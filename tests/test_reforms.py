@@ -265,14 +265,14 @@ class TestDividendTaxIncrease:
     @requires_hf_token
     def test_baseline_modifier_sets_pre_budget_rates(self):
         """Baseline simulation modifier correctly sets pre-budget rates."""
-        from policyengine_uk import Microsimulation
-
+        from uk_budget_data.pipeline import build_microsimulation
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("dividend_tax_increase_2pp")
 
-        # Create a simulation and apply the baseline modifier
-        sim = Microsimulation()
+        # Build through policyengine.py so the dataset comes from the pinned
+        # release bundle; policyengine-uk no longer has an implicit default.
+        sim = build_microsimulation(None)
         reform.baseline_simulation_modifier(sim)
 
         div = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates

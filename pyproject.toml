@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "policyengine-uk>=2.65.0",
+    "policyengine[uk]>=6.0.0",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "h5py>=3.0.0",
