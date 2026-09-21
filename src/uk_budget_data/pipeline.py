@@ -30,9 +30,7 @@ from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 console = Console()
 
 
-def build_microsimulation(
-    dataset_path: Optional[str], scenario=None
-):
+def build_microsimulation(dataset_path: Optional[str], scenario=None):
     """Build a Microsimulation pinned to the installed policyengine.py bundle.
 
     Args:
@@ -277,9 +275,7 @@ class DataPipeline:
         # (the certified enhanced FRS on HuggingFace), which needs
         # HUGGING_FACE_TOKEN. An explicit path is an unmanaged override.
         dataset_path = (
-            str(self.config.dataset_path)
-            if self.config.dataset_path
-            else None
+            str(self.config.dataset_path) if self.config.dataset_path else None
         )
 
         with Progress(
@@ -303,9 +299,7 @@ class DataPipeline:
                 baseline = build_microsimulation(
                     dataset_path, baseline_scenario
                 )
-                reformed = build_microsimulation(
-                    dataset_path, reform_scenario
-                )
+                reformed = build_microsimulation(dataset_path, reform_scenario)
 
                 # Process reform
                 processor = ReformProcessor(reform, self.config)
