@@ -9,8 +9,8 @@ from typing import Optional
 
 import h5py
 import pandas as pd
+import policyengine as pe
 from policyengine_uk import Microsimulation
-from policyengine_uk.data import UKSingleYearDataset
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -28,6 +28,22 @@ from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 console = Console()
+
+
+def build_microsimulation(dataset_path: Optional[str], scenario=None):
+    """Build a Microsimulation pinned to the installed policyengine.py bundle.
+
+    Args:
+        dataset_path: Explicit dataset path, or None to use the bundle's
+            certified dataset (requires HUGGING_FACE_TOKEN).
+        scenario: Scenario to apply, or None for current law.
+    """
+    kwargs = {} if scenario is None else {"scenario": scenario}
+    return pe.uk.managed_microsimulation(
+        dataset=dataset_path,
+        allow_unmanaged=dataset_path is not None,
+        **kwargs,
+    )
 
 
 def save_csv(df: pd.DataFrame, csv_path: Path) -> None:
@@ -202,7 +218,13 @@ class ReformProcessor:
             raise FileNotFoundError("Constituency data not found")
 
         with h5py.File(weights_path, "r") as f:
-            weights = f["2025"][...]
+            year_key = str(year)
+            if year_key not in f:
+                raise KeyError(
+                    f"No constituency weights for {year_key} in "
+                    f"{weights_path}. Available: {sorted(f.keys())}"
+                )
+            weights = f[year_key][...]
 
         constituency_df = pd.read_csv(constituencies_path)
 
@@ -248,13 +270,13 @@ class DataPipeline:
 
         results = []
 
-        # Load dataset
-        if self.config.dataset_path:
-            dataset = UKSingleYearDataset(
-                file_path=str(self.config.dataset_path)
-            )
-        else:
-            dataset = None  # Use default
+        # Dataset selection is delegated to policyengine.py. With no explicit
+        # path it resolves the dataset pinned by the installed release bundle
+        # (the certified enhanced FRS on HuggingFace), which needs
+        # HUGGING_FACE_TOKEN. An explicit path is an unmanaged override.
+        dataset_path = (
+            str(self.config.dataset_path) if self.config.dataset_path else None
+        )
 
         with Progress(
             SpinnerColumn(),
@@ -274,22 +296,10 @@ class DataPipeline:
                 )
                 reform_scenario = reform.to_scenario()
 
-                if dataset:
-                    if baseline_scenario:
-                        baseline = Microsimulation(
-                            dataset=dataset, scenario=baseline_scenario
-                        )
-                    else:
-                        baseline = Microsimulation(dataset=dataset)
-                    reformed = Microsimulation(
-                        dataset=dataset, scenario=reform_scenario
-                    )
-                else:
-                    if baseline_scenario:
-                        baseline = Microsimulation(scenario=baseline_scenario)
-                    else:
-                        baseline = Microsimulation()
-                    reformed = Microsimulation(scenario=reform_scenario)
+                baseline = build_microsimulation(
+                    dataset_path, baseline_scenario
+                )
+                reformed = build_microsimulation(dataset_path, reform_scenario)
 
                 # Process reform
                 processor = ReformProcessor(reform, self.config)

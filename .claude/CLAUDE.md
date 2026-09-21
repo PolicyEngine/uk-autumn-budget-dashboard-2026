@@ -23,14 +23,21 @@ When checking if a package has specific changes:
 2. Sync: `uv sync`
 3. Then check the installed files
 
-### policyengine-uk Updates
-This project relies on policyengine-uk having Autumn Budget 2026 parameters baked in. We're actively updating policyengine-uk, so **always use the latest version**:
+### policyengine.py controls the model and data versions
+This project depends on `policyengine[uk]` (policyengine.py), not on
+`policyengine-uk` directly. policyengine.py pins an exact `policyengine-uk`
+version **and** the certified dataset that goes with it, so the two can never
+drift apart. Do not add `policyengine-uk` as a direct dependency or upgrade it
+on its own — upgrade the bundle:
 
 ```bash
-# Keep policyengine-uk up to date
-uv lock --upgrade-package policyengine-uk
+uv lock --upgrade-package policyengine
 uv sync
 ```
+
+Microsimulations are built through `pe.uk.managed_microsimulation()`, which
+resolves the bundle's dataset from the private HuggingFace repo. That needs
+`HUGGING_FACE_TOKEN` in the environment (and as a repo secret in CI).
 
 The reforms in `src/uk_budget_data/reforms.py` assume current law = Autumn Budget policy, with baseline parameter changes setting pre-budget values to show policy impact.
 

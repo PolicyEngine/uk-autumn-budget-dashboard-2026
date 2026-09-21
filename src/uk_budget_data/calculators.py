@@ -9,6 +9,23 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
+from microdf import MicroDataFrame, MicroSeries
+
+
+def _as_weighted(df) -> MicroDataFrame:
+    """Return df as a MicroDataFrame weighted by household_weight.
+
+    Calculators rely on microdf's weighted reductions, so a plain DataFrame
+    reaching them would silently produce unweighted results.
+    """
+    if isinstance(df, MicroDataFrame):
+        return df
+    if "household_weight" not in df.columns:
+        raise KeyError(
+            "decile frame must carry a household_weight column to be "
+            "weighted; got columns: " + ", ".join(map(str, df.columns))
+        )
+    return MicroDataFrame(df, weights="household_weight")
 
 
 class BaseCalculator(ABC):
@@ -162,14 +179,15 @@ class DistributionalImpactCalculator(BaseCalculator):
             "household_weight", period=year, map_to="household"
         )
 
-        decile_df = pd.DataFrame(
+        decile_df = MicroDataFrame(
             {
                 "household_income_decile": household_decile.values,
                 "baseline_income": baseline_income.values,
                 "reform_income": reform_income.values,
                 "income_change": (reform_income - baseline_income).values,
                 "household_weight": household_weight.values,
-            }
+            },
+            weights="household_weight",
         )
         decile_df = decile_df[decile_df["household_income_decile"] >= 1]
 
@@ -186,6 +204,7 @@ class DistributionalImpactCalculator(BaseCalculator):
         decile_df: pd.DataFrame,
     ) -> list[dict]:
         """Calculate from a pre-built decile DataFrame (for testing)."""
+        decile_df = _as_weighted(decile_df)
         results = []
 
         for decile_num in range(1, 11):
@@ -193,19 +212,17 @@ class DistributionalImpactCalculator(BaseCalculator):
                 decile_df["household_income_decile"] == decile_num
             ]
             if len(decile_data) > 0:
-                weighted_change = (
-                    decile_data["income_change"]
-                    * decile_data["household_weight"]
-                ).sum()
-                weighted_baseline = (
-                    decile_data["baseline_income"]
-                    * decile_data["household_weight"]
-                ).sum()
-                rel_change = (
-                    (weighted_change / weighted_baseline) * 100
-                    if weighted_baseline > 0
-                    else 0
-                )
+                # MicroDataFrame columns are weighted, so sum() is already
+                # the weighted total.
+                weighted_change = decile_data["income_change"].sum()
+                weighted_baseline = decile_data["baseline_income"].sum()
+                if weighted_baseline <= 0:
+                    raise ValueError(
+                        f"Decile {decile_num} has non-positive weighted "
+                        f"baseline income ({weighted_baseline}) in {year}; "
+                        "a relative change is undefined."
+                    )
+                rel_change = (weighted_change / weighted_baseline) * 100
                 results.append(
                     {
                         "reform_id": reform_id,
@@ -243,6 +260,7 @@ class WinnersLosersCalculator(BaseCalculator):
         decile_df: pd.DataFrame,
     ) -> list[dict]:
         """Calculate weighted average change per decile."""
+        decile_df = _as_weighted(decile_df)
         results = []
 
         for decile_num in range(1, 11):
@@ -250,12 +268,9 @@ class WinnersLosersCalculator(BaseCalculator):
                 decile_df["household_income_decile"] == decile_num
             ]
             if len(decile_data) > 0:
-                weighted_change = (
-                    decile_data["income_change"]
-                    * decile_data["household_weight"]
-                ).sum()
-                total_hh = decile_data["household_weight"].sum()
-                avg_change = weighted_change / total_hh if total_hh > 0 else 0
+                # Weighted total over weighted household count is exactly
+                # the weighted mean microdf already computes.
+                avg_change = decile_data["income_change"].mean()
                 results.append(
                     {
                         "reform_id": reform_id,
@@ -267,11 +282,7 @@ class WinnersLosersCalculator(BaseCalculator):
                 )
 
         # Overall average
-        overall_weighted = (
-            decile_df["income_change"] * decile_df["household_weight"]
-        ).sum()
-        overall_hh = decile_df["household_weight"].sum()
-        overall_avg = overall_weighted / overall_hh if overall_hh > 0 else 0
+        overall_avg = decile_df["income_change"].mean()
         results.append(
             {
                 "reform_id": reform_id,
@@ -298,7 +309,6 @@ class MetricsCalculator(BaseCalculator):
         year: int,
     ) -> list[dict]:
         """Calculate summary metrics from microsimulations."""
-        from microdf import MicroSeries
 
         # Calculate people affected
         baseline_income = baseline.calculate(
@@ -321,15 +331,21 @@ class MetricsCalculator(BaseCalculator):
         capped_baseline = np.maximum(baseline_income.values, 1)
         income_change_pct = income_change.values / capped_baseline
 
-        weighted_people = household_count.values * household_weight.values
+        # People per household, weighted natively by microdf.
+        people = MicroSeries(
+            household_count.values, weights=household_weight.values
+        )
         income_changed = np.abs(income_change_pct) > 0.0001
         valid_deciles = household_decile.values >= 1
 
-        people_affected = weighted_people[income_changed & valid_deciles].sum()
-        total_people = weighted_people[valid_deciles].sum()
-        percent_affected = (
-            (people_affected / total_people) * 100 if total_people > 0 else 0
-        )
+        people_affected = people[income_changed & valid_deciles].sum()
+        total_people = people[valid_deciles].sum()
+        if total_people <= 0:
+            raise ValueError(
+                f"No weighted population in valid deciles for {year}; "
+                "cannot compute the share of people affected."
+            )
+        percent_affected = (people_affected / total_people) * 100
 
         # Calculate Gini change
         baseline_equiv = baseline.calculate(
@@ -376,9 +392,12 @@ class MetricsCalculator(BaseCalculator):
         ) * 100
 
         poverty_pp = reformed_rate - baseline_rate
-        poverty_pct = (
-            (poverty_pp / baseline_rate) * 100 if baseline_rate > 0 else 0
-        )
+        if baseline_rate <= 0:
+            raise ValueError(
+                f"Baseline poverty rate is {baseline_rate} for {reform_id} "
+                f"in {year}; a relative poverty change is undefined."
+            )
+        poverty_pct = (poverty_pp / baseline_rate) * 100
 
         return [
             {
@@ -658,7 +677,6 @@ class ConstituencyCalculator(BaseCalculator):
         constituency_df: pd.DataFrame,
     ) -> list[dict]:
         """Calculate from microsimulations with constituency weights."""
-        from microdf import MicroSeries
 
         baseline_income = baseline.calculate(
             "household_net_income", period=year, map_to="household"
@@ -680,9 +698,12 @@ class ConstituencyCalculator(BaseCalculator):
                 reform_ms.sum() - baseline_ms.sum()
             ) / baseline_ms.count()
             avg_baseline = baseline_ms.sum() / baseline_ms.count()
-            rel_change = (
-                (avg_change / avg_baseline) * 100 if avg_baseline > 0 else 0
-            )
+            if avg_baseline <= 0:
+                raise ValueError(
+                    f"Non-positive average baseline income ({avg_baseline}) "
+                    f"for {reform_id} in {year}; relative change undefined."
+                )
+            rel_change = (avg_change / avg_baseline) * 100
 
             results.append(
                 self.calculate_from_values(
@@ -777,11 +798,13 @@ class DemographicConstituencyCalculator(BaseCalculator):
                     avg_baseline = (
                         baseline_income * masked_weights
                     ).sum() / total_weight
-                    rel_change = (
-                        (avg_change / avg_baseline) * 100
-                        if avg_baseline > 0
-                        else 0
-                    )
+                    if avg_baseline <= 0:
+                        raise ValueError(
+                            f"Constituency {code} ({name}) has non-positive "
+                            f"weighted baseline income ({avg_baseline}) in "
+                            f"{year}; relative change is undefined."
+                        )
+                    rel_change = (avg_change / avg_baseline) * 100
 
                     results.append(
                         {
