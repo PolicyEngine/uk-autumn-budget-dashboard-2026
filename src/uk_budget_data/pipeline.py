@@ -25,7 +25,7 @@ from uk_budget_data.calculators import (
     WinnersLosersCalculator,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
-from uk_budget_data.reforms import get_autumn_budget_2025_reforms
+from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 console = Console()
 
@@ -231,7 +231,7 @@ class DataPipeline:
             reforms: List of reforms to process. Defaults to Autumn Budget.
             config: Data configuration. Uses defaults if not provided.
         """
-        self.reforms = reforms or get_autumn_budget_2025_reforms()
+        self.reforms = reforms or get_autumn_budget_2026_reforms()
         self.config = config or DataConfig()
 
     def run(self, skip_input_check: bool = False) -> dict[str, pd.DataFrame]:
@@ -462,7 +462,7 @@ def generate_all_data(
     This is the main entry point for data generation.
 
     Args:
-        reforms: List of reforms to process. Defaults to Autumn Budget 2025.
+        reforms: List of reforms to process. Defaults to Autumn Budget 2026.
         config: Data configuration. Uses defaults if not provided.
         skip_input_check: Skip checking for input files.
 

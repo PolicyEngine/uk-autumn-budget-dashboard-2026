@@ -13,7 +13,7 @@ import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import YearSlider from "./components/YearSlider";
 
-// Autumn Budget 2025 policy provisions
+// Autumn Budget 2026 policy provisions
 const POLICIES = [
   {
     id: "two_child_limit",
@@ -88,7 +88,7 @@ const POLICIES = [
 const PRESETS = [
   {
     id: "autumn-budget",
-    name: "Autumn Budget 2025",
+    name: "Autumn Budget 2026",
     policies: POLICIES.map((p) => p.id),
   },
 ];
@@ -404,7 +404,7 @@ function App() {
       <main className="main-content">
         {/* Title row with controls */}
         <div className="title-row">
-          <h1>UK Autumn Budget 2025</h1>
+          <h1>UK Autumn Budget 2026</h1>
           {activeTab === "dashboard" && (
             <PolicySelector
               policies={POLICIES}

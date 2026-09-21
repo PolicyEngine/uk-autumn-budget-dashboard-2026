@@ -406,7 +406,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     property_tax_increase_2pp: "Property tax +2pp",
     freeze_student_loan_thresholds: "Student loan freeze",
     salary_sacrifice_cap: "Salary sacrifice cap",
-    autumn_budget_2025_combined: "Autumn Budget (combined)",
+    autumn_budget_2026_combined: "Autumn Budget (combined)",
   };
 
   // Custom tooltip

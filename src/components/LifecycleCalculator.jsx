@@ -3,10 +3,15 @@ import * as d3 from "d3";
 import { LIFECYCLE_REFORMS } from "../utils/policyConfig";
 import "./LifecycleCalculator.css";
 
-// API URL - detect local vs production
+// API URL - supplied by the environment; no fallback.
 const getApiUrl = () => {
-  // Use production API for now - change to localhost:5001 for local backend testing
-  return "https://uk-autumn-budget-lifecycle-578039519715.europe-west1.run.app";
+  const url = process.env.NEXT_PUBLIC_LIFECYCLE_API_URL;
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_LIFECYCLE_API_URL is not set. Point it at the 2026 lifecycle API."
+    );
+  }
+  return url;
 };
 
 // Use shared policy configuration

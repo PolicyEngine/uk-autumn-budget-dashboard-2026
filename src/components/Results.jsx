@@ -59,7 +59,7 @@ function Results({ results, isLoading, selectedPolicies }) {
     if (!results) return;
 
     const date = new Date().toISOString().split("T")[0];
-    let content = `UK Autumn Budget 2025 Dashboard - Analysis Results\n`;
+    let content = `UK Autumn Budget 2026 Dashboard - Analysis Results\n`;
     content += `Generated: ${new Date().toLocaleString("en-GB")}\n\n`;
     content += `Selected Policies:\n`;
     content += results.policies.map((p) => `- ${p.name}`).join("\n");
@@ -124,7 +124,7 @@ function Results({ results, isLoading, selectedPolicies }) {
     return (
       <div className="results-empty">
         <div className="empty-state">
-          <h2>Welcome to the UK Autumn Budget 2025 dashboard</h2>
+          <h2>Welcome to the UK Autumn Budget 2026 dashboard</h2>
           <p>
             Analyse the potential impacts of budget policies on UK households
             and public finances.

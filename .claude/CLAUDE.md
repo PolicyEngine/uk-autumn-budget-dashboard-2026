@@ -24,7 +24,7 @@ When checking if a package has specific changes:
 3. Then check the installed files
 
 ### policyengine-uk Updates
-This project relies on policyengine-uk having Autumn Budget 2025 parameters baked in. We're actively updating policyengine-uk, so **always use the latest version**:
+This project relies on policyengine-uk having Autumn Budget 2026 parameters baked in. We're actively updating policyengine-uk, so **always use the latest version**:
 
 ```bash
 # Keep policyengine-uk up to date

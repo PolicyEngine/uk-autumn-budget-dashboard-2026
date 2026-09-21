@@ -42,3 +42,8 @@ venv/
 
 # Large data files (full versions kept locally, sampled versions checked in)
 public/data/household_scatter_full.csv
+
+# Local secrets
+.env
+.env.local
+.env.*.local
