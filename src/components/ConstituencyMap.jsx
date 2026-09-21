@@ -26,7 +26,7 @@ const REFORM_NAMES = {
   property_tax_increase_2pp: "Property tax increase (+2pp)",
   freeze_student_loan_thresholds: "Student loan threshold freeze",
   salary_sacrifice_cap: "Salary sacrifice NICs cap",
-  autumn_budget_2025_combined: "Autumn Budget 2025 (combined)",
+  autumn_budget_2026_combined: "Autumn Budget 2026 (combined)",
 };
 
 // Format year for display (e.g., 2026 -> "2026-27")

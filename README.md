@@ -1,6 +1,6 @@
-# UK Autumn Budget 2025 Dashboard
+# UK Autumn Budget 2026 Dashboard
 
-A web application for analysing the impact of UK Autumn Budget 2025 policies on households and public finances, powered by [PolicyEngine UK](https://policyengine.org/uk).
+A web application for analysing the impact of UK Autumn Budget 2026 policies on households and public finances, powered by [PolicyEngine UK](https://policyengine.org/uk).
 
 ## Features
 
@@ -66,7 +66,7 @@ src/
 └── uk_budget_data/      # Python data generation package
     ├── __init__.py      # Public API exports
     ├── models.py        # Pydantic data models
-    ├── reforms.py       # Autumn Budget 2025 reform definitions
+    ├── reforms.py       # Autumn Budget 2026 reform definitions
     ├── calculators.py   # Metric calculators
     ├── pipeline.py      # Data generation pipeline
     └── cli.py           # Command-line interface
@@ -85,7 +85,7 @@ The dashboard displays pre-calculated data from CSV files. The `uk_budget_data` 
 ```python
 from uk_budget_data import generate_all_data, get_reform, DataConfig
 
-# Generate data for all Autumn Budget 2025 reforms
+# Generate data for all Autumn Budget 2026 reforms
 generate_all_data()
 
 # Or with custom configuration

@@ -30,7 +30,7 @@ test:
 
 # Build Docker image
 build:
-	docker build -t uk-budget-api .
+	docker build -t uk-budget-api-2026 .
 
 # Stop Docker services
 stop:

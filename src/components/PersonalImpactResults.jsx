@@ -303,7 +303,7 @@ function PersonalImpactResults({ results }) {
         <h4>About this calculation</h4>
         <p>
           This calculation uses PolicyEngine UK to model how each Autumn Budget
-          2025 policy affects your household&apos;s net income. The model
+          2026 policy affects your household&apos;s net income. The model
           accounts for income tax, National Insurance, benefits, and other taxes
           and transfers. Children are automatically aged each year, and your
           income grows at the specified rate. Results compare the budget

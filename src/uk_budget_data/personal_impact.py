@@ -1,6 +1,6 @@
 """Personal impact calculator using PolicyEngine-UK.
 
-This module calculates how Autumn Budget 2025 policies affect individual
+This module calculates how Autumn Budget 2026 policies affect individual
 households over time (2025-2029).
 """
 
@@ -10,7 +10,7 @@ from typing import Callable
 from policyengine_uk import Simulation
 
 from uk_budget_data.reforms import (
-    get_autumn_budget_2025_reforms,
+    get_autumn_budget_2026_reforms,
 )
 
 
@@ -217,7 +217,7 @@ class PersonalImpactCalculator:
         """Initialize the calculator by loading reforms."""
         self.reforms = {
             reform.id: reform
-            for reform in get_autumn_budget_2025_reforms()
+            for reform in get_autumn_budget_2026_reforms()
             if reform.id in POLICY_IDS
         }
 

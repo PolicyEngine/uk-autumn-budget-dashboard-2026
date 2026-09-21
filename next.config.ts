@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   ? process.env.NEXT_PUBLIC_BASE_PATH
-  : '/uk/autumn-budget-2025';
+  : '/uk/autumn-budget-2026';
 
 
 const nextConfig: NextConfig = {

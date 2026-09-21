@@ -1,4 +1,4 @@
-"""Reform definitions for UK Autumn Budget 2025.
+"""Reform definitions for UK Autumn Budget 2026.
 
 This module contains all policy reforms announced in the November 2025 Budget,
 implemented as Reform objects that can be processed by the data pipeline.
@@ -36,7 +36,7 @@ def _years_dict(value, years: list[int] = None) -> dict[str, any]:
 # PRE-AUTUMN BUDGET BASELINE
 # =============================================================================
 # These values represent what parameters would have been WITHOUT the November
-# 2025 Autumn Budget. Used as baseline for comparing budget policy impacts.
+# 2026 Autumn Budget. Used as baseline for comparing budget policy impacts.
 #
 # Income tax thresholds: Would have unfrozen after April 2028
 # Personal allowance and basic rate threshold uprated by CPI from April 2028
@@ -260,7 +260,7 @@ def _create_threshold_freeze_extension() -> Reform:
 def _set_pre_budget_dividend_rates(sim):
     """Set pre-budget dividend rates in the baseline simulation.
 
-    Reverts the Autumn Budget 2025 changes:
+    Reverts the Autumn Budget 2026 changes:
     - Basic rate: 10.75% -> 8.75%
     - Higher rate: 35.75% -> 33.75%
 
@@ -698,7 +698,7 @@ def create_salary_sacrifice_cap_reform() -> Reform:
 
 
 def _create_combined_autumn_budget_reform() -> Reform:
-    """Create a combined reform with all Autumn Budget 2025 provisions.
+    """Create a combined reform with all Autumn Budget 2026 provisions.
 
     This reform combines:
     - Two-child limit repeal (spending)
@@ -806,10 +806,10 @@ def _create_combined_autumn_budget_reform() -> Reform:
     combined_baseline_params.update(slr_baseline)
 
     return Reform(
-        id="autumn_budget_2025_combined",
-        name="Autumn Budget 2025 (combined)",
+        id="autumn_budget_2026_combined",
+        name="Autumn Budget 2026 (combined)",
         description=(
-            "All Autumn Budget 2025 provisions combined: two-child limit "
+            "All Autumn Budget 2026 provisions combined: two-child limit "
             "repeal, salary sacrifice pension cap, fuel duty freeze extension, "
             "rail fares freeze, threshold freeze extension, student loan "
             "threshold freeze, and tax rate increases on dividends (+2pp), "
@@ -829,16 +829,16 @@ def _create_combined_autumn_budget_reform() -> Reform:
 # =============================================================================
 
 # Cache for lazy-loaded reforms
-_AUTUMN_BUDGET_2025_REFORMS_CACHE: list[Reform] | None = None
+_AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
 _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
-def _get_autumn_budget_2025_reforms() -> list[Reform]:
+def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
-    global _AUTUMN_BUDGET_2025_REFORMS_CACHE
-    if _AUTUMN_BUDGET_2025_REFORMS_CACHE is None:
-        _AUTUMN_BUDGET_2025_REFORMS_CACHE = [
+    global _AUTUMN_BUDGET_2026_REFORMS_CACHE
+    if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
+        _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
             _create_combined_autumn_budget_reform(),  # Combined first
             _create_two_child_limit_repeal(),
             _create_fuel_duty_freeze(),
@@ -850,14 +850,14 @@ def _get_autumn_budget_2025_reforms() -> list[Reform]:
             get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
         ]
-    return _AUTUMN_BUDGET_2025_REFORMS_CACHE
+    return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 
 def _get_all_reforms() -> list[Reform]:
     """Get all available reforms (lazy-loaded)."""
     global _ALL_REFORMS_CACHE
     if _ALL_REFORMS_CACHE is None:
-        _ALL_REFORMS_CACHE = _get_autumn_budget_2025_reforms() + [
+        _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
             create_salary_sacrifice_cap_reform(),
         ]
     return _ALL_REFORMS_CACHE
@@ -872,13 +872,13 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 # Public getter functions for backwards compatibility
-def get_autumn_budget_2025_reforms() -> list[Reform]:
+def get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms.
 
     Returns a list of Reform objects for all policies in the November 2025
     Autumn Budget. Lazy-loaded to avoid import-time initialization.
     """
-    return _get_autumn_budget_2025_reforms()
+    return _get_autumn_budget_2026_reforms()
 
 
 def get_all_reforms() -> list[Reform]:
@@ -892,8 +892,8 @@ def get_all_reforms() -> list[Reform]:
 
 # Module-level aliases that are lazy-loaded on first access
 # Note: These are initially None and populated on first use via get_reform()
-# For most use cases, prefer using get_reform(id) or get_autumn_budget_2025_reforms()
-AUTUMN_BUDGET_2025_REFORMS: list[Reform] | None = None
+# For most use cases, prefer using get_reform(id) or get_autumn_budget_2026_reforms()
+AUTUMN_BUDGET_2026_REFORMS: list[Reform] | None = None
 ALL_REFORMS: list[Reform] | None = None
 
 

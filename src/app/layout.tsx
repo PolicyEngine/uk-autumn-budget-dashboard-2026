@@ -4,9 +4,9 @@ import "@policyengine/ui-kit/styles.css";
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
-const TITLE = 'UK Autumn Budget 2025 dashboard';
+const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
-  'Analyse the impact of UK Autumn Budget 2025 policies on households and public finances using PolicyEngine UK microsimulation.';
+  'Analyse the impact of UK Autumn Budget 2026 policies on households and public finances using PolicyEngine UK microsimulation.';
 
 export const metadata: Metadata = {
   title: TITLE,

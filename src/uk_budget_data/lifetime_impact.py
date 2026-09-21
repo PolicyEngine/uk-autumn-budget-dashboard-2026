@@ -1,4 +1,4 @@
-"""Lifetime impact calculator for UK Autumn Budget 2025 policies.
+"""Lifetime impact calculator for UK Autumn Budget 2026 policies.
 
 Models how budget policies affect an individual graduate over their working life,
 including earnings growth, life events (marriage, children), and reform impacts.
@@ -14,7 +14,7 @@ from policyengine_uk import Simulation
 from rich.console import Console
 from rich.table import Table
 
-from uk_budget_data.reforms import get_autumn_budget_2025_reforms
+from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 # Graduate starting income by percentile (age 22, 2025 prices)
 # Based on IFS research on graduate earnings
@@ -257,8 +257,8 @@ class LifetimeImpactCalculator:
         self.console = Console() if verbose else None
         self.reforms = {
             r.id: r
-            for r in get_autumn_budget_2025_reforms()
-            if r.id != "autumn_budget_2025_combined"
+            for r in get_autumn_budget_2026_reforms()
+            if r.id != "autumn_budget_2026_combined"
         }
 
     def _log(self, message: str) -> None:

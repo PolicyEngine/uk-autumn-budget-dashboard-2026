@@ -92,24 +92,24 @@ class TestReformDefinitions:
 
     def test_autumn_budget_reforms_exist(self):
         """Autumn Budget 2025 reforms are defined."""
-        from uk_budget_data.reforms import get_autumn_budget_2025_reforms
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        reforms = get_autumn_budget_2025_reforms()
+        reforms = get_autumn_budget_2026_reforms()
         assert len(reforms) > 0
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""
-        from uk_budget_data.reforms import get_autumn_budget_2025_reforms
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        for reform in get_autumn_budget_2025_reforms():
+        for reform in get_autumn_budget_2026_reforms():
             assert reform.id, f"Reform missing id: {reform}"
             assert reform.name, f"Reform missing name: {reform}"
 
     def test_all_reforms_convertible_to_scenario(self):
         """All reforms can be converted to PolicyEngine Scenario."""
-        from uk_budget_data.reforms import get_autumn_budget_2025_reforms
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        for reform in get_autumn_budget_2025_reforms():
+        for reform in get_autumn_budget_2026_reforms():
             scenario = reform.to_scenario()
             assert (
                 scenario is not None
