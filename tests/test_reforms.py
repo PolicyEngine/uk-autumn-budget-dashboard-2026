@@ -565,3 +565,77 @@ class TestForecastYearRange:
         assert "2026" in reform.baseline_parameter_changes[tc_key]
         assert reform.baseline_parameter_changes[tc_key]["2030"] == 2
         assert reform.baseline_parameter_changes[uc_key]["2030"] == 2
+
+
+class TestAutumnBudget2026Reforms:
+    """Tests for the Autumn Budget 2026 candidate measures."""
+
+    def test_all_three_measures_on_dashboard_list(self):
+        """The 2026 measures are the ones the dashboard offers."""
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+        ids = {r.id for r in get_autumn_budget_2026_reforms()}
+        assert {
+            "cgt_equalisation",
+            "fuel_duty_rise_cancellation",
+            "bus_fare_cap",
+        } <= ids
+
+    def test_enacted_2025_measures_still_resolve_by_id(self):
+        """Shared URLs from the 2025 dashboard keep working."""
+        from uk_budget_data.reforms import get_reform
+
+        for old_id in [
+            "two_child_limit",
+            "rail_fares_freeze",
+            "salary_sacrifice_cap",
+            "fuel_duty_freeze",
+            "freeze_student_loan_thresholds",
+        ]:
+            assert get_reform(old_id) is not None, old_id
+
+    def test_cgt_equalisation_sets_income_tax_rates(self):
+        """CGT rates become the income tax rates, elasticity is CenTax's."""
+        from uk_budget_data.reforms import get_reform
+
+        changes = get_reform("cgt_equalisation").parameter_changes
+        assert set(changes["gov.hmrc.cgt.basic_rate"].values()) == {0.20}
+        assert set(changes["gov.hmrc.cgt.higher_rate"].values()) == {0.40}
+        assert set(changes["gov.hmrc.cgt.additional_rate"].values()) == {0.45}
+        elasticity = changes[
+            "gov.simulation.capital_gains_responses.elasticity"
+        ]
+        assert set(elasticity.values()) == {1.0}
+
+    def test_cgt_equalisation_avoids_unavailable_parameters(self):
+        """Schedules and mtr_elasticity need policyengine-uk 2.99.0.
+
+        policyengine.py 6.x pins 2.90.2, where those parameters do not exist;
+        naming them would raise rather than be inert.
+        """
+        from uk_budget_data.reforms import get_reform
+
+        changes = get_reform("cgt_equalisation").parameter_changes
+        for absent in [
+            "residential_property",
+            "carried_interest",
+            "badr",
+            "mtr_elasticity",
+        ]:
+            assert not any(absent in key for key in changes), absent
+
+    def test_fuel_duty_rise_cancellation_holds_2026_rate(self):
+        """The rate is held flat rather than stepping up in January 2027."""
+        from uk_budget_data.reforms import get_reform
+
+        changes = get_reform("fuel_duty_rise_cancellation").parameter_changes
+        rates = changes["gov.hmrc.fuel_duty.petrol_and_diesel"]
+        assert set(rates.values()) == {0.5345}
+
+    def test_bus_fare_cap_uses_a_simulation_modifier(self):
+        """The cap is a spend reduction, not a parameter change."""
+        from uk_budget_data.reforms import get_reform
+
+        reform = get_reform("bus_fare_cap")
+        assert reform.simulation_modifier is not None
+        assert not reform.parameter_changes
