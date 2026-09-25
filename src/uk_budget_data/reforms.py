@@ -829,26 +829,240 @@ def _create_combined_autumn_budget_reform() -> Reform:
 # =============================================================================
 
 # Cache for lazy-loaded reforms
+
+# =============================================================================
+# AUTUMN BUDGET 2026 CANDIDATE MEASURES
+# =============================================================================
+# Three measures the 2026 Budget is most likely to touch, ported from the
+# standalone PolicyEngine analyses that model each one in depth:
+#   CGT       -> PolicyEngine/uk-cgt-reform
+#   Fuel duty -> PolicyEngine/cancelling-fuel-duty-rise
+#   Bus fares -> PolicyEngine/bus-fare-cap
+# Each docstring records where the numbers come from and where this
+# implementation is narrower than its source repo.
+
+
+# CGT equalisation with income tax.
+#
+# Reformed rates, equal to the income tax rates for each band (uk-cgt-reform's
+# BURNHAM_RATES). Named for Andy Burnham, who championed the policy in the
+# Labour leadership contest and is now Prime Minister.
+CGT_EQUALISED_RATES = {
+    "basic_rate": 0.20,  # from 18%
+    "higher_rate": 0.40,  # from 24%
+    "additional_rate": 0.45,  # from 24%
+}
+
+# Realisation elasticity with respect to the RETENTION rate (1 - t), positive.
+# Advani, Lonsdale & Summers (CenTax, Oct 2024, "Reforming Capital Gains Tax")
+# use a central medium-term value of 1.0, sensitivity range 0.5-2.0.
+#
+# uk-cgt-reform sets the marginal-tax-rate convention instead
+# (mtr_elasticity = -0.7, converted from this same CenTax central value). That
+# parameter does not exist in the policyengine-uk pinned by policyengine.py
+# 6.x, so we set the retention convention the engine does carry, at CenTax's
+# own central value. The two conventions express the same evidence; they must
+# never both be set.
+CGT_RETENTION_ELASTICITY = 1.0
+
+
+def _create_cgt_equalisation() -> Reform:
+    """Equalise capital gains tax rates with income tax rates.
+
+    Ported from PolicyEngine/uk-cgt-reform, which models this in full.
+
+    Baseline (current law): 18% basic, 24% higher, 24% additional.
+    Reform: 20% / 40% / 45%, matching the income tax rates, from April 2026.
+    The £3,000 annual exempt amount is unchanged.
+
+    Narrower than the source repo in two ways, both forced by the
+    policyengine-uk version policyengine.py 6.x pins (2.90.2):
+
+    1. Main schedule only. uk-cgt-reform also sets the residential property
+       and carried interest schedules and withdraws the BADR lifetime limit,
+       which is what "tax every gain at income tax rates" requires. Those
+       parameters arrive in policyengine-uk 2.99.0; they do not exist here, so
+       gains on those schedules stay at current law and revenue is
+       UNDERSTATED relative to a full equalisation.
+    2. Retention-rate elasticity convention rather than the MTR convention
+       the source repo reports, because mtr_elasticity does not exist here.
+
+    CenTax's elasticity assumes accompanying base broadening (death-uplift
+    removal, exit charges) that is not modelled, so behavioural loss may be
+    understated for a rate-only reform. It is also a medium-term elasticity,
+    abstracting from short-run forestalling.
+    """
+    return Reform(
+        id="cgt_equalisation",
+        name="CGT equalisation with income tax",
+        description=(
+            "Raises capital gains tax rates to match income tax rates "
+            "(20%/40%/45%, from 18%/24%/24%) from April 2026, keeping the "
+            "£3,000 annual exempt amount. Applies a CenTax central "
+            "realisation elasticity of 1.0 with respect to the retention "
+            "rate. Main schedule only: residential property, carried "
+            "interest and BADR gains need policyengine-uk 2.99.0 and stay at "
+            "current law here, so revenue is understated. Modelled in full "
+            "at https://github.com/PolicyEngine/uk-cgt-reform"
+        ),
+        parameter_changes={
+            f"gov.hmrc.cgt.{band}": _years_dict(rate)
+            for band, rate in CGT_EQUALISED_RATES.items()
+        }
+        | {
+            "gov.simulation.capital_gains_responses.elasticity": _years_dict(
+                CGT_RETENTION_ELASTICITY
+            )
+        },
+    )
+
+
+# Fuel duty. Current law in policyengine-uk 2.90.2 holds the rate at 53.45p/L
+# through 2026 and steps it to 59.25p from January 2027. Cancelling that rise
+# means holding the 2026 rate flat across the forecast.
+FUEL_DUTY_FROZEN_RATE = 0.5345
+
+
+def _create_fuel_duty_rise_cancellation() -> Reform:
+    """Cancel the scheduled January 2027 fuel duty rise.
+
+    Ported from PolicyEngine/cancelling-fuel-duty-rise.
+
+    Baseline (current law): 53.45p/L through 2026, rising to 59.25p from
+    January 2027 and uprated thereafter.
+    Reform: the 2026 rate holds across the forecast.
+
+    Fuel duty has been held at 52.95p since March 2022 by successively
+    extending a 5p cut, and the rises scheduled for September and December
+    2026 were already cancelled. The open question for this Budget is the
+    January 2027 step, which HMRC has said will be confirmed at the Budget.
+
+    The source repo benchmarks fiscal totals to HMRC/OBR road-fuel clearances
+    and receipts; this reform is the microsimulation side only, so its revenue
+    figure will not match the repo's headline.
+    """
+    return Reform(
+        id="fuel_duty_rise_cancellation",
+        name="Fuel duty rise cancellation",
+        description=(
+            "Cancels the fuel duty rise scheduled for January 2027, holding "
+            "the rate at its 2026 level of 53.45p per litre across the "
+            "forecast instead of stepping up to 59.25p. Modelled against "
+            "HMRC/OBR clearance controls at "
+            "https://github.com/PolicyEngine/cancelling-fuel-duty-rise"
+        ),
+        parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": _years_dict(
+                FUEL_DUTY_FROZEN_RATE
+            )
+        },
+    )
+
+
+# Bus fare cap. The England-wide cap sits at £3 and returns to £2 for 2027,
+# backed by £400m of funding. The dataset records annual fare spend, not
+# per-trip fares, so the cap is modelled as a proportional reduction in fare
+# spending drawn from external evidence rather than as a rate parameter.
+#
+# Central 12.5% (range 10-15%) is bus-fare-cap's FARE_CAP_REDUCTION_CENTRAL,
+# derived from the DfT £2 cap evaluation and covering the whole ticket market.
+BUS_FARE_CAP_REDUCTION = 0.125
+
+
+def _bus_fare_cap_modifier(sim: Simulation) -> Simulation:
+    """Cut household bus fare spending and fund the gap through subsidy.
+
+    Applied as a simulation modifier because the saving is a proportional
+    reduction in recorded spend, not a change to any engine parameter: the
+    LCFS records annual fare spend rather than per-trip fares, so there is no
+    per-journey price for a £2 cap to bind against.
+
+    Two variables move, for the reason the rail fares freeze moves
+    rail_subsidy_spending:
+
+    - bus_fare_spending falls by the cap's saving. This is the economically
+      correct household effect, but bus_fare_spending feeds `consumption`,
+      NOT household_net_income, so on its own it leaves every distributional
+      chart in this dashboard reading exactly zero.
+    - bus_subsidy_spending rises by the same amount, representing the
+      government funding that pays for the cap (£400m was announced for
+      2027). That variable does reach household net income, so the saving
+      becomes visible and comparable with the other reforms.
+
+    The two are equal and opposite by construction: the fare revenue
+    households no longer pay is the subsidy the government puts in. Setting
+    only the first would understate the reform to zero; setting only the
+    second would leave consumption overstated.
+    """
+    for year in DEFAULT_YEARS:
+        fares = sim.calculate("bus_fare_spending", period=year).values
+        saving = fares * BUS_FARE_CAP_REDUCTION
+
+        sim.set_input("bus_fare_spending", year, fares - saving)
+
+        subsidy = sim.calculate("bus_subsidy_spending", period=year).values
+        sim.set_input("bus_subsidy_spending", year, subsidy + saving)
+
+    return sim
+
+
+def _create_bus_fare_cap() -> Reform:
+    """Restore the £2 England-wide bus fare cap, from £3.
+
+    Ported from PolicyEngine/bus-fare-cap.
+
+    Baseline: the £3 cap.
+    Reform: a £2 cap, modelled as a 12.5% reduction in household bus and
+    coach fare spending.
+
+    The reduction fraction is external evidence, not an engine calculation:
+    the dataset holds annual fare spend (COICOP 7.3.2), so there is no
+    per-trip fare for a cap to bind against. bus-fare-cap derives 12.5%
+    (range 10-15%) from the DfT evaluation of the £2 cap, across the whole
+    ticket market rather than capped journeys alone.
+
+    Distributionally this is the mirror image of the rail fares freeze the
+    2025 dashboard modelled: bus use skews towards lower-income households.
+
+    Fare spending is split across household members upstream by
+    person_bus_fare_spending and gov.dft.bus.fare_allocation_weight_by_age,
+    so no allocation is done here.
+    """
+    return Reform(
+        id="bus_fare_cap",
+        name="£2 bus fare cap",
+        description=(
+            "Restores the England-wide bus fare cap to £2 from £3, modelled "
+            "as a 12.5% reduction in household bus and coach fare spending "
+            "(range 10-15%, from the DfT evaluation of the £2 cap). The "
+            "£400m announced for 2027 funds the cap for that year; whether "
+            "it is funded beyond 2027 is the open Budget question. Modelled "
+            "in full at https://github.com/PolicyEngine/bus-fare-cap"
+        ),
+        simulation_modifier=_bus_fare_cap_modifier,
+    )
+
+
 _AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
 _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
+    """Get the main Autumn Budget 2026 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
             _create_combined_autumn_budget_reform(),  # Combined first
-            _create_two_child_limit_repeal(),
-            _create_fuel_duty_freeze(),
-            _create_rail_fares_freeze(),
+            # Autumn Budget 2026 candidate measures
+            _create_cgt_equalisation(),
+            _create_fuel_duty_rise_cancellation(),
+            _create_bus_fare_cap(),
+            # Carried over: still live questions for 2026
             _create_threshold_freeze_extension(),
             _create_dividend_tax_increase(),
             _create_savings_tax_increase(),
             _create_property_tax_increase(),
-            get_freeze_student_loan_thresholds(),
-            create_salary_sacrifice_cap_reform(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
@@ -857,7 +1071,13 @@ def _get_all_reforms() -> list[Reform]:
     """Get all available reforms (lazy-loaded)."""
     global _ALL_REFORMS_CACHE
     if _ALL_REFORMS_CACHE is None:
+        # Enacted or superseded 2025 measures stay reachable by id so old
+        # shared URLs keep resolving, but are off the 2026 dashboard list.
         _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
+            _create_two_child_limit_repeal(),
+            _create_fuel_duty_freeze(),
+            _create_rail_fares_freeze(),
+            get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
         ]
     return _ALL_REFORMS_CACHE
@@ -873,10 +1093,10 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 # Public getter functions for backwards compatibility
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms.
+    """Get the main Autumn Budget 2026 reforms.
 
-    Returns a list of Reform objects for all policies in the November 2025
-    Autumn Budget. Lazy-loaded to avoid import-time initialization.
+    Returns the measures the 2026 Budget is most likely to touch. Lazy-loaded
+    to avoid import-time initialization.
     """
     return _get_autumn_budget_2026_reforms()
 
