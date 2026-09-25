@@ -13,6 +13,7 @@ Usage:
     python scripts/sample_household_scatter.py
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -63,30 +64,29 @@ def sample_scatter_data(
 
     rng = np.random.default_rng(seed=SEED)
 
-    # Step 1: Find households that exist in ALL years
-    # This ensures we can track the same households over time
+    # Step 1: Find households present for EVERY reform-year pair. A household
+    # can appear in every year overall while being absent for one reform/year.
     years = sorted(df["year"].unique())
     print(f"  Years: {years}")
-
-    # Get household_ids present in each year
-    households_by_year = {}
-    for year in years:
-        year_ids = set(df[df["year"] == year]["household_id"].unique())
-        households_by_year[year] = year_ids
-        print(f"  Year {year}: {len(year_ids)} unique households")
-
-    # Find households present in ALL years
-    common_households = households_by_year[years[0]]
-    for year in years[1:]:
-        common_households = common_households.intersection(
-            households_by_year[year]
+    groups = df.groupby(["reform_id", "year"])["household_id"]
+    common_households = None
+    for (reform_id, year), household_ids in groups:
+        ids = set(household_ids)
+        common_households = (
+            ids if common_households is None else common_households & ids
         )
-
-    print(f"  Households present in ALL years: {len(common_households)}")
+        print(f"  {reform_id} {year}: {len(ids)} unique households")
+    common_households = common_households or set()
+    print(
+        f"  Households present in every reform/year: {len(common_households)}"
+    )
 
     # Step 2: Sample from households that exist in all years
     # Use weights from first year for sampling
-    first_year_data = df[df["year"] == years[0]]
+    first_reform = sorted(df["reform_id"].unique())[0]
+    first_year_data = df[
+        (df["year"] == years[0]) & (df["reform_id"] == first_reform)
+    ]
     common_df = first_year_data[
         first_year_data["household_id"].isin(common_households)
     ].copy()
@@ -145,9 +145,22 @@ def sample_scatter_data(
 
 
 def main():
-    data_dir = Path("public/data")
-    input_path = data_dir / "household_scatter_full.csv"
-    output_path = data_dir / "household_scatter.csv"
+    parser = argparse.ArgumentParser(
+        description="Sample household scatter rows"
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("public/data/household_scatter_full.csv"),
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("public/data/household_scatter.csv"),
+    )
+    args = parser.parse_args()
+    input_path = args.input
+    output_path = args.output
 
     if not input_path.exists():
         print(f"Error: {input_path} not found")

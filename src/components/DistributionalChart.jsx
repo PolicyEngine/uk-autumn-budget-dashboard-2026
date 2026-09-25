@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { POLICY_COLORS, POLICIES, ALL_POLICY_NAMES } from "../utils/policyConfig";
+import { POLICY_COLORS, CHART_POLICIES, ALL_POLICY_NAMES } from "../utils/policyConfig";
 import "./DistributionalChart.css";
 import "./ChartExport.css";
 
@@ -22,10 +22,9 @@ import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the percentage change in net income by decile, displaying the proportional impact relative to baseline income. Positive values indicate gains; negative values indicate losses.";
+  "This chart shows the percentage change in modelled household resources by decile, relative to baseline income. Bus fare savings are an imputed service benefit, not cash income.";
 
-// Format year for display (e.g., 2026 -> "2026-27")
-const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+const formatYearRange = (year) => String(year);
 
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const chartRef = useRef(null);
@@ -65,7 +64,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   const data = decileOrder.map((decile) => {
     const dataPoint = { decile };
     let netChange = 0;
-    POLICIES.forEach((policy) => {
+    CHART_POLICIES.forEach((policy) => {
       const isSelected = selectedPolicies.includes(policy.id);
       const dataRow = distributionalSelectedYear.find(
         (row) => row.reform_id === policy.id && row.decile === decile,
@@ -101,7 +100,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
         let positiveSum = 0;
         let negativeSum = 0;
 
-        POLICIES.forEach((policy) => {
+        CHART_POLICIES.forEach((policy) => {
           const isSelected = selectedPolicies.includes(policy.id);
           const dataRow = yearData.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
@@ -140,8 +139,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       <div className="distributional-chart">
         <h2>Relative impact by income decile</h2>
         <p className="chart-description">
-          This chart shows the percentage change in net income by decile,
-          displaying the proportional impact relative to baseline income.
+          This chart shows the percentage change in modelled household resources
+          by decile. Bus fare savings are an imputed service benefit.
         </p>
         <div
           style={{
@@ -169,7 +168,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
 
   // Build legend items for export - include ALL policies for consistency across exports
   const legendItems = [
-    ...ALL_POLICY_NAMES.map((name) => ({
+    ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
@@ -196,9 +195,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart shows the percentage change in net income by decile,
-            displaying the proportional impact relative to baseline income.
-            Positive values indicate gains; negative values indicate losses.
+            This chart shows the percentage change in modelled household
+            resources by decile, relative to baseline income. The bus fare
+            scenario includes an imputed service benefit, not cash income.
           </p>
         </div>
         <button
@@ -308,7 +307,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                 </span>
               )}
               payload={[
-                ...ALL_POLICY_NAMES.map((name) => ({
+                ...activePolicies.map((name) => ({
                   value: name,
                   type: "rect",
                   color: POLICY_COLORS[name],
@@ -324,7 +323,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                   : []),
               ]}
             />
-            {ALL_POLICY_NAMES.map((policyName) => (
+            {activePolicies.map((policyName) => (
               <Bar
                 key={policyName}
                 dataKey={policyName}

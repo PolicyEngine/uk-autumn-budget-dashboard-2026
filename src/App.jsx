@@ -12,7 +12,7 @@ import HouseholdChart from "./components/HouseholdChart";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import YearSlider from "./components/YearSlider";
 
-import { POLICIES } from "./utils/policyConfig";
+import { POLICIES, LEGACY_POLICIES, CHART_POLICIES } from "./utils/policyConfig";
 
 function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
@@ -51,14 +51,14 @@ function parseCSV(csvText) {
   return data;
 }
 
-const validPolicyIds = POLICIES.map((p) => p.id);
+const validPolicyIds = CHART_POLICIES.map((p) => p.id);
 
 function App() {
   const analysisRequest = useRef(0);
   const [selectedPolicies, setSelectedPolicies] = useState(
     POLICIES.map((p) => p.id),
   );
-  // Start with the first year in which all three policies have an effect.
+  // Show the first year in which transport measures have an effect.
   const [selectedYear, setSelectedYear] = useState(2027);
   // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
   const [distributionalYear, setDistributionalYear] = useState(2027);
@@ -82,7 +82,9 @@ function App() {
       const policies = policiesParam
         .split(",")
         .filter((id) => validPolicyIds.includes(id));
-      setSelectedPolicies(policies);
+      setSelectedPolicies(policies.includes("autumn_budget_2025_combined")
+        ? ["autumn_budget_2025_combined"]
+        : policies);
     }
   }, []);
 
@@ -95,15 +97,10 @@ function App() {
 
     if (activeTab === "personal") {
       params.set("tab", "personal");
-      params.delete("policies");
     } else {
       params.delete("tab");
-      if (selectedPolicies.length > 0) {
-        params.set("policies", selectedPolicies.join(","));
-      } else {
-        params.set("policies", "");
-      }
     }
+    params.set("policies", selectedPolicies.join(","));
 
     // Re-add personal param if it was there
     if (personalParam) {
@@ -171,7 +168,7 @@ function App() {
       const budgetData = years.map((year) => {
         const dataPoint = { year };
         let netImpact = 0;
-        POLICIES.forEach((policy) => {
+        CHART_POLICIES.forEach((policy) => {
           const isSelected = selectedPolicies.includes(policy.id);
           const dataRow = budgetaryData.find(
             (row) => row.reform_id === policy.id && parseInt(row.year) === year,
@@ -209,7 +206,7 @@ function App() {
       const distributionalChartData = decileOrder.map((decile) => {
         const dataPoint = { decile };
         let netChange = 0;
-        POLICIES.forEach((policy) => {
+        CHART_POLICIES.forEach((policy) => {
           const isSelected = selectedPolicies.includes(policy.id);
           const dataRow = distributionalSelectedYear.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
@@ -242,7 +239,7 @@ function App() {
       const waterfallData = waterfallDeciles.map((decile) => {
         const dataPoint = { decile };
         let netChange = 0;
-        POLICIES.forEach((policy) => {
+        CHART_POLICIES.forEach((policy) => {
           const isSelected = selectedPolicies.includes(policy.id);
           const dataRow = waterfallSelectedYear.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
@@ -310,16 +307,18 @@ function App() {
 
   const handlePolicyToggle = (policyId) => {
     setSelectedPolicies((prev) => {
+      if (policyId === "autumn_budget_2025_combined") {
+        return prev.includes(policyId) ? [] : [policyId];
+      }
+      if (prev.includes("autumn_budget_2025_combined")) {
+        return [policyId];
+      }
       if (prev.includes(policyId)) {
         return prev.filter((id) => id !== policyId);
       } else {
         return [...prev, policyId];
       }
     });
-  };
-
-  const handlePresetClick = (presetPolicies) => {
-    setSelectedPolicies(presetPolicies);
   };
 
   const handleTabChange = (tab) => {
@@ -334,7 +333,10 @@ function App() {
           <h1>UK Autumn Budget 2026</h1>
           {activeTab === "dashboard" && (
             <PolicySelector
-              policies={POLICIES}
+              policies={[
+                ...POLICIES,
+                ...LEGACY_POLICIES.filter((policy) => selectedPolicies.includes(policy.id)),
+              ]}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
             />
@@ -381,8 +383,18 @@ function App() {
           </button>
         </div>
 
+        <p role="note" className="dashboard-intro">
+          Years are model labels: annual income tax uses the UK tax year
+          beginning in that year, while fuel and bus impacts use the calendar
+          year. Combined totals mix those windows and are provisional, not
+          directly comparable with OBR fiscal-year costings.
+        </p>
+
         {activeTab === "personal" ? (
-          <PersonalImpactTab />
+          <PersonalImpactTab
+            key={selectedPolicies.join(",")}
+            selectedPolicies={selectedPolicies}
+          />
         ) : (
           <>
             {/* Dashboard description */}
@@ -408,6 +420,12 @@ function App() {
                 </a>
               )}
             </p>
+            <p role="note" className="dashboard-intro">
+              Provisional data: the national estimates were rerun against the
+              current reform code using a dataset whose certified release has
+              not been verified. Aligned constituency weights and a certified
+              rerun are still pending.
+            </p>
 
             {selectedPolicies.length === 0 ? (
               <div className="empty-state">
@@ -415,17 +433,9 @@ function App() {
                   Select policies to analyse their impact on government revenue
                   and household incomes.
                 </p>
-                <div className="preset-buttons">
-                  {PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      className="preset-button"
-                      onClick={() => handlePresetClick(preset.policies)}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
-                </div>
+                <button className="preset-button" onClick={() => setSelectedPolicies(POLICIES.map((policy) => policy.id))}>
+                  Select all 2026 policies
+                </button>
               </div>
             ) : (
               <div className="results-container">
@@ -466,12 +476,22 @@ function App() {
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                       />
-                      {results.rawHouseholdScatter && (
+                      {results.rawHouseholdScatter && !selectedPolicies.some((id) =>
+                        LEGACY_POLICIES.some((policy) => policy.id === id),
+                      ) && (
                         <HouseholdChart
                           rawData={results.rawHouseholdScatter}
                           selectedPolicies={selectedPolicies}
                           selectedYear={distributionalYear}
                         />
+                      )}
+                      {selectedPolicies.some((id) =>
+                        LEGACY_POLICIES.some((policy) => policy.id === id),
+                      ) && (
+                        <div className="chart-container">
+                          <h3>Household sample</h3>
+                          <p>Comparable sampled households are unavailable for historical policy links.</p>
+                        </div>
                       )}
                     </div>
 

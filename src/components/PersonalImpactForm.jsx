@@ -15,6 +15,8 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
     fuel_spending: 1200,
     bus_spending: 800,
     capital_gains: 0,
+    region: "LONDON",
+    fuel_type: "PETROL",
   });
 
   const [childAgeInput, setChildAgeInput] = useState("");
@@ -138,6 +140,24 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
 
       <div className="form-section">
         <h3>Household composition</h3>
+        <div className="form-group">
+          <label htmlFor="region">UK region</label>
+          <select id="region" name="region" value={formData.region} onChange={handleChange}>
+            <option value="NORTH_EAST">North East</option>
+            <option value="NORTH_WEST">North West</option>
+            <option value="YORKSHIRE">Yorkshire and the Humber</option>
+            <option value="EAST_MIDLANDS">East Midlands</option>
+            <option value="WEST_MIDLANDS">West Midlands</option>
+            <option value="EAST_OF_ENGLAND">East of England</option>
+            <option value="LONDON">London</option>
+            <option value="SOUTH_EAST">South East</option>
+            <option value="SOUTH_WEST">South West</option>
+            <option value="WALES">Wales</option>
+            <option value="SCOTLAND">Scotland</option>
+            <option value="NORTHERN_IRELAND">Northern Ireland</option>
+          </select>
+          <span className="help-text">The £2 bus fare scenario applies from 2027 to English regions outside London. Region is a proxy for eligible services.</span>
+        </div>
         <div className="form-group checkbox-group">
           <label>
             <input
@@ -277,7 +297,14 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
               step="100"
             />
           </div>
-          <span className="help-text">Petrol/diesel for personal vehicles</span>
+          <span className="help-text">Petrol or diesel for personal vehicles, as selected below</span>
+        </div>
+        <div className="form-group">
+          <label htmlFor="fuel_type">Fuel type</label>
+          <select id="fuel_type" name="fuel_type" value={formData.fuel_type} onChange={handleChange}>
+            <option value="PETROL">Petrol</option>
+            <option value="DIESEL">Diesel</option>
+          </select>
         </div>
 
         <div className="form-group">
@@ -294,7 +321,7 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
               step="100"
             />
           </div>
-          <span className="help-text">Bus and coach fares before the cap reduction</span>
+          <span className="help-text">Bus and coach fares before the cap reduction; the model cannot identify participating journeys</span>
         </div>
       </div>
 

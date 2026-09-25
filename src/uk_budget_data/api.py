@@ -4,13 +4,12 @@ This module provides a REST API endpoint for calculating how Autumn Budget
 policies affect individual households over time.
 """
 
-import json
 import os
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from policyengine_uk.variables.household.demographic.geography import Region
 from pydantic import BaseModel, Field, field_validator
 
 from uk_budget_data.lifecycle_calculator import (
@@ -18,6 +17,7 @@ from uk_budget_data.lifecycle_calculator import (
     run_lifecycle_model,
 )
 from uk_budget_data.personal_impact import (
+    POLICY_IDS,
     HouseholdInput,
     PersonalImpactCalculator,
 )
@@ -88,6 +88,41 @@ class APIHouseholdInput(BaseModel):
 
     bus_spending: float = Field(default=0.0, ge=0)
     capital_gains: float = Field(default=0.0, ge=0)
+    region: str = Field(default="LONDON", description="UK household region")
+    fuel_type: str = Field(default="PETROL", description="PETROL or DIESEL")
+    policy_ids: list[str] | None = Field(
+        default=None, description="Featured policy IDs to calculate"
+    )
+
+    @field_validator("region")
+    @classmethod
+    def validate_region(cls, value):
+        """Accept only PolicyEngine-UK region identifiers."""
+        if value not in Region.__members__ or value == "UNKNOWN":
+            raise ValueError("Unknown UK region")
+        return value
+
+    @field_validator("fuel_type")
+    @classmethod
+    def validate_fuel_type(cls, value):
+        """Keep the spending input tied to its selected fuel."""
+        if value not in {"PETROL", "DIESEL"}:
+            raise ValueError("Fuel type must be PETROL or DIESEL")
+        return value
+
+    @field_validator("policy_ids")
+    @classmethod
+    def validate_policy_ids(cls, value):
+        """Reject unknown, repeated, or empty policy selections."""
+        if value is None:
+            return value
+        if (
+            not value
+            or len(value) != len(set(value))
+            or set(value) - set(POLICY_IDS)
+        ):
+            raise ValueError("Select one or more unique featured policies")
+        return value
 
     @field_validator("children_ages")
     @classmethod
@@ -119,6 +154,8 @@ def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
         rail_spending=api_input.rail_spending,
         bus_spending=api_input.bus_spending,
         capital_gains=api_input.capital_gains,
+        region=api_input.region,
+        fuel_type=api_input.fuel_type,
     )
 
 
@@ -156,34 +193,10 @@ async def calculate_personal_impact(data: APIHouseholdInput):
     try:
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
-        results = calculator.calculate(household_input)
-        return convert_to_native(results)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
-
-
-@app.post("/api/personal-impact/stream")
-async def calculate_personal_impact_stream(data: APIHouseholdInput):
-    """Stream personal impact results year-by-year using SSE."""
-    try:
-        household_input = convert_api_input_to_household(data)
-        calculator = get_calculator()
-
-        async def generate():
-            for event in calculator.calculate_streaming(household_input):
-                event_data = convert_to_native(event)
-                yield f"data: {json.dumps(event_data)}\n\n"
-
-        return StreamingResponse(
-            generate(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-            },
+        results = calculator.calculate(
+            household_input, policy_ids=data.policy_ids
         )
+        return convert_to_native(results)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

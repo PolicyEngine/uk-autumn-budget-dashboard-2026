@@ -181,3 +181,59 @@ class TestResultAggregation:
 
         assert "budgetary_impact" in aggregated
         assert len(aggregated["budgetary_impact"]) == 2
+
+    def test_featured_obr_values_are_blank_without_like_for_like_estimates(
+        self, tmp_path
+    ):
+        """Historical OBR figures stay available; featured comparisons are gated."""
+        from uk_budget_data.models import DataConfig, ReformResult
+        from uk_budget_data.pipeline import aggregate_results
+
+        inputs = tmp_path / "inputs"
+        inputs.mkdir()
+        pd.DataFrame(
+            [
+                {
+                    "reform_id": policy,
+                    "year": 2027,
+                    "obr_static_value": 1.5,
+                    "obr_post_behavioural_value": 1.0,
+                }
+                for policy in ("dividend_tax_increase_2pp", "two_child_limit")
+            ]
+        ).to_csv(inputs / "obr_estimates.csv", index=False)
+
+        def result(policy):
+            return ReformResult(
+                reform_id=policy,
+                reform_name=policy,
+                budgetary_impact=[
+                    {
+                        "reform_id": policy,
+                        "reform_name": policy,
+                        "year": 2027,
+                        "value": 0.5,
+                    }
+                ],
+                distributional_impact=[],
+                winners_losers=[],
+                metrics=[],
+                income_curve=[],
+                household_scatter=[],
+                constituency=[],
+                demographic_constituency=[],
+            )
+
+        comparison = aggregate_results(
+            [result("dividend_tax_increase_2pp"), result("two_child_limit")],
+            DataConfig(data_inputs_dir=inputs),
+        )["obr_comparison"].set_index("reform_id")
+        assert pd.isna(
+            comparison.loc[
+                "dividend_tax_increase_2pp", "obr_post_behavioural_value"
+            ]
+        )
+        assert (
+            comparison.loc["two_child_limit", "obr_post_behavioural_value"]
+            == 1.0
+        )

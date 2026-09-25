@@ -308,7 +308,10 @@ function PersonalImpactResults({ results }) {
           accounts for income tax, National Insurance, benefits, and other taxes
           and transfers. Children are automatically aged each year, and your
           income grows at the specified rate. Results compare the budget
-          policies against a pre-budget baseline scenario.
+          policies against their stated baseline scenarios. Bus fare savings
+          are represented as an imputed service benefit, not cash income;
+          household region proxies eligible bus services. Capital gains use
+          a simplified model input and cannot represent separate gain schedules.
         </p>
       </div>
     </div>

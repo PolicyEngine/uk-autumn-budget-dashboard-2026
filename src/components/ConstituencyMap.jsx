@@ -1,4 +1,4 @@
-import { POLICIES } from "../utils/policyConfig";
+import { CHART_POLICIES, LEGACY_POLICIES } from "../utils/policyConfig";
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { CHART_LOGO } from "../utils/chartLogo";
@@ -17,10 +17,10 @@ const CHART_DESCRIPTION =
 const FIXED_COLOR_EXTENT = 1;
 
 // Mapping from reform_id to display name
-const REFORM_NAMES = Object.fromEntries(POLICIES.map((p) => [p.id, p.name]));
+const REFORM_NAMES = Object.fromEntries(CHART_POLICIES.map((p) => [p.id, p.name]));
+const HISTORICAL_MAP_IDS = new Set(LEGACY_POLICIES.map((p) => p.id));
 
-// Format year for display (e.g., 2026 -> "2026-27")
-const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+const formatYearRange = (year) => String(year);
 
 export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 2029 }) {
   // Use prop for year selection (shared slider in parent)
@@ -438,13 +438,16 @@ export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 
     return <div className="constituency-loading">Loading map...</div>;
   }
 
-  // Don't render if no policy is selected or no aggregated data
-  if (!selectedPolicies.length || !aggregatedData.length) {
+  if (!selectedPolicies.length) {
     return null;
   }
 
-  if (!loading && !aggregatedData.length) {
-    return <div className="chart-container"><h3>Constituency-level impacts</h3><p>Constituency estimates for these policies are not available. National results are shown above; local estimates require constituency weights.</p></div>;
+  const hasCompleteCoverage = selectedPolicies.every((policyId) =>
+    HISTORICAL_MAP_IDS.has(policyId) &&
+    rawData.some((row) => row.reform_id === policyId && row.year === selectedYear),
+  );
+  if (!hasCompleteCoverage || !aggregatedData.length) {
+    return <div className="chart-container"><h3>Constituency-level impacts</h3><p>Complete constituency estimates for the selected policies are not available. National results are shown above; local estimates require verified constituency weights.</p></div>;
   }
 
   return (

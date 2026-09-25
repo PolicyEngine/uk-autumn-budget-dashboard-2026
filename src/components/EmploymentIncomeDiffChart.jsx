@@ -15,13 +15,12 @@ import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
 
-// Format year for display (e.g., 2026 -> "2026-27")
-const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+const formatYearRange = (year) => String(year);
 
 // Chart metadata for export
 const CHART_TITLE = "Net income change";
 const getChartDescription = () =>
-  `This chart shows the change in household net income for a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.`;
+  `This chart shows the change in modelled resources for a London household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension. The household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. The £2 bus cap does not apply to London.`;
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -162,7 +161,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
           <p className="chart-description">
             This chart shows the change in household net income for a household
             with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-            primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.
+            primary earner contributes £10,000 annually to their pension. This illustrative London household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. The £2 bus cap does not apply to London.
           </p>
         </div>
         <button

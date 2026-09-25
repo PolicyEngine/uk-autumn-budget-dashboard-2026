@@ -284,7 +284,14 @@ def run_generate(parsed: argparse.Namespace) -> int:
                 "\n[bold]Running household scatter sampling...[/bold]"
             )
             result = subprocess.run(
-                [sys.executable, str(sampling_script)],
+                [
+                    sys.executable,
+                    str(sampling_script),
+                    "--input",
+                    str(config.output_dir / "household_scatter_full.csv"),
+                    "--output",
+                    str(config.output_dir / "household_scatter.csv"),
+                ],
                 capture_output=True,
                 text=True,
             )

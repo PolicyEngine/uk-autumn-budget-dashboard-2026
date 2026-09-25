@@ -2,6 +2,7 @@
 
 import os
 
+import numpy as np
 import pytest
 from policyengine_uk.system import system
 
@@ -570,8 +571,8 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_all_three_measures_on_dashboard_list(self):
-        """The 2026 measures are the ones the dashboard offers."""
+    def test_all_seven_measures_on_dashboard_list(self):
+        """The dashboard offers three candidates and four carried-over measures."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
         ids = {r.id for r in get_autumn_budget_2026_reforms()}
@@ -579,6 +580,10 @@ class TestAutumnBudget2026Reforms:
             "cgt_equalisation",
             "fuel_duty_rise_cancellation",
             "bus_fare_cap",
+            "threshold_freeze_extension",
+            "dividend_tax_increase_2pp",
+            "savings_tax_increase_2pp",
+            "property_tax_increase_2pp",
         } == ids
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
@@ -624,13 +629,84 @@ class TestAutumnBudget2026Reforms:
         ]:
             assert not any(absent in key for key in changes), absent
 
-    def test_fuel_duty_rise_cancellation_holds_2026_rate(self):
-        """The rate is held flat rather than stepping up in January 2027."""
+    def test_fuel_duty_rise_cancellation_uses_hmrc_schedule(self):
+        """Both scenarios override every month, including the stale April 2027 interval."""
         from uk_budget_data.reforms import get_reform
 
         changes = get_reform("fuel_duty_rise_cancellation").parameter_changes
         rates = changes["gov.hmrc.fuel_duty.petrol_and_diesel"]
-        assert set(rates.values()) == {0.5345}
+        assert len(rates) == 60
+        assert set(rates.values()) == {0.5295}
+        baseline = get_reform(
+            "fuel_duty_rise_cancellation"
+        ).baseline_parameter_changes["gov.hmrc.fuel_duty.petrol_and_diesel"]
+        assert baseline["2026-01-01"] == 0.5295
+        assert baseline["2027-01-01"] == 0.5595
+        assert baseline["2027-02-01"] == 0.5595
+        assert baseline["2027-03-01"] == 0.5795
+        assert baseline["2027-04-01"] == 0.5795
+        assert baseline["2027-12-01"] == 0.5795
+        assert baseline["2028-01-01"] == 0.5795
+
+    def test_source_income_tax_baselines_start_in_first_effective_year(self):
+        """Annual tax outputs sample the tax year beginning in the model year."""
+        from uk_budget_data.reforms import get_reform
+
+        for policy_id, path in (
+            ("savings_tax_increase_2pp", "savings"),
+            ("property_tax_increase_2pp", "property"),
+        ):
+            changes = get_reform(policy_id).baseline_parameter_changes
+            assert (
+                changes[f"gov.hmrc.income_tax.rates.{path}.basic"]["2027"]
+                == 0.20
+            )
+        assert (
+            get_reform(
+                "dividend_tax_increase_2pp"
+            ).baseline_simulation_modifier
+            is not None
+        )
+
+    @pytest.mark.parametrize(
+        "policy_id, year, income_variable",
+        [
+            ("dividend_tax_increase_2pp", 2026, "dividend_income"),
+            ("savings_tax_increase_2pp", 2027, "savings_interest_income"),
+            ("property_tax_increase_2pp", 2027, "property_income"),
+        ],
+    )
+    def test_source_income_tax_population_scenario_has_first_year_effect(
+        self, policy_id, year, income_variable
+    ):
+        """The pipeline scenario must apply a tax change in its first model year."""
+        from policyengine_uk import Simulation
+
+        from uk_budget_data.reforms import get_reform
+
+        situation = {
+            "people": {
+                "adult": {
+                    "age": {year: 35},
+                    "employment_income": {year: 60_000},
+                    income_variable: {year: 10_000},
+                }
+            },
+            "benunits": {"benunit": {"members": ["adult"]}},
+            "households": {"household": {"members": ["adult"]}},
+        }
+        reform = get_reform(policy_id)
+        baseline = Simulation(
+            situation=situation, scenario=reform.to_baseline_scenario()
+        )
+        changed = Simulation(
+            situation=situation, scenario=reform.to_scenario()
+        )
+        assert (
+            changed.calculate("household_net_income", year)[0]
+            - baseline.calculate("household_net_income", year)[0]
+            < 0
+        )
 
     def test_bus_fare_cap_uses_a_simulation_modifier(self):
         """The cap is a spend reduction, not a parameter change."""
@@ -639,6 +715,34 @@ class TestAutumnBudget2026Reforms:
         reform = get_reform("bus_fare_cap")
         assert reform.simulation_modifier is not None
         assert not reform.parameter_changes
+
+    def test_bus_fare_cap_starts_in_2027_outside_london(self):
+        """Only English households outside London receive the 2027 proxy."""
+        from uk_budget_data.reforms import _bus_fare_cap_modifier
+
+        class FareSimulation:
+            def __init__(self):
+                self.inputs = {}
+
+            def calculate(self, variable, period):
+                if variable == "region":
+                    return np.array(["NORTH_EAST", "LONDON", "WALES"])
+                if variable == "bus_fare_spending":
+                    return np.array([800.0, 800.0, 800.0])
+                return np.zeros(3)
+
+            def set_input(self, variable, period, values):
+                self.inputs[(variable, period)] = values
+
+        sim = FareSimulation()
+        _bus_fare_cap_modifier(sim)
+        assert not any(year == 2026 for _, year in sim.inputs)
+        np.testing.assert_allclose(
+            sim.inputs[("bus_fare_spending", 2027)], [700, 800, 800]
+        )
+        np.testing.assert_allclose(
+            sim.inputs[("bus_subsidy_spending", 2027)], [100, 0, 0]
+        )
 
     def test_personal_impact_ids_are_all_on_the_dashboard(self):
         """POLICY_IDS must stay a subset of the dashboard reform list.
