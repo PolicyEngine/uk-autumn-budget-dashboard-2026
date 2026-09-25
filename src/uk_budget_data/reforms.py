@@ -995,12 +995,17 @@ def _bus_fare_cap_modifier(sim: Simulation) -> Simulation:
     second would leave consumption overstated.
     """
     for year in DEFAULT_YEARS:
-        fares = sim.calculate("bus_fare_spending", period=year).values
+        # np.asarray, not .values: a Microsimulation returns a MicroSeries but
+        # a single-household Simulation (the personal impact calculator)
+        # returns a bare ndarray, and this modifier runs under both.
+        fares = np.asarray(sim.calculate("bus_fare_spending", period=year))
         saving = fares * BUS_FARE_CAP_REDUCTION
 
         sim.set_input("bus_fare_spending", year, fares - saving)
 
-        subsidy = sim.calculate("bus_subsidy_spending", period=year).values
+        subsidy = np.asarray(
+            sim.calculate("bus_subsidy_spending", period=year)
+        )
         sim.set_input("bus_subsidy_spending", year, subsidy + saving)
 
     return sim

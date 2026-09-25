@@ -639,3 +639,15 @@ class TestAutumnBudget2026Reforms:
         reform = get_reform("bus_fare_cap")
         assert reform.simulation_modifier is not None
         assert not reform.parameter_changes
+
+    def test_personal_impact_ids_are_all_on_the_dashboard(self):
+        """POLICY_IDS must stay a subset of the dashboard reform list.
+
+        The calculator filters the reform list by these ids, so an id that
+        drifts out of that list disappears from the calculator silently.
+        """
+        from uk_budget_data.personal_impact import POLICY_IDS
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+        available = {r.id for r in get_autumn_budget_2026_reforms()}
+        assert set(POLICY_IDS) <= available, set(POLICY_IDS) - available

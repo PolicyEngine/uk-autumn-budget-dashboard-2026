@@ -35,15 +35,18 @@ class HouseholdInput:
 YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 
 # Policies to analyse (excluding combined which would double-count)
+# The Autumn Budget 2026 measures offered by the personal impact calculator.
+# Must stay a subset of get_autumn_budget_2026_reforms(), which the calculator
+# filters by these ids; an id listed here but absent from that list silently
+# disappears from the calculator rather than erroring.
 POLICY_IDS = [
-    "two_child_limit",
-    "fuel_duty_freeze",
-    "rail_fares_freeze",
+    "cgt_equalisation",
+    "fuel_duty_rise_cancellation",
+    "bus_fare_cap",
     "threshold_freeze_extension",
     "dividend_tax_increase_2pp",
     "savings_tax_increase_2pp",
     "property_tax_increase_2pp",
-    "salary_sacrifice_cap",
 ]
 
 
