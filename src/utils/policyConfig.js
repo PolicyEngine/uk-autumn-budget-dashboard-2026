@@ -1,3 +1,15 @@
+export const POLICIES = [
+  { id: "cgt_equalisation", name: "CGT equalisation with income tax", color: "#B45309",
+    description: "Align main capital gains tax rates with income tax",
+    explanation: "Models main-schedule CGT rates of 20%, 40% and 45%, retaining the £3,000 allowance and allowing for reduced realisations. Residential property, carried interest and BADR changes are not included." },
+  { id: "fuel_duty_rise_cancellation", name: "Cancel the fuel duty rise", color: "#0D9488",
+    description: "Hold the model’s 2026 fuel duty rate",
+    explanation: "Holds the bundled model’s 2026 rate of 53.45p per litre instead of its scheduled 59.25p rate in 2027 and later uprating. These are the model’s rates; this microsimulation is not benchmarked to HMRC fuel clearance totals." },
+  { id: "bus_fare_cap", name: "£2 bus fare cap", color: "#2DD4BF",
+    description: "Restore the £2 cap from £3",
+    explanation: "Models a 12.5% reduction in bus and coach fare spending. Savings are included in household resources through bus subsidy spending. Later years assume the policy continues; funding beyond 2027 is uncertain." },
+];
+
 /**
  * Shared policy configuration for colors and labels across all charts.
  *
@@ -10,6 +22,7 @@
 // Includes all name variations used across different charts
 // Colors ordered from darkest to lightest within each category for visual consistency
 export const POLICY_COLORS = {
+  ...Object.fromEntries(POLICIES.map((p) => [p.name, p.color])),
   // COSTS to treasury (good for households - teal/green spectrum, darkest to lightest)
   "2 child limit repeal": "#0D9488", // Teal 600 (darkest)
   "Fuel duty freeze extension": "#14B8A6", // Teal 500
@@ -29,6 +42,7 @@ export const POLICY_COLORS = {
 // Policy colors by API key (used in lifecycle calculator and personal impact)
 // Colors match POLICY_COLORS for consistency
 export const POLICY_COLORS_BY_KEY = {
+  ...Object.fromEntries(POLICIES.map((p) => [p.id, p.color])),
   // COSTS to treasury (good for households - teal/green spectrum, darkest to lightest)
   two_child_limit: "#0D9488", // Teal 600 (darkest)
   impact_two_child_limit: "#0D9488",
@@ -51,20 +65,7 @@ export const POLICY_COLORS_BY_KEY = {
 };
 
 // Order: revenue raisers first (positive for gov), then costs (negative for gov)
-export const ALL_POLICY_NAMES = [
-  // Revenue raisers (positive for gov)
-  "Threshold freeze extension",
-  "Dividend tax increase (+2pp)",
-  "Savings income tax increase (+2pp)",
-  "Property income tax increase (+2pp)",
-  "Salary sacrifice cap",
-  "Freeze student loan repayment thresholds",
-  // Costs to treasury (negative for gov)
-  "2 child limit repeal",
-  "Fuel duty freeze extension",
-  "Rail fares freeze",
-  "Zero-rate VAT on energy",
-];
+export const ALL_POLICY_NAMES = POLICIES.map((policy) => policy.name);
 
 // Lifecycle calculator reform configuration
 // Note: In lifecycle view, we show impact FROM HOUSEHOLD PERSPECTIVE
@@ -108,16 +109,7 @@ export const LIFECYCLE_REFORMS = [
 ];
 
 // Personal impact policy order and colors
-export const PERSONAL_IMPACT_POLICY_ORDER = [
-  "two_child_limit",
-  "fuel_duty_freeze",
-  "rail_fares_freeze",
-  "threshold_freeze_extension",
-  "dividend_tax_increase_2pp",
-  "savings_tax_increase_2pp",
-  "property_tax_increase_2pp",
-  "salary_sacrifice_cap",
-];
+export const PERSONAL_IMPACT_POLICY_ORDER = POLICIES.map((policy) => policy.id);
 
 // Helper to get color by policy key
 export function getPolicyColor(key) {

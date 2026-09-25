@@ -91,6 +91,7 @@ def sample_scatter_data(
         first_year_data["household_id"].isin(common_households)
     ].copy()
 
+    common_df = common_df.drop_duplicates("household_id")
     n_common = len(common_df)
     if n_common <= sample_size:
         sampled_ids = set(common_df["household_id"].values)

@@ -1058,16 +1058,10 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(),  # Combined first
             # Autumn Budget 2026 candidate measures
             _create_cgt_equalisation(),
             _create_fuel_duty_rise_cancellation(),
             _create_bus_fare_cap(),
-            # Carried over: still live questions for 2026
-            _create_threshold_freeze_extension(),
-            _create_dividend_tax_increase(),
-            _create_savings_tax_increase(),
-            _create_property_tax_increase(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
@@ -1079,6 +1073,11 @@ def _get_all_reforms() -> list[Reform]:
         # Enacted or superseded 2025 measures stay reachable by id so old
         # shared URLs keep resolving, but are off the 2026 dashboard list.
         _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
+            _create_combined_autumn_budget_reform(),
+            _create_threshold_freeze_extension(),
+            _create_dividend_tax_increase(),
+            _create_savings_tax_increase(),
+            _create_property_tax_increase(),
             _create_two_child_limit_repeal(),
             _create_fuel_duty_freeze(),
             _create_rail_fares_freeze(),

@@ -26,10 +26,6 @@ export default function RootLayout({
   return (
     <html lang="en-GB">
       <head>
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/@policyengine/design-system/dist/tokens.css"
-        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

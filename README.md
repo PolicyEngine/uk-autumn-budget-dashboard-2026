@@ -31,13 +31,27 @@ pip install -e ".[dev]"
 
 ### Development
 
-Run the development server:
+Start the household API in one terminal:
 
 ```bash
-npm run dev
+.venv/bin/python -m uvicorn uk_budget_data.api:app --host 127.0.0.1 --port 8001
 ```
 
-The dashboard will be available at `http://localhost:5173`
+Start the frontend in another terminal:
+
+```bash
+NEXT_PUBLIC_BASE_PATH="" npm run dev -- --hostname 127.0.0.1 --port 3001
+# With Bun instead of npm:
+NEXT_PUBLIC_BASE_PATH="" bun --bun node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3001
+```
+
+Open `http://localhost:3001`. The frontend proxies personal calculations to
+`http://127.0.0.1:8001` (override with server-side `BUDGET_API_URL`).
+
+The dashboard offers CGT equalisation, fuel duty rise cancellation and the £2
+bus fare cap, with checked-in national results for 2026–2030. See
+[the data notes](public/data/README.md) for generation details and the missing
+constituency weights. The household calculator uses `policyengine.py`.
 
 ### Building for production
 

@@ -14,24 +14,11 @@ import {
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { POLICY_COLORS, POLICIES, ALL_POLICY_NAMES } from "../utils/policyConfig";
 import "./DistributionalChart.css";
 import "./ChartExport.css";
 
 // Order for distributional chart: good for households first, then bad
-const ALL_POLICY_NAMES = [
-  // Good for households (positive, teal/green)
-  "2 child limit repeal",
-  "Fuel duty freeze extension",
-  "Rail fares freeze",
-  // Bad for households (negative, amber)
-  "Threshold freeze extension",
-  "Dividend tax increase (+2pp)",
-  "Savings income tax increase (+2pp)",
-  "Property income tax increase (+2pp)",
-  "Freeze student loan repayment thresholds",
-  "NICs on salary sacrifice (>£2k)",
-];
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -51,26 +38,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   };
 
   // Build chart data for internal year
-  const POLICIES = [
-    { id: "two_child_limit", name: "2 child limit repeal" },
-    { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-    { id: "rail_fares_freeze", name: "Rail fares freeze" },
-    { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-    { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-    {
-      id: "savings_tax_increase_2pp",
-      name: "Savings income tax increase (+2pp)",
-    },
-    {
-      id: "property_tax_increase_2pp",
-      name: "Property income tax increase (+2pp)",
-    },
-    {
-      id: "freeze_student_loan_thresholds",
-      name: "Freeze student loan repayment thresholds",
-    },
-    { id: "salary_sacrifice_cap", name: "NICs on salary sacrifice (>£2k)" },
-  ];
 
   const decileOrder = [
     "1st",

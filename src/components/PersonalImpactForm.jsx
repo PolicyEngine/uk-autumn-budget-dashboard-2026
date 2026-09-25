@@ -13,7 +13,8 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
     dividend_income: 0,
     pension_contributions_salary_sacrifice: 0,
     fuel_spending: 1200,
-    rail_spending: 0,
+    bus_spending: 800,
+    capital_gains: 0,
   });
 
   const [childAgeInput, setChildAgeInput] = useState("");
@@ -64,6 +65,15 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
 
   return (
     <form className="personal-impact-form" onSubmit={handleSubmit}>
+      <div className="form-section">
+        <h3>Capital gains</h3>
+        <div className="form-group">
+          <label htmlFor="capital_gains">Annual gains before tax and behavioural response</label>
+          <div className="input-with-prefix"><span className="prefix">£</span>
+            <input type="number" id="capital_gains" name="capital_gains" min="0" step="1000" value={formData.capital_gains} onChange={handleNumberChange} />
+          </div>
+        </div>
+      </div>
       <div className="form-section">
         <h3>Employment income</h3>
         <div className="form-group">
@@ -271,20 +281,20 @@ function PersonalImpactForm({ onSubmit, isLoading }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="rail_spending">Annual rail spending</label>
+          <label htmlFor="bus_spending">Annual bus spending</label>
           <div className="input-with-prefix">
             <span className="prefix">£</span>
             <input
               type="number"
-              id="rail_spending"
-              name="rail_spending"
-              value={formData.rail_spending}
+              id="bus_spending"
+              name="bus_spending"
+              value={formData.bus_spending}
               onChange={handleNumberChange}
               min="0"
               step="100"
             />
           </div>
-          <span className="help-text">Train tickets and rail fares</span>
+          <span className="help-text">Bus and coach fares before the cap reduction</span>
         </div>
       </div>
 

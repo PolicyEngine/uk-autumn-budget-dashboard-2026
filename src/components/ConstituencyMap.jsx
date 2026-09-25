@@ -1,3 +1,4 @@
+import { POLICIES } from "../utils/policyConfig";
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { CHART_LOGO } from "../utils/chartLogo";
@@ -16,18 +17,7 @@ const CHART_DESCRIPTION =
 const FIXED_COLOR_EXTENT = 1;
 
 // Mapping from reform_id to display name
-const REFORM_NAMES = {
-  two_child_limit: "2 child limit repeal",
-  fuel_duty_freeze: "Fuel duty freeze extension",
-  rail_fares_freeze: "Rail fares freeze",
-  threshold_freeze_extension: "Threshold freeze extension",
-  dividend_tax_increase_2pp: "Dividend tax increase (+2pp)",
-  savings_tax_increase_2pp: "Savings tax increase (+2pp)",
-  property_tax_increase_2pp: "Property tax increase (+2pp)",
-  freeze_student_loan_thresholds: "Student loan threshold freeze",
-  salary_sacrifice_cap: "Salary sacrifice NICs cap",
-  autumn_budget_2026_combined: "Autumn Budget 2026 (combined)",
-};
+const REFORM_NAMES = Object.fromEntries(POLICIES.map((p) => [p.id, p.name]));
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -451,6 +441,10 @@ export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 
   // Don't render if no policy is selected or no aggregated data
   if (!selectedPolicies.length || !aggregatedData.length) {
     return null;
+  }
+
+  if (!loading && !aggregatedData.length) {
+    return <div className="chart-container"><h3>Constituency-level impacts</h3><p>Constituency estimates for these policies are not available. National results are shown above; local estimates require constituency weights.</p></div>;
   }
 
   return (

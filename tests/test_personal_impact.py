@@ -304,3 +304,29 @@ class TestAPIIntegration:
         assert household.property_income == 5000
         assert household.fuel_spending == 1200
         assert household.rail_spending == 500
+
+
+def test_candidate_inputs_produce_real_household_impacts():
+    """The form's new inputs must reach policyengine.py, not disappear."""
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(
+            employment_income=50000,
+            capital_gains=10000,
+            fuel_spending=1200,
+            bus_spending=800,
+        )
+    )
+    assert set(result["policies"]) == {
+        "cgt_equalisation",
+        "fuel_duty_rise_cancellation",
+        "bus_fare_cap",
+    }
+    impacts = {
+        key: value["years"][2027]["net_income_change"]
+        for key, value in result["policies"].items()
+    }
+    assert impacts["cgt_equalisation"] < 0
+    assert impacts["fuel_duty_rise_cancellation"] > 0
+    assert impacts["bus_fare_cap"] == pytest.approx(100, abs=0.05)
+    for policy in result["policies"].values():
+        assert policy["years"][2025]["net_income_change"] == 0

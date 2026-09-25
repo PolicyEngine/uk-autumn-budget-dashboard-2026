@@ -579,7 +579,7 @@ class TestAutumnBudget2026Reforms:
             "cgt_equalisation",
             "fuel_duty_rise_cancellation",
             "bus_fare_cap",
-        } <= ids
+        } == ids
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
         """Shared URLs from the 2025 dashboard keep working."""

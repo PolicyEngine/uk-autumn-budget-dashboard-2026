@@ -21,7 +21,7 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 // Chart metadata for export
 const CHART_TITLE = "Household net income analysis";
 const getChartDescription = (year) =>
-  `This chart models a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3) in ${formatYearRange(year)}. The primary earner contributes £10,000 annually to their pension. Pre-Autumn Budget shows policy without reforms, Post-Autumn Budget shows impact after selected changes.`;
+  `This chart models a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3) in ${formatYearRange(year)}. The primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. Pre-Autumn Budget shows policy without reforms, Post-Autumn Budget shows impact after selected changes.`;
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -149,7 +149,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
           <p className="chart-description">
             This chart models a household with 2 adults (both age 40) and 3
             children (ages 7, 5, and 3) in {formatYearRange(selectedYear)}. The primary earner
-            contributes £10,000 annually to their pension. Pre-Autumn Budget shows
+            contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. Pre-Autumn Budget shows
             policy without reforms, Post-Autumn Budget shows impact after selected changes.
           </p>
         </div>

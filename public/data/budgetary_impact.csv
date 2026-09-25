@@ -1,51 +1,16 @@
 reform_id,reform_name,year,value
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,-6.6170900474099215
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,-4.5527220448090775
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,0.4682203384797998
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,8.086967888167948
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,12.353354834465314
-two_child_limit,2 child limit repeal,2026,-2.9481590085316145
-two_child_limit,2 child limit repeal,2027,-3.142898714547965
-two_child_limit,2 child limit repeal,2028,-3.4207809537560925
-two_child_limit,2 child limit repeal,2029,-3.5601392994046113
-two_child_limit,2 child limit repeal,2030,-3.7167508358536523
-fuel_duty_freeze,Fuel duty freeze extension,2026,-3.523930069910573
-fuel_duty_freeze,Fuel duty freeze extension,2027,-1.387856072038301
-fuel_duty_freeze,Fuel duty freeze extension,2028,-1.210588217168649
-fuel_duty_freeze,Fuel duty freeze extension,2029,-0.5662358025160948
-fuel_duty_freeze,Fuel duty freeze extension,2030,-0.7166734426150546
-rail_fares_freeze,Rail fares freeze,2026,-0.14500041154898766
-rail_fares_freeze,Rail fares freeze,2027,-0.15499998783940774
-rail_fares_freeze,Rail fares freeze,2028,-0.15999941088405886
-rail_fares_freeze,Rail fares freeze,2029,-0.16500032185549326
-rail_fares_freeze,Rail fares freeze,2030,-0.1500021392496534
-threshold_freeze_extension,Threshold freeze extension,2026,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,0.0
-threshold_freeze_extension,Threshold freeze extension,2028,3.7418672257068746
-threshold_freeze_extension,Threshold freeze extension,2029,7.771802193818188
-threshold_freeze_extension,Threshold freeze extension,2030,12.123150835021688
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,1.425336012601322
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1.4715769704674821
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1.5182932507637588
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1.5675249869077053
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,0.5017532922953072
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,0.5310650706614664
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,0.565351877669344
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,0.7546326806970802
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,0.7814852627404638
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,0.8078807589533302
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,0.13303176591335356
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,0.26243847221629024
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,0.3995716624683384
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,0.4106523725930223
-salary_sacrifice_cap,Salary sacrifice cap,2026,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2029,2.775377330000371
-salary_sacrifice_cap,Salary sacrifice cap,2030,2.9093641105691583
+cgt_equalisation,CGT equalisation with income tax,2026,4.126349935064866
+cgt_equalisation,CGT equalisation with income tax,2027,4.290880245508051
+cgt_equalisation,CGT equalisation with income tax,2028,4.45485007485673
+cgt_equalisation,CGT equalisation with income tax,2029,4.619773908411221
+cgt_equalisation,CGT equalisation with income tax,2030,4.801425800666753
+fuel_duty_rise_cancellation,Fuel duty rise cancellation,2026,0.0
+fuel_duty_rise_cancellation,Fuel duty rise cancellation,2027,-2.532853264218993
+fuel_duty_rise_cancellation,Fuel duty rise cancellation,2028,-3.424753591953941
+fuel_duty_rise_cancellation,Fuel duty rise cancellation,2029,-4.03748425730802
+fuel_duty_rise_cancellation,Fuel duty rise cancellation,2030,-4.5399418812144035
+bus_fare_cap,£2 bus fare cap,2026,-0.5166023638760601
+bus_fare_cap,£2 bus fare cap,2027,-0.5288859492369472
+bus_fare_cap,£2 bus fare cap,2028,-0.5416218982240023
+bus_fare_cap,£2 bus fare cap,2029,-0.5548841021042957
+bus_fare_cap,£2 bus fare cap,2030,-0.5685298774634

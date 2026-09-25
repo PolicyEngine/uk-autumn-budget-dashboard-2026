@@ -4,9 +4,10 @@ This module calculates how Autumn Budget 2026 policies affect individual
 households over time (2025-2029).
 """
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Callable
 
+import policyengine as pe
 from policyengine_uk import Simulation
 
 from uk_budget_data.reforms import (
@@ -29,6 +30,8 @@ class HouseholdInput:
     pension_contributions_salary_sacrifice: float = 0.0
     fuel_spending: float = 0.0
     rail_spending: float = 0.0
+    bus_spending: float = 0.0
+    capital_gains: float = 0.0
 
 
 # Years to calculate (2025 is base year, 2026-2029 are policy years)
@@ -43,10 +46,6 @@ POLICY_IDS = [
     "cgt_equalisation",
     "fuel_duty_rise_cancellation",
     "bus_fare_cap",
-    "threshold_freeze_extension",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
 ]
 
 
@@ -225,143 +224,98 @@ class PersonalImpactCalculator:
         }
 
     def calculate(self, household: HouseholdInput) -> dict:
-        """Calculate the impact of all policies on a household.
+        """Calculate the three candidate policies using policyengine.py."""
+        from uk_budget_data.reforms import BUS_FARE_CAP_REDUCTION
 
-        Args:
-            household: Household input parameters.
-
-        Returns:
-            Dictionary with year-by-year breakdown per policy.
-        """
         results = {
-            "household_input": {
-                "employment_income": household.employment_income,
-                "income_growth_rate": household.income_growth_rate,
-                "is_married": household.is_married,
-                "partner_income": household.partner_income,
-                "children_ages": household.children_ages,
-                "property_income": household.property_income,
-                "savings_income": household.savings_income,
-                "dividend_income": household.dividend_income,
-                "pension_contributions_salary_sacrifice": (
-                    household.pension_contributions_salary_sacrifice
-                ),
-                "fuel_spending": household.fuel_spending,
-                "rail_spending": household.rail_spending,
-            },
+            "household_input": asdict(household),
             "years": {},
             "policies": {},
-            "totals": {
-                "by_year": {},
-                "cumulative": 0,
-            },
+            "totals": {"by_year": {}, "cumulative": 0},
         }
-
-        # Calculate baseline for each year
-        baselines = {}
-        for year in YEARS:
-            situation = build_situation(household, year)
-            baseline_sim = create_simulation(situation, year)
-            baselines[year] = calculate_household_metrics(baseline_sim, year)
-            results["years"][year] = {
-                "baseline": baselines[year],
-                "policies": {},
-            }
-
-        # Calculate impact of each policy
-        for policy_id in POLICY_IDS:
-            reform = self.reforms.get(policy_id)
-            if not reform:
-                continue
-
-            policy_results = {
+        for policy_id, reform in self.reforms.items():
+            results["policies"][policy_id] = {
                 "name": reform.name,
                 "description": reform.description,
                 "years": {},
                 "total_impact": 0,
             }
 
-            for year in YEARS:
-                situation = build_situation(household, year)
-
-                # For policies with custom baselines, we need to compare
-                # the reform scenario vs the baseline scenario
-                if reform.has_custom_baseline():
-                    # Create baseline scenario (what would have happened
-                    # without the budget)
-                    baseline_scenario = reform.to_baseline_scenario()
-                    if baseline_scenario:
-                        baseline_sim = create_simulation(
-                            situation,
-                            year,
-                            reform_param_changes=(
-                                reform.baseline_parameter_changes
-                            ),
-                            simulation_modifier=(
-                                reform.baseline_simulation_modifier
-                            ),
-                        )
-                    else:
-                        baseline_sim = create_simulation(situation, year)
-
-                    # Create reform scenario (the budget policy)
-                    reform_sim = create_simulation(
-                        situation,
-                        year,
-                        reform_param_changes=reform.parameter_changes,
-                        simulation_modifier=reform.simulation_modifier,
-                    )
-                else:
-                    # Standard reform: compare against current law baseline
-                    baseline_sim = create_simulation(situation, year)
-                    reform_sim = create_simulation(
-                        situation,
-                        year,
-                        reform_param_changes=reform.parameter_changes,
-                        simulation_modifier=reform.simulation_modifier,
-                    )
-
-                baseline_metrics = calculate_household_metrics(
-                    baseline_sim, year
-                )
-                reform_metrics = calculate_household_metrics(reform_sim, year)
-
-                # Calculate the impact (positive = household gains)
-                net_income_change = (
-                    reform_metrics["household_net_income"]
-                    - baseline_metrics["household_net_income"]
-                )
-
-                policy_results["years"][year] = {
-                    "baseline_net_income": baseline_metrics[
-                        "household_net_income"
-                    ],
-                    "reformed_net_income": reform_metrics[
-                        "household_net_income"
-                    ],
-                    "net_income_change": net_income_change,
-                    "baseline_metrics": baseline_metrics,
-                    "reformed_metrics": reform_metrics,
-                }
-
-                policy_results["total_impact"] += net_income_change
-                results["years"][year]["policies"][policy_id] = {
-                    "net_income_change": net_income_change
-                }
-
-            results["policies"][policy_id] = policy_results
-
-        # Calculate totals
         for year in YEARS:
-            year_total = sum(
-                results["policies"][pid]["years"][year]["net_income_change"]
-                for pid in POLICY_IDS
-                if pid in results["policies"]
-            )
-            results["totals"]["by_year"][year] = year_total
+            situation = build_situation(household, year)
+            people = [
+                {key: values[year] for key, values in person.items()}
+                for person in situation["people"].values()
+            ]
+            people[0][
+                "capital_gains_before_response"
+            ] = household.capital_gains
+            household_inputs = {
+                "region": "LONDON",
+                "petrol_spending": household.fuel_spending,
+                "diesel_spending": 0,
+                "bus_fare_spending": household.bus_spending,
+            }
 
+            def metrics(parameters=None, bus_saving=0):
+                inputs = dict(household_inputs)
+                if bus_saving:
+                    inputs["bus_fare_spending"] -= bus_saving
+                    inputs["bus_subsidy_spending"] = bus_saving
+                result = pe.uk.calculate_household(
+                    people=people,
+                    household=inputs,
+                    year=year,
+                    reform=parameters or None,
+                    extra_variables=["household_net_income"],
+                )
+                return {
+                    "household_net_income": float(
+                        result.household.household_net_income
+                    )
+                }
+
+            baseline = metrics()
+            results["years"][year] = {"baseline": baseline, "policies": {}}
+            for policy_id, reform in self.reforms.items():
+                parameters = {
+                    path: values[str(year)]
+                    for path, values in (
+                        reform.parameter_changes or {}
+                    ).items()
+                    if str(year) in values
+                }
+                saving = (
+                    household.bus_spending * BUS_FARE_CAP_REDUCTION
+                    if policy_id == "bus_fare_cap" and year >= 2026
+                    else 0
+                )
+                reformed = (
+                    metrics(parameters, saving)
+                    if parameters or saving
+                    else baseline
+                )
+                change = (
+                    reformed["household_net_income"]
+                    - baseline["household_net_income"]
+                )
+                policy = results["policies"][policy_id]
+                policy["years"][year] = {
+                    "baseline_net_income": baseline["household_net_income"],
+                    "reformed_net_income": reformed["household_net_income"],
+                    "net_income_change": change,
+                    "baseline_metrics": baseline,
+                    "reformed_metrics": reformed,
+                }
+                policy["total_impact"] += change
+                results["years"][year]["policies"][policy_id] = {
+                    "net_income_change": change
+                }
+            results["totals"]["by_year"][year] = sum(
+                p["years"][year]["net_income_change"]
+                for p in results["policies"].values()
+            )
         results["totals"]["cumulative"] = sum(
             results["totals"]["by_year"].values()
         )
-
         return results

@@ -21,7 +21,7 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 // Chart metadata for export
 const CHART_TITLE = "Net income change";
 const getChartDescription = () =>
-  `This chart shows the change in household net income for a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension.`;
+  `This chart shows the change in household net income for a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.`;
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -137,7 +137,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
         <p className="chart-description">
           This chart shows the change in household net income for a household
           with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-          primary earner contributes £10,000 annually to their pension.
+          primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.
         </p>
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
           Loading income curve data...
@@ -162,7 +162,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
           <p className="chart-description">
             This chart shows the change in household net income for a household
             with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-            primary earner contributes £10,000 annually to their pension.
+            primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.
           </p>
         </div>
         <button

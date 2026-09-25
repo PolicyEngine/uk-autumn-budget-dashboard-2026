@@ -86,6 +86,9 @@ class APIHouseholdInput(BaseModel):
         description="Annual rail spending (GBP)",
     )
 
+    bus_spending: float = Field(default=0.0, ge=0)
+    capital_gains: float = Field(default=0.0, ge=0)
+
     @field_validator("children_ages")
     @classmethod
     def validate_children_ages(cls, v):
@@ -114,6 +117,8 @@ def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
         ),
         fuel_spending=api_input.fuel_spending,
         rail_spending=api_input.rail_spending,
+        bus_spending=api_input.bus_spending,
+        capital_gains=api_input.capital_gains,
     )
 
 
@@ -232,6 +237,9 @@ class APILifecycleInput(BaseModel):
     children_ages: list[int] = Field(
         default_factory=list, description="Ages of children in 2025"
     )
+
+    bus_spending: float = Field(default=0.0, ge=0)
+    capital_gains: float = Field(default=0.0, ge=0)
 
     @field_validator("children_ages")
     @classmethod
