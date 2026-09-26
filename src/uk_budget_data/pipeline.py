@@ -457,6 +457,25 @@ def aggregate_results(
                 on=["reform_id", "year"],
                 how="left",
             )
+            # Input OBR rows carry fiscal-year receipt forecasts, while this
+            # dashboard mixes tax-year liability and calendar-year transport
+            # outputs. No like-for-like comparison has been verified for the
+            # seven featured scenarios, including dividend tax.
+            featured_ids = {
+                reform.id for reform in get_autumn_budget_2026_reforms()
+            }
+            official_columns = [
+                column
+                for column in (
+                    "obr_static_value",
+                    "obr_post_behavioural_value",
+                    "obr_value",
+                )
+                if column in comparison.columns
+            ]
+            comparison.loc[
+                comparison["reform_id"].isin(featured_ids), official_columns
+            ] = pd.NA
             aggregated["obr_comparison"] = comparison
 
     return aggregated

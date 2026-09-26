@@ -8,6 +8,7 @@ from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
     build_situation,
+    calculate_personal_net_income,
 )
 
 
@@ -304,3 +305,263 @@ class TestAPIIntegration:
         assert household.property_income == 5000
         assert household.fuel_spending == 1200
         assert household.rail_spending == 500
+
+
+def test_candidate_inputs_produce_real_household_impacts():
+    """The form's new inputs must reach policyengine.py, not disappear."""
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(
+            employment_income=50000,
+            capital_gains=10000,
+            fuel_spending=1200,
+            bus_spending=800,
+            region="NORTH_EAST",
+        )
+    )
+    assert set(result["policies"]) == {
+        "cgt_equalisation",
+        "fuel_duty_rise_cancellation",
+        "bus_fare_cap",
+        "threshold_freeze_extension",
+        "dividend_tax_increase_2pp",
+        "savings_tax_increase_2pp",
+        "property_tax_increase_2pp",
+    }
+    impacts = {
+        key: value["years"][2027]["net_income_change"]
+        for key, value in result["policies"].items()
+    }
+    assert impacts["cgt_equalisation"] < 0
+    assert impacts["fuel_duty_rise_cancellation"] > 0
+    assert impacts["bus_fare_cap"] == pytest.approx(100, abs=0.05)
+    assert (
+        result["policies"]["bus_fare_cap"]["years"][2026]["net_income_change"]
+        == 0
+    )
+    for policy in result["policies"].values():
+        assert policy["years"][2025]["net_income_change"] == 0
+
+
+def test_bus_saving_uses_year_and_region_and_diesel_routes_correctly(
+    monkeypatch,
+):
+    """Only eligible English households gain from 2027; diesel remains diesel."""
+    from uk_budget_data import personal_impact
+
+    captured_households = []
+
+    def calculate_household(*, household, **_kwargs):
+        captured_households.append(household)
+        return 10000 + household.get("bus_subsidy_spending", 0)
+
+    monkeypatch.setattr(
+        personal_impact, "calculate_personal_net_income", calculate_household
+    )
+    calculator = PersonalImpactCalculator()
+    for region, expected in (("NORTH_EAST", 100), ("LONDON", 0), ("WALES", 0)):
+        result = calculator.calculate(
+            HouseholdInput(
+                employment_income=50000,
+                region=region,
+                fuel_type="DIESEL",
+                fuel_spending=1200,
+                bus_spending=800,
+            )
+        )
+        years = result["policies"]["bus_fare_cap"]["years"]
+        assert years[2026]["net_income_change"] == 0
+        assert years[2027]["net_income_change"] == expected
+    assert all(row["petrol_spending"] == 0 for row in captured_households)
+    assert all(row["diesel_spending"] == 1200 for row in captured_households)
+
+
+def test_personal_calculation_limits_work_to_requested_policies(monkeypatch):
+    """The API's selection should avoid calculating unselected reforms."""
+    from uk_budget_data import personal_impact
+
+    calls = []
+
+    def calculate_household(*, parameters=None, household, **_kwargs):
+        calls.append(parameters)
+        return 10000 + household.get("bus_subsidy_spending", 0)
+
+    monkeypatch.setattr(
+        personal_impact, "calculate_personal_net_income", calculate_household
+    )
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(
+            employment_income=50000, bus_spending=800, region="NORTH_EAST"
+        ),
+        policy_ids=["bus_fare_cap"],
+    )
+    assert list(result["policies"]) == ["bus_fare_cap"]
+    assert (
+        result["policies"]["bus_fare_cap"]["years"][2027]["net_income_change"]
+        == 100
+    )
+    assert len(calls) < 20
+
+
+def test_zero_source_shortcut_keeps_salary_threshold_effect(monkeypatch):
+    """Skip unrelated reforms but still calculate salary-driven thresholds."""
+    from uk_budget_data import personal_impact
+
+    calls = []
+
+    def calculate_household(*, parameters=None, **_kwargs):
+        calls.append(parameters)
+        return 10000 + (100 if parameters else 0)
+
+    monkeypatch.setattr(
+        personal_impact, "calculate_personal_net_income", calculate_household
+    )
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(employment_income=50000),
+        policy_ids=[
+            "cgt_equalisation",
+            "fuel_duty_rise_cancellation",
+            "bus_fare_cap",
+            "threshold_freeze_extension",
+            "dividend_tax_increase_2pp",
+            "savings_tax_increase_2pp",
+            "property_tax_increase_2pp",
+        ],
+    )
+    assert all(
+        result["policies"][policy_id]["years"][2028]["net_income_change"] == 0
+        for policy_id in (
+            "cgt_equalisation",
+            "fuel_duty_rise_cancellation",
+            "bus_fare_cap",
+            "dividend_tax_increase_2pp",
+            "savings_tax_increase_2pp",
+            "property_tax_increase_2pp",
+        )
+    )
+    assert (
+        result["policies"]["threshold_freeze_extension"]["years"][2028][
+            "net_income_change"
+        ]
+        == -100
+    )
+    assert any(parameters for parameters in calls)
+
+
+def test_net_income_only_matches_public_household_calculator():
+    """The faster single-output path must match PolicyEngine's public API."""
+    import policyengine as pe
+
+    people = [{"age": 35, "employment_income": 50000}]
+    household = {"region": "NORTH_EAST", "petrol_spending": 1200}
+    expected = pe.uk.calculate_household(
+        people=people, household=household, year=2027
+    ).household.household_net_income
+    actual = calculate_personal_net_income(
+        people=people, household=household, year=2027
+    )
+    assert actual == pytest.approx(expected)
+
+
+def test_carried_over_measures_use_their_custom_baselines():
+    """Tax measures with unchanged reform parameters must still have impacts."""
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(
+            employment_income=60000,
+            dividend_income=10000,
+            savings_income=10000,
+            property_income=10000,
+        )
+    )
+    for policy_id in (
+        "threshold_freeze_extension",
+        "dividend_tax_increase_2pp",
+        "savings_tax_increase_2pp",
+        "property_tax_increase_2pp",
+    ):
+        assert (
+            result["policies"][policy_id]["years"][2028]["net_income_change"]
+            < 0
+        )
+    assert (
+        result["policies"]["dividend_tax_increase_2pp"]["years"][2026][
+            "net_income_change"
+        ]
+        < 0
+    )
+    assert (
+        result["policies"]["savings_tax_increase_2pp"]["years"][2027][
+            "net_income_change"
+        ]
+        < 0
+    )
+    assert (
+        result["policies"]["property_tax_increase_2pp"]["years"][2027][
+            "net_income_change"
+        ]
+        < 0
+    )
+
+
+def test_personal_fuel_2027_uses_monthly_population_schedule():
+    """The fuel-only household receives the Jan–Dec duty difference."""
+    from uk_budget_data.personal_impact import annual_reform_parameters
+    from uk_budget_data.reforms import get_reform
+
+    reform = get_reform("fuel_duty_rise_cancellation")
+    path = "gov.hmrc.fuel_duty.petrol_and_diesel"
+    baseline = annual_reform_parameters(
+        reform.baseline_parameter_changes, 2027
+    )
+    changed = annual_reform_parameters(reform.parameter_changes, 2027)
+    assert len(baseline[path]) == len(changed[path]) == 12
+    assert baseline[path]["2027-02-01"] == 0.5595
+    assert baseline[path]["2027-04-01"] == 0.5795
+    assert changed[path]["2027-04-01"] == 0.5295
+
+    result = PersonalImpactCalculator().calculate(
+        HouseholdInput(employment_income=50000, fuel_spending=1200),
+        policy_ids=["fuel_duty_rise_cancellation"],
+    )
+    assert result["policies"]["fuel_duty_rise_cancellation"]["years"][2027][
+        "net_income_change"
+    ] == pytest.approx(38.8889, abs=0.1)
+
+
+def test_fuel_personal_and_population_scenarios_agree_for_2027():
+    """The personal calculation must integrate the same monthly duty path."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.reforms import get_reform
+
+    reform = get_reform("fuel_duty_rise_cancellation")
+    situation = {
+        "people": {
+            "adult": {
+                "age": {2027: 37},
+                "employment_income": {2027: 50000},
+            }
+        },
+        "benunits": {"benunit": {"members": ["adult"]}},
+        "households": {
+            "household": {
+                "members": ["adult"],
+                "region": {2027: "LONDON"},
+                "petrol_spending": {2027: 1200},
+            }
+        },
+    }
+    baseline = Simulation(
+        situation=situation, scenario=reform.to_baseline_scenario()
+    )
+    changed = Simulation(situation=situation, scenario=reform.to_scenario())
+    scenario_change = (
+        changed.calculate("household_net_income", 2027)[0]
+        - baseline.calculate("household_net_income", 2027)[0]
+    )
+    personal_change = PersonalImpactCalculator().calculate(
+        HouseholdInput(employment_income=50000, fuel_spending=1200),
+        policy_ids=["fuel_duty_rise_cancellation"],
+    )["policies"]["fuel_duty_rise_cancellation"]["years"][2027][
+        "net_income_change"
+    ]
+    assert personal_change == pytest.approx(scenario_change, abs=0.01)

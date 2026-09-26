@@ -28,9 +28,9 @@ function OBRComparisonTable({ selectedPolicies }) {
             reform_id,
             reform_name: values[1],
             year,
-            obr_static: staticIdx >= 0 ? parseFloat(values[staticIdx]) : null,
-            obr_behavioural:
-              behaviouralIdx >= 0 ? parseFloat(values[behaviouralIdx]) : null,
+          obr_static: staticIdx >= 0 && values[staticIdx] ? parseFloat(values[staticIdx]) : null,
+          obr_behavioural:
+              behaviouralIdx >= 0 && values[behaviouralIdx] ? parseFloat(values[behaviouralIdx]) : null,
           };
         }
 
@@ -68,6 +68,10 @@ function OBRComparisonTable({ selectedPolicies }) {
   );
 
   if (filteredData.length === 0) return null;
+
+  if (!filteredData.some((row) => row.obr_static !== null || row.obr_behavioural !== null)) {
+    return <p className="comparison-description">No like-for-like official OBR costing is available for the selected policies.</p>;
+  }
 
   // Check if we have both static and behavioural data
   const hasBothTypes = filteredData.some(
@@ -122,9 +126,11 @@ function OBRComparisonTable({ selectedPolicies }) {
     <div className="obr-comparison-section">
       <h2>PolicyEngine vs OBR comparison</h2>
       <p className="comparison-description">
-        This table compares PolicyEngine's microsimulation estimates with the
-        OBR's official costings from the November 2025 Economic and Fiscal
-        Outlook. Values show annual budgetary impact in billions of pounds.
+        This table shows PolicyEngine model-year estimates alongside available
+        official OBR costings. Annual income tax uses the UK tax year starting
+        in the labelled year; fuel and bus impacts use the calendar year.
+        These windows differ from OBR fiscal-year costings. Values are in
+        billions of pounds; an em dash means no comparable OBR estimate.
         Positive values indicate revenue for the Government; negative values
         indicate costs.
       </p>
@@ -158,7 +164,7 @@ function OBRComparisonTable({ selectedPolicies }) {
               <th rowSpan="2">Policy</th>
               {years.map((year) => (
                 <th key={year} colSpan="2" className="year-header">
-                  {year}-{(year + 1).toString().slice(-2)}
+                  {year} model year
                 </th>
               ))}
             </tr>
@@ -216,21 +222,16 @@ function OBRComparisonTable({ selectedPolicies }) {
       </div>
 
       <p className="comparison-note">
-        <strong>Note:</strong> PolicyEngine produces static microsimulation
-        estimates that do not include behavioural responses. The OBR provides
-        both static and post-behavioural costings.{" "}
+        <strong>Note:</strong> PolicyEngine scenarios can include their own
+        behavioural assumptions, including the CGT realisations response.
+        The OBR publishes separately modelled static and post-behavioural
+        costings. Historical official entries shown here come from the
+        November 2025 forecast.{" "}
         {showBehavioural
           ? "Post-behavioural costings include effects like tax avoidance, reduced consumption, and price pass-through."
           : "Static costings assume no change in taxpayer behaviour."}{" "}
-        See{" "}
-        <a
-          href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          OBR EFO November 2025
-        </a>{" "}
-        for full methodology.
+        A comparison requires a like-for-like published OBR costing for each
+        policy and period; matching year labels alone are insufficient.
       </p>
     </div>
   );

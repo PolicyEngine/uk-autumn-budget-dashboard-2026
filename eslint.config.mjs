@@ -24,5 +24,6 @@ export default defineConfig([
     'coverage/**',
     'next-env.d.ts',
     'public/**',
+    '.venv/**',
   ]),
 ]);

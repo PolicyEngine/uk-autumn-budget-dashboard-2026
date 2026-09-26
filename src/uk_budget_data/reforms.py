@@ -1,14 +1,15 @@
 """Reform definitions for UK Autumn Budget 2026.
 
-This module contains all policy reforms announced in the November 2025 Budget,
-implemented as Reform objects that can be processed by the data pipeline.
+This module contains three 2026 candidate measures, four carried-over tax
+measures, and historical 2025 measures retained for shared links. Each is a
+Reform object that can be processed by the data pipeline.
 
 Reforms are organised into:
 - Spending measures (costs to treasury)
 - Tax measures (revenue raisers)
 - Structural reforms (using simulation modifiers)
 
-policyengine-uk v2.65.0+ includes the Autumn Budget parameter updates
+policyengine-uk v2.65.0+ includes the 2025 Autumn Budget parameter updates
 (including two-child limit repeal from April 2026 and salary sacrifice pension
 cap of £2,000 from April 2029) with proper fiscal year conversion that ensures
 annual queries return April 30 values. We use a pre-Autumn Budget baseline to
@@ -19,6 +20,7 @@ from typing import Optional
 
 import numpy as np
 from policyengine_uk import Simulation
+from policyengine_uk.variables.household.demographic.geography import Region
 
 from uk_budget_data.models import Reform
 
@@ -257,6 +259,10 @@ def _create_threshold_freeze_extension() -> Reform:
 # Property: +2pp from April 2027 (basic 20%->22%, higher 40%->42%, add 45%->47%)
 
 
+DIVIDEND_PRE_BUDGET_BASIC_RATE = 0.0875
+DIVIDEND_PRE_BUDGET_HIGHER_RATE = 0.3375
+
+
 def _set_pre_budget_dividend_rates(sim):
     """Set pre-budget dividend rates in the baseline simulation.
 
@@ -270,16 +276,16 @@ def _set_pre_budget_dividend_rates(sim):
     """
     div = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
 
-    # Find and modify all entries from 2027 onwards to pre-budget rates
+    # UK annual income-tax output for 2026 samples the 2026-27 tax year.
     # values_list is ordered most recent first, so iterate through all
-    # OBR fiscal year timing: 2026-27 starts April 2026, so first full year is 2027
+    # effective model years rather than delaying to the next calendar year.
     for val_entry in div.brackets[0].rate.values_list:
-        if val_entry.instant_str >= "2027":
-            val_entry.value = 0.0875  # Pre-budget basic rate
+        if val_entry.instant_str >= "2026":
+            val_entry.value = DIVIDEND_PRE_BUDGET_BASIC_RATE
 
     for val_entry in div.brackets[1].rate.values_list:
-        if val_entry.instant_str >= "2027":
-            val_entry.value = 0.3375  # Pre-budget higher rate
+        if val_entry.instant_str >= "2026":
+            val_entry.value = DIVIDEND_PRE_BUDGET_HIGHER_RATE
 
     return sim
 
@@ -336,18 +342,21 @@ def _create_savings_tax_increase() -> Reform:
         ),
         baseline_parameter_changes={
             # Pre-budget rates (20% basic, 40% higher, 45% additional)
-            # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
+            # Model year 2027 is tax year 2027-28 (policy starts April 2027).
             "gov.hmrc.income_tax.rates.savings.basic": {
+                "2027": 0.20,
                 "2028": 0.20,
                 "2029": 0.20,
                 "2030": 0.20,
             },
             "gov.hmrc.income_tax.rates.savings.higher": {
+                "2027": 0.40,
                 "2028": 0.40,
                 "2029": 0.40,
                 "2030": 0.40,
             },
             "gov.hmrc.income_tax.rates.savings.additional": {
+                "2027": 0.45,
                 "2028": 0.45,
                 "2029": 0.45,
                 "2030": 0.45,
@@ -380,18 +389,21 @@ def _create_property_tax_increase() -> Reform:
         ),
         baseline_parameter_changes={
             # Pre-budget rates (20% basic, 40% higher, 45% additional)
-            # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
+            # Model year 2027 is tax year 2027-28 (policy starts April 2027).
             "gov.hmrc.income_tax.rates.property.basic": {
+                "2027": 0.20,
                 "2028": 0.20,
                 "2029": 0.20,
                 "2030": 0.20,
             },
             "gov.hmrc.income_tax.rates.property.higher": {
+                "2027": 0.40,
                 "2028": 0.40,
                 "2029": 0.40,
                 "2030": 0.40,
             },
             "gov.hmrc.income_tax.rates.property.additional": {
+                "2027": 0.45,
                 "2028": 0.45,
                 "2029": 0.45,
                 "2030": 0.45,
@@ -829,26 +841,275 @@ def _create_combined_autumn_budget_reform() -> Reform:
 # =============================================================================
 
 # Cache for lazy-loaded reforms
+
+# =============================================================================
+# AUTUMN BUDGET 2026 CANDIDATE MEASURES
+# =============================================================================
+# Three candidate measures plus four carried-over measures. The candidates
+# standalone PolicyEngine analyses that model each one in depth:
+#   CGT       -> PolicyEngine/uk-cgt-reform
+#   Fuel duty -> PolicyEngine/cancelling-fuel-duty-rise
+#   Bus fares -> PolicyEngine/bus-fare-cap
+# Each docstring records where the numbers come from and where this
+# implementation is narrower than its source repo.
+
+
+# CGT equalisation with income tax.
+#
+# Reformed rates for the model's undifferentiated capital-gains input.
+CGT_EQUALISED_RATES = {
+    "basic_rate": 0.20,  # from 18%
+    "higher_rate": 0.40,  # from 24%
+    "additional_rate": 0.45,  # from 24%
+}
+
+# Realisation elasticity with respect to the RETENTION rate (1 - t), positive.
+# Advani, Lonsdale & Summers (CenTax, Oct 2024, "Reforming Capital Gains Tax")
+# use a central medium-term value of 1.0, sensitivity range 0.5-2.0.
+#
+# uk-cgt-reform sets the marginal-tax-rate convention instead
+# (mtr_elasticity = -0.7). That
+# parameter does not exist in the policyengine-uk pinned by policyengine.py
+# 6.x, so we set the retention convention the engine does carry, at CenTax's
+# own central value. These are distinct response assumptions; they must not
+# be treated as interchangeable or set together.
+CGT_RETENTION_ELASTICITY = 1.0
+
+
+def _create_cgt_equalisation() -> Reform:
+    """Apply income-tax-like rates to the pinned model's capital-gains input.
+
+    Baseline (current law): 18% basic, 24% higher, 24% additional.
+    Reform: 20% / 40% / 45%, matching the income tax rates, from April 2026.
+    The £3,000 annual exempt amount is unchanged.
+
+    policyengine-uk 2.90.2 has one undifferentiated capital-gains input. It
+    cannot preserve separate residential property or BADR schedules, nor
+    model the carried-interest income-tax/NIC treatment. This is a simplified
+    scenario, not a costing of a complete schedule reform or a revenue floor.
+    Its retention-rate elasticity of 1.0 is distinct from the MTR elasticity
+    of -0.7 used in the standalone analysis.
+
+    CenTax's elasticity assumes accompanying base broadening (death-uplift
+    removal, exit charges) that is not modelled, so behavioural loss may be
+    understated for a rate-only reform. It is also a medium-term elasticity,
+    abstracting from short-run forestalling.
+    """
+    return Reform(
+        id="cgt_equalisation",
+        name="CGT equalisation with income tax",
+        description=(
+            "Raises capital gains tax rates to match income tax rates "
+            "(20%/40%/45%, from 18%/24%/24%) from April 2026, keeping the "
+            "£3,000 annual exempt amount. Applies a CenTax central "
+            "realisation elasticity of 1.0 with respect to the retention "
+            "rate. The pinned model has an undifferentiated gains input, so "
+            "this is a simplified scenario, not a full-schedule costing or "
+            "a revenue floor. See the separately modelled analysis at "
+            "https://github.com/PolicyEngine/uk-cgt-reform"
+        ),
+        parameter_changes={
+            f"gov.hmrc.cgt.{band}": _years_dict(rate)
+            for band, rate in CGT_EQUALISED_RATES.items()
+        }
+        | {
+            "gov.simulation.capital_gains_responses.elasticity": _years_dict(
+                CGT_RETENTION_ELASTICITY
+            )
+        },
+    )
+
+
+# HMRC's amended 2026-27 schedule holds petrol/diesel at 52.95p/L through
+# December 2026, then sets 55.95p/L in January and 57.95p/L in March 2027.
+# The pinned model has older monthly entries, so override every month in BOTH
+# scenarios to prevent a later old entry from superseding one dated update.
+FUEL_DUTY_FROZEN_RATE = 0.5295
+FUEL_DUTY_JAN_FEB_2027_RATE = 0.5595
+FUEL_DUTY_POST_MARCH_2027_RATE = 0.5795
+FUEL_DUTY_CURRENT_LAW = {
+    f"{year}-{month:02d}-01": (
+        FUEL_DUTY_FROZEN_RATE
+        if year == 2026
+        else (
+            FUEL_DUTY_JAN_FEB_2027_RATE
+            if year == 2027 and month <= 2
+            else FUEL_DUTY_POST_MARCH_2027_RATE
+        )
+    )
+    for year in range(2026, 2031)
+    for month in range(1, 13)
+}
+FUEL_DUTY_FROZEN_SCHEDULE = {
+    date: FUEL_DUTY_FROZEN_RATE for date in FUEL_DUTY_CURRENT_LAW
+}
+
+
+def _create_fuel_duty_rise_cancellation() -> Reform:
+    """Cancel the scheduled January 2027 fuel duty rise.
+
+    Ported from PolicyEngine/cancelling-fuel-duty-rise.
+
+    Baseline: HMRC's amended schedule through March 2027, then the last
+    published rate held flat for illustrative later years.
+    Reform: the December 2026 rate holds from 2027 onward.
+
+    Fuel duty has been held at 52.95p since March 2022 by successively
+    extending a 5p cut, and the rises scheduled for September and December
+    2026 were already cancelled. The open question for this Budget is the
+    January 2027 step, which HMRC has said will be confirmed at the Budget.
+
+    The source repo benchmarks fiscal totals to HMRC/OBR road-fuel clearances
+    and receipts; this reform is the microsimulation side only, so its revenue
+    figure will not match the repo's headline.
+    """
+    return Reform(
+        id="fuel_duty_rise_cancellation",
+        name="Fuel duty rise cancellation",
+        description=(
+            "Cancels the fuel duty rise scheduled for January 2027, holding "
+            "the December 2026 rate of 52.95p per litre from 2027. The "
+            "baseline uses 55.95p/L in January–February 2027 and 57.95p/L "
+            "from March 2027. The March rate is held from 2028 as an "
+            "illustrative assumption. This dashboard "
+            "does not benchmark fuel clearances to HMRC/OBR totals."
+        ),
+        baseline_parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": FUEL_DUTY_CURRENT_LAW
+        },
+        parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": FUEL_DUTY_FROZEN_SCHEDULE
+        },
+    )
+
+
+# Bus fare cap. The England-wide cap sits at £3 and returns to £2 for 2027,
+# backed by £400m of funding. The dataset records annual fare spend, not
+# per-trip fares, so the cap is modelled as a proportional reduction in fare
+# spending drawn from external evidence rather than as a rate parameter.
+#
+# Central 12.5% (range 10-15%) is bus-fare-cap's FARE_CAP_REDUCTION_CENTRAL,
+# derived from the DfT £2 cap evaluation and covering the whole ticket market.
+BUS_FARE_CAP_REDUCTION = 0.125
+BUS_CAP_ELIGIBLE_REGIONS = frozenset(
+    {
+        Region.NORTH_EAST,
+        Region.NORTH_WEST,
+        Region.YORKSHIRE,
+        Region.EAST_MIDLANDS,
+        Region.WEST_MIDLANDS,
+        Region.EAST_OF_ENGLAND,
+        Region.SOUTH_EAST,
+        Region.SOUTH_WEST,
+    }
+)
+
+
+def _bus_fare_cap_modifier(sim: Simulation) -> Simulation:
+    """Cut household bus fare spending and fund the gap through subsidy.
+
+    Applied as a simulation modifier because the saving is a proportional
+    reduction in recorded spend, not a change to any engine parameter: the
+    LCFS records annual fare spend rather than per-trip fares, so there is no
+    per-journey price for a £2 cap to bind against.
+
+    Two variables move, for the reason the rail fares freeze moves
+    rail_subsidy_spending:
+
+    - bus_fare_spending falls by the cap's saving. This is the economically
+      correct household effect, but bus_fare_spending feeds `consumption`,
+      NOT household_net_income, so on its own it leaves every distributional
+      chart in this dashboard reading exactly zero.
+    - bus_subsidy_spending rises by the same amount, representing the
+      government funding that pays for the cap (£400m was announced for
+      2027). That variable does reach household net income, so the saving
+      becomes visible and comparable with the other reforms.
+
+    The two are equal and opposite by construction: the fare revenue
+    households no longer pay is the subsidy the government puts in. Setting
+    only the first would understate the reform to zero; setting only the
+    second would leave consumption overstated.
+    """
+    for year in [2027, 2028, 2029, 2030]:
+        # np.asarray, not .values: a Microsimulation returns a MicroSeries but
+        # a single-household Simulation (the personal impact calculator)
+        # returns a bare ndarray, and this modifier runs under both.
+        fares = np.asarray(sim.calculate("bus_fare_spending", period=year))
+        regions = sim.calculate("region", period=year)
+        eligible = np.isin(
+            regions,
+            tuple(region.name for region in BUS_CAP_ELIGIBLE_REGIONS),
+        )
+        saving = fares * BUS_FARE_CAP_REDUCTION * eligible
+
+        sim.set_input("bus_fare_spending", year, fares - saving)
+
+        subsidy = np.asarray(
+            sim.calculate("bus_subsidy_spending", period=year)
+        )
+        sim.set_input("bus_subsidy_spending", year, subsidy + saving)
+
+    return sim
+
+
+def _create_bus_fare_cap() -> Reform:
+    """Restore the £2 bus fare cap in participating areas outside London.
+
+    Ported from PolicyEngine/bus-fare-cap.
+
+    Baseline: the £3 cap.
+    Reform: a £2 cap from 2027, modelled as a 12.5% reduction in household
+    bus and coach fare spending in English regions outside London.
+
+    The reduction fraction is external evidence, not an engine calculation:
+    the dataset holds annual fare spend (COICOP 7.3.2), so there is no
+    per-trip fare for a cap to bind against. bus-fare-cap derives 12.5%
+    (range 10-15%) from the DfT evaluation of the £2 cap, across the whole
+    ticket market rather than capped journeys alone.
+
+    Distributionally this is the mirror image of the rail fares freeze the
+    2025 dashboard modelled: bus use skews towards lower-income households.
+
+    Fare spending is split across household members upstream by
+    person_bus_fare_spending and gov.dft.bus.fare_allocation_weight_by_age,
+    so no allocation is done here.
+    """
+    return Reform(
+        id="bus_fare_cap",
+        name="£2 bus fare cap",
+        description=(
+            "Restores the bus fare cap to £2 from £3 in 2027 on participating "
+            "English services outside London. The 12.5% reduction in all bus "
+            "and coach spending (range 10-15%) is a regional proxy for "
+            "eligible journeys, not route-level eligibility. The matching "
+            "imputed subsidy is a service benefit, not cash income. The "
+            "£400m announced for 2027 funds the cap for that year; whether "
+            "it is funded beyond 2027 is the open Budget question. Modelled "
+            "in full at https://github.com/PolicyEngine/bus-fare-cap"
+        ),
+        simulation_modifier=_bus_fare_cap_modifier,
+    )
+
+
 _AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
 _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
+    """Get the candidate and carried-over 2026 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(),  # Combined first
-            _create_two_child_limit_repeal(),
-            _create_fuel_duty_freeze(),
-            _create_rail_fares_freeze(),
+            # Autumn Budget 2026 candidate measures
+            _create_cgt_equalisation(),
+            _create_fuel_duty_rise_cancellation(),
+            _create_bus_fare_cap(),
+            # Carried-over measures promised by the dashboard
             _create_threshold_freeze_extension(),
             _create_dividend_tax_increase(),
             _create_savings_tax_increase(),
             _create_property_tax_increase(),
-            get_freeze_student_loan_thresholds(),
-            create_salary_sacrifice_cap_reform(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
@@ -857,7 +1118,14 @@ def _get_all_reforms() -> list[Reform]:
     """Get all available reforms (lazy-loaded)."""
     global _ALL_REFORMS_CACHE
     if _ALL_REFORMS_CACHE is None:
+        # Enacted or superseded 2025 measures stay reachable by id so old
+        # shared URLs keep resolving, but are off the 2026 dashboard list.
         _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
+            _create_combined_autumn_budget_reform(),
+            _create_two_child_limit_repeal(),
+            _create_fuel_duty_freeze(),
+            _create_rail_fares_freeze(),
+            get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
         ]
     return _ALL_REFORMS_CACHE
@@ -873,10 +1141,10 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 # Public getter functions for backwards compatibility
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """Get the main Autumn Budget 2025 reforms.
+    """Get the main Autumn Budget 2026 reforms.
 
-    Returns a list of Reform objects for all policies in the November 2025
-    Autumn Budget. Lazy-loaded to avoid import-time initialization.
+    Returns three candidate measures and four carried-over measures.
+    Lazy-loaded to avoid import-time initialization.
     """
     return _get_autumn_budget_2026_reforms()
 

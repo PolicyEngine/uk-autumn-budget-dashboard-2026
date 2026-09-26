@@ -23,7 +23,7 @@ const POLICY_COLOURS = POLICY_COLORS_BY_KEY;
 const POLICY_ORDER = PERSONAL_IMPACT_POLICY_ORDER;
 
 function formatCurrency(value, decimals = 0) {
-  const sign = value >= 0 ? "+" : "";
+  const sign = value >= 0 ? "+" : "−";
   return `${sign}£${Math.abs(value).toLocaleString("en-GB", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -37,6 +37,7 @@ function PersonalImpactResults({ results }) {
 
     const years = Object.keys(results.years)
       .map(Number)
+      .filter((year) => year >= 2026)
       .sort((a, b) => a - b);
 
     return years.map((year) => {
@@ -302,12 +303,15 @@ function PersonalImpactResults({ results }) {
       <div className="methodology-note">
         <h4>About this calculation</h4>
         <p>
-          This calculation uses PolicyEngine UK to model how each Autumn Budget
+          This calculation uses policyengine.py to model how each Autumn Budget
           2026 policy affects your household&apos;s net income. The model
           accounts for income tax, National Insurance, benefits, and other taxes
           and transfers. Children are automatically aged each year, and your
           income grows at the specified rate. Results compare the budget
-          policies against a pre-budget baseline scenario.
+          policies against their stated baseline scenarios. Bus fare savings
+          are represented as an imputed service benefit, not cash income;
+          household region proxies eligible bus services. Capital gains use
+          a simplified model input and cannot represent separate gain schedules.
         </p>
       </div>
     </div>

@@ -59,7 +59,7 @@ const NetImpactLabel = (props) => {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  "This chart shows the annual budgetary impact from 2026 to 2029, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
+  "This chart shows the annual budgetary impact from 2026 to 2030, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
 
 function BudgetaryImpactChart({ data }) {
   const chartRef = useRef(null);
@@ -78,13 +78,20 @@ function BudgetaryImpactChart({ data }) {
 
   const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
 
-  // Fixed y-axis domain to ensure 0 is always a tick mark
-  // Narrowed to +/-10bn for the 3 announced policies
-  const yAxisDomain = [-10, 10];
+  const largestStack = Math.max(1, ...data.map((row) =>
+    activePolicies.reduce((sum, name) => sum + Math.max(0, row[name] || 0), 0),
+  ));
+  const smallestStack = Math.min(-1, ...data.map((row) =>
+    activePolicies.reduce((sum, name) => sum + Math.min(0, row[name] || 0), 0),
+  ));
+  const yAxisDomain = [
+    -Math.ceil(Math.abs(smallestStack) / 5) * 5,
+    Math.ceil(largestStack / 5) * 5,
+  ];
 
   // Build legend items for export - include ALL policies for consistency across exports
   const legendItems = [
-    ...ALL_POLICY_NAMES.map((name) => ({
+    ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
@@ -109,7 +116,7 @@ function BudgetaryImpactChart({ data }) {
         <div>
           <h2>Revenue impact</h2>
           <p className="chart-description">
-            This chart shows the annual budgetary impact from 2026 to 2029,
+            This chart shows the annual budgetary impact from 2026 to 2030,
             measured in billions of pounds. Positive values indicate revenue
             gains for the Government, whilst negative values indicate costs to
             the Treasury.
@@ -230,7 +237,7 @@ function BudgetaryImpactChart({ data }) {
                   : []),
               ]}
             />
-            {ALL_POLICY_NAMES.map((policyName) => (
+            {activePolicies.map((policyName) => (
               <Bar
                 key={policyName}
                 dataKey={policyName}

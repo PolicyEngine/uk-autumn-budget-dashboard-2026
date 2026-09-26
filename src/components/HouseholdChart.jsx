@@ -18,10 +18,9 @@ import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart plots net income change against baseline income for 500 sampled households. Green dots indicate gains, amber shows losses, and grey shows minimal change. Dot opacity represents household weight in the population.";
+  "This chart plots the change in modelled household resources against baseline income for 500 sampled households. Bus fare savings are an imputed service benefit, not cash income. Dot opacity represents household weight in the population.";
 
-// Format year for display (e.g., 2026 -> "2026-27")
-const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
+const formatYearRange = (year) => String(year);
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -484,9 +483,8 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       <div className="household-chart">
         <h2>Household income impacts</h2>
         <p className="chart-description">
-          This chart plots net income change for each household against their
-          baseline income. Points above zero represent gains; points below
-          represent losses.
+          This chart plots changes in modelled household resources against
+          baseline income. Bus fare savings are an imputed service benefit.
         </p>
         <div
           style={{
@@ -511,10 +509,10 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart plots net income change against baseline income for 500
-            sampled households. Green dots indicate gains, amber shows losses, and
-            grey shows minimal change. Dot opacity represents household weight
-            in the population.
+            This chart plots changes in modelled household resources against
+            baseline income for 500 sampled households. Bus fare savings are
+            an imputed service benefit, not cash income. Dot opacity represents
+            household weight in the population.
           </p>
         </div>
         <button

@@ -48,23 +48,53 @@ class Reform(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    @staticmethod
+    def _build_scenario(
+        changes: Optional[dict[str, dict[str, Any]]],
+        modifier: Optional[Callable],
+    ) -> Scenario:
+        """Preserve dated parameter changes when constructing a UK scenario.
+
+        UK Simulation.apply_parameter_changes interprets keys through its
+        fiscal-year helper. Monthly fuel-duty changes instead need the exact
+        date path used by Scenario.from_reform (and the personal calculator).
+        """
+        annual_changes = {}
+        dated_changes = {}
+        for path, values in (changes or {}).items():
+            annual = {
+                key: value for key, value in values.items() if "-" not in key
+            }
+            dated = {key: value for key, value in values.items() if "-" in key}
+            if annual:
+                annual_changes[path] = annual
+            if dated:
+                dated_changes[path] = dated
+
+        dated_modifier = (
+            Scenario.from_reform(dated_changes).simulation_modifier
+            if dated_changes
+            else None
+        )
+        if dated_modifier and modifier:
+
+            def combined_modifier(simulation):
+                dated_modifier(simulation)
+                modifier(simulation)
+
+            modifier = combined_modifier
+        elif dated_modifier:
+            modifier = dated_modifier
+        return Scenario(
+            parameter_changes=annual_changes or None,
+            simulation_modifier=modifier,
+        )
+
     def to_scenario(self) -> Scenario:
         """Convert this reform to a PolicyEngine Scenario object."""
-        if (
-            self.simulation_modifier is not None
-            and self.parameter_changes is not None
-        ):
-            # Both modifier and parameter changes - include both
-            return Scenario(
-                simulation_modifier=self.simulation_modifier,
-                parameter_changes=self.parameter_changes,
-            )
-        elif self.simulation_modifier is not None:
-            return Scenario(simulation_modifier=self.simulation_modifier)
-        elif self.parameter_changes is not None:
-            return Scenario(parameter_changes=self.parameter_changes)
-        else:
-            return Scenario()
+        return self._build_scenario(
+            self.parameter_changes, self.simulation_modifier
+        )
 
     def to_baseline_scenario(self) -> Optional[Scenario]:
         """Convert baseline parameter changes to a Scenario, if defined.
@@ -72,21 +102,11 @@ class Reform(BaseModel):
         Returns:
             Scenario object for custom baseline, or None for default baseline.
         """
-        if (
-            self.baseline_simulation_modifier is not None
-            and self.baseline_parameter_changes is not None
-        ):
-            # Both modifier and parameter changes - include both
-            return Scenario(
-                simulation_modifier=self.baseline_simulation_modifier,
-                parameter_changes=self.baseline_parameter_changes,
+        if self.has_custom_baseline():
+            return self._build_scenario(
+                self.baseline_parameter_changes,
+                self.baseline_simulation_modifier,
             )
-        elif self.baseline_simulation_modifier is not None:
-            return Scenario(
-                simulation_modifier=self.baseline_simulation_modifier
-            )
-        elif self.baseline_parameter_changes is not None:
-            return Scenario(parameter_changes=self.baseline_parameter_changes)
         return None
 
     def has_custom_baseline(self) -> bool:

@@ -454,6 +454,7 @@ class IncomeCurveCalculator(BaseCalculator):
                     "age": {str(year): 40},
                     "employment_income": {str(year): 0},
                     "employee_pension_contributions": {str(year): 10000},
+                    "capital_gains_before_response": {str(year): 10000},
                 },
                 "adult2": {
                     "age": {str(year): 40},
@@ -487,6 +488,9 @@ class IncomeCurveCalculator(BaseCalculator):
             "households": {
                 "household": {
                     "brma": {str(year): "MAIDSTONE"},
+                    "petrol_spending": {str(year): 1200},
+                    "diesel_spending": {str(year): 0},
+                    "bus_fare_spending": {str(year): 800},
                     "region": {str(year): "LONDON"},
                     "members": [
                         "adult1",

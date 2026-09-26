@@ -83,7 +83,7 @@ function YearSlider({ selectedYear, onYearChange }) {
               className={`year-label ${index === currentIndex ? "active" : ""}`}
               onClick={() => handleYearClick(index)}
             >
-              {year}-{(year + 1).toString().slice(-2)}
+              {year}
             </button>
           ))}
         </div>
