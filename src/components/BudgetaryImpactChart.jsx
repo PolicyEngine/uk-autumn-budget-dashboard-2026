@@ -59,7 +59,7 @@ const NetImpactLabel = (props) => {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  "This chart shows the annual budgetary impact from 2026 to 2030, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
+  "This chart shows model-year revenue impacts from 2026 to 2030, in billions of pounds. Fuel and energy VAT use calendar years; Child Benefit and National Insurance use UK tax years. Positive values indicate Government revenue gains and negative values indicate costs.";
 
 function BudgetaryImpactChart({ data }) {
   const chartRef = useRef(null);
@@ -116,10 +116,7 @@ function BudgetaryImpactChart({ data }) {
         <div>
           <h2>Revenue impact</h2>
           <p className="chart-description">
-            This chart shows the annual budgetary impact from 2026 to 2030,
-            measured in billions of pounds. Positive values indicate revenue
-            gains for the Government, whilst negative values indicate costs to
-            the Treasury.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <button
@@ -157,7 +154,7 @@ function BudgetaryImpactChart({ data }) {
             <XAxis
               dataKey="year"
               tick={{ fontSize: 11, fill: "#666" }}
-              tickFormatter={(year) => `${year}-${(year + 1).toString().slice(-2)}`}
+              tickFormatter={(year) => String(year)}
             />
             <YAxis
               domain={yAxisDomain}
@@ -193,7 +190,7 @@ function BudgetaryImpactChart({ data }) {
                 formatCurrencyTooltip(value),
                 name === "netImpact" ? "Net impact" : name,
               ]}
-              labelFormatter={(year) => `${year}-${(year + 1).toString().slice(-2)}`}
+              labelFormatter={(year) => String(year)}
               contentStyle={{
                 background: "white",
                 border: "1px solid #e5e7eb",

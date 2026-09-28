@@ -1,9 +1,9 @@
 .sidebar {
   position: fixed;
   left: 0;
-  top: 0;
+  top: var(--mock-banner-height, 0px);
   width: 350px;
-  height: 100vh;
+  height: calc(100vh - var(--mock-banner-height, 0px));
   background: #1a3a3a;
   color: white;
   overflow-y: auto;

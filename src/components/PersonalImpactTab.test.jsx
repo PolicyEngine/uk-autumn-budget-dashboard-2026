@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import PersonalImpactTab from "./PersonalImpactTab";
 
-vi.mock("./PersonalImpactForm", () => ({
+vi.mock("./MockPersonalImpactForm", () => ({
   default: ({ onSubmit }) => <button onClick={() => onSubmit({ employment_income: 50000 })}>Calculate</button>,
 }));
 vi.mock("./PersonalImpactResults", () => ({ default: () => null }));
@@ -16,20 +16,31 @@ it("shows an actionable error when the household API is unavailable", async () =
 });
 
 it("explains a proxy timeout or unavailable backend", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }));
   render(<PersonalImpactTab />);
   fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("temporarily unavailable");
 });
 
+it("shows a specific validation error from the household route", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false,
+    status: 400,
+    json: async () => ({ error: "Select a valid UK region." }),
+  }));
+  render(<PersonalImpactTab />);
+  fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Select a valid UK region.");
+});
+
 it("sends only selected featured policies to the calculator", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubGlobal("fetch", fetchMock);
-  render(<PersonalImpactTab selectedPolicies={["cgt_equalisation", "bus_fare_cap", "two_child_limit"]} />);
+  render(<PersonalImpactTab selectedPolicies={["mock_fuel_duty_freeze", "mock_hvcts_extension", "two_child_limit"]} />);
   fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
   await screen.findByRole("button", { name: "Calculate" });
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).policy_ids).toEqual([
-    "cgt_equalisation", "bus_fare_cap",
+    "mock_fuel_duty_freeze", "mock_hvcts_extension",
   ]);
 });
 

@@ -12,7 +12,7 @@ from policyengine_uk import Simulation
 from uk_budget_data.reforms import (
     DIVIDEND_PRE_BUDGET_BASIC_RATE,
     DIVIDEND_PRE_BUDGET_HIGHER_RATE,
-    get_autumn_budget_2026_reforms,
+    get_all_reforms,
 )
 
 
@@ -42,7 +42,7 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 
 # Policies to analyse (excluding combined which would double-count)
 # The Autumn Budget 2026 measures offered by the personal impact calculator.
-# Must stay a subset of get_autumn_budget_2026_reforms(), which the calculator
+# Must stay a subset of get_all_reforms(), which the calculator
 # filters by these ids; an id listed here but absent from that list silently
 # disappears from the calculator rather than erroring.
 POLICY_IDS = [
@@ -309,7 +309,9 @@ class PersonalImpactCalculator:
         """Initialize the calculator by loading reforms."""
         self.reforms = {
             reform.id: reform
-            for reform in get_autumn_budget_2026_reforms()
+            # Drill 1: the dashboard list holds the five mock measures, which
+            # the calculator does not offer; its ids resolve from all reforms.
+            for reform in get_all_reforms()
             if reform.id in POLICY_IDS
         }
 

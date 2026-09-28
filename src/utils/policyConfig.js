@@ -1,4 +1,25 @@
+// MOCK DATA: drill 1 mock Autumn Budget 2026. The five measures in the
+// statement; none of them is real policy.
 export const POLICIES = [
+  { id: "mock_fuel_duty_freeze", name: "Fuel duty freeze", color: "#0D9488",
+    description: "MOCK: hold fuel duty at 55.95p per litre until 31 March 2028",
+    explanation: "MOCK. Cancels the 2p rise due on 1 March 2027 and the inflation-linked rise due in April 2027; main rates stay at 55.95p per litre until 31 March 2028 and rise with RPI from 1 April 2028. Annex A sets the April 2027 baseline at 60.10p per litre and supplies the rounded later-year rates. Household savings include pump VAT pass-through." },
+  { id: "mock_energy_vat_zero_rate", name: "VAT zero rate on household energy", color: "#14B8A6",
+    description: "MOCK: no VAT on household electricity and gas in 2027-28",
+    explanation: "MOCK. Zero-rates domestic electricity and gas in Great Britain from 1 April 2027 to 31 March 2028. Modelled as removing 5/105 of recorded household energy bills with full pass-through; Northern Ireland is excluded." },
+  { id: "mock_child_benefit_increase", name: "Child Benefit increase", color: "#2DD4BF",
+    description: "MOCK: £30.00 eldest and £20.00 additional child a week from April 2027",
+    explanation: "MOCK. Raises Child Benefit to £30.00 a week for the eldest or only child and £20.00 for each additional child from April 2027, rising with inflation after that." },
+  { id: "mock_nics_threshold_rise", name: "National Insurance threshold rise", color: "#5EEAD4",
+    description: "MOCK: Primary Threshold and Lower Profits Limit to £13,000 from April 2027",
+    explanation: "MOCK. Raises the employee Primary Threshold and the self-employed Lower Profits Limit from £12,570 to £13,000 from 6 April 2027, held until April 2031. An employee earning £13,000 or more saves £34.40 a year." },
+  { id: "mock_hvcts_extension", name: "Council tax surcharge from £1.5m", color: "#B45309",
+    description: "MOCK: High Value Council Tax Surcharge from £1.5m in England from April 2028",
+    explanation: "MOCK. Extends the surcharge to homes in England worth £1.5 million or more on 2026 values from 1 April 2028, rather than £2 million; homes between £1.5m and £2.5m pay £2,500 a year." },
+];
+
+// Retained only for old shared URLs; these do not appear in the 2026 selector.
+export const LEGACY_POLICIES = [
   { id: "cgt_equalisation", name: "CGT equalisation with income tax", color: "#B45309",
     description: "Model income-tax-like rates on capital gains",
     explanation: "A simplified scenario using the pinned model's undifferentiated capital-gains input and a retention-rate elasticity of 1.0. Separate residential property and BADR schedules and carried-interest income tax/NIC treatment are not represented. This is not a full-schedule costing or a revenue floor." },
@@ -16,10 +37,6 @@ export const POLICIES = [
     description: "Increase savings income tax by 2 percentage points", explanation: "Models the carried-over savings income tax increase." },
   { id: "property_tax_increase_2pp", name: "Property income tax increase (+2pp)", color: "#D97706",
     description: "Increase property income tax by 2 percentage points", explanation: "Models the carried-over property income tax increase." },
-];
-
-// Retained only for old shared URLs; these do not appear in the 2026 selector.
-export const LEGACY_POLICIES = [
   { id: "autumn_budget_2025_combined", name: "Autumn Budget 2025 (combined)", color: "#64748B" },
   { id: "two_child_limit", name: "2 child limit repeal", color: "#0D9488" },
   { id: "fuel_duty_freeze", name: "Fuel duty freeze extension", color: "#14B8A6" },

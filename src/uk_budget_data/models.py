@@ -71,20 +71,27 @@ class Reform(BaseModel):
             if dated:
                 dated_changes[path] = dated
 
-        dated_modifier = (
-            Scenario.from_reform(dated_changes).simulation_modifier
-            if dated_changes
-            else None
-        )
-        if dated_modifier and modifier:
+        if dated_changes:
+            dated_modifier = Scenario.from_reform(
+                dated_changes
+            ).simulation_modifier
+            original_modifier = modifier
+            annual_parameter_changes = annual_changes
 
             def combined_modifier(simulation):
+                # UK Simulation applies scenario modifiers before its annual
+                # parameter changes, and the latter reset all parameters.
+                # Apply both here in this order to retain the dated overrides.
+                if annual_parameter_changes:
+                    simulation.apply_parameter_changes(
+                        annual_parameter_changes
+                    )
                 dated_modifier(simulation)
-                modifier(simulation)
+                if original_modifier:
+                    original_modifier(simulation)
 
             modifier = combined_modifier
-        elif dated_modifier:
-            modifier = dated_modifier
+            annual_changes = {}
         return Scenario(
             parameter_changes=annual_changes or None,
             simulation_modifier=modifier,

@@ -8,13 +8,11 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 FEATURED_POLICIES = (
-    "cgt_equalisation",
-    "fuel_duty_rise_cancellation",
-    "bus_fare_cap",
-    "threshold_freeze_extension",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
+    "mock_fuel_duty_freeze",
+    "mock_energy_vat_zero_rate",
+    "mock_child_benefit_increase",
+    "mock_nics_threshold_rise",
+    "mock_hvcts_extension",
 )
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),
@@ -52,7 +50,11 @@ DECILES = {
 }
 WINNERS_GROUPS = {*(str(n) for n in range(1, 11)), "all"}
 OPTIONAL_OBR_FIELDS = ("obr_static_value", "obr_post_behavioural_value")
-TRANSPORT_POLICIES = ("fuel_duty_rise_cancellation", "bus_fare_cap")
+TRANSPORT_POLICIES = (
+    "fuel_duty_rise_cancellation",
+    "bus_fare_cap",
+    "mock_fuel_duty_freeze",
+)
 CONSTITUENCY_FIELDS = ("average_gain", "relative_change")
 DEMOGRAPHIC_FIELDS = (
     "average_gain",
