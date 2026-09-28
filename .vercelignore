@@ -1,8 +1,8 @@
-.venv
-data
-data_inputs
-tests
-scripts
-.next
+/.venv
+/data
+/data_inputs
+/tests
+/scripts
+/.next
 *.h5
 __pycache__
