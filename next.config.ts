@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next';
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
-  ? process.env.NEXT_PUBLIC_BASE_PATH
-  : '/uk/autumn-budget-2026';
+const basePath = process.env.NEXT_PUBLIC_MOCK === '1'
+  ? ''
+  : process.env.NEXT_PUBLIC_BASE_PATH !== undefined
+    ? process.env.NEXT_PUBLIC_BASE_PATH
+    : '/uk/autumn-budget-2026';
 
 
 const nextConfig: NextConfig = {

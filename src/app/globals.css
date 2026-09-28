@@ -136,7 +136,7 @@ code {
   margin-bottom: 32px;
   gap: var(--pe-space-md);
   position: sticky;
-  top: 0;
+  top: var(--mock-banner-height, 0px);
   background: linear-gradient(180deg, rgba(249, 250, 251, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

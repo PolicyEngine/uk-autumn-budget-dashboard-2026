@@ -6,7 +6,7 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 
 - **Interactive policy selection**: Combine three 2026 candidates and four carried-over measures
 - **Population preview**: See checked-in fiscal and distributional CSV estimates by year
-- **Personal impact**: Run a household calculation through the FastAPI backend
+- **Personal impact**: Compare household outcomes under selected reforms through the PolicyEngine UK API
 - **URL sharing**: Share selections, including links to retained 2025 measures
 - **Charts and exports**: Inspect income, budget and distributional results and export charts
 
@@ -16,7 +16,7 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 
 - Node.js 20.x or higher
 - Bun 1.x or higher
-- Python 3.13+ (for data generation and household API)
+- Python 3.13+ (for data generation or the optional local household backend)
 
 ### Installation
 
@@ -30,33 +30,38 @@ uv sync --extra dev --frozen
 
 ### Development
 
-Start the household API in one terminal:
-
-```bash
-.venv/bin/python -m uvicorn uk_budget_data.api:app --host 127.0.0.1 --port 8001
-```
-
-Start the frontend in another terminal:
+Start the frontend:
 
 ```bash
 NEXT_PUBLIC_BASE_PATH="" bun run dev --hostname 127.0.0.1 --port 3001
 ```
 
-Open `http://localhost:3001`. The frontend proxies personal calculations to
-`http://127.0.0.1:8001` (override with server-side `BUDGET_API_URL`).
+Open `http://localhost:3001`. Personal impact calls the live PolicyEngine UK
+household API from the server-side Next.js route. The adapter checks that the
+API model is 2.90.2, matching the dashboard's pinned model, and computes the
+selected measures against their respective baselines.
+
+To use the repository's Python FastAPI calculator instead, start it separately:
+
+```bash
+.venv/bin/python -m uvicorn uk_budget_data.api:app --host 127.0.0.1 --port 8001
+```
+
+Then set server-side `BUDGET_API_URL=http://127.0.0.1:8001` for the Next.js
+process. `POLICYENGINE_UK_API_URL` can override the default
+`https://api.policyengine.org` host when using the adapter.
 
 The dashboard offers three candidate measures and four carried-over measures.
 The checked-in national CSVs are a provisional local rerun of all seven featured
 measures against the current code. The source dataset's certified release and
 aligned constituency weights remain unverified. See
 [the data notes](public/data/README.md) for generation details and the missing
-constituency weights. The household calculator uses `policyengine.py` and
-computes the featured policies currently selected in the dashboard. A local
-calculation can take one to two minutes. For deployment, set server-side
-`BUDGET_API_URL` to the reachable FastAPI service URL and deploy that service
-from `cloudbuild.yaml`. The production proxy returns 503 if the URL is unset
-or the service is unavailable. The deployment and its environment must be
-verified before relying on personal results.
+constituency weights. Personal impact computes the featured policies currently
+selected in the dashboard. The API adapter works without a separately deployed
+backend; a calculation can take a few minutes. For a dedicated backend, deploy
+the FastAPI service from `cloudbuild.yaml` and set server-side `BUDGET_API_URL`
+to its reachable URL. Verify the deployed service and its model version before
+relying on personal results.
 
 ### Building for production
 

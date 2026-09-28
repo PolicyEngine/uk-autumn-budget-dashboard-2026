@@ -18,7 +18,9 @@ MOCK DATA. Rehearsal only; nothing here is a real Budget.
 
 Drill-only Vercel project `uk-autumn-budget-2026-drill` (team `policy-engine`), protected by team login. `NEXT_PUBLIC_MOCK=1` is set for every environment of that project: MOCK banner plus `noindex, nofollow` as a meta tag and an `X-Robots-Tag` header. Never deployed to the dashboard's public URL.
 
-The Personal impact tab needs the household calculator backend (`BUDGET_API_URL`), which the preview does not have, so "Calculate my impact" returns an error there.
+With `NEXT_PUBLIC_MOCK=1`, the preview serves the dashboard at `/`, so the PR's Preview link should open after team sign-in. The normal multizone build still uses `/uk/autumn-budget-2026` unless `NEXT_PUBLIC_BASE_PATH` is explicitly set.
+
+The Personal impact tab uses the PolicyEngine UK household API through the dashboard's server-side route. It requires the API's current model to match the dashboard's pinned PolicyEngine UK 2.90.2 and needs no `BUDGET_API_URL` in the drill project. `BUDGET_API_URL` remains an optional override for the dedicated Python backend. If the public API is unavailable or its model version changes, calculations return a visible error instead of unreviewed estimates.
 
 ## Measure list
 

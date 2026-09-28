@@ -16,10 +16,21 @@ it("shows an actionable error when the household API is unavailable", async () =
 });
 
 it("explains a proxy timeout or unavailable backend", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503 }));
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }));
   render(<PersonalImpactTab />);
   fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("temporarily unavailable");
+});
+
+it("shows a specific validation error from the household route", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false,
+    status: 400,
+    json: async () => ({ error: "Select a valid UK region." }),
+  }));
+  render(<PersonalImpactTab />);
+  fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Select a valid UK region.");
 });
 
 it("sends only selected featured policies to the calculator", async () => {

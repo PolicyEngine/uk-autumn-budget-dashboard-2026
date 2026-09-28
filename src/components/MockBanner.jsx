@@ -6,7 +6,7 @@ export default function MockBanner() {
   if (!IS_MOCK) return null;
   return (
     <div className="mock-banner" role="alert">
-      MOCK DATA: rehearsal Budget for PolicyEngine drill 1. Every measure and number on this page is invented. Not a real Budget.
+      MOCK DRILL: Proposed 2026 announcements and estimates are hypothetical. This is not a real Budget statement.
     </div>
   );
 }

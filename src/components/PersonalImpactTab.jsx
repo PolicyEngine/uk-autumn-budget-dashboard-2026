@@ -17,11 +17,14 @@ export default function PersonalImpactTab({ selectedPolicies = PERSONAL_IMPACT_P
       const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/personal-impact`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...inputs, policy_ids: policyIds }),
       });
-      if (!response.ok) throw new Error(
-        response.status === 503
-          ? "The household calculator is temporarily unavailable. Please retry later."
-          : "Could not calculate your results. Please check the inputs and retry.",
-      );
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(typeof detail?.error === "string"
+          ? detail.error
+          : response.status === 503
+            ? "The household calculator is temporarily unavailable. Please retry later."
+            : "Could not calculate your results. Please check the inputs and retry.");
+      }
       setResults(await response.json());
     } catch (err) {
       setError(err.message === "Failed to fetch"
