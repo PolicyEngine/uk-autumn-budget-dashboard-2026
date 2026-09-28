@@ -17,7 +17,7 @@ _GDP = system.parameters.gov.economic_assumptions.indices.obr.per_capita.gdp
 UPRATE = {y: _GDP(f"{y}-06-01") / _GDP("2026-06-01") for y in (2026, 2027, 2028)}
 Y=["2026","2027","2028"]
 def hh(region, people, petrol=0, diesel=0, energy=0, home=0, extra=None):
-    ppl={}; 
+    ppl={};
     for i,(age,emp,se,pen) in enumerate(people):
         d={"age":{y:age+int(y)-2026 for y in Y}}
         if emp: d["employment_income"]={y:emp for y in Y}
