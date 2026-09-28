@@ -571,20 +571,18 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_all_seven_measures_on_dashboard_list(self):
-        """The dashboard offers three candidates and four carried-over measures."""
+    def test_five_mock_measures_on_dashboard_list(self):
+        """Drill 1 (MOCK): the dashboard offers the five statement measures."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        ids = {r.id for r in get_autumn_budget_2026_reforms()}
-        assert {
-            "cgt_equalisation",
-            "fuel_duty_rise_cancellation",
-            "bus_fare_cap",
-            "threshold_freeze_extension",
-            "dividend_tax_increase_2pp",
-            "savings_tax_increase_2pp",
-            "property_tax_increase_2pp",
-        } == ids
+        ids = [r.id for r in get_autumn_budget_2026_reforms()]
+        assert ids == [
+            "mock_fuel_duty_freeze",
+            "mock_energy_vat_zero_rate",
+            "mock_child_benefit_increase",
+            "mock_nics_threshold_rise",
+            "mock_hvcts_extension",
+        ]
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
         """Shared URLs from the 2025 dashboard keep working."""
@@ -744,14 +742,14 @@ class TestAutumnBudget2026Reforms:
             sim.inputs[("bus_subsidy_spending", 2027)], [100, 0, 0]
         )
 
-    def test_personal_impact_ids_are_all_on_the_dashboard(self):
-        """POLICY_IDS must stay a subset of the dashboard reform list.
+    def test_personal_impact_ids_all_resolve(self):
+        """POLICY_IDS must stay a subset of the full reform list.
 
         The calculator filters the reform list by these ids, so an id that
         drifts out of that list disappears from the calculator silently.
         """
         from uk_budget_data.personal_impact import POLICY_IDS
-        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+        from uk_budget_data.reforms import get_all_reforms
 
-        available = {r.id for r in get_autumn_budget_2026_reforms()}
+        available = {r.id for r in get_all_reforms()}
         assert set(POLICY_IDS) <= available, set(POLICY_IDS) - available

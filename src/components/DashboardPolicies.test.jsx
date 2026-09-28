@@ -6,14 +6,15 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import PolicySelector from "./PolicySelector";
 import { POLICIES, CHART_POLICIES, ALL_POLICY_NAMES, PERSONAL_IMPACT_POLICY_ORDER } from "../utils/policyConfig";
 
+// Drill 1 (MOCK): the five measures in the mock Budget statement.
 const expected = [
-  "cgt_equalisation", "fuel_duty_rise_cancellation", "bus_fare_cap",
-  "threshold_freeze_extension", "dividend_tax_increase_2pp",
-  "savings_tax_increase_2pp", "property_tax_increase_2pp",
+  "mock_fuel_duty_freeze", "mock_energy_vat_zero_rate",
+  "mock_child_benefit_increase", "mock_nics_threshold_rise",
+  "mock_hvcts_extension",
 ];
 
 describe("2026 dashboard policy contract", () => {
-  it("offers the three candidates and four carried-over policies", () => {
+  it("offers the five mock Budget measures", () => {
     expect(POLICIES.map(p => p.id)).toEqual(expected);
     expect(PERSONAL_IMPACT_POLICY_ORDER).toEqual(expected);
     expect(ALL_POLICY_NAMES).toEqual(CHART_POLICIES.map(p => p.name));
@@ -25,7 +26,7 @@ describe("2026 dashboard policy contract", () => {
     render(<Selector />);
     fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
     const boxes = screen.getAllByRole("checkbox");
-    expect(boxes).toHaveLength(7);
+    expect(boxes).toHaveLength(5);
     for (const box of boxes) {
       expect(box).toBeChecked();
       fireEvent.click(box);
@@ -46,9 +47,11 @@ describe("2026 dashboard policy contract", () => {
     });
   }
 
-  it("shows CGT and fuel effects while the illustrative London household has no bus saving", () => {
+  it("shows fuel and Child Benefit effects while the illustrative London household has no bus saving", () => {
     const rows = csvParse(readFileSync("public/data/income_curve.csv", "utf8"));
-    for (const id of expected.slice(0, 2)) {
+    // The illustrative household (two adults, three children, £1,200 petrol)
+    // records no energy bills, so the energy VAT measure is zero for it.
+    for (const id of ["mock_fuel_duty_freeze", "mock_child_benefit_increase"]) {
       expect(rows.some(r => r.reform_id === id && Number(r.year) >= 2027 &&
         Math.abs(Number(r.reform_net_income) - Number(r.baseline_net_income)) > 1)).toBe(true);
     }

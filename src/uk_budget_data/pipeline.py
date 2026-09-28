@@ -461,8 +461,18 @@ def aggregate_results(
             # dashboard mixes tax-year liability and calendar-year transport
             # outputs. No like-for-like comparison has been verified for the
             # seven featured scenarios, including dividend tax.
+            # Drill 1 moved PR #3's seven off the dashboard list; they stay
+            # gated so their shared links never show unverified OBR figures.
             featured_ids = {
                 reform.id for reform in get_autumn_budget_2026_reforms()
+            } | {
+                "cgt_equalisation",
+                "fuel_duty_rise_cancellation",
+                "bus_fare_cap",
+                "threshold_freeze_extension",
+                "dividend_tax_increase_2pp",
+                "savings_tax_increase_2pp",
+                "property_tax_increase_2pp",
             }
             official_columns = [
                 column

@@ -1091,6 +1091,212 @@ def _create_bus_fare_cap() -> Reform:
     )
 
 
+
+# =============================================================================
+# DRILL 1: MOCK AUTUMN BUDGET 2026 (MOCK DATA, NOT A REAL BUDGET)
+# =============================================================================
+# The five measures of the mock Budget for PolicyEngine drill 1, coded
+# from the 12:30 statement only. Baselines are the engine's current law except
+# where the statement itself gives the pre-measure value. The documents'
+# Annex A baselines and the OBR forecast replace these at 13:40.
+
+MOCK_YEARS = [2026, 2027, 2028, 2029, 2030]
+
+
+def _engine_value(path: str, year: int) -> float:
+    """Current-law value of a parameter on 1 June of a year."""
+    from policyengine_uk.system import system
+
+    node = system.parameters
+    for part in path.split("."):
+        node = getattr(node, part)
+    return float(node(f"{year}-06-01"))
+
+
+def _engine_growth(path: str, from_year: int, year: int) -> float:
+    return _engine_value(path, year) / _engine_value(path, from_year)
+
+
+RPI = "gov.economic_assumptions.indices.obr.rpi"
+
+
+def _monthly_fuel_schedule(rate_for) -> dict:
+    return {
+        f"{year}-{month:02d}-01": rate_for(year, month)
+        for year in MOCK_YEARS
+        for month in range(1, 13)
+    }
+
+
+def _mock_fuel_baseline_rate(year: int, month: int) -> float:
+    """55.95p this winter, 57.95p from 1 March 2027, then RPI each April."""
+    if year == 2026:
+        return FUEL_DUTY_FROZEN_RATE
+    if year == 2027 and month <= 2:
+        return FUEL_DUTY_JAN_FEB_2027_RATE
+    fiscal_year = year if month >= 4 else year - 1
+    if fiscal_year < 2027:
+        return FUEL_DUTY_POST_MARCH_2027_RATE
+    return FUEL_DUTY_POST_MARCH_2027_RATE * _engine_growth(RPI, 2026, fiscal_year)
+
+
+def _mock_fuel_reform_rate(year: int, month: int) -> float:
+    """55.95p from January 2027 to 31 March 2028, then RPI each April."""
+    if year == 2026:
+        return FUEL_DUTY_FROZEN_RATE
+    fiscal_year = year if month >= 4 else year - 1
+    if fiscal_year <= 2027:
+        return FUEL_DUTY_JAN_FEB_2027_RATE
+    return FUEL_DUTY_JAN_FEB_2027_RATE * _engine_growth(RPI, 2027, fiscal_year)
+
+
+def _create_mock_fuel_duty_freeze() -> Reform:
+    """Mock measure 1: cancel the March and April 2027 fuel duty rises."""
+    return Reform(
+        id="mock_fuel_duty_freeze",
+        name="Fuel duty freeze",
+        description=(
+            "MOCK. Cancels the 2p rise due on 1 March 2027 and the "
+            "inflation-linked rise due in April 2027, holding main rates at "
+            "55.95p per litre until 31 March 2028, then RPI from 1 April 2028."
+        ),
+        # Baseline from the statement: the 2p rise to 57.95p on 1 March 2027
+        # and the inflation-linked rise each April, using the engine's RPI.
+        baseline_parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": _monthly_fuel_schedule(
+                _mock_fuel_baseline_rate
+            )
+        },
+        parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": _monthly_fuel_schedule(
+                _mock_fuel_reform_rate
+            )
+        },
+    )
+
+
+MOCK_ENERGY_VAT_YEARS = [2027]
+REDUCED_VAT_RATE = 0.05
+
+
+def _mock_energy_vat_modifier(sim: Simulation) -> Simulation:
+    """Remove the 5% VAT from Great Britain domestic energy bills.
+
+    The engine's reduced-rate VAT applies a flat share of all consumption, so
+    zeroing gov.hmrc.vat.reduced_rate would not target energy. Instead the
+    VAT inside recorded gas and electricity spend (bills include VAT, so
+    5/105 of the bill) comes off both VAT variables: vat_change reaches
+    household_tax and net income, and vat reaches gov_tax and gov_balance.
+    Northern Ireland is excluded.
+    """
+    for year in MOCK_ENERGY_VAT_YEARS:
+        energy = np.asarray(
+            sim.calculate("domestic_energy_consumption", period=year)
+        )
+        country = np.asarray(sim.calculate("country", period=year))
+        in_gb = country != "NORTHERN_IRELAND"
+        saving = energy * REDUCED_VAT_RATE / (1 + REDUCED_VAT_RATE) * in_gb
+        for variable in ("vat", "vat_change"):
+            current = np.asarray(sim.calculate(variable, period=year))
+            sim.set_input(variable, year, current - saving)
+    return sim
+
+
+def _create_mock_energy_vat_zero_rate() -> Reform:
+    """Mock measure 2: zero-rate GB domestic electricity and gas in 2027-28."""
+    return Reform(
+        id="mock_energy_vat_zero_rate",
+        name="VAT zero rate on household energy",
+        description=(
+            "MOCK. Applies the zero rate of VAT to domestic electricity and "
+            "gas in Great Britain from 1 April 2027 to 31 March 2028; the 5% "
+            "rate returns from April 2028. Modelled as removing 5/105 of "
+            "recorded household energy bills, with full pass-through."
+        ),
+        simulation_modifier=_mock_energy_vat_modifier,
+    )
+
+
+CPI = "gov.economic_assumptions.indices.obr.consumer_price_index"
+
+
+def _cpi_path(amount_2027: float) -> dict:
+    return {
+        str(year): amount_2027 * _engine_growth(CPI, 2027, year)
+        for year in MOCK_YEARS
+        if year >= 2027
+    }
+
+
+def _create_mock_child_benefit_increase() -> Reform:
+    """Mock measure 3: Child Benefit £30.00 / £20.00 from April 2027."""
+    return Reform(
+        id="mock_child_benefit_increase",
+        name="Child Benefit increase",
+        description=(
+            "MOCK. Raises Child Benefit to £30.00 a week for the eldest or "
+            "only child and £20.00 for each additional child from April "
+            "2027, rising with inflation after that. Baseline: current law."
+        ),
+        parameter_changes={
+            "gov.hmrc.child_benefit.amount.eldest": _cpi_path(30.00),
+            "gov.hmrc.child_benefit.amount.additional": _cpi_path(20.00),
+        },
+    )
+
+
+# The Primary Threshold is weekly in the engine: £12,570 is 241.73 and
+# £13,000 is exactly 250.00.
+PT = "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold"
+LPL = "gov.hmrc.national_insurance.class_4.thresholds.lower_profits_limit"
+
+
+def _create_mock_nics_threshold_rise() -> Reform:
+    """Mock measure 4: PT and LPL £12,570 -> £13,000 from 6 April 2027."""
+    return Reform(
+        id="mock_nics_threshold_rise",
+        name="National Insurance threshold rise",
+        description=(
+            "MOCK. Raises the Primary Threshold and the Lower Profits Limit "
+            "from £12,570 to £13,000 from 6 April 2027 and holds them there "
+            "until April 2031."
+        ),
+        # The statement gives £12,570 as the 2027 starting point.
+        baseline_parameter_changes={
+            PT: {"2027": 241.73},
+            LPL: {"2027": 12_570},
+        },
+        parameter_changes={
+            PT: {str(y): 250.00 for y in MOCK_YEARS if y >= 2027},
+            LPL: {str(y): 13_000 for y in MOCK_YEARS if y >= 2027},
+        },
+    )
+
+
+def _create_mock_hvcts_extension() -> Reform:
+    """Mock measure 5: surcharge from £1.5m (2026 values) from April 2028.
+
+    The engine already carries the Budget 2025 surcharge and applies it in
+    England only, to values deflated to 2026 prices, so only the first
+    band's threshold moves.
+    """
+    return Reform(
+        id="mock_hvcts_extension",
+        name="Council tax surcharge from £1.5m",
+        description=(
+            "MOCK. Extends the High Value Council Tax Surcharge to homes in "
+            "England worth £1.5 million or more (2026 values) from 1 April "
+            "2028; the £2,500 band covers £1.5m to £2.5m. Baseline: the "
+            "Budget 2025 surcharge from £2 million."
+        ),
+        parameter_changes={
+            "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold": {
+                str(y): 1_500_000 for y in MOCK_YEARS if y >= 2028
+            }
+        },
+    )
+
+
 _AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
 _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
@@ -1101,15 +1307,12 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            # Autumn Budget 2026 candidate measures
-            _create_cgt_equalisation(),
-            _create_fuel_duty_rise_cancellation(),
-            _create_bus_fare_cap(),
-            # Carried-over measures promised by the dashboard
-            _create_threshold_freeze_extension(),
-            _create_dividend_tax_increase(),
-            _create_savings_tax_increase(),
-            _create_property_tax_increase(),
+            # Drill 1: mock Autumn Budget 2026, the five statement measures
+            _create_mock_fuel_duty_freeze(),
+            _create_mock_energy_vat_zero_rate(),
+            _create_mock_child_benefit_increase(),
+            _create_mock_nics_threshold_rise(),
+            _create_mock_hvcts_extension(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
@@ -1121,6 +1324,13 @@ def _get_all_reforms() -> list[Reform]:
         # Enacted or superseded 2025 measures stay reachable by id so old
         # shared URLs keep resolving, but are off the 2026 dashboard list.
         _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
+            _create_cgt_equalisation(),
+            _create_fuel_duty_rise_cancellation(),
+            _create_bus_fare_cap(),
+            _create_threshold_freeze_extension(),
+            _create_dividend_tax_increase(),
+            _create_savings_tax_increase(),
+            _create_property_tax_increase(),
             _create_combined_autumn_budget_reform(),
             _create_two_child_limit_repeal(),
             _create_fuel_duty_freeze(),

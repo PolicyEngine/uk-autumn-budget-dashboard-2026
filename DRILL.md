@@ -26,7 +26,7 @@ The Personal impact tab uses the PolicyEngine UK household API through the dashb
 
 Locked from the statement. Five measures, and only these, go on the drill page; PR #3's seven candidates are not in this Budget and come off it.
 
-Coded in the dashboard (Table 4.1 measures 1 to 5):
+Coded in the dashboard (the five measures in the 12:30 statement; numbers 1 to 5 follow the statement order):
 
 | # | Measure | Start | Scored year |
 |---|---|---|---|
@@ -36,7 +36,7 @@ Coded in the dashboard (Table 4.1 measures 1 to 5):
 | 4 | National Insurance: Primary Threshold and Lower Profits Limit £12,570 → £13,000, held to April 2031 | 6 Apr 2027 | 2027-28 |
 | 5 | High Value Council Tax Surcharge: threshold £2m → £1.5m, England only; £2,500 band covers £1.5m–£2.5m | 1 Apr 2028 | 2028-29 |
 
-Ledger rows only (María's coverage ledger), not coded:
+Ledger rows only (María's coverage ledger), not coded (also in the statement):
 
 - 6 Pensions: Lump Sum Allowance £268,275 → £100,000 from 6 April 2028
 - 7 Bank Corporation Tax Surcharge 3% → 6% from 1 April 2027

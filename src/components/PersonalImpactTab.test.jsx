@@ -36,11 +36,11 @@ it("shows a specific validation error from the household route", async () => {
 it("sends only selected featured policies to the calculator", async () => {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubGlobal("fetch", fetchMock);
-  render(<PersonalImpactTab selectedPolicies={["cgt_equalisation", "bus_fare_cap", "two_child_limit"]} />);
+  render(<PersonalImpactTab selectedPolicies={["mock_fuel_duty_freeze", "mock_hvcts_extension", "two_child_limit"]} />);
   fireEvent.click(screen.getByRole("button", { name: "Calculate" }));
   await screen.findByRole("button", { name: "Calculate" });
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).policy_ids).toEqual([
-    "cgt_equalisation", "bus_fare_cap",
+    "mock_fuel_duty_freeze", "mock_hvcts_extension",
   ]);
 });
 
