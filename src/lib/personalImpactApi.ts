@@ -113,6 +113,7 @@ const REGIONS = new Set([
 ]);
 const ENGLAND_REGIONS = new Set([...BUS_REGIONS, "LONDON"]);
 const TENURES = new Set(["OWNED_OUTRIGHT", "OWNED_WITH_MORTGAGE", "RENT_PRIVATELY", "RENT_FROM_HA", "RENT_FROM_COUNCIL"]);
+const OWNER_TENURES = new Set(["OWNED_OUTRIGHT", "OWNED_WITH_MORTGAGE"]);
 const POLICY_DETAILS: Record<PolicyId, { name: string; description: string }> = {
   mock_fuel_duty_freeze: {
     name: "Fuel duty freeze",
@@ -299,7 +300,8 @@ function buildSituation(input: HouseholdInput, year: number): Situation {
         petrol_spending: { [period]: input.fuel_type === "PETROL" ? input.fuel_spending : 0 },
         diesel_spending: { [period]: input.fuel_type === "DIESEL" ? input.fuel_spending : 0 },
         bus_fare_spending: { [period]: input.bus_spending },
-        main_residence_value: { [period]: input.home_value_2026 * HOME_VALUE_FACTOR[year] },
+        // The pinned UK model's surcharge omits tenure; a tenant owns no main residence here.
+        main_residence_value: { [period]: OWNER_TENURES.has(input.tenure_type) ? input.home_value_2026 * HOME_VALUE_FACTOR[year] : 0 },
         rent: { [period]: input.rent },
         tenure_type: { [period]: input.tenure_type },
         household_net_income: { [period]: null },
@@ -394,8 +396,9 @@ function relevant(id: PolicyId, input: HouseholdInput, year: number): boolean {
     case "mock_child_benefit_increase": return year >= 2027 && input.children_ages.length > 0;
     case "mock_nics_threshold_rise": return year >= 2027 && [
       input.employment_income, input.partner_income, input.self_employment_income,
-    ].some((income) => income > 12_570);
+    ].some((income) => income * (1 + input.income_growth_rate) ** (year - 2025) > 12_570);
     case "mock_hvcts_extension": return year >= 2028 && ENGLAND_REGIONS.has(input.region) &&
+      OWNER_TENURES.has(input.tenure_type) &&
       input.home_value_2026 >= 1_500_000 && input.home_value_2026 < 2_000_000;
     case "cgt_equalisation": return year >= 2026 && input.capital_gains > 0;
     case "fuel_duty_rise_cancellation": return year >= 2027 && input.fuel_spending > 0;

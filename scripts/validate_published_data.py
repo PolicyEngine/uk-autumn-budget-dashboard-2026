@@ -50,7 +50,11 @@ DECILES = {
 }
 WINNERS_GROUPS = {*(str(n) for n in range(1, 11)), "all"}
 OPTIONAL_OBR_FIELDS = ("obr_static_value", "obr_post_behavioural_value")
-TRANSPORT_POLICIES = ("fuel_duty_rise_cancellation", "bus_fare_cap")
+TRANSPORT_POLICIES = (
+    "fuel_duty_rise_cancellation",
+    "bus_fare_cap",
+    "mock_fuel_duty_freeze",
+)
 CONSTITUENCY_FIELDS = ("average_gain", "relative_change")
 DEMOGRAPHIC_FIELDS = (
     "average_gain",

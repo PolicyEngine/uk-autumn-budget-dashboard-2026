@@ -674,7 +674,9 @@ def create_salary_sacrifice_cap_reform() -> Reform:
 
     params = system.parameters
     cap_param = params.gov.hmrc.national_insurance.salary_sacrifice_pension_cap
-    haircut_param = params.gov.contrib.behavioral_responses.salary_sacrifice_broad_base_haircut_rate
+    haircut_param = (
+        params.gov.contrib.behavioral_responses.salary_sacrifice_broad_base_haircut_rate
+    )
 
     # Read values from pe-uk for description
     cap_amount = cap_param("2029-04-06")

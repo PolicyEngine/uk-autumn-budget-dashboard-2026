@@ -112,9 +112,9 @@ class TestReformDefinitions:
 
         for reform in get_autumn_budget_2026_reforms():
             scenario = reform.to_scenario()
-            assert scenario is not None, (
-                f"Reform {reform.id} failed to_scenario"
-            )
+            assert (
+                scenario is not None
+            ), f"Reform {reform.id} failed to_scenario"
 
 
 class TestTwoChildLimitRepeal:
@@ -394,12 +394,12 @@ class TestRailFaresFreeze:
         expected_years = [2026, 2027, 2028, 2029, 2030]
         for year in expected_years:
             assert year in RAIL_FARE_INCREASES, f"Missing rate for {year}"
-            assert RAIL_FARE_INCREASES[year] > 0, (
-                f"Rate for {year} should be positive"
-            )
-            assert RAIL_FARE_INCREASES[year] < 0.10, (
-                f"Rate for {year} seems too high"
-            )
+            assert (
+                RAIL_FARE_INCREASES[year] > 0
+            ), f"Rate for {year} should be positive"
+            assert (
+                RAIL_FARE_INCREASES[year] < 0.10
+            ), f"Rate for {year} seems too high"
 
         # 2026 rate should be 5.8% (the rate that was frozen)
         assert RAIL_FARE_INCREASES[2026] == 0.058
@@ -411,9 +411,9 @@ class TestRailFaresFreeze:
         expected_years = [2026, 2027, 2028, 2029, 2030]
         for year in expected_years:
             assert year in RAIL_FREEZE_COSTS, f"Missing cost for {year}"
-            assert RAIL_FREEZE_COSTS[year] > 0, (
-                f"Cost for {year} should be positive"
-            )
+            assert (
+                RAIL_FREEZE_COSTS[year] > 0
+            ), f"Cost for {year} should be positive"
 
         # 2026 cost should be £0.145bn (Treasury estimate)
         assert RAIL_FREEZE_COSTS[2026] == 0.145

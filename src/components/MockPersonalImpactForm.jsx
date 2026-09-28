@@ -130,7 +130,7 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
         <span className="help-text">Assumed to be used evenly through the year. Includes pump VAT pass-through.</span>
       </div>
       {moneyField("domestic_energy_bill", "Annual gas and electricity bill including 5% VAT", "The mock zero rate applies in Great Britain from April 2027 to March 2028.")}
-      {moneyField("home_value_2026", "Home value in April 2026", "The surcharge extension applies to English homes from £1.5m to below £2m.", 1000)}
+      {moneyField("home_value_2026", "Home value in April 2026", "For owner-occupiers; ignored for tenants. The surcharge extension applies to English homes from £1.5m to below £2m.", 1000)}
     </section>
     <button type="submit" disabled={isLoading}>{isLoading ? "Calculating…" : "Calculate impact"}</button>
   </form>;
