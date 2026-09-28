@@ -10,7 +10,7 @@ MOCK DATA. Rehearsal only; nothing here is a real Budget.
 | **Drill start**: statement released; Vahid said start | 12:32 | `9c6ac12` (= `2ed90bd` + setup commits + María's 12:22 household-API fix; PR #3 still unmerged) |
 | Measure list locked | 12:32 | this commit |
 | Budget documents, OBR forecast and specimen households released | 13:40 | |
-| First numbers | _to fill_ | _to fill_ |
+| First numbers (statement only; preview pzj070s38) | 13:01 | `34b3db7` |
 | Full page on preview | _to fill_ | _to fill_ |
 | Stop for Nuffield call | 14:55 | |
 
