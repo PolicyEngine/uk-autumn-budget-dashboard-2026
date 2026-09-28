@@ -9,7 +9,8 @@ MOCK DATA. Rehearsal only; nothing here is a real Budget.
 | Setup only (preview, MOCK banner, noindex); no measures coded | 10:06 | `2ed90bd` (PR #3) |
 | **Drill start**: statement released; Vahid said start | 12:32 | `9c6ac12` (= `2ed90bd` + setup commits + María's 12:22 household-API fix; PR #3 still unmerged) |
 | Measure list locked | 12:32 | this commit |
-| Budget documents, OBR forecast and specimen households released | 13:40 | |
+| Budget documents, OBR forecast and specimen households released; re-basing started | 13:41 | |
+| Re-based on Annex A and mock OBR CPI (María) | 13:50 | `3b0eab7` |
 | First numbers (statement only; preview pzj070s38) | 13:01 | `34b3db7` |
 | Full page on preview | _to fill_ | _to fill_ |
 | Stop for Nuffield call | 14:55 | |
@@ -40,3 +41,31 @@ Ledger rows only (María's coverage ledger), not coded (also in the statement):
 
 - 6 Pensions: Lump Sum Allowance £268,275 → £100,000 from 6 April 2028
 - 7 Bank Corporation Tax Surcharge 3% → 6% from 1 April 2027
+
+## 13:40 re-basing
+
+María's `3b0eab7` re-bases the five measures on the documents (Vahid's parallel re-basing, `drill1-vahid-backup-1350`, reached the same baselines and is superseded):
+
+- **Annex A baselines:** fuel duty 57.95p from March 2027, then 60.10p, 62.13p, 63.98p, 65.85p (reform 55.95p to March 2028, then 57.84p, 59.57p, 61.31p); Child Benefit £27.80 and £18.40 from April 2027; Primary Threshold and Lower Profits Limit fixed at £12,570 to April 2031.
+- **Mock OBR Table 1.7:** September CPI uprates Child Benefit from April 2028, to the nearest 5p. Fuel duty paths come from the costings directly. Revised earnings and the wider engine uprating indices are not loaded.
+- **Energy VAT** comes off `vat` only (`vat_change` derives from it; cutting both double-counted), prorated 9/12 to calendar 2027 and 3/12 to 2028. **Fuel duty** also passes the duty cut through to 20% VAT at the pump, so its cost exceeds Table 4.1's duty-only figure.
+
+## Specimen check
+
+`scripts/drill1_specimen_check.py` runs the nine households through the dashboard's reform code. Change in household net income, £ a year, engine years (calendar 2027 for measures 1 to 4, 2028 for measure 5):
+
+| | Fuel | Energy VAT | Child Benefit | NICs | Surcharge (2028) |
+|---|---|---|---|---|---|
+| H1 | 39.35 | 58.93 | 0 | 34.40 | 0 |
+| H2 | 35.41 | 67.86 | 197.60 | 15.48 | 0 |
+| H3 | 0 | 53.57 | 0 | 0 | 0 |
+| H4 | 51.16 | 82.14 | 98.80 | 34.41 | 0 |
+| H5 | 55.09 | 92.86 | 0 | 68.81 | 0 |
+| H6 | 43.29 | 60.71 | 0 | 25.80 | 0 |
+| H7 | 0 | 50.00 | 114.40 | 0 | 0 |
+| H8 | 35.41 | 85.71 | 0 | 0 | −2,500.00 |
+| H9 | 43.29 | 103.57 | 0 | 34.41 | 0 |
+
+All follow from hand calculations. Child Benefit is (£2.20 + £1.60) × 52 before the HICBC (H4 50% taper, H9 fully withdrawn). NICs is 8% × £430 (6% for H6), after the 55% UC taper for H2 and nil for H7 below the threshold. Only H8 newly pays the surcharge (H5 Scotland, H9 already liable).
+
+For the fiscal 2027-28 scoring year: energy VAT is the full bill × 5/105 (H1 £78.57; the table shows the 9/12 in calendar 2027), and fuel duty is 4.15p a litre plus 20% VAT all year (1,000 litres: £49.80; calendar 2027 includes January to March at a smaller gap). Specimen homes are April 2026 valuations; the engine deflates `main_residence_value` by per-capita GDP, so the 2028 input must be uprated (×1.0643), or H8 wrongly shows £0.
