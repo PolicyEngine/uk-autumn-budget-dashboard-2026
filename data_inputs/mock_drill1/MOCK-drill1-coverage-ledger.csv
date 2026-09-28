@@ -1,0 +1,9 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 1, 28 September 2026. Not a real Budget.
+measure_no,measure,model_year,baseline,mock_policy,household_coverage,method_and_assumptions,source
+1,Fuel duty,2027,Annex A rates: 60.10p/L from April 2027,55.95p/L to March 2028; Annex A rates thereafter,All 9; H3 and H7 zero,PR #4 fixed Reform scenario; even monthly litres and full pump VAT pass-through.,MOCK-policy-costings.md §1; Annex A
+2,Domestic energy VAT,2027,5% on GB domestic energy,0% April 2027–March 2028,All 9; all in Great Britain,"PR #4 fixed Reform scenario; VAT counted once, with 9/12 in calendar 2027 and 3/12 in 2028.",MOCK-policy-costings.md §2; Annex A
+3,Child Benefit,2027,Annex A £27.80/£18.40 weekly,£30/£20 weekly,All 9; H2 H4 H7 H9 have children,PR #4 fixed Reform scenario; high-income charge included. Later years use Q3 CPI proxy.,MOCK-policy-costings.md §3; Annex A
+4,NIC thresholds,2027,"£12,570 baseline frozen through 2030","£13,000 PT/LPL",All 9; H1 H2 H4 H5 H6 H9 affected,PR #4 fixed Reform scenario; UC taper applies where relevant.,MOCK-policy-costings.md §4; Annex A
+5,High Value Council Tax Surcharge,2028,England homes from £2m in 2026 values,England homes from £1.5m,All 9; H8 newly liable,PR #4 fixed Reform scenario; 2026 valuation.,MOCK-policy-costings.md §5; Annex A
+6,Lump Sum Allowance,2028,"£268,275","£100,000 from 6 April 2028",Ledger only,No specified lump-sum withdrawal in the specimens.,MOCK-policy-costings.md §6; Annex A
+7,Bank Corporation Tax Surcharge,2027,3% above £100m allowance,6% above £100m allowance,Ledger only,Corporate measure; no specified household incidence.,MOCK-policy-costings.md §7; Annex A
