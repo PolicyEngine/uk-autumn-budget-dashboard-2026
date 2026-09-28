@@ -22,7 +22,7 @@ import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the modelled annual change in household resources by income decile, in pounds. The bus fare scenario includes an imputed service benefit rather than cash income.";
+  "This chart shows the modelled annual change in household net income by income decile, in pounds.";
 
 const formatYearRange = (year) => String(year);
 
@@ -124,8 +124,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       <div className="waterfall-chart">
         <h2>Absolute impact by income decile</h2>
         <p className="chart-description">
-          This chart shows modelled annual changes in household resources by
-          decile. Bus fare savings are an imputed service benefit.
+          {CHART_DESCRIPTION}
         </p>
         <div
           style={{
@@ -187,9 +186,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart shows the absolute change in net income by decile,
-            measured in pounds per year. The bus fare scenario includes an
-            imputed service benefit rather than cash income.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <button

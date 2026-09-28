@@ -18,7 +18,7 @@ import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart plots the change in modelled household resources against baseline income for 500 sampled households. Bus fare savings are an imputed service benefit, not cash income. Dot opacity represents household weight in the population.";
+  "This chart plots the change in modelled household net income against baseline income for 500 sampled households. Dot opacity represents household weight in the population.";
 
 const formatYearRange = (year) => String(year);
 
@@ -483,8 +483,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       <div className="household-chart">
         <h2>Household income impacts</h2>
         <p className="chart-description">
-          This chart plots changes in modelled household resources against
-          baseline income. Bus fare savings are an imputed service benefit.
+          {CHART_DESCRIPTION}
         </p>
         <div
           style={{
@@ -509,10 +508,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart plots changes in modelled household resources against
-            baseline income for 500 sampled households. Bus fare savings are
-            an imputed service benefit, not cash income. Dot opacity represents
-            household weight in the population.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <button

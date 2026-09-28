@@ -20,7 +20,7 @@ const formatYearRange = (year) => String(year);
 // Chart metadata for export
 const CHART_TITLE = "Net income change";
 const getChartDescription = () =>
-  `This chart shows the change in modelled resources for a London household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension. The household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. The £2 bus cap does not apply to London.`;
+  "This chart shows the change in modelled net income from the selected mock measures for a London household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension.";
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -134,9 +134,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
       <div className="employment-income-diff-chart">
         <h2>{chartTitle}</h2>
         <p className="chart-description">
-          This chart shows the change in household net income for a household
-          with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-          primary earner contributes £10,000 annually to their pension. This illustrative household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares.
+          {getChartDescription()}
         </p>
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
           Loading income curve data...
@@ -159,9 +157,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart shows the change in household net income for a household
-            with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-            primary earner contributes £10,000 annually to their pension. This illustrative London household has £10,000 in annual capital gains before responses, £1,200 in petrol spending and £800 in bus fares. The £2 bus cap does not apply to London.
+            {getChartDescription()}
           </p>
         </div>
         <button

@@ -22,7 +22,7 @@ import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
-  "This chart shows the percentage change in modelled household resources by decile, relative to baseline income. Bus fare savings are an imputed service benefit, not cash income.";
+  "This chart shows the percentage change in modelled household net income by decile, relative to baseline income.";
 
 const formatYearRange = (year) => String(year);
 
@@ -139,8 +139,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       <div className="distributional-chart">
         <h2>Relative impact by income decile</h2>
         <p className="chart-description">
-          This chart shows the percentage change in modelled household resources
-          by decile. Bus fare savings are an imputed service benefit.
+          {CHART_DESCRIPTION}
         </p>
         <div
           style={{
@@ -195,9 +194,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
         <div>
           <h2>{chartTitle}</h2>
           <p className="chart-description">
-            This chart shows the percentage change in modelled household
-            resources by decile, relative to baseline income. The bus fare
-            scenario includes an imputed service benefit, not cash income.
+            {CHART_DESCRIPTION}
           </p>
         </div>
         <button
