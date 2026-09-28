@@ -1,56 +1,56 @@
 MOCK DATA: rehearsal Budget for PolicyEngine drill 1, 28 September 2026. Not a real Budget.
 household,measure,model_year,team_change,key_statutory,key_policyengine,match,cause
-H1,1 fuel duty,2027,39.35,,,,
-H1,2 energy VAT,2027,58.93,,,,
-H1,3 Child Benefit,2027,0,,,,
-H1,4 NICs thresholds,2027,34.4,,,,
-H1,all four (1 to 4),2027,132.68,,,,
-H1,5 surcharge,2028,0,,,,
-H2,1 fuel duty,2027,35.42,,,,
-H2,2 energy VAT,2027,67.86,,,,
-H2,3 Child Benefit,2027,197.6,,,,
-H2,4 NICs thresholds,2027,15.48,,,,
-H2,all four (1 to 4),2027,316.35,,,,
-H2,5 surcharge,2028,0,,,,
-H3,1 fuel duty,2027,0,,,,
-H3,2 energy VAT,2027,53.57,,,,
-H3,3 Child Benefit,2027,0,,,,
-H3,4 NICs thresholds,2027,0,,,,
-H3,all four (1 to 4),2027,53.57,,,,
-H3,5 surcharge,2028,0,,,,
-H4,1 fuel duty,2027,51.16,,,,
-H4,2 energy VAT,2027,82.14,,,,
-H4,3 Child Benefit,2027,98.8,,,,
-H4,4 NICs thresholds,2027,34.41,,,,
-H4,all four (1 to 4),2027,266.5,,,,
-H4,5 surcharge,2028,0,,,,
-H5,1 fuel duty,2027,55.09,,,,
-H5,2 energy VAT,2027,92.86,,,,
-H5,3 Child Benefit,2027,0,,,,
-H5,4 NICs thresholds,2027,68.81,,,,
-H5,all four (1 to 4),2027,216.75,,,,
-H5,5 surcharge,2028,0,,,,
-H6,1 fuel duty,2027,43.29,,,,
-H6,2 energy VAT,2027,60.71,,,,
-H6,3 Child Benefit,2027,0,,,,
-H6,4 NICs thresholds,2027,25.8,,,,
-H6,all four (1 to 4),2027,129.8,,,,
-H6,5 surcharge,2028,0,,,,
-H7,1 fuel duty,2027,0,,,,
-H7,2 energy VAT,2027,50,,,,
-H7,3 Child Benefit,2027,114.4,,,,
-H7,4 NICs thresholds,2027,0,,,,
-H7,all four (1 to 4),2027,164.4,,,,
-H7,5 surcharge,2028,0,,,,
-H8,1 fuel duty,2027,35.42,,,,
-H8,2 energy VAT,2027,85.71,,,,
-H8,3 Child Benefit,2027,0,,,,
-H8,4 NICs thresholds,2027,0,,,,
-H8,all four (1 to 4),2027,121.13,,,,
-H8,5 surcharge,2028,-2500,,,,
-H9,1 fuel duty,2027,43.29,,,,
-H9,2 energy VAT,2027,103.57,,,,
-H9,3 Child Benefit,2027,0,,,,
-H9,4 NICs thresholds,2027,34.41,,,,
-H9,all four (1 to 4),2027,181.25,,,,
-H9,5 surcharge,2028,0,,,,
+H1,1 fuel duty,2027,49.8,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H1,2 energy VAT,2027,78.57,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H1,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H1,4 NICs thresholds,2027,34.4,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H1,all four (1 to 4),2027,162.77,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H1,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H2,1 fuel duty,2027,44.82,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H2,2 energy VAT,2027,90.48,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H2,3 Child Benefit,2027,197.6,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H2,4 NICs thresholds,2027,15.48,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H2,all four (1 to 4),2027,348.38,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H2,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H3,1 fuel duty,2027,0,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H3,2 energy VAT,2027,71.43,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H3,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H3,4 NICs thresholds,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H3,all four (1 to 4),2027,71.43,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H3,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H4,1 fuel duty,2027,64.74,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H4,2 energy VAT,2027,109.52,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H4,3 Child Benefit,2027,98.8,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H4,4 NICs thresholds,2027,34.41,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H4,all four (1 to 4),2027,307.47,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H4,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H5,1 fuel duty,2027,69.72,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H5,2 energy VAT,2027,123.81,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H5,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H5,4 NICs thresholds,2027,68.81,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H5,all four (1 to 4),2027,262.34,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H5,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H6,1 fuel duty,2027,54.78,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H6,2 energy VAT,2027,80.95,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H6,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H6,4 NICs thresholds,2027,25.8,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H6,all four (1 to 4),2027,161.53,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H6,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H7,1 fuel duty,2027,0,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H7,2 energy VAT,2027,66.67,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H7,3 Child Benefit,2027,114.4,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H7,4 NICs thresholds,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H7,all four (1 to 4),2027,181.07,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H7,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H8,1 fuel duty,2027,44.82,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H8,2 energy VAT,2027,114.29,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H8,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; high-income charge included where applicable.
+H8,4 NICs thresholds,2027,0,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H8,all four (1 to 4),2027,159.11,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H8,5 surcharge,2028,-2500,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
+H9,1 fuel duty,2027,54.78,,,,"Fiscal 2027-28; 4.15p/L all year from PR #4 Annex A policy, with even monthly litres and full 20% pump-VAT pass-through."
+H9,2 energy VAT,2027,138.1,,,,Fiscal 2027-28; 5/105 of VAT-inclusive annual bill; even monthly energy use and full pass-through. PR #4 calendar outputs are 9/12 in 2027 and 3/12 in 2028.
+H9,3 Child Benefit,2027,0,,,,Fiscal 2027-28 tax-year model; high-income Child Benefit charge fully withdraws the increase.
+H9,4 NICs thresholds,2027,34.41,,,,Fiscal 2027-28 tax-year PR #4 scenario; UC taper included where applicable.
+H9,all four (1 to 4),2027,227.29,,,,Fiscal 2027-28; sum of the four displayed separate-measure effects. The previous calendar-year direct combined run is preserved as round 5.
+H9,5 surcharge,2028,0,,,,"Fiscal 2028-29 PR #4 scenario; April 2026 home valuations uprated by 1.0643 for the 2028 model input, which the engine deflates to 2026 values."
