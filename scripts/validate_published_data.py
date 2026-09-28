@@ -8,13 +8,11 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 FEATURED_POLICIES = (
-    "cgt_equalisation",
-    "fuel_duty_rise_cancellation",
-    "bus_fare_cap",
-    "threshold_freeze_extension",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
+    "mock_fuel_duty_freeze",
+    "mock_energy_vat_zero_rate",
+    "mock_child_benefit_increase",
+    "mock_nics_threshold_rise",
+    "mock_hvcts_extension",
 )
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),

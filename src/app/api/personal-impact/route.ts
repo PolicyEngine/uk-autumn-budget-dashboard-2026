@@ -8,7 +8,13 @@ export async function POST(request: Request) {
   const apiUrl = process.env.BUDGET_API_URL;
   try {
     const body = await request.json();
-    if (apiUrl) {
+    const policyIds = Array.isArray(body?.policy_ids) ? body.policy_ids : [];
+    const hasMockPolicy = policyIds.some((id: unknown) =>
+      typeof id === "string" && id.startsWith("mock_"),
+    );
+    // The optional Python service predates the mock package. Always use the
+    // verified UK API adapter for the drill's featured mock IDs.
+    if (apiUrl && !hasMockPolicy && process.env.NEXT_PUBLIC_MOCK !== "1") {
       const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/personal-impact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

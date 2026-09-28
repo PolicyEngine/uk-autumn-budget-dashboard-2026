@@ -1,47 +1,43 @@
 # Dashboard data status
 
-The seven featured reforms have **provisional national estimates** for 2026–2030 generated against the current reform code. These are suitable for a local dashboard preview, but **not certified or publishable policy estimates**. The enhanced FRS file used for the rerun has not been matched to its claimed private release, and aligned constituency weights were unavailable.
+MOCK DATA: the five 2026 Budget measures and their estimates are invented for drill 1. The seven national CSVs contain **provisional local-preview estimates** rerun after review fixes on 28 September 2026. They are not certified public policy estimates. The source enhanced FRS file has not been matched to its claimed private release, and aligned constituency weights were unavailable.
 
-## Current rows and source
+## Corrected PR #4 rows and source
 
-- Seven featured reform IDs were rerun for every year from 2026 through 2030 in the seven national CSVs: `budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `household_scatter`, `income_curve`, and `obr_comparison`. This includes the three candidates and four carried-over tax measures. The generated rows reflect the current bus geography/timing and fuel baseline/rate code.
-- The five 2025 historical shared-link measures and their combined scenario remain from earlier PR commit `17771bc`. Their original dataset revision and source hash have not been verified. They are kept as prior checked-in estimates for historical links, not as part of the new rerun.
-- The rerun used `/Users/mariajuaristi/Documents/Codex/2026-09-15/is-x20/work/input/enhanced_frs_2024_25.h5`, SHA-256 `ef34c1ae28219367981fbc3c1144f58ea1f8a77554165fe02ff395b04c5ffea5`, with policyengine.py 6.0.0 and policyengine-uk 2.90.2 from the locked environment. This file is a prior-workspace copy; its hash has **not** been independently matched to the claimed private release/revision. A nearby metadata claim of private revision `25af520a` / version `1.57.3` is a lead, not verification.
-- `constituency.csv` and `demographic_constituency.csv` contain the six historical IDs and four carried-over IDs from the earlier PR commit. The three candidates have no rows. The carried-over local rows were **not regenerated with the national rerun** and their weights/provenance are unverified, so the dashboard shows an unavailable message for all seven featured maps. No matching `parliamentary_constituency_weights.h5` was available.
-- `obr_comparison.csv` has blank official OBR fields for all seven featured measures. The available OBR figures are fiscal-year receipt forecasts, while these modeled outputs mix tax-year liability and calendar-year transport effects. Blank means no like-for-like comparison has been established; it does not mean zero. Historical 2025 rows retain their earlier figures from the November 2025 forecast.
+- The five `mock_*` measures were rerun for 2026–2030 in `budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `household_scatter`, `income_curve`, and `obr_comparison`. Only their rows were replaced; the older candidate, carried-over, and 2025 historical rows were preserved for legacy links. Those older rows were not recalculated against the corrected mock code. The corrected result is the third scoring round; the reviewed PR #4 head is archived separately as round 2.
+- The run used the prior-workspace `enhanced_frs_2024_25.h5`, SHA-256 `ef34c1ae28219367981fbc3c1144f58ea1f8a77554165fe02ff395b04c5ffea5`, with policyengine.py 6.0.0 and policyengine-uk 2.90.2 from the locked environment. This hash identifies the exact local file, not an independently verified release. A nearby metadata claim of private revision `25af520a` / version `1.57.3` remains unverified.
+- Annex A of the supplied MOCK policy costings fixes the fuel duty baseline and reform rates through 2030, the Child Benefit baseline at £27.80/£18.40 a week, and the NIC baseline at £12,570 through April 2031. Child Benefit uprating uses the mock CPI growth in Table 1.7 of the supplied MOCK OBR workbook. The third-quarter CPI figure proxies September uprating; the workbook does not provide monthly September CPI.
+- The energy VAT zero rate is represented as 9/12 of each annual bill in calendar 2027 and 3/12 in calendar 2028. The model now deducts VAT once from household income and once from government VAT receipts. This even-month approximation omits seasonal differences in energy use.
+- Fuel duty savings include the direct duty reduction and 20% VAT pass-through at the pump, with litres spread evenly over the calendar year. The revised rates follow the rounded Annex A costings rather than reconstructing them from annual-average RPI.
+- All five mock measures are absent from the constituency CSVs. Maps stay unavailable; existing constituency weights/provenance are not verified. `obr_comparison.csv` leaves official OBR fields blank because the fictional costings are fiscal-year estimates, while dashboard outputs mix tax-year and calendar-year periods. Blank does not mean zero.
 
-The income curves use an illustrative household with two adults, three children, £10,000 pension contributions, £10,000 gains before behavioural response, £1,200 petrol spending and £800 bus/coach spending a year. Four carried-over income-tax measures can have a zero illustrative effect when that household lacks the corresponding income source. `household_scatter.csv` samples households and must not be summed as a population total.
+Relative to the reviewed head, the corrected local run changed the fuel duty 2027 budgetary estimate from −£1.297bn to −£1.718bn, the energy VAT estimate from −£2.511bn in 2027 and £0 in 2028 to −£1.881bn and −£0.642bn, and the NIC 2029 estimate from −£0.398bn to −£0.959bn. These are changes in provisional dashboard estimates, not official fiscal costings.
 
-## Local reproduction and checks
-
-The seven-policy rerun was made in a separate staging directory, then its featured rows were merged into the working-tree CSVs while preserving the six historical IDs:
+## Reproduction and checks
 
 ```bash
-uv sync --extra dev --frozen
-uv run uk-budget-data generate \
-  --output-dir /Users/mariajuaristi/Documents/Codex/2026-09-25/rev/work/pr3-recovery/preview-v2 \
-  --dataset /Users/mariajuaristi/Documents/Codex/2026-09-15/is-x20/work/input/enhanced_frs_2024_25.h5 \
-  --reforms cgt_equalisation fuel_duty_rise_cancellation bus_fare_cap threshold_freeze_extension dividend_tax_increase_2pp savings_tax_increase_2pp property_tax_increase_2pp \
+PYTHONPATH=src .venv/bin/python -m uk_budget_data.cli generate \
+  --output-dir "$OUTPUT_DIR" --dataset "$DATASET_PATH" \
+  --reforms mock_fuel_duty_freeze mock_energy_vat_zero_rate mock_child_benefit_increase mock_nics_threshold_rise mock_hvcts_extension \
   --years 2026 2027 2028 2029 2030 --skip-input-check
-uv run python scripts/validate_published_data.py public/data
-uv run python scripts/validate_published_data.py public/data --require-constituency
+PYTHONPATH=src .venv/bin/python scripts/validate_published_data.py public/data
 ```
 
-The national validator passes: seven featured policies, five years, seven files, complete unique chart keys, finite numeric fields, consistent sampled household IDs, matching PolicyEngine and comparison-table values, and zero 2026 bus/fuel effects. The staged rows were merged into these national CSVs after validation, preserving all six historical IDs and their previous values. The constituency validator fails with 30 missing candidate policy-year file coverages, 30 matching map-code errors, and 5,130 cross-file average-gain mismatches in the existing carried-over local rows. The `--skip-input-check` flag was required for this unverified local source and must not be used as evidence of certification.
+The staging results were merged by replacing only the 25 policy-year mock rows and their matching chart rows. The default national validator now checks the five displayed mock IDs and passes all seven CSVs. The `--skip-input-check` flag was needed because matched constituency weights were unavailable; it is not evidence of source certification. The income curves and sampled household scatter are illustrative; scatter rows must not be summed as a population total.
 
-Current working-tree national CSV SHA-256 values after the merge:
+Current working-tree national CSV SHA-256 values:
 
 | File | SHA-256 |
 |---|---|
-| `budgetary_impact.csv` | `0d9ea8d0cd65f331f6bc3927c9805cdf009cc11e1623f7ee034cc59579e78572` |
-| `distributional_impact.csv` | `c353a7536fbfcf36c9b519f304c6c74511bfd66ff22d4d1224c7d732dec28cd7` |
-| `winners_losers.csv` | `dfc5bb9964372a4a902024a67c7b3a6355e499142ab7374b76780459c8d0c6b6` |
-| `metrics.csv` | `c4869bd05d529d5ea76723bb71e410668337ee618a39bb08ee297f55e4a76669` |
-| `household_scatter.csv` | `61883fc45158c325dcb386d25db660d81c5b28f1863c045db22a12c107092d64` |
-| `income_curve.csv` | `43af81f8d1be4bce0f8dbd38b570b73c6a6a524c86172060ff3f8ca062562357` |
-| `obr_comparison.csv` | `27c781f2d3d38d7ed5164f935aa94d19570104f6315fad81e300036049d64c24` |
+| `budgetary_impact.csv` | `1417ce6b760804270086289825a6ed2b07dd40308d6aa10ee40f4c84a5f8c144` |
+| `distributional_impact.csv` | `69821b67ffb662f91a72620d6e751426883d4fde5ae7e8ffccacdc55ba0881ad` |
+| `winners_losers.csv` | `f87f5cf49c9437d639245d58b254e3ab92ec36bf78db792df939abb739757e0f` |
+| `metrics.csv` | `796e6c3a6b08cd05d63c6e207a48f966a390267d4dd034fa429c0250a23e40aa` |
+| `household_scatter.csv` | `ac181bed91def470d34b64e792ca9e2dd7b2b2276de3ae59cd63dc1db6d06fc7` |
+| `income_curve.csv` | `e78c71f0f84744a17864a26021dc8567105674f27a134b16269cb85448eaa51f` |
+| `obr_comparison.csv` | `5ee3b6a44653206e0566e1655563c7a19ec492bca168813705878e02a83fa1f0` |
 
-## CGT behavioural sensitivity (provisional 2027 check)
+## Legacy CGT behavioural sensitivity (provisional 2027 check)
 
 The pinned UK model applies a **retention-rate** elasticity to each person's realised gains: `reformed gains / gains before response = exp(ε × [ln(max(1 − reform MTR, 0.001)) − ln(max(1 − baseline MTR, 0.001))])`. The central scenario uses ε = 1.0; [CenTax's 2024 report](https://centax.org.uk/wp-content/uploads/2024/10/AdvaniLonsdaleSummers2024_CGTReform.pdf) discusses that retention-rate convention. Using the same unverified local H5 and pinned model, with only ε varied, gives:
 
@@ -66,8 +62,4 @@ UV_CACHE_DIR=/tmp/uv-cache-pr3 uv run --no-sync python /Users/mariajuaristi/Docu
 
 ## Merge gate
 
-1. Obtain the certified enhanced FRS release and constituency weights from the **same release and household ordering**. Record release IDs, SHA-256 hashes, model/lock versions and retrieval date.
-2. Rerun all seven featured reforms for 2026–2030 into a staging directory using the certified source. Inspect magnitudes, household charts, and fuel clearances/baseline assumptions. Compare any available official OBR costing only on a like-for-like basis.
-3. Regenerate constituency rows for all seven featured reforms with the matched weights, then require `scripts/validate_published_data.py public/data --require-constituency` to pass before enabling featured maps or merging published estimates. Coverage alone does not verify dataset provenance or cross-file consistency.
-
-Each reform is estimated separately. The dashboard sums selected effects and does not model interactions between them. Annual income-tax model year 2027 represents the tax year starting April 2027; fuel and bus outputs use calendar 2027, so summed policy values mix periods. The 2027 fuel baseline applies 55.95p/L in January–February and 57.95p/L in March–December against 52.95p/L in every reform month; the March rate is held from 2028 as an illustrative later-year assumption. The bus cap uses household region and a 12.5% reduction in all bus/coach spending as proxies for eligible services. Its matching imputed subsidy is treated as a service benefit in household resources, not cash income. The CGT result uses one undifferentiated gains input and is a simplified scenario, not a full-schedule costing.
+Obtain the certified enhanced FRS release and matched constituency weights, record release IDs and hashes, then rerun and validate all featured national and local outputs before any public publication or merge. This drill PR remains for a private preview with the MOCK banner and noindex. Each policy is estimated separately; the dashboard sums selected effects rather than computing an interaction-aware combined scenario. Household fuel and VAT figures assume full pass-through and fixed use.

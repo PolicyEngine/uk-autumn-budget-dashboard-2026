@@ -118,6 +118,49 @@ class TestReform:
         assert reform.to_baseline_scenario() is None
 
 
+def test_dated_parameter_and_simulation_modifier_run_once_together():
+    """Fuel schedules and VAT modifiers must compose for the specimen bundle."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.models import Reform
+
+    calls = []
+
+    def modifier(simulation):
+        calls.append(simulation)
+
+    reform = Reform(
+        id="combined_mock_test",
+        name="Combined mock test",
+        parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": {"2027-04-01": 0.5595},
+            "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold": {
+                "2027": 250
+            },
+        },
+        simulation_modifier=modifier,
+    )
+    situation = {
+        "people": {"adult": {"age": {2027: 35}}},
+        "benunits": {"benunit": {"members": ["adult"]}},
+        "households": {"household": {"members": ["adult"]}},
+    }
+    simulation = Simulation(situation=situation, scenario=reform.to_scenario())
+    assert calls == [simulation]
+    assert (
+        simulation.tax_benefit_system.parameters.gov.hmrc.fuel_duty.petrol_and_diesel(
+            "2027-04-01"
+        )
+        == 0.5595
+    )
+    assert (
+        simulation.tax_benefit_system.parameters.gov.hmrc.national_insurance.class_1.thresholds.primary_threshold(
+            "2027-04-06"
+        )
+        == 250
+    )
+
+
 class TestReformResult:
     """Tests for ReformResult model."""
 

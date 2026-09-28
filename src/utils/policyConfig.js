@@ -3,7 +3,7 @@
 export const POLICIES = [
   { id: "mock_fuel_duty_freeze", name: "Fuel duty freeze", color: "#0D9488",
     description: "MOCK: hold fuel duty at 55.95p per litre until 31 March 2028",
-    explanation: "MOCK. Cancels the 2p rise due on 1 March 2027 and the inflation-linked rise due in April 2027; main rates stay at 55.95p per litre until 31 March 2028 and rise with RPI from 1 April 2028. The baseline applies the March 2p rise and the engine's RPI path." },
+    explanation: "MOCK. Cancels the 2p rise due on 1 March 2027 and the inflation-linked rise due in April 2027; main rates stay at 55.95p per litre until 31 March 2028 and rise with RPI from 1 April 2028. Annex A sets the April 2027 baseline at 60.10p per litre and supplies the rounded later-year rates. Household savings include pump VAT pass-through." },
   { id: "mock_energy_vat_zero_rate", name: "VAT zero rate on household energy", color: "#14B8A6",
     description: "MOCK: no VAT on household electricity and gas in 2027-28",
     explanation: "MOCK. Zero-rates domestic electricity and gas in Great Britain from 1 April 2027 to 31 March 2028. Modelled as removing 5/105 of recorded household energy bills with full pass-through; Northern Ireland is excluded." },

@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { calculatePersonalImpact, PersonalImpactError } from "./personalImpactApi";
+import { calculatePersonalImpact, LEGACY_POLICY_IDS, PersonalImpactError } from "./personalImpactApi";
 
 const metadata = {
   status: "ok",
@@ -50,6 +50,7 @@ it("builds all seven baseline/reform comparisons and preserves the chart respons
     property_income: 1000,
     region: "NORTH_EAST",
     children_ages: [23],
+    policy_ids: [...LEGACY_POLICY_IDS],
   }, api as typeof fetch);
 
   expect(result.totals.by_year).toEqual({ 2025: 0, 2026: -200, 2027: -95, 2028: -295, 2029: -295, 2030: -295 });
@@ -67,6 +68,47 @@ it("builds all seven baseline/reform comparisons and preserves the chart respons
   const current2027 = calls.find((call) => call.year === "2027" && !call.policy && !call.household.bus_subsidy_spending);
   expect(Object.keys(current2027?.household ?? {})).toContain("region");
   expect(calls.some((call) => call.year === "2027" && call.household.bus_subsidy_spending)).toBe(true);
+});
+
+it("calculates all five featured mock measures with their actual household inputs", async () => {
+  const calls: Array<{ year: string; household: Record<string, unknown>; policy?: Record<string, Record<string, number>> }> = [];
+  const api = vi.fn(async (url: string, options?: RequestInit) => {
+    if (url.endsWith("/uk/metadata")) return reply(metadata);
+    const request = JSON.parse(String(options?.body));
+    const household = request.household.households.household_0;
+    const year = Object.keys(household.household_net_income)[0];
+    calls.push({ year, household, policy: request.policy });
+    const getRate = (path: string) => request.policy?.[path]?.[`${year}-01-01.${year}-12-31`];
+    let income = 1000;
+    if (getRate("gov.hmrc.child_benefit.amount.eldest") === 30) income = 1197.6;
+    if (getRate("gov.hmrc.national_insurance.class_1.thresholds.primary_threshold") === 250) income = 1034.4;
+    if (getRate("gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold") === 1_500_000) income = -1500;
+    return reply({ result: { households: { household_0: { household_net_income: { [year]: income } } } } });
+  });
+  const result = await calculatePersonalImpact({
+    employment_income: 30_000,
+    children_ages: [7],
+    self_employment_income: 25_000,
+    fuel_litres: 1000,
+    domestic_energy_bill: 2100,
+    home_value_2026: 1_600_000,
+    region: "LONDON",
+  }, api as typeof fetch);
+
+  expect(Object.keys(result.policies)).toEqual([
+    "mock_fuel_duty_freeze", "mock_energy_vat_zero_rate", "mock_child_benefit_increase",
+    "mock_nics_threshold_rise", "mock_hvcts_extension",
+  ]);
+  expect(result.policies.mock_fuel_duty_freeze.years[2027].net_income_change).toBeCloseTo(39.35, 2);
+  expect(result.policies.mock_energy_vat_zero_rate.years[2027].net_income_change).toBe(75);
+  expect(result.policies.mock_energy_vat_zero_rate.years[2028].net_income_change).toBe(25);
+  expect(result.policies.mock_child_benefit_increase.years[2027].net_income_change).toBeCloseTo(197.6);
+  expect(result.policies.mock_nics_threshold_rise.years[2027].net_income_change).toBeCloseTo(34.4);
+  expect(result.policies.mock_hvcts_extension.years[2028].net_income_change).toBe(-2500);
+  expect(calls.find((call) => call.year === "2028")?.household.main_residence_value)
+    .toEqual({ 2028: 1_600_000 * 1.0643028381409017 });
+  expect(calls.some((call) => call.year === "2027" && call.policy?.["gov.hmrc.child_benefit.amount.eldest"])).toBe(true);
+  expect(calls.some((call) => call.year === "2030" && call.policy?.["gov.hmrc.national_insurance.class_4.thresholds.lower_profits_limit"]?.["2030-01-01.2030-12-31"] === 12_570)).toBe(true);
 });
 
 it("rejects invalid selections before sending household data", async () => {

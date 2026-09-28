@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import PersonalImpactTab from "./PersonalImpactTab";
 
-vi.mock("./PersonalImpactForm", () => ({
+vi.mock("./MockPersonalImpactForm", () => ({
   default: ({ onSubmit }) => <button onClick={() => onSubmit({ employment_income: 50000 })}>Calculate</button>,
 }));
 vi.mock("./PersonalImpactResults", () => ({ default: () => null }));

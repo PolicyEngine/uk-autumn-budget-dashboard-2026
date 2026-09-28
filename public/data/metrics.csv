@@ -65,27 +65,27 @@ autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,91.28717220592496
 autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,92.88849724467391,-0.0077821152422511,-0.73141193,-6.112159
 autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,93.18424934709115,-0.0077818896879639,-0.8122263,-6.678544
 mock_fuel_duty_freeze,Fuel duty freeze,2026,0.0,0.0,0.0,0.0
-mock_fuel_duty_freeze,Fuel duty freeze,2027,49.53203130569588,-0.0007799215613485,0.0,0.0
-mock_fuel_duty_freeze,Fuel duty freeze,2028,49.92614678196917,-0.0009528554029051,0.0,0.0
-mock_fuel_duty_freeze,Fuel duty freeze,2029,49.903596799436144,-0.0009152880646446,0.0,0.0
-mock_fuel_duty_freeze,Fuel duty freeze,2030,49.88831044188153,-0.0008509389205569,0.0,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2027,51.21827342185191,-0.001045584733251666,0.0,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2028,51.35028217447033,-0.0012907201926605012,0.0,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2029,51.343098615883484,-0.0012417905811161446,0.0,0.0
+mock_fuel_duty_freeze,Fuel duty freeze,2030,51.30773966300423,-0.0011622337687985703,0.0,0.0
 mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,0.0,0.0,0.0,0.0
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,91.0495626076891,-0.0024118376330575,0.0,0.0
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,0.0,0.0,0.0,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,86.53323173219788,-0.0009508421067151828,0.0,0.0
+mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,71.19921206764434,-0.00031989133693912183,0.0,0.0
 mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,0.0,0.0,0.0,0.0
 mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,0.0,0.0,0.0,0.0
 mock_child_benefit_increase,Child Benefit increase,2026,0.0,0.0,0.0,0.0
-mock_child_benefit_increase,Child Benefit increase,2027,38.08367702844187,-0.001478989557418,-0.13477707,-1.2234763
-mock_child_benefit_increase,Child Benefit increase,2028,37.64353700555932,-0.0014750798899165,-0.07069683,-0.6418242
-mock_child_benefit_increase,Child Benefit increase,2029,37.45629633758986,-0.0014752485688261,-0.083797455,-0.75268364
-mock_child_benefit_increase,Child Benefit increase,2030,37.0005403539513,-0.0014781016053135,-0.11691475,-1.0386478
+mock_child_benefit_increase,Child Benefit increase,2027,38.22983062663371,-0.0013867601999252384,-0.109223366,-0.98626363
+mock_child_benefit_increase,Child Benefit increase,2028,37.80412592052086,-0.0013898443132960585,-0.07337761,-0.6568449
+mock_child_benefit_increase,Child Benefit increase,2029,37.6164531736897,-0.0013987892730753441,-0.104403496,-0.92599344
+mock_child_benefit_increase,Child Benefit increase,2030,37.32435164349148,-0.0014022986998725485,-0.09839916,-0.86629605
 mock_nics_threshold_rise,National Insurance threshold rise,2026,0.0,0.0,0.0,0.0
-mock_nics_threshold_rise,National Insurance threshold rise,2027,66.79152655766903,-0.0002160043966852,-0.00085163116,-0.007730919
-mock_nics_threshold_rise,National Insurance threshold rise,2028,66.97680442387795,-7.920320922777083e-05,-0.01565361,-0.14192265
-mock_nics_threshold_rise,National Insurance threshold rise,2029,64.97362586659708,-3.765367862232228e-05,-0.013028145,-0.11685954
-mock_nics_threshold_rise,National Insurance threshold rise,2030,46.630585266234085,0.0007647142391956,0.0,0.0
+mock_nics_threshold_rise,National Insurance threshold rise,2027,66.58077932602346,-0.00019837546149405484,-0.0005378723,-0.004856636
+mock_nics_threshold_rise,National Insurance threshold rise,2028,66.75749682769698,-6.858246900824794e-05,-0.016221046,-0.14484227
+mock_nics_threshold_rise,National Insurance threshold rise,2029,67.40969650177712,-8.258524701026933e-05,-0.01317215,-0.116670586
+mock_nics_threshold_rise,National Insurance threshold rise,2030,67.820482912924,-6.155944206855292e-05,-0.003109932,-0.027293168
 mock_hvcts_extension,Council tax surcharge from £1.5m,2026,0.0,0.0,0.0,0.0
 mock_hvcts_extension,Council tax surcharge from £1.5m,2027,0.0,0.0,0.0,0.0
-mock_hvcts_extension,Council tax surcharge from £1.5m,2028,0.4065985152218582,0.000265419778258,0.0,0.0
-mock_hvcts_extension,Council tax surcharge from £1.5m,2029,0.4066088232563046,0.0002657476909221,0.0,0.0
-mock_hvcts_extension,Council tax surcharge from £1.5m,2030,0.4066127229065027,0.0002640747793384,0.0,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2028,0.4658821457532082,0.00021911549654648015,0.0,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2029,0.4658946791696125,0.00021930832890874563,0.0,0.0
+mock_hvcts_extension,Council tax surcharge from £1.5m,2030,0.4659002172479546,0.00021744937588515922,0.0,0.0

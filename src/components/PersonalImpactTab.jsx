@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PersonalImpactForm from "./PersonalImpactForm";
+import MockPersonalImpactForm from "./MockPersonalImpactForm";
 import PersonalImpactResults from "./PersonalImpactResults";
 import { PERSONAL_IMPACT_POLICY_ORDER } from "../utils/policyConfig";
 import "./PersonalImpactTab.css";
@@ -34,8 +34,8 @@ export default function PersonalImpactTab({ selectedPolicies = PERSONAL_IMPACT_P
     finally { setLoading(false); }
   }
   return <div className="personal-impact-tab">
-    <p>See how your selected 2026 measures affect your household over 2026–2030. The CGT estimate uses a simplified capital-gains scenario. Bus fare savings are represented as an imputed service benefit, not cash income.</p>
-    {policyIds.length ? <PersonalImpactForm onSubmit={calculate} isLoading={loading} />
+    <p>See how the selected mock 2026 Budget measures affect your household over 2026–2030. Calendar-year fuel and energy bill effects use even monthly spending; Child Benefit and National Insurance use model tax years.</p>
+    {policyIds.length ? <MockPersonalImpactForm onSubmit={calculate} isLoading={loading} />
       : <p role="note">Select a 2026 measure to calculate your household impact.</p>}
     {error && <p role="alert">{error}</p>}
     {loading && <p role="status">Calculating your household impact. This can take a few minutes.</p>}
