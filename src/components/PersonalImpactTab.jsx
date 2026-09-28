@@ -34,7 +34,7 @@ export default function PersonalImpactTab({ selectedPolicies = PERSONAL_IMPACT_P
     finally { setLoading(false); }
   }
   return <div className="personal-impact-tab">
-    <p>See how the selected mock 2026 Budget measures affect your household over 2026–2030. Calendar-year fuel and energy bill effects use even monthly spending; Child Benefit and National Insurance use model tax years.</p>
+    <p>See how the selected mock measures affect your household over 2026–2030. Child Benefit and National Insurance use UK tax years; fuel and energy bill effects use calendar years and assume even monthly use. The surcharge starts in April 2028. Mixed-period totals are provisional and not directly comparable with fiscal-year costings.</p>
     {policyIds.length ? <MockPersonalImpactForm onSubmit={calculate} isLoading={loading} />
       : <p role="note">Select a 2026 measure to calculate your household impact.</p>}
     {error && <p role="alert">{error}</p>}

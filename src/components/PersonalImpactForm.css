@@ -68,8 +68,8 @@
   pointer-events: none;
 }
 
-.input-with-prefix input {
-  padding-left: 28px;
+.form-group .input-with-prefix input[type="number"] {
+  padding-left: 34px;
 }
 
 .input-with-suffix .suffix {
@@ -80,8 +80,21 @@
   pointer-events: none;
 }
 
-.input-with-suffix input {
-  padding-right: 28px;
+.form-group .input-with-suffix input[type="number"] {
+  padding-right: 34px;
+}
+
+.input-with-prefix input[type="number"],
+.input-with-suffix input[type="number"] {
+  appearance: textfield;
+}
+
+.input-with-prefix input::-webkit-inner-spin-button,
+.input-with-prefix input::-webkit-outer-spin-button,
+.input-with-suffix input::-webkit-inner-spin-button,
+.input-with-suffix input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .help-text {

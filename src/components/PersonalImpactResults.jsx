@@ -303,15 +303,14 @@ function PersonalImpactResults({ results }) {
       <div className="methodology-note">
         <h4>About this calculation</h4>
         <p>
-          This calculation uses PolicyEngine UK to model how each Autumn Budget
-          2026 policy affects your household&apos;s net income. The model
-          accounts for income tax, National Insurance, benefits, and other taxes
-          and transfers. Children are automatically aged each year, and your
-          income grows at the specified rate. Results compare the budget
-          policies against their stated baseline scenarios. Bus fare savings
-          are represented as an imputed service benefit, not cash income;
-          household region proxies eligible bus services. Capital gains use
-          a simplified model input and cannot represent separate gain schedules.
+          This mock calculation compares each measure with its stated baseline.
+          PolicyEngine UK models Child Benefit, National Insurance and the high
+          value council tax surcharge. Fuel duty savings use the litres entered
+          and include pump VAT; domestic energy VAT savings use the bill entered.
+          Children age each year and earnings grow at the rate you specify.
+          The five-year total mixes calendar-year bill effects with model tax
+          years for benefits and National Insurance; it is not an official OBR
+          costing.
         </p>
       </div>
     </div>

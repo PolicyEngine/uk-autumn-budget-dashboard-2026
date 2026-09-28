@@ -383,12 +383,15 @@ function App() {
           </button>
         </div>
 
-        <p role="note" className="dashboard-intro">
-          Years are model labels: annual income tax uses the UK tax year
-          beginning in that year, while fuel and bus impacts use the calendar
-          year. Combined totals mix those windows and are provisional, not
-          directly comparable with OBR fiscal-year costings.
-        </p>
+        {activeTab === "dashboard" && (
+          <p role="note" className="dashboard-intro">
+            Child Benefit and National Insurance use the UK tax year beginning
+            in the labelled year. Fuel duty and domestic energy VAT use calendar
+            years; the council tax surcharge starts in April 2028. Combined
+            totals mix these periods and are provisional, so they are not
+            directly comparable with fiscal-year costings.
+          </p>
+        )}
 
         {activeTab === "personal" ? (
           <PersonalImpactTab

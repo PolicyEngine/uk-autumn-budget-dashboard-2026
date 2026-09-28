@@ -1,7 +1,7 @@
 .mock-banner {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 1100;
   min-height: var(--mock-banner-height);
   box-sizing: border-box;
   display: flex;
@@ -18,8 +18,19 @@ body:has(.mock-banner) {
   --mock-banner-height: 48px;
 }
 
+/* The UI kit header has an inline sticky top of zero. Keep it below the drill banner. */
+body:has(.mock-banner) > .min-h-screen > div[style*="position:sticky"] {
+  top: var(--mock-banner-height) !important;
+}
+
 @media (max-width: 768px) {
   body:has(.mock-banner) {
     --mock-banner-height: 72px;
+  }
+}
+
+@media (max-width: 480px) {
+  body:has(.mock-banner) {
+    --mock-banner-height: 112px;
   }
 }
