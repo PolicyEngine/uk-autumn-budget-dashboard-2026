@@ -2,23 +2,24 @@
 
 MOCK DATA. Rehearsal only; nothing here is a real Budget.
 
-- **Start commit:** `2ed90bd95d622320d0aed6e2cd40cf089215f54e` (PR #3, `add-2026-budget-reforms`)
-- **Start time:** 10:06 BST, Monday 28 September 2026
-- **Preview only:** built with `NEXT_PUBLIC_MOCK=1`, which shows the MOCK banner and sets `noindex, nofollow` (meta tag and `X-Robots-Tag` header). Never deployed to the public URL.
+## Clock
 
-## Locked measure list
+| Event | Time (BST) | Commit |
+|---|---|---|
+| Setup only (preview, MOCK banner, noindex); no measures coded | 10:06 | `2ed90bd` (PR #3) |
+| **Drill start**: statement released | 12:30 | _to fill_ |
+| Measure list locked | _to fill_ | |
+| Budget documents, OBR forecast and specimen households released | 13:40 | |
+| First numbers | _to fill_ | _to fill_ |
+| Full page on preview | _to fill_ | _to fill_ |
+| Stop for Nuffield call | 14:55 | |
 
-Coded in the dashboard:
+## Preview
 
-| # | Measure | Start | Model year |
-|---|---|---|---|
-| 1 | Fuel duty: 55.95p frozen to 31 Mar 2028, then RPI | 1 Apr 2027 | 2027 |
-| 2 | VAT zero rate on domestic electricity and gas, GB | 1 Apr 2027 to 31 Mar 2028 | 2027 |
-| 3 | Child Benefit £30.00 eldest / £20.00 additional, then CPI | Apr 2027 | 2027 |
-| 4 | NICs Primary Threshold and Class 4 LPL £12,570 → £13,000, held to Apr 2031 | 6 Apr 2027 | 2027 |
-| 5 | High Value Council Tax Surcharge threshold £2m → £1.5m (England), £2,500 band £1.5m–£2.5m | 1 Apr 2028 | 2028 |
+Drill-only Vercel project `uk-autumn-budget-2026-drill` (team `policy-engine`), protected by team login. `NEXT_PUBLIC_MOCK=1` is set for every environment of that project: MOCK banner plus `noindex, nofollow` as a meta tag and an `X-Robots-Tag` header. Never deployed to the dashboard's public URL.
 
-Ledger rows only (María's coverage ledger), not coded:
+The Personal impact tab needs the household calculator backend (`BUDGET_API_URL`), which the preview does not have, so "Calculate my impact" returns an error there.
 
-- Lump Sum Allowance £268,275 → £100,000
-- Bank Corporation Tax Surcharge 3% → 6%
+## Measure list
+
+Locked from the statement at 12:30.
