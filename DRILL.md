@@ -13,7 +13,7 @@ MOCK DATA. Rehearsal only; nothing here is a real Budget.
 | Re-based on Annex A and mock OBR CPI (María) | 13:50 | `3b0eab7` |
 | First numbers (statement only; preview pzj070s38) | 13:01 | `34b3db7` |
 | Full page on preview (egr12zevb), re-based | 13:59 | `b023f59` |
-| Stop for Nuffield call | 14:55 | |
+| Stop for Nuffield call (planned 14:55) | 14:56 | `f10ce20` |
 
 ## Preview
 
