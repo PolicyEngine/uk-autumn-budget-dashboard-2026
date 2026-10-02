@@ -1,2 +1,2 @@
 MOCK DATA: rehearsal Budget for PolicyEngine drill 2, 5 October 2026. Not a real Budget. Fill one row per measure and fiscal year from the statement at 12:30, then from Table 4.1 and the costings at 13:40. Read with pandas skiprows=1.
-measure_no,measure,fiscal_year,our_static_bn,our_basis,our_commit,table41_post_behavioural_bn,costing_static_bn,gap_vs_static_bn,gap_vs_static_pct,gap_reason,gate
+measure_no,measure,fiscal_year,comparator,our_static_bn,our_basis,our_commit,table41_post_behavioural_bn,costing_static_bn,gap_vs_static_bn,gap_vs_static_pct,gap_reason,gate

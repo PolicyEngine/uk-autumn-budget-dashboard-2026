@@ -7,7 +7,7 @@ Drill 1 ([PR #4](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026
 - The Table 4.1 is longer and more realistic.
 - The packet is released at set times from a sealed set.
 - The roles are split three ways.
-- A reconciliation against Table 4.1 gates the first numbers.
+- A reconciliation gates every release of numbers: first against the statement (G2), then against Table 4.1 (G3).
 
 ## Timetable (BST)
 
@@ -17,12 +17,12 @@ Drill 1 ([PR #4](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026
 | 10:00–12:00 | Setup only: remove the five drill 1 `mock_*` measures; G0 freeze record; preview check; roles confirmed. No drill 2 measures coded | all |
 | **12:30** | **Statement released** (`MOCK-statement.md`). Drill clock starts | open from the packet folder |
 | 12:30–12:45 | Lock the measure list and the coverage ledger rows from the statement | reconciler |
-| 13:15 target | First numbers, gated by G2 | integrator |
+| 13:15 target | Provisional first numbers, gated by G2 (statement figures only) | integrator |
 | **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheet | open from the packet folder |
 | 13:40–14:00 | Re-base on Annex A and the OBR tables (**one owner, the integrator**) | integrator |
 | 14:30 target | Full page on the drill preview; reconciliation filled; scoring sheet filled | all |
 | **15:30** | **Stop.** Log the stop commit | integrator |
-| 16:00 | Scoring against the sealed key | open from the packet folder |
+| 16:00 | Answer key attached to PR #7 by Vahid, who holds it; scoring against it | Vahid, then the scorer |
 
 ## Roles
 
@@ -32,7 +32,7 @@ One person per role. Nobody else pushes to the drill branch.
 |---|---|---|
 | **Integrator** (Vahid) | The drill branch, the clock table, every commit, data regeneration, preview deploys, re-basing | Score households |
 | **Reconciler** (María, until 13:40) | The locked measure list, the coverage ledger, `MOCK-drill2-reconciliation.csv`, decile plausibility checks. Posts each defect as a PR comment within 5 minutes of finding it | Push code; review comments go to the integrator |
-| **Scorer** (María, from 13:40) | Runs the specimen households **on the integrator's latest pushed commit** and fills the scoring sheet on the stated basis | Edit reform code |
+| **Scorer** (María, from 13:40) | Runs the specimen households. Each scoring run is pinned to **one commit SHA** written in the sheet. If the integrator later changes a scored measure, the affected rows are rerun on the new SHA. Fills the scoring sheet on the stated basis | Edit reform code |
 
 If only two people are available, the reconciler and scorer roles are one person, but reconciliation comes first.
 
@@ -42,7 +42,7 @@ If only two people are available, the reconciler and scorer roles are one person
 |---|---|---|
 | **G0** | Freeze record written before 12:30: the start commit SHA, `policyengine-uk` version, dataset name and SHA-256, constituency weights present or explicitly absent, and the live household API version | the clock table below |
 | **G1** | Measure list locked from the statement: each measure is either **coded** or a **ledger row**, with a reason | `MOCK-drill2-coverage-ledger.csv` |
-| **G2** | No first numbers on the preview until (a) every coded measure has a reconciliation row against the statement's figures, and (b) one specimen-style household has been checked by hand for each coded measure | `MOCK-drill2-reconciliation.csv` |
+| **G2** | **Provisional, statement-based.** No first numbers on the preview until (a) every coded measure with a figure in the statement has a reconciliation row against it, with `comparator` = `statement`, and (b) one specimen-style household has been checked by hand for each coded measure. A measure with no statement figure may go on the preview only if it is marked "awaiting Table 4.1". The full comparison waits for G3 | `MOCK-drill2-reconciliation.csv` |
 | **G3** | Re-based on Annex A; every reconciliation row filled against Table 4.1 and the static costing. Each gap over 10% has a written reason | `MOCK-drill2-reconciliation.csv` |
 | **G4** | Full page: all coded measures on the preview with the MOCK banner, noindex, and the drill-only Vercel project | the clock table below |
 
@@ -74,7 +74,7 @@ These are carried over from drill 1 (issue #6 and María's drill 1 evaluation on
   - Write the choice in G0.
 - [ ] **Fuel duty VAT base.** Decide whether the dashboard's national figure is duty-only, VAT-inclusive, or both. Table 4.1 is duty-only; specimen households are VAT-inclusive. Drill 1 put VAT on every litre, business fuel included, which put fuel 18–28% above Table 4.1.
 - [ ] **HVCTS on renters.** Either gate the national surcharge on owner tenure, or accept and label it. Drill 1 charged about 27,000 private-renter households, and only the Personal impact path was fixed.
-- [ ] **Fiscal-year option.** The household path must produce fiscal-year figures for monthly-dated measures (fuel duty, VAT), so the scorer does not hand-convert calendar-year output.
+- [ ] **Fiscal-year option.** The household path returns calendar-year amounts for monthly-dated measures (fuel duty, VAT). Either add a fiscal-year option, or **accept the exception**: the scorer converts by even monthly proration and records the method in `cause`.
 - [ ] **Measure templates.** Have the templates ready from drill 1: rate change, threshold change, freeze to a date, monthly duty path, VAT base modifier, lump-sum payment by benefit receipt, and an age-conditioned allowance. Also keep the checklist of every file a measure touches:
   - `reforms.py`
   - `policyConfig.js`
@@ -82,12 +82,12 @@ These are carried over from drill 1 (issue #6 and María's drill 1 evaluation on
   - `personal_impact.py`
   - the validator
   - the tests
-- [ ] **Start point.** Drill 2 starts from this branch. In the setup window, before 12:30, remove the five drill 1 `mock_*` measures from `reforms.py`, `policyConfig.js` and the Personal impact files.
+- [ ] **Start point.** Drill 2 starts from this branch. In the setup window, before 12:30, remove the five drill 1 `mock_*` measures **together with** the validator's measure selections and the generated `public/data` CSVs. Remove them from `reforms.py`, `policyConfig.js`, the Personal impact files and `scripts/validate_published_data.py`. Run the tests and the validator on that commit, and record it as the G0 start commit.
 - [ ] **Dataset.** Name and hash the enhanced FRS H5 used for the national run. Constituency weights are present, or the constituency tab is explicitly marked unavailable.
 
 ## Packet
 
-The packet is in `data_inputs/mock_drill2/packet/`. **Don't open the 12:30 file before 12:30 or the 13:40 files before 13:40.** The answer key stays sealed until scoring at 16:00. Check every file against its hash with `shasum -a 256 <file>`.
+The packet is in `data_inputs/mock_drill2/packet/`. **Don't open the 12:30 file before 12:30 or the 13:40 files before 13:40.** The answer key is **not** in the repository. Vahid holds it (`~/drill2-sealed/sealed/`). He attaches it to PR #7 at 16:00 and logs the time in the clock table, and the scorer checks its hash before scoring. Check every file against its hash with `shasum -a 256 <file>`.
 
 | Release | File | SHA-256 |
 |---|---|---|
@@ -121,5 +121,7 @@ Filled copies of the scoring sheet, ledger and reconciliation are committed here
 | Documents released | | |
 | G3 re-based and reconciled | | |
 | G4 full page on preview (preview URL) | | |
+| Scoring runs, one SHA each (list them; mark the one matching the stop) | | |
 | Scoring sheet complete | | |
+| Answer key attached (16:00) | | |
 | Stop | | |
