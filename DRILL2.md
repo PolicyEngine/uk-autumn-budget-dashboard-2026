@@ -15,14 +15,14 @@ Drill 1 ([PR #4](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026
 |---|---|---|
 | By Mon 5 Oct, 10:00 | Pre-drill checklist below done or explicitly accepted | Vahid, María |
 | 10:00–12:00 | Setup only: remove the five drill 1 `mock_*` measures; G0 freeze record; preview check; roles confirmed. No drill 2 measures coded | all |
-| **12:30** | **Statement released** (`MOCK-statement.md`). Drill clock starts | releaser |
+| **12:30** | **Statement released** (`MOCK-statement.md`). Drill clock starts | open from the packet folder |
 | 12:30–12:45 | Lock the measure list and the coverage ledger rows from the statement | reconciler |
 | 13:15 target | First numbers, gated by G2 | integrator |
-| **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheet | releaser |
+| **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheet | open from the packet folder |
 | 13:40–14:00 | Re-base on Annex A and the OBR tables (**one owner, the integrator**) | integrator |
 | 14:30 target | Full page on the drill preview; reconciliation filled; scoring sheet filled | all |
 | **15:30** | **Stop.** Log the stop commit | integrator |
-| 16:00 | Scoring against the sealed key | releaser |
+| 16:00 | Scoring against the sealed key | open from the packet folder |
 
 ## Roles
 
@@ -84,11 +84,10 @@ These are carried over from drill 1 (issue #6 and María's drill 1 evaluation on
   - the tests
 - [ ] **Start point.** Drill 2 starts from this branch. In the setup window, before 12:30, remove the five drill 1 `mock_*` measures from `reforms.py`, `policyConfig.js` and the Personal impact files.
 - [ ] **Dataset.** Name and hash the enhanced FRS H5 used for the national run. Constituency weights are present, or the constituency tab is explicitly marked unavailable.
-- [ ] **Releaser.** Confirm who releases the packet. See "Packet" below.
 
 ## Packet
 
-The packet is **not in this repository** until after the drill, so that release times mean something. Its files and SHA-256 hashes are listed below; check them on receipt with `shasum -a 256 <file>`.
+The packet is in `data_inputs/mock_drill2/packet/`. **Don't open the 12:30 file before 12:30 or the 13:40 files before 13:40.** The answer key stays sealed until scoring at 16:00. Check every file against its hash with `shasum -a 256 <file>`.
 
 | Release | File | SHA-256 |
 |---|---|---|
