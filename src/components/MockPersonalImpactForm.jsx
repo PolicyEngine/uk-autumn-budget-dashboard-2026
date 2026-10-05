@@ -21,6 +21,8 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
     region: "LONDON",
     fuel_litres: 0,
     domestic_energy_bill: 0,
+    electricity_bill: 0,
+    capital_gains: 0,
     home_value_2026: 0,
     rent: 0,
     tenure_type: "OWNED_OUTRIGHT",
@@ -76,6 +78,7 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
       {moneyField("self_employment_income", "Your annual self-employment profits (2025)")}
       {moneyField("state_pension_income", "Your annual State Pension", "Enter the annual amount expected in the model year.")}
       {moneyField("private_pension_income", "Your annual private pension")}
+      {moneyField("capital_gains", "Your annual capital gains", "Gains realised in each year, before the annual exempt amount. The mock rate rise applies from 6 April 2027.", 1000)}
       <div className="form-group">
         <label htmlFor="income_growth_percent">Expected annual income growth</label>
         <div className="input-with-suffix">
@@ -129,7 +132,8 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
           value={input.fuel_litres} onChange={change} required />
         <span className="help-text">Assumed to be used evenly through the year. Includes pump VAT pass-through.</span>
       </div>
-      {moneyField("domestic_energy_bill", "Annual gas and electricity bill including 5% VAT", "The mock zero rate applies in Great Britain from April 2027 to March 2028.")}
+      {moneyField("domestic_energy_bill", "Annual gas and electricity bill including 5% VAT")}
+      {moneyField("electricity_bill", "Annual electricity bill including 5% VAT", "Electricity only. The mock zero rate continues in Great Britain from April 2027 to March 2028; gas stays at 5%.")}
       {moneyField("home_value_2026", "Home value in April 2026", "For owner-occupiers; ignored for tenants. The surcharge extension applies to English homes from £1.5m to below £2m.", 1000)}
     </section>
     <button type="submit" disabled={isLoading}>{isLoading ? "Calculating…" : "Calculate impact"}</button>

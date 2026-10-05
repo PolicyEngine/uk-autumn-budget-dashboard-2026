@@ -39,6 +39,7 @@ class HouseholdInput:
     self_employment_income: float = 0.0
     fuel_litres: float = 0.0
     domestic_energy_bill: float = 0.0
+    electricity_bill: float = 0.0
     home_value_2026: float = 0.0
     rent: float = 0.0
     tenure_type: str = "OWNED_OUTRIGHT"
@@ -540,6 +541,8 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
         adult["private_pension_income"] = {
             year: household.private_pension_income
         }
+        # Gains as realised; the engine's default realisation elasticity is 0.
+        adult["capital_gains"] = {year: household.capital_gains}
         for member, amount in (
             ("adult", household.state_pension_income),
             ("partner", household.partner_state_pension_income),
@@ -573,6 +576,7 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
                 else "diesel_litres"
             ): household.fuel_litres,
             "domestic_energy_consumption": household.domestic_energy_bill,
+            "electricity_consumption": household.electricity_bill,
             "main_residence_value": (
                 household.home_value_2026 * home_factor if owner else 0
             ),
