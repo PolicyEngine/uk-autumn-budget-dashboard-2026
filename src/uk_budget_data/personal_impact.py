@@ -351,8 +351,12 @@ class PersonalImpactCalculator:
             BUS_FARE_CAP_REDUCTION,
         )
 
+        # Outside mock mode the default is the legacy set, as in the
+        # frontend adapter; drill measures run only via calculate_drill_impact.
         requested = (
-            set(policy_ids) if policy_ids is not None else set(POLICY_IDS)
+            set(policy_ids)
+            if policy_ids is not None
+            else set(LEGACY_POLICY_IDS)
         )
         unknown = requested - self.reforms.keys()
         if unknown:
