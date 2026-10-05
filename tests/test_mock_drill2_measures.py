@@ -260,8 +260,14 @@ def test_state_pension_uprating_household_calculator_h3():
         calculate_drill_impact,
     )
 
+    # H3 is stated as not entitled to Pension Credit. On Annex A's earnings
+    # path the engine would award ~£178 (income after tax is below the
+    # £274.17 guarantee) and absorb the loss, so take-up is switched off.
     household = HouseholdInput(
-        employment_income=0, age_2025=65, state_pension_income=278.00 * 52
+        employment_income=0,
+        age_2025=65,
+        state_pension_income=278.00 * 52,
+        claims_pension_credit=False,
     )
     years = calculate_drill_impact(
         household, ["mock2_state_pension_uprating"]

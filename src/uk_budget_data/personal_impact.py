@@ -47,6 +47,9 @@ class HouseholdInput:
     private_pension_income: float = 0.0
     partner_state_pension_income: float = 0.0
     partner_private_pension_income: float = 0.0
+    # False when a specimen states the household is not entitled to (or does
+    # not claim) Pension Credit; the engine otherwise assumes take-up.
+    claims_pension_credit: bool = True
     age_2025: int = 35
     partner_age_2025: int = 33
 
@@ -562,6 +565,8 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
             situation["people"]["partner"]["private_pension_income"] = {
                 year: household.partner_private_pension_income
             }
+        if not household.claims_pension_credit:
+            situation["benunits"]["benunit"]["would_claim_pc"] = {year: False}
         inputs = situation["households"]["household"]
         from policyengine_uk.system import system
 

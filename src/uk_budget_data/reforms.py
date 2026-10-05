@@ -1461,12 +1461,36 @@ MOCK2_SP_APRIL_2030_UPRATING = 0.025
 MOCK2_NATIVE_SP_2026 = {"new": 241.30, "basic": 184.90}
 
 
+PC_GUARANTEE_PATH = "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
+# Annex A: the standard minimum guarantee rises at least with earnings.
+# OBR Table 1.6, May-July AWE growth uprating the following April.
+MOCK2_OBR_EARNINGS = {2027: 0.039, 2028: 0.036, 2029: 0.035, 2030: 0.034}
+MOCK2_NATIVE_PC_2026 = {"SINGLE": 238.00, "COUPLE": 363.25}
+
+
+def _mock2_pc_guarantee_path() -> dict[str, dict[str, float]]:
+    """Weekly guarantee uprated by OBR earnings each April (Annex A)."""
+    paths = {}
+    for unit, amount in MOCK2_NATIVE_PC_2026.items():
+        values = {}
+        for year, growth in MOCK2_OBR_EARNINGS.items():
+            amount = round(amount * (1 + growth), 2)
+            values[str(year)] = amount
+        paths[f"{PC_GUARANTEE_PATH}.{unit}"] = values
+    return paths
+
+
 def _mock2_sp_paths(new_sp: dict[int, float]) -> dict[str, dict[str, float]]:
-    """New SP from the given path; basic SP moves by the same ratios."""
+    """New SP from the given path; basic SP moves by the same ratios.
+
+    Also pins the Pension Credit guarantee to Annex A's earnings path, which
+    is the same in both scenarios of every measure that uses it.
+    """
     basic_ratio = MOCK2_NATIVE_SP_2026["basic"] / MOCK2_NATIVE_SP_2026["new"]
     return {
         NEW_SP_PATH: {str(y): v for y, v in new_sp.items()},
         BASIC_SP_PATH: {str(y): v * basic_ratio for y, v in new_sp.items()},
+        **_mock2_pc_guarantee_path(),
     }
 
 
@@ -1507,7 +1531,7 @@ def _create_mock2_state_pension_uprating() -> Reform:
     Both scenarios set the State Pension explicitly: the baseline is Annex A's
     triple-lock path (£278.00 a week in 2030-31, a 3.4% earnings rise) and the
     reform applies 2.5% to £268.85 in April 2030 (£275.57). Pension Credit is
-    untouched; the engine uprates it by CPI, not earnings as Annex A states.
+    on Annex A's earnings path in both scenarios.
     """
     return Reform(
         id="mock2_state_pension_uprating",
@@ -1567,7 +1591,9 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             _with_annex_a_state_pension(
                 mock2.create_mock2_state_pension_personal_allowance()
             ),
-            mock2.create_mock2_energy_price_payment(),
+            _with_annex_a_state_pension(
+                mock2.create_mock2_energy_price_payment()
+            ),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
