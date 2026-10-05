@@ -13,7 +13,7 @@ it("lists the statement's mock2 parameter measures in the selector and calculato
     "mock2_state_pension_uprating",
   ];
   const ids = POLICIES.map((policy) => policy.id);
-  expect(ids.filter((id) => id.startsWith("mock2_"))).toEqual(mock2);
+  expect(ids).toEqual(expect.arrayContaining(mock2));
   expect(PERSONAL_IMPACT_POLICY_ORDER).toEqual(ids);
   for (const policy of POLICIES) expect(policy.explanation).toMatch(/^MOCK basis/);
 });

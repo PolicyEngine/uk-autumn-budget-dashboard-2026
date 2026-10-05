@@ -57,7 +57,8 @@ def _change(reform_id, situation, year, variable="household_net_income"):
 
 def test_mock2_measures_registered_in_one_block():
     ids = [r.id for r in get_autumn_budget_2026_reforms()]
-    assert [i for i in ids if i.startswith("mock2_")] == MOCK2_IDS
+    start = ids.index(MOCK2_IDS[0])
+    assert ids[start : start + len(MOCK2_IDS)] == MOCK2_IDS
 
 
 def test_fuel_schedules_match_native_and_statement():
