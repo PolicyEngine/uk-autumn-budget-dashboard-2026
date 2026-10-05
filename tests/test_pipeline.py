@@ -59,9 +59,10 @@ class TestDataPipeline:
     def test_pipeline_uses_default_reforms(self):
         """Pipeline uses Autumn Budget reforms by default."""
         from uk_budget_data.pipeline import DataPipeline
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
         pipeline = DataPipeline()
-        assert pipeline.reforms == []
+        assert pipeline.reforms == get_autumn_budget_2026_reforms()
 
 
 class TestCSVOutput:

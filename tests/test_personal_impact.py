@@ -318,7 +318,10 @@ def test_candidate_inputs_produce_real_household_impacts():
             region="NORTH_EAST",
         )
     )
-    assert set(result["policies"]) == {
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+    drill_ids = {r.id for r in get_autumn_budget_2026_reforms()}
+    assert set(result["policies"]) - drill_ids == {
         "cgt_equalisation",
         "fuel_duty_rise_cancellation",
         "bus_fare_cap",
