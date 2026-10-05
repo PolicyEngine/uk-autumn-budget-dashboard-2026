@@ -422,7 +422,8 @@ function App() {
               )}
             </p>
             <p role="note" className="dashboard-intro">
-              MOCK drill 2 setup. The pinned national Microcosm dataset is ready;
+              MOCK drill 2 setup. UK 2.120.0 runs a dataset built on UK 2.100.0;
+              calibration under this runtime is unvalidated.
               no measures or costings are published before statement release.
               Constituency estimates are unavailable for this national release.
             </p>

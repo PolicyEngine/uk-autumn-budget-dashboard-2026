@@ -5,8 +5,11 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 
-MODEL_VERSION = "2.100.0"
-CORE_VERSION = "3.32.5"
+MODEL_VERSION = "2.120.0"
+CORE_VERSION = "3.32.17"
+DATASET_BUILD_MODEL_VERSION = "2.100.0"
+DATASET_BUILD_CORE_VERSION = "3.32.5"
+DATASET_BUILD_PYTHON_VERSION = "3.14.6"
 DATASET_NAME = "microcosm_uk_2024_25.h5"
 DATASET_SHA256 = (
     "aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af"
@@ -51,39 +54,27 @@ def verify_dataset(path: str | Path | None = None) -> Path:
     return selected
 
 
-# Annual statutory freeze anchors, expressed in each engine parameter's units.
-# Source: HMRC rates; https://www.gov.uk/government/publications/rates-and-allowances-national-insurance-contributions/rates-and-allowances-national-insurance-contributions
-# Four thresholds must move together to avoid non-rounded uprated upper limits
-# entering the old Class 4 case arithmetic: policyengine-uk issue #1878.
-NIC_FREEZE_VALUES = {
-    "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold": 241.73,
-    "gov.hmrc.national_insurance.class_1.thresholds.upper_earnings_limit": 967,
-    "gov.hmrc.national_insurance.class_4.thresholds.lower_profits_limit": 12_570,
-    "gov.hmrc.national_insurance.class_4.thresholds.upper_profits_limit": 50_270,
-}
-
-
-def nic_freeze_parameters(years=range(2026, 2031)) -> dict:
-    """Reusable baseline for a stated freeze; not a registered drill measure."""
+def drill_provenance() -> dict:
+    """Separate actual runtime from immutable producer metadata and consent."""
     return {
-        path: {str(year): value for year in years}
-        for path, value in NIC_FREEZE_VALUES.items()
+        "runtime": runtime_versions(),
+        "dataset_build": {
+            "policyengine-uk": DATASET_BUILD_MODEL_VERSION,
+            "policyengine-core": DATASET_BUILD_CORE_VERSION,
+            "python": DATASET_BUILD_PYTHON_VERSION,
+        },
+        "dataset": DATASET_NAME,
+        "sha256": DATASET_SHA256,
+        "revision": DATASET_REVISION,
+        "mode": "drill-only-latest-engine-exception",
+        "dataset_model_match": False,
+        "calibration_validated_for_runtime": False,
+        "publication_ready": False,
     }
 
 
-def with_nic_freeze(
-    changes: dict | None = None, years=range(2026, 2031)
-) -> dict:
-    """Keep all four anchors, allowing a measure's explicit changes on top."""
-    result = nic_freeze_parameters(years)
-    for path, values in (changes or {}).items():
-        result.setdefault(path, {}).update(values)
-    return result
-
-
 def drill_scenario(scenario=None):
-    """Apply the four-threshold baseline in both population and household runs."""
+    """Use the latest engine's native baseline; apply no hidden policy overrides."""
     from policyengine_uk.utils.scenario import Scenario
 
-    base = Scenario(parameter_changes=nic_freeze_parameters())
-    return base + scenario if scenario is not None else base
+    return scenario if scenario is not None else Scenario()

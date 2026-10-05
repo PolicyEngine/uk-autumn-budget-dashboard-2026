@@ -7,7 +7,7 @@ const request = () => new Request("http://localhost/api/personal-impact", { meth
 it("uses the configured pinned Python backend in MOCK mode", async () => {
   vi.stubEnv("NEXT_PUBLIC_MOCK", "1");
   vi.stubEnv("BUDGET_API_URL", "http://127.0.0.1:8000");
-  const fetch = vi.fn().mockResolvedValueOnce(Response.json({ status: "healthy", versions: { "policyengine-uk": "2.100.0", "policyengine-core": "3.32.5" } }))
+  const fetch = vi.fn().mockResolvedValueOnce(Response.json({ status: "healthy", versions: { "policyengine-uk": "2.120.0", "policyengine-core": "3.32.17" } }))
     .mockResolvedValueOnce(Response.json({ baseline_only: true, policies: {} }));
   vi.stubGlobal("fetch", fetch);
   const response = await POST(request());
@@ -18,7 +18,7 @@ it("uses the configured pinned Python backend in MOCK mode", async () => {
 it("blocks mismatched engines before sending household inputs", async () => {
   vi.stubEnv("NEXT_PUBLIC_MOCK", "1");
   vi.stubEnv("BUDGET_API_URL", "http://127.0.0.1:8000");
-  const fetch = vi.fn().mockResolvedValue(Response.json({ status: "healthy", versions: { "policyengine-uk": "2.90.2", "policyengine-core": "3.32.5" } }));
+  const fetch = vi.fn().mockResolvedValue(Response.json({ status: "healthy", versions: { "policyengine-uk": "2.90.2", "policyengine-core": "3.32.17" } }));
   vi.stubGlobal("fetch", fetch);
   expect((await POST(request())).status).toBe(503);
   expect(fetch).toHaveBeenCalledTimes(1);

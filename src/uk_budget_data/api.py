@@ -226,6 +226,7 @@ async def health_check():
     from uk_budget_data.drill_setup import (
         CORE_VERSION,
         MODEL_VERSION,
+        drill_provenance,
         runtime_versions,
     )
 
@@ -237,6 +238,7 @@ async def health_check():
     return {
         "status": "healthy" if matching else "engine-mismatch",
         "versions": versions,
+        "provenance": drill_provenance(),
     }
 
 

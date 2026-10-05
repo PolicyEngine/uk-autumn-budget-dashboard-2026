@@ -29,34 +29,27 @@ console = Console()
 
 
 def build_microsimulation(dataset_path: Optional[str], scenario=None):
-    """Load the user-selected custom release with its original build engine.
+    """Run the immutable dataset under the user-approved latest-engine exception.
 
-    The wrapper's certified default pins another engine and dataset. This
-    explicit route validates the producer's pins without altering its bundle.
+    Producer build pins stay separate from runtime pins. This drill does not
+    establish calibration or certification under the newer engine.
     """
     from policyengine_uk.data.dataset_schema import UKSingleYearDataset
 
     from uk_budget_data.drill_setup import (
-        DATASET_REVISION,
-        DATASET_SHA256,
+        drill_provenance,
         drill_scenario,
         verify_dataset,
         verify_runtime,
     )
 
-    versions = verify_runtime()
+    verify_runtime()
     path = verify_dataset(dataset_path)
     simulation = Microsimulation(
         dataset=UKSingleYearDataset(str(path)),
         scenario=scenario if scenario is not None else drill_scenario(),
     )
-    simulation.drill_provenance = {
-        **versions,
-        "dataset": path.name,
-        "sha256": DATASET_SHA256,
-        "revision": DATASET_REVISION,
-        "mode": "explicit-custom-release",
-    }
+    simulation.drill_provenance = drill_provenance()
     return simulation
 
 

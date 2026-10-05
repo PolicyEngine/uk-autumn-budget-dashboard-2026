@@ -14,8 +14,8 @@ export async function POST(request: Request) {
       if (!health.ok) throw new PersonalImpactError("The pinned household engine is unavailable.", 503);
       const metadata = await health.json();
       if (metadata.status !== "healthy" || metadata.versions?.["policyengine-uk"] !== MODEL_VERSION ||
-          metadata.versions?.["policyengine-core"] !== "3.32.5") {
-        throw new PersonalImpactError("The household engine does not match the drill dataset build.", 503);
+          metadata.versions?.["policyengine-core"] !== "3.32.17") {
+        throw new PersonalImpactError("The household engine does not match the pinned drill runtime.", 503);
       }
       const response = await fetch(`${base}/api/personal-impact`, {
         method: "POST", headers: { "Content-Type": "application/json" },

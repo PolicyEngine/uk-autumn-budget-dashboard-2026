@@ -64,9 +64,9 @@ Ledger-only rows go to the reconciler at G1.
 
 ## Pre-drill checklist (fix or accept by 10:00 Monday)
 
-The user selected the immutable Microcosm 2024/25 national dataset and its build engine: **UK 2.100.0/core 3.32.5**. This supersedes the earlier 2.90.2/API alignment option. Full provenance, accepted limitations and reproducible commands are in [the setup record](docs/drill2-setup.md); the [later-engine inventory](docs/drill2-engine-limitations.md) identifies fixes deliberately absent from this pin.
+The user selected the immutable Microcosm 2024/25 national dataset with the **latest runtime UK 2.120.0/core 3.32.17**, explicitly accepting a drill-only mismatch with its build engine **UK 2.100.0/core 3.32.5**. Calibration under the new runtime is unvalidated. Full provenance, accepted limitations and reproducible commands are in [the setup record](docs/drill2-setup.md); the [later-engine inventory](docs/drill2-engine-limitations.md) identifies corrections now included and remaining data/runtime gaps.
 
-- [x] **Engine pin and baseline:** exact lockfile pins; both drill paths use all four NIC thresholds (PT, UEL, LPL, UPL). Later Class 4 fixes remain accepted limitations.
+- [x] **Engine pin and baseline:** exact lockfile pins; both drill paths use the latest native NIC baseline. The obsolete local four-threshold override has been removed; latest Class 4 corrections are installed.
 - [x] **Fuel VAT, renter incidence and fiscal-year approximation:** accepted with the explicit bases and reconciliation requirements in the setup record.
 - [x] **Templates:** [implementation checklist and patterns](docs/drill2-measure-templates.md). No statement measures pre-coded.
 - [x] **Clean code/data state:** old drill measures removed from active registry, selector, household adapter and validator defaults; result CSVs contain headers only.

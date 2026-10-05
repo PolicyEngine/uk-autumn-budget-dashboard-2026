@@ -123,8 +123,7 @@ class Reform(BaseModel):
     def to_drill_scenario(
         self, baseline: bool = False, baseline_changes: dict | None = None
     ) -> Scenario:
-        """Compose the shared freeze before annual/datetime measure overrides."""
-        from uk_budget_data.drill_setup import with_nic_freeze
+        """Apply explicit drill overrides on the latest engine's native baseline."""
 
         changes = (
             self.baseline_parameter_changes
@@ -136,7 +135,14 @@ class Reform(BaseModel):
             if baseline
             else self.simulation_modifier
         )
-        merged = with_nic_freeze(baseline_changes if baseline else None)
+        merged = (
+            {
+                path: dict(values)
+                for path, values in (baseline_changes or {}).items()
+            }
+            if baseline
+            else {}
+        )
         for path, values in (changes or {}).items():
             merged.setdefault(path, {}).update(values)
         return self._build_scenario(merged, modifier)

@@ -1,6 +1,6 @@
 # UK Autumn Budget 2026 Dashboard
 
-For the 5 October rehearsal, use the exact [drill 2 dataset/engine setup](docs/drill2-setup.md). The active policy list and result CSVs start empty; [DRILL2.md](DRILL2.md) governs timed release and publication gates.
+For the 5 October rehearsal, the user approved UK 2.120.0 against a dataset built with UK 2.100.0 as a drill-only exception. Use the exact [drill 2 dataset/engine setup](docs/drill2-setup.md). The active policy list and result CSVs start empty; [DRILL2.md](DRILL2.md) governs timed release and publication gates.
 
 A web application for analysing the impact of UK Autumn Budget 2026 policies on households and public finances, powered by [PolicyEngine UK](https://policyengine.org/uk).
 
@@ -39,7 +39,7 @@ NEXT_PUBLIC_MOCK=1 PORT=8000 uv run uk-budget-api
 NEXT_PUBLIC_MOCK=1 BUDGET_API_URL=http://127.0.0.1:8000 NEXT_PUBLIC_BASE_PATH="" bun run dev --hostname 127.0.0.1 --port 3001
 ```
 
-Open `http://localhost:3001`. The drill starts empty. The Next.js route checks the Python backend's actual UK 2.100.0/core 3.32.5 versions before forwarding household requests. The shared public API currently runs 2.90.2 and cannot provide this drill's estimates. A hosted preview requires its own reachable matching backend; localhost is only suitable for local development.
+Open `http://localhost:3001`. The drill starts empty. The Next.js route checks the Python backend's actual UK 2.120.0/core 3.32.17 versions before forwarding household requests. The shared public API currently runs 2.90.2 and cannot provide this drill's estimates. A hosted preview requires its own reachable matching backend; localhost is only suitable for local development.
 
 See [the setup record](docs/drill2-setup.md) for the immutable private dataset, accepted limitations and G0 checks, and [the data notes](public/data/README.md) for publication status. The full household route can be smoke-tested with an empty selection before measures are registered, producing baseline-only results.
 

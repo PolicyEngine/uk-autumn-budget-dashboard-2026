@@ -4,7 +4,7 @@ import { calculatePersonalImpact, LEGACY_POLICY_IDS, PersonalImpactError } from 
 const metadata = {
   status: "ok",
   result: {
-    version: "2.100.0",
+    version: "2.120.0",
     parameters: {
       "gov.economic_assumptions.indices.obr.cpih": {
         values: {

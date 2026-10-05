@@ -1,8 +1,8 @@
-# Drill 2 setup and accepted limitations
+# Latest-engine drill 2 setup and limitations
 
-MOCK rehearsal, 5 October 2026. No drill measures are registered before the 12:30 BST statement release.
+MOCK rehearsal, 5 October 2026. The user explicitly chose the latest released engine for this drill while retaining a dataset built with older versions. This is a drill-only compatibility exception intended to expose engine and data gaps. It does not establish calibration, certification or publication readiness under the new runtime. No drill measures are registered before the 12:30 BST statement release.
 
-## Immutable input contract
+## Input and runtime provenance
 
 | Item | Pin |
 |---|---|
@@ -12,36 +12,38 @@ MOCK rehearsal, 5 October 2026. No drill measures are registered before the 12:3
 | SHA-256 | `aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af` |
 | File bytes | 234,117,256 |
 | Producer release | `microcosm-uk-2024-25-national-20261002T230158Z-5c6b3f68` |
-| Dataset build model | `policyengine-uk==2.100.0` |
-| Dataset build core | `policyengine-core==3.32.5` |
-| Interpreter | Local Python 3.13.14; producer used 3.14.6. Only model/core are claimed to match the producer exactly. |
-| Latest model at setup | `2.120.0`, deliberately not substituted |
+| Dataset build model/core | `policyengine-uk==2.100.0` / `policyengine-core==3.32.5` |
+| Dataset build interpreter | Python 3.14.6 |
+| **Drill runtime model/core** | **`policyengine-uk==2.120.0` / `policyengine-core==3.32.17`** |
+| Runtime wrapper/interpreter | Bare `policyengine==6.2.1` / Python 3.13.14 |
+| Latest-release check | PyPI rechecked immediately before pinning on 5 October 2026 |
 | Input period and format | 2024; PyTables person, benefit-unit and household tables |
 | Local geography | National release; no constituency identifiers or aligned weights. Constituencies unavailable. |
 
-The producer's build and release manifests both identify these model/core versions. The downloaded bytes match the recorded hash. Keep the private H5 outside Git; credentials and raw private certification files must also remain outside Git. The pipeline verifies the exact model/core versions and H5 hash before constructing a simulation, and has no default-dataset fallback.
+The producer's build and release manifests still identify UK 2.100.0/core 3.32.5. The downloaded bytes match the recorded hash. Those facts do not change when the runtime changes. Keep the private H5, credentials and raw private certification files outside Git. The pipeline checks exact runtime versions and H5 hash, then records separate `runtime` and `dataset_build` identities, `dataset_model_match=false`, `calibration_validated_for_runtime=false` and `publication_ready=false`.
 
-The installed `policyengine==6.0.0` wrapper bundles a different default (`policyengine-uk==2.90.2`). Its `managed_microsimulation` path would retain that bundled model identity while allowing a local dataset. This rehearsal therefore uses an explicit custom-release builder with `UKSingleYearDataset` and the pinned country engine. It records actual installed versions and the verified producer revision/hash. It does not claim certification by the wrapper's default bundle or modify that bundle.
+Wrapper 6.2.1's UK extra pins UK 2.102.3/core 3.32.10, so it cannot install the selected latest pair. The rehearsal uses the bare wrapper dependency and an explicit `UKSingleYearDataset`/country-engine loader. It does not claim certification by the wrapper's bundled default or modify that bundle.
 
-## Baseline and accepted limitations
+## Baseline and remaining limitations
 
-- **Local NIC mitigation applied:** both population and household drill scenarios freeze PT £241.73/week, UEL £967/week, LPL £12,570/year and UPL £50,270/year for model years 2026–2030 (tax years through 2030/31). Explicit measure overrides take precedence. Class 1 retains the old engine's 52-week annualisation (£50,284 from £967/week), so it is not exactly equivalent to the statutory annual £50,270 limit. Income dynamics can also change projected assessable pay; regression fixtures hold that pay fixed to isolate the thresholds. This addresses the missing freeze and round-threshold exposure; it does not supply every later Class 4 correction.
-- **Later engine fixes accepted as absent:** see the [version-by-version inventory](drill2-engine-limitations.md). Material groups include energy double uprating; Class 4 annual maximum, mixed employment/profits, losses and pension-age rules; UC income, minimum-income-floor and claimant definitions; Housing Benefit and Council Tax Reduction; pensions and carer interactions; absolute poverty; and fiscal-year fuel duty. Their effects on this selected dataset have not been quantified. Do not present this pin as equivalent to the latest engine.
-- **Fuel duty VAT basis:** accept a national VAT-inclusive household-resource result where implemented, explicitly labeled. Table 4.1's duty-only figure requires a separate duty-only comparator. Full VAT pass-through over all imputed litres includes business fuel; this can overstate the comparable VAT-inclusive national amount. Household specimens include VAT on the duty change. Do not compare the two bases without recording the difference.
-- **High-value council tax surcharge on renters:** accept the old national engine's missing owner-tenure gate and label any affected measure. The household form supplies zero owned-residence value for tenants, so its incidence differs deliberately. No new national correction has been backported.
-- **Fiscal years:** accept even monthly proration for calendar-year fuel/energy outputs when reconciling to April–March fiscal years. Record the method and basis in each reconciliation/scoring row; a mixed-period sum is provisional. The newer engine's fiscal fuel-duty correction is absent.
-- **Geography:** national estimates only. This release excludes local-area certification and contains no constituency codes. Existing FRS constituency weight files must not be applied to these rows; the pipeline explicitly disables that path.
-- **Hosted calculator:** the shared public API reports UK 2.90.2 at setup, so it cannot supply this drill's household results. `BUDGET_API_URL` must point to a backend running UK 2.100.0/core 3.32.5. The frontend verifies `/api/health` before forwarding inputs and fails closed when absent or mismatched. A locally tested backend does not establish hosted preview readiness. A localhost URL works only for a local frontend and cannot serve the Vercel preview.
+- **Native NIC baseline:** UK 2.120.0 supplies PT £241.73/week, UEL £966.73/week, LPL £12,570/year and UPL £50,270/year through 2030/31. The old local freeze has been removed; retaining its £967 UEL would mask a latest-engine correction. Both population and household calculations use native rules plus explicit measure overrides. Class 1 still annualises weekly thresholds by 52; income dynamics may change projected assessable pay.
+- **Later fixes now installed:** the [engine change inventory](drill2-engine-limitations.md) describes fixes included since the dataset's build. Installed code does not imply that every new formula runs on this older dataset: recognized stored columns become inputs and can bypass formulas. [The gap record](drill2-engine-gaps.md) separates observed schema facts from untested effects.
+- **Calibration mismatch accepted for this drill:** the dataset has not been recalibrated or certified under 2.120.0. A finite-output smoke test establishes execution only. Neither aggregate drift against the build engine nor agreement with administrative targets has been quantified.
+- **Fuel duty VAT basis:** national VAT-inclusive household-resource estimates, if implemented, must be labeled. Table 4.1's duty-only figure needs a separate duty-only comparator. Full VAT pass-through on all imputed litres includes business fuel and can overstate the comparable national VAT amount. Household specimens include VAT on the duty change. Record each basis explicitly.
+- **High-value council tax surcharge on renters:** the inspected 2.120.0 surcharge formula still checks England and residence value without an owner-tenure gate. National incidence may therefore differ from the household form, which sets owned-residence value to zero for tenants. The selected dataset's affected renter count has not been measured; no local formula correction is applied.
+- **Fiscal years:** latest UK includes fiscal-year fuel-duty changes. Do not assume all variable outputs share that basis. For custom calendar-year fuel/energy modifiers, retain the declared even-month proration exception when reconciling to April–March, recording each method and avoiding double conversion. Mixed-period totals remain provisional.
+- **Geography:** national estimates only. No constituency codes or aligned weights exist for this release. Existing FRS constituency weights must not be applied to these rows; the pipeline disables that path.
+- **Hosted calculator:** the shared API reports UK 2.90.2 and cannot supply this runtime. `BUDGET_API_URL` must reach UK 2.120.0/core 3.32.17. The frontend checks actual versions before forwarding inputs and fails closed if absent or mismatched. Local testing does not verify hosted preview readiness; localhost cannot serve Vercel.
 
 ## Reproduce setup
 
-Run from the repository root, after acquiring the exact H5 with an authorized Hugging Face account:
+Run from the repository root after obtaining the exact private H5 with authorized access:
 
 ```sh
 uv sync --frozen --extra dev
 bun install --frozen-lockfile
 export UK_BUDGET_DATASET=/absolute/path/to/microcosm_uk_2024_25.h5
-uv run python -c 'from uk_budget_data.drill_setup import verify_runtime, verify_dataset; print(verify_runtime()); print(verify_dataset())'
+uv run python -c 'from uk_budget_data.drill_setup import verify_runtime, verify_dataset, drill_provenance; print(verify_runtime()); print(verify_dataset()); print(drill_provenance())'
 uv run pytest
 bun run test
 bun run lint
@@ -49,15 +51,15 @@ NEXT_PUBLIC_MOCK=1 bun run build
 uv run python scripts/validate_published_data.py --pre-start
 ```
 
-The pre-start validator checks an empty active registry and schema-only CSV files. It never approves numerical results. After release, register the locked policy list and run publication validation with `--policies <active IDs>`; use `--require-constituency` only after a separately verified local data release becomes available.
+The empty-start validator approves setup only. After release, register the locked statement list and run numerical publication validation with `--policies <active IDs>`, alongside G2/G3 reconciliation. The drill-only dataset/runtime exception continues to apply even after those checks pass.
 
-Start the backend and frontend in separate terminals:
+Run the backend and frontend in separate terminals:
 
 ```sh
 NEXT_PUBLIC_MOCK=1 PORT=8000 uv run uk-budget-api
 NEXT_PUBLIC_MOCK=1 BUDGET_API_URL=http://127.0.0.1:8000 bun run dev
 ```
 
-`GET /api/health` returns actual model/core versions. `POST /api/personal-impact` with `{"employment_income":30000,"policy_ids":[]}` returns a baseline-only response before release. This is a runtime check, not a published policy estimate. The page intentionally offers no calculation until measures are registered.
+Restart both services after changing the environment. `/api/health` reports actual runtime versions and separate build provenance. A household POST with `{"employment_income":30000,"policy_ids":[]}` gives baseline-only output before release. No policy impact is implied.
 
-After the checked setup is committed, record `git rev-parse HEAD` in the external G0 receipt or create an immutable local tag `drill2-g0-20261005`. A commit cannot contain its own final SHA. Record the separate scored/stop SHAs later. Preview deployment, authenticated UI check, and both participants' role confirmation remain separate readiness checks.
+After verification and commit, record the new start SHA in the external G0 receipt and a new immutable local tag `drill2-g0-latest-engine-20261005`. Preserve `drill2-g0-20261005` and its prior receipt as the historical dataset-compatible setup. A commit cannot contain its own final SHA. Record later scoring and stop SHAs separately. Hosted preview verification and participant confirmation remain operational checks.

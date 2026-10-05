@@ -71,7 +71,7 @@ type ApiMetadata = {
 type Job = { year: number; key: string; household: Situation; policy?: Policy };
 
 const YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
-export const MODEL_VERSION = "2.100.0"; // Dataset build pin; public API must match.
+export const MODEL_VERSION = "2.120.0"; // Drill runtime pin; dataset build version is recorded separately.
 const DEFAULT_API_URL = "https://api.policyengine.org";
 const CPI_PATH = "gov.economic_assumptions.indices.obr.cpih";
 const FUEL_PATH = "gov.hmrc.fuel_duty.petrol_and_diesel";

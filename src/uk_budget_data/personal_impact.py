@@ -500,7 +500,11 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
 
     Empty selection is a baseline smoke only and produces no policy effects.
     """
-    from uk_budget_data.drill_setup import drill_scenario, verify_runtime
+    from uk_budget_data.drill_setup import (
+        drill_provenance,
+        drill_scenario,
+        verify_runtime,
+    )
 
     verify_runtime()
     reforms = {r.id: r for r in get_autumn_budget_2026_reforms()}
@@ -516,6 +520,7 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
         "policies": {},
         "totals": {"by_year": {}, "cumulative": 0},
         "baseline_only": not requested,
+        "provenance": drill_provenance(),
     }
     for key in requested:
         reform = reforms[key]

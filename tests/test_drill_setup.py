@@ -8,6 +8,15 @@ from policyengine_uk import Simulation
 from uk_budget_data import drill_setup
 from uk_budget_data.models import Reform
 
+# Latest model native baseline, verified from official 2.120.0 parameters.
+# Test expectations only: production code does not override these values.
+NATIVE_NIC_THRESHOLDS = {
+    "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold": 241.73,
+    "gov.hmrc.national_insurance.class_1.thresholds.upper_earnings_limit": 966.73,
+    "gov.hmrc.national_insurance.class_4.thresholds.lower_profits_limit": 12_570,
+    "gov.hmrc.national_insurance.class_4.thresholds.upper_profits_limit": 50_270,
+}
+
 
 def situation(year, employment=0, self_employment=0):
     return {
@@ -25,16 +34,20 @@ def situation(year, employment=0, self_employment=0):
 
 
 @pytest.mark.parametrize("year", [2026, 2027, 2028, 2029, 2030])
-def test_frozen_nics_match_statutory_bands_at_all_drill_years(year):
+def test_native_nics_match_frozen_bands_at_all_drill_years(year):
     """Fixed assessable pay isolates the frozen bands from employment dynamics.
 
-    UK 2.100.0 annualises weekly Class 1 thresholds with 52 weeks:
-    (£967 - £241.73)*52*8% + (£60,000 - £967*52)*2%.
+    UK 2.120.0 annualises weekly Class 1 thresholds with 52 weeks:
+    (£966.73 - £241.73)*52*8% + (£60,000 - £966.73*52)*2%.
     Class 4 uses annual £12,570/£50,270 bands and 6%/2% rates.
     """
     template = Reform(id="fixture", name="Fixture")
     for employment, profits, expected in [
-        (60000, 0, (967 - 241.73) * 52 * 0.08 + (60000 - 967 * 52) * 0.02),
+        (
+            60000,
+            0,
+            (966.73 - 241.73) * 52 * 0.08 + (60000 - 966.73 * 52) * 0.02,
+        ),
         (0, 60000, 2456.60),
     ]:
         for baseline in (True, False):
@@ -43,7 +56,7 @@ def test_frozen_nics_match_statutory_bands_at_all_drill_years(year):
                 scenario=template.to_drill_scenario(baseline=baseline),
             )
             params = sim.tax_benefit_system.parameters
-            for path, value in drill_setup.NIC_FREEZE_VALUES.items():
+            for path, value in NATIVE_NIC_THRESHOLDS.items():
                 assert params.get_child(path)(
                     f"{year}-01-01"
                 ) == pytest.approx(value)
@@ -66,7 +79,7 @@ def test_dated_measure_does_not_erase_nic_baseline():
     sim = Simulation(
         situation=situation(2029, 60000), scenario=reform.to_drill_scenario()
     )
-    for path, value in drill_setup.NIC_FREEZE_VALUES.items():
+    for path, value in NATIVE_NIC_THRESHOLDS.items():
         assert sim.tax_benefit_system.parameters.get_child(path)(
             "2029-01-01"
         ) == pytest.approx(value)
@@ -125,8 +138,8 @@ def test_mock_api_baseline_and_old_policy_rejection(monkeypatch):
     client = TestClient(app)
     health = client.get("/api/health").json()
     assert health["versions"] == {
-        "policyengine-uk": "2.100.0",
-        "policyengine-core": "3.32.5",
+        "policyengine-uk": "2.120.0",
+        "policyengine-core": "3.32.17",
     }
     result = client.post(
         "/api/personal-impact",
@@ -166,7 +179,7 @@ def test_modifier_reads_frozen_baseline_before_caching_nics(baseline):
     observed = []
 
     def read_nics(simulation):
-        for path, value in drill_setup.NIC_FREEZE_VALUES.items():
+        for path, value in NATIVE_NIC_THRESHOLDS.items():
             assert simulation.tax_benefit_system.parameters.get_child(path)(
                 "2029-01-01"
             ) == pytest.approx(value)
@@ -188,3 +201,54 @@ def test_modifier_reads_frozen_baseline_before_caching_nics(baseline):
     assert float(
         composed.calculate("national_insurance", 2029)[0]
     ) == pytest.approx(expected, abs=0.001)
+
+
+def test_latest_runtime_is_distinct_from_dataset_build():
+    provenance = drill_setup.drill_provenance()
+    assert provenance["runtime"] == {
+        "policyengine-uk": "2.120.0",
+        "policyengine-core": "3.32.17",
+    }
+    assert provenance["dataset_build"] == {
+        "policyengine-uk": "2.100.0",
+        "policyengine-core": "3.32.5",
+        "python": "3.14.6",
+    }
+    assert provenance["dataset_model_match"] is False
+    assert provenance["publication_ready"] is False
+    assert provenance["calibration_validated_for_runtime"] is False
+    assert drill_setup.drill_scenario().parameter_changes is None
+    assert (
+        Reform(id="unregistered", name="Native")
+        .to_drill_scenario()
+        .parameter_changes
+        is None
+    )
+
+
+def test_annual_override_applies_before_modifier_on_native_engine():
+    """Preserve the modifier-order repair after removing the local NI freeze."""
+    path = "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold"
+    observed = []
+
+    def inspect(simulation):
+        observed.append(
+            simulation.tax_benefit_system.parameters.get_child(path)(
+                "2029-01-01"
+            )
+        )
+        simulation.calculate("national_insurance", 2029)
+
+    reform = Reform(
+        id="unregistered",
+        name="Fixture",
+        parameter_changes={path: {"2029": 250}},
+        simulation_modifier=inspect,
+    )
+    sim = Simulation(
+        situation=situation(2029, 60000), scenario=reform.to_drill_scenario()
+    )
+    assert observed == [250]
+    assert (
+        sim.tax_benefit_system.parameters.get_child(path)("2029-01-01") == 250
+    )
