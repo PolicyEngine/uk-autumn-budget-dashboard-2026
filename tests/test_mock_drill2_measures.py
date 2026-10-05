@@ -248,3 +248,29 @@ def test_state_pension_uprating_full_rate_loss():
         - reform.parameter_changes[path]["2030"]
     ) * 52
     assert loss == pytest.approx(126.295, abs=0.001)
+
+
+def test_state_pension_uprating_household_calculator_h3():
+    # Full new SP entered at Annex A's £278.00 x 52 = £14,456 in 2030-31.
+    # Reform: x 275.57125/278.00 -> loss £126.295. On its own the measure
+    # leaves the standard £12,570 PA, so 20% tax falls by £25.259:
+    # net change = -126.295 x 0.8 = -£101.036.
+    from uk_budget_data.personal_impact import (
+        HouseholdInput,
+        calculate_drill_impact,
+    )
+
+    household = HouseholdInput(
+        employment_income=0, age_2025=65, state_pension_income=278.00 * 52
+    )
+    years = calculate_drill_impact(
+        household, ["mock2_state_pension_uprating"]
+    )["years"]
+    change = years[2030]["policies"]["mock2_state_pension_uprating"]
+    assert change["net_income_change"] == pytest.approx(-101.036, abs=0.01)
+    assert (
+        years[2029]["policies"]["mock2_state_pension_uprating"][
+            "net_income_change"
+        ]
+        == 0
+    )

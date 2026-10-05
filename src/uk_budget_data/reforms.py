@@ -1478,6 +1478,29 @@ def _mock2_sp_reform_path() -> dict[int, float]:
     return path
 
 
+def _mock2_sp_household_modifier(sim: Simulation) -> Simulation:
+    """Household calculator only: scale entered State Pension by the reform ratio.
+
+    With a situation (no dataset) the engine takes the reported amount as
+    given: the part above the reformed flat rate moves to
+    additional_state_pension, so the total never changes. The specimen basis
+    says the State Pension follows Annex A, so scale it by 275.57/278.00 from
+    2030. National runs (Microsimulation) already respond through the rates.
+    """
+    from policyengine_uk import Microsimulation
+
+    if isinstance(sim, Microsimulation):
+        return sim
+    reform = _mock2_sp_reform_path()
+    for year in MOCK2_YEARS:
+        if year < 2030:
+            continue
+        ratio = reform[year] / MOCK2_ANNEX_A_NEW_SP[year]
+        pension = np.asarray(sim.calculate("state_pension", period=year))
+        sim.set_input("state_pension", year, pension * ratio)
+    return sim
+
+
 def _create_mock2_state_pension_uprating() -> Reform:
     """Mock 2 measure 6: from April 2030, SP rises by max(CPI, 2.5%).
 
@@ -1497,6 +1520,7 @@ def _create_mock2_state_pension_uprating() -> Reform:
         ),
         baseline_parameter_changes=_mock2_sp_paths(MOCK2_ANNEX_A_NEW_SP),
         parameter_changes=_mock2_sp_paths(_mock2_sp_reform_path()),
+        simulation_modifier=_mock2_sp_household_modifier,
     )
 
 
