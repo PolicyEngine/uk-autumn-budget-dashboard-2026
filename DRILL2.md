@@ -106,8 +106,8 @@ Filled copies of the scoring sheet, ledger and reconciliation are committed here
 
 | Event | Time (BST) | Commit |
 |---|---|---|
-| G0 freeze record: `policyengine-uk` version; dataset and SHA-256; API version | | |
-| Drill start: statement released | | |
+| G0 freeze record: `policyengine-uk` version; dataset and SHA-256; API version | 12:13 (María's setup; logged 12:36) | `32217f2`: runtime policyengine-uk 2.120.0 / core 3.32.17; dataset `microcosm_uk_2024_25.h5` sha256 `aa31bdf6…88af` (build UK 2.100.0); constituencies unavailable; shared API 2.90.2, so Personal impact needs the matched local backend |
+| Drill start: statement released | 12:30 (opened 12:31, hash matches) | `32217f2` |
 | G1 measure list locked | | |
 | G2 first numbers (preview URL) | | |
 | Documents released | | |
