@@ -3,9 +3,17 @@ import { csvParse } from "d3";
 import { it, expect } from "vitest";
 import { POLICIES, PERSONAL_IMPACT_POLICY_ORDER } from "../utils/policyConfig";
 
-it("starts with no selectable or household drill measures", () => {
-  expect(POLICIES).toEqual([]);
-  expect(PERSONAL_IMPACT_POLICY_ORDER).toEqual([]);
+it("registers each drill measure once, with a MOCK basis note", () => {
+  const ids = POLICIES.map((policy) => policy.id);
+  expect(new Set(ids).size).toBe(ids.length);
+  expect(ids).toEqual(expect.arrayContaining([
+    "mock2_state_pension_personal_allowance",
+    "mock2_energy_price_payment",
+  ]));
+  for (const policy of POLICIES.filter((p) => p.id.startsWith("mock2_"))) {
+    expect(policy.explanation, policy.id).toMatch(/^MOCK basis:/);
+  }
+  expect(PERSONAL_IMPACT_POLICY_ORDER).toEqual(ids);
 });
 
 it("ships no generated result rows, including auxiliary chart files", () => {

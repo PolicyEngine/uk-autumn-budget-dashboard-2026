@@ -1100,9 +1100,12 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the candidate and carried-over 2026 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
-        _AUTUMN_BUDGET_2026_REFORMS_CACHE = (
-            []
-        )  # Filled after statement release.
+        from uk_budget_data import mock_drill2_structural as mock2
+
+        _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
+            mock2.create_mock2_state_pension_personal_allowance(),
+            mock2.create_mock2_energy_price_payment(),
+        ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 

@@ -7,7 +7,10 @@ import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
-FEATURED_POLICIES = ()  # Empty until the statement-derived list is locked.
+FEATURED_POLICIES = (
+    "mock2_state_pension_personal_allowance",
+    "mock2_energy_price_payment",
+)
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),
     "distributional_impact": ("value",),

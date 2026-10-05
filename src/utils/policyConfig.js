@@ -1,5 +1,12 @@
 // MOCK drill 2: no measures registered before the statement release.
-export const POLICIES = [];
+export const POLICIES = [
+  { id: "mock2_state_pension_personal_allowance", name: "State Pension personal allowance", color: "#14B8A6",
+    description: "A £13,100 personal allowance for people over State Pension age from April 2027",
+    explanation: "MOCK basis: drill 2 rehearsal statement, not a real Budget. People at State Pension age get a £13,100 personal allowance from 2027-28, rising each year with the new State Pension, so the full new State Pension alone pays no income tax. It is withdrawn at £1 for every £2 of adjusted net income above £20,000 until it reaches the standard allowance; the taper rate is an assumption awaiting Annex A. The £100,000 taper then applies as normal." },
+  { id: "mock2_energy_price_payment", name: "Energy Price Protection Payment", color: "#5EEAD4",
+    description: "A one-off £150 for households receiving Universal Credit or Pension Credit",
+    explanation: "MOCK basis: drill 2 rehearsal statement, not a real Budget. Each household in which any benefit unit receives Universal Credit or Pension Credit gets £150 once. The statement places the payment in January 2027 (fiscal year 2026-27); the model books it in model year 2027 using that year's benefit amounts. It is added through the cost-of-living payment channel, so it counts in household net income and government spending." },
+];
 
 // Retained only for old shared URLs; these do not appear in the 2026 selector.
 export const LEGACY_POLICIES = [
