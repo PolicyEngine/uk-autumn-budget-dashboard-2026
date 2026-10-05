@@ -1,2 +1,22 @@
 MOCK DATA: rehearsal Budget for PolicyEngine drill 2, 5 October 2026. Not a real Budget. Fill one row per measure and fiscal year from the statement at 12:30, then from Table 4.1 and the costings at 13:40. Read with pandas skiprows=1.
 measure_no,measure,fiscal_year,comparator,our_static_bn,our_basis,our_commit,table41_post_behavioural_bn,costing_static_bn,gap_vs_static_bn,gap_vs_static_pct,gap_reason,gate
+1,Fuel duty,2027-28,statement,,,,-2.2,,,,statement figure is post-behavioural; our static figure pending,G2
+1,Fuel duty,2029-30,statement,,,,-1.7,,,,statement figure is post-behavioural; our static figure pending,G2
+1,Fuel duty,2030-31,statement,,,,-1.8,,,,statement figure is post-behavioural; our static figure pending,G2
+2,Electricity VAT,2027-28,statement,,,,-1.7,,,,statement figure is post-behavioural; our static figure pending,G2
+2,Electricity VAT,2029-30,statement,,,,0.0,,,,statement figure is post-behavioural; our static figure pending,G2
+2,Electricity VAT,2030-31,statement,,,,0.0,,,,statement figure is post-behavioural; our static figure pending,G2
+4,State Pension Personal Allowance,2027-28,statement,,,,-0.5,,,,statement figure is post-behavioural; our static figure pending,G2
+4,State Pension Personal Allowance,2029-30,statement,,,,-0.8,,,,statement figure is post-behavioural; our static figure pending,G2
+4,State Pension Personal Allowance,2030-31,statement,,,,-0.9,,,,statement figure is post-behavioural; our static figure pending,G2
+5,Employer National Insurance,2027-28,statement,,,,-1.9,,,,statement figure is post-behavioural; our static figure pending,G2
+5,Employer National Insurance,2029-30,statement,,,,-1.9,,,,statement figure is post-behavioural; our static figure pending,G2
+5,Employer National Insurance,2030-31,statement,,,,-2.0,,,,statement figure is post-behavioural; our static figure pending,G2
+6,State Pension uprating,2027-28,statement,,,,0.0,,,,statement figure is post-behavioural; our static figure pending,G2
+6,State Pension uprating,2029-30,statement,,,,0.0,,,,statement figure is post-behavioural; our static figure pending,G2
+6,State Pension uprating,2030-31,statement,,,,1.1,,,,statement figure is post-behavioural; our static figure pending,G2
+7,Capital Gains Tax,2027-28,statement,,,,0.2,,,,statement figure is post-behavioural; our static figure pending,G2
+7,Capital Gains Tax,2029-30,statement,,,,1.2,,,,statement figure is post-behavioural; our static figure pending,G2
+7,Capital Gains Tax,2030-31,statement,,,,1.3,,,,statement figure is post-behavioural; our static figure pending,G2
+3,Energy Price Protection Payment,,statement,,,,,,,,no statement figure: awaiting Table 4.1,G2
+8,HVCTS £1.5m-£2m band,,statement,,,,,,,,no statement figure: awaiting Table 4.1,G2
