@@ -96,7 +96,14 @@ class TestReformDefinitions:
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
         reforms = get_autumn_budget_2026_reforms()
-        assert reforms == []
+        assert {r.id for r in reforms} >= {
+            "mock2_fuel_duty_hold",
+            "mock2_electricity_vat_zero",
+            "mock2_employer_ni_threshold",
+            "mock2_cgt_rates",
+            "mock2_hvcts_band",
+            "mock2_state_pension_uprating",
+        }
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""
@@ -571,13 +578,15 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_no_measures_before_statement_release(self):
+    def test_only_drill2_measures_after_statement_release(self):
         from uk_budget_data.reforms import (
             get_autumn_budget_2026_reforms,
             get_reform,
         )
 
-        assert get_autumn_budget_2026_reforms() == []
+        assert all(
+            r.id.startswith("mock2_") for r in get_autumn_budget_2026_reforms()
+        )
         assert get_reform("mock_nics_threshold_rise") is None
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
