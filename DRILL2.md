@@ -115,5 +115,5 @@ Filled copies of the scoring sheet, ledger and reconciliation are committed here
 | G4 full page on preview (preview URL) | 14:00:59 deployed (`621db06`), all 8 measures; final data at `e05274b` | https://uk-autumn-budget-2026-drill-git-drill2-moc-a2bb64-policy-engine.vercel.app — `X-Robots-Tag: noindex` checked; MOCK banner, meta `noindex, nofollow` and Personal impact not verified (team login) |
 | Scoring runs, one SHA each (list them; mark the one matching the stop) | 14:11 run 1, 80 rows; 14:35 run 2, 6 rows rerun | run 1 `6fa2f5f` (74 rows kept); run 2 `c156e8b` (H3/H5/H8, measures 4 and 8). Stop `e05274b` matches run 2's code for households |
 | Scoring sheet complete | 14:35 (target 14:30) | `e05274b`: `MOCK-drill2-scoring.csv` sha256 `19879869…badf`; reconciliation sha256 `43f0fea2…1271` |
-| Answer key attached (16:00) | | |
+| Answer key attached (16:00) | 15:47 (early, after the stop and complete scoring) | `data_inputs/mock_drill2/packet/MOCK-drill2-answer-key.csv`, sha256 `f60f7a50…a36f` matches; 78/80 rows match to the penny |
 | Stop | 15:18 | `e05274b` (code `c156e8b` plus data and filled sheets). G3 qualified by the reconciler: CGT, fuel base, employer NI basis, EPPP count and HVCTS count gaps open |
