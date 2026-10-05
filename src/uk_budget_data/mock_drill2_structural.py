@@ -2,11 +2,12 @@
 
 MOCK DATA: these measures implement the invented drill 2 Chancellor's
 statement (data_inputs/mock_drill2/packet/MOCK-statement.md). Not a real
-Budget. Annex A / the policy costings (released 13:40) may change the
-constants below; every assumption awaiting it is marked ``AWAITING ANNEX A``.
+Budget. Constants follow the 13:40 policy costings
+(data_inputs/mock_drill2/packet/MOCK-policy-costings.md, sections 3 and 4
+and Annex A).
 
 Both measures are structural: the engine has no parameter for an age-
-conditioned personal allowance or for a 2027 one-off payment, so each is a
+conditioned personal allowance or for a one-off energy payment, so each is a
 ``policyengine_core`` Reform class applied through a ``simulation_modifier``.
 ``Reform.to_drill_scenario()`` carries that modifier into both the national
 pipeline (``pipeline.build_microsimulation``) and the household calculator
@@ -48,27 +49,45 @@ from uk_budget_data.models import Reform
 # (annual parameters are fiscal-year mapped), so 2027 is the first year.
 SP_PA_FIRST_YEAR = 2027
 SP_PA_AMOUNT_2027 = 13_100
-# Statement: "tapers away for pensioners with incomes above £20,000".
-# Held flat in cash terms (the statement uprates only the allowance).
-# AWAITING ANNEX A: confirm whether the £20,000 threshold is uprated.
+# Costing section 4: tapered by £1 for every £2 of adjusted net income above
+# £20,000 until it reaches the £12,570 Personal Allowance. The £20,000
+# threshold is fixed in cash terms (only the allowance is uprated). The
+# measure does not change the basic rate limit.
 SP_PA_TAPER_THRESHOLD = 20_000
-# AWAITING ANNEX A: the statement gives no taper rate. Assumed £1 of the
-# higher allowance withdrawn per £2 of adjusted net income above the
-# threshold (the same 50% rate as the £100,000 taper), down to the standard
-# personal allowance. Change here only.
 SP_PA_TAPER_RATE = 0.5
+# Costing section 4: from April 2028 the allowance "rises each April by the
+# same percentage as the full new State Pension, rounded up to the next £10".
+SP_PA_ROUNDING = 10
 
 
 def _new_state_pension_weekly(parameters, instant):
     return parameters(instant).gov.dwp.state_pension.new_state_pension.amount
 
 
+def sp_personal_allowance_amount(year: int, new_sp_weekly) -> float:
+    """Untapered State Pension Personal Allowance for model year ``year``.
+
+    amount(2027) = 13,100; amount(t) = ceil(amount(t-1) x nSP(t) / nSP(t-1)
+    / 10) x 10, chained year by year (each year's rounded value is the base
+    for the next). ``new_sp_weekly(y)`` returns the full new State Pension a
+    week for model year y.
+    """
+    amount = SP_PA_AMOUNT_2027
+    for y in range(SP_PA_FIRST_YEAR + 1, year + 1):
+        raw = amount * new_sp_weekly(y) / new_sp_weekly(y - 1)
+        # round() guards ceil against float noise on an exact multiple of £10.
+        amount = SP_PA_ROUNDING * np.ceil(round(raw / SP_PA_ROUNDING, 9))
+    return float(amount)
+
+
 class personal_allowance(Variable):
     """Personal allowance with the MOCK State Pension age allowance.
 
     standard = engine PA (12,570 less 50% of ANI above £100,000, ceil'd).
-    higher   = 13,100 x nSP(t) / nSP(2027), less SP_PA_TAPER_RATE of ANI above
-               £20,000 (ceil'd like the engine's PA).
+    amount   = 13,100 in 2027, then each year ceil(amount(t-1) x nSP(t) /
+               nSP(t-1) / 10) x 10 (see sp_personal_allowance_amount).
+    higher   = amount less 50% of ANI above £20,000 (ceil'd like the
+               engine's PA); the taper is applied after the rounding.
     result   = max(standard, higher) for people at State Pension age from
                2027, else standard.
 
@@ -99,14 +118,16 @@ class personal_allowance(Variable):
         )
         if period.start.year < SP_PA_FIRST_YEAR:
             return standard
-        # Engine SP uprating, read from this simulation's own parameters so a
-        # changed State Pension path (e.g. an uprating measure) carries through.
-        # System parameters are fiscal-year mapped: "2027-01-01" is FY 2027-28.
-        uprating = _new_state_pension_weekly(
-            parameters, period
-        ) / _new_state_pension_weekly(parameters, f"{SP_PA_FIRST_YEAR}-01-01")
+        # nSP is read from this simulation's own parameters so a changed
+        # State Pension path (Annex A baseline, an uprating measure) carries
+        # through. System parameters are fiscal-year mapped: "2027-01-01" is
+        # FY 2027-28.
+        amount = sp_personal_allowance_amount(
+            period.start.year,
+            lambda y: _new_state_pension_weekly(parameters, f"{y}-01-01"),
+        )
         higher = np.ceil(
-            SP_PA_AMOUNT_2027 * uprating
+            amount
             - max_(0, ANI_for_taper - SP_PA_TAPER_THRESHOLD) * SP_PA_TAPER_RATE
         )
         return where(
@@ -141,10 +162,12 @@ def create_mock2_state_pension_personal_allowance() -> Reform:
         name="State Pension personal allowance",
         description=(
             "MOCK drill 2. From April 2027 people at State Pension age get a "
-            f"£{SP_PA_AMOUNT_2027:,} personal allowance, rising with the new "
-            "State Pension each year and withdrawn at £1 per £2 of adjusted "
-            f"net income above £{SP_PA_TAPER_THRESHOLD:,} down to the "
-            "standard allowance (taper rate assumed, awaiting Annex A)."
+            f"£{SP_PA_AMOUNT_2027:,} personal allowance, rising each April "
+            "from 2028 by the same percentage as the full new State Pension "
+            "(rounded up to the next £10) and withdrawn at £1 per £2 of "
+            f"adjusted net income above £{SP_PA_TAPER_THRESHOLD:,} (fixed) "
+            "down to the standard allowance. The basic rate limit is "
+            "unchanged."
         ),
         simulation_modifier=_state_pension_personal_allowance_modifier,
     )
@@ -155,15 +178,14 @@ def create_mock2_state_pension_personal_allowance() -> Reform:
 # =============================================================================
 
 ENERGY_PAYMENT_AMOUNT = 150
-# Statement: "a one-off £150 in January". January 2027 falls in FY 2026-27,
-# but in this engine model year 2027 means FY 2027-28 for annual parameters
-# and benefit amounts (6 Apr 2027 - 5 Apr 2028), which does NOT contain
-# January 2027. As instructed, the payment is booked in model year 2027 and
-# eligibility uses the engine's 2027 UC / Pension Credit amounts. Reconcile
-# against a 2026-27 scorecard line (Table 4.1) with this one-year offset.
-# AWAITING ANNEX A: confirm payment date, fiscal year and qualifying benefits.
-ENERGY_PAYMENT_YEAR = 2027
-ENERGY_PAYMENT_QUALIFYING_BENEFITS = ("universal_credit", "pension_credit")
+# Costing section 3: a one-off £150 paid in January 2027 to households in
+# Great Britain receiving Universal Credit or Pension Credit guarantee credit
+# on 1 December 2026; static cost £870m in 2026-27, around 5.8m households.
+# Both dates fall in FY 2026-27, which is model year 2026 in this engine, so
+# the payment and its eligibility test use the 2026 period (annual UC and
+# guarantee-credit receipt stand in for receipt on 1 December 2026).
+# Northern Ireland is excluded (it gets a Barnett-equivalent sum instead).
+ENERGY_PAYMENT_YEAR = 2026
 
 
 class mock2_energy_price_payment_eligible(Variable):
@@ -173,10 +195,12 @@ class mock2_energy_price_payment_eligible(Variable):
     definition_period = YEAR
 
     def formula(benunit, period, parameters):
-        eligible = False
-        for benefit in ENERGY_PAYMENT_QUALIFYING_BENEFITS:
-            eligible = eligible | (benunit(benefit, period) > 0)
-        return eligible
+        # Guarantee credit receipt, not any Pension Credit: a savings-credit-
+        # only award does not qualify. in_receipt_of_guarantee_credit applies
+        # Pension Credit take-up (would_claim_pc), as universal_credit does.
+        return (benunit("universal_credit", period) > 0) | benunit(
+            "in_receipt_of_guarantee_credit", period
+        )
 
 
 class mock2_energy_price_payment(Variable):
@@ -197,7 +221,9 @@ class mock2_energy_price_payment(Variable):
                 "mock2_energy_price_payment_eligible", period
             )
         )
-        return eligible * ENERGY_PAYMENT_AMOUNT
+        country = household("country", period)
+        in_gb = country != country.possible_values.NORTHERN_IRELAND
+        return eligible * in_gb * ENERGY_PAYMENT_AMOUNT
 
 
 class cost_of_living_support_payment(Variable):
@@ -205,7 +231,10 @@ class cost_of_living_support_payment(Variable):
 
     This existing one-off-payment channel already feeds household_benefits
     (hence household_net_income), HBAI net income and gov_spending, so the
-    payment reaches household resources and the government cost once.
+    payment reaches household resources and the government cost once. It is
+    not part of any income tax base or any benefit means test (no UC, Pension
+    Credit or Housing Benefit income variable reads it), matching the
+    costing: not taxable and disregarded for all benefits.
     """
 
     label = "Cost-of-living support payment (incl. MOCK energy payment)"
@@ -239,9 +268,10 @@ def create_mock2_energy_price_payment() -> Reform:
         name="Energy Price Protection Payment",
         description=(
             f"MOCK drill 2. A one-off £{ENERGY_PAYMENT_AMOUNT} per household "
-            "where any benefit unit receives Universal Credit or Pension "
-            "Credit, paid in January 2027 (FY 2026-27) and modelled in model "
-            "year 2027."
+            "in Great Britain where any benefit unit receives Universal "
+            "Credit or Pension Credit guarantee credit on 1 December 2026, "
+            "paid in January 2027 (FY 2026-27, model year 2026). Not taxable "
+            "and disregarded for benefits."
         ),
         simulation_modifier=_energy_price_payment_modifier,
     )
