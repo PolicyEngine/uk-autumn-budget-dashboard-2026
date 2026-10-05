@@ -108,15 +108,24 @@ def test_dataset_and_runtime_mismatch_fail_closed(tmp_path, monkeypatch):
         drill_setup.verify_runtime()
 
 
-def test_pre_start_rejects_results_but_publication_rejects_empty(tmp_path):
+def test_pre_start_rejects_results_but_publication_rejects_empty(
+    tmp_path, monkeypatch
+):
     from scripts.validate_published_data import (
         NATIONAL_FIELDS,
         validate,
         validate_pre_start,
     )
+    from uk_budget_data import reforms
 
     for name in NATIONAL_FIELDS:
         (tmp_path / f"{name}.csv").write_text("reform_id,year,value\n")
+    # After the statement release the registry is populated, which the
+    # pre-start gate must flag; the empty-state check simulates 12:29.
+    assert validate_pre_start(tmp_path) == [
+        "Active drill reforms remain before the statement release"
+    ]
+    monkeypatch.setattr(reforms, "get_autumn_budget_2026_reforms", lambda: [])
     assert validate_pre_start(tmp_path) == []
     assert any(
         "at least one" in error

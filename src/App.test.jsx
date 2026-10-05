@@ -39,7 +39,7 @@ describe("dashboard URL behavior", () => {
     useCheckedInData();
     window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=");
     render(<App />);
-    expect(await screen.findByText(/Awaiting the 12:30 statement/)).toBeInTheDocument();
+    expect(await screen.findByText(/Select policies to analyse their impact/)).toBeInTheDocument();
   });
 
 
