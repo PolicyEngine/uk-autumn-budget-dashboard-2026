@@ -1,4 +1,7 @@
-/** Server-side adapter for the PolicyEngine UK household API.
+/** Server-side adapter for the PolicyEngine UK household API (legacy measures only).
+ *
+ * MOCK drill measures never run here: with NEXT_PUBLIC_MOCK=1 the route
+ * forwards to the pinned local Python engine (BUDGET_API_URL) instead.
  *
  * Keep the scenarios in step with personal_impact.py and reforms.py. The API
  * exposes household calculations, while the dashboard needs differences
@@ -6,6 +9,7 @@
  * each model year.
  */
 
+// MOCK drill 2 ids, served by the pinned Python engine, not by this adapter.
 export const MOCK_POLICY_IDS = [
   "mock2_fuel_duty_hold",
   "mock2_electricity_vat_zero",
@@ -24,7 +28,7 @@ export const LEGACY_POLICY_IDS = [
   "savings_tax_increase_2pp",
   "property_tax_increase_2pp",
 ] as const;
-export const POLICY_IDS = [...MOCK_POLICY_IDS, ...LEGACY_POLICY_IDS] as const;
+export const POLICY_IDS = LEGACY_POLICY_IDS;
 
 type PolicyId = (typeof POLICY_IDS)[number];
 type Policy = Record<string, Record<string, number>>;
@@ -168,7 +172,7 @@ export function parseHouseholdInput(raw: unknown): HouseholdInput {
   if (typeof tenure !== "string" || !TENURES.has(tenure)) {
     throw new PersonalImpactError("Select a valid housing tenure.", 400);
   }
-  const requested = data.policy_ids ?? (process.env.NEXT_PUBLIC_MOCK === "1" ? MOCK_POLICY_IDS : LEGACY_POLICY_IDS);
+  const requested = data.policy_ids ?? LEGACY_POLICY_IDS;
   if (!Array.isArray(requested) || requested.length === 0 ||
       requested.some((id) => typeof id !== "string" || !POLICY_IDS.includes(id as PolicyId)) ||
       new Set(requested).size !== requested.length) {

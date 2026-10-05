@@ -22,10 +22,13 @@ it("registers each drill measure once, with a MOCK basis note", () => {
   expect(PERSONAL_IMPACT_POLICY_ORDER).toEqual(ids);
 });
 
-it("ships no generated result rows, including auxiliary chart files", () => {
+it("ships generated rows only for registered drill measures", () => {
+  const ids = new Set(POLICIES.map((policy) => policy.id));
   for (const file of readdirSync("public/data").filter(file => file.endsWith(".csv"))) {
     const rows = csvParse(readFileSync(`public/data/${file}`, "utf8"));
-    expect(rows, file).toHaveLength(0);
     expect(rows.columns.length, file).toBeGreaterThan(0);
+    for (const row of rows) {
+      if (row.reform_id !== undefined) expect(ids.has(row.reform_id), `${file}: ${row.reform_id}`).toBe(true);
+    }
   }
 });

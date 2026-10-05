@@ -1,1 +1,33 @@
 reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,58.63943600402426,-0.0004941792735400981,0.0,0.0
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,58.21528607383131,-0.0003644735384126182,0.0,0.0
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,58.09965805175597,-0.0003519491622615095,0.0,0.0
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,58.03944992213924,-0.0003327173514486808,0.0,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,89.09379254878942,-0.00040737341150657647,0.0,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,61.73455890996308,-0.00013394990654921286,0.0,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,0.0,0.0,0.0,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,0.0,0.0,0.0,0.0
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,72.73642076929946,-0.00034121841280509795,-0.0800333,-0.6871662
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,72.76378776444461,-0.00034144181700772346,-0.06988239,-0.59386593
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,72.69568696410592,-0.0003348336241475003,-0.007388115,-0.062364865
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,72.69317282328704,-0.0003131320229039261,-0.012969017,-0.105009265
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,1.8823863217111623,-0.005318892169084205,0.0,0.0
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,1.887591488969752,-0.005367834098442904,0.0,0.0
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,1.895901365473138,-0.005431750394858395,0.0,0.0
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,1.9016391070021135,-0.005464711831198985,0.0,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,0.0,0.0,0.0,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,0.4695759792532831,-7.515208574256103e-05,0.0,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,0.46957585658843354,-0.00010676800638493324,0.0,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,0.46957407241474325,-0.000105800357972676,0.0,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,0.0,0.0,0.0,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,0.0,0.0,0.0,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,0.0,0.0,0.0,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,0.0,0.0,0.0,0.0
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9.066289413102165,-0.000284476411674483,-0.08032513,-0.6896718
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,9.272161055816335,-0.00045393143893205604,-0.124474525,-1.0577941
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,9.726817203311677,-0.0006317446155224951,-0.15813446,-1.3348511
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,10.129615704972725,-0.0008026556780239387,-0.17752075,-1.4373736
+mock2_energy_price_payment,Energy Price Protection Payment,2027,27.952033553412413,-0.0010647788966556184,-0.07324982,-0.6289232
+mock2_energy_price_payment,Energy Price Protection Payment,2028,0.0,0.0,0.0,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,0.0,0.0,0.0,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,0.0,0.0,0.0,0.0

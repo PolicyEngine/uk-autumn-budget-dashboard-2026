@@ -1,1 +1,321 @@
 reform_id,reform_name,year,decile,value
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,1st,0.11960754576905433
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,2nd,0.08483384795046367
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,3rd,0.07269712843439309
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,4th,0.07203054497008751
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,5th,0.07863273041778977
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,6th,0.07412842237424078
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,7th,0.08873624508911285
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,8th,0.07125095872886986
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,9th,0.07579250223889918
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,10th,0.03233147260524775
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,1st,0.08798446393138969
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,2nd,0.06426391036859637
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,3rd,0.0535840889396557
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,4th,0.05291931893931036
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,5th,0.05788729864475665
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,6th,0.05494742784697945
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,7th,0.06571176151084299
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,8th,0.052640993290885764
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,9th,0.05575808949834258
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,10th,0.023861563686145927
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,1st,0.08465981698494744
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,2nd,0.06353872204726548
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,3rd,0.05246947471293259
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,4th,0.0507984605200638
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,5th,0.05713528075848821
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,6th,0.05081518673943235
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,7th,0.06597308450927775
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,8th,0.05039452854989528
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,9th,0.05443473976937918
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,10th,0.023061346384602083
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,1st,0.08231037439816723
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,2nd,0.06047040801351135
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,3rd,0.04908422640453998
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,4th,0.050103737660903785
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,5th,0.05185128195366723
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,6th,0.05133179907264997
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,7th,0.06267963224818193
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,8th,0.047879627768495706
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,9th,0.05178461130124595
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,10th,0.022038147196686356
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,1st,0.10952474272545513
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,2nd,0.072712218317981
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,3rd,0.06766034890420168
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,4th,0.057414210842082966
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,5th,0.054622615947476846
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,6th,0.05237536207733176
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,7th,0.044161747887318206
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,8th,0.04370281425833247
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,9th,0.04064440004293754
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,10th,0.021909323242631097
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,1st,0.036415410728128886
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,2nd,0.023950875279044517
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,3rd,0.022087552941850552
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,4th,0.01900295368592386
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,5th,0.017874853495961407
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,6th,0.017227028988766387
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,7th,0.014553648402372096
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,8th,0.014367610721926287
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,9th,0.01327854902925895
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,10th,0.007163434128933617
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,1st,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,2nd,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,3rd,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,4th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,5th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,6th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,7th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,8th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,9th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,10th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,1st,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,2nd,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,3rd,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,4th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,5th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,6th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,7th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,8th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,9th,0.0
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,10th,0.0
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,1st,0.058743799682993536
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,2nd,0.06034845587708829
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,3rd,0.0636745393739561
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,4th,0.07353621510033578
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,5th,0.08577218393463344
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,6th,0.0865608914898021
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,7th,0.08902826147303664
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,8th,0.08017570736732661
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,9th,0.07479522237903483
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,10th,0.035793036021387385
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,1st,0.05844104434697221
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,2nd,0.05921032441465117
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,3rd,0.06722680284829492
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,4th,0.07309302376409171
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,5th,0.08381054926799578
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,6th,0.08582660250643923
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,7th,0.08549812827087995
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,8th,0.078878790866022
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,9th,0.07340925781119796
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,10th,0.03474763089028265
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,1st,0.05882784688764906
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,2nd,0.05787915999947126
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,3rd,0.0716703881487219
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,4th,0.07150606149654037
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,5th,0.07524061210318389
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,6th,0.08477120705032351
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,7th,0.08282511581357624
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,8th,0.0768675058215037
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,9th,0.07187318778549569
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,10th,0.033731939287889305
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,1st,0.056960014382880314
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,2nd,0.0505710986240666
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,3rd,0.0619850739999064
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,4th,0.07093493485268457
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,5th,0.0810858488286224
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,6th,0.0853474575033845
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,7th,0.08188122495704658
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,8th,0.07452855703196269
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,9th,0.06977058715040434
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,10th,0.03267985160135797
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,1st,-0.05856945395371232
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,2nd,-0.02661227083855859
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,3rd,-0.022792007121991524
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,4th,-0.008604847273490446
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,5th,-0.014521241139585328
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,6th,-0.03196385249668271
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,7th,-0.08166438833125261
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,8th,-0.09319019121817959
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,9th,-0.15340812754643804
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,10th,-0.692323208702973
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,1st,-0.05934769186924905
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,2nd,-0.027555236710793837
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,3rd,-0.02261644679797167
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,4th,-0.009243508338684576
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,5th,-0.015367410081903258
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,6th,-0.033659371516558366
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,7th,-0.0834842822913203
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,8th,-0.09510538217124759
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,9th,-0.1554607820882982
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,10th,-0.7014777704496254
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,1st,-0.061091592376075976
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,2nd,-0.02845728027150351
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,3rd,-0.023106673492691965
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,4th,-0.009579950250037463
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,5th,-0.016103706442711908
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,6th,-0.03240591493283985
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,7th,-0.08233809470213976
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,8th,-0.10065432939337117
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,9th,-0.15597649867692764
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,10th,-0.7124608214846412
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,1st,-0.06170052196183344
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,2nd,-0.027645267043910658
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,3rd,-0.026245843096215162
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,4th,-0.00982114107076892
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,5th,-0.01586321090447322
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,6th,-0.03085136759631921
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,7th,-0.08710634610383279
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,8th,-0.10244764872287272
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,9th,-0.1600923786059724
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,10th,-0.7190851053037163
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,1st,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,2nd,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,3rd,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,4th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,5th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,6th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,7th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,8th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,9th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,10th,0.0
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,1st,-0.0013485409700641003
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,2nd,-0.001536910633227371
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,3rd,-0.001442672211114247
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,4th,-0.0005393086528642471
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,5th,-0.003028832867322619
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,6th,-0.0013329975048872549
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,7th,-0.0015748106803835974
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,8th,-0.0005130625141898573
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,9th,-0.01667637098026638
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,10th,-0.017423334180398143
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,1st,-0.0013623531912398648
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,2nd,-0.0015494309313402045
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,3rd,-0.0014511223211757353
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,4th,-0.0005436619515187931
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,5th,-0.003039719447838658
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,6th,-0.0013411021006978754
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,7th,-0.0015847699999973644
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,8th,-0.0005151897657863756
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,9th,-0.016694720994248832
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,10th,-0.01746035473305661
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,1st,-0.0013759767934772755
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,2nd,-0.001572769649831439
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,3rd,-0.0014527662937156172
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,4th,-0.0005535068768403119
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,5th,-0.0030720469139840128
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,6th,-0.001357306956394964
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,7th,-0.0015829953817732161
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,8th,-0.0005149573135733027
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,9th,-0.016805147868412168
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,10th,-0.017386150666524693
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,1st,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,2nd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,3rd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,4th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,5th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,6th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,7th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,8th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,9th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,10th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,1st,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,2nd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,3rd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,4th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,5th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,6th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,7th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,8th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,9th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,10th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,1st,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,2nd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,3rd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,4th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,5th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,6th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,7th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,8th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,9th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,10th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,1st,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,2nd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,3rd,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,4th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,5th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,6th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,7th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,8th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,9th,0.0
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,10th,0.0
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,1st,0.045838011199093164
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,2nd,0.06064956302034895
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,3rd,0.04868818794594876
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,4th,0.0392048017815531
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,5th,0.022020289340620117
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,6th,0.017561350410355316
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,7th,0.009632949673521662
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,8th,0.006810019641155362
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9th,0.002812555252621963
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,10th,0.0014551878074924069
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,1st,0.0773680549983308
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,2nd,0.09843369305134313
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,3rd,0.07800020199365328
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,4th,0.06263848916514353
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,5th,0.03434830572815378
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,6th,0.02658389254686834
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,7th,0.015233300326190276
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,8th,0.010697166314838866
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,9th,0.004733247841824338
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,10th,0.002153956728857493
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,1st,0.11123024249183433
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,2nd,0.13798644169262567
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,3rd,0.10971835353419213
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,4th,0.08366620120122555
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,5th,0.0496516664187731
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,6th,0.03480338322782357
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,7th,0.021174545114262464
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,8th,0.014613325042284159
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,9th,0.006332946980180814
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,10th,0.0030907909034767686
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,1st,0.14825227098358768
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,2nd,0.17471012456014534
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,3rd,0.14030103268088628
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,4th,0.10794559328118324
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,5th,0.059906556057338585
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,6th,0.04633106158637369
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,7th,0.028968334655125497
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,8th,0.018238944321638292
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,9th,0.00814213921342094
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,10th,0.003919983400570274
+mock2_energy_price_payment,Energy Price Protection Payment,2027,1st,0.24106251489097963
+mock2_energy_price_payment,Energy Price Protection Payment,2027,2nd,0.15448252103586524
+mock2_energy_price_payment,Energy Price Protection Payment,2027,3rd,0.13339016783224036
+mock2_energy_price_payment,Energy Price Protection Payment,2027,4th,0.0975052106991304
+mock2_energy_price_payment,Energy Price Protection Payment,2027,5th,0.07376790633751067
+mock2_energy_price_payment,Energy Price Protection Payment,2027,6th,0.055801624066967453
+mock2_energy_price_payment,Energy Price Protection Payment,2027,7th,0.04001805548650548
+mock2_energy_price_payment,Energy Price Protection Payment,2027,8th,0.020110552400973182
+mock2_energy_price_payment,Energy Price Protection Payment,2027,9th,0.01537133484274411
+mock2_energy_price_payment,Energy Price Protection Payment,2027,10th,0.0032536754247734358
+mock2_energy_price_payment,Energy Price Protection Payment,2028,1st,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,2nd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,3rd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,4th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,5th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,6th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,7th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,8th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,9th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2028,10th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,1st,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,2nd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,3rd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,4th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,5th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,6th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,7th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,8th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,9th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2029,10th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,1st,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,2nd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,3rd,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,4th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,5th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,6th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,7th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,8th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,9th,0.0
+mock2_energy_price_payment,Energy Price Protection Payment,2030,10th,0.0
