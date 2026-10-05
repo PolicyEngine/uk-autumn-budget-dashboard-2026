@@ -50,7 +50,9 @@ def _run(situation, year, variables, policy=SP_PA):
         ("reform", reform.to_drill_scenario()),
     ):
         sim = Simulation(situation=situation, scenario=scenario)
-        out[label] = {v: float(sim.calculate(v, year).sum()) for v in variables}
+        out[label] = {
+            v: float(sim.calculate(v, year).sum()) for v in variables
+        }
     return out
 
 
@@ -218,7 +220,9 @@ def test_energy_payment_once_for_pension_credit_and_uc_household():
     )
     eligible = sim.calculate("mock2_energy_price_payment_eligible", year)
     assert eligible.all()
-    assert float(sim.calculate("mock2_energy_price_payment", year).sum()) == 150
+    assert (
+        float(sim.calculate("mock2_energy_price_payment", year).sum()) == 150
+    )
 
 
 def test_household_calculator_routes_both_measures():
@@ -268,7 +272,9 @@ def test_structural_override_does_not_leak_into_later_simulations():
     assert float(reformed.calculate("personal_allowance", 2027)[0]) == 13_100
     plain = Simulation(situation=situation)
     assert float(plain.calculate("personal_allowance", 2027)[0]) == 12_570
-    Simulation(situation=situation, scenario=get_reform(ENERGY).to_drill_scenario())
+    Simulation(
+        situation=situation, scenario=get_reform(ENERGY).to_drill_scenario()
+    )
     assert "mock2_energy_price_payment" not in (
         Simulation(situation=situation).tax_benefit_system.variables
     )

@@ -85,7 +85,9 @@ class personal_allowance(Variable):
     definition_period = YEAR
 
     def formula(person, period, parameters):
-        PA = parameters(period).gov.hmrc.income_tax.allowances.personal_allowance
+        PA = parameters(
+            period
+        ).gov.hmrc.income_tax.allowances.personal_allowance
         ANI = person("adjusted_net_income", period)
         ANI_for_taper = ANI - person("gift_aid_grossed_up", period)
         standard = max_(
