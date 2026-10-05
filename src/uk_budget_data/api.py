@@ -90,9 +90,34 @@ class APIHouseholdInput(BaseModel):
     capital_gains: float = Field(default=0.0, ge=0)
     region: str = Field(default="LONDON", description="UK household region")
     fuel_type: str = Field(default="PETROL", description="PETROL or DIESEL")
+    self_employment_income: float = Field(default=0, ge=0)
+    fuel_litres: float = Field(default=0, ge=0)
+    domestic_energy_bill: float = Field(default=0, ge=0)
+    home_value_2026: float = Field(default=0, ge=0)
+    rent: float = Field(default=0, ge=0)
+    tenure_type: str = "OWNED_OUTRIGHT"
+    state_pension_income: float = Field(default=0, ge=0)
+    private_pension_income: float = Field(default=0, ge=0)
+    partner_state_pension_income: float = Field(default=0, ge=0)
+    partner_private_pension_income: float = Field(default=0, ge=0)
+    age_2025: int = Field(default=35, ge=16, le=100)
+    partner_age_2025: int = Field(default=33, ge=16, le=100)
     policy_ids: list[str] | None = Field(
         default=None, description="Featured policy IDs to calculate"
     )
+
+    @field_validator("tenure_type")
+    @classmethod
+    def validate_tenure(cls, value):
+        if value not in {
+            "OWNED_OUTRIGHT",
+            "OWNED_WITH_MORTGAGE",
+            "RENT_PRIVATELY",
+            "RENT_FROM_HA",
+            "RENT_FROM_COUNCIL",
+        }:
+            raise ValueError("Unknown housing tenure")
+        return value
 
     @field_validator("region")
     @classmethod
@@ -114,7 +139,14 @@ class APIHouseholdInput(BaseModel):
     @classmethod
     def validate_policy_ids(cls, value):
         """Reject unknown, repeated, or empty policy selections."""
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
         if value is None:
+            return value
+        if os.environ.get("NEXT_PUBLIC_MOCK") == "1":
+            active = {r.id for r in get_autumn_budget_2026_reforms()}
+            if len(value) != len(set(value)) or set(value) - active:
+                raise ValueError("Select unique active drill measures")
             return value
         if (
             not value
@@ -138,25 +170,7 @@ class APIHouseholdInput(BaseModel):
 
 def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
     """Convert API input to the format expected by PersonalImpactCalculator."""
-    return HouseholdInput(
-        employment_income=api_input.employment_income,
-        income_growth_rate=api_input.income_growth_rate,
-        is_married=api_input.is_married,
-        partner_income=api_input.partner_income,
-        children_ages=api_input.children_ages,
-        property_income=api_input.property_income,
-        savings_income=api_input.savings_income,
-        dividend_income=api_input.dividend_income,
-        pension_contributions_salary_sacrifice=(
-            api_input.pension_contributions_salary_sacrifice
-        ),
-        fuel_spending=api_input.fuel_spending,
-        rail_spending=api_input.rail_spending,
-        bus_spending=api_input.bus_spending,
-        capital_gains=api_input.capital_gains,
-        region=api_input.region,
-        fuel_type=api_input.fuel_type,
-    )
+    return HouseholdInput(**api_input.model_dump(exclude={"policy_ids"}))
 
 
 def convert_to_native(obj):
@@ -191,6 +205,9 @@ async def calculate_personal_impact(data: APIHouseholdInput):
     Returns year-by-year impact breakdown per policy.
     """
     try:
+        from uk_budget_data.drill_setup import verify_runtime
+
+        verify_runtime()
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
         results = calculator.calculate(
@@ -206,7 +223,21 @@ async def calculate_personal_impact(data: APIHouseholdInput):
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    from uk_budget_data.drill_setup import (
+        CORE_VERSION,
+        MODEL_VERSION,
+        runtime_versions,
+    )
+
+    versions = runtime_versions()
+    matching = versions == {
+        "policyengine-uk": MODEL_VERSION,
+        "policyengine-core": CORE_VERSION,
+    }
+    return {
+        "status": "healthy" if matching else "engine-mismatch",
+        "versions": versions,
+    }
 
 
 class APILifecycleInput(BaseModel):

@@ -7,9 +7,7 @@ from a list of reforms.
 from pathlib import Path
 from typing import Optional
 
-import h5py
 import pandas as pd
-import policyengine as pe
 from policyengine_uk import Microsimulation
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -31,19 +29,35 @@ console = Console()
 
 
 def build_microsimulation(dataset_path: Optional[str], scenario=None):
-    """Build a Microsimulation pinned to the installed policyengine.py bundle.
+    """Load the user-selected custom release with its original build engine.
 
-    Args:
-        dataset_path: Explicit dataset path, or None to use the bundle's
-            certified dataset (requires HUGGING_FACE_TOKEN).
-        scenario: Scenario to apply, or None for current law.
+    The wrapper's certified default pins another engine and dataset. This
+    explicit route validates the producer's pins without altering its bundle.
     """
-    kwargs = {} if scenario is None else {"scenario": scenario}
-    return pe.uk.managed_microsimulation(
-        dataset=dataset_path,
-        allow_unmanaged=dataset_path is not None,
-        **kwargs,
+    from policyengine_uk.data.dataset_schema import UKSingleYearDataset
+
+    from uk_budget_data.drill_setup import (
+        DATASET_REVISION,
+        DATASET_SHA256,
+        drill_scenario,
+        verify_dataset,
+        verify_runtime,
     )
+
+    versions = verify_runtime()
+    path = verify_dataset(dataset_path)
+    simulation = Microsimulation(
+        dataset=UKSingleYearDataset(str(path)),
+        scenario=scenario if scenario is not None else drill_scenario(),
+    )
+    simulation.drill_provenance = {
+        **versions,
+        "dataset": path.name,
+        "sha256": DATASET_SHA256,
+        "revision": DATASET_REVISION,
+        "mode": "explicit-custom-release",
+    }
+    return simulation
 
 
 def save_csv(df: pd.DataFrame, csv_path: Path) -> None:
@@ -142,7 +156,7 @@ class ReformProcessor:
         all_constituency = []
         all_demographic = []
 
-        scenario = self.reform.to_scenario()
+        scenario = self.reform.to_drill_scenario()
 
         for year in self.config.years:
             # Distributional (also returns dataframe for other calcs)
@@ -164,7 +178,10 @@ class ReformProcessor:
             all_metrics.extend(metrics)
 
             # Income curve - pass both baseline and reform scenarios
-            baseline_scenario = self.reform.to_baseline_scenario()
+            baseline_scenario = self.reform.to_drill_scenario(
+                baseline=True,
+                baseline_changes=self.config.baseline_parameter_changes,
+            )
             income_curve = self.income_curve_calc.calculate(
                 baseline_scenario, scenario, reform_id, reform_name, year
             )
@@ -207,36 +224,9 @@ class ReformProcessor:
         year: int,
     ) -> tuple[list[dict], list[dict]]:
         """Calculate constituency-level impacts."""
-        weights_path = self.config.data_dir / (
-            "parliamentary_constituency_weights.h5"
+        raise FileNotFoundError(
+            "The pinned national Microcosm release has no certified aligned constituency weights."
         )
-        constituencies_path = (
-            self.config.data_inputs_dir / "constituencies_2024.csv"
-        )
-
-        if not weights_path.exists() or not constituencies_path.exists():
-            raise FileNotFoundError("Constituency data not found")
-
-        with h5py.File(weights_path, "r") as f:
-            year_key = str(year)
-            if year_key not in f:
-                raise KeyError(
-                    f"No constituency weights for {year_key} in "
-                    f"{weights_path}. Available: {sorted(f.keys())}"
-                )
-            weights = f[year_key][...]
-
-        constituency_df = pd.read_csv(constituencies_path)
-
-        constituency = self.constituency_calc.calculate(
-            baseline, reformed, reform_id, year, weights, constituency_df
-        )
-
-        demographic = self.demographic_calc.calculate(
-            baseline, reformed, reform_id, year, weights, constituency_df
-        )
-
-        return constituency, demographic
 
 
 class DataPipeline:
@@ -253,7 +243,9 @@ class DataPipeline:
             reforms: List of reforms to process. Defaults to Autumn Budget.
             config: Data configuration. Uses defaults if not provided.
         """
-        self.reforms = reforms or get_autumn_budget_2026_reforms()
+        self.reforms = (
+            get_autumn_budget_2026_reforms() if reforms is None else reforms
+        )
         self.config = config or DataConfig()
 
     def run(self, skip_input_check: bool = False) -> dict[str, pd.DataFrame]:
@@ -265,15 +257,19 @@ class DataPipeline:
         Returns:
             Dict mapping output name to DataFrame.
         """
-        if not skip_input_check:
-            check_input_data(self.config)
+        from uk_budget_data.drill_setup import verify_dataset, verify_runtime
+
+        verify_runtime()
+        verify_dataset(self.config.dataset_path)
+        if not self.reforms:
+            raise ValueError(
+                "No drill measures registered; use the pre-start validator"
+            )
 
         results = []
 
-        # Dataset selection is delegated to policyengine.py. With no explicit
-        # path it resolves the dataset pinned by the installed release bundle
-        # (the certified enhanced FRS on HuggingFace), which needs
-        # HUGGING_FACE_TOKEN. An explicit path is an unmanaged override.
+        # The explicit custom dataset path or UK_BUDGET_DATASET is mandatory.
+        # build_microsimulation verifies the producer hash and model/core pins.
         dataset_path = (
             str(self.config.dataset_path) if self.config.dataset_path else None
         )
@@ -290,11 +286,11 @@ class DataPipeline:
 
                 # Create simulations
                 # Baseline priority: reform-specific > global config > default
-                baseline_scenario = (
-                    reform.to_baseline_scenario()
-                    or self.config.get_baseline_scenario()
+                baseline_scenario = reform.to_drill_scenario(
+                    baseline=True,
+                    baseline_changes=self.config.baseline_parameter_changes,
                 )
-                reform_scenario = reform.to_scenario()
+                reform_scenario = reform.to_drill_scenario()
 
                 baseline = build_microsimulation(
                     dataset_path, baseline_scenario

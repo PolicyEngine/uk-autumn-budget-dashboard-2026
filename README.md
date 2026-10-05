@@ -1,12 +1,14 @@
 # UK Autumn Budget 2026 Dashboard
 
+For the 5 October rehearsal, use the exact [drill 2 dataset/engine setup](docs/drill2-setup.md). The active policy list and result CSVs start empty; [DRILL2.md](DRILL2.md) governs timed release and publication gates.
+
 A web application for analysing the impact of UK Autumn Budget 2026 policies on households and public finances, powered by [PolicyEngine UK](https://policyengine.org/uk).
 
 ## Features
 
-- **Interactive policy selection**: Combine three 2026 candidates and four carried-over measures
-- **Population preview**: See checked-in fiscal and distributional CSV estimates by year
-- **Personal impact**: Compare household outcomes under selected reforms through the PolicyEngine UK API
+- **Interactive policy selection**: Register statement-derived measures after the drill starts
+- **Population preview**: Show fiscal and distributional CSV estimates after validation
+- **Personal impact**: Compare household outcomes under selected reforms through the matching pinned Python backend
 - **URL sharing**: Share selections, including links to retained 2025 measures
 - **Charts and exports**: Inspect income, budget and distributional results and export charts
 
@@ -30,38 +32,16 @@ uv sync --extra dev --frozen
 
 ### Development
 
-Start the frontend:
+Start the pinned backend and frontend in separate terminals:
 
 ```bash
-NEXT_PUBLIC_BASE_PATH="" bun run dev --hostname 127.0.0.1 --port 3001
+NEXT_PUBLIC_MOCK=1 PORT=8000 uv run uk-budget-api
+NEXT_PUBLIC_MOCK=1 BUDGET_API_URL=http://127.0.0.1:8000 NEXT_PUBLIC_BASE_PATH="" bun run dev --hostname 127.0.0.1 --port 3001
 ```
 
-Open `http://localhost:3001`. Personal impact calls the live PolicyEngine UK
-household API from the server-side Next.js route. The adapter checks that the
-API model is 2.90.2, matching the dashboard's pinned model, and computes the
-selected measures against their respective baselines.
+Open `http://localhost:3001`. The drill starts empty. The Next.js route checks the Python backend's actual UK 2.100.0/core 3.32.5 versions before forwarding household requests. The shared public API currently runs 2.90.2 and cannot provide this drill's estimates. A hosted preview requires its own reachable matching backend; localhost is only suitable for local development.
 
-To use the repository's Python FastAPI calculator instead, start it separately:
-
-```bash
-.venv/bin/python -m uvicorn uk_budget_data.api:app --host 127.0.0.1 --port 8001
-```
-
-Then set server-side `BUDGET_API_URL=http://127.0.0.1:8001` for the Next.js
-process. `POLICYENGINE_UK_API_URL` can override the default
-`https://api.policyengine.org` host when using the adapter.
-
-The dashboard offers three candidate measures and four carried-over measures.
-The checked-in national CSVs are a provisional local rerun of all seven featured
-measures against the current code. The source dataset's certified release and
-aligned constituency weights remain unverified. See
-[the data notes](public/data/README.md) for generation details and the missing
-constituency weights. Personal impact computes the featured policies currently
-selected in the dashboard. The API adapter works without a separately deployed
-backend; a calculation can take a few minutes. For a dedicated backend, deploy
-the FastAPI service from `cloudbuild.yaml` and set server-side `BUDGET_API_URL`
-to its reachable URL. Verify the deployed service and its model version before
-relying on personal results.
+See [the setup record](docs/drill2-setup.md) for the immutable private dataset, accepted limitations and G0 checks, and [the data notes](public/data/README.md) for publication status. The full household route can be smoke-tested with an empty selection before measures are registered, producing baseline-only results.
 
 ### Building for production
 
@@ -101,18 +81,16 @@ The dashboard displays pre-calculated data from CSV files. The `uk_budget_data` 
 uv run uk-budget-data generate --list-reforms
 
 # Generate all data
-uv run uk-budget-data generate --dataset /path/to/certified/enhanced_frs_2024_25.h5 --output-dir /tmp/budget-stage
+uv run uk-budget-data generate --dataset /path/to/microcosm_uk_2024_25.h5 --output-dir /tmp/budget-stage
 
 # Generate for specific reforms
-uv run uk-budget-data generate --dataset /path/to/certified/enhanced_frs_2024_25.h5 --output-dir /tmp/budget-stage --reforms cgt_equalisation bus_fare_cap
+uv run uk-budget-data generate --dataset /path/to/microcosm_uk_2024_25.h5 --output-dir /tmp/budget-stage --reforms cgt_equalisation bus_fare_cap
 
 # Custom years
-uv run uk-budget-data generate --dataset /path/to/certified/enhanced_frs_2024_25.h5 --output-dir /tmp/budget-stage --years 2026 2027
+uv run uk-budget-data generate --dataset /path/to/microcosm_uk_2024_25.h5 --output-dir /tmp/budget-stage --years 2026 2027
 ```
 
-Use constituency weights from the same certified data release. Run
-`uv run python scripts/validate_published_data.py /tmp/budget-stage --require-constituency`
-before replacing checked-in data. See [data provenance and merge gates](public/data/README.md).
+This national release has no constituency identifiers or aligned local weights, so local outputs are disabled. After measures exist, run `uv run python scripts/validate_published_data.py /tmp/budget-stage --policies <locked IDs>` before replacing result files. Before release use `--pre-start` against the schema-only `public/data` directory.
 
 ### Custom baseline scenarios
 
@@ -135,26 +113,13 @@ uv run pytest --cov=uk_budget_data
 
 ## Available reforms
 
-The 2026 selector includes these three candidates and four carried-over measures:
-
-| Reform | Description |
-|--------|-------------|
-| `cgt_equalisation` | Simplified CGT rate-alignment scenario |
-| `fuel_duty_rise_cancellation` | Hold the 52.95p/L rate from 2027 |
-| `bus_fare_cap` | £2 cap proxy from 2027 in England outside London |
-| `threshold_freeze_extension` | Extension of income tax threshold freeze |
-| `dividend_tax_increase_2pp` | +2pp on dividend tax rates |
-| `savings_tax_increase_2pp` | +2pp on savings income tax |
-| `property_tax_increase_2pp` | +2pp on property income tax |
-
-The five enacted or superseded 2025 measures remain in the data and URL
-lookup for old shared links.
+The drill selector is empty until the 12:30 statement release. Register only the locked statement-derived measures. Legacy definitions remain available in code for historical use outside the drill, but their generated result rows have been removed. [Measure templates](docs/drill2-measure-templates.md) describe the shared scenario path and file checklist.
 
 ## Technology stack
 
 - **Frontend**: Next.js 16 and React 19
 - **Charts**: Recharts 2.15 (built on D3)
-- **Data generation**: Python 3.13+, policyengine.py with PolicyEngine UK
+- **Data generation**: Python 3.13+, the explicitly pinned PolicyEngine UK custom release
 - **State management**: React hooks (useState, useEffect, useMemo)
 - **Styling**: Custom CSS inspired by PolicyEngine UK
 - **Build tool**: Next.js with Bun

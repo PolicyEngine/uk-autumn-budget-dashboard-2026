@@ -61,7 +61,7 @@ class TestDataPipeline:
         from uk_budget_data.pipeline import DataPipeline
 
         pipeline = DataPipeline()
-        assert len(pipeline.reforms) > 0
+        assert pipeline.reforms == []
 
 
 class TestCSVOutput:

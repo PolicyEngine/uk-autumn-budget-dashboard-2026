@@ -28,27 +28,21 @@ function useCheckedInData() {
 }
 
 describe("dashboard URL behavior", () => {
-  it("renders a 2025 shared policy with its checked-in chart result", async () => {
+  it("does not expose stale results through a historical URL", async () => {
     useCheckedInData();
     window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=two_child_limit");
     render(<App />);
-    await waitFor(() => expect(screen.getByTestId("budget-chart")).toHaveTextContent("-2.9481590085316145"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("not available yet");
   });
 
   it("shows a usable empty state when every policy is deselected", async () => {
     useCheckedInData();
     window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=");
     render(<App />);
-    expect(await screen.findByRole("button", { name: "Select all 2026 policies" })).toBeInTheDocument();
+    expect(await screen.findByText(/Awaiting the 12:30 statement/)).toBeInTheDocument();
   });
 
-  it("opens the historical combined link without double counting its components", async () => {
-    useCheckedInData();
-    window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=autumn_budget_2025_combined,two_child_limit");
-    render(<App />);
-    await waitFor(() => expect(screen.getByTestId("budget-chart")).toHaveTextContent("-6.6170900474099215"));
-    expect(screen.getByTestId("budget-chart")).toHaveTextContent('"2 child limit repeal":0');
-  });
+
 
   it("retains selected policies when a personal-impact URL is reloaded", async () => {
     useCheckedInData();

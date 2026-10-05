@@ -13,6 +13,7 @@ from uk_budget_data.reforms import (
     DIVIDEND_PRE_BUDGET_BASIC_RATE,
     DIVIDEND_PRE_BUDGET_HIGHER_RATE,
     get_all_reforms,
+    get_autumn_budget_2026_reforms,
 )
 
 
@@ -35,6 +36,18 @@ class HouseholdInput:
     capital_gains: float = 0.0
     region: str = "LONDON"
     fuel_type: str = "PETROL"
+    self_employment_income: float = 0.0
+    fuel_litres: float = 0.0
+    domestic_energy_bill: float = 0.0
+    home_value_2026: float = 0.0
+    rent: float = 0.0
+    tenure_type: str = "OWNED_OUTRIGHT"
+    state_pension_income: float = 0.0
+    private_pension_income: float = 0.0
+    partner_state_pension_income: float = 0.0
+    partner_private_pension_income: float = 0.0
+    age_2025: int = 35
+    partner_age_2025: int = 33
 
 
 # Years to calculate (2025 is base year, 2026-2030 are policy years)
@@ -45,7 +58,7 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 # Must stay a subset of get_all_reforms(), which the calculator
 # filters by these ids; an id listed here but absent from that list silently
 # disappears from the calculator rather than erroring.
-POLICY_IDS = [
+LEGACY_POLICY_IDS = [
     "cgt_equalisation",
     "fuel_duty_rise_cancellation",
     "bus_fare_cap",
@@ -53,6 +66,11 @@ POLICY_IDS = [
     "dividend_tax_increase_2pp",
     "savings_tax_increase_2pp",
     "property_tax_increase_2pp",
+]
+
+
+POLICY_IDS = LEGACY_POLICY_IDS + [
+    r.id for r in get_autumn_budget_2026_reforms()
 ]
 
 
@@ -75,7 +93,7 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
     # Build people
     people = {
         "adult": {
-            "age": {year: 35 + years_from_base},
+            "age": {year: household.age_2025 + years_from_base},
             "employment_income": {
                 year: household.employment_income * growth_factor
             },
@@ -97,7 +115,7 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
     # Add partner if married
     if household.is_married:
         people["partner"] = {
-            "age": {year: 33 + years_from_base},
+            "age": {year: household.partner_age_2025 + years_from_base},
             "employment_income": {
                 year: household.partner_income * growth_factor
             },
@@ -309,8 +327,7 @@ class PersonalImpactCalculator:
         """Initialize the calculator by loading reforms."""
         self.reforms = {
             reform.id: reform
-            # Drill 1: the dashboard list holds the five mock measures, which
-            # the calculator does not offer; its ids resolve from all reforms.
+            # Legacy IDs resolve separately from the empty drill registry.
             for reform in get_all_reforms()
             if reform.id in POLICY_IDS
         }
@@ -318,7 +335,12 @@ class PersonalImpactCalculator:
     def calculate(
         self, household: HouseholdInput, policy_ids: list[str] | None = None
     ) -> dict:
-        """Calculate the requested dashboard policies using policyengine.py."""
+        """Calculate the requested dashboard policies using the pinned engine."""
+        import os
+
+        if os.environ.get("NEXT_PUBLIC_MOCK") == "1":
+            return calculate_drill_impact(household, policy_ids)
+
         from policyengine_uk.variables.household.demographic.geography import (
             Region,
         )
@@ -471,3 +493,121 @@ class PersonalImpactCalculator:
             results["totals"]["by_year"].values()
         )
         return results
+
+
+def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
+    """Use the population registry/scenarios for every new drill measure.
+
+    Empty selection is a baseline smoke only and produces no policy effects.
+    """
+    from uk_budget_data.drill_setup import drill_scenario, verify_runtime
+
+    verify_runtime()
+    reforms = {r.id: r for r in get_autumn_budget_2026_reforms()}
+    requested = list(reforms) if policy_ids is None else policy_ids
+    if (
+        len(requested) != len(set(requested))
+        or set(requested) - reforms.keys()
+    ):
+        raise ValueError("Select unique active drill measures")
+    results = {
+        "household_input": asdict(household),
+        "years": {},
+        "policies": {},
+        "totals": {"by_year": {}, "cumulative": 0},
+        "baseline_only": not requested,
+    }
+    for key in requested:
+        reform = reforms[key]
+        results["policies"][key] = {
+            "name": reform.name,
+            "description": reform.description,
+            "years": {},
+            "total_impact": 0,
+        }
+    for year in YEARS:
+        situation = build_situation(household, year)
+        growth = (1 + household.income_growth_rate) ** (year - 2025)
+        adult = situation["people"]["adult"]
+        adult["self_employment_income"] = {
+            year: household.self_employment_income * growth
+        }
+        adult["private_pension_income"] = {
+            year: household.private_pension_income
+        }
+        for member, amount in (
+            ("adult", household.state_pension_income),
+            ("partner", household.partner_state_pension_income),
+        ):
+            if member in situation["people"] and amount > 0:
+                situation["people"][member]["state_pension_type"] = {
+                    year: "NEW"
+                }
+                situation["people"][member]["state_pension_reported"] = {
+                    year: amount
+                }
+        if household.is_married:
+            situation["people"]["partner"]["private_pension_income"] = {
+                year: household.partner_private_pension_income
+            }
+        inputs = situation["households"]["household"]
+        from policyengine_uk.system import system
+
+        index = (
+            system.parameters.gov.economic_assumptions.indices.obr.per_capita.gdp
+        )
+        home_factor = index(f"{year}-01-01") / index("2026-01-01")
+        owner = household.tenure_type in {
+            "OWNED_OUTRIGHT",
+            "OWNED_WITH_MORTGAGE",
+        }
+        for variable, value in {
+            (
+                "petrol_litres"
+                if household.fuel_type == "PETROL"
+                else "diesel_litres"
+            ): household.fuel_litres,
+            "domestic_energy_consumption": household.domestic_energy_bill,
+            "main_residence_value": (
+                household.home_value_2026 * home_factor if owner else 0
+            ),
+            "rent": household.rent,
+            "tenure_type": household.tenure_type,
+        }.items():
+            inputs[variable] = {year: value}
+
+        def income(scenario=None):
+            sim = Simulation(
+                situation=situation,
+                scenario=(
+                    scenario if scenario is not None else drill_scenario()
+                ),
+            )
+            return float(sim.calculate("household_net_income", year)[0])
+
+        current = income()
+        results["years"][year] = {
+            "baseline": {"household_net_income": current},
+            "policies": {},
+        }
+        total = 0
+        for key in requested:
+            reform = reforms[key]
+            baseline = income(reform.to_drill_scenario(baseline=True))
+            reformed = income(reform.to_drill_scenario())
+            change = reformed - baseline
+            results["policies"][key]["years"][year] = {
+                "baseline_net_income": baseline,
+                "reformed_net_income": reformed,
+                "net_income_change": change,
+                "baseline_metrics": {"household_net_income": baseline},
+                "reformed_metrics": {"household_net_income": reformed},
+            }
+            results["policies"][key]["total_impact"] += change
+            results["years"][year]["policies"][key] = {
+                "net_income_change": change
+            }
+            total += change
+        results["totals"]["by_year"][year] = total
+        results["totals"]["cumulative"] += total
+    return results

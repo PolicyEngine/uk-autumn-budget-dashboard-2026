@@ -64,26 +64,18 @@ Ledger-only rows go to the reconciler at G1.
 
 ## Pre-drill checklist (fix or accept by 10:00 Monday)
 
-**Blocker:** the engine choice. Option (a) is cheap: freeze all four NICs thresholds in any pinned baseline. **Accept and label by default:** the fuel duty VAT base, HVCTS on renters, and the fiscal-year option. An item still open on Monday is recorded as accepted, not as a failure.
+The user selected the immutable Microcosm 2024/25 national dataset and its build engine: **UK 2.100.0/core 3.32.5**. This supersedes the earlier 2.90.2/API alignment option. Full provenance, accepted limitations and reproducible commands are in [the setup record](docs/drill2-setup.md); the [later-engine inventory](docs/drill2-engine-limitations.md) identifies fixes deliberately absent from this pin.
 
-These are carried over from drill 1 (issue #6 and María's drill 1 evaluation on PR #4).
+- [x] **Engine pin and baseline:** exact lockfile pins; both drill paths use all four NIC thresholds (PT, UEL, LPL, UPL). Later Class 4 fixes remain accepted limitations.
+- [x] **Fuel VAT, renter incidence and fiscal-year approximation:** accepted with the explicit bases and reconciliation requirements in the setup record.
+- [x] **Templates:** [implementation checklist and patterns](docs/drill2-measure-templates.md). No statement measures pre-coded.
+- [x] **Clean code/data state:** old drill measures removed from active registry, selector, household adapter and validator defaults; result CSVs contain headers only.
+- [x] **Dataset:** `microcosm_uk_2024_25.h5`; SHA-256 `aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af`. National release; constituency output unavailable.
+- [ ] **G0 receipt:** after verification, record the actual start commit SHA and check results outside that commit (or pin the local G0 tag).
+- [ ] **Hosted preview check:** matching pinned backend, MOCK banner, meta/header noindex, authenticated access and a baseline-only response. Public API 2.90.2 cannot be used for this pin.
+- [ ] **Roles confirmed:** integrator and reconciler/scorer acknowledge the start point before 12:30.
 
-- [ ] **Engine version.**
-  - **Option (a):** stay on `policyengine-uk` 2.90.2, and freeze **all four** NICs thresholds (PT, LPL, UEL, UPL) in any baseline that pins them. This avoids [policyengine-uk#1878](https://github.com/PolicyEngine/policyengine-uk/issues/1878).
-  - **Option (b):** upgrade to ≥ 2.102.1 **and** confirm the live household API moves with it. The Personal impact adapter checks the version.
-  - Write the choice in G0.
-- [ ] **Fuel duty VAT base.** Decide whether the dashboard's national figure is duty-only, VAT-inclusive, or both. Table 4.1 is duty-only; specimen households are VAT-inclusive. Drill 1 put VAT on every litre, business fuel included, which put fuel 18–28% above Table 4.1.
-- [ ] **HVCTS on renters.** Either gate the national surcharge on owner tenure, or accept and label it. Drill 1 charged about 27,000 private-renter households, and only the Personal impact path was fixed.
-- [ ] **Fiscal-year option.** The household path returns calendar-year amounts for monthly-dated measures (fuel duty, VAT). Either add a fiscal-year option, or **accept the exception**: the scorer converts by even monthly proration and records the method in `cause`.
-- [ ] **Measure templates.** Have the templates ready from drill 1: rate change, threshold change, freeze to a date, monthly duty path, VAT base modifier, lump-sum payment by benefit receipt, and an age-conditioned allowance. Also keep the checklist of every file a measure touches:
-  - `reforms.py`
-  - `policyConfig.js`
-  - `personalImpactApi.ts`
-  - `personal_impact.py`
-  - the validator
-  - the tests
-- [ ] **Start point.** Drill 2 starts from this branch. In the setup window, before 12:30, remove the five drill 1 `mock_*` measures **together with** the validator's measure selections and the generated `public/data` CSVs. Remove them from `reforms.py`, `policyConfig.js`, the Personal impact files and `scripts/validate_published_data.py`. Run the tests and the validator on that commit, and record it as the G0 start commit.
-- [ ] **Dataset.** Name and hash the enhanced FRS H5 used for the national run. Constituency weights are present, or the constituency tab is explicitly marked unavailable.
+Use `scripts/validate_published_data.py --pre-start` for setup. Numerical publication validation remains a separate mandatory gate after measures and results exist.
 
 ## Packet
 

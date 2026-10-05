@@ -55,9 +55,10 @@ class Reform(BaseModel):
     ) -> Scenario:
         """Preserve dated parameter changes when constructing a UK scenario.
 
-        UK Simulation.apply_parameter_changes interprets keys through its
-        fiscal-year helper. Monthly fuel-duty changes instead need the exact
-        date path used by Scenario.from_reform (and the personal calculator).
+        UK Simulation applies modifiers before annual parameter changes.
+        Install annual parameters first so a modifier cannot cache calculations
+        under the old baseline. Explicit date ranges then retain their exact
+        boundaries through Scenario.from_reform; a single ISO date is one day.
         """
         annual_changes = {}
         dated_changes = {}
@@ -71,10 +72,12 @@ class Reform(BaseModel):
             if dated:
                 dated_changes[path] = dated
 
-        if dated_changes:
-            dated_modifier = Scenario.from_reform(
-                dated_changes
-            ).simulation_modifier
+        if dated_changes or (annual_changes and modifier):
+            dated_modifier = (
+                Scenario.from_reform(dated_changes).simulation_modifier
+                if dated_changes
+                else None
+            )
             original_modifier = modifier
             annual_parameter_changes = annual_changes
 
@@ -86,7 +89,8 @@ class Reform(BaseModel):
                     simulation.apply_parameter_changes(
                         annual_parameter_changes
                     )
-                dated_modifier(simulation)
+                if dated_modifier:
+                    dated_modifier(simulation)
                 if original_modifier:
                     original_modifier(simulation)
 
@@ -115,6 +119,27 @@ class Reform(BaseModel):
                 self.baseline_simulation_modifier,
             )
         return None
+
+    def to_drill_scenario(
+        self, baseline: bool = False, baseline_changes: dict | None = None
+    ) -> Scenario:
+        """Compose the shared freeze before annual/datetime measure overrides."""
+        from uk_budget_data.drill_setup import with_nic_freeze
+
+        changes = (
+            self.baseline_parameter_changes
+            if baseline
+            else self.parameter_changes
+        )
+        modifier = (
+            self.baseline_simulation_modifier
+            if baseline
+            else self.simulation_modifier
+        )
+        merged = with_nic_freeze(baseline_changes if baseline else None)
+        for path, values in (changes or {}).items():
+            merged.setdefault(path, {}).update(values)
+        return self._build_scenario(merged, modifier)
 
     def has_custom_baseline(self) -> bool:
         """Check if this reform uses a custom baseline scenario."""
@@ -162,7 +187,7 @@ class DataConfig(BaseModel):
     )
     dataset_path: Optional[Path] = Field(
         default=None,
-        description="Path to enhanced FRS dataset (optional)",
+        description="Pinned Microcosm H5 path (or UK_BUDGET_DATASET environment variable)",
     )
     income_curve_max: int = Field(
         default=150_000,

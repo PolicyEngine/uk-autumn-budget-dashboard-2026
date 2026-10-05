@@ -1,22 +1,5 @@
-// MOCK DATA: drill 1 mock Autumn Budget 2026. The five measures in the
-// statement; none of them is real policy.
-export const POLICIES = [
-  { id: "mock_fuel_duty_freeze", name: "Fuel duty freeze", color: "#0D9488",
-    description: "MOCK: hold fuel duty at 55.95p per litre until 31 March 2028",
-    explanation: "MOCK. Cancels the 2p rise due on 1 March 2027 and the inflation-linked rise due in April 2027; main rates stay at 55.95p per litre until 31 March 2028 and rise with RPI from 1 April 2028. Annex A sets the April 2027 baseline at 60.10p per litre and supplies the rounded later-year rates. Household savings include pump VAT pass-through." },
-  { id: "mock_energy_vat_zero_rate", name: "VAT zero rate on household energy", color: "#14B8A6",
-    description: "MOCK: no VAT on household electricity and gas in 2027-28",
-    explanation: "MOCK. Zero-rates domestic electricity and gas in Great Britain from 1 April 2027 to 31 March 2028. Modelled as removing 5/105 of recorded household energy bills with full pass-through; Northern Ireland is excluded." },
-  { id: "mock_child_benefit_increase", name: "Child Benefit increase", color: "#2DD4BF",
-    description: "MOCK: £30.00 eldest and £20.00 additional child a week from April 2027",
-    explanation: "MOCK. Raises Child Benefit to £30.00 a week for the eldest or only child and £20.00 for each additional child from April 2027, rising with inflation after that." },
-  { id: "mock_nics_threshold_rise", name: "National Insurance threshold rise", color: "#5EEAD4",
-    description: "MOCK: Primary Threshold and Lower Profits Limit to £13,000 from April 2027",
-    explanation: "MOCK. Raises the employee Primary Threshold and the self-employed Lower Profits Limit from £12,570 to £13,000 from 6 April 2027, held until April 2031. An employee earning £13,000 or more saves £34.40 a year." },
-  { id: "mock_hvcts_extension", name: "Council tax surcharge from £1.5m", color: "#B45309",
-    description: "MOCK: High Value Council Tax Surcharge from £1.5m in England from April 2028",
-    explanation: "MOCK. Extends the surcharge to homes in England worth £1.5 million or more on 2026 values from 1 April 2028, rather than £2 million; homes between £1.5m and £2.5m pay £2,500 a year." },
-];
+// MOCK drill 2: no measures registered before the statement release.
+export const POLICIES = [];
 
 // Retained only for old shared URLs; these do not appear in the 2026 selector.
 export const LEGACY_POLICIES = [

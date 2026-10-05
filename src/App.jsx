@@ -51,7 +51,7 @@ function parseCSV(csvText) {
   return data;
 }
 
-const validPolicyIds = CHART_POLICIES.map((p) => p.id);
+const validPolicyIds = (process.env.NEXT_PUBLIC_MOCK === "1" ? POLICIES : CHART_POLICIES).map((p) => p.id);
 
 function App() {
   const analysisRequest = useRef(0);
@@ -385,11 +385,9 @@ function App() {
 
         {activeTab === "dashboard" && (
           <p role="note" className="dashboard-intro">
-            Child Benefit and National Insurance use the UK tax year beginning
-            in the labelled year. Fuel duty and domestic energy VAT use calendar
-            years; the council tax surcharge starts in April 2028. Combined
-            totals mix these periods and are provisional, so they are not
-            directly comparable with fiscal-year costings.
+            Measures, start dates, and costing periods will be confirmed against
+            the released statement. Each published result will identify its
+            calendar-year or tax-year basis.
           </p>
         )}
 
@@ -424,21 +422,19 @@ function App() {
               )}
             </p>
             <p role="note" className="dashboard-intro">
-              Provisional data: the national estimates were rerun against the
-              current reform code using a dataset whose certified release has
-              not been verified. Aligned constituency weights and a certified
-              rerun are still pending.
+              MOCK drill 2 setup. The pinned national Microcosm dataset is ready;
+              no measures or costings are published before statement release.
+              Constituency estimates are unavailable for this national release.
             </p>
 
             {selectedPolicies.length === 0 ? (
               <div className="empty-state">
                 <p>
-                  Select policies to analyse their impact on government revenue
-                  and household incomes.
+                  {POLICIES.length ? "Select policies to analyse their impact." : "Awaiting the 12:30 statement. No drill measures have been registered."}
                 </p>
-                <button className="preset-button" onClick={() => setSelectedPolicies(POLICIES.map((policy) => policy.id))}>
+                {POLICIES.length > 0 && <button className="preset-button" onClick={() => setSelectedPolicies(POLICIES.map((policy) => policy.id))}>
                   Select all 2026 policies
-                </button>
+                </button>}
               </div>
             ) : (
               <div className="results-container">
