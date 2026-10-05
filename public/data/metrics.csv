@@ -28,12 +28,12 @@ mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2026
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,0.0,0.0,0.0,0.0
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,0.0,0.0,0.0,0.0
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,0.0,0.0,0.0,0.0
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,18.96012118900047,0.00043015111891722257,0.21432018,1.7798759
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,18.84714209800178,0.00041357172338797496,0.21296692,1.7783731
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,0.0,0.0,0.0,0.0
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9.066289413102165,-0.0002844292990703297,-0.08032513,-0.6896718
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,9.550090029855658,-0.000536649612191272,-0.14085388,-1.2031777
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,10.2713216259805,-0.0007899157563654092,-0.1351471,-1.1588899
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,10.63380648987726,-0.0010157288276183658,-0.079297066,-0.65854245
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9.036870902692302,-0.0002830745983279382,-0.08032322,-0.6901821
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,9.509087603592876,-0.0005277571753783624,-0.14212894,-1.2163591
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,10.203812640230396,-0.0007778863689915081,-0.13376522,-1.1530265
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,10.491490348616436,-0.0009970794497664152,-0.08171177,-0.6823314
 mock2_energy_price_payment,Energy Price Protection Payment,2026,26.743620105137843,-0.0010261070669691115,-0.080132484,-0.6933427
 mock2_energy_price_payment,Energy Price Protection Payment,2027,0.0,0.0,0.0,0.0
 mock2_energy_price_payment,Energy Price Protection Payment,2028,0.0,0.0,0.0,0.0

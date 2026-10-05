@@ -318,17 +318,17 @@ mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,9,0.0
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,10,0.0
 mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,all,0.0
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,1,-22.2292347701755
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,2,-40.39846339851985
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,3,-45.82869776573545
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,4,-43.01352853087756
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,5,-36.360275747079285
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,6,-33.513787500682014
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,7,-36.87909999672244
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,8,-36.874265685257384
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,9,-24.570646328587245
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,10,-21.349771083374865
-mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,all,-33.88830027570447
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,1,-19.86384953473934
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,2,-39.95021211874807
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,3,-45.10568546957764
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,4,-43.23816180349744
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,5,-35.20731441252398
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,6,-33.806122955331745
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,7,-36.83971142652637
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,8,-36.04118392282489
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,9,-24.570647271818505
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,10,-21.34977322215806
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,all,-33.3517616705646
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,1,0.0
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,2,0.0
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,3,0.0
@@ -340,50 +340,50 @@ mock2_state_pension_personal_allowance,State Pension personal allowance,2026,8,0
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,9,0.0
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,10,0.0
 mock2_state_pension_personal_allowance,State Pension personal allowance,2026,all,0.0
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,1,11.924638676372012
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,2,24.136873393330514
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,3,21.803749011187392
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,4,19.676245799323333
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,5,12.519442973920567
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,6,10.861262266010753
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,7,6.638040915037502
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,8,5.229310525378306
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9,2.5035236439839297
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,1,11.91173037028049
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,2,24.265368333015008
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,3,21.32260110745609
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,4,19.787489939060865
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,5,12.375235870732926
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,6,10.891226747207147
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,7,6.582293085921327
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,8,5.229794603788319
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,9,2.4867299050203484
 mock2_state_pension_personal_allowance,State Pension personal allowance,2027,10,2.470841752803632
-mock2_state_pension_personal_allowance,State Pension personal allowance,2027,all,11.906023826669669
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,1,23.94081431811342
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,2,47.05103513364712
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,3,41.933261076914356
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,4,37.48367174275882
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,5,24.80541833951034
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,6,19.453044087261983
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,7,12.827255870877323
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,8,10.019268820288415
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,all,11.857200490495254
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,1,23.712124449048083
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,2,47.39435272836339
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,3,41.10973858045598
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,4,37.45637814431723
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,5,22.65792405838055
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,6,19.250035373913025
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,7,12.72629664088956
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,8,9.973992912703347
 mock2_state_pension_personal_allowance,State Pension personal allowance,2028,9,4.896073186692682
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,10,4.676462736938211
-mock2_state_pension_personal_allowance,State Pension personal allowance,2028,all,22.97930994064607
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,1,37.61940429548238
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,2,70.48634975712135
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,3,63.143319387010244
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,4,55.49791725008692
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,5,35.43896433581748
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,6,30.51361671195429
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,7,19.480674030018523
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,8,14.932932529757935
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,9,7.359298416984855
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,10,4.676461349311146
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,all,22.636635858379023
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,1,37.00932747265938
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,2,71.6066199073314
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,3,61.38657111027802
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,4,55.41350835394365
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,5,32.84910241896579
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,6,30.630149704629105
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,7,19.506062173842476
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,8,14.750478262212491
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,9,7.359298885260365
 mock2_state_pension_personal_allowance,State Pension personal allowance,2029,10,6.988130420346615
-mock2_state_pension_personal_allowance,State Pension personal allowance,2029,all,34.539350116636314
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,1,50.24384886934911
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,2,89.97571740510703
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,3,87.54796477377076
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,4,73.41280452213005
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,5,49.816500958469966
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,6,31.454234886330287
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,7,28.34321578335814
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,8,21.464586393199852
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,all,34.108409509164
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,1,48.54782933128488
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,2,89.78895259958456
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,3,85.92424289330641
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,4,72.1091783089516
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,5,45.59869647092762
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,6,36.9285348719418
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,7,27.533731475902307
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,8,21.46909950657518
 mock2_state_pension_personal_allowance,State Pension personal allowance,2030,9,10.026991361560738
 mock2_state_pension_personal_allowance,State Pension personal allowance,2030,10,9.33329747980116
-mock2_state_pension_personal_allowance,State Pension personal allowance,2030,all,45.71335895301324
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,all,45.22882690157631
 mock2_energy_price_payment,Energy Price Protection Payment,2026,1,57.9794051649589
 mock2_energy_price_payment,Energy Price Protection Payment,2026,2,58.821834669170734
 mock2_energy_price_payment,Energy Price Protection Payment,2026,3,56.37657042600308
