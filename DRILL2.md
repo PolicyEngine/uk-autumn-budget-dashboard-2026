@@ -110,7 +110,7 @@ Filled copies of the scoring sheet, ledger and reconciliation are committed here
 | Drill start: statement released | 12:30 (opened 12:31, hash matches) | `32217f2` |
 | G1 measure list locked | 12:44:03 (María, reconciler) | `fef2171`: 15 rows, 8 coded and 7 ledger; ledger SHA-256 `78c49c1b…c69a` |
 | G2 first numbers (preview URL) | 13:31:52 (target 13:15; María's 8/8 household checks at `0e464b8`, build fix) | `6b4c09f`; [deployment](https://vercel.com/policy-engine/uk-autumn-budget-2026-drill/8rRKffPGmhrnUxWdx3svdfrTjz11), branch preview https://uk-autumn-budget-2026-drill-git-drill2-moc-a2bb64-policy-engine.vercel.app; State Pension uprating, energy payment and HVCTS band marked awaiting OBR tables / Table 4.1 |
-| Documents released | | |
+| Documents released | 13:40 (opened 13:40:44; all five hashes match) | `8bf168f` |
 | G3 re-based and reconciled | | |
 | G4 full page on preview (preview URL) | | |
 | Scoring runs, one SHA each (list them; mark the one matching the stop) | | |
