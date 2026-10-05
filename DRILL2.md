@@ -112,8 +112,8 @@ Filled copies of the scoring sheet, ledger and reconciliation are committed here
 | G2 first numbers (preview URL) | 13:31:52 (target 13:15; María's 8/8 household checks at `0e464b8`, build fix) | `6b4c09f`; [deployment](https://vercel.com/policy-engine/uk-autumn-budget-2026-drill/8rRKffPGmhrnUxWdx3svdfrTjz11), branch preview https://uk-autumn-budget-2026-drill-git-drill2-moc-a2bb64-policy-engine.vercel.app; State Pension uprating, energy payment and HVCTS band marked awaiting OBR tables / Table 4.1 |
 | Documents released | 13:40 (opened 13:40:44; all five hashes match) | `8bf168f` |
 | G3 re-based and reconciled | 13:57 | `c004a1c` (code `60c5caa`; household SP fix `6fa2f5f`): Annex A baselines, all 8 measures reconciled to Table 4.1 and static; gaps over 10% explained. Largest: CGT +116% to +139% vs static (gains base), fuel duty about half (implied ~22bn litres vs 43bn), employer NI about 42% (pay pass-through) |
-| G4 full page on preview (preview URL) | | |
-| Scoring runs, one SHA each (list them; mark the one matching the stop) | | |
-| Scoring sheet complete | | |
+| G4 full page on preview (preview URL) | 14:00:59 deployed (`621db06`), all 8 measures; final data at `e05274b` | https://uk-autumn-budget-2026-drill-git-drill2-moc-a2bb64-policy-engine.vercel.app — `X-Robots-Tag: noindex` checked; MOCK banner, meta `noindex, nofollow` and Personal impact not verified (team login) |
+| Scoring runs, one SHA each (list them; mark the one matching the stop) | 14:11 run 1, 80 rows; 14:35 run 2, 6 rows rerun | run 1 `6fa2f5f` (74 rows kept); run 2 `c156e8b` (H3/H5/H8, measures 4 and 8). Stop `e05274b` matches run 2's code for households |
+| Scoring sheet complete | 14:35 (target 14:30) | `e05274b`: `MOCK-drill2-scoring.csv` sha256 `19879869…badf`; reconciliation sha256 `43f0fea2…1271` |
 | Answer key attached (16:00) | | |
-| Stop | | |
+| Stop | 15:18 | `e05274b` (code `c156e8b` plus data and filled sheets). G3 qualified by the reconciler: CGT, fuel base, employer NI basis, EPPP count and HVCTS count gaps open |
