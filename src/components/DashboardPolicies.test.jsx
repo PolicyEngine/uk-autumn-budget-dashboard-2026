@@ -7,6 +7,12 @@ it("registers each drill measure once, with a MOCK basis note", () => {
   const ids = POLICIES.map((policy) => policy.id);
   expect(new Set(ids).size).toBe(ids.length);
   expect(ids).toEqual(expect.arrayContaining([
+    "mock2_fuel_duty_hold",
+    "mock2_electricity_vat_zero",
+    "mock2_employer_ni_threshold",
+    "mock2_cgt_rates",
+    "mock2_hvcts_band",
+    "mock2_state_pension_uprating",
     "mock2_state_pension_personal_allowance",
     "mock2_energy_price_payment",
   ]));

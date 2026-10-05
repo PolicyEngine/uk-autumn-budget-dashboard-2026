@@ -93,6 +93,7 @@ class APIHouseholdInput(BaseModel):
     self_employment_income: float = Field(default=0, ge=0)
     fuel_litres: float = Field(default=0, ge=0)
     domestic_energy_bill: float = Field(default=0, ge=0)
+    electricity_bill: float = Field(default=0, ge=0)
     home_value_2026: float = Field(default=0, ge=0)
     rent: float = Field(default=0, ge=0)
     tenure_type: str = "OWNED_OUTRIGHT"

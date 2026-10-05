@@ -6,7 +6,14 @@
  * each model year.
  */
 
-export const MOCK_POLICY_IDS = [] as const;
+export const MOCK_POLICY_IDS = [
+  "mock2_fuel_duty_hold",
+  "mock2_electricity_vat_zero",
+  "mock2_employer_ni_threshold",
+  "mock2_cgt_rates",
+  "mock2_hvcts_band",
+  "mock2_state_pension_uprating",
+] as const;
 
 export const LEGACY_POLICY_IDS = [
   "cgt_equalisation",
@@ -47,6 +54,7 @@ type HouseholdInput = {
   fuel_type: "PETROL" | "DIESEL";
   fuel_litres: number;
   domestic_energy_bill: number;
+  electricity_bill: number;
   self_employment_income: number;
   home_value_2026: number;
   rent: number;
@@ -185,6 +193,7 @@ export function parseHouseholdInput(raw: unknown): HouseholdInput {
     fuel_type: fuelType,
     fuel_litres: inputNumber(data, "fuel_litres", 0),
     domestic_energy_bill: inputNumber(data, "domestic_energy_bill", 0),
+    electricity_bill: inputNumber(data, "electricity_bill", 0),
     self_employment_income: inputNumber(data, "self_employment_income", 0),
     home_value_2026: inputNumber(data, "home_value_2026", 0),
     rent: inputNumber(data, "rent", 0),
