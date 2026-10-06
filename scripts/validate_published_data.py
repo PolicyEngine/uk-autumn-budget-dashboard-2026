@@ -8,11 +8,15 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 FEATURED_POLICIES = (
-    "mock_fuel_duty_freeze",
-    "mock_energy_vat_zero_rate",
-    "mock_child_benefit_increase",
-    "mock_nics_threshold_rise",
-    "mock_hvcts_extension",
+    # MOCK drill 2 parameter measures (statement order).
+    "mock2_fuel_duty_hold",
+    "mock2_electricity_vat_zero",
+    "mock2_employer_ni_threshold",
+    "mock2_cgt_rates",
+    "mock2_hvcts_band",
+    "mock2_state_pension_uprating",
+    "mock2_state_pension_personal_allowance",
+    "mock2_energy_price_payment",
 )
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),
@@ -53,7 +57,6 @@ OPTIONAL_OBR_FIELDS = ("obr_static_value", "obr_post_behavioural_value")
 TRANSPORT_POLICIES = (
     "fuel_duty_rise_cancellation",
     "bus_fare_cap",
-    "mock_fuel_duty_freeze",
 )
 CONSTITUENCY_FIELDS = ("average_gain", "relative_change")
 DEMOGRAPHIC_FIELDS = (
@@ -255,6 +258,8 @@ def validate(
 ) -> list[str]:
     """Return every publication gate failure for the requested policy set."""
     errors = []
+    if not policies:
+        errors.append("Publication requires at least one registered policy; use --pre-start for empty-state checks")
     tables = {}
     for name, fields in NATIONAL_FIELDS.items():
         path = directory / f"{name}.csv"
@@ -416,6 +421,25 @@ def validate(
     return errors
 
 
+def validate_pre_start(directory: Path) -> list[str]:
+    """Verify an empty rehearsal; this does not approve any numerical results."""
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+    errors = []
+    if get_autumn_budget_2026_reforms():
+        errors.append("Active drill reforms remain before the statement release")
+    for name in NATIONAL_FIELDS:
+        if not (directory / f"{name}.csv").exists():
+            errors.append(f"Missing schema-only {name}.csv")
+    for path in directory.glob("*.csv"):
+        with path.open(newline="") as source:
+            reader = csv.DictReader(source)
+            if not reader.fieldnames:
+                errors.append(f"{path.name}: missing header")
+            if any(reader):
+                errors.append(f"{path.name}: generated rows remain before the drill")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -426,8 +450,9 @@ def main() -> int:
         "--years", nargs="+", type=int, default=(2026, 2027, 2028, 2029, 2030)
     )
     parser.add_argument("--require-constituency", action="store_true")
+    parser.add_argument("--pre-start", action="store_true", help="Check empty setup only; not a publication gate")
     args = parser.parse_args()
-    errors = validate(
+    errors = validate_pre_start(args.directory) if args.pre_start else validate(
         args.directory,
         tuple(args.policies),
         tuple(args.years),
@@ -440,6 +465,9 @@ def main() -> int:
     if errors:
         print(f"{len(errors)} publication-gate failure(s)")
         return 1
+    if args.pre_start:
+        print("Pre-start empty-state PASS; no numerical publication approval")
+        return 0
     print(
         f"Validated {len(args.policies)} policies, {len(args.years)} years, and {len(NATIONAL_FIELDS) + (2 if args.require_constituency else 0)} CSVs"
     )

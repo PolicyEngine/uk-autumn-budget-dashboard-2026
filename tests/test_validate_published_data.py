@@ -2,12 +2,8 @@
 
 import csv
 import json
-import shutil
-from pathlib import Path
 
 from scripts.validate_published_data import (
-    FEATURED_POLICIES,
-    NATIONAL_FIELDS,
     validate,
     validate_constituency_files,
 )
@@ -242,32 +238,3 @@ def test_national_files_reject_duplicate_keys_nonfinite_values_and_cross_file_mi
     assert any("incomplete decile" in error for error in errors)
     assert any("invalid gini_change" in error for error in errors)
     assert any("OBR/PE mismatch" in error for error in errors)
-
-
-def test_mock_fuel_2026_effect_is_rejected(tmp_path):
-    """The published mock fuel reform must have no impact before March 2027."""
-    source = Path(__file__).resolve().parents[1] / "public" / "data"
-    for name in NATIONAL_FIELDS:
-        shutil.copyfile(source / f"{name}.csv", tmp_path / f"{name}.csv")
-    distribution = list(
-        csv.DictReader((tmp_path / "distributional_impact.csv").open())
-    )
-    row = next(
-        row
-        for row in distribution
-        if row["reform_id"] == "mock_fuel_duty_freeze"
-        and row["year"] == "2026"
-    )
-    row["value"] = "5"
-    write_csv(
-        tmp_path / "distributional_impact.csv",
-        distribution[0].keys(),
-        distribution,
-    )
-
-    errors = validate(
-        tmp_path, FEATURED_POLICIES, (2026, 2027, 2028, 2029, 2030), False
-    )
-    assert any(
-        "mock_fuel_duty_freeze has a 2026 effect" in error for error in errors
-    )

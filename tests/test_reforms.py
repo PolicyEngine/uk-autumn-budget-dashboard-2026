@@ -95,8 +95,11 @@ class TestReformDefinitions:
         """Autumn Budget 2025 reforms are defined."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        reforms = get_autumn_budget_2026_reforms()
-        assert len(reforms) > 0
+        ids = [r.id for r in get_autumn_budget_2026_reforms()]
+        assert {
+            "mock2_state_pension_personal_allowance",
+            "mock2_energy_price_payment",
+        } <= set(ids)
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""
@@ -571,18 +574,16 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_five_mock_measures_on_dashboard_list(self):
-        """Drill 1 (MOCK): the dashboard offers the five statement measures."""
-        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+    def test_only_drill2_measures_after_statement_release(self):
+        from uk_budget_data.reforms import (
+            get_autumn_budget_2026_reforms,
+            get_reform,
+        )
 
         ids = [r.id for r in get_autumn_budget_2026_reforms()]
-        assert ids == [
-            "mock_fuel_duty_freeze",
-            "mock_energy_vat_zero_rate",
-            "mock_child_benefit_increase",
-            "mock_nics_threshold_rise",
-            "mock_hvcts_extension",
-        ]
+        assert len(ids) == len(set(ids))
+        assert get_reform("mock2_energy_price_payment") is not None
+        assert get_reform("mock_nics_threshold_rise") is None
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
         """Shared URLs from the 2025 dashboard keep working."""
@@ -611,11 +612,7 @@ class TestAutumnBudget2026Reforms:
         assert set(elasticity.values()) == {1.0}
 
     def test_cgt_equalisation_avoids_unavailable_parameters(self):
-        """Schedules and mtr_elasticity need policyengine-uk 2.99.0.
-
-        policyengine.py 6.x pins 2.90.2, where those parameters do not exist;
-        naming them would raise rather than be inert.
-        """
+        """The retained legacy scenario preserves its simplified schedules."""
         from uk_budget_data.reforms import get_reform
 
         changes = get_reform("cgt_equalisation").parameter_changes
@@ -753,135 +750,3 @@ class TestAutumnBudget2026Reforms:
 
         available = {r.id for r in get_all_reforms()}
         assert set(POLICY_IDS) <= available, set(POLICY_IDS) - available
-
-
-class TestMockDrillReviewFixes:
-    """Source-packet and model checks for the five drill measures."""
-
-    def test_fuel_duty_includes_pump_vat_pass_through(self):
-        from policyengine_uk import Simulation
-
-        from uk_budget_data.reforms import get_reform
-
-        year = 2027
-        situation = {
-            "people": {
-                "adult": {
-                    "age": {year: 35},
-                    "employment_income": {year: 30_000},
-                }
-            },
-            "benunits": {"benunit": {"members": ["adult"]}},
-            "households": {
-                "household": {
-                    "members": ["adult"],
-                    "region": {year: "LONDON"},
-                    "petrol_litres": {year: 1_000},
-                }
-            },
-        }
-        reform = get_reform("mock_fuel_duty_freeze")
-        baseline = Simulation(
-            situation=situation, scenario=reform.to_baseline_scenario()
-        )
-        reformed = Simulation(
-            situation=situation, scenario=reform.to_scenario()
-        )
-        saving = float(
-            reformed.calculate("household_net_income", year)[0]
-            - baseline.calculate("household_net_income", year)[0]
-        )
-        # No rise in January-February, 2p/L in March and 4.15p/L April-December.
-        expected = 1_000 * (0.02 + 9 * 0.0415) / 12 * 1.2
-        assert saving == pytest.approx(expected, abs=0.02)
-
-    def test_fuel_and_child_benefit_use_annex_a_baselines(self):
-        from uk_budget_data.reforms import get_reform
-
-        fuel = get_reform("mock_fuel_duty_freeze")
-        duty = fuel.baseline_parameter_changes[
-            "gov.hmrc.fuel_duty.petrol_and_diesel"
-        ]
-        assert duty["2027-03-01"] == 0.5795
-        assert duty["2027-04-01"] == 0.6010
-        assert duty["2028-03-01"] == 0.6010
-        assert duty["2028-04-01"] == 0.6213
-        assert duty["2029-04-01"] == 0.6398
-        assert duty["2030-04-01"] == 0.6585
-        reform_duty = fuel.parameter_changes[
-            "gov.hmrc.fuel_duty.petrol_and_diesel"
-        ]
-        assert reform_duty["2028-04-01"] == 0.5784
-        assert reform_duty["2029-04-01"] == 0.5957
-        assert reform_duty["2030-04-01"] == 0.6131
-        child = get_reform("mock_child_benefit_increase")
-        assert (
-            child.baseline_parameter_changes[
-                "gov.hmrc.child_benefit.amount.eldest"
-            ]["2027"]
-            == 27.80
-        )
-        assert (
-            child.baseline_parameter_changes[
-                "gov.hmrc.child_benefit.amount.additional"
-            ]["2027"]
-            == 18.40
-        )
-
-    @pytest.mark.parametrize("year", [2027, 2028, 2029, 2030])
-    def test_nic_baseline_stays_frozen_until_2031(self, year):
-        from uk_budget_data.reforms import LPL, PT, get_reform
-
-        reform = get_reform("mock_nics_threshold_rise")
-        assert reform.baseline_parameter_changes[PT][str(year)] == 241.73
-        assert reform.baseline_parameter_changes[LPL][str(year)] == 12_570
-        assert reform.parameter_changes[PT][str(year)] == 250
-        assert reform.parameter_changes[LPL][str(year)] == 13_000
-
-    @pytest.mark.parametrize(
-        "year,region,expected",
-        [
-            (2027, "LONDON", 75),
-            (2028, "LONDON", 25),
-            (2029, "LONDON", 0),
-            (2027, "NORTHERN_IRELAND", 0),
-        ],
-    )
-    def test_energy_vat_is_counted_once_in_income_and_receipts(
-        self, year, region, expected
-    ):
-        from policyengine_uk import Simulation
-
-        from uk_budget_data.reforms import get_reform
-
-        situation = {
-            "people": {
-                "adult": {
-                    "age": {year: 35},
-                    "employment_income": {year: 30_000},
-                }
-            },
-            "benunits": {"benunit": {"members": ["adult"]}},
-            "households": {
-                "household": {
-                    "members": ["adult"],
-                    "region": {year: region},
-                    "domestic_energy_consumption": {year: 2_100},
-                }
-            },
-        }
-        baseline = Simulation(situation=situation)
-        reform = Simulation(
-            situation=situation,
-            scenario=get_reform("mock_energy_vat_zero_rate").to_scenario(),
-        )
-        income = float(
-            reform.calculate("household_net_income", year)[0]
-            - baseline.calculate("household_net_income", year)[0]
-        )
-        receipts = float(
-            reform.calculate("gov_balance", year)[0]
-            - baseline.calculate("gov_balance", year)[0]
-        )
-        assert income == pytest.approx(expected, abs=0.01)
-        assert receipts == pytest.approx(-expected, abs=0.01)

@@ -1,91 +1,41 @@
 reform_id,reform_name,year,policyengine_value,obr_static_value,obr_post_behavioural_value
-cgt_equalisation,CGT equalisation with income tax,2026,4.114368569711029,,
-cgt_equalisation,CGT equalisation with income tax,2027,4.278331508161407,,
-cgt_equalisation,CGT equalisation with income tax,2028,4.443193157480267,,
-cgt_equalisation,CGT equalisation with income tax,2029,4.609124380351848,,
-cgt_equalisation,CGT equalisation with income tax,2030,4.790906782955519,,
-fuel_duty_rise_cancellation,Fuel duty rise cancellation,2026,0.0,,
-fuel_duty_rise_cancellation,Fuel duty rise cancellation,2027,-2.037931334917336,,
-fuel_duty_rise_cancellation,Fuel duty rise cancellation,2028,-2.1245359531962777,,
-fuel_duty_rise_cancellation,Fuel duty rise cancellation,2029,-2.0453309677940044,,
-fuel_duty_rise_cancellation,Fuel duty rise cancellation,2030,-1.9384914915117697,,
-bus_fare_cap,£2 bus fare cap,2026,0.0,,
-bus_fare_cap,£2 bus fare cap,2027,-0.2631890500131418,,
-bus_fare_cap,£2 bus fare cap,2028,-0.2695253554493786,,
-bus_fare_cap,£2 bus fare cap,2029,-0.2761241328424278,,
-bus_fare_cap,£2 bus fare cap,2030,-0.2829149223260917,,
-threshold_freeze_extension,Threshold freeze extension,2026,0.0,,
-threshold_freeze_extension,Threshold freeze extension,2027,0.0,,
-threshold_freeze_extension,Threshold freeze extension,2028,3.731633090080941,,
-threshold_freeze_extension,Threshold freeze extension,2029,7.757746982121564,,
-threshold_freeze_extension,Threshold freeze extension,2030,12.115271392839364,,
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.9441104477837924,,
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,0.971853879259089,,
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1.0055614999032585,,
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1.0420158609942505,,
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1.0722370953811275,,
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0,,
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.7859791510348515,,
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,0.832425218972991,,
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,0.8781435776071024,,
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,0.9266486585802004,,
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0,,
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.8797709461530456,,
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,0.920505956683774,,
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,0.9619664370521016,,
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,1.009578684323867,,
-two_child_limit,2 child limit repeal,2026,-2.9481590085316145,-2.1,-2.3
-two_child_limit,2 child limit repeal,2027,-3.142898714547965,-2.2,-2.5
-two_child_limit,2 child limit repeal,2028,-3.4207809537560925,-2.4,-2.7
-two_child_limit,2 child limit repeal,2029,-3.5601392994046113,-2.7,-3.0
-two_child_limit,2 child limit repeal,2030,-3.716750835853652,-2.8,-3.1
-fuel_duty_freeze,Fuel duty freeze extension,2026,-3.523930069910573,-2.4,-2.4
-fuel_duty_freeze,Fuel duty freeze extension,2027,-1.387856072038301,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2028,-1.210588217168649,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2029,-0.5662358025160948,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2030,-0.7166734426150546,-0.8,-0.8
-rail_fares_freeze,Rail fares freeze,2026,-0.1450004115489876,-0.1,-0.1
-rail_fares_freeze,Rail fares freeze,2027,-0.1549999878394077,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2028,-0.1599994108840588,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2029,-0.1650003218554932,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2030,-0.1500021392496534,-0.2,-0.2
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,0.0,5.915,5.915
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,0.1330317659133535,0.255,0.255
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,0.2624384722162902,0.29,0.29
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,0.3995716624683384,0.355,0.355
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,0.4106523725930223,0.4,0.4
-salary_sacrifice_cap,Salary sacrifice cap,2026,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2029,2.775377330000371,4.9,4.7
-salary_sacrifice_cap,Salary sacrifice cap,2030,2.9093641105691583,5.1,2.6
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,-6.6170900474099215,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,-4.5527220448090775,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,0.4682203384797998,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,8.086967888167948,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,12.353354834465314,,
-mock_fuel_duty_freeze,Fuel duty freeze,2026,0.0,,
-mock_fuel_duty_freeze,Fuel duty freeze,2027,-1.7184102234208707,,
-mock_fuel_duty_freeze,Fuel duty freeze,2028,-2.1695776403098925,,
-mock_fuel_duty_freeze,Fuel duty freeze,2029,-2.150055165486462,,
-mock_fuel_duty_freeze,Fuel duty freeze,2030,-2.0970578959757993,,
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2026,0.0,,
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2027,-1.8814611859672636,,
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2028,-0.6422537864581719,,
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2029,0.0,,
-mock_energy_vat_zero_rate,VAT zero rate on household energy,2030,0.0,,
-mock_child_benefit_increase,Child Benefit increase,2026,0.0,,
-mock_child_benefit_increase,Child Benefit increase,2027,-1.2067285390920146,,
-mock_child_benefit_increase,Child Benefit increase,2028,-1.2286258299501154,,
-mock_child_benefit_increase,Child Benefit increase,2029,-1.249896987503929,,
-mock_child_benefit_increase,Child Benefit increase,2030,-1.268060918224817,,
-mock_nics_threshold_rise,National Insurance threshold rise,2026,0.0,,
-mock_nics_threshold_rise,National Insurance threshold rise,2027,-0.7889301706114608,,
-mock_nics_threshold_rise,National Insurance threshold rise,2028,-0.9402626965511162,,
-mock_nics_threshold_rise,National Insurance threshold rise,2029,-0.9588796897358262,,
-mock_nics_threshold_rise,National Insurance threshold rise,2030,-1.015408379898253,,
-mock_hvcts_extension,Council tax surcharge from £1.5m,2026,0.0,,
-mock_hvcts_extension,Council tax surcharge from £1.5m,2027,0.0,,
-mock_hvcts_extension,Council tax surcharge from £1.5m,2028,0.2687137463505768,,
-mock_hvcts_extension,Council tax surcharge from £1.5m,2029,0.2752936987357473,,
-mock_hvcts_extension,Council tax surcharge from £1.5m,2030,0.28206274392404534,,
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2026,0.0,,
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2027,-1.3790267003336663,,
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2028,-1.0609559650058031,,
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2029,-1.0521633592158008,,
+mock2_fuel_duty_hold,Fuel duty held until September 2027,2030,-1.0257615212153135,,
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2026,0.0,,
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027,-0.9366681323488397,,
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028,-0.31347164212569606,,
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2029,0.0,,
+mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2030,0.0,,
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2026,0.0,,
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027,-1.3173662603511276,,
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2028,-1.3275786629366255,,
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2029,-1.3224862695229307,,
+mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030,-1.313816989755335,,
+mock2_cgt_rates,Capital Gains Tax rate rise,2026,0.0,,
+mock2_cgt_rates,Capital Gains Tax rate rise,2027,4.421540234737838,,
+mock2_cgt_rates,Capital Gains Tax rate rise,2028,4.593049965620277,,
+mock2_cgt_rates,Capital Gains Tax rate rise,2029,4.7659554995975215,,
+mock2_cgt_rates,Capital Gains Tax rate rise,2030,4.956569607498615,,
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2026,0.0,,
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2027,0.0,,
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2028,0.14955231968142696,,
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2029,0.15321432755437928,,
+mock2_hvcts_band,Council tax surcharge band from £1.5m,2030,0.15698163627593642,,
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2026,0.0,,
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2027,0.0,,
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2028,0.0,,
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2029,0.0,,
+mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030,0.9922315610023367,,
+mock2_state_pension_personal_allowance,State Pension personal allowance,2026,0.0,,
+mock2_state_pension_personal_allowance,State Pension personal allowance,2027,-0.34841485392686455,,
+mock2_state_pension_personal_allowance,State Pension personal allowance,2028,-0.6675309652144696,,
+mock2_state_pension_personal_allowance,State Pension personal allowance,2029,-1.0098244653294446,,
+mock2_state_pension_personal_allowance,State Pension personal allowance,2030,-1.3450157244895897,,
+mock2_energy_price_payment,Energy Price Protection Payment,2026,-1.0586285007259122,,
+mock2_energy_price_payment,Energy Price Protection Payment,2027,0.0,,
+mock2_energy_price_payment,Energy Price Protection Payment,2028,0.0,,
+mock2_energy_price_payment,Energy Price Protection Payment,2029,0.0,,
+mock2_energy_price_payment,Energy Price Protection Payment,2030,0.0,,

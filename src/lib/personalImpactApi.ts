@@ -1,4 +1,7 @@
-/** Server-side adapter for the PolicyEngine UK household API.
+/** Server-side adapter for the PolicyEngine UK household API (legacy measures only).
+ *
+ * MOCK drill measures never run here: with NEXT_PUBLIC_MOCK=1 the route
+ * forwards to the pinned local Python engine (BUDGET_API_URL) instead.
  *
  * Keep the scenarios in step with personal_impact.py and reforms.py. The API
  * exposes household calculations, while the dashboard needs differences
@@ -6,12 +9,14 @@
  * each model year.
  */
 
+// MOCK drill 2 ids, served by the pinned Python engine, not by this adapter.
 export const MOCK_POLICY_IDS = [
-  "mock_fuel_duty_freeze",
-  "mock_energy_vat_zero_rate",
-  "mock_child_benefit_increase",
-  "mock_nics_threshold_rise",
-  "mock_hvcts_extension",
+  "mock2_fuel_duty_hold",
+  "mock2_electricity_vat_zero",
+  "mock2_employer_ni_threshold",
+  "mock2_cgt_rates",
+  "mock2_hvcts_band",
+  "mock2_state_pension_uprating",
 ] as const;
 
 export const LEGACY_POLICY_IDS = [
@@ -23,7 +28,7 @@ export const LEGACY_POLICY_IDS = [
   "savings_tax_increase_2pp",
   "property_tax_increase_2pp",
 ] as const;
-export const POLICY_IDS = [...MOCK_POLICY_IDS, ...LEGACY_POLICY_IDS] as const;
+export const POLICY_IDS = LEGACY_POLICY_IDS;
 
 type PolicyId = (typeof POLICY_IDS)[number];
 type Policy = Record<string, Record<string, number>>;
@@ -53,6 +58,7 @@ type HouseholdInput = {
   fuel_type: "PETROL" | "DIESEL";
   fuel_litres: number;
   domestic_energy_bill: number;
+  electricity_bill: number;
   self_employment_income: number;
   home_value_2026: number;
   rent: number;
@@ -77,27 +83,10 @@ type ApiMetadata = {
 type Job = { year: number; key: string; household: Situation; policy?: Policy };
 
 const YEARS = [2025, 2026, 2027, 2028, 2029, 2030];
-const MODEL_VERSION = "2.90.2"; // dashboard uv.lock and verified /uk/metadata
+export const MODEL_VERSION = "2.120.0"; // Drill runtime pin; dataset build version is recorded separately.
 const DEFAULT_API_URL = "https://api.policyengine.org";
 const CPI_PATH = "gov.economic_assumptions.indices.obr.cpih";
 const FUEL_PATH = "gov.hmrc.fuel_duty.petrol_and_diesel";
-const CHILD_BENEFIT_FIRST = "gov.hmrc.child_benefit.amount.eldest";
-const CHILD_BENEFIT_OTHER = "gov.hmrc.child_benefit.amount.additional";
-const NIC_PRIMARY = "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold";
-const NIC_PROFITS = "gov.hmrc.national_insurance.class_4.thresholds.lower_profits_limit";
-// MOCK costings Annex A fixes the rounded fuel rates for each fiscal year.
-const MOCK_FUEL_BASELINE: Record<number, number> = {
-  2027: 0.6010, 2028: 0.6213, 2029: 0.6398, 2030: 0.6585,
-};
-const MOCK_FUEL_REFORM: Record<number, number> = {
-  2027: 0.5595, 2028: 0.5784, 2029: 0.5957, 2030: 0.6131,
-};
-// MOCK OBR Table 1.7 supplies September CPI proxies; see reforms.py.
-const MOCK_SEPTEMBER_CPI: Record<number, number> = {
-  2027: 0.02262844565699923, 2028: 0.02221482507864847, 2029: 0.02050085863555534,
-};
-// PolicyEngine UK 2.90.2 GDP-per-capita index / 2026; keeps a 2026 home
-// valuation fixed in real terms for the existing surcharge in net income.
 const HOME_VALUE_FACTOR: Record<number, number> = {
   2025: 0.971626324336865, 2026: 1, 2027: 1.0323022194725853,
   2028: 1.0643028381409017, 2029: 1.0958085221560592, 2030: 1.1303302142139047,
@@ -111,30 +100,9 @@ const BUS_REGIONS = new Set([
 const REGIONS = new Set([
   ...BUS_REGIONS, "LONDON", "WALES", "SCOTLAND", "NORTHERN_IRELAND",
 ]);
-const ENGLAND_REGIONS = new Set([...BUS_REGIONS, "LONDON"]);
 const TENURES = new Set(["OWNED_OUTRIGHT", "OWNED_WITH_MORTGAGE", "RENT_PRIVATELY", "RENT_FROM_HA", "RENT_FROM_COUNCIL"]);
 const OWNER_TENURES = new Set(["OWNED_OUTRIGHT", "OWNED_WITH_MORTGAGE"]);
 const POLICY_DETAILS: Record<PolicyId, { name: string; description: string }> = {
-  mock_fuel_duty_freeze: {
-    name: "Fuel duty freeze",
-    description: "MOCK. Holds duty at 55.95p/L to March 2028 against the Annex A baseline, with full pump VAT pass-through.",
-  },
-  mock_energy_vat_zero_rate: {
-    name: "VAT zero rate on household energy",
-    description: "MOCK. Removes 5/105 of Great Britain energy bills from April 2027 to March 2028, with full pass-through.",
-  },
-  mock_child_benefit_increase: {
-    name: "Child Benefit increase",
-    description: "MOCK. Raises weekly rates to £30/£20 from April 2027 against Annex A £27.80/£18.40, with CPI uprating thereafter.",
-  },
-  mock_nics_threshold_rise: {
-    name: "National Insurance threshold rise",
-    description: "MOCK. Raises employee and self-employed thresholds to £13,000 from April 2027 against a £12,570 freeze.",
-  },
-  mock_hvcts_extension: {
-    name: "Council tax surcharge from £1.5m",
-    description: "MOCK. Extends the English surcharge to 2026 home values from £1.5m to below £2m from April 2028.",
-  },
   cgt_equalisation: {
     name: "CGT equalisation with income tax",
     description: "Illustrative 20%/40%/45% capital gains rates from 2026, with a retention-rate realisation elasticity of 1.0.",
@@ -204,7 +172,7 @@ export function parseHouseholdInput(raw: unknown): HouseholdInput {
   if (typeof tenure !== "string" || !TENURES.has(tenure)) {
     throw new PersonalImpactError("Select a valid housing tenure.", 400);
   }
-  const requested = data.policy_ids ?? MOCK_POLICY_IDS;
+  const requested = data.policy_ids ?? LEGACY_POLICY_IDS;
   if (!Array.isArray(requested) || requested.length === 0 ||
       requested.some((id) => typeof id !== "string" || !POLICY_IDS.includes(id as PolicyId)) ||
       new Set(requested).size !== requested.length) {
@@ -229,6 +197,7 @@ export function parseHouseholdInput(raw: unknown): HouseholdInput {
     fuel_type: fuelType,
     fuel_litres: inputNumber(data, "fuel_litres", 0),
     domestic_energy_bill: inputNumber(data, "domestic_energy_bill", 0),
+    electricity_bill: inputNumber(data, "electricity_bill", 0),
     self_employment_income: inputNumber(data, "self_employment_income", 0),
     home_value_2026: inputNumber(data, "home_value_2026", 0),
     rent: inputNumber(data, "rent", 0),
@@ -300,7 +269,7 @@ function buildSituation(input: HouseholdInput, year: number): Situation {
         petrol_spending: { [period]: input.fuel_type === "PETROL" ? input.fuel_spending : 0 },
         diesel_spending: { [period]: input.fuel_type === "DIESEL" ? input.fuel_spending : 0 },
         bus_fare_spending: { [period]: input.bus_spending },
-        // The pinned UK model's surcharge omits tenure; a tenant owns no main residence here.
+        // A tenant owns no main residence here (PolicyEngine/policyengine-uk#2164 adds the owner test in the engine).
         main_residence_value: { [period]: OWNER_TENURES.has(input.tenure_type) ? input.home_value_2026 * HOME_VALUE_FACTOR[year] : 0 },
         rent: { [period]: input.rent },
         tenure_type: { [period]: input.tenure_type },
@@ -356,50 +325,8 @@ function cpih(metadata: ApiMetadata, year: number): number {
   return value;
 }
 
-function mockChildRate(start: number, year: number): number {
-  let amount = start;
-  for (let next = 2028; next <= year; next++) {
-    amount = Math.round(amount * (1 + MOCK_SEPTEMBER_CPI[next - 1]) * 20) / 20;
-  }
-  return amount;
-}
-
-function mockFuelRate(year: number, month: number, reformed: boolean): number {
-  if (year < 2027) return 0.5295;
-  if (!reformed && year === 2027 && month <= 2) return 0.5595;
-  const fiscalYear = month >= 4 ? year : year - 1;
-  if (!reformed && fiscalYear < 2027) return 0.5795;
-  if (reformed && fiscalYear <= 2027) return 0.5595;
-  return reformed ? MOCK_FUEL_REFORM[fiscalYear] : MOCK_FUEL_BASELINE[fiscalYear];
-}
-
-function mockDirectChange(id: PolicyId, input: HouseholdInput, year: number): number {
-  if (id === "mock_energy_vat_zero_rate") {
-    const fraction = year === 2027 ? 0.75 : year === 2028 ? 0.25 : 0;
-    return input.region === "NORTHERN_IRELAND" ? 0 : input.domestic_energy_bill * (5 / 105) * fraction;
-  }
-  if (id === "mock_fuel_duty_freeze" && year >= 2027) {
-    const annualDutySaving = Array.from({ length: 12 }, (_, index) =>
-      mockFuelRate(year, index + 1, false) - mockFuelRate(year, index + 1, true),
-    ).reduce((sum, monthlySaving) => sum + monthlySaving, 0) / 12;
-    // Fixed annual litres spread evenly by month; full 20% pump VAT pass-through.
-    return input.fuel_litres * annualDutySaving * 1.2;
-  }
-  return 0;
-}
-
 function relevant(id: PolicyId, input: HouseholdInput, year: number): boolean {
   switch (id) {
-    case "mock_fuel_duty_freeze": return year >= 2027 && input.fuel_litres > 0;
-    case "mock_energy_vat_zero_rate": return (year === 2027 || year === 2028) &&
-      input.domestic_energy_bill > 0 && input.region !== "NORTHERN_IRELAND";
-    case "mock_child_benefit_increase": return year >= 2027 && input.children_ages.length > 0;
-    case "mock_nics_threshold_rise": return year >= 2027 && [
-      input.employment_income, input.partner_income, input.self_employment_income,
-    ].some((income) => income * (1 + input.income_growth_rate) ** (year - 2025) > 12_570);
-    case "mock_hvcts_extension": return year >= 2028 && ENGLAND_REGIONS.has(input.region) &&
-      OWNER_TENURES.has(input.tenure_type) &&
-      input.home_value_2026 >= 1_500_000 && input.home_value_2026 < 2_000_000;
     case "cgt_equalisation": return year >= 2026 && input.capital_gains > 0;
     case "fuel_duty_rise_cancellation": return year >= 2027 && input.fuel_spending > 0;
     case "bus_fare_cap": return year >= 2027 && input.bus_spending > 0 && BUS_REGIONS.has(input.region);
@@ -418,27 +345,7 @@ function jobsForYear(input: HouseholdInput, metadata: ApiMetadata, year: number)
   const jobs: Job[] = [{ year, key: "current", household }];
   for (const id of input.policy_ids) {
     if (!relevant(id, input, year)) continue;
-    if (id === "mock_child_benefit_increase") {
-      jobs.push({ year, key: `${id}:baseline`, household, policy: annualPolicy(year, {
-        [CHILD_BENEFIT_FIRST]: mockChildRate(27.80, year),
-        [CHILD_BENEFIT_OTHER]: mockChildRate(18.40, year),
-      }) });
-      jobs.push({ year, key: `${id}:reform`, household, policy: annualPolicy(year, {
-        [CHILD_BENEFIT_FIRST]: mockChildRate(30, year),
-        [CHILD_BENEFIT_OTHER]: mockChildRate(20, year),
-      }) });
-    } else if (id === "mock_nics_threshold_rise") {
-      jobs.push({ year, key: `${id}:baseline`, household, policy: annualPolicy(year, {
-        [NIC_PRIMARY]: 241.73, [NIC_PROFITS]: 12_570,
-      }) });
-      jobs.push({ year, key: `${id}:reform`, household, policy: annualPolicy(year, {
-        [NIC_PRIMARY]: 250, [NIC_PROFITS]: 13_000,
-      }) });
-    } else if (id === "mock_hvcts_extension") {
-      jobs.push({ year, key: `${id}:reform`, household, policy: annualPolicy(year, {
-        "gov.hmrc.council_tax.high_value_surcharge.amount[1].threshold": 1_500_000,
-      }) });
-    } else if (id === "cgt_equalisation") {
+    if (id === "cgt_equalisation") {
       jobs.push({ year, key: `${id}:reform`, household, policy: cgtPolicy(year) });
     } else if (id === "fuel_duty_rise_cancellation") {
       jobs.push({ year, key: `${id}:baseline`, household, policy: fuelBaselinePolicy(year) });
@@ -566,14 +473,7 @@ export async function calculatePersonalImpact(raw: unknown, fetchImpl: typeof fe
       let baseline = current;
       let reformed = current;
       if (relevant(id, input, year)) {
-        if (id === "mock_fuel_duty_freeze" || id === "mock_energy_vat_zero_rate") {
-          reformed = current + mockDirectChange(id, input, year);
-        } else if (id === "mock_child_benefit_increase" || id === "mock_nics_threshold_rise") {
-          baseline = get(year, `${id}:baseline`);
-          reformed = get(year, `${id}:reform`);
-        } else if (id === "mock_hvcts_extension") {
-          reformed = get(year, `${id}:reform`);
-        } else if (id === "cgt_equalisation" || id === "bus_fare_cap") {
+        if (id === "cgt_equalisation" || id === "bus_fare_cap") {
           reformed = get(year, `${id}:reform`);
         } else if (id === "fuel_duty_rise_cancellation") {
           baseline = get(year, `${id}:baseline`);

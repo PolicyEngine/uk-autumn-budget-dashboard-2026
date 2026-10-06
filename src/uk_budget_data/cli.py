@@ -70,7 +70,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--dataset",
         type=Path,
         default=None,
-        help="Path to enhanced FRS dataset (optional)",
+        help="Path to the pinned Microcosm H5 (or set UK_BUDGET_DATASET)",
     )
 
     generate_parser.add_argument(
