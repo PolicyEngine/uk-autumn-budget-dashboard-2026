@@ -231,30 +231,31 @@ def _new_state_pension_2030(parameter_changes):
 
 def test_state_pension_uprating_annex_a_paths():
     # Annex A triple lock: £268.85 (2029-30) -> £278.00 (2030-31), +3.4%
-    # earnings. Reform: 268.85 x 1.025 = £275.57125 in April 2030.
+    # earnings. Reform: 268.85 x 1.025 = £275.57125, rounded to the nearest
+    # 5p as DWP does: £275.55 in April 2030.
     reform = get_reform("mock2_state_pension_uprating")
     path = "gov.dwp.state_pension.new_state_pension.amount"
     assert reform.baseline_parameter_changes[path]["2030"] == 278.00
     assert reform.parameter_changes[path]["2029"] == 268.85
-    assert reform.parameter_changes[path]["2030"] == pytest.approx(275.57125)
+    assert reform.parameter_changes[path]["2030"] == pytest.approx(275.55)
 
 
 def test_state_pension_uprating_full_rate_loss():
-    # A full-rate pensioner loses (278.00 - 275.57125) x 52 = £126.295 a year.
+    # A full-rate pensioner loses (278.00 - 275.55) x 52 = £127.40 a year.
     reform = get_reform("mock2_state_pension_uprating")
     path = "gov.dwp.state_pension.new_state_pension.amount"
     loss = (
         reform.baseline_parameter_changes[path]["2030"]
         - reform.parameter_changes[path]["2030"]
     ) * 52
-    assert loss == pytest.approx(126.295, abs=0.001)
+    assert loss == pytest.approx(127.40, abs=0.001)
 
 
 def test_state_pension_uprating_household_calculator_h3():
     # Full new SP entered at Annex A's £278.00 x 52 = £14,456 in 2030-31.
-    # Reform: x 275.57125/278.00 -> loss £126.295. On its own the measure
-    # leaves the standard £12,570 PA, so 20% tax falls by £25.259:
-    # net change = -126.295 x 0.8 = -£101.036.
+    # Reform: x 275.55/278.00 -> loss £127.40. On its own the measure
+    # leaves the standard £12,570 PA, so 20% tax falls by £25.48:
+    # net change = -127.40 x 0.8 = -£101.92 (the drill answer key).
     from uk_budget_data.personal_impact import (
         HouseholdInput,
         calculate_drill_impact,
@@ -273,7 +274,7 @@ def test_state_pension_uprating_household_calculator_h3():
         household, ["mock2_state_pension_uprating"]
     )["years"]
     change = years[2030]["policies"]["mock2_state_pension_uprating"]
-    assert change["net_income_change"] == pytest.approx(-101.036, abs=0.01)
+    assert change["net_income_change"] == pytest.approx(-101.92, abs=0.01)
     assert (
         years[2029]["policies"]["mock2_state_pension_uprating"][
             "net_income_change"

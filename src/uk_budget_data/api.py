@@ -101,6 +101,10 @@ class APIHouseholdInput(BaseModel):
     private_pension_income: float = Field(default=0, ge=0)
     partner_state_pension_income: float = Field(default=0, ge=0)
     partner_private_pension_income: float = Field(default=0, ge=0)
+    claims_pension_credit: bool = Field(
+        default=True,
+        description="False when the household does not claim Pension Credit",
+    )
     age_2025: int = Field(default=35, ge=16, le=100)
     partner_age_2025: int = Field(default=33, ge=16, le=100)
     policy_ids: list[str] | None = Field(

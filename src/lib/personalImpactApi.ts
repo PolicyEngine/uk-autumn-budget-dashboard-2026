@@ -269,7 +269,7 @@ function buildSituation(input: HouseholdInput, year: number): Situation {
         petrol_spending: { [period]: input.fuel_type === "PETROL" ? input.fuel_spending : 0 },
         diesel_spending: { [period]: input.fuel_type === "DIESEL" ? input.fuel_spending : 0 },
         bus_fare_spending: { [period]: input.bus_spending },
-        // The pinned UK model's surcharge omits tenure; a tenant owns no main residence here.
+        // A tenant owns no main residence here (PolicyEngine/policyengine-uk#2164 adds the owner test in the engine).
         main_residence_value: { [period]: OWNER_TENURES.has(input.tenure_type) ? input.home_value_2026 * HOME_VALUE_FACTOR[year] : 0 },
         rent: { [period]: input.rent },
         tenure_type: { [period]: input.tenure_type },

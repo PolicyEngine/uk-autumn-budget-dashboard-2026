@@ -32,6 +32,7 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
     partner_private_pension_income: 0,
     age_2025: 35,
     partner_age_2025: 33,
+    claims_pension_credit: true,
   });
 
   const change = (event) => {
@@ -100,6 +101,9 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
         {moneyField("partner_state_pension_income", "Partner’s annual State Pension")}
         {moneyField("partner_private_pension_income", "Partner’s annual private pension")}
       </>}
+      <div className="form-group checkbox-group">
+        <label><input name="claims_pension_credit" type="checkbox" checked={input.claims_pension_credit} onChange={change} /> Claims Pension Credit if entitled</label>
+      </div>
       <div className="form-group">
         <label htmlFor="children_ages_text">Children’s ages in 2025</label>
         <input id="children_ages_text" name="children_ages_text" type="text" value={input.children_ages_text}

@@ -1496,9 +1496,10 @@ def _mock2_sp_paths(new_sp: dict[int, float]) -> dict[str, dict[str, float]]:
 
 def _mock2_sp_reform_path() -> dict[int, float]:
     path = dict(MOCK2_ANNEX_A_NEW_SP)
-    path[2030] = MOCK2_ANNEX_A_NEW_SP[2029] * (
-        1 + MOCK2_SP_APRIL_2030_UPRATING
-    )
+    # DWP rounds uprated State Pension rates to the nearest 5p (SSAA 1992
+    # s.150A(4) allows rounding): 268.85 x 1.025 = 275.57 -> £275.55.
+    raw = MOCK2_ANNEX_A_NEW_SP[2029] * (1 + MOCK2_SP_APRIL_2030_UPRATING)
+    path[2030] = round(round(raw / 0.05) * 0.05, 2)
     return path
 
 
