@@ -27,8 +27,8 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 | 13:15 target | G2: provisional first numbers (statement-based) | integrator |
 | **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheets | open from the packet folder |
 | 13:40–14:10 | G3: re-base on Annex A; national scoring sheet filled | integrator, then reconciler |
-| **14:20** | **OBR correction notice released** (`release_1420/`). Re-run what it touches | integrator |
-| 14:20–14:50 | G5: corrected figures re-based and re-pinned; affected household rows rerun on the new SHA | integrator, scorer |
+| **14:20** | **OBR correction notice released** (`packet/MOCK-obr-correction-notice.md`). Re-run what it touches | integrator |
+| 14:20–14:50 | G5: preserve the first run; create complete corrected sheets on one new SHA; rerun affected rows and verify any carry-forward | integrator, scorer |
 | 14:50 target | G4: full page on the drill preview; household and national sheets complete | all |
 | **15:30** | **Stop.** Log the stop commit | integrator |
 | 16:00 | Answer key released and scored | key holder, then scorer |
@@ -39,7 +39,7 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 |---|---|---|
 | **Integrator** (Vahid) | The drill branch, every commit, data regeneration, preview deploys, re-basing, the clock table | Score households, or see the packet before release |
 | **Reconciler, then scorer** (María) | G1 ledger, the reconciliation, the national scoring sheet, then the household scoring sheet (one SHA per run) | Push code |
-| **Key holder** | Releases the answer key at 16:00 | Take part in the drill |
+| **Independent key holder — UNCONFIRMED (Friday blocker)** | Releases the answer key at 16:00 | Take part in the drill |
 
 ## Gates
 
@@ -49,8 +49,10 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 | **G1** | Every statement measure is **coded** or a **ledger** row, with a reason | coverage ledger |
 | **G2** | Provisional, statement-based. Each coded measure with a statement figure has a reconciliation row, and one hand-checked household | reconciliation |
 | **G3** | Re-based on Annex A. Each national row has our static figure, its basis (gross or net; duty only or VAT-inclusive; fiscal or calendar) and an explanation class for any gap over 10% | national scoring sheet |
-| **G5** | After the 14:20 notice: the affected measures are re-run, the changed rows re-pinned to the new SHA, and the old run marked superseded | clock table, both sheets |
+| **G5** | After the 14:20 notice: preserve the old run, complete a new single-SHA run, rerun affected measures, verify unchanged-row carry-forward and mark the old run superseded | clock table, both sheets |
 | **G4** | Full page on the drill-only preview, with the MOCK banner and noindex | clock table |
+
+The [unsealed scoring rubric](docs/drill3-scoring-rubric.md) defines complete runs, carry-forward evidence, denominators, partial credit and process points. Freeze its SHA at G0.
 
 ## Scoring at 16:00
 
@@ -93,6 +95,51 @@ The key holder keeps the generator and answer key outside the repository. Two ru
 
 - [`docs/autumn-budget-2026-candidate-reforms.md`](docs/autumn-budget-2026-candidate-reforms.md): 24 candidate measures with sources, likelihood, cost and how PolicyEngine would model them, as of 8 October.
 - [`docs/budget-day-model-risk-register.md`](docs/budget-day-model-risk-register.md): 15 places where the UK model and data most need challenging, with evidence from the scorecard and drill 2.
+
+## Setup acceptance
+
+Friday setup remains **unconfirmed** until the participants fill every required field below. A blank field blocks sign-off. This table records operator evidence; no check below has already passed for drill 3.
+
+| Required evidence | Owner | Record / acceptance |
+|---|---|---|
+| Independent key holder (full name and contact) | key holder | **UNCONFIRMED — supply a nonparticipant before Friday sign-off** |
+| Custody of all three sealed keys; published hashes match; two generator runs agree; independent household recalculation agrees to ±1p; correction versions and row inventories checked | key holder | **UNCONFIRMED**; spoiler-free attestation, time and receipt |
+| Exact 16:00 BST delivery route and recipient | key holder, María | **UNCONFIRMED**; private attachment route; verify hashes on receipt |
+| Chosen model/core and dataset name/SHA-256; certification receipt or explicit unvalidated-publication plan | Vahid, María | **UNCONFIRMED**; retaining UK 2.120.0 with the UK 2.100.0-built data requires “unvalidated under this engine” on every national figure |
+| Signed-in drill-only preview: URL/deployment SHA, MOCK banner, robots meta and X-Robots-Tag `noindex, nofollow`, matching backend version and baseline-only HTTP 200 | Vahid, María | **UNCONFIRMED**; record health versions and empty-selection response; Vercel login alone does not pass |
+| Rubric SHA, denominators/row-version inventory and equivalent-class acceptance sets frozen without revealing answers | María, key holder | **UNCONFIRMED**; see scoring rubric |
+| Participant role and Monday release/stop times acknowledged | Vahid, María, key holder | **UNCONFIRMED**; names and time |
+
+The household API uses the pinned Python backend for the drill. The legacy public-API adapter retains its historical horizon and is outside drill scoring. Friday preview testing may use an empty policy selection before Monday registry removal.
+
+### Monday empty-state reset and G0
+
+During the scheduled **10:00–11:30 BST** setup, Vahid empties the active backend list in `src/uk_budget_data/reforms.py` and the frontend `POLICIES` array in `src/utils/policyConfig.js`. Keep historical definitions for shared links. Change the backend list to `[]` and the frontend declaration to `export const POLICIES = [];`; update validator policy defaults and registration assertions for that empty state. Do not perform this removal before Monday.
+
+From the repository root, with the pinned environment already available:
+
+```sh
+uv run uk-budget-data reset --check-only
+uv run uk-budget-data reset
+uv run python scripts/validate_published_data.py --pre-start
+uv run pytest tests/test_drill_setup.py tests/test_cli.py tests/test_reset_drill_data.py
+bun run test
+```
+
+The reset requires both active registries empty, checks every named generated CSV before writing, and preserves each header. It resets the seven national CSVs plus `constituency.csv` and `demographic_constituency.csv`; geography, unknown files and private inputs remain intact. If the validator finds another generated CSV, inspect and clear its result rows explicitly; do not delete unknown files. The numerical `generate` command remains a post-release operation and rejects an empty registry.
+
+After the empty-state check and preview smoke pass, commit the setup and record its final SHA externally in G0 by **Monday 11:30 BST**, with the runtime/data receipt and rubric SHA. A commit cannot contain its own final SHA. After G1, register only released measures and pass their IDs explicitly to publication validation:
+
+```sh
+uv run uk-budget-data generate --dataset /path/to/pinned.h5 --output-dir /tmp/drill3-stage --reforms <locked IDs> --years 2026 2027 2028 2029 2030 2031
+uv run python scripts/validate_published_data.py /tmp/drill3-stage --policies <locked IDs> --years 2026 2027 2028 2029 2030 2031
+```
+
+### Terminal-year scoring route
+
+The shared policy horizon covers 2026–2031. The MOCK household API defaults to base year 2025 and all six policy years, and accepts ordered unique `years` through 2032. For boundary work, send the released household inputs with `"years": [2031, 2032]` and the relevant released `policy_ids`. The UI reports the six policy years and excludes boundary diagnostics from its cumulative total.
+
+These API results retain the engine's annual mixed basis (`period_basis=engine_annual_mixed`, `fiscal_conversion_applied=false`). Native fiscal variables keep their engine treatment. For a separately justified calendar-only measure with even monthly incidence, the opt-in `calendar_to_fiscal_even_months({2031: annual_2031, 2032: annual_2032}, 2031)` helper uses nine months from 2031 and three from 2032. It rejects a missing 2032 value. Never apply it to whole household net income or a native fiscal result. Dated/nonuniform measures require their actual April–March month schedule and a documented measure-specific comparator; record that method in the sheets.
 
 ## Clock
 

@@ -156,7 +156,9 @@ def test_mock_api_baseline_and_old_policy_rejection(monkeypatch):
     assert result.status_code == 200, result.text
     assert result.json()["baseline_only"] is True
     assert result.json()["policies"] == {}
-    assert len(result.json()["years"]) == 6
+    assert list(result.json()["years"]) == [
+        str(year) for year in range(2025, 2032)
+    ]
     assert (
         client.post(
             "/api/personal-impact",
@@ -259,4 +261,41 @@ def test_annual_override_applies_before_modifier_on_native_engine():
     assert observed == [250]
     assert (
         sim.tax_benefit_system.parameters.get_child(path)("2029-01-01") == 250
+    )
+
+
+def test_mock_api_supports_terminal_calendar_boundary(monkeypatch):
+    """2032 annual output supports explicit fiscal-boundary scoring work."""
+    from fastapi.testclient import TestClient
+
+    from uk_budget_data.api import app
+
+    monkeypatch.setenv("NEXT_PUBLIC_MOCK", "1")
+    client = TestClient(app)
+    result = client.post(
+        "/api/personal-impact",
+        json={
+            "employment_income": 30000,
+            "policy_ids": [],
+            "years": [2031, 2032],
+        },
+    )
+    assert result.status_code == 200, result.text
+    assert list(result.json()["years"]) == ["2031", "2032"]
+    assert result.json()["period_basis"] == "engine_annual_mixed"
+    assert result.json()["fiscal_conversion_applied"] is False
+    for year in ("2031", "2032"):
+        assert math.isfinite(
+            result.json()["years"][year]["baseline"]["household_net_income"]
+        )
+    assert (
+        client.post(
+            "/api/personal-impact",
+            json={
+                "employment_income": 30000,
+                "policy_ids": [],
+                "years": [2033],
+            },
+        ).status_code
+        == 422
     )

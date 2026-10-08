@@ -1,3 +1,4 @@
+import budgetYears from "../uk_budget_data/budget_years.json";
 import { useState, useRef, useEffect } from "react";
 import "./YearSelector.css";
 
@@ -5,7 +6,7 @@ function YearSelector({ selectedYear, onYearChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const years = [2026, 2027, 2028, 2029, 2030];
+  const years = budgetYears.policy_years;
 
   useEffect(() => {
     const handleClickOutside = (event) => {

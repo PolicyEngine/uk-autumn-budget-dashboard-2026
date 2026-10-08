@@ -7,6 +7,8 @@ import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 FEATURED_POLICIES = (
     # MOCK drill 2 parameter measures (statement order).
     "mock2_fuel_duty_hold",
@@ -259,7 +261,9 @@ def validate(
     """Return every publication gate failure for the requested policy set."""
     errors = []
     if not policies:
-        errors.append("Publication requires at least one registered policy; use --pre-start for empty-state checks")
+        errors.append(
+            "Publication requires at least one registered policy; use --pre-start for empty-state checks"
+        )
     tables = {}
     for name, fields in NATIONAL_FIELDS.items():
         path = directory / f"{name}.csv"
@@ -424,9 +428,12 @@ def validate(
 def validate_pre_start(directory: Path) -> list[str]:
     """Verify an empty rehearsal; this does not approve any numerical results."""
     from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
     errors = []
     if get_autumn_budget_2026_reforms():
-        errors.append("Active drill reforms remain before the statement release")
+        errors.append(
+            "Active drill reforms remain before the statement release"
+        )
     for name in NATIONAL_FIELDS:
         if not (directory / f"{name}.csv").exists():
             errors.append(f"Missing schema-only {name}.csv")
@@ -436,7 +443,9 @@ def validate_pre_start(directory: Path) -> list[str]:
             if not reader.fieldnames:
                 errors.append(f"{path.name}: missing header")
             if any(reader):
-                errors.append(f"{path.name}: generated rows remain before the drill")
+                errors.append(
+                    f"{path.name}: generated rows remain before the drill"
+                )
     return errors
 
 
@@ -447,16 +456,24 @@ def main() -> int:
     )
     parser.add_argument("--policies", nargs="+", default=FEATURED_POLICIES)
     parser.add_argument(
-        "--years", nargs="+", type=int, default=(2026, 2027, 2028, 2029, 2030)
+        "--years", nargs="+", type=int, default=tuple(POLICY_YEARS)
     )
     parser.add_argument("--require-constituency", action="store_true")
-    parser.add_argument("--pre-start", action="store_true", help="Check empty setup only; not a publication gate")
+    parser.add_argument(
+        "--pre-start",
+        action="store_true",
+        help="Check empty setup only; not a publication gate",
+    )
     args = parser.parse_args()
-    errors = validate_pre_start(args.directory) if args.pre_start else validate(
-        args.directory,
-        tuple(args.policies),
-        tuple(args.years),
-        args.require_constituency,
+    errors = (
+        validate_pre_start(args.directory)
+        if args.pre_start
+        else validate(
+            args.directory,
+            tuple(args.policies),
+            tuple(args.years),
+            args.require_constituency,
+        )
     )
     for error in errors[:30]:
         print(f"FAIL: {error}")

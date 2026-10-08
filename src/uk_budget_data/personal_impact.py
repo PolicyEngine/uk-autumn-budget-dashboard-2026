@@ -9,6 +9,7 @@ from typing import Callable
 
 from policyengine_uk import Simulation
 
+from uk_budget_data.budget_years import POLICY_YEARS, validate_household_years
 from uk_budget_data.reforms import (
     DIVIDEND_PRE_BUDGET_BASIC_RATE,
     DIVIDEND_PRE_BUDGET_HIGHER_RATE,
@@ -337,13 +338,20 @@ class PersonalImpactCalculator:
         }
 
     def calculate(
-        self, household: HouseholdInput, policy_ids: list[str] | None = None
+        self,
+        household: HouseholdInput,
+        policy_ids: list[str] | None = None,
+        years: list[int] | None = None,
     ) -> dict:
         """Calculate the requested dashboard policies using the pinned engine."""
         import os
 
         if os.environ.get("NEXT_PUBLIC_MOCK") == "1":
-            return calculate_drill_impact(household, policy_ids)
+            return calculate_drill_impact(household, policy_ids, years)
+        if years is not None:
+            raise ValueError(
+                "Custom calendar years require the MOCK drill backend"
+            )
 
         from policyengine_uk.variables.household.demographic.geography import (
             Region,
@@ -390,9 +398,9 @@ class PersonalImpactCalculator:
                 {key: values[year] for key, values in person.items()}
                 for person in situation["people"].values()
             ]
-            people[0][
-                "capital_gains_before_response"
-            ] = household.capital_gains
+            people[0]["capital_gains_before_response"] = (
+                household.capital_gains
+            )
             household_inputs = {
                 "region": household.region,
                 "petrol_spending": (
@@ -503,7 +511,9 @@ class PersonalImpactCalculator:
         return results
 
 
-def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
+def calculate_drill_impact(
+    household: HouseholdInput, policy_ids=None, years=None
+) -> dict:
     """Use the population registry/scenarios for every new drill measure.
 
     Empty selection is a baseline smoke only and produces no policy effects.
@@ -515,6 +525,7 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
     )
 
     verify_runtime()
+    selected_years = validate_household_years(years)
     reforms = {r.id: r for r in get_autumn_budget_2026_reforms()}
     requested = list(reforms) if policy_ids is None else policy_ids
     if (
@@ -528,6 +539,9 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
         "policies": {},
         "totals": {"by_year": {}, "cumulative": 0},
         "baseline_only": not requested,
+        "period_basis": "engine_annual_mixed",
+        "fiscal_conversion_applied": False,
+        "policy_years": POLICY_YEARS.copy(),
         "provenance": drill_provenance(),
     }
     for key in requested:
@@ -538,7 +552,7 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
             "years": {},
             "total_impact": 0,
         }
-    for year in YEARS:
+    for year in selected_years:
         situation = build_situation(household, year)
         growth = (1 + household.income_growth_rate) ** (year - 2025)
         adult = situation["people"]["adult"]
@@ -570,9 +584,7 @@ def calculate_drill_impact(household: HouseholdInput, policy_ids=None) -> dict:
         inputs = situation["households"]["household"]
         from policyengine_uk.system import system
 
-        index = (
-            system.parameters.gov.economic_assumptions.indices.obr.per_capita.gdp
-        )
+        index = system.parameters.gov.economic_assumptions.indices.obr.per_capita.gdp
         home_factor = index(f"{year}-01-01") / index("2026-01-01")
         owner = household.tenure_type in {
             "OWNED_OUTRIGHT",
