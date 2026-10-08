@@ -1,0 +1,2 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 3, 12 October 2026. Not a real Budget. First data line (replace): scored policy code <sha>; policyengine-uk <version>; dataset <name and sha256>; validated pair <yes/no>; household basis <fiscal years>.
+measure_no,measure,status,model_year,baseline,mock_policy,household_coverage,method_and_assumptions,known_engine_issues,source
