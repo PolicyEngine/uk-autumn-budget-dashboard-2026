@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import "./ConstituencyMap.css";
 import "./ChartExport.css";
+import { useConstituencyResults } from "../hooks/useConstituencyResults";
+import {
+  formatYearRange,
+  UNAVAILABLE_MESSAGE,
+} from "../utils/constituencyData";
 
 // Chart metadata for export
 const CHART_TITLE = "Constituency-level impacts";
@@ -29,9 +34,6 @@ const REFORM_NAMES = {
   autumn_budget_2026_combined: "Autumn Budget 2026 (combined)",
 };
 
-// Format year for display (e.g., 2026 -> "2026-27")
-const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
-
 export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 2029 }) {
   // Use prop for year selection (shared slider in parent)
   const svgRef = useRef(null);
@@ -39,108 +41,17 @@ export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 
   const [selectedConstituency, setSelectedConstituency] = useState(null);
   const [tooltipData, setTooltipData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [rawData, setRawData] = useState([]);
-  const [geoData, setGeoData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
 
-  // Load data
-  useEffect(() => {
-    Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/constituency.csv`).then((r) => r.text()),
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/uk_constituencies_2024.geojson`).then((r) => r.json()),
-    ])
-      .then(([csvText, geojson]) => {
-        // Parse CSV with proper handling of quoted fields
-        const parseCSVLine = (line) => {
-          const result = [];
-          let current = "";
-          let inQuotes = false;
-
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === "," && !inQuotes) {
-              result.push(current.trim());
-              current = "";
-            } else {
-              current += char;
-            }
-          }
-          result.push(current.trim());
-          return result;
-        };
-
-        const lines = csvText.split("\n");
-        const headers = parseCSVLine(lines[0]);
-        const parsedData = lines
-          .slice(1)
-          .filter((line) => line.trim())
-          .map((line) => {
-            const values = parseCSVLine(line);
-            const row = {};
-            headers.forEach((header, idx) => {
-              row[header] = values[idx]?.trim();
-            });
-
-            return {
-              reform_id: row.reform_id,
-              year: parseInt(row.year) || 2026,
-              constituency_code: row.constituency_code,
-              constituency_name: row.constituency_name?.replace(/^"|"$/g, ""),
-              average_gain: parseFloat(row.average_gain) || 0,
-              relative_change: parseFloat(row.relative_change) || 0,
-            };
-          });
-
-        setRawData(parsedData);
-        setGeoData(geojson);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error loading data:", error);
-        setLoading(false);
-      });
-  }, []);
-
-  // Aggregate data across selected policies
-  const aggregatedData = useMemo(() => {
-    if (!rawData.length || !selectedPolicies.length) return [];
-
-    // Group by constituency and sum values across selected policies
-    const constituencyMap = new Map();
-
-    rawData.forEach((row) => {
-      if (!selectedPolicies.includes(row.reform_id)) return;
-      if (row.year !== selectedYear) return;
-
-      const key = row.constituency_code;
-      if (!constituencyMap.has(key)) {
-        constituencyMap.set(key, {
-          constituency_code: row.constituency_code,
-          constituency_name: row.constituency_name,
-          average_gain: 0,
-          relative_change: 0,
-          // Track per-policy breakdown
-          policyBreakdown: {},
-        });
-      }
-
-      const existing = constituencyMap.get(key);
-      existing.average_gain += row.average_gain;
-      existing.relative_change += row.relative_change;
-
-      // Store individual policy contribution
-      existing.policyBreakdown[row.reform_id] = {
-        average_gain: row.average_gain,
-        relative_change: row.relative_change,
-      };
-    });
-
-    return Array.from(constituencyMap.values());
-  }, [rawData, selectedPolicies, selectedYear]);
+  // Data, availability and per-constituency sums are shared with the
+  // constituency rankings, so the map and the rankings always agree.
+  const {
+    loading,
+    geoData,
+    availability,
+    aggregated: aggregatedData,
+  } = useConstituencyResults(selectedPolicies, selectedYear);
 
   // Render map
   useEffect(() => {
@@ -448,9 +359,17 @@ export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 
     return <div className="constituency-loading">Loading map...</div>;
   }
 
-  // Don't render if no policy is selected or no aggregated data
-  if (!selectedPolicies.length || !aggregatedData.length) {
+  if (!selectedPolicies.length) {
     return null;
+  }
+
+  if (!availability.available) {
+    return (
+      <div className="chart-container">
+        <h3>Constituency-level impacts</h3>
+        <p>{UNAVAILABLE_MESSAGE}</p>
+      </div>
+    );
   }
 
   return (
