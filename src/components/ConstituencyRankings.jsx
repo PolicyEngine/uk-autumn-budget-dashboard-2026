@@ -4,102 +4,47 @@ import { formatYearRange } from "../utils/constituencyData";
 import {
   RANK_METRICS,
   buildRankingCsv,
+  isAllTied,
   rankConstituencies,
   selectTopAndBottom,
 } from "../utils/constituencyRanking";
 import { downloadFile } from "../utils/downloadFile";
+import ConstituencyRankingTable, {
+  formatPercent,
+  formatPounds,
+} from "./ConstituencyRankingTable";
 import "./ConstituencyRankings.css";
 
 const TABLE_SIZE = 10;
 
-const formatPounds = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-  signDisplay: "exceptZero",
-}).format;
-
-const formatPercent = (value) => {
-  const magnitude = Math.abs(value).toFixed(2);
-  if (Number(magnitude) === 0) return "0.00%";
-  return `${value > 0 ? "+" : "-"}${magnitude}%`;
-};
+// Excel reads a CSV as UTF-8 only with a byte-order mark ("Ynys Môn").
+const UTF8_BOM = "﻿";
 
 // Drill builds set NEXT_PUBLIC_MOCK=1; their numbers must never read as real.
 const isMockBuild = () => process.env.NEXT_PUBLIC_MOCK === "1";
-
-function RankingTable({ title, caption, rows, metric, regionLookup }) {
-  return (
-    <div className="ranking-table-wrapper">
-      <h3>{title}</h3>
-      <table className="ranking-table">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Rank</th>
-            <th scope="col">Constituency</th>
-            <th scope="col" className="col-region">
-              Region or country
-            </th>
-            <th scope="col" className={metric === "gbp" ? "ranked" : ""}>
-              Change (£)
-            </th>
-            <th scope="col" className={metric === "pct" ? "ranked" : ""}>
-              Change (%)
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const region =
-              regionLookup.get(row.constituency_code)?.region ?? "";
-            return (
-              <tr key={row.constituency_code}>
-                <td title={row.tied ? "Tied" : undefined}>
-                  {row.tied ? "=" : ""}
-                  {row.rank}
-                </td>
-                <th scope="row">
-                  {row.constituency_name}
-                  {/* Narrow screens drop the region column and show it here */}
-                  <span className="region-inline">{region}</span>
-                </th>
-                <td className="col-region">{region}</td>
-                <td className={`number ${metric === "gbp" ? "ranked" : ""}`}>
-                  {formatPounds(row.average_gain)}
-                </td>
-                <td className={`number ${metric === "pct" ? "ranked" : ""}`}>
-                  {formatPercent(row.relative_change)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 export default function ConstituencyRankings({
   selectedPolicies = [],
   selectedYear = 2029,
 }) {
   const [metric, setMetric] = useState("gbp");
-  const { loading, availability, aggregated, regionLookup } =
+  const { loading, availability, aggregated, regionLookup, policies } =
     useConstituencyResults(selectedPolicies, selectedYear);
 
   const ranked = useMemo(
     () => rankConstituencies(aggregated, metric),
     [aggregated, metric],
   );
-  const { top, bottom } = selectTopAndBottom(ranked, TABLE_SIZE);
 
   // Same flag as the map: no tables unless constituency results exist.
   if (loading || !availability.available || !ranked.length) {
     return null;
   }
 
+  const { top, bottom, topTie, bottomTie } = selectTopAndBottom(
+    ranked,
+    TABLE_SIZE,
+  );
   const mock = isMockBuild();
   const yearLabel = formatYearRange(selectedYear);
 
@@ -108,16 +53,19 @@ export default function ConstituencyRankings({
       metric,
       regionLookup,
       year: selectedYear,
-      policies: selectedPolicies,
+      yearLabel,
+      policies,
       mock,
     });
     const prefix = mock ? "MOCK-" : "";
     downloadFile(
-      csv,
+      `${UTF8_BOM}${csv}`,
       `${prefix}constituency-rankings-${selectedYear}-by-${metric}.csv`,
       "text/csv;charset=utf-8",
     );
   };
+
+  const tableProps = { metric, regionLookup };
 
   return (
     <section
@@ -161,22 +109,31 @@ export default function ConstituencyRankings({
           </button>
         </div>
       </div>
-      <div className="rankings-tables">
-        <RankingTable
-          title={`Top ${top.length}`}
-          caption="Highest average change, highest first"
-          rows={top}
-          metric={metric}
-          regionLookup={regionLookup}
-        />
-        <RankingTable
-          title={`Bottom ${bottom.length}`}
-          caption="Lowest average change, lowest first"
-          rows={bottom}
-          metric={metric}
-          regionLookup={regionLookup}
-        />
-      </div>
+      {isAllTied(ranked) ? (
+        <p className="rankings-note">
+          Every constituency has the same average change (
+          {metric === "gbp"
+            ? formatPounds(ranked[0].average_gain)
+            : formatPercent(ranked[0].relative_change)}
+          ) in {yearLabel}, so there is no ranking by{" "}
+          {RANK_METRICS[metric].label}.
+        </p>
+      ) : (
+        <div className="rankings-tables">
+          <ConstituencyRankingTable
+            position="top"
+            rows={top}
+            tie={topTie}
+            {...tableProps}
+          />
+          <ConstituencyRankingTable
+            position="bottom"
+            rows={bottom}
+            tie={bottomTie}
+            {...tableProps}
+          />
+        </div>
+      )}
     </section>
   );
 }

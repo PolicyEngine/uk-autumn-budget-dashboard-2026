@@ -7,6 +7,7 @@ import "./ChartExport.css";
 import { useConstituencyResults } from "../hooks/useConstituencyResults";
 import {
   formatYearRange,
+  LOAD_FAILED_MESSAGE,
   UNAVAILABLE_MESSAGE,
 } from "../utils/constituencyData";
 
@@ -367,7 +368,11 @@ export default function ConstituencyMap({ selectedPolicies = [], selectedYear = 
     return (
       <div className="chart-container">
         <h3>Constituency-level impacts</h3>
-        <p>{UNAVAILABLE_MESSAGE}</p>
+        <p>
+          {availability.reason === "load-failed"
+            ? LOAD_FAILED_MESSAGE
+            : UNAVAILABLE_MESSAGE}
+        </p>
       </div>
     );
   }

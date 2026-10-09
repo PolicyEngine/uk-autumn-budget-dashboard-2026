@@ -3,27 +3,25 @@
  * rankings, so both read the same numbers and the same availability flag.
  */
 
-// Reform IDs whose constituency rows can be shown. The rows on main are the
-// November 2025 publication's: public/data/constituency.csv is byte-identical
-// to the file the 2025 dashboard shipped. Add a 2026 reform ID only after its
-// constituency rows are regenerated from the certified Microcosm release with
-// aligned constituency weights and pass the local-area checks. Until then the
-// map and the rankings stay unavailable for any selection that includes it.
-export const VERIFIED_CONSTITUENCY_POLICY_IDS = new Set([
-  "autumn_budget_2025_combined",
-  "two_child_limit",
-  "fuel_duty_freeze",
-  "rail_fares_freeze",
-  "threshold_freeze_extension",
-  "dividend_tax_increase_2pp",
-  "savings_tax_increase_2pp",
-  "property_tax_increase_2pp",
-  "freeze_student_loan_thresholds",
-  "salary_sacrifice_cap",
-]);
+// Reform IDs whose constituency rows may be shown. Empty: no checked-in
+// constituency rows are certified. public/data/constituency.csv on main is the
+// 2025 dashboard's file (byte-identical), not Microcosm output, and its rows
+// disagree with demographic_constituency.csv for nine of its ten reform IDs.
+// Add an ID only after its constituency rows are regenerated from the
+// certified Microcosm release with aligned constituency weights and pass the
+// local-area checks. CI checks every listed ID for full coverage and for
+// agreement with demographic_constituency.csv (constituencyData.test.js).
+export const VERIFIED_CONSTITUENCY_POLICY_IDS = new Set([]);
 
 export const UNAVAILABLE_MESSAGE =
   "Complete constituency estimates for the selected policies are not available. National results are shown above; local estimates require verified constituency weights.";
+
+export const LOAD_FAILED_MESSAGE =
+  "Constituency estimates could not be loaded. National results are shown above.";
+
+// A combined reform already contains its components, so summing it with any
+// other policy would double count.
+const isCombinedReform = (policyId) => policyId.endsWith("_combined");
 
 // Format year for display (e.g., 2026 -> "2026-27")
 export const formatYearRange = (year) =>
@@ -108,9 +106,10 @@ export function buildRegionLookup(geoData) {
 /**
  * Decide whether constituency results can be shown for a selection.
  *
- * Fails closed: available only when every selected policy is verified and has
- * exactly one row with finite values for every expected constituency in the
- * selected year, and no rows for any other constituency.
+ * Fails closed: available only when the data loaded, every selected policy is
+ * verified, no combined reform is summed with another policy, and each policy
+ * has exactly one row with finite values for every expected constituency in
+ * the selected year (and none for any other), with finite sums.
  *
  * @returns {{available: boolean, reason: string, policies?: string[]}}
  */
@@ -120,12 +119,18 @@ export function getConstituencyAvailability({
   selectedYear,
   constituencyCodes,
   verifiedPolicyIds = VERIFIED_CONSTITUENCY_POLICY_IDS,
+  loadFailed = false,
 }) {
-  if (!selectedPolicies?.length) {
+  const policies = [...new Set(selectedPolicies ?? [])];
+  if (!policies.length) {
     return { available: false, reason: "no-policies" };
   }
 
-  const unverified = selectedPolicies.filter(
+  if (loadFailed) {
+    return { available: false, reason: "load-failed" };
+  }
+
+  const unverified = policies.filter(
     (policyId) => !verifiedPolicyIds.has(policyId),
   );
   if (unverified.length) {
@@ -136,14 +141,17 @@ export function getConstituencyAvailability({
     };
   }
 
+  if (policies.length > 1 && policies.some(isCombinedReform)) {
+    return { available: false, reason: "overlapping-policies" };
+  }
+
   const expected = new Set(constituencyCodes ?? []);
   if (!expected.size) {
     return { available: false, reason: "no-geography" };
   }
 
-  const seen = new Map(
-    selectedPolicies.map((policyId) => [policyId, new Set()]),
-  );
+  const seen = new Map(policies.map((policyId) => [policyId, new Set()]));
+  const sums = new Map();
   for (const row of rows ?? []) {
     const codes = seen.get(row.reform_id);
     if (!codes || row.year !== selectedYear) continue;
@@ -160,9 +168,14 @@ export function getConstituencyAvailability({
       };
     }
     codes.add(row.constituency_code);
+    const [gain, relative] = sums.get(row.constituency_code) ?? [0, 0];
+    sums.set(row.constituency_code, [
+      gain + row.average_gain,
+      relative + row.relative_change,
+    ]);
   }
 
-  const incomplete = selectedPolicies.filter(
+  const incomplete = policies.filter(
     (policyId) => seen.get(policyId).size !== expected.size,
   );
   if (incomplete.length) {
@@ -171,6 +184,12 @@ export function getConstituencyAvailability({
       reason: "incomplete-coverage",
       policies: incomplete,
     };
+  }
+
+  for (const [gain, relative] of sums.values()) {
+    if (!Number.isFinite(gain) || !Number.isFinite(relative)) {
+      return { available: false, reason: "invalid-sums" };
+    }
   }
 
   return { available: true, reason: "available" };

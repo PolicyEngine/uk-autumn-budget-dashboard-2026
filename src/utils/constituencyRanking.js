@@ -54,14 +54,55 @@ export function rankConstituencies(entries, metric) {
  * total order, so they never share a constituency; with at least 2n
  * constituencies each holds exactly n. The bottom list runs lowest first,
  * with tied constituencies kept in name order.
+ *
+ * When a cut falls inside a group of tied constituencies, `topTie` or
+ * `bottomTie` reports the group (its rank, its size and how many of it the
+ * list shows), so the table can say that the rest of the group is not shown.
  */
 export function selectTopAndBottom(ranked, n = 10) {
   const top = ranked.slice(0, Math.min(n, ranked.length));
   const bottomCount = Math.min(n, ranked.length - top.length);
-  const bottom = ranked
-    .slice(ranked.length - bottomCount)
-    .sort((a, b) => b.rank - a.rank);
-  return { top, bottom };
+  const bottomStart = ranked.length - bottomCount;
+  const bottom = ranked.slice(bottomStart).sort((a, b) => b.rank - a.rank);
+
+  const tieAcrossCut = (list, outside) => {
+    if (!list.length || !outside) return null;
+    const rank = outside.rank;
+    const shown = list.filter((e) => e.rank === rank).length;
+    if (!shown) return null;
+    const total = ranked.filter((e) => e.rank === rank).length;
+    return { rank, total, shown };
+  };
+
+  return {
+    top,
+    bottom,
+    topTie: tieAcrossCut(top, ranked[top.length]),
+    bottomTie: tieAcrossCut(bottom, ranked[bottomStart - 1]),
+  };
+}
+
+/** True when every constituency has the same value, so no ranking exists. */
+export function isAllTied(ranked) {
+  return ranked.length > 1 && ranked.every((e) => e.rank === 1);
+}
+
+/**
+ * Describe a top or bottom list by the signs of its values, so a list of
+ * smallest losses is never read as the biggest winners.
+ */
+export function describeList(rows, metric, position) {
+  const { field } = RANK_METRICS[metric];
+  const values = rows.map((row) => row[field]);
+  if (values.length && values.every((v) => v > 0)) {
+    return position === "top" ? "Largest gains" : "Smallest gains";
+  }
+  if (values.length && values.every((v) => v < 0)) {
+    return position === "top" ? "Smallest losses" : "Largest losses";
+  }
+  return position === "top"
+    ? "Highest average change"
+    : "Lowest average change";
 }
 
 // Quote a CSV field when it holds a comma, quote or line break (RFC 4180).
@@ -86,6 +127,7 @@ export const RANKING_CSV_COLUMNS = [
   "average_change_gbp",
   "relative_change_pct",
   "year",
+  "year_label",
   "policies",
 ];
 
@@ -99,13 +141,14 @@ export const RANKING_CSV_COLUMNS = [
  * @param {object} options
  * @param {"gbp"|"pct"} options.metric - sort order of the rows
  * @param {Map<string, {region: string, country: string}>} options.regionLookup
- * @param {number} options.year
+ * @param {number} options.year - model year, as in constituency.csv
+ * @param {string} options.yearLabel - the year as the dashboard shows it
  * @param {string[]} options.policies - reform IDs summed into each value
  * @param {boolean} [options.mock] - label every row as MOCK data
  */
 export function buildRankingCsv(
   entries,
-  { metric, regionLookup, year, policies, mock = false },
+  { metric, regionLookup, year, yearLabel, policies, mock = false },
 ) {
   const rankByGbp = new Map(
     rankConstituencies(entries, "gbp").map((e) => [
@@ -137,6 +180,7 @@ export function buildRankingCsv(
       fixed(entry.average_gain, 2),
       fixed(entry.relative_change, 4),
       year,
+      yearLabel,
       policyList,
     ];
     lines.push((mock ? ["MOCK", ...fields] : fields).map(csvField).join(","));

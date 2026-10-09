@@ -4,6 +4,8 @@ import { parseCsvLine } from "./constituencyData";
 import {
   RANKING_CSV_COLUMNS,
   buildRankingCsv,
+  describeList,
+  isAllTied,
   rankConstituencies,
   selectTopAndBottom,
 } from "./constituencyRanking";
@@ -25,6 +27,7 @@ const csvOptions = (regionLookup = new Map()) => ({
   metric: "gbp",
   regionLookup,
   year: 2029,
+  yearLabel: "2029-30",
   policies: ["two_child_limit", "fuel_duty_freeze"],
 });
 
@@ -154,6 +157,82 @@ describe("selectTopAndBottom", () => {
   });
 });
 
+describe("ties across the cut", () => {
+  it("reports a tied group that the top 10 splits", () => {
+    // Values 20..13 (8 seats), then 12 seats tied at 0, then 5 below.
+    const values = [
+      20,
+      19,
+      18,
+      17,
+      16,
+      15,
+      14,
+      13,
+      ...Array(12).fill(0),
+      -1,
+      -2,
+      -3,
+      -4,
+      -5,
+    ];
+    const ranked = rankConstituencies(
+      synthetic(values.length, (i) => values[i]),
+      "gbp",
+    );
+    const { top, topTie, bottomTie } = selectTopAndBottom(ranked);
+    expect(top.map((e) => e.rank).slice(-2)).toEqual([9, 9]);
+    expect(topTie).toEqual({ rank: 9, total: 12, shown: 2 });
+    // The bottom 10 holds five tied seats plus the five below them.
+    expect(bottomTie).toEqual({ rank: 9, total: 12, shown: 5 });
+  });
+
+  it("reports nothing when no tie crosses a cut", () => {
+    const { topTie, bottomTie } = selectTopAndBottom(
+      rankConstituencies(synthetic(30), "gbp"),
+    );
+    expect(topTie).toBeNull();
+    expect(bottomTie).toBeNull();
+  });
+});
+
+describe("isAllTied", () => {
+  it("is true only when every constituency shares one value", () => {
+    expect(
+      isAllTied(
+        rankConstituencies(
+          synthetic(25, () => 0),
+          "gbp",
+        ),
+      ),
+    ).toBe(true);
+    expect(isAllTied(rankConstituencies(synthetic(25), "gbp"))).toBe(false);
+    expect(isAllTied(rankConstituencies(synthetic(1), "gbp"))).toBe(false);
+  });
+});
+
+describe("describeList", () => {
+  const rows = (...values) => values.map((v, i) => entry(`C${i}`, `C${i}`, v));
+
+  it("names gains and losses by the sign of every value in the list", () => {
+    expect(describeList(rows(30, 20), "gbp", "top")).toBe("Largest gains");
+    expect(describeList(rows(2, 1), "gbp", "bottom")).toBe("Smallest gains");
+    expect(describeList(rows(-1, -2), "gbp", "top")).toBe("Smallest losses");
+    expect(describeList(rows(-30, -20), "gbp", "bottom")).toBe(
+      "Largest losses",
+    );
+  });
+
+  it("falls back to neutral wording for mixed signs or zero", () => {
+    expect(describeList(rows(5, 0), "gbp", "top")).toBe(
+      "Highest average change",
+    );
+    expect(describeList(rows(1, -1), "pct", "bottom")).toBe(
+      "Lowest average change",
+    );
+  });
+});
+
 describe("buildRankingCsv", () => {
   it("has one row per constituency plus a header", () => {
     const entries = synthetic(650);
@@ -176,7 +255,7 @@ describe("buildRankingCsv", () => {
     );
     const rows = dataLines(csv);
     expect(rows[0]).toBe(
-      '1,1,S1,"Ayr, Carrick and Cumnock",Scotland,Scotland,120.46,0.3333,2029,two_child_limit;fuel_duty_freeze',
+      '1,1,S1,"Ayr, Carrick and Cumnock",Scotland,Scotland,120.46,0.3333,2029,2029-30,two_child_limit;fuel_duty_freeze',
     );
     expect(parseCsvLine(rows[1])).toEqual([
       "2",
@@ -188,6 +267,7 @@ describe("buildRankingCsv", () => {
       "-4.00",
       "-0.0100",
       "2029",
+      "2029-30",
       "two_child_limit;fuel_duty_freeze",
     ]);
   });
@@ -392,6 +472,43 @@ describe("ranking invariants (property-based)", () => {
             [...top, ...bottom].map((e) => e.constituency_code),
           );
           expect(codes.size).toBe(20);
+        },
+      ),
+    );
+  });
+
+  it("reports a tie at a cut exactly when the cut splits a tied group", () => {
+    fc.assert(
+      fc.property(
+        entriesArb({ maxLength: 80 }),
+        metricArb,
+        (entries, metric) => {
+          const ranked = rankConstituencies(entries, metric);
+          const { top, bottom, topTie, bottomTie } = selectTopAndBottom(
+            ranked,
+            10,
+          );
+          const split = (list, next) =>
+            list.length > 0 &&
+            next !== undefined &&
+            list.some((e) => e.rank === next.rank);
+          expect(topTie !== null).toBe(split(top, ranked[top.length]));
+          expect(bottomTie !== null).toBe(
+            split(bottom, ranked[ranked.length - bottom.length - 1]),
+          );
+          for (const [tie, list] of [
+            [topTie, top],
+            [bottomTie, bottom],
+          ]) {
+            if (!tie) continue;
+            expect(tie.shown).toBe(
+              list.filter((e) => e.rank === tie.rank).length,
+            );
+            expect(tie.total).toBe(
+              ranked.filter((e) => e.rank === tie.rank).length,
+            );
+            expect(tie.total).toBeGreaterThan(tie.shown);
+          }
         },
       ),
     );

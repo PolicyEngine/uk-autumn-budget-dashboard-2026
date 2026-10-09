@@ -18,6 +18,10 @@ import {
   makeConstituencyCsv,
   makeGeojson,
 } from "../test/constituencyFixtures";
+import {
+  crossCheckConstituencyRows,
+  parseDemographicCsv,
+} from "../test/constituencyChecks";
 
 // TEST DATA ONLY: synthetic constituencies and values.
 const seats = makeConstituencies(25);
@@ -34,6 +38,8 @@ const availability = (rows, overrides = {}) =>
     selectedPolicies: POLICIES,
     selectedYear: 2029,
     constituencyCodes: codes,
+    // The shipped set is empty; these tests verify the synthetic policies.
+    verifiedPolicyIds: new Set(POLICIES),
     ...overrides,
   });
 
@@ -87,6 +93,57 @@ describe("getConstituencyAvailability", () => {
       available: true,
       reason: "available",
     });
+  });
+
+  it("verifies no policy by default, so nothing shows on main", () => {
+    expect(VERIFIED_CONSTITUENCY_POLICY_IDS.size).toBe(0);
+    const result = getConstituencyAvailability({
+      rows: syntheticRows(),
+      selectedPolicies: POLICIES,
+      selectedYear: 2029,
+      constituencyCodes: codes,
+    });
+    expect(result).toMatchObject({
+      available: false,
+      reason: "unverified-policy",
+      policies: POLICIES,
+    });
+  });
+
+  it("is unavailable when the data failed to load", () => {
+    expect(availability([], { loadFailed: true }).reason).toBe("load-failed");
+  });
+
+  it("refuses to sum a combined reform with any other policy", () => {
+    const combined = "autumn_budget_2025_combined";
+    const rows = parseConstituencyCsv(
+      makeConstituencyCsv(seats, [...POLICIES, combined], [2029], () => [
+        1, 0.1,
+      ]),
+    );
+    const verifiedPolicyIds = new Set([...POLICIES, combined]);
+    expect(
+      availability(rows, {
+        selectedPolicies: [combined, POLICIES[0]],
+        verifiedPolicyIds,
+      }).reason,
+    ).toBe("overlapping-policies");
+    expect(
+      availability(rows, { selectedPolicies: [combined], verifiedPolicyIds })
+        .available,
+    ).toBe(true);
+  });
+
+  it("counts a repeated policy ID once", () => {
+    const repeated = [POLICIES[0], POLICIES[0]];
+    expect(
+      availability(syntheticRows(), { selectedPolicies: repeated }).available,
+    ).toBe(true);
+  });
+
+  it("is unavailable when finite rows sum to a non-finite value", () => {
+    const rows = syntheticRows(() => [1e308, 0.1]);
+    expect(availability(rows).reason).toBe("invalid-sums");
   });
 
   it("is unavailable with no policy selected", () => {
@@ -250,6 +307,50 @@ describe("aggregateConstituencies", () => {
   });
 });
 
+describe("local-area cross-check", () => {
+  // TEST DATA ONLY: one synthetic constituency with two demographic groups.
+  const published = (gain) => [
+    { reform_id: "p", year: 2029, constituency_code: "E1", average_gain: gain },
+  ];
+  const groups = [
+    {
+      reform_id: "p",
+      year: 2029,
+      constituency_code: "E1",
+      average_gain: 10,
+      household_count: 3,
+    },
+    {
+      reform_id: "p",
+      year: 2029,
+      constituency_code: "E1",
+      average_gain: 30,
+      household_count: 1,
+    },
+  ];
+  const check = (rows, demographic = groups) =>
+    crossCheckConstituencyRows(rows, demographic, {
+      policyIds: ["p"],
+      years: [2029],
+    });
+
+  it("passes when the constituency equals its household-weighted groups", () => {
+    expect(check(published(15))).toEqual([]);
+    expect(check(published(15.04))).toEqual([]);
+  });
+
+  it("flags a constituency more than £0.05 from its groups", () => {
+    expect(check(published(15.06))).toHaveLength(1);
+    expect(check(published(NaN))).toHaveLength(1);
+  });
+
+  it("flags a constituency with no demographic rows", () => {
+    expect(check(published(15), [])).toEqual([
+      "p|2029|E1: no demographic rows",
+    ]);
+  });
+});
+
 describe("checked-in constituency data", () => {
   const rows = parseConstituencyCsv(
     readFileSync("public/data/constituency.csv", "utf8"),
@@ -259,20 +360,61 @@ describe("checked-in constituency data", () => {
   );
   const geoCodes = geoData.features.map((f) => f.properties.GSScode);
   const regionLookup = buildRegionLookup(geoData);
-  const selected = [...VERIFIED_CONSTITUENCY_POLICY_IDS].filter(
-    (id) => id !== "autumn_budget_2025_combined",
-  );
 
-  it("ranks all 650 constituencies with a region for each", () => {
-    const result = getConstituencyAvailability({
-      rows,
-      selectedPolicies: selected,
-      selectedYear: 2029,
-      constituencyCodes: geoCodes,
-    });
-    expect(result.available).toBe(true);
+  // Tripwire for VERIFIED_CONSTITUENCY_POLICY_IDS: every ID added to the set
+  // must cover every constituency in every year it has rows for, and agree
+  // with demographic_constituency.csv. Empty set: nothing to check yet.
+  it("admits only policies whose rows pass the local-area checks", () => {
+    const verified = [...VERIFIED_CONSTITUENCY_POLICY_IDS];
+    if (!verified.length) return;
 
-    const aggregated = aggregateConstituencies(rows, selected, 2029);
+    const demographic = parseDemographicCsv(
+      readFileSync("public/data/demographic_constituency.csv", "utf8"),
+    );
+    for (const policyId of verified) {
+      const years = [
+        ...new Set(
+          rows.filter((r) => r.reform_id === policyId).map((r) => r.year),
+        ),
+      ];
+      expect(
+        years.length,
+        `${policyId} has no constituency rows`,
+      ).toBeGreaterThan(0);
+      for (const year of years) {
+        expect(
+          getConstituencyAvailability({
+            rows,
+            selectedPolicies: [policyId],
+            selectedYear: year,
+            constituencyCodes: geoCodes,
+          }),
+        ).toEqual({ available: true, reason: "available" });
+      }
+      expect(
+        crossCheckConstituencyRows(rows, demographic, {
+          policyIds: [policyId],
+          years,
+        }),
+      ).toEqual([]);
+    }
+  });
+
+  // Shape only: these rows are the 2025 dashboard's and are NOT verified.
+  // The test passes them in explicitly to exercise the pipeline on 650 seats.
+  it("ranks 650 real constituencies with a region for each", () => {
+    const shapeOnly = ["two_child_limit", "fuel_duty_freeze"];
+    expect(
+      getConstituencyAvailability({
+        rows,
+        selectedPolicies: shapeOnly,
+        selectedYear: 2029,
+        constituencyCodes: geoCodes,
+        verifiedPolicyIds: new Set(shapeOnly),
+      }).available,
+    ).toBe(true);
+
+    const aggregated = aggregateConstituencies(rows, shapeOnly, 2029);
     expect(aggregated).toHaveLength(650);
     expect(
       aggregated.every((e) => regionLookup.get(e.constituency_code)?.region),
@@ -298,7 +440,8 @@ describe("checked-in constituency data", () => {
       metric: "gbp",
       regionLookup,
       year: 2029,
-      policies: selected,
+      yearLabel: "2029-30",
+      policies: shapeOnly,
     });
     expect(csv.trimEnd().split("\n")).toHaveLength(651);
 
@@ -307,20 +450,5 @@ describe("checked-in constituency data", () => {
     );
     const topCodes = new Set(top.map((e) => e.constituency_code));
     expect(bottom.filter((e) => topCodes.has(e.constituency_code))).toEqual([]);
-  });
-
-  it("covers every verified policy for every published year", () => {
-    for (const policyId of VERIFIED_CONSTITUENCY_POLICY_IDS) {
-      for (const year of [2026, 2027, 2028, 2029, 2030]) {
-        expect(
-          getConstituencyAvailability({
-            rows,
-            selectedPolicies: [policyId],
-            selectedYear: year,
-            constituencyCodes: geoCodes,
-          }).available,
-        ).toBe(true);
-      }
-    }
   });
 });

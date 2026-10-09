@@ -80,8 +80,9 @@
   border-left: 1px solid #d1d5db;
 }
 
+/* #277674 keeps white text above the 4.5:1 WCAG AA contrast minimum. */
 .rankings-toggle button.active {
-  background: #319795;
+  background: #277674;
   color: #fff;
 }
 
@@ -171,6 +172,26 @@
 
 .ranking-table .region-inline {
   display: none;
+}
+
+.constituency-rankings .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ranking-tie-note,
+.rankings-note {
+  margin: 8px 0 0 0;
+  color: #4b5563;
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
 @media (max-width: 900px) {
