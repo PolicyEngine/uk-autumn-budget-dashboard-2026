@@ -9,8 +9,12 @@
 // disagree with demographic_constituency.csv for nine of its ten reform IDs.
 // Add an ID only after its constituency rows are regenerated from the
 // certified Microcosm release with aligned constituency weights and pass the
-// local-area checks. CI checks every listed ID for full coverage and for
-// agreement with demographic_constituency.csv (constituencyData.test.js).
+// local-area checks, and record that in public/data/
+// constituency_certification.json: dataset_release (the Microcosm release),
+// constituency_weights_sha256, the SHA-256 of constituency.csv and of
+// demographic_constituency.csv, and reform_ids. CI checks every listed ID
+// against that manifest, for full coverage, and for agreement with
+// demographic_constituency.csv (constituencyData.test.js).
 export const VERIFIED_CONSTITUENCY_POLICY_IDS = new Set([]);
 
 export const UNAVAILABLE_MESSAGE =

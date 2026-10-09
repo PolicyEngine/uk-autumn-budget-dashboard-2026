@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
@@ -19,6 +20,8 @@ import {
   makeGeojson,
 } from "../test/constituencyFixtures";
 import {
+  UNCERTIFIED_2025_SHA256,
+  checkCertificationManifest,
   crossCheckConstituencyRows,
   parseDemographicCsv,
 } from "../test/constituencyChecks";
@@ -95,8 +98,7 @@ describe("getConstituencyAvailability", () => {
     });
   });
 
-  it("verifies no policy by default, so nothing shows on main", () => {
-    expect(VERIFIED_CONSTITUENCY_POLICY_IDS.size).toBe(0);
+  it("uses the shipped verified set when none is passed", () => {
     const result = getConstituencyAvailability({
       rows: syntheticRows(),
       selectedPolicies: POLICIES,
@@ -351,6 +353,62 @@ describe("local-area cross-check", () => {
   });
 });
 
+describe("certification manifest", () => {
+  // TEST DATA ONLY: made-up release name and hashes.
+  const files = {
+    constituencySha256: "a".repeat(64),
+    demographicSha256: "b".repeat(64),
+  };
+  const manifest = {
+    dataset_release: "microcosm-uk-2025-26-local-test",
+    constituency_weights_sha256: "c".repeat(64),
+    constituency_csv_sha256: files.constituencySha256,
+    demographic_constituency_csv_sha256: files.demographicSha256,
+    reform_ids: ["two_child_limit"],
+  };
+  const check = (m, f = files, ids = ["two_child_limit"]) =>
+    checkCertificationManifest(m, f, ids);
+
+  it("accepts a Microcosm release that pins both files", () => {
+    expect(check(manifest)).toEqual([]);
+  });
+
+  it("rejects a missing manifest or a non-Microcosm release", () => {
+    expect(check(undefined).length).toBeGreaterThan(0);
+    expect(check({ ...manifest, dataset_release: "efrs-2023" })).toEqual([
+      "dataset_release must name a Microcosm release",
+    ]);
+    expect(check({ ...manifest, constituency_weights_sha256: "" })).toEqual([
+      "constituency_weights_sha256 must be a SHA-256",
+    ]);
+  });
+
+  it("rejects files that changed after certification", () => {
+    expect(
+      check(manifest, { ...files, constituencySha256: "d".repeat(64) }),
+    ).toEqual(["constituency.csv does not match the certified SHA-256"]);
+    expect(
+      check(manifest, { ...files, demographicSha256: "d".repeat(64) }),
+    ).toEqual([
+      "demographic_constituency.csv does not match the certified SHA-256",
+    ]);
+  });
+
+  it("rejects the 2025 dashboard's files even if a manifest pins them", () => {
+    const [stale] = UNCERTIFIED_2025_SHA256;
+    const pinned = { ...manifest, constituency_csv_sha256: stale };
+    expect(check(pinned, { ...files, constituencySha256: stale })).toEqual([
+      `${stale} is the 2025 dashboard's uncertified file`,
+    ]);
+  });
+
+  it("rejects a verified ID the manifest does not certify", () => {
+    expect(check(manifest, files, ["two_child_limit", "bus_fare_cap"])).toEqual(
+      ["bus_fare_cap is not in reform_ids"],
+    );
+  });
+});
+
 describe("checked-in constituency data", () => {
   const rows = parseConstituencyCsv(
     readFileSync("public/data/constituency.csv", "utf8"),
@@ -361,12 +419,28 @@ describe("checked-in constituency data", () => {
   const geoCodes = geoData.features.map((f) => f.properties.GSScode);
   const regionLookup = buildRegionLookup(geoData);
 
-  // Tripwire for VERIFIED_CONSTITUENCY_POLICY_IDS: every ID added to the set
-  // must cover every constituency in every year it has rows for, and agree
-  // with demographic_constituency.csv. Empty set: nothing to check yet.
-  it("admits only policies whose rows pass the local-area checks", () => {
+  // Tripwire for VERIFIED_CONSTITUENCY_POLICY_IDS. Every ID in the set needs
+  // a certification manifest naming the Microcosm release and pinning both
+  // local files' bytes; full coverage in every year it has rows for; and
+  // agreement with demographic_constituency.csv. Empty set: nothing to check.
+  it("admits only certified policies whose rows pass the local-area checks", () => {
     const verified = [...VERIFIED_CONSTITUENCY_POLICY_IDS];
     if (!verified.length) return;
+
+    const manifestPath = "public/data/constituency_certification.json";
+    expect(existsSync(manifestPath), `${manifestPath} is missing`).toBe(true);
+    const sha256 = (path) =>
+      createHash("sha256").update(readFileSync(path)).digest("hex");
+    expect(
+      checkCertificationManifest(
+        JSON.parse(readFileSync(manifestPath, "utf8")),
+        {
+          constituencySha256: sha256("public/data/constituency.csv"),
+          demographicSha256: sha256("public/data/demographic_constituency.csv"),
+        },
+        verified,
+      ),
+    ).toEqual([]);
 
     const demographic = parseDemographicCsv(
       readFileSync("public/data/demographic_constituency.csv", "utf8"),

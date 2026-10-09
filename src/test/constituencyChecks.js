@@ -69,3 +69,58 @@ export function crossCheckConstituencyRows(
   }
   return problems;
 }
+
+// SHA-256 of the constituency files the 2025 dashboard shipped, which main
+// still carries. They are not Microcosm output, so no certification may pin
+// them.
+export const UNCERTIFIED_2025_SHA256 = new Set([
+  "f58941e59ff701573bc97dfa3cf33da441b2da0558b1e11030a6ca8911b5d965",
+  "ba974b52ad13a4e97f28c74d334257d1d2ea6dc425f062703f57b5020d507cad",
+]);
+
+const SHA256 = /^[0-9a-f]{64}$/;
+
+/**
+ * Check the certification manifest that must accompany any verified reform
+ * ID (public/data/constituency_certification.json). It names the Microcosm
+ * release the constituency rows came from and pins the bytes of both local
+ * files, so regenerated or carried-over rows cannot inherit a certification.
+ * Returns one message per problem.
+ *
+ * @param {object} manifest - parsed manifest
+ * @param {object} files
+ * @param {string} files.constituencySha256 - SHA-256 of constituency.csv
+ * @param {string} files.demographicSha256 - SHA-256 of demographic_constituency.csv
+ * @param {string[]} verifiedIds - VERIFIED_CONSTITUENCY_POLICY_IDS
+ */
+export function checkCertificationManifest(
+  manifest,
+  { constituencySha256, demographicSha256 },
+  verifiedIds,
+) {
+  const problems = [];
+  if (!/^microcosm-/.test(manifest?.dataset_release ?? "")) {
+    problems.push("dataset_release must name a Microcosm release");
+  }
+  if (!SHA256.test(manifest?.constituency_weights_sha256 ?? "")) {
+    problems.push("constituency_weights_sha256 must be a SHA-256");
+  }
+  if (manifest?.constituency_csv_sha256 !== constituencySha256) {
+    problems.push("constituency.csv does not match the certified SHA-256");
+  }
+  if (manifest?.demographic_constituency_csv_sha256 !== demographicSha256) {
+    problems.push(
+      "demographic_constituency.csv does not match the certified SHA-256",
+    );
+  }
+  for (const sha of [constituencySha256, demographicSha256]) {
+    if (UNCERTIFIED_2025_SHA256.has(sha)) {
+      problems.push(`${sha} is the 2025 dashboard's uncertified file`);
+    }
+  }
+  const certified = new Set(manifest?.reform_ids ?? []);
+  for (const id of verifiedIds) {
+    if (!certified.has(id)) problems.push(`${id} is not in reform_ids`);
+  }
+  return problems;
+}
