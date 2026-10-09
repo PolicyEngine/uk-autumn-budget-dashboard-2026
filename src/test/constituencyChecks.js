@@ -8,9 +8,9 @@
  */
 
 import { parseCsvLine } from "../utils/constituencyData";
-import SKETCHES_2025 from "./constituency2025Sketches.json";
+import SAMPLES_2025 from "./constituency2025Samples.json";
 
-export { SKETCHES_2025 };
+export { SAMPLES_2025 };
 
 /** Parse demographic_constituency.csv into typed rows. */
 export function parseDemographicCsv(csvText) {
@@ -129,54 +129,52 @@ export function checkCertificationManifest(
 }
 
 /**
- * Fingerprint of one reform ID's constituency values, per year: the number
- * of rows, the mean and root-mean-square of the £ change, and the mean of
- * the % change. It ignores names, row order and number formatting.
+ * One reform ID's values for a fixed sample of constituencies, per year:
+ * `{year: {code: [average_gain, relative_change]}}`. Comparing individual
+ * seats tells carried-over rows from regenerated ones far better than
+ * national means can, and ignores names, row order and number formatting.
  */
-export function policyValueSketch(rows, reformId) {
+export function policyValueSample(rows, reformId, codes) {
+  const wanted = new Set(codes);
   const byYear = {};
   for (const row of rows) {
-    if (row.reform_id !== reformId) continue;
-    const s = (byYear[row.year] ??= { n: 0, gain: 0, gainSq: 0, rel: 0 });
-    s.n += 1;
-    s.gain += row.average_gain;
-    s.gainSq += row.average_gain ** 2;
-    s.rel += row.relative_change;
+    if (row.reform_id !== reformId || !wanted.has(row.constituency_code)) {
+      continue;
+    }
+    (byYear[row.year] ??= {})[row.constituency_code] = [
+      row.average_gain,
+      row.relative_change,
+    ];
   }
-  return Object.fromEntries(
-    Object.entries(byYear).map(([year, s]) => [
-      year,
-      {
-        n: s.n,
-        mean_gain: s.gain / s.n,
-        rms_gain: Math.sqrt(s.gainSq / s.n),
-        mean_relative: s.rel / s.n,
-      },
-    ]),
-  );
+  return byYear;
 }
 
-// Rounding each value to the penny (or to 4 dp of a percentage point) moves
-// these means by less than this; regenerating a measure on new data moves
-// them by far more.
-const SKETCH_TOLERANCE = { gbp: 0.01, pct: 1e-4 };
+// Rounding to the penny (or to 4 dp of a percentage point) moves a value by
+// less than this. A regeneration on new data moves most seats by far more.
+export const SAMPLE_TOLERANCE = { gbp: 0.01, pct: 1e-4 };
 
 /**
- * True when any year in which the measure had an effect in 2025 still has its
- * 2025 values, to rounding: the rows were carried over (possibly re-saved at
- * lower precision, or alongside new years). Years with no 2025 effect are
- * skipped, since a regenerated measure may legitimately be zero there too.
+ * True when, in any year in which the measure had an effect in 2025, every
+ * sampled seat still has its 2025 values to rounding: the rows were carried
+ * over (possibly re-saved at lower precision, or alongside new years). Years
+ * with no 2025 effect are skipped, since a regenerated measure may
+ * legitimately be zero there too.
  */
-export function carriesOver2025Year(sketch, reference) {
-  return Object.entries(reference).some(([year, b]) => {
-    const a = sketch[year];
+export function carriesOver2025Year(sample, reference) {
+  return Object.entries(reference).some(([year, seats]) => {
+    const current = sample[year];
+    const values = Object.entries(seats);
     return (
-      b.rms_gain > 0 &&
-      a !== undefined &&
-      a.n === b.n &&
-      Math.abs(a.mean_gain - b.mean_gain) <= SKETCH_TOLERANCE.gbp &&
-      Math.abs(a.rms_gain - b.rms_gain) <= SKETCH_TOLERANCE.gbp &&
-      Math.abs(a.mean_relative - b.mean_relative) <= SKETCH_TOLERANCE.pct
+      current !== undefined &&
+      values.some(([, [gain]]) => gain !== 0) &&
+      values.every(([code, [gain, relative]]) => {
+        const now = current[code];
+        return (
+          now !== undefined &&
+          Math.abs(now[0] - gain) <= SAMPLE_TOLERANCE.gbp &&
+          Math.abs(now[1] - relative) <= SAMPLE_TOLERANCE.pct
+        );
+      })
     );
   });
 }
@@ -184,13 +182,16 @@ export function carriesOver2025Year(sketch, reference) {
 /**
  * Reform IDs with any year still carrying the 2025 dashboard's values, even
  * inside a changed file, at lower precision or next to new years
- * (constituency2025Sketches.json holds policyValueSketch of each ID in the
- * 2025 file).
+ * (constituency2025Samples.json holds policyValueSample of each ID in the
+ * 2025 file, for 20 constituencies spaced through the sorted codes).
  */
 export function carriedOver2025Policies(rows, reformIds) {
   return reformIds.filter(
     (id) =>
-      Object.hasOwn(SKETCHES_2025, id) &&
-      carriesOver2025Year(policyValueSketch(rows, id), SKETCHES_2025[id]),
+      Object.hasOwn(SAMPLES_2025.policies, id) &&
+      carriesOver2025Year(
+        policyValueSample(rows, id, SAMPLES_2025.codes),
+        SAMPLES_2025.policies[id],
+      ),
   );
 }
