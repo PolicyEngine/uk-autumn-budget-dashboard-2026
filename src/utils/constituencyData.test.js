@@ -20,10 +20,13 @@ import {
   makeGeojson,
 } from "../test/constituencyFixtures";
 import {
+  UNCERTIFIED_2025_ROW_DIGESTS,
   UNCERTIFIED_2025_SHA256,
+  carriedOver2025Policies,
   checkCertificationManifest,
   crossCheckConstituencyRows,
   parseDemographicCsv,
+  policyRowsDigest,
 } from "../test/constituencyChecks";
 
 // TEST DATA ONLY: synthetic constituencies and values.
@@ -402,6 +405,64 @@ describe("certification manifest", () => {
     ]);
   });
 
+  // These two read the 2025 file, so they run only while main carries it.
+  const csvBytes = readFileSync("public/data/constituency.csv");
+  const carries2025File = UNCERTIFIED_2025_SHA256.has(
+    createHash("sha256").update(csvBytes).digest("hex"),
+  );
+  const rows2025 = carries2025File
+    ? parseConstituencyCsv(csvBytes.toString("utf8"))
+    : [];
+
+  it.runIf(carries2025File)("pins every reform ID's 2025 rows", () => {
+    const ids = Object.keys(UNCERTIFIED_2025_ROW_DIGESTS);
+    expect(new Set(rows2025.map((r) => r.reform_id))).toEqual(new Set(ids));
+    expect(carriedOver2025Policies(rows2025, ids)).toEqual(ids);
+  });
+
+  it.runIf(carries2025File)(
+    "spots 2025 rows carried over inside a changed file",
+    () => {
+      // TEST DATA ONLY: one fabricated row added; the 2025 rows untouched.
+      const changedFile = [
+        ...rows2025,
+        {
+          reform_id: "bus_fare_cap",
+          year: 2027,
+          constituency_code: "E14001063",
+          average_gain: 1,
+          relative_change: 0.1,
+        },
+      ];
+      expect(
+        carriedOver2025Policies(changedFile, [
+          "savings_tax_increase_2pp",
+          "bus_fare_cap",
+        ]),
+      ).toEqual(["savings_tax_increase_2pp"]);
+
+      // Reordered rows and renamed seats are still the same values.
+      const reordered = [...rows2025]
+        .reverse()
+        .map((r) => ({ ...r, constituency_name: "x" }));
+      expect(policyRowsDigest(reordered, "two_child_limit")).toBe(
+        UNCERTIFIED_2025_ROW_DIGESTS.two_child_limit,
+      );
+
+      // Any changed value means the rows were regenerated.
+      const regenerated = rows2025.map((r) =>
+        r.reform_id === "savings_tax_increase_2pp" &&
+        r.constituency_code === "E14001063" &&
+        r.year === 2029
+          ? { ...r, average_gain: r.average_gain + 0.01 }
+          : r,
+      );
+      expect(
+        carriedOver2025Policies(regenerated, ["savings_tax_increase_2pp"]),
+      ).toEqual([]);
+    },
+  );
+
   it("rejects a verified ID the manifest does not certify", () => {
     expect(check(manifest, files, ["two_child_limit", "bus_fare_cap"])).toEqual(
       ["bus_fare_cap is not in reform_ids"],
@@ -441,6 +502,9 @@ describe("checked-in constituency data", () => {
         verified,
       ),
     ).toEqual([]);
+    // Rows carried over from the 2025 file cannot be certified, even inside
+    // an otherwise regenerated file.
+    expect(carriedOver2025Policies(rows, verified)).toEqual([]);
 
     const demographic = parseDemographicCsv(
       readFileSync("public/data/demographic_constituency.csv", "utf8"),

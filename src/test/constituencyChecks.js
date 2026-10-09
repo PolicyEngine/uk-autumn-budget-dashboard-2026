@@ -7,6 +7,7 @@
  * constituency with no demographic rows fails instead of being skipped.
  */
 
+import { createHash } from "node:crypto";
 import { parseCsvLine } from "../utils/constituencyData";
 
 /** Parse demographic_constituency.csv into typed rows. */
@@ -123,4 +124,55 @@ export function checkCertificationManifest(
     if (!certified.has(id)) problems.push(`${id} is not in reform_ids`);
   }
   return problems;
+}
+
+/**
+ * Digest of one reform ID's constituency values: year, code, £ and % change.
+ * Built from parsed numbers, so it ignores names, row order and number
+ * formatting, and catches rows carried over unchanged inside a new file.
+ */
+export function policyRowsDigest(rows, reformId) {
+  const canonical = rows
+    .filter((row) => row.reform_id === reformId)
+    .map(
+      (row) =>
+        `${row.year}|${row.constituency_code}|${row.average_gain}|${row.relative_change}`,
+    )
+    .sort();
+  return createHash("sha256").update(canonical.join("\n")).digest("hex");
+}
+
+// policyRowsDigest of each reform ID's rows in the 2025 dashboard's
+// constituency.csv (the file main carries). A verified ID whose rows still
+// digest to its 2025 value has not been regenerated, whatever else changed.
+export const UNCERTIFIED_2025_ROW_DIGESTS = {
+  autumn_budget_2025_combined:
+    "7af609b57cc0bf83cbf248af5e1a27acf605449da6d830fbf1e2ba52dbb1ab88",
+  dividend_tax_increase_2pp:
+    "49d2cea02cd56b097a995e4342c351486503d8c49e3b56f1dc3cb3c82d66bcc6",
+  freeze_student_loan_thresholds:
+    "a3a9d5dd91e63fc683bd4a8917d30e7756aa346aba04dd8da90c793a8a4e674f",
+  fuel_duty_freeze:
+    "73c856a1165465962421c098c08788595432f0d073718fa4ff0f4d021a37a6b9",
+  property_tax_increase_2pp:
+    "c3abd52ad7f5f0f18443e26c39c6e2a6cb6195f93586edce38d958fa8c8ae2c4",
+  rail_fares_freeze:
+    "e5b5df954624f8ce4af0f0df8f698809d644049605eac4c7b7d63d3809e2ec28",
+  salary_sacrifice_cap:
+    "fe2c688e6d57e7fd47e24816fdb471c75a4a9bc55e71c4e00d029014a5a5e667",
+  savings_tax_increase_2pp:
+    "e8de02816b1b5ad53838b568f7336800d81be205c3f0938391fd6812e723a2e2",
+  threshold_freeze_extension:
+    "adc872243e869b5358a520cef9c46502cb9ca71f1b242e47493d35b5b1790f15",
+  two_child_limit:
+    "145434a7b9038343193a3462094f7860218b252c8b55e0cd84574b753278608b",
+};
+
+/** Reform IDs whose current rows are still the 2025 dashboard's rows. */
+export function carriedOver2025Policies(rows, reformIds) {
+  return reformIds.filter(
+    (id) =>
+      id in UNCERTIFIED_2025_ROW_DIGESTS &&
+      policyRowsDigest(rows, id) === UNCERTIFIED_2025_ROW_DIGESTS[id],
+  );
 }
