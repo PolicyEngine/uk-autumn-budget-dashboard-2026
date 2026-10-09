@@ -7,8 +7,10 @@
  * constituency with no demographic rows fails instead of being skipped.
  */
 
-import { createHash } from "node:crypto";
 import { parseCsvLine } from "../utils/constituencyData";
+import SKETCHES_2025 from "./constituency2025Sketches.json";
+
+export { SKETCHES_2025 };
 
 /** Parse demographic_constituency.csv into typed rows. */
 export function parseDemographicCsv(csvText) {
@@ -127,52 +129,68 @@ export function checkCertificationManifest(
 }
 
 /**
- * Digest of one reform ID's constituency values: year, code, £ and % change.
- * Built from parsed numbers, so it ignores names, row order and number
- * formatting, and catches rows carried over unchanged inside a new file.
+ * Fingerprint of one reform ID's constituency values, per year: the number
+ * of rows, the mean and root-mean-square of the £ change, and the mean of
+ * the % change. It ignores names, row order and number formatting.
  */
-export function policyRowsDigest(rows, reformId) {
-  const canonical = rows
-    .filter((row) => row.reform_id === reformId)
-    .map(
-      (row) =>
-        `${row.year}|${row.constituency_code}|${row.average_gain}|${row.relative_change}`,
-    )
-    .sort();
-  return createHash("sha256").update(canonical.join("\n")).digest("hex");
+export function policyValueSketch(rows, reformId) {
+  const byYear = {};
+  for (const row of rows) {
+    if (row.reform_id !== reformId) continue;
+    const s = (byYear[row.year] ??= { n: 0, gain: 0, gainSq: 0, rel: 0 });
+    s.n += 1;
+    s.gain += row.average_gain;
+    s.gainSq += row.average_gain ** 2;
+    s.rel += row.relative_change;
+  }
+  return Object.fromEntries(
+    Object.entries(byYear).map(([year, s]) => [
+      year,
+      {
+        n: s.n,
+        mean_gain: s.gain / s.n,
+        rms_gain: Math.sqrt(s.gainSq / s.n),
+        mean_relative: s.rel / s.n,
+      },
+    ]),
+  );
 }
 
-// policyRowsDigest of each reform ID's rows in the 2025 dashboard's
-// constituency.csv (the file main carries). A verified ID whose rows still
-// digest to its 2025 value has not been regenerated, whatever else changed.
-export const UNCERTIFIED_2025_ROW_DIGESTS = {
-  autumn_budget_2025_combined:
-    "7af609b57cc0bf83cbf248af5e1a27acf605449da6d830fbf1e2ba52dbb1ab88",
-  dividend_tax_increase_2pp:
-    "49d2cea02cd56b097a995e4342c351486503d8c49e3b56f1dc3cb3c82d66bcc6",
-  freeze_student_loan_thresholds:
-    "a3a9d5dd91e63fc683bd4a8917d30e7756aa346aba04dd8da90c793a8a4e674f",
-  fuel_duty_freeze:
-    "73c856a1165465962421c098c08788595432f0d073718fa4ff0f4d021a37a6b9",
-  property_tax_increase_2pp:
-    "c3abd52ad7f5f0f18443e26c39c6e2a6cb6195f93586edce38d958fa8c8ae2c4",
-  rail_fares_freeze:
-    "e5b5df954624f8ce4af0f0df8f698809d644049605eac4c7b7d63d3809e2ec28",
-  salary_sacrifice_cap:
-    "fe2c688e6d57e7fd47e24816fdb471c75a4a9bc55e71c4e00d029014a5a5e667",
-  savings_tax_increase_2pp:
-    "e8de02816b1b5ad53838b568f7336800d81be205c3f0938391fd6812e723a2e2",
-  threshold_freeze_extension:
-    "adc872243e869b5358a520cef9c46502cb9ca71f1b242e47493d35b5b1790f15",
-  two_child_limit:
-    "145434a7b9038343193a3462094f7860218b252c8b55e0cd84574b753278608b",
-};
+// Rounding each value to the penny (or to 4 dp of a percentage point) moves
+// these means by less than this; regenerating a measure on new data moves
+// them by far more.
+const SKETCH_TOLERANCE = { gbp: 0.01, pct: 1e-4 };
 
-/** Reform IDs whose current rows are still the 2025 dashboard's rows. */
+/**
+ * True when any year in which the measure had an effect in 2025 still has its
+ * 2025 values, to rounding: the rows were carried over (possibly re-saved at
+ * lower precision, or alongside new years). Years with no 2025 effect are
+ * skipped, since a regenerated measure may legitimately be zero there too.
+ */
+export function carriesOver2025Year(sketch, reference) {
+  return Object.entries(reference).some(([year, b]) => {
+    const a = sketch[year];
+    return (
+      b.rms_gain > 0 &&
+      a !== undefined &&
+      a.n === b.n &&
+      Math.abs(a.mean_gain - b.mean_gain) <= SKETCH_TOLERANCE.gbp &&
+      Math.abs(a.rms_gain - b.rms_gain) <= SKETCH_TOLERANCE.gbp &&
+      Math.abs(a.mean_relative - b.mean_relative) <= SKETCH_TOLERANCE.pct
+    );
+  });
+}
+
+/**
+ * Reform IDs with any year still carrying the 2025 dashboard's values, even
+ * inside a changed file, at lower precision or next to new years
+ * (constituency2025Sketches.json holds policyValueSketch of each ID in the
+ * 2025 file).
+ */
 export function carriedOver2025Policies(rows, reformIds) {
   return reformIds.filter(
     (id) =>
-      id in UNCERTIFIED_2025_ROW_DIGESTS &&
-      policyRowsDigest(rows, id) === UNCERTIFIED_2025_ROW_DIGESTS[id],
+      Object.hasOwn(SKETCHES_2025, id) &&
+      carriesOver2025Year(policyValueSketch(rows, id), SKETCHES_2025[id]),
   );
 }

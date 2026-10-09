@@ -20,13 +20,14 @@ import {
   makeGeojson,
 } from "../test/constituencyFixtures";
 import {
-  UNCERTIFIED_2025_ROW_DIGESTS,
+  SKETCHES_2025,
   UNCERTIFIED_2025_SHA256,
   carriedOver2025Policies,
   checkCertificationManifest,
   crossCheckConstituencyRows,
+  carriesOver2025Year,
   parseDemographicCsv,
-  policyRowsDigest,
+  policyValueSketch,
 } from "../test/constituencyChecks";
 
 // TEST DATA ONLY: synthetic constituencies and values.
@@ -405,6 +406,47 @@ describe("certification manifest", () => {
     ]);
   });
 
+  it("spots carried-over values through rounding, but not regenerated ones", () => {
+    // TEST DATA ONLY: synthetic rows for one policy in 2028 and 2029, plus a
+    // policy with no effect at all.
+    const base = syntheticRows((p, y, i) =>
+      p === POLICIES[0] ? [37.123456789 * (i - 9), 0.0123456789 * i] : [0, 0],
+    );
+    const reference = policyValueSketch(base, POLICIES[0]);
+    const carried = (rows, id = POLICIES[0], ref = reference) =>
+      carriesOver2025Year(policyValueSketch(rows, id), ref);
+    const remap = (f) =>
+      base.map((r) => ({
+        ...r,
+        average_gain: f(r.average_gain, 2),
+        relative_change: f(r.relative_change, 4),
+      }));
+
+    // Re-saved at lower precision, reordered or renamed: still carried over.
+    expect(carried(remap((v) => Number(v.toPrecision(12))))).toBe(true);
+    expect(carried(remap((v) => Number(v.toFixed(6))))).toBe(true);
+    expect(carried(remap((v) => Math.fround(v)))).toBe(true);
+    expect(carried(remap((v, dp) => Number(v.toFixed(dp))))).toBe(true);
+    expect(
+      carried(
+        [...base].reverse().map((r) => ({ ...r, constituency_name: "x" })),
+      ),
+    ).toBe(true);
+    // One carried-over year is enough, even next to a new year.
+    const extraYear = base
+      .filter((r) => r.year === 2029)
+      .map((r) => ({ ...r, year: 2031, average_gain: r.average_gain * 2 }));
+    expect(
+      carried([...base.filter((r) => r.year === 2029), ...extraYear]),
+    ).toBe(true);
+
+    // Regenerated on new data (here 30% different): not carried over.
+    expect(carried(remap((v) => v * 1.3))).toBe(false);
+    // A measure with no effect in any year never counts as carried over.
+    const none = policyValueSketch(base, POLICIES[1]);
+    expect(carried(base, POLICIES[1], none)).toBe(false);
+  });
+
   // These two read the 2025 file, so they run only while main carries it.
   const csvBytes = readFileSync("public/data/constituency.csv");
   const carries2025File = UNCERTIFIED_2025_SHA256.has(
@@ -414,14 +456,17 @@ describe("certification manifest", () => {
     ? parseConstituencyCsv(csvBytes.toString("utf8"))
     : [];
 
-  it.runIf(carries2025File)("pins every reform ID's 2025 rows", () => {
-    const ids = Object.keys(UNCERTIFIED_2025_ROW_DIGESTS);
+  it.runIf(carries2025File)("pins every reform ID's 2025 values", () => {
+    const ids = Object.keys(SKETCHES_2025);
     expect(new Set(rows2025.map((r) => r.reform_id))).toEqual(new Set(ids));
+    for (const id of ids) {
+      expect(policyValueSketch(rows2025, id)).toEqual(SKETCHES_2025[id]);
+    }
     expect(carriedOver2025Policies(rows2025, ids)).toEqual(ids);
   });
 
   it.runIf(carries2025File)(
-    "spots 2025 rows carried over inside a changed file",
+    "spots 2025 rows carried over inside a changed file or at lower precision",
     () => {
       // TEST DATA ONLY: one fabricated row added; the 2025 rows untouched.
       const changedFile = [
@@ -441,20 +486,23 @@ describe("certification manifest", () => {
         ]),
       ).toEqual(["savings_tax_increase_2pp"]);
 
-      // Reordered rows and renamed seats are still the same values.
-      const reordered = [...rows2025]
-        .reverse()
-        .map((r) => ({ ...r, constituency_name: "x" }));
-      expect(policyRowsDigest(reordered, "two_child_limit")).toBe(
-        UNCERTIFIED_2025_ROW_DIGESTS.two_child_limit,
-      );
+      const resaved = rows2025.map((r) => ({
+        ...r,
+        average_gain: Number(r.average_gain.toFixed(2)),
+        relative_change: Math.fround(r.relative_change),
+      }));
+      expect(
+        carriedOver2025Policies(resaved, ["savings_tax_increase_2pp"]),
+      ).toEqual(["savings_tax_increase_2pp"]);
 
-      // Any changed value means the rows were regenerated.
+      // Regenerated values (here 30% different) are not carried over.
       const regenerated = rows2025.map((r) =>
-        r.reform_id === "savings_tax_increase_2pp" &&
-        r.constituency_code === "E14001063" &&
-        r.year === 2029
-          ? { ...r, average_gain: r.average_gain + 0.01 }
+        r.reform_id === "savings_tax_increase_2pp"
+          ? {
+              ...r,
+              average_gain: r.average_gain * 1.3,
+              relative_change: r.relative_change * 1.3,
+            }
           : r,
       );
       expect(
