@@ -99,3 +99,32 @@ class TestReformSelection:
         # Should only return the valid one
         assert len(reforms) == 1
         assert reforms[0].id == "two_child_limit"
+
+
+def test_reset_cli_uses_explicit_directory_and_frontend_config(
+    tmp_path, monkeypatch
+):
+    from uk_budget_data import cli
+
+    data = tmp_path / "data"
+    data.mkdir()
+    for name in cli.RESET_CSV_FILES:
+        (data / name).write_text("reform_id,year,value\nold,2026,1\n")
+    config = tmp_path / "policyConfig.js"
+    config.write_text("export const POLICIES = [];\n")
+    monkeypatch.setattr(cli, "get_autumn_budget_2026_reforms", lambda: [])
+    assert (
+        cli.main(
+            [
+                "reset",
+                "--output-dir",
+                str(data),
+                "--frontend-config",
+                str(config),
+            ]
+        )
+        == 0
+    )
+    assert (
+        data / "budgetary_impact.csv"
+    ).read_text() == "reform_id,year,value\n"

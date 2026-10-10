@@ -1,0 +1,2 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 3, 12 October 2026. Not a real Budget. Blank template: calculation SHA <sha>; data-container SHA <sha>; engine <version>; dataset <name and sha256>; validated pair <yes/no>; gate <pending>; source release <statement/Annex A/correction>; basis <gross/net; duty/VAT; fiscal/calendar>. Skip this line when reading CSV.
+measure_no,measure,fiscal_year,comparator,our_static_bn,our_basis,our_commit,table41_post_behavioural_bn,costing_static_bn,gap_vs_static_bn,gap_vs_static_pct,gap_reason,gate

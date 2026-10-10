@@ -1,3 +1,4 @@
+import budgetYears from "../uk_budget_data/budget_years.json";
 import { useMemo } from "react";
 import {
   ResponsiveContainer,
@@ -37,7 +38,7 @@ function PersonalImpactResults({ results }) {
 
     const years = Object.keys(results.years)
       .map(Number)
-      .filter((year) => year >= 2026)
+      .filter((year) => budgetYears.policy_years.includes(year))
       .sort((a, b) => a - b);
 
     return years.map((year) => {
@@ -90,7 +91,9 @@ function PersonalImpactResults({ results }) {
 
   if (!results) return null;
 
-  const totalImpact = results.totals?.cumulative || 0;
+  const totalImpact = Object.entries(results.totals?.by_year || {})
+    .filter(([year]) => budgetYears.policy_years.includes(Number(year)))
+    .reduce((total, [, value]) => total + value, 0);
   const impactClass =
     totalImpact > 0 ? "positive" : totalImpact < 0 ? "negative" : "neutral";
 
@@ -98,7 +101,7 @@ function PersonalImpactResults({ results }) {
     <div className="personal-impact-results">
       {/* Hero summary */}
       <div className={`impact-summary ${impactClass}`}>
-        <div className="summary-label">Your total impact over 5 years</div>
+        <div className="summary-label">Your total impact over {yearlyData.length} years</div>
         <div className="summary-value">{formatCurrency(totalImpact)}</div>
         <div className="summary-context">
           {totalImpact > 0

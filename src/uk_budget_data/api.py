@@ -111,6 +111,24 @@ class APIHouseholdInput(BaseModel):
         default=None, description="Featured policy IDs to calculate"
     )
 
+    years: list[int] | None = Field(
+        default=None,
+        description="MOCK annual years; 2032 supports terminal fiscal-boundary work",
+    )
+
+    @field_validator("years")
+    @classmethod
+    def validate_years(cls, value):
+        from uk_budget_data.budget_years import validate_household_years
+
+        if value is None:
+            return value
+        if os.environ.get("NEXT_PUBLIC_MOCK") != "1":
+            raise ValueError(
+                "Custom calendar years require the MOCK drill backend"
+            )
+        return validate_household_years(value)
+
     @field_validator("tenure_type")
     @classmethod
     def validate_tenure(cls, value):
@@ -175,7 +193,9 @@ class APIHouseholdInput(BaseModel):
 
 def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
     """Convert API input to the format expected by PersonalImpactCalculator."""
-    return HouseholdInput(**api_input.model_dump(exclude={"policy_ids"}))
+    return HouseholdInput(
+        **api_input.model_dump(exclude={"policy_ids", "years"})
+    )
 
 
 def convert_to_native(obj):
@@ -216,7 +236,9 @@ async def calculate_personal_impact(data: APIHouseholdInput):
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
         results = calculator.calculate(
-            household_input, policy_ids=data.policy_ids
+            household_input,
+            policy_ids=data.policy_ids,
+            **({"years": data.years} if data.years is not None else {}),
         )
         return convert_to_native(results)
     except ValueError as e:
