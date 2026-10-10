@@ -11,7 +11,7 @@ The Chancellor of the Exchequer today presented the Budget. It helps families wi
 - **Growth.** The OBR forecasts growth of 0.8% this year and 1.1% in 2027, picking up to 1.5% in 2028 and 1.6% in 2029.
 - **Inflation.** CPI inflation is 3.4% this year, falling to 2.9% in 2027 and 2.2% in 2028, and reaching the 2% target in 2029.
 - **Earnings.** Average earnings grow by 4.2% this year and 3.6% in 2027.
-- **Fiscal rules.** Before today's decisions the forecast left £13.1 billion of headroom against the stability rule in 2029-30. The decisions cost £2.7 billion in that year, leaving £10.4 billion. Debt falls as a share of GDP by the end of the forecast, which now runs to 2031-32.
+- **Fiscal rules.** Before today's decisions the forecast left £13.1 billion of headroom against the stability rule in 2029-30. The decisions cost £2.0 billion in that year, leaving £11.1 billion. Debt falls as a share of GDP by the end of the forecast, which now runs to 2031-32.
 
 ## Help with the cost of living
 
@@ -35,6 +35,8 @@ The Chancellor of the Exchequer today presented the Budget. It helps families wi
 
 **Capital gains.** From 6 April 2027 the higher rate of Capital Gains Tax rises from 24% to 28%, and the annual exempt amount falls from £3,000 to £2,000.
 
+**Pension salary sacrifice.** From 6 April 2029 the annual pension salary-sacrifice limit exempt from employee and employer National Insurance falls from £2,000 to £1,000. Pension income tax relief continues. The documents include revised national data determinants for this measure and Capital Gains Tax.
+
 **The most valuable homes.** From April 2028 homes in England worth £5 million to £10 million pay a £10,000 surcharge, and homes worth £10 million or more pay £15,000.
 
 **Carried interest.** More of fund managers' carried interest will be taxed, as the multiplier rises from 72.5% to 80%.
@@ -53,7 +55,7 @@ The Budget confirms the defence top-up from the Defence Investment Plan, raises 
 
 ## The Budget in numbers
 
-The policy decisions cost £3.6 billion in 2027-28, cost £2.7 billion in 2029-30 and raise £2.2 billion in 2031-32. Figures are after behavioural effects; a minus sign is a cost. The full scorecard is in Table 4.1, released at 13:40.
+The policy decisions cost £3.6 billion in 2027-28, cost £2.0 billion in 2029-30 and raise £2.9 billion in 2031-32. Figures are after behavioural effects; a minus sign is a cost. The full scorecard is in Table 4.1, released at 13:40.
 
 | | 2027-28 | 2029-30 | 2031-32 |
 |---|---|---|---|
@@ -62,7 +64,8 @@ The policy decisions cost £3.6 billion in 2027-28, cost £2.7 billion in 2029-3
 | Pensioner Allowance | −£0.3bn | −£1.0bn | −£1.8bn |
 | Additional rate threshold | +£0.8bn | +£1.0bn | +£1.1bn |
 | Capital Gains Tax | +£1.3bn | +£0.5bn | +£1.0bn |
+| Pension salary sacrifice | £0.0bn | +£0.7bn | +£0.8bn |
 | Thresholds | £0.0bn | £0.0bn | +£2.8bn |
-| Total, all measures | −£3.6bn | −£2.7bn | +£2.2bn |
+| Total, all measures | −£3.6bn | −£2.0bn | +£2.9bn |
 
 *MOCK: this summary contains no quotation from any real person. Every measure and number in it is invented for a PolicyEngine rehearsal.*

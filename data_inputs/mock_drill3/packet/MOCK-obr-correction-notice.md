@@ -21,11 +21,11 @@ The caseload of 5.4 million households in 2026-27 and 5.5 million in 2027-28 wro
 
 | £ million | 2026-27 | 2027-28 | 2028-29 | 2029-30 | 2030-31 | 2031-32 |
 |---|---|---|---|---|---|---|
-| Total policy decisions, as published | −815 | −3,580 | −3,380 | −2,670 | −445 | +2,175 |
-| **Total policy decisions, corrected** | **−785** | **−3,550** | **−3,380** | **−2,670** | **−445** | **+2,175** |
+| Total policy decisions, as published | −815 | −3,580 | −3,380 | −1,980 | +275 | +2,925 |
+| **Total policy decisions, corrected** | **−785** | **−3,550** | **−3,380** | **−1,980** | **+275** | **+2,925** |
 | Total spending policy decisions, corrected | −525 | −3,530 | −3,640 | −4,115 | −2,375 | −2,530 |
-| Total tax policy decisions, corrected | −260 | −20 | +260 | +1,445 | +1,930 | +4,705 |
+| Total tax policy decisions, corrected | −260 | −20 | +260 | +2,135 | +2,650 | +5,455 |
 
-Totals for 2028-29 onwards are unchanged, so the effect of the decisions on headroom in 2029-30, and the headroom of £10.4 billion, are unchanged.
+Totals for 2028-29 onwards are unchanged by this notice, so the effect of the decisions on headroom in 2029-30, and the headroom of £11.1 billion, are unchanged. Measure 20 and the CGT/pension data-work inputs are unchanged by the notice.
 
 *MOCK: every measure and number in this notice is invented for a PolicyEngine rehearsal.*

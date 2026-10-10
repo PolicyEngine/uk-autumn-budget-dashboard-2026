@@ -39,9 +39,9 @@ For gaps over 10%, select one primary class from the runbook's closed list and g
 
 ## Ledger part: L (15%)
 
-`L = correctly classified Table 4.1 lines / 19`
+`L = correctly classified Table 4.1 lines / 20`
 
-Each of the 19 Table 4.1 lines contributes one point. Award the point only when both `coded`/`ledger` classification and the stated reason match the key-holder's frozen acceptance criteria. For coded lines the reason identifies household coverage/method; for ledger lines it identifies the exclusion or unsupported mechanism. Accept equivalent wording that states the same frozen mechanism. If several key rows map to one Table 4.1 line, every applicable classification/reason must agree before that line earns its point; additional physical key rows do not increase its weight. The key holder attests this mapping before score acceptance.
+Each of the 20 Table 4.1 lines contributes one point. Award the point only when both `coded`/`ledger` classification and the stated reason match the key-holder's frozen acceptance criteria. For coded lines the reason identifies household coverage/method; for ledger lines it identifies the exclusion or unsupported mechanism. Accept equivalent wording that states the same frozen mechanism. If several key rows map to one Table 4.1 line, every applicable classification/reason must agree before that line earns its point; additional physical key rows do not increase its weight. The key holder attests this mapping before score acceptance.
 
 ## Process part: P (15%)
 
@@ -66,6 +66,14 @@ The shared policy horizon is 2026–2031. The pinned MOCK household API supports
 
 For calendar-only measures with justified even-month incidence, `calendar_to_fiscal_even_months` computes 9/12 of the starting calendar year plus 3/12 of the following year. Fiscal 2031–32 therefore requires a 2032 value. Use released inputs and a measure-specific difference/quantity; never prorate aggregate household net income or native fiscal variables. Nonuniform or dated measures need their actual month schedule, including January–March 2032. Record the method, period and assumptions with the row; extending the displayed year labels alone does not establish fiscal accuracy.
 
+## Data-work evaluation (guidance, no additional points)
+
+The revised packet asks the team to implement CGT projection and pension salary-sacrifice calibration changes. Use the packet's before/after template and debrief checks to evaluate the diagnosis, bracket allocation, observed-year preservation, overlapping constraints, residual discrepancies and code/data provenance. Keep behavioural and incidence settings fixed between data runs. A national dataset rebuild and an eight-record diagnostic exercise provide different evidence; record any incomplete national work explicitly.
+
+These checks add no gate, deadline, numerical tolerance or points to H/N/L/P. Score the final national basis/class entries under the rules above, using key-holder acceptance criteria frozen for the revised packet. A repaired score within 10% requires `none_expected`; do not force a historical data-error label after the repair removes that gap. Freeze conditional acceptance criteria for the unrepaired/repaired data cases before release and identify the actual artifact in the run receipt. Do not reward closeness to the costing alone as proof of a sound data change.
+
+The old three-key bundle predates this revision. Revised keys, hashes and inventories remain pending with the independent key holder; no original key hash is evidence of coverage of the new rows.
+
 ## Acceptance receipt
 
-The final scorer receipt names the selected complete run, stop-code identity, rubric SHA, verified key hashes, version-aware H/N inventories, 19-line ledger mapping, four part scores and overall arithmetic. The independent key holder signs inventory/class-equivalence corrections, if any. Friday's named nonparticipant/custody/release-route sign-off, Monday G0 evidence and authenticated preview acceptance remain required operator actions in `DRILL3.md`.
+The final scorer receipt names the selected complete run, stop-code identity, rubric SHA, verified key hashes, version-aware H/N inventories, 20-line ledger mapping, four part scores and overall arithmetic. The independent key holder signs inventory/class-equivalence corrections, if any. Friday's named nonparticipant/custody/release-route sign-off, Monday G0 evidence and authenticated preview acceptance remain required operator actions in `DRILL3.md`.

@@ -15,6 +15,7 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 | One scoring run became a mixed-SHA sheet | **Each scoring run is pinned to one SHA.** The 14:20 correction notice forces a re-run, logged as a new run |
 | Engine 2.120.0 ran on data built under 2.100.0 | **G0 must name a validated engine and data pair, or label every national figure "unvalidated under this engine"** |
 | The answer key had household rows only | The key has three parts: households, national (static, post-behavioural and expected explanation class) and ledger classification |
+| CGT forward projections and salary-sacrifice calibration still need implementation work | The revised packet includes both reforms, national data inputs, bracket-crossing pension cases and a before/after evidence template. Data-repair checks inform the debrief; they add no gate or points |
 
 ## Timetable (BST)
 
@@ -25,7 +26,7 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 | **12:30** | **Statement released** (`MOCK-statement.md`). Drill clock starts | open from the packet folder |
 | 12:30–12:45 | G1: lock the measure list and coverage ledger from the statement | reconciler |
 | 13:15 target | G2: provisional first numbers (statement-based) | integrator |
-| **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheets | open from the packet folder |
+| **13:40** | **Documents released:** Table 4.1, costings with Annex A, OBR tables, specimen households, scoring sheets and national data-work inputs | open from the packet folder |
 | 13:40–14:10 | G3: re-base on Annex A; national scoring sheet filled | integrator, then reconciler |
 | **14:20** | **OBR correction notice released** (`packet/MOCK-obr-correction-notice.md`). Re-run what it touches | integrator |
 | 14:20–14:50 | G5: preserve the first run; create complete corrected sheets on one new SHA; rerun affected rows and verify any carry-forward | integrator, scorer |
@@ -54,6 +55,8 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 
 The [unsealed scoring rubric](docs/drill3-scoring-rubric.md) defines complete runs, carry-forward evidence, denominators, partial credit and process points. Freeze its SHA at G0.
 
+Both selected data tasks are part of the Monday implementation exercise. The packet supplies a CGT projection path and salary-sacrifice calibration inputs, with a before/after results template. The integrator attempts the data changes and rescores under the existing clock. Evaluate the diagnosis, artifact provenance, fixed assumptions and checks during the debrief. **There is no additional data-repair gate or scoring weight.** Preflight national data and pipeline access and a practical incremental rebuild route during setup; a small diagnostic fixture alone does not establish a national data repair.
+
 ## Scoring at 16:00
 
 | Part | What is scored | Weight |
@@ -73,21 +76,26 @@ The packet is in `data_inputs/mock_drill3/packet/`. **Don't open the 12:30 file 
 
 | Release | File | SHA-256 |
 |---|---|---|
-| 12:30 | `MOCK-statement.md` | `d4c528d5d762bcc6a20766daa48aef759478a1a6295bcb2ce6b4eb80bdde3eac` |
-| 13:40 | `MOCK-policy-decisions.xlsx` (Table 4.1) | `b0293b0774b12c90652f7303add32480ebc0bf28c0805d87313dcc577cb48ee2` |
-| 13:40 | `MOCK-policy-costings.md` (with Annex A) | `bbc8e2d57adb328ebde9c94fd818256b385785d0e41abf29d0b4fc85a66d2725` |
-| 13:40 | `MOCK-obr-economy-forecast.xlsx` | `4e0736b137658fcaf091d2a1a3aef358270924e447999059cd75e820851d57e4` |
-| 13:40 | `MOCK-specimen-inputs.md` | `0f1fd8b0b688323d42e115171a2b14190865c19b6cb22d65ef7a092971fbd1c6` |
-| 13:40 | `MOCK-drill3-scoring.csv` (households, blank) | `90edcd36301367e03d50215683bc0211897274192d9fb68c43bd2fe6df8de8ef` |
-| 13:40 | `MOCK-drill3-national-scoring.csv` (national, blank) | `8b35462aee5c71face925a5cee179d16c763448faf7cdbcb7931a28a4880b057` |
-| 14:20 | `MOCK-obr-correction-notice.md` | `3b8d9b24de1cd6cb610497b5da4909d550628011023e5fb1051dec2a87f6809e` |
-| 16:00 | `MOCK-drill3-answer-key-households.csv` (sealed) | `a9b8d646a12860a1396a9d9f1973a82136426dc593fc59f4323feaf9dd0026d5` |
-| 16:00 | `MOCK-drill3-answer-key-national.csv` (sealed) | `2ae4ecd5c9ff40f195df31c1fd94a826a8e6fbb104491096eee1c14503a1bae6` |
-| 16:00 | `MOCK-drill3-answer-key-ledger.csv` (sealed) | `5b1f5250faa8b0556f5ee7141fde707ad6630b59817d11a7b52455d6d20a7e36` |
+| 12:30 | `MOCK-statement.md` | `69c93e92ec63069ffd191f6e90c4d6d9a05ad3e74269e453e12cccdf42870f57` |
+| 13:40 | `MOCK-policy-decisions.xlsx` (Table 4.1) | `649d4eb246b552847441059d7429365b6b4b54f3337dc33e1e92c5b2ace04f5f` |
+| 13:40 | `MOCK-policy-costings.md` (with Annex A) | `6edc9e1111303c4baf9e23d05b9fcd9c0733df444d890fe1e2f65a401a17e190` |
+| 13:40 | `MOCK-obr-economy-forecast.xlsx` | `d00c6c2a5a00b9c7aa4633573f18806e5db8190081fb2778b8631a973caabcd4` |
+| 13:40 | `MOCK-specimen-inputs.md` | `ef3ec5520ae4845e51863bf07f536ef4eb239fe6990dfb6e521442c9ba226051` |
+| 13:40 | `MOCK-drill3-scoring.csv` (households, blank) | `ffb3ec4bfdd64b18cac4a4b9c9824ab3032e9157ae27a381924c0f7c33ab3819` |
+| 13:40 | `MOCK-drill3-national-scoring.csv` (national, blank) | `5ed8c18a89276629de47ba99410031e83b5909cc28d7a3ff7556072dca1bffc3` |
+| 13:40 | `MOCK-cgt-projection-inputs.csv` | `484f7f549ab546dcda47043307eeba88a7c35d6cdf5e66bb7c88f1d280a7fa50` |
+| 13:40 | `MOCK-data-work-results.csv` | `87278919e156a66735196584e3faee1524d1f53cd3aed94f9882dd8d423e8d4c` |
+| 13:40 | `MOCK-data-work.md` | `be05e2b880450ab77f37e07131d7c9b3f4aff61e7182ab93a6ba62441db4cf5d` |
+| 13:40 | `MOCK-salary-sacrifice-records.csv` | `ddddaf300436bb5db2e2d7bd88b2be07c5ebec3e3f57c74f493e488f05b31d37` |
+| 13:40 | `MOCK-salary-sacrifice-targets.csv` | `401672cedea7fefb4da13d0e03aaec502996d2c7643e864fa121b9d28657061d` |
+| 14:20 | `MOCK-obr-correction-notice.md` | `74412d4e0428e418ac510f1edd9dc7c30b53f869927d2ab5d6b57f5082c55957` |
+| 16:00 | `MOCK-drill3-answer-key-households.csv` (sealed) | **PENDING — regenerate for revised packet** |
+| 16:00 | `MOCK-drill3-answer-key-national.csv` (sealed) | **PENDING — regenerate for revised packet** |
+| 16:00 | `MOCK-drill3-answer-key-ledger.csv` (sealed) | **PENDING — regenerate for revised packet** |
 
-**Packet shape:** 19 Table 4.1 lines (10 coded, 9 ledger), 12 specimen households across all four nations, a six-year forecast window (2026-27 to 2031-32), and a 14:20 correction notice. The household key has 168 rows, including one row per household that scores a pair of measures together. The national key has 61 rows and the ledger key 21. The 14:20 notice changes one household value and one costing figure; the keys record both the 13:40 and corrected values, so the scorer can see whether the team re-ran.
+**Packet shape:** 20 Table 4.1 lines (11 coded, 9 ledger), 14 specimen households across all four nations, a six-year forecast window (2026-27 to 2031-32), and a 14:20 correction notice. The blank household sheet has 172 rows: the original 168 plus four dedicated pension-cap cases. The blank national sheet has 67 rows: the original 61 plus six years for measure 20. The data release also contains a projection series, eight independent pension diagnostic records, band-relief targets and a blank before/after evidence template. The 14:20 notice changes the same household value and costing as before; the revised keys must record both releases so the scorer can see whether the team re-ran.
 
-The key holder keeps the generator and answer key outside the repository. Two runs of the generator give byte-identical files, and an independent recalculation of every household value agrees to the penny.
+The key holder keeps the generator and answer keys outside the repository. **The previous three key hashes are superseded by this packet revision.** The original key bundle/generator was unavailable to the packet editor, so no revised-key determinism or household attestation is claimed. Before release, the key holder must add the four H13/H14 rows, six measure 20 national rows and its ledger classification; check CGT explanations against the revised projection exercise, costing bases, correction versions and updated totals; then publish replacement hashes and physical/version-aware inventories. Regeneration must give byte-identical files in two runs, with an independent household recalculation to ±1p. Keep all answers outside this repository.
 
 **Templates** in `data_inputs/mock_drill3/`: `MOCK-drill3-coverage-ledger.csv` and `MOCK-drill3-reconciliation.csv` (as in drill 2). The national scoring sheet comes with the 13:40 release.
 
@@ -108,6 +116,7 @@ Friday setup remains **unconfirmed** until the participants fill every required 
 | Chosen model/core and dataset name/SHA-256; certification receipt or explicit unvalidated-publication plan | Vahid, María | **UNCONFIRMED**; retaining UK 2.120.0 with the UK 2.100.0-built data requires “unvalidated under this engine” on every national figure |
 | Signed-in drill-only preview: URL/deployment SHA, MOCK banner, robots meta and X-Robots-Tag `noindex, nofollow`, matching backend version and baseline-only HTTP 200 | Vahid, María | **UNCONFIRMED**; record health versions and empty-selection response; Vercel login alone does not pass |
 | Rubric SHA, denominators/row-version inventory and equivalent-class acceptance sets frozen without revealing answers | María, key holder | **UNCONFIRMED**; see scoring rubric |
+| Revised packet/key alignment: measure 20, H13/H14, CGT data assumptions, unchanged correction cases and replacement hashes | key holder | **PENDING — original off-repository generator and keys must be updated before release** |
 | Participant role and Monday release/stop times acknowledged | Vahid, María, key holder | **UNCONFIRMED**; names and time |
 
 The household API uses the pinned Python backend for the drill. The legacy public-API adapter retains its historical horizon and is outside drill scoring. Friday preview testing may use an empty policy selection before Monday registry removal.

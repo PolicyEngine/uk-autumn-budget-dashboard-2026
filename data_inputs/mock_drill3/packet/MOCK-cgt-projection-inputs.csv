@@ -1,0 +1,10 @@
+MOCK DATA: synthetic drill determinants. Not HMRC statistics or an OBR forecast. Skip one line when reading this CSV.
+tax_year,stage,gross_realised_gains_bn,taxpayers_thousands,higher_rate_chargeable_gains_bn,aea_static_contribution_m,same_year_cash_share
+2024-25,observed_anchor,118.0,551,50.0,0,0.07
+2025-26,forecast,88.0,540,32.5,0,0.07
+2026-27,forecast,91.0,550,34.5,0,0.07
+2027-28,forecast,95.0,560,36.0,210,0.07
+2028-29,forecast,99.0,575,37.475,220,0.07
+2029-30,forecast,103.0,590,39.1,228,0.07
+2030-31,forecast,108.0,605,40.875,230,0.07
+2031-32,forecast,112.0,620,42.8,230,0.07

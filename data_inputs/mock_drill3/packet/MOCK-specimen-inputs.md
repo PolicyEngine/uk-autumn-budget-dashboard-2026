@@ -6,7 +6,7 @@ MOCK DATA: rehearsal Budget for PolicyEngine drill 3, 12 October 2026. Not a rea
 
 ## Household scoring
 
-Twelve households, facts only. For each household and each row of `MOCK-drill3-scoring.csv`, work out the change in annual household net income from **that measure on its own**, against the pre-Budget baseline in Annex A, in the scoring year shown. One row is different: **"1 and 2 together (stacked)"** asks for the change from measures 1 and 2 applied together, against the same baseline. Log each figure in £ a year to the penny in `team_change`, note any assumption in `cause`, and pin the run in `run_sha`.
+Fourteen households, facts only. H1–H12 retain their original measure schedule; H13 and H14 are dedicated salary-sacrifice cases and score measure 20 only. For each household and each row of `MOCK-drill3-scoring.csv`, work out the change in annual household net income from **that measure on its own**, against the pre-Budget baseline in Annex A, in the scoring year shown. One row is different: **"1 and 2 together (stacked)"** asks for the change from measures 1 and 2 applied together, against the same baseline. Log each figure in £ a year to the penny in `team_change`, note any assumption in `cause`, and pin the run in `run_sha`.
 
 | Measure | Scoring year(s) |
 |---|---|
@@ -20,6 +20,7 @@ Twelve households, facts only. For each household and each row of `MOCK-drill3-s
 | 8 Local Housing Allowance | 2027-28 |
 | 9 fuel duty | 2026-27, 2027-28 |
 | 10 Class 4 NICs | 2027-28 |
+| 20 pension salary-sacrifice cap (H13 and H14 only) | 2029-30, 2031-32 |
 | 1 and 2 together (stacked) | 2031-32 |
 
 Scoring basis, stated once:
@@ -33,6 +34,7 @@ Scoring basis, stated once:
 - A bill credit counts as household income in the fiscal year it is credited.
 - Capital Gains Tax: score the change in the liability for the tax year of the disposal, whenever it is paid.
 - Home values are April 2026 valuations.
+- H1–H12 have no pension salary sacrifice or employee pension contributions. H13/H14 hold their sacrifice fixed in cash, retain pension income tax relief, have no employer pass-through and have no employee response or broad-workforce earnings haircut. Their measure 20 household result includes employee NICs only; record employer NICs separately as a diagnostic.
 
 ## National scoring
 
@@ -53,6 +55,8 @@ In the coverage ledger, classify every Table 4.1 line, and anything in the state
   `modelled_param`, `modelled_new_variable`, `constructed_counterfactual`, `ledger_business_side`, `ledger_out_of_model_scope`, `ledger_spending`, `already_in_baseline`
 
 Each CSV's first line is the MOCK line: skip one line when reading it (pandas: `skiprows=1`).
+
+The data-work brief and before/after template accompany the national sheets. Both selected reforms require a data implementation attempt, with any incomplete rebuild recorded explicitly. The debrief checks are guidance and do not add a gate or scoring points.
 
 ## H1: Employee on £51,000 (England)
 
@@ -125,3 +129,15 @@ Each CSV's first line is the MOCK line: skip one line when reading it (pandas: `
 - **Where:** South East (Sevenoaks). Married to a non-earning spouse who has no income of their own. Owner-occupiers of a home valued at £800,000.00. Employee earning the amount below. Sole owner, outright, of a house in London (Wandsworth) valued at £2,200,000.00 (April 2026 valuation) that is let to tenants; taxable rental profit £20,000.00 in every year. Sells a separate buy-to-let flat in Bristol on 10 November 2027 for a gain of £60,000.00 (residential property); no other gains or losses in 2027-28. Does not claim any benefit.
 - **Inputs:** 1,100 litres of diesel a year, all private motoring; council tax £2,750.00.
 - **People:** landlord, 58: employment earnings £70,000.00 and rental profit £20,000.00 a year; spouse, 57: no income.
+
+## H13: Employee sacrificing a pension across rUK tax bands (England)
+
+- **Where:** England (Leeds). Single, aged 40, works for a large private-sector employer. No other income, benefits or tax adjustments.
+- **Inputs:** contractual salary **before** pension salary sacrifice £54,000.00; annual sacrifice £4,000.00; cash salary £50,000.00. These amounts stay fixed in every year. No annual allowance charge. No motoring.
+- **Scope:** measure 20 only, in 2029-30 and 2031-32, against the existing £2,000 cap. Income tax pension relief continues; employer NICs do not enter household net income.
+
+## H14: Scottish employee whose relief uses Scottish bands
+
+- **Where:** Scotland (Glasgow). Single, aged 40, Scottish taxpayer, works for a large private-sector employer. No other income, benefits or tax adjustments.
+- **Inputs:** contractual salary **before** pension salary sacrifice £50,000.00; annual sacrifice £4,000.00; cash salary £46,000.00. These amounts stay fixed in every year. No annual allowance charge. No motoring.
+- **Scope:** measure 20 only, in 2029-30 and 2031-32, against the existing £2,000 cap. Use Scottish rates for the income tax relief diagnostic and UK-wide Class 1 rates for NICs.

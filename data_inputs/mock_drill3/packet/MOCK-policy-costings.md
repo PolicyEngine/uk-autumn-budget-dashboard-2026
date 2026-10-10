@@ -50,6 +50,8 @@ Each note for a coded measure gives a static and a post-behavioural costing. The
 
 **Basis.** Capital Gains Tax, cash receipts. Tax on a year's gains is mostly paid on 31 January after the tax year ends, so a tax year's liability lands in the next fiscal year; gains on UK residential property (7% of liabilities) are paid within 60 days of the disposal, in the same fiscal year. **Static.** Gains taxed at the higher rate, net of the annual exempt amount: £36.0bn in 2027-28 rising to £42.8bn in 2031-32; 4 percentage points on that base, plus £210m–£230m from the lower annual exempt amount. Static liabilities by tax year: 2027-28 £1,650m, 2028-29 £1,719m, 2029-30 £1,792m, 2030-31 £1,865m, 2031-32 £1,942m. **Behaviour.** Forestalling: £6.0bn of gains are brought forward into November 2026 to March 2027 at an average rate of 23%, raising 2026-27 liabilities by £1,380m, which are mostly paid in January 2028 (fiscal year 2027-28). Those gains are no longer realised later (£4.5bn in 2027-28 and £1.5bn in 2028-29), and realisations fall 8% in steady state, at a marginal rate of 27%. Post-behavioural liabilities by tax year: 2026-27 £1,380m, 2027-28 £-343m, 2028-29 £502m, 2029-30 £943m, 2030-31 £979m, 2031-32 £1,018m. Business Asset Disposal Relief, Investors' Relief and carried interest are unchanged. The basic main rate stays at 18%, and band use follows UK income tax bands for all taxpayers, including Scottish taxpayers.
 
+**Cash-table rounding.** Measure 4's published fiscal cash figures are rounded to the nearest £5m after applying the 7%/93% payment split to the tax-year liabilities. The tax-year liabilities are shown to the nearest £1m. The accompanying CGT CSV supplies the static chargeable-gains path and AEA contribution for the data-work cross-check.
+
 ## 5. Employer NICs for under-22s
 
 *Employer National Insurance: Extend the zero rate for employees under 21 to employees under 22, on earnings up to the Upper Secondary Threshold, from 6 April 2027*
@@ -116,6 +118,19 @@ Each note for a coded measure gives a static and a post-behavioural costing. The
 
 **Basis.** Class 4 NICs, cash. The tax base is profits between the Lower and Upper Profits Limits (£12,570 to £50,270), about £61bn in 2027-28 for about 3.1 million self-employed people, growing 3% a year. Class 4 is paid through Self Assessment: about a quarter of a tax year's extra liability is received in that fiscal year and three-quarters in the next. The rate above the Upper Profits Limit stays at 2%. The post-behavioural figure allows for income shifting and incorporation (15%).
 
+## 20. Pension salary-sacrifice cap
+
+*National Insurance: Reduce the pension salary-sacrifice exemption cap from £2,000 to £1,000 per employee per tax year from 6 April 2029*
+
+| | 2026-27 | 2027-28 | 2028-29 | 2029-30 | 2030-31 | 2031-32 |
+|---|---|---|---|---|---|---|
+| Static Exchequer impact (£m) | 0 | 0 | 0 | +780 | +815 | +850 |
+| Post-behavioural Exchequer impact (£m) | 0 | 0 | 0 | +690 | +720 | +750 |
+
+**Basis.** Gross employee plus employer Class 1 NICs, UK-wide cash receipts in the tax year, before corporation-tax offsets or wage pass-through. The baseline already caps the exemption at £2,000 from April 2029. Only the additional £1,000 of previously exempt sacrifice is affected, subject to the individual's sacrifice amount and NICs thresholds. Pension contributions and income tax relief continue: contributions above the new cap incur employee and employer NICs, but do not lose pension income tax relief. This is not a fresh £2,000 cap against an uncapped baseline. Employer NICs are employer costs; employee NICs affect household net income.
+
+**Data and response.** The costing uses the revised salary-sacrifice calibration determinants supplied with `MOCK-data-work.md`. Its static basis holds contributions and earnings fixed, with no employee contribution response and no broad-workforce earnings haircut. The post-behavioural figures separately allow for reduced sacrifice and employment adjustments. Do not tune those responses to compensate for a data discrepancy. Measures 1–19 retain their existing numbers; measure 20 includes interactions with them where applicable. The mock relief targets support a calibration exercise, not an identity equating aggregate income tax relief with the cap's NICs yield.
+
 ## Other measures
 
 | No. | Measure | 2026-27 | 2027-28 | 2028-29 | 2029-30 | 2030-31 | 2031-32 |
@@ -145,7 +160,9 @@ The pre-measures baseline for every rate and threshold that a measure in this do
 | National Insurance | Class 1 employee | 8% between the Primary Threshold and the Upper Earnings Limit, 2% above. Primary Threshold £12,570 and Upper Earnings Limit £50,270 to 2030-31; from April 2031 aligned with the indexed Personal Allowance and higher rate threshold: £12,830 and £51,330 (annual) |
 | National Insurance | Class 4 | 6% between the Lower and Upper Profits Limits, 2% above. £12,570 and £50,270 to 2030-31; £12,830 and £51,330 in 2031-32 |
 | National Insurance | Class 1 employer | 15% above the Secondary Threshold, £5,000 to 2030-31 and £5,100 in 2031-32. Zero rate up to the Upper Secondary Threshold (£50,270) for employees under 21, and for apprentices under 25 up to the Apprentice Upper Secondary Threshold. Employment Allowance £10,500 |
+| Pension salary sacrifice | NICs exemption cap; pension income tax relief | Uncapped through 2028-29; £2,000 per employee per tax year from 6 April 2029. Above the cap, employee and employer NICs apply; pension income tax relief continues. For static measure 20 scoring, employee response and the broad-workforce earnings haircut are off in baseline and reform |
 | Capital Gains Tax | Main rates; annual exempt amount | 18% and 24% (all assets, including residential property); £3,000. Business Asset Disposal Relief 18%. Gains use the UK basic rate band, including for Scottish taxpayers. Carried interest: income tax regime from April 2026 with a 72.5% multiplier |
+| National data | CGT projection and pension salary-sacrifice calibration | The 13:40 data-work brief and CSV determinants supplement the forecast. Apply the data changes during the drill and retain before/after diagnostics. They do not change the rules for the original twelve specimen households |
 | State Pension | Full new State Pension, a week | £241.30 (2026-27); £250.70 (2027-28); £259.45 (2028-29); £268.00 (2029-30); £276.60 (2030-31); £285.15 (2031-32). Triple lock to April 2029; from April 2030 the uprating rule announced on 29 September 2026, which gives earnings growth in April 2030 and April 2031 in this forecast. Each rate is rounded to the nearest 5p; annual amount = 52 × weekly rate |
 | Pension Credit | Standard minimum guarantee | Rises at least in line with earnings each April |
 | Universal Credit | Taper; earnings | 55% of net earnings (after income tax, NICs and pension contributions) above any work allowance. Benefit cap earnings exemption unchanged |
