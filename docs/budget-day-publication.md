@@ -109,7 +109,7 @@ public/data/
 
 Every artifact carries `receipt.json` with two parts.
 
-**1. An execution receipt** in the schema policyengine.py publishes for this purpose (execution receipt v1, PolicyEngine/policyengine.py#571). It records:
+**1. An execution receipt** in the schema policyengine.py publishes for this purpose (execution receipt v1, PolicyEngine/policyengine.py#571, with combined runs in #579). It records:
 - the installed wrapper, model and core versions;
 - the data release and build;
 - the SHA-256 of the dataset bytes simulated;
@@ -128,7 +128,18 @@ Every digest is computed over RFC 8785 canonical JSON, so Python and the browser
 - the command that produced it;
 - the forecast and calibration **basis**: `pre_budget` or `updated`, with source and vintage.
 
-An artifact is publishable only if its receipt says `certified` and the tree was clean. An explicitly supplied local dataset whose bytes don't match the certified release can never be approved.
+An artifact is publishable only if its receipt says `certified`, the certificate verifies against the bundle it names, and the tree was clean. An explicitly supplied local dataset whose bytes don't match the certified release can never be approved.
+
+### What the receipt asks of measure code
+
+The receipt binds a measure by what it is, so a measure has to be written in a form that can be bound. This changes how measures are coded on the day:
+
+- **Prefer `parameter_changes`.** They are bound by content.
+- **A `simulation_modifier` must be a module-level function**, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. It is bound by its source and this repository's commit. Closures, lambdas, nested functions and `functools.partial` are refused, because the values they capture cannot be bound. The tested measure templates are helpers to call from such a function.
+- **Values must be finite.** `float("inf")` for "no cap" cannot be bound; use a fixed finite sentinel the model treats as unbounded.
+- **A combined run** is bound as the ordered list of its members' identities. Before simulating, the dashboard checks that no two members set the same parameter differently, and that every value a member sets alone still holds in the combined scenario.
+
+A measure that cannot be bound fails at generation, naming the measure and the reason. It is never published without a receipt.
 
 ## Checks before a measure can be approved
 
@@ -141,9 +152,10 @@ An artifact is publishable only if its receipt says `certified` and the tree was
    These are #3's validator checks, applied to artifacts.
 3. **One execution identity.** The receipt's execution identity equals the manifest's, and the receipt is certified.
 4. **Integrity.** File hashes on disk equal the receipt's.
-5. **Treasury reconciliation.** Each comparable fiscal year passes or carries an accepted exception (below). Provisional entries skip this check and are labelled.
-6. **Household checks.** The measure's household fixtures pass through the deployed route against the same execution identity.
-7. **An approval** naming the current output digest.
+5. **Reform responsiveness.** Where an effect is expected, the measure's fiscal impact has the expected sign and is at least £1m and 5% of the Treasury's figure. An inert or wrong-direction measure is never published, provisional or approved, and no exception can waive it.
+6. **Treasury reconciliation.** Each comparable fiscal year passes or carries an accepted exception (below). Provisional entries skip this check and are labelled.
+7. **Household checks.** The measure's household fixtures pass through the deployed route against the same execution identity.
+8. **An approval** naming the current output digest.
 
 A **combined** entry is current only if each member's approved digest equals the digest it was computed alongside. Otherwise it is marked stale in the same step that changed the member.
 
@@ -158,9 +170,10 @@ A **combined** entry is current only if each member's approved digest equals the
 
   A mapping file links each measure to its rows.
 - **Comparison.** Our static figure against the **static costing**, following the drill-3 rubric. Table 4.1's post-behavioural figure is shown alongside and not gated.
-- **Proposed rule** (the numbers are a decision for the team). A year passes when |ours − Treasury| ≤ max(10% × |Treasury|, £50m).
-  - Zero against zero passes.
-  - A nonzero estimate against a zero costing needs an exception.
+- **Proposed rule** (the numbers are a decision for the team; they live in `data_inputs/treasury/policy.yaml`). A year passes when |ours − Treasury| ≤ max(10% × |Treasury|, £50m).
+  - A figure the Treasury prints as zero tolerates only £2.5m, its own rounding.
+  - Anything larger needs an exception.
+- **Responsiveness** is separate and cannot be excepted (#17). The expectation comes from a reviewed declaration made when the measure is coded, or failing that from the sign of the Treasury's own figure. A measure with neither is "undeclared" and cannot be published.
 - **Exceptions.** Each records:
   - the residual;
   - one of the drill-3 explanation classes: `behavioural`, `coverage_business`, `top_tail_data`, `timing_fiscal_calendar`, `incidence_basis`, `baseline_mismatch`, `data_forward_path`, `devolved` or `interaction`;
@@ -224,6 +237,7 @@ The runbook records the actual household URL and the production publishing trigg
 | 5 | Briefing exports gated on the manifest; hardcoded figures removed | 3 |
 | 6 | #15: household route checker, `/api/version`, build identity. Then a Cloud Build no-traffic deploy with smoke test | #13, deployed API |
 | 6b | #16: Treasury Table 4.1 importer with printed-totals check | #13 |
+| 6d | #17: reconciliation and responsiveness gate, writing `reconciliation.json` beside each artifact | #16 |
 | 6c | policyengine-app-v2: draft rewrite for `/uk/autumn-budget-2026` | Decision 1 |
 | 7+ | Drill-fix extraction: one small PR per fix with its regression, no mock measures | 2 |
 | R | Runbook and rehearsal receipts | All |
