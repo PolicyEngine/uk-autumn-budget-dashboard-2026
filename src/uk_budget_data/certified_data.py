@@ -1,0 +1,196 @@
+"""Check that the configured Hugging Face token can read the certified data.
+
+The dashboard builds microsimulations through policyengine.py, which pins a
+certified UK dataset in its release bundle and downloads it from a private
+Hugging Face repository. CI runs this check before the certified-data tests,
+so a missing or rejected credential fails at once with an actionable message
+instead of surfacing as a download error ten minutes into the test run, or as
+a silent skip.
+
+The check reads only metadata: it never downloads a dataset. For every UK
+artifact pinned in the installed bundle it confirms that the token can see the
+file at the pinned revision and that the file's LFS SHA-256 equals the hash in
+the bundle manifest.
+
+Usage::
+
+    HUGGING_FACE_TOKEN=... uv run python -m uk_budget_data.certified_data
+"""
+
+import hashlib
+import json
+import os
+import sys
+from dataclasses import dataclass
+from importlib import resources
+from typing import Optional
+
+TOKEN_ENV = "HUGGING_FACE_TOKEN"
+
+ACCESS_HINT = (
+    "CI reads the token from the organisation secret "
+    "PE_UK_PRIVATE_HF_READ_TOKEN, a fine-grained read-only token for "
+    "policyengine/policyengine-uk-data-private. An organisation admin must "
+    "add this repository to that secret's selected repositories."
+)
+
+
+class CertifiedDataAccessError(RuntimeError):
+    """Raised when the certified data cannot be read with the token."""
+
+
+@dataclass(frozen=True)
+class Artifact:
+    """One file pinned by the policyengine.py release bundle."""
+
+    name: str
+    repo_id: str
+    repo_type: str
+    path: str
+    revision: str
+    sha256: str
+
+
+def load_bundle_manifest() -> dict:
+    """Load the release manifest shipped inside the installed policyengine."""
+    manifest = (
+        resources.files("policyengine") / "data" / "bundle" / "manifest.json"
+    )
+    return json.loads(manifest.read_text())
+
+
+def uk_artifacts(manifest: dict) -> list[Artifact]:
+    """List every UK data artifact pinned in a bundle manifest."""
+    release = manifest["data_releases"]["uk"]
+    default_repo_type = release.get("data_package", {}).get(
+        "repo_type", "model"
+    )
+    artifacts = [
+        Artifact(
+            name=name,
+            repo_id=entry["repo_id"],
+            repo_type=entry.get("repo_type", default_repo_type),
+            path=entry["path"],
+            revision=entry["revision"],
+            sha256=entry["sha256"],
+        )
+        for name, entry in sorted(release["datasets"].items())
+    ]
+    if not any(a.name == release["default_dataset"] for a in artifacts):
+        raise CertifiedDataAccessError(
+            f"Bundle default dataset {release['default_dataset']!r} is not "
+            "listed among the bundle's UK datasets."
+        )
+    return artifacts
+
+
+def _reason(error: Exception) -> str:
+    """First line of an HTTP error, without its trailing full stop."""
+    return str(error).strip().splitlines()[0].rstrip(".")
+
+
+def token_fingerprint(token: str) -> str:
+    """Return a short, non-reversible fingerprint safe to print in logs."""
+    return hashlib.sha256(token.encode()).hexdigest()[:12]
+
+
+def check_access(
+    token: Optional[str],
+    artifacts: list[Artifact],
+    api=None,
+) -> list[str]:
+    """Confirm the token can read every artifact at its pinned hash.
+
+    Args:
+        token: The Hugging Face token, or None/empty if unset.
+        artifacts: Artifacts pinned by the bundle.
+        api: A ``huggingface_hub.HfApi``-compatible client (for tests).
+
+    Returns:
+        Log lines describing what was checked. They never contain the token.
+
+    Raises:
+        CertifiedDataAccessError: If the token is missing, rejected, cannot
+            see an artifact, or an artifact's hash differs from the bundle.
+    """
+    if not token:
+        raise CertifiedDataAccessError(
+            f"{TOKEN_ENV} is not set, so the certified dataset cannot be "
+            f"downloaded. {ACCESS_HINT}"
+        )
+    if api is None:
+        from huggingface_hub import HfApi
+
+        api = HfApi()
+
+    from huggingface_hub.errors import HfHubHTTPError
+
+    try:
+        identity = api.whoami(token=token)
+    except HfHubHTTPError as error:
+        raise CertifiedDataAccessError(
+            f"Hugging Face rejected the token (fingerprint "
+            f"{token_fingerprint(token)}): {_reason(error)}. {ACCESS_HINT}"
+        ) from error
+
+    lines = [
+        f"Hugging Face account {identity.get('name', '?')}, token "
+        f"fingerprint {token_fingerprint(token)}"
+    ]
+
+    groups: dict[tuple[str, str, str], list[Artifact]] = {}
+    for artifact in artifacts:
+        key = (artifact.repo_id, artifact.repo_type, artifact.revision)
+        groups.setdefault(key, []).append(artifact)
+
+    for (repo_id, repo_type, revision), group in sorted(groups.items()):
+        try:
+            infos = api.get_paths_info(
+                repo_id,
+                [a.path for a in group],
+                revision=revision,
+                repo_type=repo_type,
+                token=token,
+            )
+        except HfHubHTTPError as error:
+            raise CertifiedDataAccessError(
+                f"The token cannot read {repo_type} repository {repo_id} at "
+                f"revision {revision}: {_reason(error)}. {ACCESS_HINT}"
+            ) from error
+        by_path = {info.path: info for info in infos}
+        for artifact in group:
+            info = by_path.get(artifact.path)
+            if info is None:
+                raise CertifiedDataAccessError(
+                    f"{repo_id}@{revision} has no file {artifact.path} "
+                    f"(bundle dataset {artifact.name})."
+                )
+            lfs = getattr(info, "lfs", None)
+            remote_sha = getattr(lfs, "sha256", None)
+            if remote_sha != artifact.sha256:
+                raise CertifiedDataAccessError(
+                    f"{repo_id}@{revision}/{artifact.path} has SHA-256 "
+                    f"{remote_sha}, but the bundle pins {artifact.sha256} "
+                    f"(dataset {artifact.name})."
+                )
+            lines.append(
+                f"OK {artifact.name}: {repo_id}@{revision}/{artifact.path} "
+                f"sha256={artifact.sha256[:12]}"
+            )
+    return lines
+
+
+def main() -> int:
+    """Run the check against the installed bundle and the environment."""
+    try:
+        artifacts = uk_artifacts(load_bundle_manifest())
+        for line in check_access(os.environ.get(TOKEN_ENV), artifacts):
+            print(line)
+    except CertifiedDataAccessError as error:
+        print(f"::error::{error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

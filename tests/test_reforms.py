@@ -1,15 +1,7 @@
 """Tests for reform definitions."""
 
-import os
-
 import pytest
 from policyengine_uk.system import system
-
-# Skip tests that require HuggingFace token (for microsimulation data)
-requires_hf_token = pytest.mark.skipif(
-    not os.environ.get("HUGGING_FACE_TOKEN"),
-    reason="Requires HUGGING_FACE_TOKEN for microsimulation data",
-)
 
 
 class TestPreAutumnBudgetBaseline:
@@ -262,7 +254,7 @@ class TestDividendTaxIncrease:
         # Reform parameter_changes is empty (uses new rates from policyengine-uk)
         assert reform.parameter_changes == {}
 
-    @requires_hf_token
+    @pytest.mark.certified_data
     def test_baseline_modifier_sets_pre_budget_rates(self):
         """Baseline simulation modifier correctly sets pre-budget rates."""
         from uk_budget_data.pipeline import build_microsimulation
