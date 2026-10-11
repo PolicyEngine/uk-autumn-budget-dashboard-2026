@@ -192,6 +192,82 @@ def test_configured_baseline_is_recorded(world):
     assert document["execution_receipt"]["baseline"]["kind"] == "reform"
 
 
+HIGHER_RATE_PATH = "gov.hmrc.income_tax.rates.uk[1].rate"
+
+
+def test_a_combined_set_is_one_artifact_bound_to_its_members(world):
+    alpha = reform("alpha")
+    beta = Reform(
+        id="beta",
+        name="Beta",
+        parameter_changes={HIGHER_RATE_PATH: {str(y): 0.41 for y in YEARS}},
+    )
+    key = "combined--alpha+beta"
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "beta": {2027: -0.5, 2028: -0.6},
+        key: {2027: -1.4, 2028: -2.5},
+    }
+    report = generate_artifacts(
+        [alpha, beta],
+        DataConfig(years=YEARS),
+        combined_sets=[[beta, alpha]],
+        artifacts_root=world.artifacts,
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process(values),
+    )
+    assert report.refused == {}
+    assert [r.key for r in report.written] == ["alpha", "beta", key]
+    document = read_receipt(report.written[2].path)
+    receipt = document["execution_receipt"]
+    assert receipt["reform"]["representation"] == (
+        "policyengine-uk.scenario_composition/v1"
+    )
+    assert receipt["baseline"]["kind"] == "current_law"
+    assert document["dashboard"]["measure_ids"] == ["alpha", "beta"]
+    members = document["dashboard"]["members"]
+    assert [member["id"] for member in members] == ["alpha", "beta"]
+    standalone = read_receipt(report.written[0].path)["execution_receipt"]
+    assert members[0]["reform"]["reform_sha256"] == (
+        standalone["reform"]["reform_sha256"]
+    )
+
+    # The whole flow: members approved, then the combined run.
+    manifest = m.Manifest()
+    arguments = dict(data_root=world.data_root, inputs=world.inputs)
+    for reference in report.written[:2]:
+        world.costing(reference.key, values[reference.key])
+        world.reconcile(reference)
+        stage(manifest, reference.path, **arguments)
+        approve(manifest, reference.key, "María", **arguments)
+    stage(manifest, report.written[2].path, **arguments)
+    approve(manifest, key, "María", **arguments)
+    assert manifest.combined[key].status == m.APPROVED
+    assert check(manifest, **arguments) == []
+
+
+def test_conflicting_members_are_refused_before_simulating(world):
+    built = []
+
+    def build(dataset, scenario=None):
+        built.append(scenario)
+        return world.sim()
+
+    report = generate_artifacts(
+        [],
+        DataConfig(years=YEARS),
+        combined_sets=[[reform("alpha", 0.21), reform("beta", 0.22)]],
+        artifacts_root=world.artifacts,
+        generator_argv=["test"],
+        build=build,
+        process=fake_process({}),
+    )
+    assert report.written == []
+    assert "combined--alpha+beta" in report.refused
+    assert built == []
+
+
 # --- the publish commands -------------------------------------------------
 
 
