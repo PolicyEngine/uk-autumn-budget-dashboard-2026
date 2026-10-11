@@ -56,10 +56,12 @@ addopts = "-v --tb=short"
 [tool.black]
 line-length = 79
 target-version = ["py313"]
+extend-exclude = "src/uk_budget_data/publication/_vendor_w4"
 
 [tool.ruff]
 line-length = 79
 target-version = "py313"
+extend-exclude = ["src/uk_budget_data/publication/_vendor_w4"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
