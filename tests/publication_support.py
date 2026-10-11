@@ -21,6 +21,10 @@ from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication.artifacts import write_artifact
 from uk_budget_data.publication.reconcile import reconcile_artifact
+from uk_budget_data.publication.tables import (
+    SCATTER_SAMPLE_PER_MILLE,
+    in_scatter_sample,
+)
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
 BASIS = {
@@ -34,6 +38,14 @@ SOURCE_HEADER = (
     "source_id,document,table,row_id,row_label,fiscal_year,value_bn,basis,"
     "sign_convention,head,notes\n"
 )
+
+
+# Household ids that fall in the published scatter sample.
+SAMPLED_HOUSEHOLDS = [
+    household
+    for household in range(1, 5000)
+    if in_scatter_sample(household, SCATTER_SAMPLE_PER_MILLE)
+][:3]
 
 
 def module_level_modifier(sim, rate=0.21):
@@ -87,7 +99,7 @@ def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
                     "reform_net_income": income * 0.7 + value,
                 }
             )
-        for household in (56, 172, 311):
+        for household in SAMPLED_HOUSEHOLDS:
             tables["household_scatter"].append(
                 {
                     **base,

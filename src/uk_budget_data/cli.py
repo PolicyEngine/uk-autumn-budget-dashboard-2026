@@ -14,6 +14,12 @@ from uk_budget_data.lifetime_impact import (
 )
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import generate_all_data
+from uk_budget_data.publication.commands import (
+    add_generate_arguments,
+    add_publish_parser,
+    run_generate_artifacts,
+    run_publish,
+)
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
     get_reform,
@@ -99,6 +105,9 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         action="store_true",
         help="Skip checking for input files",
     )
+
+    add_generate_arguments(generate_parser)
+    add_publish_parser(subparsers)
 
     # Lifetime impact command
     lifetime_parser = subparsers.add_parser(
@@ -268,6 +277,12 @@ def run_generate(parsed: argparse.Namespace) -> int:
     console.print(f"Reforms: {len(reforms)}")
     console.print()
 
+    # Receipted artifacts: one write-once directory per measure, and one
+    # per combined set. --combined alone generates only the combined runs.
+    if parsed.artifacts or parsed.combined:
+        standalone = reforms if (parsed.reforms or not parsed.combined) else []
+        return run_generate_artifacts(parsed, config, standalone, get_reform)
+
     # Run pipeline
     try:
         generate_all_data(
@@ -347,6 +362,8 @@ def main(args: list[str] = None) -> int:
         return run_generate(parsed)
     elif parsed.command == "lifetime":
         return run_lifetime(parsed)
+    elif parsed.command == "publish":
+        return run_publish(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -355,6 +372,9 @@ def main(args: list[str] = None) -> int:
             "  generate  - Generate dashboard data from microsimulation"
         )
         console.print("  lifetime  - Calculate lifetime impact on a graduate")
+        console.print(
+            "  publish   - Reconcile, stage, approve and check publications"
+        )
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."
         )
