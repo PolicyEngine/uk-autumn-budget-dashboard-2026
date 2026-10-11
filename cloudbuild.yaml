@@ -1,6 +1,12 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/uk-budget-api-2026', '.']
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'GIT_SHA=$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/uk-budget-api-2026'
+      - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/uk-budget-api-2026']
