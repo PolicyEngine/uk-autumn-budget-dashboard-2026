@@ -1,0 +1,7 @@
+reform_id,reform_name,year,baseline_income,income_change,household_weight,household_id
+combined--alpha+beta,Combined--Alpha+Beta,2030,20004.0,-2.75,1000.0,4
+combined--alpha+beta,Combined--Alpha+Beta,2030,20034.0,-2.75,1000.0,34
+combined--alpha+beta,Combined--Alpha+Beta,2030,20099.0,-2.75,1000.0,99
+combined--alpha+beta,Combined--Alpha+Beta,2031,20004.0,-3.0,1000.0,4
+combined--alpha+beta,Combined--Alpha+Beta,2031,20034.0,-3.0,1000.0,34
+combined--alpha+beta,Combined--Alpha+Beta,2031,20099.0,-3.0,1000.0,99

@@ -1,0 +1,125 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      },
+      "forecast": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      }
+    },
+    "config_baseline": null,
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "digests": {
+      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "outputs_sha256": "3f3c8d65b1a02e135a47c8c8d7c42ab8d4e5f26ce81b7eb688727366aa39d0f8",
+      "receipt_sha256": "81c03f5304561a686f411266fe3e32f9f49e2eb09d2b60befd18a15a4c5dfdce"
+    },
+    "files": {
+      "budgetary_impact.csv": "80d5826957bfa018e1aa0168089792acaeebfa188d45594f73fe0def362518e1",
+      "distributional_impact.csv": "092553312b5052e5205470191a09e7d87aebdca34ab2b011c332609636f07e89",
+      "household_scatter.csv": "c11f7f47fb4383c6f44475de8f59fdd0d99a459aae09678f1024537da01dc850",
+      "income_curve.csv": "1caa6397175f671b6d1447127c488eb7c3cc466cf5baa6d5d135e26cc2392b76",
+      "metrics.csv": "fb97b7f019e21ec5fae20628d2fd207910d2fe8b45e21eb0454f84b06e3d3fa2",
+      "winners_losers.csv": "be960fdb277f370a52e03a7fadf8359371d7740e6e518c16483fa06fbc609a8f"
+    },
+    "generated_at": "2026-10-11T23:56:29.315508+00:00",
+    "generator_argv": [
+      "test"
+    ],
+    "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "key": "beta",
+    "measure_ids": [
+      "beta"
+    ],
+    "members": null,
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "vendored-w4-pr579@712c36a",
+    "tree_clean": true,
+    "unsupported_years": [
+      2031
+    ]
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "beta baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.2.6",
+      "certificate_sha256": "95ba582ab99aa58e11709a3f0def976a9bf0ae9bb5139ec13bb70275b05ca10d",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "certified_for_core_version": "3.33.0",
+      "certified_for_model_version": "2.125.1",
+      "compatibility_basis": "legacy_compatible_model_package",
+      "country_id": "uk"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.0"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_fingerprint": "sha256:c094d7006fdd81df220090284212f16bbffb15624643bc442c4bb3e1b1e5dac8",
+      "build_id": "policyengine-uk-data-1.58.0",
+      "build_model_version": "2.122.2",
+      "data_package": "policyengine-uk-data",
+      "dataset": "enhanced_frs_2024_25",
+      "dataset_revision": "1.58.0",
+      "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "dataset_uri": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.58.0",
+      "release_manifest_revision": "fdeba38517bd86067f34c0a5d8ed8923efb3b10a",
+      "release_version": "1.58.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.125.1"
+    },
+    "outputs_sha256": "3f3c8d65b1a02e135a47c8c8d7c42ab8d4e5f26ce81b7eb688727366aa39d0f8",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "beta",
+      "reform_sha256": "2d8f8cb5e8af901724e39b39806d68c0f0751a45a20c3ebd6b4b0a8a8524f6bc",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.2.6"
+    },
+    "years": [
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

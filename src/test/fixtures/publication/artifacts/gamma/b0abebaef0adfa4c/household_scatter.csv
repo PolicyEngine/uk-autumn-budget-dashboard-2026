@@ -1,0 +1,7 @@
+reform_id,reform_name,year,baseline_income,income_change,household_weight,household_id
+gamma,Gamma,2030,20004.0,0.5,1000.0,4
+gamma,Gamma,2030,20034.0,0.5,1000.0,34
+gamma,Gamma,2030,20099.0,0.5,1000.0,99
+gamma,Gamma,2031,20004.0,0.6,1000.0,4
+gamma,Gamma,2031,20034.0,0.6,1000.0,34
+gamma,Gamma,2031,20099.0,0.6,1000.0,99

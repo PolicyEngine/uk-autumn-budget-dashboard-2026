@@ -1,0 +1,63 @@
+{
+  "measure_id": "alpha",
+  "outputs_sha256": "cfc50a7c1407acfa3011dcb7b596188871b6e76622c8a97cab6b5c679958698a",
+  "policy": {
+    "absolute_floor_bn": 0.05,
+    "comparator_basis": "static_costing",
+    "min_response_bn": 0.001,
+    "min_response_share": 0.05,
+    "relative_tolerance": 0.1,
+    "zero_tolerance_bn": 0.0025
+  },
+  "responsiveness": {
+    "rows": [
+      {
+        "expectation_from": "treasury",
+        "expected_direction": "negative",
+        "minimum_bn": 0.05500000000000001,
+        "pe_bn": -1.1,
+        "status": "responsive",
+        "year": 2030
+      }
+    ],
+    "status": "responsive"
+  },
+  "rows": [
+    {
+      "allowance_bn": 0.11000000000000001,
+      "comparator": {
+        "basis": "static_costing",
+        "rows": [
+          {
+            "fiscal_year": "2030-31",
+            "row_id": "alpha",
+            "scale": 1.0,
+            "source_id": "S",
+            "value_bn": -1.1
+          }
+        ],
+        "value_bn": -1.1
+      },
+      "fiscal_year": "2030-31",
+      "pe_bn": -1.1,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2030
+    },
+    {
+      "fiscal_year": "2031-32",
+      "pe_bn": -1.3,
+      "reason": "Beyond the dataset's projected years",
+      "status": "unsupported",
+      "year": 2031
+    }
+  ],
+  "schema": "uk-budget-dashboard/reconciliation/v1",
+  "summary": {
+    "status": "pass",
+    "years": {
+      "pass": 1,
+      "unsupported": 1
+    }
+  }
+}
