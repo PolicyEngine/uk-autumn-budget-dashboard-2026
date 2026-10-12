@@ -21,8 +21,9 @@ allowance in both the household ``Simulation`` and ``Microsimulation``.
 Rule, per person and model year 2027-2031 (FY 2027-28 to 2031-32):
 
     native    = engine Personal Allowance (incl. its £100k taper, ceil'd)
-    excess    = max(0, state_pension - native)      if is_SP_age, else 0
-    withdrawn = PROVISIONAL_TAPER_RATE x max(0, ANI - £30,000)
+    sp_round  = state_pension rounded UP to the next £10 (Annex A)
+    excess    = max(0, sp_round - native)           if is_SP_age, else 0
+    withdrawn = TAPER_RATE (0.5, Annex A) x max(0, ANI - £30,000)
     allowance = ceil(native + max(0, excess - withdrawn))
 
 The withdrawal only ever removes the excess; the allowance never falls below
@@ -40,6 +41,7 @@ from policyengine_uk.variables.gov.hmrc.income_tax.allowances.personal_allowance
 
 from uk_budget_data.mock_drill2_structural import _ensure_formula_runs
 from uk_budget_data.models import Reform
+from uk_budget_data.reforms import BASIC_SP_PATH, MOCK2_NATIVE_SP_2026, NEW_SP_PATH
 
 MOCK3_PENSIONER_ALLOWANCE_ID = "mock3_pensioner_allowance"
 
@@ -50,9 +52,36 @@ PENSIONER_ALLOWANCE_LAST_YEAR = 2031
 # Statement: "withdrawn gradually from pensioners with incomes above
 # £30,000". Treated as a cash-fixed threshold on adjusted net income.
 PENSIONER_ALLOWANCE_TAPER_THRESHOLD = 30_000
-# PROVISIONAL: the statement gives no withdrawal rate. £1 for every £2 (50%),
-# as for the Personal Allowance taper. Replace from Annex A (13:40).
-PROVISIONAL_TAPER_RATE = 0.5
+# Annex A (costing 2) confirms £1 for every £2 of ANI above £30,000.
+TAPER_RATE = 0.5
+# Annex A: State Pension rounded UP to the next £10.
+ALLOWANCE_ROUNDING = 10
+# Annex A new State Pension weekly rates, pinned in BOTH scenarios. Basic SP
+# moves by the same ratio (drill 2 _mock2_sp_paths pattern, without its
+# Pension Credit pin).
+MOCK3_ANNEX_A_NEW_SP = {
+    2026: 241.30,
+    2027: 250.70,
+    2028: 259.45,
+    2029: 268.00,
+    2030: 276.60,
+    2031: 285.15,
+}
+PA_PATH = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
+# Annex A baseline PA 2031-32 (engine native is ~£12,822); pinned in both
+# scenarios of this measure only.
+MOCK3_ANNEX_A_PA_2031 = 12_830
+
+
+def _mock3_pinned_paths() -> dict[str, dict[str, float]]:
+    basic_ratio = MOCK2_NATIVE_SP_2026["basic"] / MOCK2_NATIVE_SP_2026["new"]
+    return {
+        NEW_SP_PATH: {str(y): v for y, v in MOCK3_ANNEX_A_NEW_SP.items()},
+        BASIC_SP_PATH: {
+            str(y): v * basic_ratio for y, v in MOCK3_ANNEX_A_NEW_SP.items()
+        },
+        PA_PATH: {"2031": MOCK3_ANNEX_A_PA_2031},
+    }
 
 
 class personal_allowance(Variable):
@@ -74,9 +103,12 @@ class personal_allowance(Variable):
         ):
             return native
         state_pension = person("state_pension", period)
+        allowance_from_sp = (
+            np.ceil(state_pension / ALLOWANCE_ROUNDING) * ALLOWANCE_ROUNDING
+        )
         excess = where(
             person("is_SP_age", period),
-            max_(0, state_pension - native),
+            max_(0, allowance_from_sp - native),
             0,
         )
         ani_for_taper = person("adjusted_net_income", period) - person(
@@ -84,10 +116,9 @@ class personal_allowance(Variable):
         )
         withdrawn = (
             max_(0, ani_for_taper - PENSIONER_ALLOWANCE_TAPER_THRESHOLD)
-            * PROVISIONAL_TAPER_RATE
+            * TAPER_RATE
         )
-        # ceil (as the engine rounds the PA) so an allowance "equal to" a
-        # pence-valued State Pension never leaves pennies taxable.
+        # ceil (as the engine rounds the PA) on the tapered result.
         return np.ceil(native + max_(0, excess - withdrawn))
 
 
@@ -108,12 +139,15 @@ def _create_mock3_pensioner_allowance() -> Reform:
         name="Pensioner Allowance",
         description=(
             "MOCK. From April 2027 people over State Pension age get a "
-            "Pensioner Allowance equal to their State Pension where that is "
+            "Pensioner Allowance equal to their State Pension rounded up to "
+            "the next £10 where that is "
             "higher than the Personal Allowance, so nobody whose only income "
             "is the State Pension pays income tax on it. The extra allowance "
             "is withdrawn at £1 for every £2 of adjusted net income above "
-            f"£{PENSIONER_ALLOWANCE_TAPER_THRESHOLD:,} (provisional rate) and "
+            f"£{PENSIONER_ALLOWANCE_TAPER_THRESHOLD:,} and "
             "never falls below the Personal Allowance. Applies UK-wide."
         ),
+        baseline_parameter_changes=_mock3_pinned_paths(),
+        parameter_changes=_mock3_pinned_paths(),
         simulation_modifier=_pensioner_allowance_modifier,
     )

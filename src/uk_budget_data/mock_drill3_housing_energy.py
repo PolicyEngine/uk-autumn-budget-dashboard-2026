@@ -55,6 +55,14 @@ MOCK3_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
 # national maximum, anomalous-rate rule and March 2020 minimum. Annual
 # redetermination is the engine's reading of "kept there each year".
 #
+# OPEN (Annex A, 13:40, not yet rebased): Annex A says the baseline is frozen
+# at April 2025 levels, CGM 2-bed (category C) = £1,000.00/month, and costing
+# 8 gives the April 2027 reform rate as £1,095.00/month. The engine gives
+# CGM C 2027: baseline £875.00 (April 2024 determination), reform £1,079.67.
+# Baseline gap -£125.00, reform gap -£15.33; Annex A UC change for a capped
+# 2-bed renter = £1,140/yr vs engine £2,456.04/yr. Needs a baseline/reform
+# rate override; not done.
+#
 # Northern Ireland: the parameter is UK-wide (NIHE determinations sit in the
 # same table), so unfreezing alone would also raise NI rates. The statement
 # says Great Britain only, so the modifier below holds NI benefit units at
@@ -205,8 +213,9 @@ def _create_mock3_lha_30th_percentile() -> Reform:
 #     credit, which applies PC take-up);
 #   core group 2 proxy: any qualifying means-tested benefit received
 #     (> 0 annual amount): Universal Credit, income-related ESA, income-based
-#     JSA, Income Support, Housing Benefit, Child Tax Credit, Working Tax
-#     Credit. Any further scheme tests (e.g. the energy-cost test, removed
+#     JSA, Housing Benefit, or Pension Credit (any element) -- the Annex A
+#     (costing 3) list; Child Tax Credit, Working Tax Credit and Income
+#     Support are excluded. Any further scheme tests (e.g. the energy-cost test, removed
 #     in the 2025-26 expansion) are not modelled; caseload check is open.
 # One £100 per household however many benefit units qualify. Engine years
 # 2026 (FY 2026-27, winter 2026-27) and 2027 (winter 2027-28). Scotland and
@@ -221,11 +230,9 @@ MOCK3_WHD_QUALIFYING_BENEFITS = (
     "universal_credit",
     "esa_income",
     "jsa_income",
-    "income_support",
     "housing_benefit",
-    "child_tax_credit",
-    "working_tax_credit",
-)
+    "pension_credit",  # Annex A: Pension Credit (any element)
+)  # Annex A costing 3: CTC, WTC and Income Support removed
 MOCK3_WHD_STATEMENT_CASELOAD = 5_400_000  # households; check open
 
 
@@ -236,7 +243,7 @@ class mock3_whd_top_up_eligible(Variable):
     definition_period = YEAR
 
     def formula(benunit, period, parameters):
-        eligible = benunit("in_receipt_of_guarantee_credit", period)
+        eligible = benunit("in_receipt_of_guarantee_credit", period) > 0
         for benefit in MOCK3_WHD_QUALIFYING_BENEFITS:
             eligible = eligible | (benunit(benefit, period) > 0)
         return eligible

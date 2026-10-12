@@ -20,9 +20,11 @@ by the previous calendar year's growth in
 nearest 0.01p. ``MOCK3_FUEL_REFORM_SCHEDULE`` holds the literal results;
 ``_engine_rpi_steps`` recomputes them and a test checks they agree.
 
-Swapping in Annex A (13:40): set ``MOCK3_FUEL_BASELINE_SCHEDULE`` to a dated
-tuple (it is ``None`` = engine native now) and/or replace
-``MOCK3_FUEL_REFORM_SCHEDULE``. Nothing else needs editing.
+Annex A (13:40) applied: ``MOCK3_FUEL_BASELINE_SCHEDULE`` is Annex A's
+published baseline (59.92p Apr 2027 ... 67.18p Apr 2031) and
+``MOCK3_FUEL_REFORM_SCHEDULE`` holds costing 9's published values (59.75p
+Apr 2028 ... 64.97p Apr 2031), replacing the RPI-derived literals.
+``_engine_rpi_steps`` is retained for reference only.
 
 Basis: both scenarios carry explicit full-calendar-month rates for every
 month of every policy year (2026-2031), so model-year totals are CALENDAR
@@ -57,22 +59,26 @@ MOCK3_PUMP_VAT_RATE = 0.20
 
 # Baseline dated steps (date, £/litre). None = the engine's native schedule.
 # Annex A may replace this with an explicit tuple.
-MOCK3_FUEL_BASELINE_SCHEDULE = None
+MOCK3_FUEL_BASELINE_SCHEDULE = (
+    ("2022-03-23", 0.5295),
+    ("2027-01-01", 0.5595),
+    ("2027-03-01", 0.5795),
+    ("2027-04-01", 0.5992),
+    ("2028-04-01", 0.6178),
+    ("2029-04-01", 0.6357),
+    ("2030-04-01", 0.6535),
+    ("2031-04-01", 0.6718),
+)  # Annex A published baseline schedule
 
-# Reform dated steps (date, £/litre). 2028-2031 April steps are the engine's
-# RPI method applied to 57.95p (see _engine_rpi_steps):
-#   2028: 0.5795 x 1.030 = 0.596885 -> 0.5969
-#   2029: 0.5969 x 1.028 = 0.6136132 -> 0.6136
-#   2030: 0.6136 x 1.029 = 0.6313944 -> 0.6314
-#   2031: 0.6314 x 1.023 = 0.6459222 -> 0.6459
+# Reform dated steps (date, £/litre): Annex A costing 9 published values.
 MOCK3_FUEL_REFORM_SCHEDULE = (
     ("2022-03-23", 0.5295),
     ("2027-04-01", 0.5595),
     ("2027-10-01", 0.5795),
-    ("2028-04-01", 0.5969),
-    ("2029-04-01", 0.6136),
-    ("2030-04-01", 0.6314),
-    ("2031-04-01", 0.6459),
+    ("2028-04-01", 0.5975),
+    ("2029-04-01", 0.6148),
+    ("2030-04-01", 0.6320),
+    ("2031-04-01", 0.6497),
 )
 MOCK3_RPI_BASE_DATE = "2027-10-01"  # 57.95p, the rate RPI uprating starts from
 MOCK3_RPI_FIRST_YEAR = 2028
@@ -161,6 +167,23 @@ def _mock3_fuel_pump_vat_modifier(sim: Simulation) -> Simulation:
     return sim
 
 
+def mock3_fuel_household_fiscal_change(litres: float, fiscal_year: int) -> float:
+    """VAT-inclusive change at the pump (£) for fiscal year starting April
+    ``fiscal_year``, litres spread evenly across months.
+
+    Sum of monthly (baseline - reform) duty gaps x litres/12 x 1.2.
+    Positive = household saves.
+    """
+    months = [(fiscal_year, m) for m in range(4, 13)] + [
+        (fiscal_year + 1, m) for m in range(1, 4)
+    ]
+    gap = sum(
+        _mock3_fuel_baseline_rate(y, m) - _mock3_fuel_reform_rate(y, m)
+        for y, m in months
+    )
+    return gap * litres / 12 * (1 + MOCK3_PUMP_VAT_RATE)
+
+
 def _create_mock3_fuel_duty_phasing() -> Reform:
     """Mock 3 measure 1: phase the January and March 2027 fuel duty rises.
 
@@ -177,9 +200,9 @@ def _create_mock3_fuel_duty_phasing() -> Reform:
             "1 March 2027 (to 57.95p) do not happen then: main rates stay at "
             "52.95p per litre until 31 March 2027, rise to 55.95p on 1 April "
             "2027 and to 57.95p on 1 October 2027, and RPI uprating resumes "
-            "in April 2028. Baseline: the engine's native schedule (55.95p "
-            "Jan 2027, 57.95p Mar 2027, 59.75p Apr 2027, then RPI each "
-            "April). Calendar-year basis; includes 20% VAT on the duty change."
+            "in April 2028. Baseline: Annex A (55.95p "
+            "Jan 2027, 57.95p Mar 2027, 59.92p Apr 2027, then 61.78p, "
+            "63.57p, 65.35p, 67.18p each April 2028-2031). Calendar-year basis; includes 20% VAT on the duty change."
         ),
         baseline_parameter_changes={
             FUEL_DUTY_PATH: _mock3_fuel_schedule(_mock3_fuel_baseline_rate)
