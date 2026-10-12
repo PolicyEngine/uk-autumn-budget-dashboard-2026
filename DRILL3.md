@@ -40,7 +40,7 @@ The real Budget is on **Wednesday 28 October 2026**. Drill 1 is [PR #4](https://
 |---|---|---|
 | **Integrator** (Vahid) | The drill branch, every commit, data regeneration, preview deploys, re-basing, the clock table | Score households, or see the packet before release |
 | **Reconciler, then scorer** (María) | G1 ledger, the reconciliation, the national scoring sheet, then the household scoring sheet (one SHA per run) | Push code |
-| **Independent key holder — UNCONFIRMED (Friday blocker)** | Releases the answer key at 16:00 | Take part in the drill |
+| **Key holder: Claude Code on Vahid's machine** (`~/drill3-sealed/sealed_v2/`, confirmed 12 Oct) | Releases the answer key at 16:00: commits the three keys to the packet folder and posts the hashes on PR #9 | Take part in scoring. Vahid does not open the sealed folder before 16:00 |
 
 ## Gates
 
@@ -110,7 +110,7 @@ Friday setup remains **unconfirmed** until the participants fill every required 
 
 | Required evidence | Owner | Record / acceptance |
 |---|---|---|
-| Independent key holder (full name and contact) | key holder | **UNCONFIRMED — supply a nonparticipant before Friday sign-off** |
+| Key holder | key holder | **Confirmed 12 Oct:** Claude Code on Vahid's machine holds `sealed_v2/` and releases it at 16:00. Not fully independent, because it runs on the integrator's machine; Vahid has not opened the sealed folder, and the release is logged with hashes on PR #9 |
 | Custody of all three sealed keys; published hashes match; two generator runs agree; independent household recalculation agrees to ±1p; correction versions and row inventories checked | key holder | **UNCONFIRMED**; spoiler-free attestation, time and receipt |
 | Exact 16:00 BST delivery route and recipient | key holder, María | **UNCONFIRMED**; private attachment route; verify hashes on receipt |
 | Chosen model/core and dataset name/SHA-256; certification receipt or explicit unvalidated-publication plan | Vahid, María | **Chosen 12 Oct 09:30:** policyengine.py 6.2.7, policyengine-uk 2.125.1, core 3.33.0 (latest). Dataset: latest released Microcosm national file `microcosm_uk_2024_25.h5`, SHA-256 `aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af` (HF revision `9d4a76ba`, release `microcosm-uk-2024-25-national`, built under UK 2.100.0; no newer national release exists). Not a certified pair, so every national figure is labelled **unvalidated under this engine**. `verify_runtime` and `verify_dataset` pass |
