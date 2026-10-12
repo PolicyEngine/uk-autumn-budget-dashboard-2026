@@ -3,7 +3,6 @@
 PYTEST_DONT_REWRITE: receipt binding verifies this module's original bytecode.
 """
 
-import calendar
 import subprocess
 
 import numpy as np
@@ -19,7 +18,6 @@ from uk_budget_data.measure_templates import (
     apply_benefit_receipt_payment,
     apply_property_band_surcharge,
     apply_vat_base_change,
-    monthly_schedule,
     nearest_5p_weekly,
     pension_uprating,
     rate_change,
@@ -31,15 +29,6 @@ FUEL_PATH = "gov.hmrc.fuel_duty.petrol_and_diesel"
 ALLOWANCE_PATH = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 NEW_PENSION_PATH = "gov.dwp.state_pension.new_state_pension.amount"
 BASIC_PENSION_PATH = "gov.dwp.state_pension.basic_state_pension.amount"
-
-
-def _month_range(year, month):
-    last = calendar.monthrange(year, month)[1]
-    return f"{year}-{month:02d}-01.{year}-{month:02d}-{last:02d}"
-
-
-def _monthly_values(year=2028, amount=0.6):
-    return {_month_range(year, month): amount for month in range(1, 13)}
 
 
 @pytest.mark.parametrize("builder", [rate_change, threshold_change])
@@ -114,40 +103,6 @@ def test_parameter_builders_accept_native_scale_bracket_paths():
     }
 
 
-def test_monthly_schedule_returns_explicit_baseline_and_reform():
-    baseline = _monthly_values(amount=0.6)
-    reform = _monthly_values(amount=0.5)
-    pieces = monthly_schedule(FUEL_PATH, baseline, reform)
-    assert pieces == {
-        "baseline_parameter_changes": {FUEL_PATH: baseline},
-        "parameter_changes": {FUEL_PATH: reform},
-    }
-    assert "2028-02-01.2028-02-29" in pieces["parameter_changes"][FUEL_PATH]
-    policy = Reform(
-        id="synthetic_schedule", name="Synthetic schedule", **pieces
-    )
-    assert policy.to_baseline_scenario().parameter_changes == {
-        FUEL_PATH: baseline
-    }
-    assert policy.to_scenario().parameter_changes == {FUEL_PATH: reform}
-
-
-def test_native_parameter_changes_refuses_full_month_range_syntax():
-    # This is an engine limitation, requiring the dated scenario adapter.
-    policy = Reform(
-        id="synthetic_schedule",
-        name="Synthetic schedule",
-        **monthly_schedule(FUEL_PATH, _monthly_values(), _monthly_values()),
-    )
-    situation = {
-        "people": {"p": {"age": {2028: 40}}},
-        "benunits": {"b": {"members": ["p"]}},
-        "households": {"h": {"members": ["p"]}},
-    }
-    with pytest.raises(ValueError, match="Expected a period"):
-        Simulation(situation=situation, scenario=policy.to_scenario())
-
-
 def test_annual_parameter_builders_run_through_native_scenario():
     policy = Reform(
         id="synthetic_annual_values",
@@ -168,79 +123,6 @@ def test_annual_parameter_builders_run_through_native_scenario():
     parameter = sim.tax_benefit_system.parameters.gov.hmrc.fuel_duty
     assert parameter.petrol_and_diesel("2028") == pytest.approx(0.6)
     assert parameter.petrol_and_diesel("2029") == pytest.approx(0.7)
-
-
-@pytest.mark.parametrize("side", ["baseline", "reform"])
-@pytest.mark.parametrize(
-    "defect", ["gap", "overlap", "single_date", "partial"]
-)
-def test_monthly_schedule_refuses_incomplete_or_overlapping_covers(
-    side, defect
-):
-    baseline = _monthly_values()
-    reform = _monthly_values()
-    broken = baseline if side == "baseline" else reform
-    if defect == "gap":
-        broken.pop(_month_range(2028, 7))
-    elif defect == "overlap":
-        broken["2028-01-01.2028-02-29"] = 0.6
-    elif defect == "single_date":
-        broken["2028-04-01"] = broken.pop(_month_range(2028, 4))
-    else:
-        broken["2028-04-01.2028-04-29"] = broken.pop(_month_range(2028, 4))
-    with pytest.raises(ValueError):
-        monthly_schedule(FUEL_PATH, baseline, reform)
-
-
-def test_monthly_schedule_requires_the_same_years_on_both_sides():
-    with pytest.raises(ValueError, match="same years"):
-        monthly_schedule(
-            FUEL_PATH, _monthly_values(2028), _monthly_values(2029)
-        )
-
-
-def test_monthly_schedule_refuses_a_missing_whole_year():
-    months = {**_monthly_values(2027), **_monthly_values(2029)}
-    with pytest.raises(ValueError, match="consecutive years"):
-        monthly_schedule(FUEL_PATH, months, months)
-
-
-@given(st.sets(st.integers(1, 12), min_size=0, max_size=12))
-@settings(max_examples=30, deadline=None)
-def test_monthly_schedule_accepts_exactly_complete_month_covers(months):
-    values = {_month_range(2028, month): 0.6 for month in months}
-    if months == set(range(1, 13)):
-        assert len(monthly_schedule(FUEL_PATH, values, values)) == 2
-    else:
-        with pytest.raises(ValueError, match="12 months"):
-            monthly_schedule(FUEL_PATH, values, values)
-
-
-@given(
-    year=st.integers(2026, 2031),
-    month=st.integers(1, 12),
-    side=st.sampled_from(["baseline", "reform"]),
-    cross_month=st.booleans(),
-)
-@settings(max_examples=30, deadline=None)
-def test_monthly_schedule_refuses_random_overlapping_ranges(
-    year, month, side, cross_month
-):
-    baseline = _monthly_values(year)
-    reform = _monthly_values(year)
-    broken = baseline if side == "baseline" else reform
-    if cross_month:
-        next_year = year + (month == 12)
-        end = _month_range(next_year, month % 12 + 1).split(".")[1]
-        start_day = 1
-    else:
-        end = _month_range(year, month).split(".")[1]
-        start_day = 2
-    # This extra range overlaps an existing month, either within that
-    # month or across its boundary. Neither side may contain the overlap.
-    broken[f"{year}-{month:02d}-{start_day:02d}.{end}"] = 0.6
-    with pytest.raises(ValueError):
-        monthly_schedule(FUEL_PATH, baseline, reform)
 
 
 def test_uprating_chain_on_explicit_path():

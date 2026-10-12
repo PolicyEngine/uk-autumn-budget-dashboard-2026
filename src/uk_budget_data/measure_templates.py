@@ -3,13 +3,15 @@
 Parameter builders return content-bound dictionaries for ``Reform``. Runtime
 helpers must be called from module-level modifiers with finite JSON defaults:
 execution receipts cannot bind closure factories or partially applied helpers.
+
+There is no ``monthly_schedule`` helper: monthly policies must be expressed
+as fiscal-year values, with the team choosing the aggregation methodology.
+Parameter builders refuse interval keys on the installed UK engine.
 """
 
-import calendar
 import math
 import re
 from collections.abc import Mapping
-from datetime import date
 from decimal import (
     ROUND_CEILING,
     ROUND_FLOOR,
@@ -87,73 +89,6 @@ def threshold_change(
     """Build explicit annual thresholds on an existing native parameter."""
     _validate_parameter_path(path)
     return {path: _annual_values(values)}
-
-
-def _full_months(values: Mapping, label: str) -> dict[str, float]:
-    if not isinstance(values, Mapping) or not values:
-        raise ValueError(f"{label} must cover all 12 months of each year")
-    result = {}
-    covered = {}
-    for period, value in values.items():
-        if not isinstance(period, str) or not re.fullmatch(
-            r"\d{4}-\d{2}-\d{2}\.\d{4}-\d{2}-\d{2}", period
-        ):
-            raise ValueError(f"{label} requires explicit full-month ranges")
-        try:
-            start, end = (
-                date.fromisoformat(part) for part in period.split(".")
-            )
-        except ValueError as exc:
-            raise ValueError(f"Invalid full-month range: {period}") from exc
-        expected_end = date(
-            start.year,
-            start.month,
-            calendar.monthrange(start.year, start.month)[1],
-        )
-        if start.day != 1 or end != expected_end:
-            raise ValueError(
-                f"Range must cover exactly one full month: {period}"
-            )
-        months = covered.setdefault(start.year, set())
-        if start.month in months:
-            raise ValueError(f"Overlapping month in {label}: {period}")
-        months.add(start.month)
-        result[period] = float(_finite_decimal(value, f"Value for {period}"))
-    if any(months != set(range(1, 13)) for months in covered.values()):
-        raise ValueError(f"{label} must cover all 12 months without gaps")
-    years = sorted(covered)
-    if years != list(range(years[0], years[-1] + 1)):
-        raise ValueError(f"{label} must cover consecutive years without gaps")
-    return dict(sorted(result.items()))
-
-
-def monthly_schedule(
-    path: str, baseline_months: Mapping, reform_months: Mapping
-) -> dict[str, dict[str, dict[str, float]]]:
-    """Return ``Reform`` kwargs with complete monthly schedules on both sides.
-
-    Each key is an inclusive ``YYYY-MM-01.YYYY-MM-<last>`` range. Both sides
-    must cover the same years, each with all twelve months. This avoids a
-    dated reform being compared with a different, implicit annual baseline.
-
-    The installed UK engine's direct ``parameter_changes`` route does not
-    parse these bounded ranges. Consumption requires the publication-core
-    dated scenario adapter; this builder neither patches a processed tree
-    nor substitutes an annual average for the supplied chronology.
-    """
-    _validate_parameter_path(path)
-    baseline = _full_months(baseline_months, "Baseline schedule")
-    reform = _full_months(reform_months, "Reform schedule")
-    if {period[:4] for period in baseline} != {
-        period[:4] for period in reform
-    }:
-        raise ValueError(
-            "Baseline and reform schedules must cover the same years"
-        )
-    return {
-        "baseline_parameter_changes": {path: baseline},
-        "parameter_changes": {path: reform},
-    }
 
 
 def allowance_uprating(
