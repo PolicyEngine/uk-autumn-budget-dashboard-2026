@@ -57,10 +57,13 @@ addopts = "-v --tb=short"
 [tool.black]
 line-length = 79
 target-version = ["py313"]
+# Keep the upstream receipt compatibility fixtures byte-for-byte unchanged.
+extend-exclude = "/tests/vendor/execution_receipt_v1/"
 
 [tool.ruff]
 line-length = 79
 target-version = "py313"
+extend-exclude = ["tests/vendor/execution_receipt_v1"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
