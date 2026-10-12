@@ -38,9 +38,7 @@ describe("parseCsv", () => {
           maxLength: 5,
         }),
         (grid) => {
-          const text = grid
-            .map((row) => row.map(quote).join(","))
-            .join("\r\n");
+          const text = grid.map((row) => row.map(quote).join(",")).join("\r\n");
           expect(parseCsv(text)).toEqual(grid);
         },
       ),
@@ -52,9 +50,9 @@ const header = TABLES.budgetary_impact.columns.map(([c]) => c).join(",");
 
 describe("parseTable", () => {
   it("types each column as the publication format declares", () => {
-    expect(parseTable("budgetary_impact", `${header}\nx,X,2030,-1.5\n`)).toEqual(
-      [{ reform_id: "x", reform_name: "X", year: 2030, value: -1.5 }],
-    );
+    expect(
+      parseTable("budgetary_impact", `${header}\nx,X,2030,-1.5\n`),
+    ).toEqual([{ reform_id: "x", reform_name: "X", year: 2030, value: -1.5 }]);
   });
 
   it("refuses a missing, non-numeric or non-finite number, never zero", () => {
@@ -95,7 +93,10 @@ describe("parseTable", () => {
         const table = Object.keys(TABLES).find(
           (name) => TABLES[name].file === file,
         );
-        const rows = parseTable(table, fixtureText(`${entry.artifact}/${file}`));
+        const rows = parseTable(
+          table,
+          fixtureText(`${entry.artifact}/${file}`),
+        );
         expect(rows.length).toBeGreaterThan(0);
       }
     }

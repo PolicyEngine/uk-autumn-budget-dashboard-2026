@@ -46,9 +46,7 @@ describe("selection on the fixture", () => {
       ["beta", "alpha"],
       ["beta", "alpha", "beta"],
     ]) {
-      expect(combinedEntryFor(manifest, ids)?.key).toBe(
-        "combined--alpha+beta",
-      );
+      expect(combinedEntryFor(manifest, ids)?.key).toBe("combined--alpha+beta");
     }
     expect(combinedEntryFor(manifest, ["alpha", "gamma"])).toBeNull();
     expect(combinedEntryFor(manifest, ["alpha"])).toMatchObject({
@@ -314,7 +312,9 @@ function build(world) {
       member_outputs_sha256: Object.fromEntries(
         members.map((id) => [
           id,
-          c.memberCurrent ? manifest.measures[id].outputs_sha256 : "f".repeat(64),
+          c.memberCurrent
+            ? manifest.measures[id].outputs_sha256
+            : "f".repeat(64),
         ]),
       ),
     };
@@ -347,7 +347,7 @@ function referenceTarget(manifest, selection) {
 
 function shuffledWithDuplicates(selection, seed) {
   const copy = [...selection, ...selection.slice(0, seed % 3)];
-  return copy.sort((x, y) => ((x + seed).localeCompare(y + seed)));
+  return copy.sort((x, y) => (x + seed).localeCompare(y + seed));
 }
 
 describe("selection properties", () => {
@@ -418,9 +418,7 @@ describe("selection properties", () => {
           fiscalSeries({ ...args, selectedIds: world.selection, years: YEARS }),
         );
         for (const year of YEARS) {
-          expect(
-            combinedStats({ ...args, selectedIds: other, year }),
-          ).toEqual(
+          expect(combinedStats({ ...args, selectedIds: other, year })).toEqual(
             combinedStats({ ...args, selectedIds: world.selection, year }),
           );
         }
@@ -454,9 +452,9 @@ describe("selection properties", () => {
             expect(value).not.toBe(0);
           }
           if (row.combined !== null) {
-            const published = world.tables[row.combinedKey].budgetary_impact.find(
-              (r) => r.year === row.year,
-            );
+            const published = world.tables[
+              row.combinedKey
+            ].budgetary_impact.find((r) => r.year === row.year);
             expect(published?.value).toBe(row.combined);
           } else {
             expect(row.combinedReason).not.toBe("");
@@ -485,9 +483,9 @@ describe("selection properties", () => {
           expect(row.interaction !== null).toBe(complete);
           if (complete) {
             const sum = parts.reduce((s, p) => s + p, 0);
-            expect(Math.abs(row.interaction - (row.combined - sum))).toBeLessThan(
-              1e-9,
-            );
+            expect(
+              Math.abs(row.interaction - (row.combined - sum)),
+            ).toBeLessThan(1e-9);
           }
         }
       }),
@@ -509,7 +507,10 @@ describe("the generator reaches the interesting cases", () => {
           selectedIds: world.selection,
           year,
         });
-        if (stats.status === "available" && stats.key.startsWith("combined--")) {
+        if (
+          stats.status === "available" &&
+          stats.key.startsWith("combined--")
+        ) {
           combinedAvailable += 1;
         }
       }

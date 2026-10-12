@@ -1,7 +1,0 @@
-reform_id,reform_name,year,baseline_income,income_change,household_weight,household_id
-alpha,Alpha,2030,20004.0,-1.1,1000.0,4
-alpha,Alpha,2030,20034.0,-1.1,1000.0,34
-alpha,Alpha,2030,20099.0,-1.1,1000.0,99
-alpha,Alpha,2031,20004.0,-1.3,1000.0,4
-alpha,Alpha,2031,20034.0,-1.3,1000.0,34
-alpha,Alpha,2031,20099.0,-1.3,1000.0,99

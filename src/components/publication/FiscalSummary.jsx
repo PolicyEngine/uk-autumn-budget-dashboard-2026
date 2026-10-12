@@ -34,7 +34,9 @@ function FiscalSummary({ series, ids, measureNames = {} }) {
         <p className="publication-provisional">{PROVISIONAL_LABEL}</p>
       )}
       <table>
-        <caption>Budgetary impact (£bn, positive improves the public finances)</caption>
+        <caption>
+          Budgetary impact (£bn, positive improves the public finances)
+        </caption>
         <thead>
           <tr>
             <th scope="col">Measure</th>

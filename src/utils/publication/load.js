@@ -23,6 +23,7 @@ export const DEFAULT_TABLES = [
   "distributional_impact",
   "winners_losers",
   "metrics",
+  "household_scatter_binned",
 ];
 
 function isAbort(error) {
@@ -45,7 +46,10 @@ async function fetchOk(fetchImpl, url, init) {
  * @returns {Promise<Object|null>} The manifest, or null when none is
  *   published yet (HTTP 404).
  */
-export async function loadManifest(basePath, { fetchImpl = fetch, signal } = {}) {
+export async function loadManifest(
+  basePath,
+  { fetchImpl = fetch, signal } = {},
+) {
   const url = `${basePath}/data/${MANIFEST_FILE}`;
   const response = await fetchImpl(url, { signal, cache: "no-cache" });
   if (response.status === 404) return null;

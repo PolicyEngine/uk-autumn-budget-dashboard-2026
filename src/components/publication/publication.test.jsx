@@ -127,3 +127,56 @@ describe("UnavailableNotice", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Not yet published");
   });
 });
+
+describe("BinnedHouseholdScatter", () => {
+  it("draws cells, not households, and says when it cannot", async () => {
+    const { default: BinnedHouseholdScatter, colourFor } =
+      await import("./BinnedHouseholdScatter");
+    const { container } = render(
+      <BinnedHouseholdScatter
+        series={{
+          status: "unavailable",
+          reason: "No combined run is published for this selection",
+        }}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No combined run is published for this selection",
+    );
+    expect(container.querySelector(".recharts-wrapper")).toBeNull();
+    expect(colourFor({ changeBand: -100 })).toBe("#D97706");
+    expect(colourFor({ changeBand: 0 })).toBe("#9CA3AF");
+    expect(colourFor({ changeBand: 100 })).toBe("#319795");
+  });
+
+  it("labels a provisional scatter and explains the groups", async () => {
+    const { default: BinnedHouseholdScatter } =
+      await import("./BinnedHouseholdScatter");
+    render(
+      <BinnedHouseholdScatter
+        series={{
+          status: "available",
+          key: "gamma",
+          provisional: true,
+          points: [
+            {
+              income: 22500,
+              change: 50,
+              households: 1000,
+              incomeBand: 20000,
+              changeBand: 0,
+            },
+          ],
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "Provisional: statement figures, awaiting Treasury costing",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Groups with fewer than 10 surveyed households/),
+    ).toBeInTheDocument();
+  });
+});

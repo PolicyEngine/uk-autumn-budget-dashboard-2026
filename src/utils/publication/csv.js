@@ -73,7 +73,9 @@ export function parseCsv(text) {
       index += 1;
     } else {
       if (cellWasQuoted) {
-        throw new TableError(`text after a closing quote at character ${index}`);
+        throw new TableError(
+          `text after a closing quote at character ${index}`,
+        );
       }
       cell += char;
     }

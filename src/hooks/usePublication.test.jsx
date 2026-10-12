@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { usePublication } from "./usePublication";
-import { BASE_PATH, fixtureFetch } from "../test/publicationFixture";
+import {
+  BASE_PATH,
+  fixtureFetch,
+  fixtureJson,
+} from "../test/publicationFixture";
+
+const manifest = fixtureJson("manifest.json");
+const receiptOf = (id) => `${manifest.measures[id].artifact}/receipt.json`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -44,7 +51,7 @@ describe("usePublication", () => {
   it("drops a slow response for a selection that is no longer current", async () => {
     let release;
     const gate = new Promise((resolve) => (release = resolve));
-    const alpha = "artifacts/alpha/f47e7d70e14db743/receipt.json";
+    const alpha = receiptOf("alpha");
     const fetchImpl = fixtureFetch({ delays: { [alpha]: gate } });
     vi.stubGlobal("fetch", fetchImpl);
     const { result, rerender } = renderHook(
@@ -64,7 +71,7 @@ describe("usePublication", () => {
   it("keeps the last complete selection while a new one loads", async () => {
     let release;
     const gate = new Promise((resolve) => (release = resolve));
-    const beta = "artifacts/beta/81c03f5304561a68/receipt.json";
+    const beta = receiptOf("beta");
     vi.stubGlobal("fetch", fixtureFetch({ delays: { [beta]: gate } }));
     const { result, rerender } = renderHook(
       ({ ids }) => usePublication(BASE_PATH, ids),

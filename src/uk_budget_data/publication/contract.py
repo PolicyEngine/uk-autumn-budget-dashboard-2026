@@ -19,7 +19,12 @@ import sys
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.receipt import receipt_api
-from uk_budget_data.publication.tables import TABLES
+from uk_budget_data.publication.tables import (
+    SCATTER_BINS,
+    SCATTER_MIN_HOUSEHOLDS,
+    SCATTER_ROUND_TO,
+    TABLES,
+)
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
 # Values that exercise canonical JSON (RFC 8785): key order by UTF-16 code
@@ -81,6 +86,11 @@ def contract() -> dict:
         ],
         "displayable": sorted(m.DISPLAYABLE),
         "digest_vectors": digest_vectors(),
+        "scatter_bins": {
+            **SCATTER_BINS,
+            "min_households": SCATTER_MIN_HOUSEHOLDS,
+            "round_to": SCATTER_ROUND_TO,
+        },
         "deciles": _in_decile_order(DECILES),
         "winners_groups": _in_decile_order(WINNERS_GROUPS),
         "tables": {

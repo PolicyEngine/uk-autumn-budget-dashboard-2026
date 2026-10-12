@@ -121,7 +121,10 @@ export function parseManifest(json) {
   if (!Number.isInteger(json.revision) || json.revision < 1) {
     problems.push("revision is not a positive integer");
   }
-  const groups = { measures: json.measures ?? {}, combined: json.combined ?? {} };
+  const groups = {
+    measures: json.measures ?? {},
+    combined: json.combined ?? {},
+  };
   for (const [group, entries] of Object.entries(groups)) {
     if (!isPlainObject(entries)) {
       problems.push(`${group} is not an object`);

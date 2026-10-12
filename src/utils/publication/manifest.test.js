@@ -122,9 +122,9 @@ describe("availability", () => {
       status: "staged",
       reason: "Awaiting approval",
     });
-    expect(measureAvailability(manifest, "combined--alpha+beta").available).toBe(
-      true,
-    );
+    expect(
+      measureAvailability(manifest, "combined--alpha+beta").available,
+    ).toBe(true);
     expect(measureAvailability(manifest, "missing")).toEqual({
       available: false,
       status: null,

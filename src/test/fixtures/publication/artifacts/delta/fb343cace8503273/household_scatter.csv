@@ -1,7 +1,0 @@
-reform_id,reform_name,year,baseline_income,income_change,household_weight,household_id
-delta,Delta,2030,20004.0,0.7,1000.0,4
-delta,Delta,2030,20034.0,0.7,1000.0,34
-delta,Delta,2030,20099.0,0.7,1000.0,99
-delta,Delta,2031,20004.0,0.8,1000.0,4
-delta,Delta,2031,20034.0,0.8,1000.0,34
-delta,Delta,2031,20099.0,0.8,1000.0,99

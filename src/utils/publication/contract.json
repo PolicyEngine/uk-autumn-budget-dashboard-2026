@@ -97,6 +97,16 @@
   "manifest_file": "manifest.json",
   "manifest_schema": "uk-budget-dashboard/publication-manifest/v1",
   "receipt_file": "receipt.json",
+  "scatter_bins": {
+    "change_band_width": 100.0,
+    "change_max": 2000.0,
+    "change_min": -2000.0,
+    "income_band_width": 5000.0,
+    "income_max": 150000.0,
+    "income_min": 0.0,
+    "min_households": 10,
+    "round_to": 10
+  },
   "statuses": [
     "staged",
     "provisional",
@@ -246,7 +256,7 @@
       ],
       "required": true
     },
-    "household_scatter": {
+    "household_scatter_binned": {
       "columns": [
         [
           "reform_id",
@@ -261,27 +271,24 @@
           "int"
         ],
         [
-          "baseline_income",
+          "income_band",
           "float"
         ],
         [
-          "income_change",
+          "change_band",
           "float"
         ],
         [
-          "household_weight",
+          "households",
           "float"
-        ],
-        [
-          "household_id",
-          "int"
         ]
       ],
-      "file": "household_scatter.csv",
+      "file": "household_scatter_binned.csv",
       "key": [
         "reform_id",
         "year",
-        "household_id"
+        "income_band",
+        "change_band"
       ],
       "required": true
     },
