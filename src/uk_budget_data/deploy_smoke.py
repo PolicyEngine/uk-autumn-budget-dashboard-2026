@@ -44,6 +44,54 @@ def numbers(value: Any):
             yield from numbers(member)
 
 
+def _has_finite_number(value: Any) -> bool:
+    found = list(numbers(value))
+    return bool(found) and all(math.isfinite(n) for n in found)
+
+
+def impact_problems(body: Any) -> list[str]:
+    """Ways a household answer is not a real calculation.
+
+    A 200 is not enough: the answer must be an object with no error, with a
+    baseline for at least one year, and with every policy covering those
+    same years with finite numbers. Zero effects are allowed, since a
+    measure can leave a household unchanged; whether the numbers are right
+    is for the household fixtures, not this check.
+    """
+    route = "/api/personal-impact"
+    if not isinstance(body, dict):
+        return [f"{route} did not return an object"]
+    if "error" in body or "detail" in body:
+        return [f"{route} returned an error body"]
+    if not all(math.isfinite(n) for n in numbers(body)):
+        return [f"{route} returned a non-finite number"]
+    years = body.get("years")
+    if not isinstance(years, dict) or not years:
+        return [f"{route} returned no years"]
+    problems = []
+    for year, entry in years.items():
+        if not isinstance(entry, dict) or not _has_finite_number(
+            entry.get("baseline")
+        ):
+            problems.append(f"{route} has no baseline for {year}")
+    policies = body.get("policies")
+    if not isinstance(policies, dict) or not policies:
+        return problems + [f"{route} returned no policies"]
+    for name, policy in policies.items():
+        policy_years = (
+            (policy or {}).get("years") if isinstance(policy, dict) else None
+        )
+        if not isinstance(policy_years, dict) or set(policy_years) != set(
+            years
+        ):
+            problems.append(f"{route}: {name} does not cover every year")
+            continue
+        for year, entry in policy_years.items():
+            if not _has_finite_number(entry):
+                problems.append(f"{route}: {name} has no result for {year}")
+    return problems
+
+
 def identity_problems(
     reported: Any, expected_git_sha: str, expected: dict
 ) -> list[str]:
@@ -106,13 +154,7 @@ def run_smoke(
         client, "POST", "/api/personal-impact", problems, json=SMOKE_HOUSEHOLD
     )
     if impact is not None:
-        found = list(numbers(impact.json()))
-        if not found:
-            problems.append("/api/personal-impact returned no numbers")
-        elif not all(math.isfinite(n) for n in found):
-            problems.append(
-                "/api/personal-impact returned a non-finite number"
-            )
+        problems += impact_problems(impact.json())
 
     return {"pass": not problems, "problems": problems, "version": reported}
 

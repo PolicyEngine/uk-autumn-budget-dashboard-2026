@@ -1,20 +1,23 @@
 # Build and deploy the household API, uk-budget-api-2026.
 #
 # A new revision takes no traffic until it passes a smoke test on its own
-# tagged URL. Run from a clean checkout of main:
+# tagged URL. Submit an exact archive of a pushed commit:
 #
-#   gcloud builds submit --project policyengine-apps \
-#     --config cloudbuild.yaml --substitutions _GIT_SHA=$(git rev-parse HEAD)
+#   git archive <commit> | tar -x -C <empty dir>
+#   gcloud builds submit <dir> --project policyengine-apps \
+#     --config <dir>/cloudbuild.yaml --substitutions _GIT_SHA=<commit>
 #
-# The build writes the revision it promoted, and the one it replaced, to the
-# build log ("Promoted ... replacing ..."). Roll back with:
-#
-#   gcloud run services update-traffic uk-budget-api-2026 \
-#     --project policyengine-apps --region europe-west1 \
-#     --to-revisions <replaced revision>=100
+# The build checks that the uploaded source is exactly that public commit,
+# deploys the image it built by digest, smoke-tests a tag only this build
+# uses, and moves traffic only if traffic has not changed since the build
+# began. The log ends with the allocation it replaced and the command that
+# restores it. Creating the service, which must take traffic at once, needs
+# _ALLOW_CREATE=true as well.
 
 substitutions:
   _GIT_SHA: ''
+  _ALLOW_CREATE: 'false'
+  _REPOSITORY: PolicyEngine/uk-autumn-budget-dashboard-2026
   _SERVICE: uk-budget-api-2026
   _REGION: europe-west1
   _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/uk-budget-api-2026
@@ -26,14 +29,24 @@ options:
   dynamicSubstitutions: true
 
 steps:
-  - id: require-commit
+  # The uploaded source must be byte for byte the public commit named, so
+  # the commit /api/version reports is the code that was built.
+  - id: verify-source
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
     args:
       - '-c'
       - |
+        set -euo pipefail
         if ! echo "${_GIT_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
           echo "_GIT_SHA must be the full commit being deployed" >&2
+          exit 1
+        fi
+        mkdir -p /tmp/commit
+        curl -fsSL "https://codeload.github.com/${_REPOSITORY}/tar.gz/${_GIT_SHA}" \
+          | tar -xz -C /tmp/commit --strip-components=1
+        if ! diff -r --no-dereference /tmp/commit /workspace; then
+          echo "The uploaded source is not commit ${_GIT_SHA}" >&2
           exit 1
         fi
 
@@ -51,9 +64,18 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${_IMAGE}:${_GIT_SHA}']
 
-  # Deploy with no traffic, tagged "candidate". A service's first revision
-  # must take traffic, so on first creation it does; nothing links to the
-  # service until the smoke test below has passed.
+  # Deploy by digest: a tag can be moved by another build, a digest cannot.
+  - id: resolve-digest
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        docker inspect --format '{{index .RepoDigests 0}}' \
+          "${_IMAGE}:${_GIT_SHA}" > /workspace/image_ref
+        echo "Image $$(cat /workspace/image_ref)"
+
   - id: deploy-candidate
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
@@ -61,33 +83,60 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        common="--image ${_IMAGE}:${_GIT_SHA} --region ${_REGION} \
-          --platform managed --no-invoker-iam-check --memory 2Gi --cpu 2 \
-          --timeout 300 --tag candidate \
+        image=$$(cat /workspace/image_ref)
+        tag="b-$$(echo "${BUILD_ID}" | tr -cd 'a-z0-9' | cut -c1-12)"
+        echo "$$tag" > /workspace/candidate_tag
+        common="--image $$image --region ${_REGION} --platform managed \
+          --no-invoker-iam-check --memory 2Gi --cpu 2 --timeout 300 \
+          --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
-        if gcloud run services describe ${_SERVICE} --region ${_REGION} \
-            --format='value(metadata.name)' >/dev/null 2>&1; then
+        # A failed lookup stops the build; only a confirmed absence creates.
+        found=$$(gcloud run services list --region ${_REGION} \
+          --filter="metadata.name=${_SERVICE}" --format='value(metadata.name)')
+        if [ "$$found" = "${_SERVICE}" ]; then
           gcloud run services describe ${_SERVICE} --region ${_REGION} \
             --format=json | python3 -c 'import json, sys
         traffic = json.load(sys.stdin)["status"].get("traffic", [])
-        print(next((t["revisionName"] for t in traffic
-                    if t.get("percent") == 100), ""))' > /workspace/previous_revision
+        live = sorted((t["revisionName"], t["percent"]) for t in traffic
+                      if t.get("percent"))
+        print(json.dumps(live))' > /workspace/previous_traffic
           gcloud run deploy ${_SERVICE} $$common --no-traffic
-        else
-          : > /workspace/previous_revision
+        elif [ -z "$$found" ] && [ "${_ALLOW_CREATE}" = "true" ]; then
+          echo "[]" > /workspace/previous_traffic
+          echo "Creating ${_SERVICE}: its first revision takes traffic at once"
           gcloud run deploy ${_SERVICE} $$common
+        else
+          echo "${_SERVICE} not found; creating it needs _ALLOW_CREATE=true" >&2
+          exit 1
         fi
+        # The revision under this build's tag must be this build's, running
+        # the image this build pushed.
+        revision=$$(gcloud run services describe ${_SERVICE} \
+          --region ${_REGION} --format=json | python3 -c 'import json, sys
+        tag = sys.argv[1]
+        traffic = json.load(sys.stdin)["status"]["traffic"]
+        print(next(t["revisionName"] for t in traffic if t.get("tag") == tag))' "$$tag")
+        gcloud run revisions describe "$$revision" --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        revision = json.load(sys.stdin)
+        build_id, image = sys.argv[1], sys.argv[2]
+        labels = revision["metadata"].get("labels", {})
+        if labels.get("gcb-build-id") != build_id:
+            sys.exit("the tagged revision belongs to another build")
+        digest = revision["status"].get("imageDigest", "")
+        if not digest or digest.split("@")[-1] != image.split("@")[-1]:
+            sys.exit("the tagged revision runs a different image")' \
+          "${BUILD_ID}" "$$image"
+        echo "$$revision" > /workspace/candidate_revision
         gcloud run services describe ${_SERVICE} --region ${_REGION} \
           --format=json | python3 -c 'import json, sys
+        tag = sys.argv[1]
         traffic = json.load(sys.stdin)["status"]["traffic"]
-        candidate = next(t for t in traffic if t.get("tag") == "candidate")
-        print(candidate["revisionName"])
-        print(candidate["url"], file=open("/workspace/candidate_url", "w"))' \
-          > /workspace/candidate_revision
-        echo "Candidate $$(cat /workspace/candidate_revision) at $$(cat /workspace/candidate_url)"
+        print(next(t["url"] for t in traffic if t.get("tag") == tag))' \
+          "$$tag" > /workspace/candidate_url
+        echo "Candidate $$revision at $$(cat /workspace/candidate_url)"
 
-  # Smoke-test the candidate from inside the image just built, so the
-  # versions it expects are this build's own.
+  # Smoke-test the candidate from inside the image it runs.
   - id: smoke
     name: 'gcr.io/cloud-builders/docker'
     entrypoint: bash
@@ -95,11 +144,13 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        docker run --rm ${_IMAGE}:${_GIT_SHA} uv run --no-sync python -m \
-          uk_budget_data.deploy_smoke \
+        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync \
+          python -m uk_budget_data.deploy_smoke \
           --base-url "$$(cat /workspace/candidate_url)" \
           --expect-git-sha ${_GIT_SHA}
 
+  # Promote only if traffic is still what it was when this build began, so
+  # the allocation recorded for rollback is the one actually replaced.
   - id: promote
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
@@ -108,10 +159,25 @@ steps:
       - |
         set -euo pipefail
         candidate=$$(cat /workspace/candidate_revision)
-        previous=$$(cat /workspace/previous_revision)
+        now=$$(gcloud run services describe ${_SERVICE} --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        traffic = json.load(sys.stdin)["status"].get("traffic", [])
+        live = sorted((t["revisionName"], t["percent"]) for t in traffic
+                      if t.get("percent"))
+        print(json.dumps(live))')
+        before=$$(cat /workspace/previous_traffic)
+        if [ "$$before" != "[]" ] && [ "$$now" != "$$before" ]; then
+          echo "Traffic changed during this build ($$before -> $$now); not promoting" >&2
+          exit 1
+        fi
         gcloud run services update-traffic ${_SERVICE} --region ${_REGION} \
-          --to-revisions "$${candidate}=100"
-        echo "Promoted $${candidate} replacing $${previous:-nothing (first deploy)}"
+          --to-revisions "$$candidate=100"
+        restore=$$(python3 -c 'import json, sys
+        print(",".join(f"{r}={p}" for r, p in json.loads(sys.argv[1])))' "$$before")
+        echo "Promoted $$candidate replacing $$before"
+        if [ -n "$$restore" ]; then
+          echo "Roll back with: gcloud run services update-traffic ${_SERVICE} --project ${PROJECT_ID} --region ${_REGION} --to-revisions $$restore"
+        fi
 
 images:
   - '${_IMAGE}:${_GIT_SHA}'
