@@ -1,0 +1,193 @@
+{
+  "mock": true,
+  "measure": "4 (mock3_cgt_higher_rate_aea) CGT projection data work, EXPERIMENTAL",
+  "parent_code_sha": "c3ac9dcdadd4aa54fc95a085b3c7536ae9552861",
+  "dataset": "/Users/vahid/drill2-data/microcosm_uk_2024_25.h5",
+  "data_sha256": "aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af",
+  "inputs_csv": "data_inputs/mock_drill3/packet/MOCK-cgt-projection-inputs.csv",
+  "inputs_sha256": "484f7f549ab546dcda47043307eeba88a7c35d6cdf5e66bb7c88f1d280a7fa50",
+  "engine": "policyengine-uk 2.125.1 / policyengine-core 3.33.0",
+  "validation_status": "experimental, unvalidated under this engine",
+  "factors_by_year": {
+    "2024": 1.0,
+    "2025": 0.7144689734179109,
+    "2026": 0.7178641586579403,
+    "2027": 0.7259698886863265,
+    "2028": 0.7337895862541249,
+    "2029": 0.7414895295327312,
+    "2030": 0.7537413629579072,
+    "2031": 0.7577880669270418
+  },
+  "before": {
+    "mode": "before",
+    "years": {
+      "2024": {
+        "gross_realised_gains_bn": 117.45248413085938,
+        "taxpayers_thousands": 549.3147583007812,
+        "baseline_liability_bn": 23.33291244506836,
+        "people_with_gains_thousands": 585.7476806640625
+      },
+      "2027": {
+        "gross_realised_gains_bn": 132.1758270263672,
+        "taxpayers_thousands": 561.7386474609375,
+        "baseline_liability_bn": 30.363136291503906,
+        "people_with_gains_thousands": 594.3980712890625,
+        "reform_liability_bn": 34.84877395629883,
+        "measure4_liability_change_m": 4485.637664794922
+      },
+      "2028": {
+        "gross_realised_gains_bn": 136.818359375,
+        "taxpayers_thousands": 564.9346313476562,
+        "baseline_liability_bn": 31.469402313232422,
+        "people_with_gains_thousands": 596.7756958007812,
+        "reform_liability_bn": 36.129234313964844,
+        "measure4_liability_change_m": 4659.832000732422
+      },
+      "2029": {
+        "gross_realised_gains_bn": 141.48800659179688,
+        "taxpayers_thousands": 568.6307983398438,
+        "baseline_liability_bn": 32.582664489746094,
+        "people_with_gains_thousands": 599.4014892578125,
+        "reform_liability_bn": 37.418128967285156,
+        "measure4_liability_change_m": 4835.4644775390625
+      },
+      "2030": {
+        "gross_realised_gains_bn": 146.60162353515625,
+        "taxpayers_thousands": 572.2486572265625,
+        "baseline_liability_bn": 33.80366516113281,
+        "people_with_gains_thousands": 602.0988159179688,
+        "reform_liability_bn": 38.832435607910156,
+        "measure4_liability_change_m": 5028.770446777344
+      },
+      "2031": {
+        "gross_realised_gains_bn": 151.86996459960938,
+        "taxpayers_thousands": 575.631591796875,
+        "baseline_liability_bn": 35.05791091918945,
+        "people_with_gains_thousands": 604.68896484375,
+        "reform_liability_bn": 40.283119201660156,
+        "measure4_liability_change_m": 5225.208282470703
+      }
+    },
+    "factors": null
+  },
+  "after": {
+    "mode": "after",
+    "years": {
+      "2024": {
+        "gross_realised_gains_bn": 117.45248413085938,
+        "taxpayers_thousands": 549.3147583007812,
+        "baseline_liability_bn": 23.33291244506836,
+        "people_with_gains_thousands": 585.7476806640625
+      },
+      "2027": {
+        "gross_realised_gains_bn": 95.9556655883789,
+        "taxpayers_thousands": 533.6746215820312,
+        "baseline_liability_bn": 21.79517364501953,
+        "people_with_gains_thousands": 594.3980712890625,
+        "reform_liability_bn": 24.973161697387695,
+        "measure4_liability_change_m": 3177.988052368164
+      },
+      "2028": {
+        "gross_realised_gains_bn": 100.39588165283203,
+        "taxpayers_thousands": 545.521484375,
+        "baseline_liability_bn": 22.844804763793945,
+        "people_with_gains_thousands": 596.7756958007812,
+        "reform_liability_bn": 26.185054779052734,
+        "measure4_liability_change_m": 3340.250015258789
+      },
+      "2029": {
+        "gross_realised_gains_bn": 104.91188049316406,
+        "taxpayers_thousands": 550.8844604492188,
+        "baseline_liability_bn": 23.913347244262695,
+        "people_with_gains_thousands": 599.4014892578125,
+        "reform_liability_bn": 27.41899871826172,
+        "measure4_liability_change_m": 3505.6514739990234
+      },
+      "2030": {
+        "gross_realised_gains_bn": 110.49971771240234,
+        "taxpayers_thousands": 557.270751953125,
+        "baseline_liability_bn": 25.23587417602539,
+        "people_with_gains_thousands": 602.0988159179688,
+        "reform_liability_bn": 28.94548225402832,
+        "measure4_liability_change_m": 3709.6080780029297
+      },
+      "2031": {
+        "gross_realised_gains_bn": 115.08525085449219,
+        "taxpayers_thousands": 564.6267700195312,
+        "baseline_liability_bn": 26.318010330200195,
+        "people_with_gains_thousands": 604.68896484375,
+        "reform_liability_bn": 30.1932373046875,
+        "measure4_liability_change_m": 3875.2269744873047
+      }
+    },
+    "factors": {
+      "2024": 1.0,
+      "2025": 0.7144689734179109,
+      "2026": 0.7178641586579403,
+      "2027": 0.7259698886863265,
+      "2028": 0.7337895862541249,
+      "2029": 0.7414895295327312,
+      "2030": 0.7537413629579072,
+      "2031": 0.7577880669270418
+    }
+  },
+  "revenue": {
+    "before": {
+      "liability_m": {
+        "2027": 4485.637664794922,
+        "2028": 4659.832000732422,
+        "2029": 4835.4644775390625,
+        "2030": 5028.770446777344,
+        "2031": 5225.208282470703
+      },
+      "cash_m": {
+        "2027": 313.9946365356446,
+        "2028": 4497.831268310547,
+        "2029": 4672.126274108887,
+        "2030": 4848.995895385742,
+        "2031": 5042.521095275879,
+        "retained_beyond_2031_32": 4859.443702697754
+      }
+    },
+    "after": {
+      "liability_m": {
+        "2027": 3177.988052368164,
+        "2028": 3340.250015258789,
+        "2029": 3505.6514739990234,
+        "2030": 3709.6080780029297,
+        "2031": 3875.2269744873047
+      },
+      "cash_m": {
+        "2027": 222.4591636657715,
+        "2028": 3189.346389770508,
+        "2029": 3351.8281173706055,
+        "2030": 3519.928436279297,
+        "2031": 3721.2014007568355,
+        "retained_beyond_2031_32": 3603.961086273193
+      }
+    },
+    "costing_crosscheck": {
+      "liability_m": {
+        "2027": 1650.0,
+        "2028": 1719.0,
+        "2029": 1792.0,
+        "2030": 1865.0,
+        "2031": 1942.0
+      },
+      "cash_m": {
+        "2027": 115.50000000000001,
+        "2028": 1654.83,
+        "2029": 1724.11,
+        "2030": 1797.11,
+        "2031": 1870.3899999999999,
+        "retained_beyond_2031_32": 1806.06
+      }
+    }
+  },
+  "limitations": [
+    "Amount multiplier only; taxpayer determinants not applied to weights.",
+    "Dataset 2024-25 level not matched to packet 118.0 anchor; only path growth applied.",
+    "Engine person_weight grows after 2024 (population uprating), so the weighted gains aggregate exceeds path(y)/118 x 2024 aggregate by the weight growth (~1.5% in 2027).",
+    "Static: no forestalling or realisation response; engine elasticity default."
+  ]
+}
