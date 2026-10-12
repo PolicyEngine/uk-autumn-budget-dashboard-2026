@@ -68,7 +68,7 @@ Both selected data tasks are part of the Monday implementation exercise. The pac
 
 ### Explanation classes (closed list)
 
-`behavioural`, `coverage_business`, `top_tail_data`, `timing_fiscal_calendar`, `incidence_basis`, `baseline_mismatch`, `data_forward_path`, `devolved`, `interaction`, `none_expected`.
+`behavioural`, `coverage_business`, `top_tail_data`, `timing_fiscal_calendar`, `incidence_basis`, `baseline_mismatch`, `data_forward_path`, `devolved`, `interaction`, `takeup_caseload`, `none_expected`. (`takeup_caseload` matches the list in the released specimen file.)
 
 ## Packet
 
@@ -89,13 +89,13 @@ The packet is in `data_inputs/mock_drill3/packet/`. **Don't open the 12:30 file 
 | 13:40 | `MOCK-salary-sacrifice-records.csv` | `ddddaf300436bb5db2e2d7bd88b2be07c5ebec3e3f57c74f493e488f05b31d37` |
 | 13:40 | `MOCK-salary-sacrifice-targets.csv` | `401672cedea7fefb4da13d0e03aaec502996d2c7643e864fa121b9d28657061d` |
 | 14:20 | `MOCK-obr-correction-notice.md` | `74412d4e0428e418ac510f1edd9dc7c30b53f869927d2ab5d6b57f5082c55957` |
-| 16:00 | `MOCK-drill3-answer-key-households.csv` (sealed) | **PENDING — regenerate for revised packet** |
-| 16:00 | `MOCK-drill3-answer-key-national.csv` (sealed) | **PENDING — regenerate for revised packet** |
-| 16:00 | `MOCK-drill3-answer-key-ledger.csv` (sealed) | **PENDING — regenerate for revised packet** |
+| 16:00 | `MOCK-drill3-answer-key-households.csv` (sealed, revised 12 Oct) | `b8d04a8b13e8e594d7ad32e699e8c94a0845ef0b1456df01ff574af90f49652d` |
+| 16:00 | `MOCK-drill3-answer-key-national.csv` (sealed, revised 12 Oct) | `960f0b2b368b38d9a25b8c67a0527f492971c5967b1aa612c7a80d95f075e6de` |
+| 16:00 | `MOCK-drill3-answer-key-ledger.csv` (sealed, revised 12 Oct) | `d3a9821b0f46b9317b9cc4f7fa534b668fe79597f048e54402f20f2d1627feb6` |
 
 **Packet shape:** 20 Table 4.1 lines (11 coded, 9 ledger), 14 specimen households across all four nations, a six-year forecast window (2026-27 to 2031-32), and a 14:20 correction notice. The blank household sheet has 172 rows: the original 168 plus four dedicated pension-cap cases. The blank national sheet has 67 rows: the original 61 plus six years for measure 20. The data release also contains a projection series, eight independent pension diagnostic records, band-relief targets and a blank before/after evidence template. The 14:20 notice changes the same household value and costing as before; the revised keys must record both releases so the scorer can see whether the team re-ran.
 
-The key holder keeps the generator and answer keys outside the repository. **The previous three key hashes are superseded by this packet revision.** The original key bundle/generator was unavailable to the packet editor, so no revised-key determinism or household attestation is claimed. Before release, the key holder must add the four H13/H14 rows, six measure 20 national rows and its ledger classification; check CGT explanations against the revised projection exercise, costing bases, correction versions and updated totals; then publish replacement hashes and physical/version-aware inventories. Regeneration must give byte-identical files in two runs, with an independent household recalculation to ±1p. Keep all answers outside this repository.
+The key holder keeps the generator and answer keys outside the repository. **The answer keys were regenerated on 12 October from the revised packet (`4501ed0`); the earlier key hashes are superseded.** The keys cover 172 household rows (1 correction-version row), 67 national rows (2 correction-version rows) and the 20 Table 4.1 lines (plus 2 baseline-only rows with no weight). Two builds give byte-identical keys, and an independent recalculation of every household value agrees to the penny. The spoiler-free attestation (inventories, identifiers, hashes, checks) is posted on PR #9.
 
 **Templates** in `data_inputs/mock_drill3/`: `MOCK-drill3-coverage-ledger.csv` and `MOCK-drill3-reconciliation.csv` (as in drill 2). The national scoring sheet comes with the 13:40 release.
 
@@ -116,7 +116,7 @@ Friday setup remains **unconfirmed** until the participants fill every required 
 | Chosen model/core and dataset name/SHA-256; certification receipt or explicit unvalidated-publication plan | Vahid, María | **UNCONFIRMED**; retaining UK 2.120.0 with the UK 2.100.0-built data requires “unvalidated under this engine” on every national figure |
 | Signed-in drill-only preview: URL/deployment SHA, MOCK banner, robots meta and X-Robots-Tag `noindex, nofollow`, matching backend version and baseline-only HTTP 200 | Vahid, María | **UNCONFIRMED**; record health versions and empty-selection response; Vercel login alone does not pass |
 | Rubric SHA, denominators/row-version inventory and equivalent-class acceptance sets frozen without revealing answers | María, key holder | **UNCONFIRMED**; see scoring rubric |
-| Revised packet/key alignment: measure 20, H13/H14, CGT data assumptions, unchanged correction cases and replacement hashes | key holder | **PENDING — original off-repository generator and keys must be updated before release** |
+| Revised packet/key alignment: measure 20, H13/H14, CGT data assumptions, unchanged correction cases and replacement hashes | key holder | **Done 12 Oct**: keys regenerated against all 13 revised release files (hashes verified); totals, costings, data inputs and household facts consistent; replacement hashes in the packet table |
 | Participant role and Monday release/stop times acknowledged | Vahid, María, key holder | **UNCONFIRMED**; names and time |
 
 The household API uses the pinned Python backend for the drill. The legacy public-API adapter retains its historical horizon and is outside drill scoring. Friday preview testing may use an empty policy selection before Monday registry removal.
