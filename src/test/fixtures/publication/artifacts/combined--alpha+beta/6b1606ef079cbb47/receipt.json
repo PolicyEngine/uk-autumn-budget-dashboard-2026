@@ -12,9 +12,7 @@
         "vintage": "v1"
       }
     },
-    "composition_order": "merged parameter changes first, then each member's modifier in member order, all inside one simulation modifier",
     "config_baseline": null,
-    "dataset_sha256_taken": "at receipt",
     "dataset_years": [
       2024,
       2025,
@@ -37,7 +35,7 @@
       "metrics.csv": "18b42d0c427b860c94e6a09368df17cac1e9ae300be603a186879311ca069be1",
       "winners_losers.csv": "ac5a5533dec07262219948f920d4a155f53fe9bda6f761d3512f905c13ecdc11"
     },
-    "generated_at": "2026-10-12T09:06:11.560268+00:00",
+    "generated_at": "2026-10-12T09:43:04.320707+00:00",
     "generator_argv": [
       "test"
     ],
@@ -85,7 +83,7 @@
     ],
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr579@9672ad3",
+    "receipt_source": "vendored-w4-pr579@69390c5",
     "tree_clean": true,
     "unsupported_years": [
       2031

@@ -12,9 +12,7 @@
         "vintage": "v1"
       }
     },
-    "composition_order": null,
     "config_baseline": null,
-    "dataset_sha256_taken": "at receipt",
     "dataset_years": [
       2024,
       2025,
@@ -37,7 +35,7 @@
       "metrics.csv": "9e8a71f0b708e0018a1b41789cfbaf87d727c5cdf8dd127dea51711876fed109",
       "winners_losers.csv": "b3d52ed70b4344a7e96b40a1d0cd7251e7321c3f36caf9fe9e5618ed2269b5f6"
     },
-    "generated_at": "2026-10-12T09:05:56.384295+00:00",
+    "generated_at": "2026-10-12T09:43:04.295828+00:00",
     "generator_argv": [
       "test"
     ],
@@ -50,7 +48,7 @@
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr579@9672ad3",
+    "receipt_source": "vendored-w4-pr579@69390c5",
     "tree_clean": true,
     "unsupported_years": [
       2031
