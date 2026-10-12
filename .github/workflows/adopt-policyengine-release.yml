@@ -45,8 +45,10 @@ jobs:
         id: release
         run: |
           version="${PAYLOAD_VERSION:-$INPUT_VERSION}"
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::'$version' is not a plain release version"
+          # Bash matches the whole string (grep would match any one line),
+          # so a version with a line break cannot add outputs below.
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::the version is not a plain release version"
             exit 1
           fi
           bundle="$PAYLOAD_BUNDLE_UK_JSON"

@@ -124,7 +124,13 @@ def test_a_malformed_digest_is_refused():
     assert "dataset_sha256 is not a SHA-256" in problems
 
 
-def test_release_without_a_receipt_module_cannot_be_verified():
+def test_release_without_a_receipt_module_cannot_be_verified(monkeypatch):
+    # Review round 3: without this, an installed release that has a
+    # receipt module would recompute the digest and fail the test.
+    monkeypatch.setattr(
+        "uk_budget_data.bundle_adoption.receipt_certificate_sha256",
+        lambda: None,
+    )
     problems = check(digest=None)
     # The installed 6.2.6 has no receipt module, so nothing recomputes it.
     assert problems == [
@@ -239,3 +245,56 @@ def test_one_object_is_exported_on_exactly_one_line(bundle):
     assert exported is not None
     assert exported.count("\n") == 1
     assert json.loads(exported.removeprefix("BUNDLE_UK_JSON=")) == bundle
+
+
+# --- the workflow's version check (review round 3) ------------------------
+
+
+def _release_step(tmp_path, version: str, bundle: str = "{}"):
+    """Run the workflow's own release step; return its exit and outputs."""
+    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["open-upgrade-pr"][
+        "steps"
+    ]
+    script = next(s for s in steps if s.get("id") == "release")["run"]
+    output, env_file = tmp_path / "output", tmp_path / "env"
+    output.write_text("")
+    env_file.write_text("")
+    result = subprocess.run(
+        ["bash", "-e", "-o", "pipefail", "-c", script],
+        env={
+            "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+            "PAYLOAD_VERSION": version,
+            "INPUT_BUNDLE_UK_JSON": bundle,
+            "GITHUB_OUTPUT": str(output),
+            "GITHUB_ENV": str(env_file),
+        },
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode, output.read_text(), env_file.read_text()
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
+@pytest.mark.parametrize(
+    "version",
+    [
+        "6.3.0\nversion=6.2.6\nbranch=main",
+        "version=6.2.6\n6.3.0",
+        "6.3.0\n",
+        "6.3.0\r",
+        "6.3.0 ",
+        "",
+    ],
+)
+def test_a_version_with_more_than_one_line_writes_no_output(tmp_path, version):
+    code, output, env = _release_step(tmp_path, version)
+    assert code != 0
+    assert output == "" and env == ""
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
+def test_a_plain_version_writes_exactly_its_outputs(tmp_path):
+    code, output, env = _release_step(tmp_path, "6.3.0")
+    assert code == 0
+    assert output == "version=6.3.0\nbranch=adopt/policyengine-6.3.0\n"
+    assert env == "BUNDLE_UK_JSON={}\n"
