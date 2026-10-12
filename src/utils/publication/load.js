@@ -8,7 +8,7 @@
  */
 
 import { parseTable, tableForFile, TABLES } from "./csv";
-import { verifyFile, verifyReceiptFiles } from "./digest";
+import { receiptProblems, verifyFile, verifyReceiptFiles } from "./digest";
 import {
   isDisplayable,
   MANIFEST_FILE,
@@ -72,9 +72,8 @@ export async function loadArtifact(
   const receipt = await (
     await fetchOk(fetchImpl, `${base}/${RECEIPT_FILE}`, { signal })
   ).json();
-  if (receipt?.dashboard?.key !== key) {
-    throw new Error("the receipt is for a different entry");
-  }
+  const problems = await receiptProblems(receipt, key, entry);
+  if (problems.length > 0) throw new Error(problems.join("; "));
   if (!(await verifyReceiptFiles(receipt, entry))) {
     throw new Error("the receipt's files are not the ones the manifest names");
   }

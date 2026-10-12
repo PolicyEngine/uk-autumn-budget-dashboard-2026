@@ -99,6 +99,27 @@ describe("FiscalSummary", () => {
     ).toBe(3);
   });
 
+  it("marks a provisional measure's own row beside an approved one", () => {
+    const series = fiscalSeries({
+      manifest,
+      tablesByKey,
+      selectedIds: ["alpha", "gamma"],
+      years: [2030],
+    });
+    render(
+      <FiscalSummary
+        series={series}
+        ids={["alpha", "gamma"]}
+        measureNames={names}
+      />,
+    );
+    const gamma = screen.getByRole("rowheader", { name: /Gamma/ });
+    const alpha = screen.getByRole("rowheader", { name: /Alpha/ });
+    expect(gamma).toHaveTextContent("(provisional)");
+    expect(alpha).not.toHaveTextContent("(provisional)");
+    expect(screen.getByText("£0.50bn")).toBeInTheDocument();
+  });
+
   it("shows a dash, not zero, for a measure that is not published", () => {
     const series = fiscalSeries({
       manifest,

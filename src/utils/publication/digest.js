@@ -72,3 +72,72 @@ export async function verifyFile(name, content, receipt) {
   if (!files || !Object.hasOwn(files, name)) return false;
   return (await sha256Hex(content)) === files[name];
 }
+
+/** Dashboard fields that describe one generation run (not digested). */
+const VOLATILE_DASHBOARD_FIELDS = ["generated_at", "generator_argv"];
+
+/**
+ * The artifact digest the manifest names (Python's
+ * ``receipt.artifact_sha256``): the receipt document without its
+ * run-specific fields.
+ */
+export async function artifactSha256(receipt) {
+  const dashboard = Object.fromEntries(
+    Object.entries(receipt?.dashboard ?? {}).filter(
+      ([name]) => !VOLATILE_DASHBOARD_FIELDS.includes(name),
+    ),
+  );
+  return jcsSha256({
+    schema: receipt?.schema,
+    execution_receipt: receipt?.execution_receipt,
+    dashboard,
+  });
+}
+
+function sameSet(left, right) {
+  const a = [...new Set(left ?? [])].sort();
+  const b = [...new Set(right ?? [])].sort();
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Every way a receipt is not the artifact a manifest entry names: its
+ * digest, its key, its recorded digests and, for a combined run, its
+ * members and their output snapshot. Empty when it is.
+ */
+export async function receiptProblems(receipt, key, entry) {
+  const problems = [];
+  const dashboard = receipt?.dashboard ?? {};
+  if ((await artifactSha256(receipt)) !== entry.artifact_sha256) {
+    problems.push("the receipt is not the artifact the manifest names");
+  }
+  if (dashboard.key !== key) {
+    problems.push("the receipt is for a different entry");
+  }
+  const digests = dashboard.digests ?? {};
+  for (const field of [
+    "outputs_sha256",
+    "receipt_sha256",
+    "execution_identity_sha256",
+  ]) {
+    if (digests[field] !== entry[field]) {
+      problems.push(`the receipt's ${field} is not the manifest's`);
+    }
+  }
+  if (Array.isArray(entry.measures)) {
+    if (!sameSet(dashboard.measure_ids, entry.measures)) {
+      problems.push("the receipt's members are not the manifest's");
+    }
+    const snapshot = dashboard.member_outputs_sha256 ?? {};
+    const named = entry.member_outputs_sha256 ?? {};
+    if (
+      !sameSet(Object.keys(snapshot), Object.keys(named)) ||
+      Object.keys(named).some((id) => snapshot[id] !== named[id])
+    ) {
+      problems.push("the receipt's member outputs are not the manifest's");
+    }
+  } else if (!sameSet(dashboard.measure_ids, [key])) {
+    problems.push("the receipt names other measures");
+  }
+  return problems;
+}

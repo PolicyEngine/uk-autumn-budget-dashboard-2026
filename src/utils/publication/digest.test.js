@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import contract from "./contract.json";
 import {
+  artifactSha256,
   dropNulls,
   jcsSha256,
+  receiptProblems,
   sha256Hex,
   verifyFile,
   verifyReceiptFiles,
@@ -89,6 +91,48 @@ describe("verifying the fixture's artifacts", () => {
         },
       ),
       { numRuns: 60 },
+    );
+  });
+});
+
+describe("binding a receipt to its manifest entry", () => {
+  // Differential: the manifest's artifact digests were computed by Python.
+  it.each(Object.entries(entries))(
+    "%s: the browser computes the manifest's artifact digest",
+    async (key, entry) => {
+      const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+      expect(await artifactSha256(receipt)).toBe(entry.artifact_sha256);
+      expect(await receiptProblems(receipt, key, entry)).toEqual([]);
+    },
+  );
+
+  it("refuses a combined entry relabelled with other members", async () => {
+    // Review case: relabel alpha+beta as alpha+gamma, with a matching
+    // snapshot, keeping the artifact and every other digest.
+    const key = "combined--alpha+beta";
+    const entry = structuredClone(entries[key]);
+    entry.measures = ["alpha", "gamma"];
+    entry.member_outputs_sha256 = {
+      alpha: entries.alpha.outputs_sha256,
+      gamma: entries.gamma.outputs_sha256,
+    };
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    const problems = await receiptProblems(receipt, key, entry);
+    expect(problems).toContain("the receipt's members are not the manifest's");
+    expect(problems).toContain(
+      "the receipt's member outputs are not the manifest's",
+    );
+  });
+
+  it("refuses a receipt edited outside its file list", async () => {
+    // Review case: tree_clean and publishable changed, files unchanged.
+    const entry = entries.alpha;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    receipt.dashboard.tree_clean = false;
+    receipt.dashboard.publishable = false;
+    expect(await verifyReceiptFiles(receipt, entry)).toBe(true);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt is not the artifact the manifest names",
     );
   });
 });

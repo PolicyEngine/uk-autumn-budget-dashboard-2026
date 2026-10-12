@@ -89,7 +89,22 @@ describe("loadPublication", () => {
     });
     const result = await loadPublication(BASE_PATH, ["alpha"], { fetchImpl });
     expect(result.tablesByKey.alpha).toBeUndefined();
-    expect(result.failures.alpha).toMatch(/different entry|not the ones/);
+    expect(result.failures.alpha).toMatch(
+      /not the artifact the manifest names/,
+    );
+  });
+
+  it("leaves out an artifact whose receipt was edited", async () => {
+    const receipt = fixtureJson(`${alpha}/receipt.json`);
+    receipt.dashboard.tree_clean = false;
+    const fetchImpl = fixtureFetch({
+      overrides: { [`${alpha}/receipt.json`]: JSON.stringify(receipt) },
+    });
+    const result = await loadPublication(BASE_PATH, ["alpha"], { fetchImpl });
+    expect(result.tablesByKey.alpha).toBeUndefined();
+    expect(result.failures.alpha).toMatch(
+      /not the artifact the manifest names/,
+    );
   });
 
   it("leaves out an artifact with a missing file", async () => {
