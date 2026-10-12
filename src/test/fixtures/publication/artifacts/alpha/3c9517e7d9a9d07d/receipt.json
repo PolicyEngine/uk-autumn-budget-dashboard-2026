@@ -26,7 +26,7 @@
     "digests": {
       "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
       "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
-      "receipt_sha256": "4351a860975c70e483d1bb044aa3067593594e8fcde0b2898f6802fe669616a0"
+      "receipt_sha256": "73061ef6ffc35005fd743ffb2d8eb9c34096ba0592300b60781bd86d3bea497c"
     },
     "files": {
       "budgetary_impact.csv": "e07b7072a626ab1572d2e4709e400e628802baaf424c68a8331a74f1e0b0b73a",
@@ -36,7 +36,7 @@
       "metrics.csv": "491434ec9f06fd87d3ba375920f074d2fb9c9f40ac071d0c66bba66d277b03e9",
       "winners_losers.csv": "d868aaa18a43441d5a6f5af8b9022a19645fa6d23a4c9d17346b04d3836e16d5"
     },
-    "generated_at": "2026-10-12T14:02:20.104491+00:00",
+    "generated_at": "2026-10-12T14:59:33.151808+00:00",
     "generator_argv": [
       "test"
     ],
@@ -49,7 +49,7 @@
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr579@69390c5",
+    "receipt_source": "vendored-w4-pr579@f951bd5",
     "tree_clean": true,
     "unsupported_years": [
       2031
@@ -106,7 +106,7 @@
       "binding": "content",
       "kind": "reform",
       "name": "alpha",
-      "reform_sha256": "487549c1dd1892271cc9dc7359430b122bf91554f9c62fa66d757e9d958a8af0",
+      "reform_sha256": "1c39d019a47e8c0a2f113051f8eb67b2a4df0bbd09ae7bda5223b17d69577ae5",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
@@ -114,6 +114,15 @@
       "python_version": "3.13.9"
     },
     "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
     "wrapper": {
       "name": "policyengine",
       "version": "6.2.6"
