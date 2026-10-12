@@ -57,6 +57,48 @@ def test_annual_builders_validate_paths_and_explicit_years(builder):
         builder(FUEL_PATH, {2028: 0.5, "2028": 0.6})
 
 
+@pytest.mark.parametrize("builder", [rate_change, threshold_change])
+@pytest.mark.parametrize(
+    "key",
+    [
+        "2026-04-06",  # one day: scores nothing
+        "2026-04-06.2100-12-31",  # an interval: scores nothing on 2.125.1
+        "year:2026:5",
+        "2026-04",
+    ],
+)
+def test_only_bare_fiscal_years_are_accepted(builder, key):
+    """A Budget measure keyed any other way can silently do nothing.
+
+    On the installed policyengine-uk 2.125.1 a bare year names the whole UK
+    fiscal year (``utils/parameters.py: uk_fiscal_year_period``) and a lone
+    date names one day. Interval keys are read correctly only from 2.126.12
+    (#2305); W4's certification evidence shows one scoring nothing on
+    2.125.1. Allow them only once the bundle moves.
+    """
+    with pytest.raises(ValueError, match="four-digit"):
+        builder(FUEL_PATH, {key: 0.6})
+
+
+def test_a_bare_year_sets_the_whole_fiscal_year_on_the_installed_model():
+    situation = {
+        "people": {"p": {"age": {"2028": 40}}},
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"]}},
+    }
+    sim = Simulation(
+        situation=situation,
+        scenario=Scenario(
+            parameter_changes=rate_change(FUEL_PATH, {2028: 0.7})
+        ),
+    )
+    fuel = sim.tax_benefit_system.parameters.gov.hmrc.fuel_duty
+    # Formulas read the annual value; the fiscal-year value is 30 April's.
+    assert fuel.petrol_and_diesel("2028-01-01") == pytest.approx(0.7)
+    assert fuel.petrol_and_diesel("2028-04-30") == pytest.approx(0.7)
+    assert fuel.petrol_and_diesel("2027-04-30") != pytest.approx(0.7)
+
+
 @pytest.mark.parametrize("bad_value", [float("inf"), float("nan"), True])
 def test_parameter_builders_refuse_nonfinite_or_boolean_values(bad_value):
     with pytest.raises(ValueError, match="finite number"):
