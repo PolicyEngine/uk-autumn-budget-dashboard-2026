@@ -42,6 +42,11 @@ BASIS_STATUSES = ("pre_budget", "updated")
 # manifest file.
 ARTIFACTS_PREFIX = "public/data/artifacts/"
 MANIFEST_PATH = "public/data/manifest.json"
+# How uk_budget_data.publication.combine applies a combined run's members.
+COMPOSITION_ORDER = (
+    "merged parameter changes first, then each member's modifier in member "
+    "order, all inside one simulation modifier"
+)
 # Dashboard fields that describe one generation run rather than what was
 # generated, left out of the artifact digest.
 VOLATILE_DASHBOARD_FIELDS = ("generated_at", "generator_argv")
@@ -387,6 +392,12 @@ def build_receipt_document(
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,
+        # How the members were combined, which the composition identity's
+        # representation does not yet say (policyengine-uk 2.125.1 would
+        # run a Scenario's modifier before its parameter changes).
+        "composition_order": (
+            COMPOSITION_ORDER if inputs.members is not None else None
+        ),
         "config_baseline": (
             json.loads(inputs.config_baseline_identity.model_dump_json())
             if inputs.config_baseline_identity is not None
