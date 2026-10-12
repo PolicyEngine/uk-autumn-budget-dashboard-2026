@@ -80,7 +80,7 @@ The drill project `uk-autumn-budget-2026-drill` is unchanged. It sets `NEXT_PUBL
 | Serving | Revision `uk-budget-api-2026-00001-gow`. A service's first revision must take traffic; nothing links to it |
 | Limits | 2 CPU, 2 GiB, 300 s, public calls with the invoker IAM check off (as on the 2025 `uk-autumn-budget-lifecycle`) |
 | Images | `europe-west1-docker.pkg.dev/policyengine-apps/cloud-run-source-deploy/uk-budget-api-2026:<commit>` |
-| Deploy | No trigger. `gcloud builds submit` on an exact `git archive` of a pushed commit, with `_GIT_SHA` naming it (runbook, "Before the day"). The build checks the source is that commit, deploys by image digest under a tag only it uses, smoke-tests that tag, and promotes only if traffic has not changed meanwhile (#21). |
+| Deploy | No trigger. `gcloud builds submit --region europe-west1` on an exact `git archive` of a pushed commit, with `_GIT_SHA` naming it (runbook, "Before the day"). The build checks the source is that commit, deploys by image digest under a tag only it uses, smoke-tests that tag, and promotes only if traffic has not changed meanwhile (#21). |
 | Rollback | The build log ends with the allocation it replaced and the `gcloud run services update-traffic … --to-revisions …` command that restores it. |
 
 What else is in the project, read on 12 October: the 2025 services `uk-autumn-budget-dashboard` (2 CPU, 8 GiB) and `uk-autumn-budget-lifecycle` (1 CPU, 512 MiB), each deployed by a Cloud Build trigger on `main` of its own repository. Before 12 October no 2026 service existed there or in `policyengine-api` or `policyengine-household-api`, and no Cloud Build trigger in `policyengine-apps` or `policyengine-api` built this repository. Cloud Run is not enabled in `policyengine-app-v2`, and `policyengine-research` was not readable.
@@ -106,7 +106,7 @@ public/data/
     receipt.json  reconciliation.json
 ```
 
-- **No household-level rows.** The household scatter is published as binned cells: the weighted number of households in each £5,000 baseline income band × £100 income change band. The outer bands are open-ended, cells with fewer than 10 survey households are left out, and counts are rounded to the nearest 10. Whether to replace the household-level `household_scatter.csv` that `main` and the 2025 site publish is with Max.
+- **No household-level rows.** The household scatter is published as binned cells: the weighted number of households in each £5,000 baseline income band × £100 income change band. The outer bands are open-ended, cells with fewer than 10 survey households are left out, and counts are rounded to the nearest 1,000 (rounding to 10 would let differences between cells reveal one household's weight). The household-level `household_scatter.csv` that `main` and the 2025 site publish stays as it is: Max decided on 12 October to keep both (cos d1397).
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
