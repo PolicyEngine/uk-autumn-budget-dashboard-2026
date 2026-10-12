@@ -22,7 +22,16 @@ afterEach(() => {
 });
 
 it("retains the terminal-year budget figure in chart data", async () => {
-  const policy = POLICIES[0];
+  // The drill registry is empty before release, so register one stand-in measure.
+  const policy = { id: "mock_terminal_year_test", name: "Terminal-year test", color: "#319795",
+    description: "Test measure", explanation: "MOCK basis: test only." };
+  vi.resetModules();
+  vi.doMock("./utils/policyConfig", async (importOriginal) => {
+    const original = await importOriginal();
+    return { ...original, POLICIES: [policy], CHART_POLICIES: [policy, ...original.LEGACY_POLICIES],
+      PERSONAL_IMPACT_POLICY_ORDER: [policy.id] };
+  });
+  const { default: StandInApp } = await import("./App");
   vi.stubGlobal("fetch", vi.fn(async (url) => ({
     ok: true,
     text: async () => {
@@ -34,9 +43,11 @@ it("retains the terminal-year budget figure in chart data", async () => {
     },
   })));
   window.history.replaceState({}, "", `/uk/autumn-budget-2026?policies=${policy.id}`);
-  render(<App />);
+  render(<StandInApp />);
   await waitFor(() => expect(screen.getByTestId("budget-chart")).toHaveTextContent('"year":2031'));
   expect(screen.getByTestId("budget-chart")).toHaveTextContent('"netImpact":2.5');
+  vi.doUnmock("./utils/policyConfig");
+  vi.resetModules();
 });
 
 function useCheckedInData() {
@@ -58,7 +69,7 @@ describe("dashboard URL behavior", () => {
     useCheckedInData();
     window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=");
     render(<App />);
-    expect(await screen.findByText(/Select policies to analyse their impact/)).toBeInTheDocument();
+    expect(await screen.findByText(/Select policies to analyse their impact|Awaiting the 12:30 statement/)).toBeInTheDocument();
   });
 
 

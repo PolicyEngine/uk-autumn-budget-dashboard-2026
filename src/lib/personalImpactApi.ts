@@ -9,15 +9,9 @@
  * each model year.
  */
 
-// MOCK drill 2 ids, served by the pinned Python engine, not by this adapter.
-export const MOCK_POLICY_IDS = [
-  "mock2_fuel_duty_hold",
-  "mock2_electricity_vat_zero",
-  "mock2_employer_ni_threshold",
-  "mock2_cgt_rates",
-  "mock2_hvcts_band",
-  "mock2_state_pension_uprating",
-] as const;
+// MOCK drill ids are served by the pinned Python engine, never by this adapter;
+// none are registered before the drill 3 statement release.
+export const MOCK_POLICY_IDS: readonly string[] = [];
 
 export const LEGACY_POLICY_IDS = [
   "cgt_equalisation",

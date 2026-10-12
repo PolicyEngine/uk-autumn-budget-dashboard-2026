@@ -1579,23 +1579,9 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the candidate and carried-over 2026 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
-        from uk_budget_data import mock_drill2_structural as mock2
-
-        _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            # MOCK drill 2 parameter measures (statement order).
-            _create_mock2_fuel_duty_hold(),
-            _create_mock2_electricity_vat_zero(),
-            _create_mock2_employer_ni_threshold(),
-            _create_mock2_cgt_rates(),
-            _create_mock2_hvcts_band(),
-            _create_mock2_state_pension_uprating(),
-            _with_annex_a_state_pension(
-                mock2.create_mock2_state_pension_personal_allowance()
-            ),
-            _with_annex_a_state_pension(
-                mock2.create_mock2_energy_price_payment()
-            ),
-        ]
+        # MOCK drill 3 (12 Oct 2026): the active list starts empty before the
+        # 12:30 statement. Drill 2's mock2_* definitions stay above for history.
+        _AUTUMN_BUDGET_2026_REFORMS_CACHE = []
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 

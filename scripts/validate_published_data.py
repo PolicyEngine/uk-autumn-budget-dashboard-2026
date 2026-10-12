@@ -9,17 +9,7 @@ from pathlib import Path
 
 from uk_budget_data.budget_years import POLICY_YEARS
 
-FEATURED_POLICIES = (
-    # MOCK drill 2 parameter measures (statement order).
-    "mock2_fuel_duty_hold",
-    "mock2_electricity_vat_zero",
-    "mock2_employer_ni_threshold",
-    "mock2_cgt_rates",
-    "mock2_hvcts_band",
-    "mock2_state_pension_uprating",
-    "mock2_state_pension_personal_allowance",
-    "mock2_energy_price_payment",
-)
+FEATURED_POLICIES = ()  # Empty until the drill 3 statement-derived list is locked.
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),
     "distributional_impact": ("value",),

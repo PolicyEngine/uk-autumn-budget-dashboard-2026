@@ -95,11 +95,9 @@ class TestReformDefinitions:
         """Autumn Budget 2025 reforms are defined."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        ids = [r.id for r in get_autumn_budget_2026_reforms()]
-        assert {
-            "mock2_state_pension_personal_allowance",
-            "mock2_energy_price_payment",
-        } <= set(ids)
+        # Drill 3 (12 Oct 2026): the active list is empty before the
+        # 12:30 statement; measures are registered only after release.
+        assert get_autumn_budget_2026_reforms() == []
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""
@@ -574,15 +572,14 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_only_drill2_measures_after_statement_release(self):
+    def test_no_drill_measures_before_statement_release(self):
         from uk_budget_data.reforms import (
             get_autumn_budget_2026_reforms,
             get_reform,
         )
 
-        ids = [r.id for r in get_autumn_budget_2026_reforms()]
-        assert len(ids) == len(set(ids))
-        assert get_reform("mock2_energy_price_payment") is not None
+        assert get_autumn_budget_2026_reforms() == []
+        assert get_reform("mock2_energy_price_payment") is None
         assert get_reform("mock_nics_threshold_rise") is None
 
     def test_enacted_2025_measures_still_resolve_by_id(self):
