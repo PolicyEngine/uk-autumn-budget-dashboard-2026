@@ -389,7 +389,7 @@
             }
           ],
           "default": null,
-          "description": "content_sha256 of {'representation': ..., 'payload': ...}.",
+          "description": "SHA-256 of the RFC 8785 serialisation of {'representation': ..., 'payload': ...}, nulls kept (unlike content_sha256).",
           "title": "Reform Sha256"
         },
         "representation": {
@@ -601,6 +601,14 @@
       "title": "Schema Version",
       "type": "integer"
     },
+    "supported_years": {
+      "description": "Years the installed model projects this dataset to, from its data year (policyengine-uk's extend_single_year_dataset, no formula run). A year in years that is not here is unsupported: policyengine-core fills it by carrying or uprating the latest inputs, so its results are not evidence and must be shown as provisional or not at all.",
+      "items": {
+        "type": "integer"
+      },
+      "title": "Supported Years",
+      "type": "array"
+    },
     "wrapper": {
       "$ref": "#/$defs/WrapperIdentity"
     },
@@ -625,7 +633,8 @@
     "reform",
     "baseline",
     "fiscal_year",
-    "years"
+    "years",
+    "supported_years"
   ],
   "title": "ExecutionReceipt",
   "type": "object",
@@ -635,10 +644,11 @@
     "execution_identity_sha256": "{schema_version, country_id, wrapper, model, core, data, certification_status, certificate?} where certificate keeps only bundle_version, country_id, certificate_sha256, compatibility_basis, certified_for_model_version, certified_for_core_version, certified_dataset_sha256 and certified_by",
     "outputs_sha256": "the canonical output payload the receipt binds",
     "receipt_sha256": "the whole receipt without runtime and without reform.name and baseline.name",
-    "reform.reform_sha256": "{representation, payload} where payload is the reform exactly as given in that representation; for policyengine-uk.scenario_composition/v1 the payload is {applied_before_data_load, application: parameter_changes_then_modifiers, members: [{representation, reform_sha256, binding}, ...]} with members in application order"
+    "reform.reform_sha256": "RFC 8785 over {representation, payload} where payload is the reform exactly as given in that representation, nulls kept (a null in a reform can mean something, unlike an absent receipt field); for policyengine-uk.scenario_composition/v1 the payload is {applied_before_data_load, application: parameter_changes_then_modifiers, members: [{representation, reform_sha256, binding}, ...]} with members in application order"
   },
   "x-policyengine-rules": [
     "years is sorted ascending with no duplicates, and each year is written as an integer (2027, not 2027.0).",
+    "supported_years is sorted ascending with no duplicates. A year in years that is not in supported_years is unsupported: the model does not project the dataset to it, so a consumer must show its results as provisional or not at all.",
     "certification_status certified requires certificate; uncertified forbids it.",
     "certificate.country_id equals country_id.",
     "certificate.certified_for_model_version equals model.version.",

@@ -1,5 +1,5 @@
 # VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #579
-# (stacked on #571) at 69390c54de612e587cec3e0e3d09b0454b524b1e,
+# (stacked on #571) at f951bd59178ccabe05c55c9bfb14b23b53feb858,
 # src/policyengine/provenance/bytecode.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
 # when the dashboard pins the policyengine release that contains PRs #571
@@ -17,6 +17,7 @@ from __future__ import annotations
 import importlib.util
 import marshal
 import os
+import struct
 from pathlib import Path
 from types import CodeType
 from typing import Any, Optional
@@ -32,9 +33,62 @@ _HASH_BASED = 0b01
 _CHECK_SOURCE = 0b10
 
 
-def code_shape(code: CodeType) -> tuple[Any, ...]:
-    """A code object without where it was compiled: no file, no line numbers."""
+def _float_bits(value: float) -> bytes:
+    """A float's binary64 bytes: its sign, NaN payload and zero sign included."""
 
+    return struct.pack("<d", value)
+
+
+def _constant(value: Any, seen: Optional[dict[int, int]]) -> tuple[Any, ...]:
+    """A code constant with its exact type, so equal-but-different values differ.
+
+    ``(1,) == (1.0,)``, ``True == 1`` and ``0.0 == -0.0`` in Python, but code
+    holding one behaves differently from code holding the other, so tuples
+    and frozensets are encoded item by item and floats by their IEEE 754
+    bytes (``float.hex`` writes every NaN as ``nan``, but ``math.copysign``
+    tells a NaN's sign apart).
+
+    With ``seen``, an object met before in the same code tree is encoded as a
+    reference to its first occurrence, so sharing counts too: in
+    ``items = ((1,), (1,))`` the compiler makes the two inner tuples one
+    object, and ``items[0] is items[1]`` is true for it but false for a cache
+    holding two equal tuples. The compiler and marshal both keep sharing, so
+    a cache Python wrote numbers its objects as a fresh compilation does.
+    """
+
+    if seen is not None:
+        if id(value) in seen:
+            return ("ref", seen[id(value)])
+        seen[id(value)] = len(seen)
+    kind = type(value)
+    if kind is float:
+        return (kind, _float_bits(value))
+    if kind is complex:
+        return (kind, _float_bits(value.real), _float_bits(value.imag))
+    if kind is tuple:
+        return (kind, tuple(_constant(item, seen) for item in value))
+    if kind is frozenset:
+        # Members in an order fixed by their values alone, so two equal sets
+        # number their shared objects alike whatever their hash order.
+        members = sorted(value, key=lambda item: repr(_constant(item, None)))
+        return (kind, tuple(_constant(item, seen) for item in members))
+    if isinstance(value, CodeType):
+        return (CodeType, code_shape(value, _seen=seen))
+    if kind in (type(None), type(Ellipsis)):
+        return (kind,)
+    return (kind, value)
+
+
+def code_shape(
+    code: CodeType, *, _seen: Optional[dict[int, int]] = None
+) -> tuple[Any, ...]:
+    """A code object without where it was compiled: no file, no line numbers.
+
+    Constants are compared with their types, float bits and sharing across
+    the whole code tree (see :func:`_constant`).
+    """
+
+    seen: dict[int, int] = {} if _seen is None else _seen
     return (
         code.co_name,
         code.co_qualname,
@@ -49,10 +103,7 @@ def code_shape(code: CodeType) -> tuple[Any, ...]:
         code.co_freevars,
         code.co_cellvars,
         code.co_exceptiontable,
-        tuple(
-            code_shape(const) if isinstance(const, CodeType) else (type(const), const)
-            for const in code.co_consts
-        ),
+        tuple(_constant(const, seen) for const in code.co_consts),
     )
 
 
@@ -97,12 +148,21 @@ def compiled_file(pyc: Path, source: Path, optimization: str) -> CompiledFile:
     level = OPTIMIZATION_LEVELS.get(optimization)
     if level is None:
         return CompiledFile("invalid", f"optimisation level {optimization!r}")
-    data = pyc.read_bytes()
-    source_bytes = source.read_bytes()
+    try:
+        data = pyc.read_bytes()
+        source_bytes = source.read_bytes()
+    except OSError as exc:
+        # The interpreter ignores a cache it cannot read and compiles the source.
+        return CompiledFile("inert", f"unreadable ({type(exc).__name__})")
     if len(data) < _HEADER or data[:4] != importlib.util.MAGIC_NUMBER:
         return CompiledFile("inert", "written for another interpreter")
     flags = int.from_bytes(data[4:8], "little")
-    if flags == 0:
+    if flags & ~(_HASH_BASED | _CHECK_SOURCE):
+        # importlib refuses unknown flag bits and falls back to the source.
+        return CompiledFile("inert", "unknown header flags")
+    if not flags & _HASH_BASED:
+        # Timestamp-based, whatever the check-source bit says (importlib
+        # reads that bit only for hash-based caches).
         stat = os.stat(source)
         recorded = (
             int.from_bytes(data[8:12], "little"),
@@ -111,8 +171,6 @@ def compiled_file(pyc: Path, source: Path, optimization: str) -> CompiledFile:
         current = (int(stat.st_mtime) & 0xFFFFFFFF, stat.st_size & 0xFFFFFFFF)
         if recorded != current:
             return CompiledFile("inert", "stale timestamp")
-    elif flags not in (_HASH_BASED, _HASH_BASED | _CHECK_SOURCE):
-        return CompiledFile("inert", "unknown header flags")
     try:
         loaded = marshal.loads(data[_HEADER:])
     except (EOFError, ValueError, TypeError):

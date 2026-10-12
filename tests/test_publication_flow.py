@@ -13,12 +13,12 @@ from hypothesis.stateful import (
     rule,
 )
 
+from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import (
     RATE_PATH,
     World,
     make_household_rows,
     make_tables,
-    module_level_modifier,
 )
 from uk_budget_data.cli import main
 from uk_budget_data.models import DataConfig, Reform, ReformResult

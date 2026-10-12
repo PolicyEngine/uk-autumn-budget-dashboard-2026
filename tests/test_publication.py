@@ -11,13 +11,13 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
+from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import (
     DATASET_YEARS,
     RATE_PATH,
     YEARS,
     World,
     make_tables,
-    module_level_modifier,
 )
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication import receipt as receipt_module

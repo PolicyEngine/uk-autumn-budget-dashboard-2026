@@ -31,7 +31,7 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-pr579@69390c5"
+VENDORED_SOURCE = "vendored-w4-pr579@f951bd5"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 
@@ -477,11 +477,10 @@ def build_receipt_document(
         "generator_argv": list(inputs.generator_argv),
         "basis": inputs.basis,
         "dataset_years": supported,
-        "unsupported_years": (
-            years
-            if supported is None
-            else [y for y in years if y not in supported]
-        ),
+        # The execution receipt records the years the installed model
+        # projects the dataset to (policyengine.py#571's supported_years);
+        # the years it leaves out are the unsupported ones.
+        "unsupported_years": _unsupported(receipt, years, supported),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
         "publishable": not reasons,
@@ -577,6 +576,15 @@ def projection_end_year() -> Optional[int]:
     return default if isinstance(default, int) else None
 
 
+def _unsupported(receipt, years: list[int], supported) -> list[int]:
+    signed = getattr(receipt, "supported_years", None)
+    if signed is not None:
+        return list(receipt.unsupported_years)
+    if supported is None:
+        return list(years)
+    return [year for year in years if year not in supported]
+
+
 def dashboard_problems(document: dict) -> list[str]:
     """Ways the dashboard block's derived fields disagree with their sources.
 
@@ -587,7 +595,9 @@ def dashboard_problems(document: dict) -> list[str]:
       tree state;
     - the dataset years run without gaps to the installed model's
       projection end, and the unsupported years are exactly the reported
-      years beyond them.
+      years beyond them;
+    - the unsupported years are the execution receipt's own, when it
+      records the years the dataset is projected to.
     """
     dashboard = document.get("dashboard") or {}
     problems = []
@@ -612,6 +622,12 @@ def dashboard_problems(document: dict) -> list[str]:
     years = sorted(int(year) for year in receipt.years)
     supported = dashboard.get("dataset_years")
     unsupported = dashboard.get("unsupported_years")
+    if getattr(receipt, "supported_years", None) is not None and (
+        unsupported != list(receipt.unsupported_years)
+    ):
+        problems.append(
+            "its unsupported years are not the execution receipt's"
+        )
     if supported is None:
         if unsupported != years:
             problems.append(
