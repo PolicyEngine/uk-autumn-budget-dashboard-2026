@@ -3,7 +3,7 @@
 Usage:
     uv run python scripts/generate_blog_charts.py \
         --manifest public/data/manifest.json --keys measure-a measure-b \
-        --out-dir public/briefing/3/
+        --out-dir public/briefing/3/measures/
 """
 
 import argparse
@@ -301,6 +301,9 @@ def create_revenue_chart(
 ) -> dict:
     """Fiscal costing, with only passed or accepted receipted comparators."""
     reform_data = df[df["reform_id"] == reform_id].copy()
+    if labels is not None:
+        # Only the years the caller may show: never an unsupported one.
+        reform_data = reform_data[reform_data["year"].isin(list(labels))]
     if reform_data.empty:
         raise ValueError(f"No data found for {reform_id}")
     reform_data = reform_data.sort_values("year")
@@ -416,15 +419,10 @@ def generate(
     outputs = {}
     for key, artifact in loaded["entries"].items():
         tables = artifact["tables"]
-        years = sorted(artifact["entry"].years)
-        labels = export.year_labels(artifact)
+        years = export.supported_years(artifact)
+        labels = export.year_labels(artifact, years)
         source = export.source_line(artifact, loaded["stamp"])
-        reconciliation_path = (
-            Path(manifest).parent
-            / artifact["entry"].artifact
-            / "reconciliation.json"
-        )
-        reconciliation = json.loads(reconciliation_path.read_text())
+        reconciliation = export.treasury_comparison(artifact, inputs)
         charts = {
             "distributional": create_distributional_chart(
                 pd.DataFrame(tables["distributional_impact"]),
@@ -447,7 +445,7 @@ def generate(
             outputs[f"{key}/{name}.json"] = (
                 json.dumps(stamped, indent=2, allow_nan=False) + "\n"
             )
-    return export.write_export(out_dir, outputs, loaded)
+    return export.write_export(out_dir, outputs, loaded, inputs=inputs)
 
 
 def main(argv: list[str] | None = None) -> int:

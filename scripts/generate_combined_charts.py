@@ -3,7 +3,7 @@
 Usage:
     uv run python scripts/generate_combined_charts.py \
         --manifest public/data/manifest.json --key combined--measure-a+measure-b \
-        --out-dir public/briefing/3/
+        --out-dir public/briefing/3/combined/
 """
 
 import argparse
@@ -746,8 +746,8 @@ def create_constituency_map_html(data_by_year: dict, years: list[str]) -> str:
 
 def chart_data(artifact: dict) -> tuple[dict, dict, dict, dict]:
     """Round only values present in the corresponding artifact tables."""
-    years = sorted(artifact["entry"].years)
-    labels = export.year_labels(artifact)
+    years = export.supported_years(artifact)
+    labels = export.year_labels(artifact, years)
     tables = artifact["tables"]
     distributional, winners_losers, poverty, constituencies = {}, {}, {}, {}
     group_labels = {
@@ -851,7 +851,7 @@ def generate(
         name: export.stamp_html(content, source, loaded["stamp"], payload)
         for name, (content, payload) in charts.items()
     }
-    return export.write_export(out_dir, outputs, loaded)
+    return export.write_export(out_dir, outputs, loaded, inputs=inputs)
 
 
 def main(argv: list[str] | None = None) -> int:

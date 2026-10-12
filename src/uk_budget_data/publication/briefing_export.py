@@ -28,14 +28,28 @@ def load(manifest: Path, keys: list[str], *, inputs: Path) -> dict:
     )
 
 
+def supported_years(artifact: dict) -> list[int]:
+    """The artifact's years a chart may show: never an unsupported one.
+
+    Years beyond the dataset's projection are unavailable, not figures.
+    """
+    entry = artifact["entry"]
+    years = sorted(y for y in entry.years if y not in entry.unsupported_years)
+    if not years:
+        raise PublishError(
+            "export", [f"{entry.name} has no supported years to show"]
+        )
+    return years
+
+
 def require_tables(key: str, artifact: dict, names: tuple[str, ...]) -> None:
     """Optional artifact tables become required when a chart needs them."""
-    years = set(artifact["entry"].years)
+    years = set(supported_years(artifact))
     problems = []
     for name in names:
         rows = artifact["tables"].get(name, [])
         present = {row["year"] for row in rows}
-        if present != years:
+        if not years <= present:
             problems.append(
                 f"{key}: {name} does not cover the artifact years "
                 f"{sorted(years)}"
@@ -44,14 +58,65 @@ def require_tables(key: str, artifact: dict, names: tuple[str, ...]) -> None:
         raise PublishError("export", problems)
 
 
-def year_labels(artifact: dict) -> list[str]:
-    """Use the W4 receipt's fiscal-year convention and reported years."""
+def year_labels(artifact: dict, years: list[int] | None = None) -> list[str]:
+    """Fiscal-year labels, by the W4 receipt's convention, for ``years``.
+
+    ``years`` defaults to the artifact's supported years.
+    """
     execution = load_execution_receipt(artifact["receipt"])
     api, _ = receipt_api()
+    years = supported_years(artifact) if years is None else years
     return [
-        api.fiscal_year_label(year, execution.fiscal_year)
-        for year in sorted(execution.years)
+        api.fiscal_year_label(year, execution.fiscal_year) for year in years
     ]
+
+
+def treasury_comparison(artifact: dict, inputs: Path) -> dict:
+    """Reconcile the artifact afresh against the current Treasury inputs.
+
+    The ``reconciliation.json`` beside an artifact is a record for people
+    and can be edited, so charts never read it. This recomputes the result
+    from the artifact's own (checked) budgetary rows and the inputs.
+    """
+    from uk_budget_data.publication.reconcile import (
+        load_exceptions,
+        load_expected,
+        load_mapping,
+        load_policy,
+        load_sources,
+        reconcile,
+    )
+
+    entry = artifact["entry"]
+    key = artifact["receipt"]["dashboard"]["key"]
+    budgetary = {
+        row["year"]: row["value"]
+        for row in artifact["tables"]["budgetary_impact"]
+        if row["reform_id"] == key
+    }
+    inputs = Path(inputs)
+    return reconcile(
+        budgetary,
+        measure_id=key,
+        outputs_sha256=entry.outputs_sha256,
+        sources=load_sources(inputs / "sources"),
+        mapping=load_mapping(inputs / "mapping.csv"),
+        exceptions=load_exceptions(inputs / "exceptions.yaml"),
+        policy=load_policy(inputs / "policy.yaml"),
+        expected=load_expected(inputs / "expected_effects.csv"),
+        supported_years=set(supported_years(artifact)),
+    )
+
+
+def inputs_digest(inputs: Path) -> str:
+    """One digest over every Treasury input file the export may have used."""
+    inputs = Path(inputs)
+    files = {
+        str(path.relative_to(inputs)): sha256_bytes(path.read_bytes())
+        for path in sorted(inputs.rglob("*"))
+        if path.is_file()
+    }
+    return sha256_bytes(json.dumps(files, sort_keys=True).encode("utf-8"))
 
 
 def source_line(artifact: dict, stamp: dict) -> str:
@@ -116,8 +181,24 @@ def stamp_plotly(chart: dict, source: str, stamp: dict) -> dict:
     return chart
 
 
-def write_export(out_dir: Path, outputs: dict[str, str], loaded: dict) -> dict:
-    """Write already prepared charts and a receipt binding all their bytes."""
+def write_export(
+    out_dir: Path,
+    outputs: dict[str, str],
+    loaded: dict,
+    *,
+    inputs: Path | None = None,
+) -> dict:
+    """Write already prepared charts and a receipt binding all their bytes.
+
+    The destination must be new or empty, so the receipt describes exactly
+    what is in it: nothing left from an earlier export survives beside it.
+    """
+    out_dir = Path(out_dir)
+    if out_dir.exists() and any(out_dir.iterdir()):
+        raise PublishError(
+            "export",
+            [f"{out_dir} is not empty; export into a new directory"],
+        )
     repo_root = Path(__file__).resolve().parents[3]
     git_sha = subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -141,6 +222,9 @@ def write_export(out_dir: Path, outputs: dict[str, str], loaded: dict) -> dict:
         "artifacts": artifacts,
         "files": files,
         "generator_git_sha": git_sha,
+        "treasury_inputs_sha256": (
+            inputs_digest(inputs) if inputs is not None else None
+        ),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     if len(artifacts) == 1:
@@ -148,7 +232,6 @@ def write_export(out_dir: Path, outputs: dict[str, str], loaded: dict) -> dict:
         receipt.update({"key": key, **artifacts[key]})
     # No directory or file is touched until every gate, chart and digest has
     # been prepared successfully for the complete requested set.
-    out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, content in outputs.items():
         destination = out_dir / name

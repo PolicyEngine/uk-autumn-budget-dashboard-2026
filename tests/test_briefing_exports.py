@@ -17,6 +17,7 @@ from tests.briefing_support import (
 )
 from tests.publication_support import World
 from uk_budget_data.publication import manifest as m
+from uk_budget_data.publication.artifacts import read_tables
 from uk_budget_data.publication.publish import PublishError
 
 
@@ -48,6 +49,15 @@ def world():
     instance = World()
     yield instance
     instance.close()
+
+
+def _decile_label(table, x):
+    """The table's decile key for a chart's x label."""
+    if table == "distributional_impact":
+        n = int(x)
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n if n < 4 else 0, "th")
+        return f"{n}{suffix}"
+    return x
 
 
 @pytest.mark.parametrize("generator", [blog, combined])
@@ -229,29 +239,41 @@ def test_every_chart_data_number_is_receipted(seed, years):
                 )
                 if row["year"] == year and row["decile"] != "all"
             ]
+        labels = {year: f"{year}-{(year + 1) % 100:02d}" for year in years}
         for key in ("alpha", "beta"):
+            # Decile charts: one trace per year, named by its fiscal year,
+            # each value the table's value for that year and decile.
             for filename, table, field, scale in (
                 ("distributional.json", "distributional_impact", "value", 100),
                 ("winners_losers.json", "winners_losers", "avg_change", 1),
-                ("revenue.json", "budgetary_impact", "value", 1),
             ):
                 chart = json.loads((blog_out / key / filename).read_text())
-                allowed = {row[field] for row in tables[key][table]}
-                for trace in chart["data"]:
-                    # Treasury comparisons are separately gated values; in
-                    # this world their values match the fiscal table.
-                    for value in trace["y"]:
-                        assert any(
-                            abs(value * scale - approved) < 1e-10
-                            for approved in allowed
-                        )
-                    assert all(
-                        str(year) + "-" in str(trace.get("name", ""))
-                        or f"{year}-{(year + 1) % 100:02d}"
-                        in trace.get("x", [])
-                        for year in years
-                        if str(year) in str(trace)
+                assert [trace["name"] for trace in chart["data"]] == [
+                    labels[year] for year in years
+                ]
+                for trace, year in zip(chart["data"], years, strict=True):
+                    rows = {
+                        row["decile"]: row[field]
+                        for row in tables[key][table]
+                        if row["year"] == year
+                    }
+                    expected_y = [
+                        rows[_decile_label(table, x)] for x in trace["x"]
+                    ]
+                    assert [v * scale for v in trace["y"]] == pytest.approx(
+                        expected_y, abs=1e-10
                     )
+            # Revenue: each bar on its own fiscal year.
+            chart = json.loads((blog_out / key / "revenue.json").read_text())
+            by_year = {
+                row["year"]: row["value"]
+                for row in tables[key]["budgetary_impact"]
+            }
+            for trace in chart["data"]:
+                assert trace["x"] == [labels[year] for year in years]
+            assert chart["data"][0]["y"] == pytest.approx(
+                [by_year[year] for year in years], abs=1e-10
+            )
     finally:
         world.close()
 
@@ -307,10 +329,15 @@ def test_blog_only_uses_pass_or_accepted_reconciliation_rows(world, tmp_path):
     reconciliation = json.loads(path.read_text())
     # Summary stays approved; an out-of-scope alongside record must never
     # turn into an exported comparator just because it contains a number.
+    # An edited record claims a passing comparator worth a made-up number.
+    for row in reconciliation["rows"]:
+        row["status"] = "pass"
+        if "comparator" in row:
+            row["comparator"]["value_bn"] = 918273.645
     reconciliation["rows"].append(
         {
             "year": 2029,
-            "status": "not_comparable",
+            "status": "pass",
             "comparator": {
                 "basis": "post_behavioural",
                 "value_bn": 918273.645,
@@ -333,3 +360,71 @@ def test_blog_only_uses_pass_or_accepted_reconciliation_rows(world, tmp_path):
         and "alpha" in json.dumps(trace)
         for trace in comparators
     )
+
+
+def test_unsupported_years_never_reach_a_chart(world, tmp_path):
+    """Review finding: 2031 figures were exported beside supported years."""
+    manifest, _ = approved_world(world, years=(2027, 2031))
+    assert manifest.measures["alpha"].unsupported_years == [2031]
+    out = tmp_path / "combined"
+    combined.generate(
+        world.data_root / "manifest.json",
+        COMBINED_KEY,
+        out,
+        inputs=world.inputs,
+    )
+    payload = html_payload(out / "distributional.html", "data")
+    assert set(payload) == {"2027-28"}
+    blog_out = tmp_path / "blog"
+    blog.generate(
+        world.data_root / "manifest.json",
+        ["alpha"],
+        blog_out,
+        inputs=world.inputs,
+    )
+    chart = json.loads((blog_out / "alpha" / "revenue.json").read_text())
+    assert chart["data"][0]["x"] == ["2027-28"]
+
+
+def test_the_revenue_chart_puts_each_value_on_its_own_year(world, tmp_path):
+    manifest, _ = approved_world(world)
+    out = tmp_path / "briefing"
+    blog.generate(
+        world.data_root / "manifest.json", ["alpha"], out, inputs=world.inputs
+    )
+    chart = json.loads((out / "alpha" / "revenue.json").read_text())
+    trace = chart["data"][0]
+    assert trace["x"] == ["2027-28", "2028-29"]
+    tables = read_tables(world.data_root / manifest.measures["alpha"].artifact)
+    by_year = {row["year"]: row["value"] for row in tables["budgetary_impact"]}
+    assert trace["y"] == pytest.approx(
+        [by_year[2027], by_year[2028]], abs=0.01
+    )
+
+
+def test_an_export_never_writes_into_a_used_directory(world, tmp_path):
+    """Review finding: a withdrawn measure's chart outlived its receipt."""
+    approved_world(world)
+    out = tmp_path / "briefing"
+    out.mkdir()
+    (out / "beta").mkdir()
+    (out / "beta" / "revenue.json").write_text("{}")
+    with pytest.raises(PublishError, match="not empty"):
+        blog.generate(
+            world.data_root / "manifest.json",
+            ["alpha"],
+            out,
+            inputs=world.inputs,
+        )
+    assert sorted(p.name for p in out.rglob("*")) == ["beta", "revenue.json"]
+
+
+def test_the_export_receipt_binds_the_treasury_inputs(world, tmp_path):
+    approved_world(world)
+    out = tmp_path / "briefing"
+    receipt = blog.generate(
+        world.data_root / "manifest.json", ["alpha"], out, inputs=world.inputs
+    )
+    from uk_budget_data.publication.briefing_export import inputs_digest
+
+    assert receipt["treasury_inputs_sha256"] == inputs_digest(world.inputs)
