@@ -39,7 +39,14 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 
 - **CI.** Hugging Face rejected the repository's token, so CI was red on every PR, and the one dataset test skipped without a token. #12 fixes both, using the org token granted on 12 October.
 - **Production dashboard.** The Vercel project exists but has not deployed yet (details below). Nothing public links to it.
-- **The household API exists but its main route is too slow.** On the first deploy, `/api/health` and `/api/version` answered, but `/api/personal-impact` had not answered after 300 seconds (HTTP 504) on 2 CPUs. That is `main`'s household calculator, which #3 replaces. #3's route needs the same measurement once it is deployed.
+- **The household route is too slow for Budget day, on `main` and on #3.** Measured on Cloud Run, 2 CPUs, 12 October:
+
+  | Code | Plain earner (£30,000) | Family with every input filled |
+  |---|---|---|
+  | `main` | no answer after 300 s (HTTP 504) | not tried |
+  | #3 (no-traffic revision `pr3`) | 25 s, and 27 s warm | 114 s |
+
+  Neither loads the population dataset: both build single-household simulations. The time goes on building them. #3 builds a new simulation for every year, policy and side: 12 for the plain earner, 58 for the family. Each takes about 1 second to build on policyengine-uk 2.125.1 (measured locally), while calculating on a built simulation takes about 0.1 s. One simulation per policy and side, covering all six years, would cut the family's 58 builds to about 10. Concurrent requests also share an instance's 2 CPUs (Cloud Run allows 80 at once by default), so latency grows with traffic.
 - **PR #3 holds the real 2026 foundation**: the measure registry, the PolicyEngine-backed household route and the published-data validator.
 - **The page cannot show combined figures safely yet.** On `main` and on #3, the browser:
   - substitutes zero for missing rows;
