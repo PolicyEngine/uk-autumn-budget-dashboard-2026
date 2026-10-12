@@ -16,7 +16,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
@@ -43,6 +49,7 @@ class Approval(_Strict):
     by: str
     at: str
     outputs_sha256: str
+    artifact_sha256: str
     carried_from_receipt: Optional[str] = None
 
 
@@ -60,6 +67,10 @@ class Entry(_Strict):
     outputs_sha256: str
     receipt_sha256: str
     execution_identity_sha256: str
+    # The artifact's own digest (receipt.artifact_sha256): the entry names
+    # exactly these bytes, and the gates check the directory still holds
+    # them.
+    artifact_sha256: str
     years: list[int]
     unsupported_years: list[int] = Field(default_factory=list)
     reconciliation: Optional[ReconciliationSummary] = None
@@ -107,6 +118,22 @@ class Manifest(_Strict):
     superseded: list[Superseded] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    @model_validator(mode="after")
+    def _keys_are_distinct_across_groups(self):
+        shared = set(self.measures) & set(self.combined)
+        if shared:
+            raise ValueError(
+                f"keys used as both a measure and a combined run: "
+                f"{sorted(shared)}"
+            )
+        misplaced = [k for k in self.measures if k.startswith("combined--")]
+        misplaced += [
+            k for k in self.combined if not k.startswith("combined--")
+        ]
+        if misplaced:
+            raise ValueError(f"keys in the wrong group: {sorted(misplaced)}")
+        return self
 
     def entries(self) -> dict[str, Entry]:
         """Every entry by key (measure ids and combined keys never clash)."""

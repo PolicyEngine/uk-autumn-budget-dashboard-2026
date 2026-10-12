@@ -16,6 +16,9 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 STR, INT, FLOAT, BOOL = "str", "int", "float", "bool"
+# Integers beyond this cannot all be told apart once read as floats (here, or
+# by the browser), so they are refused rather than collapsed together.
+MAX_EXACT_INTEGER = 2**53 - 1
 
 
 class TableError(ValueError):
@@ -198,11 +201,26 @@ def _coerce(value: Any, kind: str, where: str) -> Any:
     if kind == STR:
         return str(value)
     if kind == BOOL:
-        if isinstance(value, str):
-            if value in ("True", "False"):
-                return value == "True"
-            raise TableError(f"{where}: {value!r} is not a boolean")
-        return bool(value)
+        if isinstance(value, str) and value in ("True", "False"):
+            return value == "True"
+        if type(value).__name__ in ("bool", "bool_"):
+            return bool(value)
+        raise TableError(f"{where}: {value!r} is not a boolean")
+    if kind == INT and type(value).__name__ in (
+        "int",
+        "int8",
+        "int16",
+        "int32",
+        "int64",
+        "uint8",
+        "uint16",
+        "uint32",
+        "uint64",
+    ):
+        number = int(value)
+        if abs(number) > MAX_EXACT_INTEGER:
+            raise TableError(f"{where}: {value!r} is too large to keep exact")
+        return number
     try:
         # A float32 is written as its own shortest decimal, as pandas writes
         # it, rather than as the longer exact double.
@@ -216,6 +234,8 @@ def _coerce(value: Any, kind: str, where: str) -> Any:
     if kind == INT:
         if number != int(number):
             raise TableError(f"{where}: {value!r} is not a whole number")
+        if abs(number) > MAX_EXACT_INTEGER:
+            raise TableError(f"{where}: {value!r} is too large to keep exact")
         return int(number)
     return number
 
@@ -377,12 +397,21 @@ SCATTER_BINS = {
     "change_max": 2_000.0,
 }
 SCATTER_MIN_HOUSEHOLDS = 10
-SCATTER_ROUND_TO = 10
+# Survey weights run to thousands, so counts are rounded to the nearest
+# thousand households: finer rounding would let differences between cells
+# reveal one household's weight.
+SCATTER_ROUND_TO = 1000
 
 
 def band(value: float, width: float, low: float, high: float) -> float:
     """The lower edge of the band holding ``value``, outer bands open."""
     edge = math.floor(value / width) * width
+    # Guard against rounding in the division (for example a tiny negative
+    # value whose quotient underflows to -0.0).
+    if edge > value:
+        edge -= width
+    elif edge + width <= value:
+        edge += width
     return float(min(max(edge, low), high - width))
 
 
@@ -411,7 +440,9 @@ def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
                 b["income_max"],
             ),
             band(
-                float(row["income_change"]),
+                # Round to the penny first, so float noise around zero is
+                # not counted as a loss.
+                round(float(row["income_change"]), 2),
                 b["change_band_width"],
                 b["change_min"],
                 b["change_max"],

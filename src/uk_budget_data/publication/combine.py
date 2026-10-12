@@ -124,9 +124,9 @@ def merged_changes(measures: list[Reform], config: DataConfig) -> dict:
                 member.id,
                 side,
             )
-            if modifier is not None and not any(
-                modifier is seen for seen in sides[side]["modifiers"]
-            ):
+            # Every member's modifier runs, once per member, in member
+            # order, even when two members share one.
+            if modifier is not None:
                 sides[side]["modifiers"].append(modifier)
     return sides
 

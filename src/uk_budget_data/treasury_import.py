@@ -21,6 +21,7 @@ Usage::
 
 import argparse
 import csv
+import math
 import re
 import sys
 from dataclasses import dataclass, field
@@ -98,16 +99,20 @@ def parse_figure(value) -> tuple[Optional[float], bool]:
     if isinstance(value, bool):
         raise ScorecardError(f"unexpected boolean cell {value!r}")
     if isinstance(value, (int, float)):
-        return float(value), False
-    text = _text(value)
-    if text in NIL:
-        return 0.0, False
-    if text == NEGLIGIBLE:
-        return 0.0, True
-    try:
-        return float(text.replace(",", "")), False
-    except ValueError as error:
-        raise ScorecardError(f"not a figure: {value!r}") from error
+        number = float(value)
+    else:
+        text = _text(value)
+        if text in NIL:
+            return 0.0, False
+        if text == NEGLIGIBLE:
+            return 0.0, True
+        try:
+            number = float(text.replace(",", ""))
+        except ValueError as error:
+            raise ScorecardError(f"not a figure: {value!r}") from error
+    if not math.isfinite(number):
+        raise ScorecardError(f"not a finite figure: {value!r}")
+    return number, False
 
 
 def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
@@ -119,6 +124,12 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
             if FISCAL_YEAR.match(_text(cell))
         }
         if len(years) >= 3:
+            labels = list(years.values())
+            repeated = sorted({y for y in labels if labels.count(y) > 1})
+            if repeated:
+                raise ScorecardError(
+                    f"fiscal year columns repeat: {', '.join(repeated)}"
+                )
             head_columns = [
                 column
                 for column, cell in enumerate(row)

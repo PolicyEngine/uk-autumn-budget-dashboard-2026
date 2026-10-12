@@ -352,10 +352,26 @@ def test_receipt_is_certified_and_consistent(world):
     )
 
 
-def test_different_dataset_bytes_are_never_certified(world):
+def test_different_dataset_bytes_cannot_be_receipted(world):
+    """Bytes that are not the named dataset never get a receipt at all."""
     other = world.root / "other.h5"
     other.write_bytes(b"some other dataset")
-    document = read_receipt(world.write("alpha", VALUES, dataset=other).path)
+    with pytest.raises(ReceiptUnavailable, match="not the bundle's"):
+        world.write("alpha", VALUES, dataset=other)
+
+
+def test_a_dataset_other_than_the_certified_default_is_uncertified(world):
+    tiny = world.root / "enhanced_frs_2024_25_tiny.h5"
+    tiny.write_bytes(b"a smaller dataset")
+    world.register("enhanced_frs_2024_25_tiny", tiny)
+    document = read_receipt(
+        world.write(
+            "alpha",
+            VALUES,
+            dataset=tiny,
+            dataset_name="enhanced_frs_2024_25_tiny",
+        ).path
+    )
     assert (
         document["execution_receipt"]["certification_status"] == "uncertified"
     )
@@ -465,9 +481,10 @@ def test_stage_then_approve(world):
     )
 
 
-def test_unreconciled_artifact_cannot_be_staged(world):
+def test_a_measure_with_no_expectation_cannot_be_staged(world):
+    """Reconciliation is recomputed; no file needs to exist."""
     reference = world.write("alpha", VALUES)
-    with pytest.raises(PublishError, match="no reconciliation.json"):
+    with pytest.raises(PublishError, match="undeclared"):
         stage(
             m.Manifest(),
             reference.path,
@@ -552,10 +569,16 @@ def test_provisional_tolerates_awaiting_source_but_approval_does_not(world):
 
 
 def test_uncertified_artifact_cannot_be_provisional_or_approved(world):
-    other = world.root / "other.h5"
+    other = world.root / "enhanced_frs_2024_25_tiny.h5"
     other.write_bytes(b"uncertified")
+    world.register("enhanced_frs_2024_25_tiny", other)
     world.costing("alpha", VALUES)
-    reference = world.write("alpha", VALUES, dataset=other)
+    reference = world.write(
+        "alpha",
+        VALUES,
+        dataset=other,
+        dataset_name="enhanced_frs_2024_25_tiny",
+    )
     world.reconcile(reference)
     manifest = m.Manifest()
     with pytest.raises(PublishError, match="not certified"):
@@ -629,7 +652,14 @@ def combined_reference(world, members, values):
             }
         )
     return world.write(
-        key, values, members=records, measure_ids=sorted(members)
+        key,
+        values,
+        members=records,
+        measure_ids=sorted(members),
+        member_outputs={
+            member: world_manifest_entry(world, member).outputs_sha256
+            for member in sorted(members)
+        },
     )
 
 

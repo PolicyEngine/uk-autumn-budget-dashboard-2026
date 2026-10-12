@@ -162,13 +162,18 @@ class World:
 
     # --- simulations and receipts ------------------------------------
 
-    def sim(self, dataset: Path = None, years=DATASET_YEARS):
+    def sim(
+        self,
+        dataset: Path = None,
+        years=DATASET_YEARS,
+        dataset_name: str = "enhanced_frs_2024_25",
+    ):
         """A stand-in simulation carrying what the receipt builder reads."""
         return SimpleNamespace(
             policyengine_bundle={
                 "runtime_dataset_source": str(dataset or self._dataset),
                 "country_id": "uk",
-                "runtime_dataset": "enhanced_frs_2024_25",
+                "runtime_dataset": dataset_name,
             },
             dataset=SimpleNamespace(years=list(years)),
         )
@@ -190,6 +195,8 @@ class World:
         members=None,
         measure_ids=None,
         tables=None,
+        member_outputs=None,
+        dataset_name: str = "enhanced_frs_2024_25",
     ):
         """Generate an artifact for ``key`` with the given fiscal impact."""
         revision = self.revision(clean)
@@ -211,9 +218,10 @@ class World:
             basis=BASIS,
             revision=revision,
             members=members,
+            member_outputs=member_outputs,
             generator_argv=["test"],
         )
-        sim = self.sim(dataset, dataset_years)
+        sim = self.sim(dataset, dataset_years, dataset_name)
 
         def build(file_digests):
             return receipt_module.build_receipt_document(
@@ -227,6 +235,17 @@ class World:
         return write_artifact(
             tables or make_tables(key, values), key, build, self.artifacts
         )
+
+    def register(self, dataset_name: str, dataset: Path):
+        """Name ``dataset``'s bytes in the bundle as ``dataset_name``.
+
+        A dataset other than the bundle's certified default yields an
+        uncertified receipt: the way to test what the gates do with one.
+        """
+        digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+        release = self.bundle["data_releases"]["uk"]
+        release["datasets"][dataset_name]["sha256"] = digest
+        (self.root / "manifest.json").write_text(json.dumps(self.bundle))
 
     # --- Treasury inputs ----------------------------------------------
 

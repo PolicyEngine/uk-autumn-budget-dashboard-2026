@@ -21,6 +21,7 @@ from uk_budget_data.publication.artifacts import (
     ArtifactRef,
     write_artifact,
 )
+from uk_budget_data.publication.manifest import load_manifest
 from uk_budget_data.publication.receipt import (
     BASIS_PATH,
     ReceiptInputs,
@@ -112,15 +113,29 @@ def generate_artifacts(
         process: Runs the calculators for (reform, config, baseline, reform
             simulation) and returns a ReformResult.
         on_progress: Called with a line of progress text.
+
+    A combined run records the outputs each member had when it was made:
+    the member's artifact from this run if it was generated here, otherwise
+    its entry in the manifest beside ``artifacts_root``. A combined run
+    whose members are in neither can be written but never staged.
     """
     report = GenerationReport()
+    manifest = load_manifest(artifacts_root.parent)
+    written_outputs: dict[str, str] = {}
     revision = code_revision(repo_root)
     basis = load_basis(repo_root / BASIS_PATH)
     config_baseline = _config_baseline_identity(config)
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
 
-    def run(reform: Reform, key: str, identities, members, measure_ids):
+    def run(
+        reform: Reform,
+        key: str,
+        identities,
+        members,
+        measure_ids,
+        member_outputs=None,
+    ):
         baseline_identity, reform_identity = identities
         baseline_scenario = (
             reform.to_baseline_scenario() or config.get_baseline_scenario()
@@ -141,6 +156,7 @@ def generate_artifacts(
                 revision=revision,
                 config_baseline_identity=config_baseline,
                 members=members,
+                member_outputs=member_outputs,
             )
             if argv is not None:
                 inputs.generator_argv = argv
@@ -150,6 +166,7 @@ def generate_artifacts(
             result_tables(result), key, build_receipt, artifacts_root
         )
         report.written.append(reference)
+        written_outputs[key] = reference.outputs_sha256
         on_progress(
             f"{key}: {'wrote' if reference.created else 'unchanged'} "
             f"{reference.path}"
@@ -175,20 +192,45 @@ def generate_artifacts(
         ids = [member.id for member in ordered]
         key = combine.combined_key(ids)
         try:
-            baseline_identity, reform_identity, records = combined_identities(
-                ordered, config, revision
-            )
             combined = combine.combine_measures(ordered, config)
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
             )
+            # Bind each side with the phase its combined Scenario runs in.
+            combined_baseline = (
+                combined.to_baseline_scenario()
+                or config.get_baseline_scenario()
+            )
+            baseline_identity, reform_identity, records = combined_identities(
+                ordered,
+                config,
+                revision,
+                reform_applied_before_data_load=(
+                    combined.to_scenario().applied_before_data_load
+                ),
+                baseline_applied_before_data_load=(
+                    combined_baseline.applied_before_data_load
+                    if combined_baseline is not None
+                    else False
+                ),
+            )
             combined = combined.model_copy(update={"id": key})
+            snapshot = {
+                member: written_outputs.get(member)
+                or (
+                    manifest.measures[member].outputs_sha256
+                    if member in manifest.measures
+                    else None
+                )
+                for member in ids
+            }
             run(
                 combined,
                 key,
                 (baseline_identity, reform_identity),
                 records,
                 ids,
+                member_outputs=(snapshot if all(snapshot.values()) else None),
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason
