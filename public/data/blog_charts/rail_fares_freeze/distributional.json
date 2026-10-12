@@ -1,0 +1,351 @@
+{
+  "data": [
+    {
+      "x": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "y": [
+        0.00019708103,
+        0.00019907922000000002,
+        9.553147e-05,
+        8.139177e-05,
+        8.222222e-05,
+        0.00010287932,
+        4.995395e-05,
+        0.00033634695999999997,
+        3.675625e-05,
+        1.4662147e-05
+      ],
+      "type": "bar",
+      "marker": {
+        "color": "#319795",
+        "line": {
+          "width": 0
+        }
+      },
+      "hovertemplate": "Decile %{x}<br>Change: %{y:.2%}<extra></extra>",
+      "text": [
+        "+0.02%",
+        "+0.02%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.00%",
+        "+0.03%",
+        "+0.00%",
+        "+0.00%"
+      ],
+      "textposition": "outside",
+      "textfont": {
+        "family": "Inter, sans-serif",
+        "size": 14,
+        "color": "#000000"
+      },
+      "visible": true,
+      "name": "2026"
+    },
+    {
+      "x": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "y": [
+        0.00020936348000000001,
+        0.00020948146,
+        0.00010439284,
+        0.00010507595999999999,
+        6.8393964e-05,
+        0.000104616955,
+        5.40208e-05,
+        0.00035806039999999997,
+        3.908384e-05,
+        1.5362113000000002e-05
+      ],
+      "type": "bar",
+      "marker": {
+        "color": "#319795",
+        "line": {
+          "width": 0
+        }
+      },
+      "hovertemplate": "Decile %{x}<br>Change: %{y:.2%}<extra></extra>",
+      "text": [
+        "+0.02%",
+        "+0.02%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.04%",
+        "+0.00%",
+        "+0.00%"
+      ],
+      "textposition": "outside",
+      "textfont": {
+        "family": "Inter, sans-serif",
+        "size": 14,
+        "color": "#000000"
+      },
+      "visible": false,
+      "name": "2027"
+    },
+    {
+      "x": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "y": [
+        0.00021536242,
+        0.00021600890000000002,
+        0.00010646209,
+        0.00010606808000000001,
+        6.748534300000001e-05,
+        0.00010961946,
+        5.4598227e-05,
+        0.00036481105,
+        4.1326024e-05,
+        1.5515018999999998e-05
+      ],
+      "type": "bar",
+      "marker": {
+        "color": "#319795",
+        "line": {
+          "width": 0
+        }
+      },
+      "hovertemplate": "Decile %{x}<br>Change: %{y:.2%}<extra></extra>",
+      "text": [
+        "+0.02%",
+        "+0.02%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.04%",
+        "+0.00%",
+        "+0.00%"
+      ],
+      "textposition": "outside",
+      "textfont": {
+        "family": "Inter, sans-serif",
+        "size": 14,
+        "color": "#000000"
+      },
+      "visible": false,
+      "name": "2028"
+    },
+    {
+      "x": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "y": [
+        0.00021869395,
+        0.00022159188999999998,
+        0.00011532621999999999,
+        0.00010188100000000001,
+        6.7748325e-05,
+        0.00011173665,
+        5.626335e-05,
+        0.00037454028,
+        4.145664e-05,
+        1.5831885000000002e-05
+      ],
+      "type": "bar",
+      "marker": {
+        "color": "#319795",
+        "line": {
+          "width": 0
+        }
+      },
+      "hovertemplate": "Decile %{x}<br>Change: %{y:.2%}<extra></extra>",
+      "text": [
+        "+0.02%",
+        "+0.02%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.01%",
+        "+0.04%",
+        "+0.00%",
+        "+0.00%"
+      ],
+      "textposition": "outside",
+      "textfont": {
+        "family": "Inter, sans-serif",
+        "size": 14,
+        "color": "#000000"
+      },
+      "visible": false,
+      "name": "2029"
+    }
+  ],
+  "layout": {
+    "xaxis": {
+      "title": {
+        "text": "Income decile",
+        "font": {
+          "family": "Inter, sans-serif",
+          "size": 14
+        }
+      },
+      "tickfont": {
+        "family": "Inter, sans-serif"
+      },
+      "showgrid": true,
+      "gridcolor": "#e0e0e0",
+      "gridwidth": 1,
+      "tickmode": "linear",
+      "tick0": 1,
+      "dtick": 1
+    },
+    "yaxis": {
+      "title": {
+        "text": "Relative change in net income",
+        "font": {
+          "family": "Inter, sans-serif",
+          "size": 14
+        }
+      },
+      "tickfont": {
+        "family": "Inter, sans-serif"
+      },
+      "tickformat": ".2%",
+      "showgrid": true,
+      "gridcolor": "#e0e0e0",
+      "gridwidth": 1,
+      "zeroline": true,
+      "zerolinecolor": "#344054",
+      "zerolinewidth": 2
+    },
+    "height": 550,
+    "margin": {
+      "l": 100,
+      "r": 40,
+      "b": 120,
+      "t": 40,
+      "pad": 4
+    },
+    "plot_bgcolor": "#FFFFFF",
+    "paper_bgcolor": "#FFFFFF",
+    "font": {
+      "family": "Inter, sans-serif"
+    },
+    "sliders": [
+      {
+        "active": 0,
+        "currentvalue": {
+          "prefix": "Year: ",
+          "font": {
+            "family": "Inter, sans-serif",
+            "size": 16
+          }
+        },
+        "pad": {
+          "t": 50,
+          "b": 10
+        },
+        "steps": [
+          {
+            "method": "update",
+            "args": [
+              {
+                "visible": [
+                  true,
+                  false,
+                  false,
+                  false
+                ]
+              }
+            ],
+            "label": "2026"
+          },
+          {
+            "method": "update",
+            "args": [
+              {
+                "visible": [
+                  false,
+                  true,
+                  false,
+                  false
+                ]
+              }
+            ],
+            "label": "2027"
+          },
+          {
+            "method": "update",
+            "args": [
+              {
+                "visible": [
+                  false,
+                  false,
+                  true,
+                  false
+                ]
+              }
+            ],
+            "label": "2028"
+          },
+          {
+            "method": "update",
+            "args": [
+              {
+                "visible": [
+                  false,
+                  false,
+                  false,
+                  true
+                ]
+              }
+            ],
+            "label": "2029"
+          }
+        ],
+        "x": 0.1,
+        "len": 0.8,
+        "xanchor": "left",
+        "y": 0,
+        "yanchor": "top"
+      }
+    ]
+  }
+}

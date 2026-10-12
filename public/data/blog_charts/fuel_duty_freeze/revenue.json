@@ -1,0 +1,118 @@
+{
+  "data": [
+    {
+      "x": [
+        "2026",
+        "2027",
+        "2028",
+        "2029"
+      ],
+      "y": [
+        -3.3743905878626133,
+        -1.5156467067642614,
+        -1.474301293575977,
+        -0.8850673996726718
+      ],
+      "type": "bar",
+      "name": "PolicyEngine",
+      "marker": {
+        "color": "#319795"
+      },
+      "hovertemplate": "Year %{x}<br>PolicyEngine: \u00a3%{y:.2f}bn<extra></extra>"
+    },
+    {
+      "x": [
+        "2026",
+        "2027",
+        "2028",
+        "2029"
+      ],
+      "y": [
+        0.0,
+        -0.9,
+        -0.9,
+        -0.9
+      ],
+      "type": "bar",
+      "name": "OBR (static)",
+      "marker": {
+        "color": "#9CA3AF"
+      },
+      "hovertemplate": "Year %{x}<br>OBR static: \u00a3%{y:.2f}bn<extra></extra>"
+    },
+    {
+      "x": [
+        "2026",
+        "2027",
+        "2028",
+        "2029"
+      ],
+      "y": [
+        0.0,
+        -0.9,
+        -0.9,
+        -0.9
+      ],
+      "type": "bar",
+      "name": "OBR (behavioural)",
+      "marker": {
+        "color": "#6B7280"
+      },
+      "hovertemplate": "Year %{x}<br>OBR behavioural: \u00a3%{y:.2f}bn<extra></extra>"
+    }
+  ],
+  "layout": {
+    "xaxis": {
+      "title": {
+        "text": "Year",
+        "font": {
+          "family": "Inter, sans-serif",
+          "size": 14
+        }
+      },
+      "tickfont": {
+        "family": "Inter, sans-serif"
+      }
+    },
+    "yaxis": {
+      "title": {
+        "text": "Budgetary impact (\u00a3bn)",
+        "font": {
+          "family": "Inter, sans-serif",
+          "size": 14
+        }
+      },
+      "tickfont": {
+        "family": "Inter, sans-serif"
+      },
+      "ticksuffix": "bn",
+      "tickprefix": "\u00a3",
+      "showgrid": true,
+      "gridcolor": "#e0e0e0",
+      "zeroline": true,
+      "zerolinecolor": "#333",
+      "zerolinewidth": 2
+    },
+    "height": 450,
+    "margin": {
+      "l": 100,
+      "r": 40,
+      "b": 80,
+      "t": 40,
+      "pad": 4
+    },
+    "plot_bgcolor": "#FFFFFF",
+    "paper_bgcolor": "#FFFFFF",
+    "font": {
+      "family": "Inter, sans-serif"
+    },
+    "barmode": "group",
+    "legend": {
+      "orientation": "h",
+      "yanchor": "bottom",
+      "y": 1.02,
+      "xanchor": "center",
+      "x": 0.5
+    }
+  }
+}
