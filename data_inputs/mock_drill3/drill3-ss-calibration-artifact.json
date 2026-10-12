@@ -1,0 +1,98 @@
+{
+  "label": "MOCK drill 3 measure 20 salary-sacrifice calibration (EXPERIMENTAL, unvalidated under this engine)",
+  "inputs": {
+    "dataset": "/Users/vahid/drill2-data/microcosm_uk_2024_25.h5",
+    "data_sha256": "aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af",
+    "targets_csv_sha256": "401672cedea7fefb4da13d0e03aaec502996d2c7643e864fa121b9d28657061d",
+    "records_csv_sha256": "ddddaf300436bb5db2e2d7bd88b2be07c5ebec3e3f57c74f493e488f05b31d37",
+    "allocator_sha256": "722a1981223a9e190e64b038fb3eed9a4dbc824e409f18728309ab6c7d4f461f",
+    "script_sha256": "d8fbd18fb5101468d3dbd988d93ba79ddb4161e900eff98afe4af721b5d4df24",
+    "engine": "policyengine-uk 2.125.1",
+    "core": "policyengine-core 3.33.0",
+    "calibration_year": 2026
+  },
+  "binding_constraints": [
+    "salary_sacrifice_it_relief_basic",
+    "salary_sacrifice_it_relief_higher",
+    "salary_sacrifice_it_relief_additional"
+  ],
+  "diagnostic_only": [
+    "salary_sacrifice_it_relief_total_rounded"
+  ],
+  "binding_choice_rationale": "Band targets bind; the rounded total is the same relief summed and rounded, so binding it as well would double-count one quantity.",
+  "method": "Exact 3x3 solve for multiplicative weight factors per dominant-relief-band household group; non-sacrificing households unchanged.",
+  "engine_semantics": "employment_income is cash (net of sacrifice); contractual = employment_income + pension_contributions_via_salary_sacrifice.",
+  "allocation_scope": "Earned (employment) income only; PA taper on employment income only; other income, reliefs and charges ignored.",
+  "targets_m": {
+    "salary_sacrifice_it_relief_basic": 266.004,
+    "salary_sacrifice_it_relief_higher": 2613.492,
+    "salary_sacrifice_it_relief_additional": 1155.0,
+    "salary_sacrifice_it_relief_total_rounded": 4034.5
+  },
+  "factors": {
+    "basic": 0.1273130916078205,
+    "higher": 0.667163615774431,
+    "additional": 0.3208658027617348
+  },
+  "households_per_group": {
+    "basic": 5744,
+    "higher": 2905,
+    "additional": 1572
+  },
+  "before": {
+    "relief_basic_m": 1617.867329840746,
+    "relief_higher_m": 3990.436484848293,
+    "relief_additional_m": 3543.7603144600316,
+    "relief_total_m": 9152.064131331712,
+    "relief_employee_ni_m": 996.1057636602578,
+    "relief_employer_ni_m": 3789.901331432538,
+    "contributions_m": 25351.52153755876,
+    "sacrificers_m": 7.689837858752169,
+    "kish_ess_all": 4973.038913239687,
+    "kish_ess_sacrificing_hh": 1026.1062539943573
+  },
+  "after": {
+    "relief_basic_m": 266.004,
+    "relief_higher_m": 2613.492,
+    "relief_additional_m": 1154.9999999999993,
+    "relief_total_m": 4034.4959995042873,
+    "relief_employee_ni_m": 283.7560148024388,
+    "relief_employer_ni_m": 1484.5653929866037,
+    "contributions_m": 9914.372179308333,
+    "sacrificers_m": 2.3144387768806314,
+    "kish_ess_all": 4483.512007891203,
+    "kish_ess_sacrificing_hh": 648.8694711454385
+  },
+  "total_rounded_diagnostic_residual_m": -0.004000495712716656,
+  "measure20_static_revenue_m": {
+    "2029": {
+      "before": {
+        "ni_employee": 198.2526092529297,
+        "ni_employer": 656.0238037109375,
+        "gross_total": 854.2764129638672
+      },
+      "after": {
+        "ni_employee": 51.92713941979142,
+        "ni_employer": 256.81666853313624,
+        "gross_total": 308.7438079529277
+      }
+    },
+    "2031": {
+      "before": {
+        "ni_employee": 200.2178497314453,
+        "ni_employer": 678.37841796875,
+        "gross_total": 878.5962677001953
+      },
+      "after": {
+        "ni_employee": 51.894729356123655,
+        "ni_employer": 262.82510774926726,
+        "gross_total": 314.7198371053909
+      }
+    }
+  },
+  "static_off_set_to_zero_both_runs": [
+    "salary_sacrifice_broad_base_haircut",
+    "employer_ni_fixed_employer_cost_change",
+    "employment_income_behavioral_response"
+  ]
+}
