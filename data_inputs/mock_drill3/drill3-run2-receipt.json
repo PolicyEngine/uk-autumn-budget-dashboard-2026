@@ -1,6 +1,6 @@
 {
- "run1_code": "4b72684",
- "run2_code": "619dc67",
+ "run1_code": "4b726843d2cbe02bc344548af6f322c3f0569cc1",
+ "run2_code": "619dc677951983713ea0fbd22aa9c62d81a97b8f",
  "changed_files": [
   "src/uk_budget_data/mock_drill3_housing_energy.py",
   "src/uk_budget_data/mock_drill3_params.py"
@@ -36,5 +36,62 @@
  "household_inputs": "specimen inputs unchanged (MOCK-specimen-inputs.md ef3ec552\u2026); correction changes H6 LHA baseline rate only",
  "source_assumptions": "correction notice items 1 (LHA CGM 2-bed \u00a3985) and 2 (WHD costing -510/-520); no other source change",
  "data_artifacts": "scored national data on microcosm_uk_2024_25.h5 aa31bdf6; CGT (0546e7a0\u2026) and salary-sacrifice (3883cc25\u2026) experiments NOT used",
- "code_diff": " src/uk_budget_data/mock_drill3_housing_energy.py | 138 +++++++++++++++++------\n src/uk_budget_data/mock_drill3_params.py         |  21 ++++\n 2 files changed, 127 insertions(+), 32 deletions(-)\n"
+ "code_diff": " src/uk_budget_data/mock_drill3_housing_energy.py | 138 +++++++++++++++++------\n src/uk_budget_data/mock_drill3_params.py         |  21 ++++\n 2 files changed, 127 insertions(+), 32 deletions(-)\n",
+ "run1_data_commit": "a71a742200066ea8369591abfc45cd841229c362",
+ "run1_scatter_resample_commit": "eaef278de58c1d26284c301daca7ce6298660825",
+ "timestamp_bst": "2026-10-12 16:03:44 Europe/Berlin clock; run 2 generation completed 14:35 BST, sheet first committed 14:36 BST",
+ "rubric_sha256": "c365c30d408f5e63828a040554761d908365cfb25b5fe72b1d0cced0eba1ee7f",
+ "correction_notice_sha256": "74412d4e0428e418ac510f1edd9dc7c30b53f869927d2ab5d6b57f5082c55957",
+ "specimen_inputs_sha256": "ef3ec5520ae4845e51863bf07f536ef4eb239fe6990dfb6e521442c9ba226051",
+ "costings_sha256": "6edc9e1111303c4baf9e23d05b9fcd9c0733df444d890fe1e2f65a401a17e190",
+ "preview": {
+  "url": "https://uk-autumn-budget-2026-drill-git-drill3-moc-483daf-policy-engine.vercel.app",
+  "deployment_commit": "165675b43df3d13911112f340c58d0e59df2f12f",
+  "vercel_status": "success",
+  "hosted_personal_impact": "not configured (BUDGET_API_URL)"
+ },
+ "carried_rows": [
+  "national:4:2026-27",
+  "national:4:2027-28",
+  "national:4:2028-29",
+  "national:4:2029-30",
+  "national:4:2030-31",
+  "national:4:2031-32",
+  "national:5:2026-27",
+  "national:5:2027-28",
+  "national:5:2028-29",
+  "national:5:2029-30",
+  "national:5:2030-31",
+  "national:5:2031-32",
+  "national:6:2026-27",
+  "national:6:2027-28",
+  "national:6:2028-29",
+  "national:6:2029-30",
+  "national:6:2030-31",
+  "national:6:2031-32",
+  "national:9:2026-27",
+  "national:9:2027-28",
+  "national:9:2028-29",
+  "national:9:2029-30",
+  "national:9:2030-31",
+  "national:9:2031-32",
+  "national:2:2026-27"
+ ],
+ "restated_rows": [
+  "national:1:2031-32 (cash basis)",
+  "national:2:2027-28..2030-31 (gross income tax re-extraction, code unchanged)",
+  "national:2:2031-32 (stacked restatement)",
+  "national:10:* (gross ni_class_4, 25/75)",
+  "national:20:2029-30..2031-32 (gross NICs)"
+ ],
+ "rerun_rows": [
+  "national:1:*",
+  "national:3:*",
+  "national:7:*",
+  "national:8:*",
+  "national:10:*",
+  "national:20:*",
+  "households: all 172 recomputed by scorer on 619dc67 (no carry-forward)"
+ ],
+ "household_submission_sha256": "be8fc9a98bf006385260a78e1d21bc97a141336cc61c1690d1158e44b709af16"
 }
