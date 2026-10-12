@@ -2,8 +2,10 @@
 
 The gates, in order:
 
-1. **Integrity.** The receipt describes itself consistently and the files on
-   disk are the files it lists.
+1. **Integrity.** The receipt describes itself consistently, its derived
+   fields follow from their sources, and the files on disk are the files it
+   lists. A manifest entry names its artifact by digest, and the directory
+   must still hold exactly those bytes.
 2. **One execution identity.** The artifact ran on the manifest's execution
    identity and declared basis.
 3. **Certification.** The receipt is publishable: a certified model and data
@@ -13,39 +15,41 @@ The gates, in order:
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or
-   carries an accepted exception.
+   carries an accepted exception. Reconciliation and responsiveness are
+   recomputed from the current Treasury inputs at every gate; the
+   ``reconciliation.json`` file is a record for people, never trusted.
 7. **Combined runs.** Every member is in the manifest with the measure
-   definition the combined run used; approval needs every member approved.
+   definition the combined run used, and with the outputs it had when the
+   combined run was generated; approval needs every member approved.
 
 Staging an artifact supersedes the previous entry for its key and marks any
 combined run that included different outputs for that measure as stale, in
 the same write.
 """
 
-import json
 from pathlib import Path
 from typing import Optional
 
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
-    RECONCILIATION_FILE,
     file_problems,
     read_receipt,
     read_tables,
 )
 from uk_budget_data.publication.receipt import (
+    artifact_sha256,
     certificate_problems,
+    dashboard_problems,
     document_problems,
     load_execution_receipt,
 )
 from uk_budget_data.publication.reconcile import (
     ACCEPTED,
     PASS,
+    ReconciliationInputError,
     load_expected,
-)
-from uk_budget_data.publication.reconcile import (
-    SCHEMA as RECONCILIATION_SCHEMA,
+    reconcile_artifact,
 )
 from uk_budget_data.publication.responsiveness import RESPONSIVE
 from uk_budget_data.publication.validate import table_problems
@@ -73,19 +77,34 @@ def artifact_dir(entry: m.Entry, data_root: Path) -> Path:
     return data_root / entry.artifact
 
 
-def load_reconciliation(
-    path: Path, outputs_sha256: str
+def recompute_reconciliation(
+    path: Path, inputs: Path
 ) -> tuple[Optional[dict], list[str]]:
-    """Read ``reconciliation.json`` and check it is for these outputs."""
-    file = path / RECONCILIATION_FILE
-    if not file.exists():
-        return None, ["no reconciliation.json; run the reconcile command"]
-    document = json.loads(file.read_text())
-    if document.get("schema") != RECONCILIATION_SCHEMA:
-        return None, [f"reconciliation schema is {document.get('schema')!r}"]
-    if document.get("outputs_sha256") != outputs_sha256:
-        return None, ["reconciliation.json is for different outputs"]
-    return document, []
+    """Reconcile an artifact afresh against the current Treasury inputs."""
+    try:
+        return reconcile_artifact(path, inputs), []
+    except (ReconciliationInputError, ValueError, OSError) as error:
+        return None, [f"reconciliation: {error}"]
+
+
+def binding_problems(document: dict, path: Path, entry: m.Entry) -> list[str]:
+    """Ways the artifact on disk is not the one the manifest entry names."""
+    digests = document["dashboard"]["digests"]
+    problems = []
+    actual = artifact_sha256(document)
+    if actual != entry.artifact_sha256:
+        problems.append(
+            "the artifact on disk is not the one this entry names "
+            f"({actual[:12]} is not {entry.artifact_sha256[:12]})"
+        )
+    for name in (
+        "outputs_sha256",
+        "receipt_sha256",
+        "execution_identity_sha256",
+    ):
+        if digests[name] != getattr(entry, name):
+            problems.append(f"the artifact's {name} is not the entry's")
+    return problems
 
 
 def _identity_problems(document: dict, manifest: m.Manifest) -> list[str]:
@@ -113,14 +132,32 @@ def _members_problems(
     data_root: Path,
     need: tuple[str, ...],
 ) -> list[str]:
-    """Check a combined run's members against the manifest's measures."""
+    """Check a combined run's members against the manifest's measures.
+
+    Each member must be in the manifest at a needed status, with the measure
+    definition the combined run used, and with the outputs it had when the
+    combined run was generated (recorded in the combined receipt).
+    """
+    dashboard = document["dashboard"]
+    recorded = dashboard.get("member_outputs_sha256")
     problems = []
-    for member in document["dashboard"].get("members") or []:
+    if not recorded:
+        problems.append(
+            "it does not record its members' outputs; generate it after "
+            "staging every member"
+        )
+        recorded = {}
+    for member in dashboard.get("members") or []:
         entry = manifest.measures.get(member["id"])
         if entry is None or entry.status not in need:
             wanted = " or ".join(need)
             problems.append(f"member {member['id']} is not {wanted}")
             continue
+        if recorded and recorded.get(member["id"]) != entry.outputs_sha256:
+            problems.append(
+                f"member {member['id']} has different outputs from when "
+                "this combined run was generated"
+            )
         own = read_receipt(artifact_dir(entry, data_root))["execution_receipt"]
         for side in ("reform", "baseline"):
             if own[side].get("reform_sha256") != member[side].get(
@@ -142,11 +179,14 @@ def gate_problems(
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
     household_receipt: Optional[dict] = None,
+    entry: Optional[m.Entry] = None,
 ) -> tuple[list[str], dict]:
     """Every reason an artifact may not hold ``level``, plus what was read.
 
-    ``level`` is ``staged``, ``provisional`` or ``approved``. The second
-    return value carries the receipt document and reconciliation summary.
+    ``level`` is ``staged``, ``provisional`` or ``approved``. ``entry`` is
+    the manifest entry the artifact is meant to be, when there is one: the
+    artifact must then be exactly the bytes it names. The second return
+    value carries the receipt document and reconciliation summary.
     """
     try:
         document = read_receipt(path)
@@ -160,6 +200,11 @@ def gate_problems(
         return [f"the receipt is for {dashboard['key']!r}"], {
             "document": document
         }
+    if path.name != artifact_sha256(document)[:16]:
+        problems.append("its directory is not named by its digest")
+    if entry is not None:
+        problems += binding_problems(document, path, entry)
+    problems += dashboard_problems(document)
     problems += _identity_problems(document, manifest)
     info: dict = {"document": document, "reconciliation": None}
 
@@ -183,7 +228,13 @@ def gate_problems(
         }[level]
         problems += _members_problems(document, manifest, data_root, need)
     else:
-        reconciliation, errors = load_reconciliation(path, outputs)
+        reconciliation, errors = recompute_reconciliation(path, inputs)
+        if reconciliation is not None and (
+            reconciliation["outputs_sha256"] != outputs
+        ):
+            reconciliation, errors = None, [
+                "reconciliation ran on different outputs"
+            ]
         if reconciliation is None:
             problems += errors
         else:
@@ -277,6 +328,14 @@ def stage(
     digests = dashboard["digests"]
     level = m.PROVISIONAL if provisional else m.STAGED
 
+    if is_combined(key) != bool(dashboard.get("members")):
+        raise PublishError(
+            key,
+            [
+                "a combined key needs a combined artifact, and a measure "
+                "key a single-measure one"
+            ],
+        )
     working = manifest.model_copy(deep=True)
     changed_identity = (
         working.execution is not None
@@ -332,14 +391,6 @@ def stage(
         raise PublishError(
             key, [f"the artifact is not under the data root {data_root}"]
         ) from None
-    if is_combined(key) != bool(dashboard.get("members")):
-        raise PublishError(
-            key,
-            [
-                "a combined key needs a combined artifact, and a measure "
-                "key a single-measure one"
-            ],
-        )
     group = working.combined if is_combined(key) else working.measures
     previous = group.get(key)
     entry = m.Entry(
@@ -349,16 +400,16 @@ def stage(
         outputs_sha256=digests["outputs_sha256"],
         receipt_sha256=digests["receipt_sha256"],
         execution_identity_sha256=digests["execution_identity_sha256"],
+        artifact_sha256=artifact_sha256(document),
         years=document["execution_receipt"]["years"],
         unsupported_years=dashboard["unsupported_years"],
         reconciliation=info.get("reconciliation"),
     )
     if is_combined(key):
+        # The member outputs this combined run was generated against, from
+        # its own receipt: never relabelled with the current members.
         entry.measures = list(dashboard["measure_ids"])
-        entry.member_outputs_sha256 = {
-            member: working.measures[member].outputs_sha256
-            for member in entry.measures
-        }
+        entry.member_outputs_sha256 = dict(dashboard["member_outputs_sha256"])
     group[key] = entry
 
     carried = None
@@ -367,23 +418,27 @@ def stage(
         and previous.approval is not None
         and previous.outputs_sha256 == entry.outputs_sha256
     ):
-        still_ok, _ = gate_problems(
+        blocking, _ = gate_problems(
             key,
             path,
             working,
             level=m.APPROVED,
             data_root=data_root,
             inputs=inputs,
+            entry=entry,
         )
-        if not still_ok:
+        if not blocking:
             carried = previous.approval.model_copy(
-                update={"carried_from_receipt": previous.receipt_sha256}
+                update={
+                    "carried_from_receipt": previous.receipt_sha256,
+                    "artifact_sha256": entry.artifact_sha256,
+                }
             )
             entry.status = m.APPROVED
             entry.approval = carried
     if (
         previous is not None
-        and previous.receipt_sha256 != entry.receipt_sha256
+        and previous.artifact_sha256 != entry.artifact_sha256
     ):
         working.superseded.append(
             m.Superseded(key=key, superseded_at=m.now(), entry=previous)
@@ -420,6 +475,7 @@ def approve(
         data_root=data_root,
         inputs=inputs,
         household_receipt=household_receipt,
+        entry=entry,
     )
     if is_combined(key):
         for member in entry.measures or []:
@@ -437,7 +493,10 @@ def approve(
     target.reconciliation = info.get("reconciliation")
     target.household_checks = household_receipt
     target.approval = m.Approval(
-        by=by.strip(), at=m.now(), outputs_sha256=target.outputs_sha256
+        by=by.strip(),
+        at=m.now(),
+        outputs_sha256=target.outputs_sha256,
+        artifact_sha256=target.artifact_sha256,
     )
     _commit(manifest, working)
 
@@ -480,13 +539,16 @@ def check(
             level=entry.status,
             data_root=data_root,
             inputs=inputs,
+            household_receipt=entry.household_checks,
+            entry=entry,
         )
         if entry.status == m.APPROVED:
             if (
                 entry.approval is None
                 or entry.approval.outputs_sha256 != entry.outputs_sha256
+                or entry.approval.artifact_sha256 != entry.artifact_sha256
             ):
-                problems.append("its approval is for different outputs")
+                problems.append("its approval is for a different artifact")
         if (
             manifest.execution is None
             or entry.execution_identity_sha256

@@ -31,13 +31,20 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-pr579@712c36a"
+VENDORED_SOURCE = "vendored-w4-pr579@9672ad3"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 
 # Paths the publication commands write; changes there do not make a tree
 # dirty for receipt purposes.
-PUBLICATION_PATHS = ("public/data/artifacts/", "public/data/manifest.json")
+# Paths the publication commands themselves write, which a clean tree may
+# differ in: anything under the artifacts directory, and exactly the
+# manifest file.
+ARTIFACTS_PREFIX = "public/data/artifacts/"
+MANIFEST_PATH = "public/data/manifest.json"
+# Dashboard fields that describe one generation run rather than what was
+# generated, left out of the artifact digest.
+VOLATILE_DASHBOARD_FIELDS = ("generated_at", "generator_argv")
 
 _REQUIRED_API = (
     "ExecutionReceipt",
@@ -108,12 +115,44 @@ def code_revision(repo_root: Path = Path(".")) -> CodeRevision:
         ).stdout
 
     sha = git("rev-parse", "HEAD").strip()
-    dirty = []
-    for line in git("status", "--porcelain").splitlines():
-        path = line[3:].split(" -> ")[-1].strip('"')
-        if not path.startswith(PUBLICATION_PATHS):
-            dirty.append(path)
-    return CodeRevision(sha, not dirty, tuple(sorted(dirty)))
+    dirty = sorted(
+        {
+            path
+            for path in porcelain_paths(git("status", "--porcelain", "-z"))
+            if not is_publication_path(path)
+        }
+    )
+    return CodeRevision(sha, not dirty, tuple(dirty))
+
+
+def porcelain_paths(output: str) -> list[str]:
+    """Every path in ``git status --porcelain -z`` output.
+
+    A rename or copy entry names two paths, the new one and then the old
+    one as the next NUL-separated field; both count.
+    """
+    fields = output.split("\0")
+    paths = []
+    index = 0
+    while index < len(fields):
+        entry = fields[index]
+        index += 1
+        if not entry:
+            continue
+        status, path = entry[:2], entry[3:]
+        paths.append(path)
+        if "R" in status or "C" in status:
+            if index < len(fields) and fields[index]:
+                paths.append(fields[index])
+            index += 1
+    return paths
+
+
+def is_publication_path(path: str) -> bool:
+    """Whether a changed path is one the publication commands write."""
+    return path == MANIFEST_PATH or (
+        path.startswith(ARTIFACTS_PREFIX) and ".." not in path.split("/")
+    )
 
 
 def scenario_identity(scenario, *, name: str, revision: CodeRevision):
@@ -147,11 +186,19 @@ def measure_identities(reform, config, revision: CodeRevision):
     )
 
 
-def combined_identities(members, config, revision: CodeRevision):
+def combined_identities(
+    members,
+    config,
+    revision: CodeRevision,
+    *,
+    reform_applied_before_data_load: bool,
+    baseline_applied_before_data_load: bool,
+):
     """The (baseline, reform) identities of a combined run, and its members.
 
-    Each side is the ordered composition of the members' own identities.
-    ``members`` must already be in application order.
+    Each side is the ordered composition of the members' own identities,
+    bound with the phase (before or after data load) that side's combined
+    Scenario runs in. ``members`` must already be in application order.
     """
     api, _ = receipt_api()
     baselines, reforms, records = [], [], []
@@ -169,8 +216,16 @@ def combined_identities(members, config, revision: CodeRevision):
     name = "+".join(member.id for member in members)
     try:
         return (
-            api.composed_reform_identity(baselines, name=f"{name} baseline"),
-            api.composed_reform_identity(reforms, name=name),
+            api.composed_reform_identity(
+                baselines,
+                applied_before_data_load=baseline_applied_before_data_load,
+                name=f"{name} baseline",
+            ),
+            api.composed_reform_identity(
+                reforms,
+                applied_before_data_load=reform_applied_before_data_load,
+                name=name,
+            ),
             records,
         )
     except (api.ReceiptError, ValueError) as error:
@@ -249,7 +304,35 @@ class ReceiptInputs:
     revision: CodeRevision
     config_baseline_identity: Any = None
     members: Optional[list[dict]] = None
+    # Combined runs: each member's published outputs when the run was made.
+    member_outputs: Optional[dict[str, str]] = None
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
+
+
+def _with_dataset_hash(sim):
+    """The simulation, with the SHA-256 of the dataset it loaded recorded.
+
+    policyengine.py's receipt (from PR #571) refuses a simulation whose
+    managed loader recorded no hash of the dataset bytes at load time
+    (``policyengine_bundle["runtime_dataset_sha256"]``). Installed releases
+    before that PR record none. In that case the file is hashed here, now,
+    and the receipt document says so (``dataset_sha256_taken``): the receipt
+    still names the exact bytes on disk, but not as checked at load time.
+
+    Returns (simulation, "at load" or "at receipt").
+    """
+    from types import SimpleNamespace
+
+    from policyengine.utils.hashing import sha256_file
+
+    bundle = dict(getattr(sim, "policyengine_bundle", None) or {})
+    if bundle.get("runtime_dataset_sha256"):
+        return sim, "at load"
+    source = bundle.get("runtime_dataset_source")
+    if not source or not Path(source).exists():
+        return sim, "at load"
+    bundle["runtime_dataset_sha256"] = sha256_file(source)
+    return SimpleNamespace(policyengine_bundle=bundle), "at receipt"
 
 
 def build_receipt_document(
@@ -264,6 +347,9 @@ def build_receipt_document(
     api, source = receipt_api()
     years = sorted(set(int(year) for year in inputs.years))
     outputs = dict(sorted(inputs.file_digests.items()))
+    supported = dataset_years(sim_reform)
+    sim_reform, hashed_at = _with_dataset_hash(sim_reform)
+    sim_baseline, _ = _with_dataset_hash(sim_baseline)
     try:
         receipt = api.build_execution_receipt_for_microsimulation(
             sim_reform,
@@ -296,11 +382,11 @@ def build_receipt_document(
             "the working tree had uncommitted changes: "
             + ", ".join(inputs.revision.dirty_paths[:5])
         )
-    supported = dataset_years(sim_reform)
     dashboard = {
         "key": inputs.key,
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
+        "member_outputs_sha256": inputs.member_outputs,
         "config_baseline": (
             json.loads(inputs.config_baseline_identity.model_dump_json())
             if inputs.config_baseline_identity is not None
@@ -324,6 +410,7 @@ def build_receipt_document(
         ),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
+        "dataset_sha256_taken": hashed_at,
         "publishable": not reasons,
         "reasons": reasons,
     }
@@ -368,4 +455,110 @@ def document_problems(document: dict) -> list[str]:
         != receipt.outputs_sha256
     ):
         problems.append("the listed files do not match outputs_sha256")
+    return problems
+
+
+def artifact_sha256(document: dict) -> str:
+    """Digest of everything in a receipt document that publication relies on.
+
+    It covers the execution receipt and every dashboard field except the
+    ones describing the generation run itself (VOLATILE_DASHBOARD_FIELDS),
+    so two artifacts with the same tables but a different tree state, basis
+    or member snapshot never share an identity.
+    """
+    api, _ = receipt_api()
+    dashboard = {
+        name: value
+        for name, value in (document.get("dashboard") or {}).items()
+        if name not in VOLATILE_DASHBOARD_FIELDS
+    }
+    return api.content_sha256(
+        {
+            "schema": document.get("schema"),
+            "execution_receipt": document.get("execution_receipt"),
+            "dashboard": dashboard,
+        }
+    )
+
+
+def projection_end_year() -> Optional[int]:
+    """The last year policyengine-uk projects a single-year dataset to.
+
+    Read from the installed model: every call to
+    ``extend_single_year_dataset`` in ``policyengine_uk/simulation.py``
+    uses its default ``end_year``. None if the function is not there.
+    """
+    import inspect
+
+    try:
+        from policyengine_uk.data.economic_assumptions import (
+            extend_single_year_dataset,
+        )
+    except ImportError:
+        return None
+    default = (
+        inspect.signature(extend_single_year_dataset)
+        .parameters["end_year"]
+        .default
+    )
+    return default if isinstance(default, int) else None
+
+
+def dashboard_problems(document: dict) -> list[str]:
+    """Ways the dashboard block's derived fields disagree with their sources.
+
+    The dashboard is written by the generator, but nothing signs it, so
+    every field a gate relies on is recomputed or cross-checked here:
+
+    - ``publishable`` and ``reasons`` follow from the certificate and the
+      tree state;
+    - the dataset years run without gaps to the installed model's
+      projection end, and the unsupported years are exactly the reported
+      years beyond them.
+    """
+    dashboard = document.get("dashboard") or {}
+    problems = []
+    if not isinstance(dashboard.get("tree_clean"), bool):
+        problems.append("its tree state is not recorded")
+    try:
+        receipt = load_execution_receipt(document)
+    except Exception as error:  # noqa: BLE001 - reported as a problem
+        return problems + [f"the execution receipt is invalid: {error}"]
+    certificate = certificate_problems(receipt)
+    expected_publishable = (
+        not certificate and dashboard.get("tree_clean") is True
+    )
+    if dashboard.get("publishable") is not expected_publishable:
+        problems.append(
+            "its publishable flag does not follow from its certificate and "
+            "tree state"
+        )
+    if expected_publishable and dashboard.get("reasons"):
+        problems.append("it is publishable but lists reasons it is not")
+
+    years = sorted(int(year) for year in receipt.years)
+    supported = dashboard.get("dataset_years")
+    unsupported = dashboard.get("unsupported_years")
+    if supported is None:
+        if unsupported != years:
+            problems.append(
+                "with no dataset years recorded, every year is unsupported"
+            )
+        return problems
+    supported = sorted(int(year) for year in supported)
+    if supported != list(range(supported[0], supported[-1] + 1)):
+        problems.append("its dataset years have gaps")
+    end = projection_end_year()
+    if end is None:
+        problems.append("the installed model's projection end is unknown")
+    elif supported[-1] != end:
+        problems.append(
+            f"its dataset years end in {supported[-1]}, but the installed "
+            f"model projects to {end}"
+        )
+    if unsupported != [year for year in years if year not in supported]:
+        problems.append(
+            "its unsupported years are not the reported years beyond the "
+            "dataset's"
+        )
     return problems

@@ -190,6 +190,7 @@ class World:
         members=None,
         measure_ids=None,
         tables=None,
+        member_outputs=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact."""
         revision = self.revision(clean)
@@ -211,6 +212,7 @@ class World:
             basis=BASIS,
             revision=revision,
             members=members,
+            member_outputs=member_outputs,
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years)

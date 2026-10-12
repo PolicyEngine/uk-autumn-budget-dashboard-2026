@@ -465,9 +465,10 @@ def test_stage_then_approve(world):
     )
 
 
-def test_unreconciled_artifact_cannot_be_staged(world):
+def test_a_measure_with_no_expectation_cannot_be_staged(world):
+    """Reconciliation is recomputed; no file needs to exist."""
     reference = world.write("alpha", VALUES)
-    with pytest.raises(PublishError, match="no reconciliation.json"):
+    with pytest.raises(PublishError, match="undeclared"):
         stage(
             m.Manifest(),
             reference.path,
@@ -629,7 +630,14 @@ def combined_reference(world, members, values):
             }
         )
     return world.write(
-        key, values, members=records, measure_ids=sorted(members)
+        key,
+        values,
+        members=records,
+        measure_ids=sorted(members),
+        member_outputs={
+            member: world_manifest_entry(world, member).outputs_sha256
+            for member in sorted(members)
+        },
     )
 
 
