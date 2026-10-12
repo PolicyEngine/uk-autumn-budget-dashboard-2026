@@ -54,7 +54,19 @@ def _finite_decimal(value, label: str) -> Decimal:
     return result
 
 
-def _annual_values(values: Mapping) -> dict[str, float]:
+def _decimal_work_precision(*values: Decimal) -> int:
+    """Retain supplied digits through alignment, products and division."""
+    return max(
+        28,
+        sum(
+            len(value.as_tuple().digits) + abs(value.as_tuple().exponent)
+            for value in values
+        )
+        + 4,
+    )
+
+
+def _annual_decimal_values(values: Mapping) -> dict[str, Decimal]:
     """Normalize explicit annual keys without inventing intervening values."""
     if not isinstance(values, Mapping) or not values:
         raise ValueError("Supply at least one explicit annual value")
@@ -69,8 +81,15 @@ def _annual_values(values: Mapping) -> dict[str, float]:
         key = str(year)
         if key in result:
             raise ValueError(f"Duplicate annual value for {key}")
-        result[key] = float(_finite_decimal(value, f"Value for {key}"))
+        result[key] = _finite_decimal(value, f"Value for {key}")
     return dict(sorted(result.items()))
+
+
+def _annual_values(values: Mapping) -> dict[str, float]:
+    return {
+        year: float(value)
+        for year, value in _annual_decimal_values(values).items()
+    }
 
 
 def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
@@ -93,9 +112,9 @@ def threshold_change(
 
 def allowance_uprating(
     path: str,
-    base_value: float,
+    base_value: float | Decimal,
     growth_by_year: Mapping,
-    rounding: float = 10,
+    rounding: float | Decimal = 10,
     rounding_mode: str = "up",
     taper_after_rounding: bool = True,
 ) -> dict[str, dict[str, float]]:
@@ -105,6 +124,7 @@ def allowance_uprating(
     Include a zero growth in the initial year to publish that base explicitly.
     Years must be consecutive; growth values are fractional changes, so 0.01
     means 1%. ``up``, ``down`` and ``nearest`` are explicit rounding policies.
+    Decimal inputs retain their exact values until the final rounding step.
 
     These are untapered amounts. The existing personal-allowance formula (or
     an age-conditioned formula) applies its income taper afterwards. A
@@ -124,29 +144,27 @@ def allowance_uprating(
     amount = _finite_decimal(base_value, "Base allowance")
     if increment <= 0 or amount < 0:
         raise ValueError("Rounding must be positive and allowance nonnegative")
-    growths = _annual_values(growth_by_year)
+    growths = _annual_decimal_values(growth_by_year)
     years = [int(year) for year in growths]
     if years != list(range(years[0], years[-1] + 1)):
         raise ValueError("Supply growth for consecutive years without gaps")
     values = {}
     for year, growth in growths.items():
-        factor = 1 + _finite_decimal(growth, f"Growth for {year}")
-        if factor < 0:
-            raise ValueError("Growth cannot be below -100%")
-        units = amount * factor / increment
-        # Growth computed from float ratios can sit just above an exact
-        # multiple. Retain the nine-decimal guard before policy rounding.
         with localcontext() as context:
-            context.prec = max(28, units.adjusted() + 12)
-            units = units.quantize(Decimal("0.000000001"))
-        amount = (
-            units.to_integral_value(rounding=modes[rounding_mode]) * increment
-        )
+            context.prec = _decimal_work_precision(amount, growth, increment)
+            factor = 1 + growth
+            if factor < 0:
+                raise ValueError("Growth cannot be below -100%")
+            units = amount * factor / increment
+            amount = (
+                units.to_integral_value(rounding=modes[rounding_mode])
+                * increment
+            )
         values[year] = float(_finite_decimal(amount, f"Allowance for {year}"))
     return {path: values}
 
 
-def nearest_5p_weekly(amount: float) -> float:
+def nearest_5p_weekly(amount: float | Decimal) -> float:
     """Round a weekly amount to the nearest 5p, with halfway values rounded up.
 
     This is an explicit policy rule, not a claim that the engine rounds its
@@ -155,27 +173,35 @@ def nearest_5p_weekly(amount: float) -> float:
     value = _finite_decimal(amount, "Weekly amount")
     if value < 0:
         raise ValueError("Weekly amount must be nonnegative")
-    return float(
-        (value / Decimal("0.05")).to_integral_value(rounding=ROUND_HALF_UP)
-        * Decimal("0.05")
-    )
+    increment = Decimal("0.05")
+    with localcontext() as context:
+        context.prec = _decimal_work_precision(value, increment)
+        rounded = (value / increment).to_integral_value(
+            rounding=ROUND_HALF_UP
+        ) * increment
+    return float(rounded)
 
 
 def pension_uprating(
-    amount: float, growth: float, *, round_to_5p: bool = False
+    amount: float | Decimal,
+    growth: float | Decimal,
+    *,
+    round_to_5p: bool = False,
 ) -> float:
     """Uprate one pension rate, conditionally applying the stated 5p rule.
 
     Opt in for every affected pension independently; deriving basic pension
     from an already rounded new-pension ratio misses basic pension rounding.
     """
-    raw = _finite_decimal(amount, "Weekly amount") * (
-        1 + _finite_decimal(growth, "Pension growth")
-    )
+    base = _finite_decimal(amount, "Weekly amount")
+    increase = _finite_decimal(growth, "Pension growth")
+    with localcontext() as context:
+        context.prec = _decimal_work_precision(base, increase)
+        raw = base * (1 + increase)
     if raw < 0:
         raise ValueError("Uprated weekly amount must be nonnegative")
-    value = float(_finite_decimal(raw, "Uprated weekly amount"))
-    return nearest_5p_weekly(value) if round_to_5p else value
+    value = _finite_decimal(raw, "Uprated weekly amount")
+    return nearest_5p_weekly(value) if round_to_5p else float(value)
 
 
 def _stored_input_periods(sim, variable):
@@ -293,7 +319,9 @@ def _replace_formula(sim, name, formula):
     _apply_reform_class(FormulaReform, sim)
 
 
-# Audited receipt selectors; Pension Credit components need receipt gates.
+# These selectors have verified receipt semantics in UK 2.125.1. The two
+# Pension Credit components are entitlement amounts, so require the native
+# receipt gate alongside the selected component before awarding a payment.
 _BENEFIT_RECEIPT_GATES = {
     "universal_credit": None,
     "guarantee_credit": "in_receipt_of_guarantee_credit",

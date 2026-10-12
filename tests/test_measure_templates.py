@@ -140,10 +140,11 @@ def test_uprating_chains_from_rounded_value_not_initial_value():
     assert values["2029"] != 15_320  # Rounding the unchained £15,311.701.
 
 
-def test_uprating_ignores_float_noise_at_exact_rounding_multiple():
+def test_uprating_rounds_the_supplied_growth_without_a_tolerance():
     exact = allowance_uprating(ALLOWANCE_PATH, 20_000, {2028: 0.3})
     computed = allowance_uprating(ALLOWANCE_PATH, 20_000, {2028: 0.1 + 0.2})
-    assert exact == computed == {ALLOWANCE_PATH: {"2028": 26_000}}
+    assert exact == {ALLOWANCE_PATH: {"2028": 26_000}}
+    assert computed == {ALLOWANCE_PATH: {"2028": 26_010}}
 
 
 def test_allowance_uprating_refuses_gaps_and_taper_before_rounding():
@@ -178,11 +179,16 @@ def test_allowance_uprating_is_monotone_rounded_and_chained(
         ALLOWANCE_PATH
     ]
     previous = base
-    for year, value in lower.items():
+    for index, (year, value) in enumerate(lower.items()):
+        # Independent integer ceiling: growth is growths[index] / 100_000,
+        # then the amount is rounded upward to the next multiple of ten.
+        numerator = previous * (100_000 + growths[index])
+        expected = ((numerator + 999_999) // 1_000_000) * 10
+        assert value == expected
         assert value % 10 == 0
         assert value >= previous
         assert higher[year] >= value
-        previous = value
+        previous = int(value)
 
 
 @pytest.mark.parametrize(
