@@ -1,5 +1,5 @@
 # VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #579
-# (stacked on #571) at 69390c54de612e587cec3e0e3d09b0454b524b1e,
+# (stacked on #571) at f951bd59178ccabe05c55c9bfb14b23b53feb858,
 # src/policyengine/provenance/wheels.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
 # when the dashboard pins the policyengine release that contains PRs #571
@@ -266,18 +266,20 @@ def _verify_bytecode(
     """Check every bytecode cache this interpreter would load for ``sources``."""
 
     problems: list[str] = []
-    checked: dict[Path, str] = {}
+    # One check per cache *and* the source it stands for: a cache reached
+    # through a link can stand for several sources, and must match each.
+    checked: dict[tuple[Path, str, str], str] = {}
     inert: list[str] = []
     verified = set(sources)
 
     def check(pyc: Path, source: str, optimization: str, label: str) -> None:
-        resolved = pyc.resolve()
-        if resolved in checked:
+        key = (pyc.resolve(), source, optimization)
+        if key in checked:
             return
         result = compiled_file(
             pyc, Path(distribution.locate_file(source)), optimization
         )
-        checked[resolved] = result.status
+        checked[key] = result.status
         if result.status == "inert":
             inert.append(f"{label}: {result.detail}")
         elif result.status != "matches":
