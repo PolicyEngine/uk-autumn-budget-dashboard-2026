@@ -5,18 +5,6 @@ mock3_fuel_duty_phasing,Fuel duty rises phased,2028,55.91527992244297,-0.0001899
 mock3_fuel_duty_phasing,Fuel duty rises phased,2029,55.753406963635996,-0.00018369597703846505,0.0,0.0
 mock3_fuel_duty_phasing,Fuel duty rises phased,2030,55.457004944013434,-0.00017385716883130319,0.0,0.0
 mock3_fuel_duty_phasing,Fuel duty rises phased,2031,55.56552874326803,-0.00017572366097896088,0.0,0.0
-mock3_whd_top_up,Warm Home Discount £100 top-up,2026,26.23194043347955,-0.0006816805313093122,-0.034802437,-0.30184427
-mock3_whd_top_up,Warm Home Discount £100 top-up,2027,26.22635861345431,-0.0006658478185994832,-0.033203125,-0.2860644
-mock3_whd_top_up,Warm Home Discount £100 top-up,2028,0.0,0.0,0.0,0.0
-mock3_whd_top_up,Warm Home Discount £100 top-up,2029,0.0,0.0,0.0,0.0
-mock3_whd_top_up,Warm Home Discount £100 top-up,2030,0.0,0.0,0.0,0.0
-mock3_whd_top_up,Warm Home Discount £100 top-up,2031,0.0,0.0,0.0,0.0
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,0.0,0.0,0.0,0.0
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,4.336333237238208,-0.0012994180697164335,-0.12897682,-1.111211
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,4.423346505018317,-0.0014533799528294784,-0.1519146,-1.2960908
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,4.47563374656963,-0.0016077895402737687,-0.17126751,-1.447742
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,4.700776396153639,-0.0018118205525337377,-0.18820286,-1.524059
-mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,3.9689710539523784,-0.0017133653240467563,-0.118219376,-0.90800935
 mock3_pensioner_allowance,Pensioner Allowance,2026,0.0,0.0,0.0,0.0
 mock3_pensioner_allowance,Pensioner Allowance,2027,9.964523234810283,-0.0008175624451700999,-0.0772171,-0.6652706
 mock3_pensioner_allowance,Pensioner Allowance,2028,10.888186848269756,-0.0010361545044968042,-0.16323757,-1.4000645
@@ -29,24 +17,12 @@ mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028
 mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,0.0,0.0,0.0,0.0
 mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,0.0,0.0,0.0,0.0
 mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,0.0,0.0,0.0,0.0
-mock3_additional_rate_threshold,Lower additional rate threshold,2026,0.0,0.0,0.0,0.0
-mock3_additional_rate_threshold,Lower additional rate threshold,2027,6.386443654662188,-0.0017083200127888105,0.0010309219,0.008881997
-mock3_additional_rate_threshold,Lower additional rate threshold,2028,6.595885044439879,-0.0017376899293748667,0.001326561,0.01131783
-mock3_additional_rate_threshold,Lower additional rate threshold,2029,7.074357977673583,-0.0018044481387001308,0.0010309219,0.00871449
-mock3_additional_rate_threshold,Lower additional rate threshold,2030,7.481461743072539,-0.0018473007575098336,0.0,0.0
-mock3_additional_rate_threshold,Lower additional rate threshold,2031,7.929995766799647,-0.0019137813457780547,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,0.0,0.0,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,2.1443575798622776,-0.005391992234422844,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,2.1468493697243223,-0.005441231744430423,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,2.14874749621166,-0.0055051217791393155,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,2.1502032863247473,-0.005537895425137077,0.0,0.0
 mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,2.151392210939364,-0.00553120040723321,0.0,0.0
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,0.0,0.0,0.0,0.0
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,0.0,0.0,0.0,0.0
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,0.0,0.0,0.0,0.0
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,18.794243226689183,-5.7085810011592515e-05,0.0,0.0
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,18.74971048348355,-6.342370667101617e-05,5.722046e-06,4.6343885e-05
-mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,19.419244422894597,-9.038526052669222e-05,0.0073509216,0.056524955
 mock3_hvcts_top_bands,Council tax surcharge top bands,2026,0.0,0.0,0.0,0.0
 mock3_hvcts_top_bands,Council tax surcharge top bands,2027,0.0,0.0,0.0,0.0
 mock3_hvcts_top_bands,Council tax surcharge top bands,2028,0.0,0.0,0.0,0.0
@@ -59,9 +35,33 @@ mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,0.0,0.0
 mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,0.0,0.0,0.0,0.0
 mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,0.0,0.0,0.0,0.0
 mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,88.94354732025677,-0.00013206807679823338,0.06740284,0.51774204
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,0.0,0.0,0.0,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,6.386443654662188,-0.0017083200127888105,0.0010309219,0.008881997
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,6.595885044439879,-0.0017376899293748667,0.001326561,0.01131783
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,7.074357977673583,-0.0018044481387001308,0.0010309219,0.00871449
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,7.481461743072539,-0.0018473007575098336,0.0,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,7.929995766799647,-0.0019137813457780547,0.0,0.0
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,0.0,0.0,0.0,0.0
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,10.23388441153146,-2.96588343134134e-05,-0.0011587143,-0.009983003
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,10.429138201607154,-2.766019792241198e-05,0.0010499954,0.008958254
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,10.511335051550795,-2.305420665332372e-05,0.011732101,0.09917267
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,10.647226145863527,-1.8259233752999527e-05,0.0,0.0
 mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,10.653606354426834,-1.3876826317298752e-05,-8.583069e-06,-6.592411e-05
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,0.0,0.0,0.0,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,0.0,0.0,0.0,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,0.0,0.0,0.0,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,18.794243226689183,-5.7085810011592515e-05,0.0,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,18.74971048348355,-6.342370667101617e-05,5.722046e-06,4.6343885e-05
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,19.419244422894597,-9.038526052669222e-05,0.0073509216,0.056524955
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,26.23194043347955,-0.0006816805313093122,-0.034802437,-0.30184427
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,26.22635861345431,-0.0006658478185994832,-0.033203125,-0.2860644
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,0.0,0.0,0.0,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,0.0,0.0,0.0,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,0.0,0.0,0.0,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,0.0,0.0,0.0,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,0.0,0.0,0.0,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,3.5687335508649767,-0.00044420976118974393,-0.08717728,-0.75381196
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,3.873261675459344,-0.0005815907922669122,-0.08696556,-0.74609905
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,3.9582900716874176,-0.0007211152868215574,-0.10700989,-0.9095059
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,3.9655153933248664,-0.0008904289492641476,-0.12456417,-1.0147854
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,3.5405672197295663,-0.0008711068694745496,-0.070534706,-0.5437929
