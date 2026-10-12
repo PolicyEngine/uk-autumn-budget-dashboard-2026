@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
@@ -69,6 +69,16 @@ class Entry(_Strict):
     # Combined runs only.
     measures: Optional[list[str]] = None
     member_outputs_sha256: Optional[dict[str, str]] = None
+
+    @field_validator("artifact")
+    @classmethod
+    def _artifact_stays_inside_the_data_root(cls, value: str) -> str:
+        parts = Path(value).parts
+        if Path(value).is_absolute() or ".." in parts or not parts:
+            raise ValueError(
+                f"artifact path {value!r} must be relative to the data root"
+            )
+        return value
 
 
 class Superseded(_Strict):

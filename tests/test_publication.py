@@ -769,3 +769,39 @@ def test_world_restores_policyengine_state(_):
     assert certification.default_bundle_source_path is not original
     world.close()
     assert certification.default_bundle_source_path is original
+
+
+def test_an_artifact_outside_the_data_root_is_refused(world):
+    reference = world.ready("alpha", VALUES)
+    elsewhere = world.root / "elsewhere"
+    with pytest.raises(PublishError, match="not under the data root"):
+        stage(
+            m.Manifest(),
+            reference.path,
+            data_root=elsewhere,
+            inputs=world.inputs,
+        )
+
+
+def test_a_manifest_entry_cannot_point_outside_the_data_root(world):
+    manifest, _ = staged(world)
+    m.save_manifest(manifest, world.data_root)
+    raw = json.loads(m.manifest_path(world.data_root).read_text())
+    for escape in ("../../etc", "/etc/passwd"):
+        raw["measures"]["alpha"]["artifact"] = escape
+        m.manifest_path(world.data_root).write_text(json.dumps(raw))
+        with pytest.raises(ValueError, match="relative to the data root"):
+            m.load_manifest(world.data_root)
+
+
+def test_a_measure_cannot_use_a_combined_key(world):
+    world.costing("combined--alpha", VALUES)
+    reference = world.write("combined--alpha", VALUES)
+    world.reconcile(reference)
+    with pytest.raises(PublishError, match="combined key needs"):
+        stage(
+            m.Manifest(),
+            reference.path,
+            data_root=world.data_root,
+            inputs=world.inputs,
+        )

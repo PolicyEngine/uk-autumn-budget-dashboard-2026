@@ -17,6 +17,7 @@ from typing import Callable, Optional
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
+    COMBINED_PREFIX,
     ArtifactRef,
     write_artifact,
 )
@@ -157,6 +158,11 @@ def generate_artifacts(
         )
 
     for reform in reforms:
+        if reform.id.startswith(COMBINED_PREFIX):
+            report.refused[reform.id] = (
+                f"a measure id may not start with {COMBINED_PREFIX!r}"
+            )
+            continue
         try:
             identities = measure_identities(reform, config, revision)
             run(reform, reform.id, identities, None, [reform.id])
