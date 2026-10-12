@@ -1,18 +1,23 @@
 name: CI
 
+# Runs on every pull request, whatever its base branch, so stacked PRs are
+# checked too. A pull_request run takes this file from the PR's merge commit,
+# so a stacked PR picks up this trigger once its base branch contains it.
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  python-tests:
+    name: Python tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
@@ -22,18 +27,53 @@ jobs:
           save-cache: false
           version: "latest"
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+      - name: Set up Python
+        run: uv python install 3.13
 
-      - name: Install dependencies
-        run: uv sync --extra dev
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked --extra dev
 
-      - name: Run tests
-        env:
-          HUGGING_FACE_TOKEN: ${{ secrets.HUGGING_FACE_TOKEN }}
-        run: uv run pytest tests/ -v
+      - name: Run tests that need no credentials
+        run: uv run pytest tests/ -m "not certified_data"
+
+  certified-data:
+    name: Certified data
+    # The private-data token is given only to pushes and pull requests from
+    # branches of this repository; fork PRs receive no secrets. Never run
+    # this workflow on pull_request_target.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Fine-grained, read-only token for the private UK data repository.
+      HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
+      # Certified-data tests fail, never skip, in this job.
+      REQUIRE_CERTIFIED_DATA: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          save-cache: false
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked --extra dev
+
+      - name: Check access to the bundle's certified data
+        run: uv run python -m uk_budget_data.certified_data
+
+      - name: Run certified-data tests
+        run: uv run pytest tests/ -m certified_data
 
   lint:
+    name: Python lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -47,8 +87,8 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
-      - name: Install dependencies
-        run: uv sync --extra dev
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked --extra dev
 
       - name: Check formatting with black
         run: uv run black --check src/ tests/
