@@ -32,7 +32,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
       --config "$dir/cloudbuild.yaml" --substitutions _GIT_SHA="$commit"
     ```
 
-    The build refuses source that is not exactly that commit. It tests the new revision under its own tag, and moves traffic only if the smoke test passes and nothing else changed traffic meanwhile. The log ends with the allocation it replaced and the command that restores it.
+    **One deploy at a time:** a build that finds another deploy of the service running stops. The build refuses source that is not exactly that commit. It tests the new revision under its own tag. It moves traffic only if the smoke test passes and nothing else changed traffic meanwhile. The log ends with the allocation it replaced and the command that restores it.
 
   `curl -s "$HOUSEHOLD_API/api/version"` must report the bundle's model and core versions (#15).
 - [ ] **Required checks on `main`:**
