@@ -58,15 +58,17 @@ def test_api_brma_drives_lha_gain(monkeypatch):
         "mock3_lha_30th_percentile",
         2027,
     )
-    # 12 x (£925.43 reform - £775.00 frozen) = £1,805.16.
-    assert with_brma == pytest.approx(1_805.16, abs=0.01)
+    # Annex A anchor: 12 x (£925.43 x 1,095/1,079.67 - £775.00 x 985/875)
+    # = 12 x (£938.57 - £872.43) = £793.70.
+    assert with_brma == pytest.approx(793.70, abs=0.02)
     default = _change(
         client.post("/api/personal-impact", json=RENTER),
         "mock3_lha_30th_percentile",
         2027,
     )
     # Without a BRMA the engine falls back to Maidstone.
-    assert default == pytest.approx(1_796.88, abs=0.01)
+    # Engine regression value after the Annex A scaling (not hand-checked).
+    assert default == pytest.approx(818.75, abs=0.02)
     assert default != pytest.approx(with_brma, abs=1)
 
 

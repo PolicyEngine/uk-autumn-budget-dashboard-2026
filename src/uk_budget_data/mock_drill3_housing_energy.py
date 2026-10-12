@@ -55,14 +55,24 @@ MOCK3_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
 # national maximum, anomalous-rate rule and March 2020 minimum. Annual
 # redetermination is the engine's reading of "kept there each year".
 #
-# OPEN (Annex A, 13:40, not yet rebased): Annex A says the baseline is frozen
-# at April 2025 levels, CGM 2-bed (category C) = £1,000.00/month, and costing
-# 8 gives the April 2027 reform rate as £1,095.00/month. The engine gives
-# CGM C 2027: baseline £875.00 (April 2024 determination), reform £1,079.67.
-# Baseline gap -£125.00, reform gap -£15.33; Annex A UC change for a capped
-# 2-bed renter = £1,140/yr vs engine £2,456.04/yr. Needs a baseline/reform
-# rate override; not done.
-#
+# Annex A anchor (corrected at 14:20): the baseline is frozen at April 2025
+# levels, CGM 2-bed (category C) = £985.00/month, and costing 8 gives the
+# April 2027 reform rate as £1,095.00/month. The engine gives CGM C 2027:
+# baseline £875.00 (April 2024 determination), reform £1,079.67. We anchor
+# by scaling the engine's GB LHA rates (BRMA_LHA_rate,
+# housing_benefit_LHA_rate and the LHA inside uc_LHA_cap) by constant
+# factors chosen so CGM C (UC monthly) matches Annex A exactly:
+#   baseline factor 985.00 / 875.00 in every year 2026-2031 (applied in both
+#     scenarios for 2026, so the 2026 change stays zero);
+#   reform factor 1,095.00 / 1,079.67 from 2027. Annex A gives only the 2027
+#     reform rate, so later years apply the same 2027 factor to the engine's
+#     redetermined (rent-index-grown) rates.
+# The same factors are applied to every GB BRMA and category, and to the
+# weekly HB rates (a uniform proportional restatement; Annex A gives only
+# the CGM 2-bed anchor). Both factors exceed 1, so for UC
+# min(rent, f x LHA) = min(rent, f x min(rent, LHA)) and the cap can be
+# scaled from the native capped value. Northern Ireland is not part of
+# Annex A's GB measure and stays at the engine's April 2024 rates, unscaled.
 # Northern Ireland: the parameter is UK-wide (NIHE determinations sit in the
 # same table), so unfreezing alone would also raise NI rates. The statement
 # says Great Britain only, so the modifier below holds NI benefit units at
@@ -75,6 +85,31 @@ MOCK3_LHA_YEARS = [y for y in MOCK3_YEARS if y >= MOCK3_LHA_FIRST_YEAR]
 MOCK3_LHA_PERCENTILE = 0.3
 # The determination the native baseline holds from April 2025 onward.
 MOCK3_NATIVE_HELD_DETERMINATION = 2024
+
+# Annex A anchors (CGM 2-bed, category C, UC monthly) and engine 2.125.1
+# values they rebase; tests check the scaled engine hits Annex A to the penny.
+ANNEX_A_BASELINE_CGM_C_MONTHLY = 985.00
+ANNEX_A_REFORM_2027_CGM_C_MONTHLY = 1_095.00
+ENGINE_BASELINE_CGM_C_MONTHLY = 875.00
+ENGINE_REFORM_2027_CGM_C_MONTHLY = 1_079.67
+MOCK3_LHA_BASELINE_FACTOR = (
+    ANNEX_A_BASELINE_CGM_C_MONTHLY / ENGINE_BASELINE_CGM_C_MONTHLY
+)
+MOCK3_LHA_REFORM_FACTOR = (
+    ANNEX_A_REFORM_2027_CGM_C_MONTHLY / ENGINE_REFORM_2027_CGM_C_MONTHLY
+)
+MOCK3_LHA_ANCHOR_FIRST_YEAR = 2026
+assert MOCK3_LHA_BASELINE_FACTOR >= 1 and MOCK3_LHA_REFORM_FACTOR >= 1
+
+
+def _baseline_factor(year: int) -> float:
+    return MOCK3_LHA_BASELINE_FACTOR if year >= MOCK3_LHA_ANCHOR_FIRST_YEAR else 1.0
+
+
+def _reform_factor(year: int) -> float:
+    if year >= MOCK3_LHA_FIRST_YEAR:
+        return MOCK3_LHA_REFORM_FACTOR
+    return _baseline_factor(year)
 
 
 def _frozen_benunit_lha(
@@ -111,25 +146,33 @@ def _ni_mask(benunit, period):
     return benunit.value_from_first_person(country) == "NORTHERN_IRELAND"
 
 
-def _gb_only(native_variable_class, frozen):
-    """Wrap a native LHA variable: NI keeps the frozen value from 2027."""
+def _anchored(native_variable_class, factor, frozen=None, rent_capped=False):
+    """Wrap a native LHA variable: GB scaled by factor(year); NI unscaled.
+
+    With ``frozen``, NI takes the frozen April 2024 value from 2027 (reform).
+    """
 
     native_formula = native_variable_class.formula
 
     class _Wrapped(native_variable_class):
         def formula(benunit, period, parameters):
+            year = period.start.year
             value = native_formula(benunit, period, parameters)
-            if period.start.year < MOCK3_LHA_FIRST_YEAR:
-                return value
-            return where(
-                _ni_mask(benunit, period), frozen(benunit, period), value
-            )
+            f = factor(year)
+            scaled = value * f
+            if rent_capped:
+                scaled = min_(benunit("benunit_rent", period), scaled)
+            ni = _ni_mask(benunit, period)
+            ni_value = value
+            if frozen is not None and year >= MOCK3_LHA_FIRST_YEAR:
+                ni_value = frozen(benunit, period)
+            return where(ni, ni_value, scaled)
 
     _Wrapped.__name__ = native_variable_class.__name__
     return _Wrapped
 
 
-def _build_gb_only_lha_reform():
+def _build_anchored_lha_reform(factor, freeze_ni: bool):
     from policyengine_uk.variables.gov.dwp.BRMA_LHA_rate import (
         BRMA_LHA_rate,
     )
@@ -138,32 +181,44 @@ def _build_gb_only_lha_reform():
     )
     from policyengine_uk.variables.gov.dwp.uc_LHA_cap import uc_LHA_cap
 
-    brma = _gb_only(
+    def frz(fn):
+        return fn if freeze_ni else None
+
+    brma = _anchored(
         BRMA_LHA_rate,
-        lambda b, p: _frozen_benunit_lha(b, p) * WEEKS_IN_YEAR,
+        factor,
+        frz(lambda b, p: _frozen_benunit_lha(b, p) * WEEKS_IN_YEAR),
     )
-    hb = _gb_only(
+    hb = _anchored(
         housing_benefit_LHA_rate,
-        lambda b, p: _frozen_benunit_lha(
-            b, p, category_variable="housing_benefit_LHA_category"
-        )
-        * WEEKS_IN_YEAR,
-    )
-    uc = _gb_only(
-        uc_LHA_cap,
-        lambda b, p: min_(
-            b("benunit_rent", p),
-            _frozen_benunit_lha(b, p, universal_credit=True) * MONTHS_IN_YEAR,
+        factor,
+        frz(
+            lambda b, p: _frozen_benunit_lha(
+                b, p, category_variable="housing_benefit_LHA_category"
+            )
+            * WEEKS_IN_YEAR
         ),
     )
+    uc = _anchored(
+        uc_LHA_cap,
+        factor,
+        frz(
+            lambda b, p: min_(
+                b("benunit_rent", p),
+                _frozen_benunit_lha(b, p, universal_credit=True)
+                * MONTHS_IN_YEAR,
+            )
+        ),
+        rent_capped=True,
+    )
 
-    class _GbOnlyLhaReform(CoreReform):
+    class _AnchoredLhaReform(CoreReform):
         def apply(self):
             self.update_variable(brma)
             self.update_variable(hb)
             self.update_variable(uc)
 
-    return _GbOnlyLhaReform
+    return _AnchoredLhaReform
 
 
 def _ensure_formula_runs(sim, variable: str) -> None:
@@ -175,9 +230,25 @@ def _ensure_formula_runs(sim, variable: str) -> None:
         )
 
 
+_LHA_VARIABLES = ("BRMA_LHA_rate", "housing_benefit_LHA_rate", "uc_LHA_cap")
+
+
 def _mock3_lha_gb_only_modifier(sim):
-    _apply_reform_class(_build_gb_only_lha_reform(), sim)
-    for variable in ("BRMA_LHA_rate", "housing_benefit_LHA_rate", "uc_LHA_cap"):
+    """Reform: GB anchored to Annex A (reform factor from 2027); NI frozen."""
+    _apply_reform_class(
+        _build_anchored_lha_reform(_reform_factor, freeze_ni=True), sim
+    )
+    for variable in _LHA_VARIABLES:
+        _ensure_formula_runs(sim, variable)
+    return sim
+
+
+def _mock3_lha_baseline_modifier(sim):
+    """Baseline: GB rebased to Annex A's April 2025 freeze; NI unscaled."""
+    _apply_reform_class(
+        _build_anchored_lha_reform(_baseline_factor, freeze_ni=False), sim
+    )
+    for variable in _LHA_VARIABLES:
         _ensure_formula_runs(sim, variable)
     return sim
 
@@ -190,7 +261,9 @@ def _create_mock3_lha_30th_percentile() -> Reform:
             "MOCK. From April 2027 Local Housing Allowance rates in Great "
             "Britain return to the 30th percentile of local rents and are "
             "redetermined at the 30th percentile each year to 2031-32. "
-            "Baseline: the engine's native freeze at April 2024 rates. "
+            "Baseline: frozen at April 2025 levels (Annex A, corrected). GB "
+            "rates are anchored to Annex A's Central Greater Manchester "
+            "2-bed rates (£985.00 baseline, £1,095.00 reform in April 2027). "
             "Northern Ireland stays frozen. National maximum rates unchanged."
         ),
         parameter_changes={
@@ -200,6 +273,7 @@ def _create_mock3_lha_30th_percentile() -> Reform:
             },
         },
         simulation_modifier=_mock3_lha_gb_only_modifier,
+        baseline_simulation_modifier=_mock3_lha_baseline_modifier,
     )
 
 
