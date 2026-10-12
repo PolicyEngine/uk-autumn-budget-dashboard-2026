@@ -58,6 +58,11 @@ def module_level_modifier(sim, rate=0.21):
     return sim
 
 
+def broken_modifier(sim, message="this measure cannot run"):
+    """A structural measure that fails whenever it is applied."""
+    raise RuntimeError(message)
+
+
 def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
     """A complete, valid set of tables whose fiscal impact is ``values``."""
     name = key.replace("_", " ").title()
