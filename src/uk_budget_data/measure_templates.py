@@ -22,6 +22,7 @@ from decimal import (
 )
 
 import numpy as np
+from policyengine_core.periods import YEAR
 from policyengine_core.reforms import Reform as CoreReform
 from policyengine_uk.model_api import Variable
 from policyengine_uk.utils.scenario import _apply_reform_class
@@ -276,11 +277,8 @@ def apply_vat_base_change(
     native = sim.tax_benefit_system.get_variable("vat")
 
     def formula(household, period, parameters):
-        previous = native.get_formula(period)
-        current = (
-            previous(household, period, parameters)
-            if previous is not None
-            else household.empty_array()
+        current = _call_formula(
+            native.get_formula(period), household, period, parameters
         )
         if period.start.year not in years:
             return current
@@ -303,6 +301,16 @@ def apply_vat_base_change(
 
     _replace_formula(sim, "vat", formula)
     return sim
+
+
+def _call_formula(formula, entity, period, parameters):
+    """Run a variable's previous formula as policyengine-core does: a
+    two-argument formula takes no parameters."""
+    if formula is None:
+        return entity.empty_array()
+    if formula.__code__.co_argcount == 2:
+        return formula(entity, period)
+    return formula(entity, period, parameters)
 
 
 def _replace_formula(sim, name, formula):
@@ -450,7 +458,9 @@ def apply_age_conditioned_allowance(
     native = sim.tax_benefit_system.get_variable("personal_allowance")
 
     def formula(person, period, parameters):
-        standard = native.get_formula(period)(person, period, parameters)
+        standard = _call_formula(
+            native.get_formula(period), person, period, parameters
+        )
         if period.start.year not in amounts:
             return standard
         income = person("adjusted_net_income", period) - person(
@@ -466,9 +476,12 @@ def apply_age_conditioned_allowance(
         untapered = np.maximum(pa.amount, higher)
         reduction = np.maximum(0, income - pa.maximum_ANI) * pa.reduction_rate
         age_allowance = np.maximum(0, np.ceil(untapered - reduction))
+        # The previous formula is the native allowance or an earlier
+        # measure's; both carry the native taper, so an eligible person
+        # keeps whichever is larger and two allowance measures compose.
         return np.where(
             person(eligibility_variable, period),
-            age_allowance,
+            np.maximum(standard, age_allowance),
             standard,
         )
 
@@ -509,6 +522,11 @@ def apply_property_band_surcharge(
         raise ValueError(
             "Property surcharge channel must have a household formula"
         )
+    if native.definition_period != YEAR:
+        raise ValueError(
+            "Property surcharge channel must be annual: the amount is a "
+            "yearly charge"
+        )
     country_enum = sim.tax_benefit_system.get_variable(
         "country"
     ).possible_values
@@ -519,11 +537,8 @@ def apply_property_band_surcharge(
         raise ValueError("Select a country enum name or UK")
 
     def formula(household, period, parameters):
-        previous = native.get_formula(period)
-        current = (
-            previous(household, period, parameters)
-            if previous is not None
-            else household.empty_array()
+        current = _call_formula(
+            native.get_formula(period), household, period, parameters
         )
         if period.start.year not in years:
             return current
