@@ -338,3 +338,71 @@ def test_a_materializer_hash_is_never_overwritten(tmp_path, monkeypatch):
     assert _default_build(str(dataset)).policyengine_bundle[
         "runtime_dataset_sha256"
     ] == ("f" * 64)
+
+
+# --- round 2 (partial report): three more gate bypasses -------------------
+
+
+def test_an_unpublishable_artifact_with_no_reasons_is_refused(world):
+    from uk_budget_data.publication.publish import gate_problems
+
+    world.costing("alpha", VALUES)
+    world.expect("alpha", "negative", 2027)
+    reference = world.write("alpha", VALUES, clean=False)
+    document = read_receipt(reference.path)
+    document["dashboard"]["reasons"] = []
+    (reference.path / "receipt.json").write_text(json.dumps(document))
+    problems, _ = gate_problems(
+        "alpha",
+        reference.path,
+        m.Manifest(),
+        level=m.PROVISIONAL,
+        **args(world),
+    )
+    assert any("not publishable" in p for p in problems)
+
+
+def test_a_truncated_dataset_range_cannot_hide_a_year(world):
+    reference = world.write("alpha", VALUES)
+    document = read_receipt(reference.path)
+    document["dashboard"]["dataset_years"] = [2028, 2029, 2030]
+    document["dashboard"]["unsupported_years"] = [2027]
+    problems = dashboard_problems(document)
+    assert any("not exactly the reported years" in p for p in problems)
+    assert any("leave out [2027]" in p for p in problems)
+
+
+def test_a_combined_receipt_must_record_every_member(world):
+    from uk_budget_data.publication.publish import _members_problems
+
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    reference = combined(world, manifest, ["alpha", "beta"], {2027: -2.0})
+    document = read_receipt(reference.path)
+    document["dashboard"]["members"] = [
+        r for r in document["dashboard"]["members"] if r["id"] == "alpha"
+    ]
+    problems = _members_problems(
+        document, manifest, world.data_root, (m.APPROVED,)
+    )
+    assert any("member records do not match" in p for p in problems)
+
+
+def test_exports_consume_exactly_the_bytes_they_checked(world, monkeypatch):
+    from uk_budget_data.publication import exports
+
+    manifest = m.Manifest()
+    reference = approved(world, manifest, "alpha")
+    m.save_manifest(manifest, world.data_root)
+    real_check = exports.check
+
+    def check_then_tamper(*a, **k):
+        failures = real_check(*a, **k)
+        table = reference.path / "budgetary_impact.csv"
+        table.write_bytes(table.read_bytes().replace(b"-1.0", b"-9.0"))
+        return failures
+
+    monkeypatch.setattr(exports, "check", check_then_tamper)
+    with pytest.raises(PublishError, match="does not match its receipt"):
+        exports.load_approved(["alpha"], **args(world))
