@@ -1,79 +1,82 @@
-# Publishing the Budget dashboard incrementally (proposal)
+# Publishing the Budget dashboard incrementally
 
-**Status: proposal for Vahid and María's review.** Nothing here changes the Budget-day workflow until they agree. Comment on the PR that adds this file.
+**Status, 12 October.** Max ruled that changes which only fix bugs or add opt-in tooling are obvious improvements and land on the normal review gates. Most of this design is therefore landing (see "Status of the work"). Five questions remain for Vahid and María; they are below. Comment on the PR that adds this file.
 
 The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by 07:00 on 29 October. There is no model freeze; the model keeps improving through Budget day. So each number on the dashboard and in the briefing has to carry evidence of what produced it, and pass checks, before it is published, measure by measure as measures are coded.
 
-## Where things stand (11 October)
+## Questions for Vahid and María
 
-- **No production 2026 dashboard exists.**
-  - `https://policyengine.org/uk/autumn-budget-2026` returns 404, and policyengine-app-v2 has no rewrite for it.
-  - The only Vercel project linked to this repository is `uk-autumn-budget-2026-drill`. It tracks `main` as its production branch, is login-protected and sets `NEXT_PUBLIC_MOCK` in every environment, so a merge to `main` deploys a MOCK page.
-  - No deployed household API URL is recorded in the repository or its PRs.
-- **CI has been red on every PR since at least 9 October.** Hugging Face rejects the repository's token, and the one dataset test skipped whenever the token was absent. #12 fixes both.
-- **PR #3 holds the real 2026 foundation**: the measure registry, the PolicyEngine-backed household route and the published-data validator. Three things remain:
-  - certified regeneration (review item C2);
-  - the old combined builder, still labelled 2026 (C3);
-  - a recursion in `_build_scenario` when dated changes and a custom modifier coexist.
+| # | Question | Proposal |
+|---|---|---|
+| 1 | **Who presses merge on the day, and who reviews reconciliation exceptions?** | Vahid integrates and merges; María reviews exceptions and approves. Nobody approves their own exception. |
+| 2 | **When does `generate` switch from the flat CSVs to the gated path** (one write-once artifact per measure, published through the manifest)? | After a rehearsal on the deployed routes shows the page reading the manifest. Until then `--artifacts` is opt-in and the flat CSVs stay the default. |
+| 3 | **Should `main` require checks before a merge?** | Python tests, Certified data, Python lint, Frontend build, Frontend tests, Frontend lint and Publication gate. Emergency bypass by Max only, recorded. |
+| 4 | **How does #3 land, and with it the Personal impact tab?** W5 will not rebase, rewrite or supersede #3 or the drill branches (#4, #7, #9), and builds so they keep working. | Tell us when you expect to merge #3. The page wiring in #20 follows it, and #3's household route replaces the lifecycle calculator (see "The household API" below). |
+| 5 | **When is the rehearsal?** | A full run on the deployed routes by Friday 23 October: intake, dashboard and briefing, including one model upgrade and regeneration, and again after any material change. |
+
+The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain proposals until the methodology call (cos d1344) is ruled.
+
+## Status of the work
+
+| Work | Where | State |
+|---|---|---|
+| CI fails rather than skips, and runs on every PR base | #12 | Landing on gates. The org data token was granted on 12 October |
+| Certified bundle 6.2.6 (UK 2.125.1, data 1.58.0); the student loan freeze, which crashed on it, fixed | #13 | Landing on gates |
+| Household route checker and `/api/version` | #15 | Landing on gates |
+| Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | Landing on gates. The service exists (below) |
+| Treasury Table 4.1 import with a printed-totals check | #16 | Landing on gates |
+| Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
+| A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |
+| Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in | #19 | Landing on gates |
+| The page shows only published figures: unavailable instead of zero, combined statistics only from the combined run, no hardcoded 2026 | #20 | Modules, components and tests done; wiring into the page follows #3 |
+| Briefing exports from an approved manifest only; hardcoded figures removed | In progress | |
+| Drill fixes as tested measure templates and regressions, no mock measures | In progress | |
+| Production Vercel project | Created 12 October | Below |
+| `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
+| Runbook | [`budget-day-runbook.md`](budget-day-runbook.md) | Draft, yours to rewrite |
+
+## Where things stand (12 October)
+
+- **CI.** Hugging Face rejected the repository's token, so CI was red on every PR, and the one dataset test skipped without a token. #12 fixes both, using the org token granted on 12 October.
+- **Production dashboard.** The Vercel project exists but has not deployed yet (details below). Nothing public links to it.
+- **The household API exists but its main route is too slow.** On the first deploy, `/api/health` and `/api/version` answered, but `/api/personal-impact` had not answered after 300 seconds (HTTP 504) on 2 CPUs. That is `main`'s household calculator, which #3 replaces. #3's route needs the same measurement once it is deployed.
+- **PR #3 holds the real 2026 foundation**: the measure registry, the PolicyEngine-backed household route and the published-data validator.
 - **The page cannot show combined figures safely yet.** On `main` and on #3, the browser:
   - substitutes zero for missing rows;
   - adds up standalone effects;
   - reads affected population, poverty and Gini from the first selected measure for 2026.
 
-- **No household API is deployed for 2026.**
-  - `main`'s Personal impact tab throws unless `NEXT_PUBLIC_LIFECYCLE_API_URL` is set ("Point it at the 2026 lifecycle API"), and the drill project sets no such variable.
-  - It was built for the separate 2025 "Lifetime tax model" service (`uk-autumn-budget-lifecycle-578039519715.europe-west1.run.app`, routes `/` and `/calculate`), which is still live. That service is a standalone hardcoded tax model, not PolicyEngine.
-  - No `uk-budget-api-2026` Cloud Run service exists in that Google Cloud project. Its deterministic URL returns Google's not-found page.
-  - No Cloud Build trigger posts statuses to this repository.
-  - Other projects could not be checked without gcloud access.
-- **Years past the dataset's projection.** W4 found that policyengine-uk projects datasets only to 2030, yet returns non-zero 2031–32 totals by a mechanism still being checked. Until that is settled, years beyond the dataset's projected years are marked **unsupported** and shown as unavailable, not as final figures.
+  #20 fixes all three once it is wired in. The metrics bar also labels the poverty change "relative AHC", but the national calculator uses policyengine-uk's `in_poverty_bhc`, which in 2.125.1 is absolute poverty before housing costs.
+- **Years past the dataset's projection.** policyengine-uk projects datasets only to 2030. Years beyond the dataset's projected years are marked **unsupported** and shown as unavailable, not as final figures.
 
-## Decisions for Vahid and María
+## Production setup (as created)
 
-Each has a proposal. Nothing is built into the Budget-day workflow until you agree.
-
-| # | Decision | Proposal |
-|---|---|---|
-| 1 | **Production route.** Who presses merge on the day? | A new non-MOCK Vercel project tracking `main`, plus a policyengine-app-v2 rewrite for `/uk/autumn-budget-2026` (exact setup below). A merge to `main` publishes, behind required checks. The integrator (Vahid) merges. |
-| 2 | **Household API hosting** | Cloud Run `uk-budget-api-2026` in the project that hosts the 2025 services, deployed with no traffic, smoke-tested, then switched over (below). The alternative is Modal. The runbook records the actual URL. |
-| 3 | **Treasury gate** | Our static figure against the static costing passes when the difference is within 10% or £50m, whichever is larger. Table 4.1's post-behavioural figure is shown alongside but not gated. Anything larger needs an exception in your closed classes, reviewed by María and bound to the output digest. Before the documents arrive, figures go up as provisional statement figures only. |
-| 4 | **#3** | W5 takes it over the line under your review: rebase onto #12 and #13, regenerate on certified data with constituency weights from the same release, rename the old combined builder, fix the `_build_scenario` recursion. Or you finish it. Your choice. |
-| 5 | **Rehearsal** | A full run on the deployed routes by **Friday 23 October**: intake, dashboard, briefing, including one model upgrade and regeneration. Repeat after any material change. |
-| 6 | **Combined totals** | Only from one combined simulation of exactly the selected measures, for the selected year. Standalone bars plus an interaction segment. Any other selection shows standalone effects and says combined figures are unavailable. The full package and any presets you name are precomputed. |
-| 7 | **Corrections** | A complete new run, staged so the old entry is kept as superseded. Combined runs that include a changed measure turn stale automatically. An approval or exception carries over only for byte-identical outputs. |
-| 8 | **Model upgrades on the day** | Replace the "freeze by 21 October" idea with adoption of the latest qualified release by PR. Every published measure and the combined run are regenerated and re-gated on the new identity before merge. Otherwise stay on the current identity; mixing identities is refused. |
-| 9 | **Personal impact tab** | #3's PolicyEngine-backed household route becomes the tab, and the lifecycle calculator is removed. It points at a 2025 standalone tax model and has no 2026 service. Household fixtures go through the deployed route, ±£0.01, on the same model version (#15). |
-| 10 | **Briefing** | Charts and tables are exported only from an approved manifest revision, stamped with model, data and revision. The hardcoded figures in `generate_combined_charts.py` go. Who writes and reviews the briefing, and on what timetable? |
-| 11 | **Required checks on `main`** | Python tests, Certified data, Python lint, Frontend build, tests and lint, and Publication gate. Emergency bypass: Max only, recorded. |
-| 12 | **Drill fixes** | Extract them as tested measure templates and regressions (VAT once, NICs bands, owner-only surcharge, pension rounding, £10 allowance rounding, GB benefit-receipt payment, the False Pension Credit flag), with no mock measures. Do any need to land on #3 first? |
-
-## Production setup (proposal for decision 1 and 2)
-
-**Dashboard (Vercel)**, mirroring the 2025 dashboard project, whose production alias serves behind the policyengine.org rewrite:
+**Dashboard: Vercel project `uk-autumn-budget-2026`** (team `policy-engine`, ID `prj_SelxVbakBqqSLdsoS74Qw36wp2E8`), created 12 October:
 
 | Setting | Value |
 |---|---|
-| Project | `uk-autumn-budget-2026`, team `policy-engine`, linked to `PolicyEngine/uk-autumn-budget-dashboard-2026` |
-| Production branch | `main` (a merge publishes; required checks gate the merge) |
-| Framework | Next.js. Install with `bun install --frozen-lockfile`, build with `bun run build`, Node 24.x |
-| Environment, Production and Preview | **No `NEXT_PUBLIC_MOCK`.** `NEXT_PUBLIC_BASE_PATH` unset, so the code default `/uk/autumn-budget-2026` applies. `BUDGET_API_URL` set to the household API (server-side, used by #3's proxy). |
-| Deployment protection | Standard protection, as on the 2025 project (`all_except_custom_domains`): previews need a team login; the production alias is public. Check the production alias returns 200 before enabling the rewrite. |
-| Public URL | `https://policyengine.org/uk/autumn-budget-2026`, via a draft rewrite in policyengine-app-v2 to `https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026`, mirroring the 2025 entry |
-| Rollback target | Record the previous production deployment ID before every Budget-day merge |
+| Repository | `PolicyEngine/uk-autumn-budget-dashboard-2026`, production branch `main`: a merge publishes |
+| Framework | Next.js, Node 24.x, Vercel's defaults for install and build |
+| Environment | None set. No `NEXT_PUBLIC_MOCK`; `NEXT_PUBLIC_BASE_PATH` unset, so the code default `/uk/autumn-budget-2026` applies. `BUDGET_API_URL` (#3's proxy) gets the household API URL once #3 lands |
+| Deployment protection | Standard (`all_except_custom_domains`), as on the 2025 project `uk-autumn-budget-dashboard` |
+| Production domain | `uk-autumn-budget-2026.vercel.app` |
+| Deployments | None yet. The first production deployment happens at the next merge to `main`. Until the measures are regenerated, `main` still carries the 2025 measures' CSVs |
 
-The drill project `uk-autumn-budget-2026-drill` stays as it is for rehearsals. Its production alias is not public.
+The drill project `uk-autumn-budget-2026-drill` is unchanged. It sets `NEXT_PUBLIC_MOCK` in every environment, and its production target is a `drill1-mock-budget` deployment.
 
-**Household API (Cloud Run)**, in the project that hosts the 2025 services (number 578039519715, `europe-west1`):
+**Household API: Cloud Run `uk-budget-api-2026`**, in `policyengine-apps` (number 578039519715), `europe-west1`, beside the 2025 services:
 
-| Step | Detail |
+| Setting | Value |
 |---|---|
-| Build | `cloudbuild.yaml` builds the Dockerfile with `GIT_SHA=$COMMIT_SHA` (#15), so `/api/version` reports the build |
-| Deploy | `gcloud run deploy uk-budget-api-2026 --no-traffic --tag candidate`, then smoke-test the tagged URL: `/api/version` must match the bundle, and one household fixture must pass |
-| Promote | `gcloud run services update-traffic uk-budget-api-2026 --to-latest` only after the smoke test passes |
-| Trigger | None today. Manual `gcloud builds submit` by the deploy owner, or a trigger on `main`. Your call. |
-| Rollback | `gcloud run services update-traffic uk-budget-api-2026 --to-revisions <previous>=100` |
+| URL | `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` |
+| Created | 12 October by Cloud Build `80178569-c9a7-4e24-b2ba-1342802df254`, from commit `f47099d` on #21 before merge |
+| Serving | Revision `uk-budget-api-2026-00001-gow`. A service's first revision must take traffic; nothing links to it |
+| Limits | 2 CPU, 2 GiB, 300 s, public calls with the invoker IAM check off (as on the 2025 `uk-autumn-budget-lifecycle`) |
+| Images | `europe-west1-docker.pkg.dev/policyengine-apps/cloud-run-source-deploy/uk-budget-api-2026:<commit>` |
+| Deploy | No trigger. From a clean checkout of `main`: `gcloud builds submit --project policyengine-apps --config cloudbuild.yaml --substitutions _GIT_SHA=$(git rev-parse HEAD)` |
+| Rollback | The build log names the revision it replaced. `gcloud run services update-traffic uk-budget-api-2026 --project policyengine-apps --region europe-west1 --to-revisions <replaced revision>=100` |
 
-These need gcloud access and an owner with deploy rights. Nothing is created until you agree.
+What else is in the project, read on 12 October: the 2025 services `uk-autumn-budget-dashboard` (2 CPU, 8 GiB) and `uk-autumn-budget-lifecycle` (1 CPU, 512 MiB), each deployed by a Cloud Build trigger on `main` of its own repository. Before 12 October no 2026 service existed there or in `policyengine-api` or `policyengine-household-api`, and no Cloud Build trigger in `policyengine-apps` or `policyengine-api` built this repository. Cloud Run is not enabled in `policyengine-app-v2`, and `policyengine-research` was not readable.
 
 ## Principles
 
@@ -207,7 +210,7 @@ The same script is the runbook's household step and the post-deploy smoke test.
 
 The exact setup is in "Production setup" above.
 - **Dashboard rollback.** Vercel Instant Rollback to the recorded previous production deployment, then `git revert` through a pull request. Then promote the fixed deployment with `vercel promote`: after a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted ([Vercel's Instant Rollback page](https://vercel.com/docs/instant-rollback), read 12 October).
-- **Household API rollback.** Move traffic back to the previous revision, then re-run the household checks on the live route.
+- **Household API.** Each deploy runs as a revision tagged `candidate` with no traffic. It takes traffic only after its smoke test passes on its own URL. Rollback moves traffic back to the revision the build log names, then re-runs the household checks on the live route.
 
 ## Runbook
 
@@ -225,20 +228,3 @@ A first draft is in [`budget-day-runbook.md`](budget-day-runbook.md), with the c
 | — | Rollback |
 
 The runbook records the actual household URL and the production publishing triggers. It is rehearsed end to end on the deployed routes by 23 October, and again after any material change.
-
-## PR sequence
-
-| # | PR | Depends on |
-|---|---|---|
-| 1 | #12: CI fails rather than skips, runs on every PR, uses the lockfile | Admin: data-token access |
-| 2 | #13: certified bundle 6.2.6 (UK 2.125.1, data 1.58.0) | 1 |
-| 3 | #19: publication core: receipts, write-once artifacts, the manifest, the `publish` commands, combined runs and a CI job that re-runs every gate. Generation still writes the flat CSVs unless `--artifacts` is passed | #17 |
-| 4 | Frontend: manifest loader, unavailable states, combined-only statistics, interaction display, UI regression tests | 3 and #3 |
-| 5 | Briefing exports gated on the manifest; hardcoded figures removed | 3 |
-| 6 | #15: household route checker, `/api/version`, build identity. Then a Cloud Build no-traffic deploy with smoke test | #13, deployed API |
-| 6b | #16: Treasury Table 4.1 importer with printed-totals check | #13 |
-| 6d | #17: reconciliation and responsiveness gate, writing `reconciliation.json` beside each artifact | #16 |
-| 6e | #18: a draft upgrade PR opens when policyengine releases a qualified bundle. It never merges | #17 |
-| 6c | PolicyEngine/policyengine-app-v2#1249: draft rewrite for `/uk/autumn-budget-2026` | Decision 1 |
-| 7+ | Drill-fix extraction: one small PR per fix with its regression, no mock measures | 2 |
-| R | Runbook ([draft](budget-day-runbook.md)) and rehearsal receipts | All |

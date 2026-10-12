@@ -15,13 +15,21 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
 ## Before the day: the deployed-route rehearsal, by Friday 23 October
 
-- [ ] **Production route live.** The dashboard serves at `https://policyengine.org/uk/autumn-budget-2026` from the production Vercel project, which tracks `main`. Record here:
-  - the project ID;
-  - the domain;
-  - the last production deployment ID, which is the rollback target.
-- [ ] **Household API live.** Record here:
-  - its URL, which is **the household URL for the day**;
-  - the serving revision and image digest.
+- [ ] **Production route live.** The dashboard serves at `https://policyengine.org/uk/autumn-budget-2026` (policyengine-app-v2#1249, still a draft) from the production Vercel project, which tracks `main`.
+  - Project: `uk-autumn-budget-2026`, team `policy-engine`, ID `prj_SelxVbakBqqSLdsoS74Qw36wp2E8` (created 12 October).
+  - Domain: `uk-autumn-budget-2026.vercel.app`.
+  - Last production deployment ID, the rollback target: record before every merge on the day.
+- [ ] **Household API live.**
+  - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
+  - Serving revision and image: record after the last deploy before the day. On 12 October the first revision, `uk-budget-api-2026-00001-gow`, answered `/api/version` but not `/api/personal-impact` within 300 s, so the household route is not yet usable.
+  - Deploy (no trigger), from a clean checkout of `main`:
+
+    ```sh
+    gcloud builds submit --project policyengine-apps --config cloudbuild.yaml \
+      --substitutions _GIT_SHA=$(git rev-parse HEAD)
+    ```
+
+    The new revision takes traffic only after its smoke test passes. The log ends with the revision it promoted and the one it replaced.
 
   `curl -s "$HOUSEHOLD_API/api/version"` must report the bundle's model and core versions (#15).
 - [ ] **Required checks on `main`:**
@@ -181,11 +189,12 @@ Exports are built only from approved entries of one manifest revision. Each char
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
   2. `git revert` the bad merge through a pull request, and wait for its deployment to build.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
-- **Household API:**
+- **Household API.** Use the revision the deploy's log says it replaced:
 
   ```sh
   gcloud run services update-traffic uk-budget-api-2026 \
-    --region europe-west1 --to-revisions <previous>=100
+    --project policyengine-apps --region europe-west1 \
+    --to-revisions <replaced revision>=100
   ```
 
   Then re-run the household check against the live route.
