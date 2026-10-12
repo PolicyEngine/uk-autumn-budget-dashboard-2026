@@ -206,12 +206,12 @@ The same script is the runbook's household step and the post-deploy smoke test.
 ## Deployment and rollback
 
 The exact setup is in "Production setup" above.
-- **Dashboard rollback.** Vercel Instant Rollback to the recorded previous production deployment, then `git revert` and redeploy. Promote the fixed deployment afterwards, because rollback pauses automatic domain assignment.
+- **Dashboard rollback.** Vercel Instant Rollback to the recorded previous production deployment, then `git revert` through a pull request. Then promote the fixed deployment with `vercel promote`: after a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted ([Vercel's Instant Rollback page](https://vercel.com/docs/instant-rollback), read 12 October).
 - **Household API rollback.** Move traffic back to the previous revision, then re-run the household checks on the live route.
 
 ## Runbook
 
-`docs/budget-day-runbook.md` will be written with Vahid and María. Every step has a command, its expected output and its gate. It follows the drill structure:
+A first draft is in [`budget-day-runbook.md`](budget-day-runbook.md), with the commands as built on the PR stack. It is Vahid and María's to rewrite. Every step has a command and its gate. It follows the drill structure:
 
 | Gate | Step |
 |---|---|
@@ -232,12 +232,13 @@ The runbook records the actual household URL and the production publishing trigg
 |---|---|---|
 | 1 | #12: CI fails rather than skips, runs on every PR, uses the lockfile | Admin: data-token access |
 | 2 | #13: certified bundle 6.2.6 (UK 2.125.1, data 1.58.0) | 1 |
-| 3 | Publication core: receipts, artifacts, manifest, `publish` checks, reconciliation, combined runs | 2 |
+| 3 | #19: publication core: receipts, write-once artifacts, the manifest, the `publish` commands, combined runs and a CI job that re-runs every gate. Generation still writes the flat CSVs unless `--artifacts` is passed | #17 |
 | 4 | Frontend: manifest loader, unavailable states, combined-only statistics, interaction display, UI regression tests | 3 and #3 |
 | 5 | Briefing exports gated on the manifest; hardcoded figures removed | 3 |
 | 6 | #15: household route checker, `/api/version`, build identity. Then a Cloud Build no-traffic deploy with smoke test | #13, deployed API |
 | 6b | #16: Treasury Table 4.1 importer with printed-totals check | #13 |
 | 6d | #17: reconciliation and responsiveness gate, writing `reconciliation.json` beside each artifact | #16 |
-| 6c | policyengine-app-v2: draft rewrite for `/uk/autumn-budget-2026` | Decision 1 |
+| 6e | #18: a draft upgrade PR opens when policyengine releases a qualified bundle. It never merges | #17 |
+| 6c | PolicyEngine/policyengine-app-v2#1249: draft rewrite for `/uk/autumn-budget-2026` | Decision 1 |
 | 7+ | Drill-fix extraction: one small PR per fix with its regression, no mock measures | 2 |
-| R | Runbook and rehearsal receipts | All |
+| R | Runbook ([draft](budget-day-runbook.md)) and rehearsal receipts | All |
