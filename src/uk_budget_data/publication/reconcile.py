@@ -26,6 +26,7 @@ pending the team's decision.
 import argparse
 import csv
 import json
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -95,8 +96,20 @@ class Policy:
             "min_response_bn",
             "min_response_share",
         ):
-            if not getattr(self, name) >= 0:
-                raise ReconciliationInputError(f"{name} must be >= 0")
+            value = getattr(self, name)
+            if isinstance(value, bool) or not (
+                isinstance(value, (int, float))
+                and math.isfinite(value)
+                and value >= 0
+            ):
+                raise ReconciliationInputError(
+                    f"{name} must be a finite number >= 0"
+                )
+        if not self.min_response_bn > 0:
+            raise ReconciliationInputError(
+                "min_response_bn must be above zero, so a measure that "
+                "does nothing can never count as moving"
+            )
 
 
 @dataclass(frozen=True)
@@ -172,12 +185,26 @@ def fiscal_year_label(model_year: int, offset: int = 0) -> str:
     return f"{start}-{(start + 1) % 100:02d}"
 
 
-def allowance_bn(treasury_bn: float, policy: Policy) -> float:
+def allowance_bn(
+    treasury_bn: float,
+    policy: Policy,
+    printed_zero: Optional[bool] = None,
+) -> float:
     """The largest acceptable absolute difference from a Treasury figure.
 
     A figure the Treasury prints as zero tolerates only its own rounding.
+    A comparator that sums to zero from non-zero printed figures is not a
+    printed zero, so it gets the ordinary allowance.
+
+    Args:
+        treasury_bn: The comparator.
+        policy: Thresholds.
+        printed_zero: Whether every figure behind the comparator was printed
+            as zero. None means "infer from the comparator itself".
     """
-    if abs(treasury_bn) <= _EPSILON:
+    if printed_zero is None:
+        printed_zero = abs(treasury_bn) <= _EPSILON
+    if printed_zero:
         return policy.zero_tolerance_bn
     return max(
         policy.relative_tolerance * abs(treasury_bn),
@@ -185,12 +212,27 @@ def allowance_bn(treasury_bn: float, policy: Policy) -> float:
     )
 
 
-def within_allowance(pe_bn: float, treasury_bn: float, policy: Policy) -> bool:
+def within_allowance(
+    pe_bn: float,
+    treasury_bn: float,
+    policy: Policy,
+    printed_zero: Optional[bool] = None,
+) -> bool:
     """Whether a year passes without an exception (the bound is inclusive)."""
     return (
         abs(pe_bn - treasury_bn)
-        <= allowance_bn(treasury_bn, policy) + _EPSILON
+        <= allowance_bn(treasury_bn, policy, printed_zero) + _EPSILON
     )
+
+
+@dataclass(frozen=True)
+class Comparator:
+    """The Treasury side of one year on one basis."""
+
+    value_bn: Optional[float]
+    rows: list
+    missing: list
+    printed_zero: bool
 
 
 def _comparator(
@@ -199,32 +241,57 @@ def _comparator(
     basis: str,
     sources: list[SourceRow],
     mapping: list[MappingRow],
-) -> tuple[Optional[float], list[dict]]:
-    """Sum the mapped Treasury rows for one year on one basis."""
+) -> Comparator:
+    """Sum the mapped Treasury rows for one year on one basis.
+
+    Every comparable mapping must contribute exactly one figure. If any has
+    none (not yet entered, or left blank), the comparator is incomplete and
+    its value is None, so a partial sum can never pass.
+    """
     total = 0.0
     used = []
+    missing = []
     for link in mapping:
         if link.measure_id != measure_id or link.status == NOT_COMPARABLE:
             continue
         label = fiscal_year_label(model_year, link.year_offset)
-        for row in sources:
-            if (
-                row.source_id == link.source_id
-                and row.row_id == link.row_id
-                and row.basis == basis
-                and row.fiscal_year == label
-            ):
-                total += link.scale * row.value_bn
-                used.append(
-                    {
-                        "source_id": row.source_id,
-                        "row_id": row.row_id,
-                        "fiscal_year": row.fiscal_year,
-                        "value_bn": row.value_bn,
-                        "scale": link.scale,
-                    }
-                )
-    return (total, used) if used else (None, [])
+        matches = [
+            row
+            for row in sources
+            if row.source_id == link.source_id
+            and row.row_id == link.row_id
+            and row.basis == basis
+            and row.fiscal_year == label
+        ]
+        if len(matches) > 1:
+            raise ReconciliationInputError(
+                f"{link.source_id} row {link.row_id} has {len(matches)} "
+                f"{basis} figures for {label}"
+            )
+        if not matches:
+            missing.append(
+                {
+                    "source_id": link.source_id,
+                    "row_id": link.row_id,
+                    "fiscal_year": label,
+                }
+            )
+            continue
+        row = matches[0]
+        total += link.scale * row.value_bn
+        used.append(
+            {
+                "source_id": row.source_id,
+                "row_id": row.row_id,
+                "fiscal_year": row.fiscal_year,
+                "value_bn": row.value_bn,
+                "scale": link.scale,
+            }
+        )
+    if missing or not used:
+        return Comparator(None, used, missing, False)
+    printed_zero = all(abs(row["value_bn"]) <= _EPSILON for row in used)
+    return Comparator(total, used, [], printed_zero)
 
 
 def reconcile(
@@ -258,6 +325,7 @@ def reconcile(
     """
     own_links = [m for m in mapping if m.measure_id == measure_id]
     not_comparable = [m for m in own_links if m.status == NOT_COMPARABLE]
+    comparable = [m for m in own_links if m.status != NOT_COMPARABLE]
     other = next(b for b in BASES if b != policy.comparator_basis)
 
     rows = []
@@ -266,11 +334,14 @@ def reconcile(
         pe = float(budgetary[year])
         label = fiscal_year_label(year)
         row: dict = {"year": year, "fiscal_year": label, "pe_bn": pe}
-        gated, gated_rows = _comparator(
+        gated_side = _comparator(
             measure_id, year, policy.comparator_basis, sources, mapping
         )
-        alongside, alongside_rows = _comparator(
-            measure_id, year, other, sources, mapping
+        alongside_side = _comparator(measure_id, year, other, sources, mapping)
+        gated, gated_rows = gated_side.value_bn, gated_side.rows
+        alongside, alongside_rows = (
+            alongside_side.value_bn,
+            alongside_side.rows,
         )
         comparators[year] = gated if gated is not None else alongside
         if alongside is not None:
@@ -284,12 +355,15 @@ def reconcile(
         if supported_years is not None and year not in supported_years:
             row["status"] = UNSUPPORTED
             row["reason"] = "Beyond the dataset's projected years"
-        elif not_comparable and gated is None:
+        elif not_comparable and not comparable:
+            # Every mapped row was classified out of scope.
             row["status"] = NOT_COMPARABLE
             row["reason"] = "; ".join(m.reason for m in not_comparable)
             row["reviewer"] = "; ".join(m.reviewer for m in not_comparable)
         elif gated is None:
             row["status"] = AWAITING_SOURCE
+            if gated_side.missing:
+                row["missing"] = gated_side.missing
         else:
             residual = pe - gated
             row["comparator"] = {
@@ -298,8 +372,15 @@ def reconcile(
                 "rows": gated_rows,
             }
             row["residual_bn"] = residual
-            row["allowance_bn"] = allowance_bn(gated, policy)
-            if within_allowance(pe, gated, policy):
+            row["allowance_bn"] = allowance_bn(
+                gated, policy, gated_side.printed_zero
+            )
+            if not_comparable:
+                row["excluded"] = [
+                    {"row_id": m.row_id, "reason": m.reason}
+                    for m in not_comparable
+                ]
+            if within_allowance(pe, gated, policy, gated_side.printed_zero):
                 row["status"] = PASS
             else:
                 row["status"] = FAILED
@@ -392,6 +473,7 @@ def _read_csv(path: Path) -> list[dict]:
 def load_sources(directory: Path) -> list[SourceRow]:
     """Read every source sheet; rows with a blank value are not yet entered."""
     rows = []
+    seen: set[tuple] = set()
     for path in sorted(directory.glob("*.csv")):
         for line in _read_csv(path):
             value = (line.get("value_bn") or "").strip()
@@ -405,12 +487,33 @@ def load_sources(directory: Path) -> list[SourceRow]:
                 raise ReconciliationInputError(
                     f"{path}: only exchequer_positive figures are supported"
                 )
+            try:
+                number = float(value)
+            except ValueError as error:
+                raise ReconciliationInputError(
+                    f"{path}: value_bn {value!r} is not a number"
+                ) from error
+            if not math.isfinite(number):
+                raise ReconciliationInputError(
+                    f"{path}: value_bn {value!r} is not finite"
+                )
+            identity = (
+                line["source_id"],
+                str(line["row_id"]),
+                line["fiscal_year"],
+                line["basis"],
+            )
+            if identity in seen:
+                raise ReconciliationInputError(
+                    f"{path}: {identity} is entered twice"
+                )
+            seen.add(identity)
             rows.append(
                 SourceRow(
                     source_id=line["source_id"],
                     row_id=str(line["row_id"]),
                     fiscal_year=line["fiscal_year"],
-                    value_bn=float(value),
+                    value_bn=number,
                     basis=line["basis"],
                     row_label=line.get("row_label", ""),
                 )
@@ -419,7 +522,7 @@ def load_sources(directory: Path) -> list[SourceRow]:
 
 
 def load_mapping(path: Path) -> list[MappingRow]:
-    return [
+    rows = [
         MappingRow(
             measure_id=line["measure_id"],
             source_id=line.get("source_id", ""),
@@ -432,6 +535,19 @@ def load_mapping(path: Path) -> list[MappingRow]:
         )
         for line in _read_csv(path)
     ]
+    seen = set()
+    for row in rows:
+        identity = (row.measure_id, row.source_id, row.row_id)
+        if identity in seen:
+            raise ReconciliationInputError(
+                f"{path}: {identity} is mapped twice"
+            )
+        if not math.isfinite(row.scale):
+            raise ReconciliationInputError(
+                f"{path}: {identity} has a non-finite scale"
+            )
+        seen.add(identity)
+    return rows
 
 
 def load_exceptions(path: Path) -> list[ExceptionEntry]:
