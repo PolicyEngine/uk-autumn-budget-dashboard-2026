@@ -603,3 +603,98 @@ def test_the_simulation_loads_exactly_the_bytes_that_were_hashed(
         sim.policyengine_bundle["runtime_dataset_sha256"]
         == hashlib.sha256(loaded[0]).hexdigest()
     )
+
+
+# --- round 4 (publication review) ------------------------------------------
+
+
+def _member_records(world, manifest, members=("alpha", "beta")):
+    records = []
+    for member in members:
+        own = read_receipt(
+            world.data_root / manifest.measures[member].artifact
+        )["execution_receipt"]
+        records.append(
+            {
+                "id": member,
+                "baseline": dict(own["baseline"]),
+                "reform": dict(own["reform"]),
+            }
+        )
+    return records
+
+
+def _claim(world, manifest, records):
+    ids = [record["id"] for record in records]
+    return world.write(
+        "combined--" + "+".join(ids),
+        {2027: -2.0, 2028: -4.0},
+        members=records,
+        measure_ids=ids,
+        member_outputs={
+            member: manifest.measures[member].outputs_sha256 for member in ids
+        },
+    )
+
+
+def test_a_members_own_baseline_cannot_be_left_out(world):
+    """Review round 4 (blocker): two members with the same baseline of
+    their own each have it applied; marking one unapplied was accepted."""
+    from uk_budget_data.publication.receipt import composition_problems
+
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    # Any identity other than the configured baseline is a member's own.
+    own_baseline = _member_records(world, manifest)[0]["reform"]
+
+    def records(flags):
+        made = _member_records(world, manifest)
+        for record, flag in zip(made, flags):
+            record["baseline"] = dict(own_baseline)
+            record["baseline_bound"] = flag
+        return made
+
+    honest = read_receipt(_claim(world, manifest, records([True, True])).path)
+    assert composition_problems(honest) == []
+    forged = read_receipt(_claim(world, manifest, records([True, False])).path)
+    assert any(
+        "beta has its own baseline" in p for p in composition_problems(forged)
+    )
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("representation", "policyengine.reform_dict/v1"),
+        ("binding", "code_revision"),
+    ],
+)
+def test_a_member_record_must_be_its_published_identity(world, field, value):
+    """Review round 4: only kind and digest were compared with the member's
+    own receipt, so a record could restate its representation or binding."""
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    records = _member_records(world, manifest)
+    assert records[1]["reform"][field] != value
+    records[1]["reform"][field] = value
+    claim = _claim(world, manifest, records)
+    with pytest.raises(PublishError, match="different reform definition"):
+        stage(manifest, claim.path, **args(world))
+
+
+def test_an_invalid_unapplied_baseline_is_a_problem_not_a_crash(world):
+    """Review round 4: an unapplied baseline was never validated, and a
+    malformed one crashed staging."""
+    from uk_budget_data.publication.receipt import composition_problems
+
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    reference = _claim(world, manifest, _member_records(world, manifest))
+    document = read_receipt(reference.path)
+    document["dashboard"]["members"][1]["baseline_bound"] = False
+    document["dashboard"]["members"][1]["baseline"]["binding"] = []
+    problems = composition_problems(document)
+    assert problems and "cannot be composed" in problems[0]
