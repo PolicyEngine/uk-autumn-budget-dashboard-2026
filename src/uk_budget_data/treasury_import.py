@@ -163,15 +163,17 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         ]
         label_cells = [_text(c) for c in cells[:head_column] if _text(c)]
         head = _text(cells[head_column]).lower()
-        if all(_text(v) == "" for v in raw_values) and head not in {
-            "tax",
-            "spend",
-        }:
+        label = max(label_cells, key=len) if label_cells else ""
+        lowered = label.lower()
+        # Totals are recognised before blank rows are skipped: a total
+        # printed blank is a nil total, and still counts as printed.
+        if lowered not in TOTAL_LABELS and (
+            all(_text(v) == "" for v in raw_values)
+            and head not in {"tax", "spend"}
+        ):
             # A section heading, blank line or footnote. A row with a Tax or
             # Spend head is a measure even when every figure is blank (nil).
             continue
-        label = max(label_cells, key=len) if label_cells else ""
-        lowered = label.lower()
         if lowered in TOTAL_LABELS:
             if TOTAL_LABELS[lowered] in totals:
                 # A second printed total would silently replace the first.

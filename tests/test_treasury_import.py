@@ -274,3 +274,28 @@ def test_a_measure_with_only_nil_figures_is_kept(tmp_path):
     nil_rows = [row for row in rows if row["row_id"] == "2"]
     assert len(rows) == 10 and len(nil_rows) == 5
     assert {row["value_bn"] for row in nil_rows} == {"0.0000"}
+
+
+@pytest.mark.parametrize("blank_first", [True, False])
+def test_a_blank_total_beside_a_printed_one_is_refused(blank_first):
+    """Review round 4: a total printed blank (nil) was skipped as a blank
+    row, so a nil total and a £100m total passed as one £100m total."""
+    rows = sheet_rows([(1, "A measure", "Tax", [100] * 5)])
+    blank = (None, None, "Total policy decisions", None, *([None] * 5))
+    position = next(
+        i for i, row in enumerate(rows) if "Total policy decisions" in row
+    )
+    rows.insert(position if blank_first else position + 1, blank)
+    with pytest.raises(ScorecardError, match="appears twice"):
+        parse_rows(rows)
+
+
+def test_a_lone_blank_total_is_a_nil_total():
+    rows = sheet_rows([(1, "A measure", "Tax", [100] * 5)], totals=False)
+    rows.insert(
+        -1, (None, None, "Total policy decisions", None, *([None] * 5))
+    )
+    scorecard = parse_rows(rows)
+    assert set(scorecard.totals_m[None].values()) == {0.0}
+    with pytest.raises(TotalsMismatch):
+        check_totals(scorecard)
