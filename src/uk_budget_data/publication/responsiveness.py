@@ -130,7 +130,8 @@ def check_responsiveness(
         minimum = min_response_bn
         if comparator is not None:
             minimum = max(minimum, min_response_share * abs(comparator))
-        if abs(value) < minimum:
+        # An exact zero never counts as moving, whatever the thresholds.
+        if value == 0 or abs(value) < minimum:
             status = INERT
         elif _sign(value) != direction:
             status = WRONG_DIRECTION
