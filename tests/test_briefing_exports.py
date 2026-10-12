@@ -517,17 +517,37 @@ def test_the_export_receipt_binds_the_treasury_inputs(world, tmp_path):
 def test_treasury_inputs_are_gated_drawn_and_hashed_from_one_snapshot(
     world, tmp_path, monkeypatch
 ):
-    """Review round 3: inputs read after the gate could put a figure in a
-    chart that the receipt's input digest did not cover."""
+    """Review rounds 3 and 4: inputs read after the gate could put a figure
+    in a chart that the receipt's input digest did not cover.
+
+    Only a post-behavioural figure changes: it is drawn alongside and never
+    gated, so a renderer reading the live inputs would draw the changed
+    figure while the static comparator still passes. The racing export
+    must draw exactly what a clean export draws.
+    """
     from uk_budget_data.publication import briefing_export
     from uk_budget_data.publication.briefing_export import inputs_digest
 
     approved_world(world)
     source = world.inputs / "sources" / "S.csv"
+    source.write_bytes(
+        source.read_bytes()
+        + b"S,Budget,costings,alpha,alpha,2027-28,2.5,post_behavioural,"
+        b"exchequer_positive,tax,\n"
+    )
     original = source.read_bytes()
     before = inputs_digest(world.inputs)
-    changed = re.sub(
-        rb"(alpha,alpha,2027-28,)[^,]+,", rb"\g<1>918273.645,", original
+    manifest = world.data_root / "manifest.json"
+
+    blog.generate(manifest, ["alpha"], tmp_path / "clean", inputs=world.inputs)
+    clean = json.loads(
+        (tmp_path / "clean" / "alpha" / "revenue.json").read_text()
+    )
+    post = [t for t in clean["data"] if "post_behavioural" in t["name"]]
+    assert [t["y"] for t in post] == [[2.5]]
+
+    changed = original.replace(
+        b",2.5,post_behavioural,", b",918273.645,post_behavioural,"
     )
     assert changed != original
     real_check = briefing_export.exports.check
@@ -547,13 +567,12 @@ def test_treasury_inputs_are_gated_drawn_and_hashed_from_one_snapshot(
     monkeypatch.setattr(briefing_export.exports, "check", check_then_change)
     monkeypatch.setattr(briefing_export, "stamp_plotly", stamp_then_restore)
     receipt = blog.generate(
-        world.data_root / "manifest.json",
-        ["alpha"],
-        tmp_path / "out",
-        inputs=world.inputs,
+        manifest, ["alpha"], tmp_path / "racing", inputs=world.inputs
     )
-    chart = (tmp_path / "out" / "alpha" / "revenue.json").read_text()
-    assert "918273.645" not in chart
+    racing = json.loads(
+        (tmp_path / "racing" / "alpha" / "revenue.json").read_text()
+    )
+    assert racing["data"] == clean["data"]
     assert receipt["treasury_inputs_sha256"] == before
 
 
