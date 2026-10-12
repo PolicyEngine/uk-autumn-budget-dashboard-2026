@@ -161,8 +161,8 @@ These API results retain the engine's annual mixed basis (`period_basis=engine_a
 | Documents released | 13:40:14 | 13:40 files opened at 13:40:14 BST (hashes verified before release); code at release `83dd174` |
 | G3 re-based; national sheet filled | 14:11 (late; due 14:10) | Code `4b72684` (all 11 rebased on Annex A except LHA baseline: engine April 2024 vs Annex A April 2025); data + prefilled national sheet `a71a742` (`MOCK-drill3-national-scoring-run1.csv`, classes PROPOSED for María). Ledger re-locked by María on Table 4.1 numbering at 14:10:46 (`e004ff9`; line 1 `constructed_counterfactual` confirmed); released-basis ledger wording updated after. Household_scatter resampled across all reforms after the shard merge; validator passes 11 × 6 |
 | Correction notice released | 14:20:05 | `MOCK-obr-correction-notice.md` opened at 14:20:05 BST (hash verified before release). Affects measure 8 (CGM 2-bed baseline £985.00, national costing unchanged) and measure 3 (caseload 5.1m/5.2m; costing −510/−520). Run 1 (code `4b72684`) to be superseded by a complete run 2 on a new SHA |
-| G5 correction re-run and re-pinned | | |
+| G5 correction re-run and re-pinned | 14:37 | Run 2 complete on code `619dc67`, data + sheet `8aef1c1` (`MOCK-drill3-national-scoring-run2.csv`, receipt `drill3-run2-receipt.json`): measures 1, 3, 7, 8, 10, 20 re-run; 2, 4, 5, 6, 9 carried forward with code-diff receipt. Run 1 (`4b72684`) preserved and SUPERSEDED. Household sheet for run 2 with María |
 | G4 full page on preview (preview URL) | | |
-| Scoring runs, one SHA each (list them; mark the one matching the stop) | | |
+| Scoring runs, one SHA each (list them; mark the one matching the stop) | | Run 1: code `4b72684` (13:40 release), superseded at G5. Run 2: code `619dc67` (after 14:20 correction), current |
 | Stop | | |
 | Answer key released | | |
