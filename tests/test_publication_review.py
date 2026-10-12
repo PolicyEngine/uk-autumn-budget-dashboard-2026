@@ -266,3 +266,75 @@ def test_real_booleans_are_accepted():
     assert _coerce(True, "bool", "x") is True
     assert _coerce(np.bool_(False), "bool", "x") is False
     assert _coerce("True", "bool", "x") is True
+
+
+# --- W4: the dataset hash is taken at load, never at receipt time ---------
+
+
+def test_a_simulation_with_no_load_time_hash_cannot_be_receipted(world):
+    from uk_budget_data.publication import receipt as receipt_module
+    from uk_budget_data.publication.receipt import ReceiptUnavailable
+
+    sim = world.sim()
+    del sim.policyengine_bundle["runtime_dataset_sha256"]
+    revision = world.revision()
+    inputs = receipt_module.ReceiptInputs(
+        key="alpha",
+        measure_ids=["alpha"],
+        years=[2027],
+        baseline_identity=receipt_module.scenario_identity(
+            None, name="baseline", revision=revision
+        ),
+        reform_identity=receipt_module.scenario_identity(
+            None, name="alpha", revision=revision
+        ),
+        file_digests={"budgetary_impact.csv": "a" * 64},
+        basis={},
+        revision=revision,
+    )
+    with pytest.raises(ReceiptUnavailable, match="without verifying"):
+        receipt_module.build_receipt_document(sim, sim, inputs)
+
+
+def test_a_local_dataset_is_hashed_before_the_simulation_reads_it(
+    tmp_path, monkeypatch
+):
+    from types import SimpleNamespace
+
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication.generate import _default_build
+
+    dataset = tmp_path / "data.h5"
+    dataset.write_bytes(b"bytes that ran")
+    expected = __import__("hashlib").sha256(b"bytes that ran").hexdigest()
+
+    def build(path, scenario):
+        # Anything that changes the file after the simulation was built
+        # must not change the recorded hash.
+        sim = SimpleNamespace(policyengine_bundle={})
+        dataset.write_bytes(b"bytes swapped in later")
+        return sim
+
+    monkeypatch.setattr(pipeline, "build_microsimulation", build)
+    sim = _default_build(str(dataset))
+    assert sim.policyengine_bundle["runtime_dataset_sha256"] == expected
+
+
+def test_a_materializer_hash_is_never_overwritten(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication.generate import _default_build
+
+    dataset = tmp_path / "data.h5"
+    dataset.write_bytes(b"x")
+    monkeypatch.setattr(
+        pipeline,
+        "build_microsimulation",
+        lambda path, scenario: SimpleNamespace(
+            policyengine_bundle={"runtime_dataset_sha256": "f" * 64}
+        ),
+    )
+    assert _default_build(str(dataset)).policyengine_bundle[
+        "runtime_dataset_sha256"
+    ] == ("f" * 64)
