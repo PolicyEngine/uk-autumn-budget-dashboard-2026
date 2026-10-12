@@ -1,1 +1,727 @@
 reform_id,reform_name,year,decile,avg_change
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,1,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,2,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,3,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,4,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,5,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,6,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,7,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,8,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,9,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,10,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2026,all,0.0
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,1,20.20803742043719
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,2,22.019854094117917
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,3,21.250611966018155
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,4,23.554850006056817
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,5,29.43936495820236
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,6,29.53317257964636
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,7,39.92534731640808
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,8,35.69710951953749
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,9,43.74893065696248
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,10,35.81008462026423
+mock3_fuel_duty_phasing,Fuel duty rises phased,2027,all,29.765106872426117
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,1,10.895349949011564
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,2,12.256907294234912
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,3,11.575262596885237
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,4,12.692600874163661
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,5,15.816330525463904
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,6,16.234031105302428
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,7,21.81287287086633
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,8,19.432735066954727
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,9,23.79498301693994
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,10,19.62070346391558
+mock3_fuel_duty_phasing,Fuel duty rises phased,2028,all,16.219414952979996
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,1,10.62879860883641
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,2,12.233424173086052
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,3,11.4184668234197
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,4,12.34071305000149
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,5,15.81727936443563
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,6,15.423474338181904
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,7,21.793781242873436
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,8,19.0227682494254
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,9,23.562917467122492
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,10,19.291098554000133
+mock3_fuel_duty_phasing,Fuel duty rises phased,2029,all,15.96938985530027
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,1,10.36236804042949
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,2,11.722831747992267
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,3,10.907233684270233
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,4,12.093163034271964
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,5,14.685875928005986
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,6,15.635711294029235
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,7,21.309028874098512
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,8,18.284358316946243
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,9,22.962623079628116
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,10,18.52924611026101
+mock3_fuel_duty_phasing,Fuel duty rises phased,2030,all,15.466797219071546
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,1,10.69194952542097
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,2,11.406758312977447
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,3,12.024376991793588
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,4,11.980920082947707
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,5,14.972707322947704
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,6,16.059146173146864
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,7,21.570320679547557
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,8,18.40974026383379
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,9,23.85006250714893
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,10,18.720282132850702
+mock3_fuel_duty_phasing,Fuel duty rises phased,2031,all,15.800861215170533
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,1,34.287196983348316
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,2,40.26588647780235
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,3,40.29198924574818
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,4,32.21606691990478
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,5,27.016368919869542
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,6,23.15631400115152
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,7,17.94194182117993
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,8,10.071766996530801
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,9,9.083049785596431
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,10,3.314800711171345
+mock3_whd_top_up,Warm Home Discount £100 top-up,2026,all,24.183042192665926
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,1,34.805381126469015
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,2,40.027481712687596
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,3,39.752860211971814
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,4,32.229902512581496
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,5,26.274851433637007
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,6,22.97017442078405
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,7,18.182951300738523
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,8,10.526276436527981
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,9,8.926370693639312
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,10,3.4567488639356907
+mock3_whd_top_up,Warm Home Discount £100 top-up,2027,all,24.136165442599406
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,1,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,2,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,3,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,4,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,5,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,6,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,7,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,8,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,9,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,10,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2028,all,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,1,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,2,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,3,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,4,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,5,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,6,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,7,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,8,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,9,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,10,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2029,all,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,1,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,2,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,3,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,4,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,5,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,6,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,7,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,8,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,9,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,10,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2030,all,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,1,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,2,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,3,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,4,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,5,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,6,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,7,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,8,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,9,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,10,0.0
+mock3_whd_top_up,Warm Home Discount £100 top-up,2031,all,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,1,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,2,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,3,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,4,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,5,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,6,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,7,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,8,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,9,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,10,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2026,all,0.0
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,1,69.17287716223635
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,2,65.8287207164273
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,3,92.91435833910349
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,4,69.50212605506115
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,5,73.48871371649697
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,6,61.1684093674614
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,7,22.876274933731555
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,8,27.749108651884722
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,9,21.818676406352868
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,10,5.2954520042317945
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027,all,51.61262199791942
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,1,77.80794899424728
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,2,75.96896046817581
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,3,105.9294462289393
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,4,80.28593920161842
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,5,82.35122720843894
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,6,67.7162655747254
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,7,25.018425376965386
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,8,31.35234758810936
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,9,25.190918089380823
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,10,5.026124180858876
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2028,all,58.37273087865327
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,1,84.20229121790398
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,2,91.56568657796736
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,3,113.47965763005597
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,4,96.77010837471308
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,5,89.23603496237864
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,6,76.5228114501878
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,7,26.223473822889517
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,8,35.094968645178874
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,9,28.574245008193802
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,10,5.612609547178095
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2029,all,65.43797109588557
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,1,103.4222163306809
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,2,105.83240921318095
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,3,140.0374403273753
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,4,97.44238059929191
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,5,91.56581875663379
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,6,75.64405872888658
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,7,34.38815934543714
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,8,45.2465111285843
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,9,24.629005885142167
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,10,6.36960172374885
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2030,all,73.58720009152835
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,1,118.3976171839702
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,2,100.72280102742121
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,3,109.04153694787247
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,4,98.45136518383802
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,5,84.05873193207621
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,6,61.55683363348134
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,7,32.951564725653526
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,8,24.492126461112736
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,9,18.238823660011306
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,10,2.185239723206093
+mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031,all,66.47600515709543
+mock3_pensioner_allowance,Pensioner Allowance,2026,1,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,2,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,3,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,4,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,5,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,6,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,7,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,8,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,9,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,10,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2026,all,0.0
+mock3_pensioner_allowance,Pensioner Allowance,2027,1,22.197309011848873
+mock3_pensioner_allowance,Pensioner Allowance,2027,2,84.01040925325604
+mock3_pensioner_allowance,Pensioner Allowance,2027,3,112.05062183391479
+mock3_pensioner_allowance,Pensioner Allowance,2027,4,100.36654022294343
+mock3_pensioner_allowance,Pensioner Allowance,2027,5,56.264120129442475
+mock3_pensioner_allowance,Pensioner Allowance,2027,6,52.29801710664303
+mock3_pensioner_allowance,Pensioner Allowance,2027,7,37.24440028036205
+mock3_pensioner_allowance,Pensioner Allowance,2027,8,39.198100972260995
+mock3_pensioner_allowance,Pensioner Allowance,2027,9,15.232421250266098
+mock3_pensioner_allowance,Pensioner Allowance,2027,10,15.762176102422407
+mock3_pensioner_allowance,Pensioner Allowance,2027,all,53.205931505682294
+mock3_pensioner_allowance,Pensioner Allowance,2028,1,28.639833350637648
+mock3_pensioner_allowance,Pensioner Allowance,2028,2,99.01136050316232
+mock3_pensioner_allowance,Pensioner Allowance,2028,3,126.57777826477998
+mock3_pensioner_allowance,Pensioner Allowance,2028,4,120.20806642756567
+mock3_pensioner_allowance,Pensioner Allowance,2028,5,65.4857524585272
+mock3_pensioner_allowance,Pensioner Allowance,2028,6,57.98366180678557
+mock3_pensioner_allowance,Pensioner Allowance,2028,7,45.00705092856109
+mock3_pensioner_allowance,Pensioner Allowance,2028,8,45.6488370738188
+mock3_pensioner_allowance,Pensioner Allowance,2028,9,16.77356997240609
+mock3_pensioner_allowance,Pensioner Allowance,2028,10,17.87090387149612
+mock3_pensioner_allowance,Pensioner Allowance,2028,all,62.123595833417575
+mock3_pensioner_allowance,Pensioner Allowance,2029,1,34.43250897289588
+mock3_pensioner_allowance,Pensioner Allowance,2029,2,118.06266037250678
+mock3_pensioner_allowance,Pensioner Allowance,2029,3,145.5988453660561
+mock3_pensioner_allowance,Pensioner Allowance,2029,4,132.51285578547729
+mock3_pensioner_allowance,Pensioner Allowance,2029,5,84.8579229045573
+mock3_pensioner_allowance,Pensioner Allowance,2029,6,66.17642893373653
+mock3_pensioner_allowance,Pensioner Allowance,2029,7,52.21523896276284
+mock3_pensioner_allowance,Pensioner Allowance,2029,8,52.025673393702064
+mock3_pensioner_allowance,Pensioner Allowance,2029,9,19.79997099386776
+mock3_pensioner_allowance,Pensioner Allowance,2029,10,19.747523945300077
+mock3_pensioner_allowance,Pensioner Allowance,2029,all,72.248907544225
+mock3_pensioner_allowance,Pensioner Allowance,2030,1,42.33297831420581
+mock3_pensioner_allowance,Pensioner Allowance,2030,2,121.52226937455126
+mock3_pensioner_allowance,Pensioner Allowance,2030,3,172.3949638818026
+mock3_pensioner_allowance,Pensioner Allowance,2030,4,157.2567260054771
+mock3_pensioner_allowance,Pensioner Allowance,2030,5,98.59222705602451
+mock3_pensioner_allowance,Pensioner Allowance,2030,6,75.18267759963787
+mock3_pensioner_allowance,Pensioner Allowance,2030,7,64.4231492314264
+mock3_pensioner_allowance,Pensioner Allowance,2030,8,57.26107981117699
+mock3_pensioner_allowance,Pensioner Allowance,2030,9,23.233059368342552
+mock3_pensioner_allowance,Pensioner Allowance,2030,10,21.97440740453296
+mock3_pensioner_allowance,Pensioner Allowance,2030,all,83.09958592328495
+mock3_pensioner_allowance,Pensioner Allowance,2031,1,38.52804321504393
+mock3_pensioner_allowance,Pensioner Allowance,2031,2,115.35743018441012
+mock3_pensioner_allowance,Pensioner Allowance,2031,3,191.59235287603192
+mock3_pensioner_allowance,Pensioner Allowance,2031,4,162.85834064596142
+mock3_pensioner_allowance,Pensioner Allowance,2031,5,106.45468679462638
+mock3_pensioner_allowance,Pensioner Allowance,2031,6,85.5766911543157
+mock3_pensioner_allowance,Pensioner Allowance,2031,7,47.52812092752061
+mock3_pensioner_allowance,Pensioner Allowance,2031,8,59.81612196118049
+mock3_pensioner_allowance,Pensioner Allowance,2031,9,24.490652933712862
+mock3_pensioner_allowance,Pensioner Allowance,2031,10,21.088551235786355
+mock3_pensioner_allowance,Pensioner Allowance,2031,all,85.08504042086557
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2026,all,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027,all,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2028,all,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2029,all,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2030,all,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,1,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,2,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,3,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,4,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,5,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,6,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,7,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,8,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,9,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,10,0.0
+mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031,all,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,1,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,2,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,3,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,4,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,5,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,6,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,7,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,8,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,9,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,10,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2026,all,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,1,-1.1450715397713187
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,2,-0.528672484675356
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,3,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,4,-0.8703821886239526
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,5,-0.9694924022027949
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,6,-3.5677507840417135
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,7,-15.334026309476325
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,8,-28.689250571836485
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,9,-79.71288418093658
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,10,-806.3303582651598
+mock3_additional_rate_threshold,Lower additional rate threshold,2027,all,-92.87757054140874
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,1,-0.5517798197778443
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,2,-0.5655632237757896
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,3,-0.024518944762891536
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,4,-0.8363114580821256
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,5,-0.550556018281095
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,6,-4.588026274088925
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,7,-17.947274784680346
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,8,-32.25086309441598
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,9,-92.17535393444665
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,10,-835.2588787923598
+mock3_additional_rate_threshold,Lower additional rate threshold,2028,all,-97.6120742291448
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,1,-0.5442579503319428
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,2,-0.6298294645867941
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,3,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,4,0.0
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,5,-1.56073630678723
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,6,-9.835013591877832
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,7,-19.576781207650573
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,8,-33.5725897942984
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,9,-100.29868991971661
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,10,-872.7707132396621
+mock3_additional_rate_threshold,Lower additional rate threshold,2029,all,-103.09937391357992
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,1,-0.5824435167445884
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,2,-0.6176071773809853
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,3,9.901679379332211e-08
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,4,-0.067830378918805
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,5,-1.6687206133737948
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,6,-10.597819700618176
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,7,-23.654307628672925
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,8,-36.94161459288241
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,9,-112.62321978289208
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,10,-916.509794534294
+mock3_additional_rate_threshold,Lower additional rate threshold,2030,all,-109.0644902395064
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,1,-1.1868482695318379
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,2,-0.01942273636517316
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,3,-0.02519547384676682
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,4,-1.0091016724549973
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,5,-3.591792085585676
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,6,-11.05950804563522
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,7,-27.179313493529957
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,8,-44.39128077570069
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,9,-122.80049605975019
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,10,-980.1262422324028
+mock3_additional_rate_threshold,Lower additional rate threshold,2031,all,-118.18356091425903
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,1,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,2,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,3,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,4,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,5,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,6,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,7,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,8,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,9,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,10,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2026,all,0.0
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,1,-13.980425790876035
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,2,-9.259386439043704
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,3,-9.450786079490912
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,4,-4.3272622299824866
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,5,-9.672069393456255
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,6,-19.052778549624296
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,7,-57.506259649502766
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,8,-73.85915584792706
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,9,-142.65007212767367
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,10,-1192.016273381766
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027,all,-151.7123818701155
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,1,-14.31990247314753
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,2,-9.82357801859139
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,3,-9.638383106387916
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,4,-4.572031857221577
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,5,-10.609883923988745
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,6,-20.243049852033025
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,7,-60.0031502891562
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,8,-76.89597801919136
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,9,-145.4011144856718
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,10,-1232.766088941005
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2028,all,-156.99630672145733
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,1,-14.903878735369
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,2,-10.412821904752208
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,3,-10.00410709300773
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,4,-4.833253889651221
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,5,-10.995929246740006
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,6,-20.162267682371258
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,7,-59.4325097234642
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,8,-82.8021177307719
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,9,-149.01832008641463
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,10,-1271.2069121665747
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2029,all,-162.19736522859654
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,1,-15.269295094188607
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,2,-10.113910449612328
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,3,-11.599204439163094
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,4,-4.996289188246199
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,5,-11.433556167909892
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,6,-19.9637705342129
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,7,-63.75660131995217
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,8,-85.1284523674052
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,9,-154.55239960330863
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,10,-1320.3090881816229
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2030,all,-167.92495110699767
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,1,-19.524051027995142
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,2,-9.758777849167517
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,3,-12.538512625844229
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,4,-5.557719932844462
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,5,-10.727467273850207
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,6,-23.59584273545523
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,7,-78.94475703266642
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,8,-77.14909422803221
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,9,-191.6051974645059
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,10,-1321.9863521847028
+mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031,all,-173.80056476078823
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,1,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,2,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,3,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,4,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,5,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,6,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,7,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,8,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,9,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,10,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2026,all,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,1,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,2,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,3,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,4,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,5,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,6,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,7,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,8,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,9,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,10,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2027,all,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,1,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,2,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,3,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,4,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,5,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,6,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,7,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,8,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,9,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,10,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2028,all,0.0
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,1,-2.1363887896583345
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,2,-2.2103253710753936
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,3,-2.8820408017251835
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,4,-6.883497305189055
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,5,-7.679760556382328
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,6,-11.656417201079826
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,7,-10.655872680826363
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,8,-13.301243918150101
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,9,-14.418177980356534
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,10,-36.59746927449496
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029,all,-10.621128247744629
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,1,-1.5474226140202487
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,2,-2.2602975748440524
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,3,-2.800659306374056
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,4,-6.741506045383045
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,5,-7.956673416861273
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,6,-12.15156641168641
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,7,-10.980960874363086
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,8,-13.053125370694753
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,9,-14.493140674027917
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,10,-38.52161561694389
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2030,all,-10.797287948887401
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,1,-1.5483060019318802
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,2,-2.4516920450435307
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,3,-3.4624009113742904
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,4,-8.389495586831622
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,5,-9.43993347047712
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,6,-14.376625632871326
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,7,-14.447699295371608
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,8,-18.433208912944295
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,9,-17.665739315880096
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,10,-52.42282735368766
+mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031,all,-13.983539777142028
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2026,all,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2027,all,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2028,all,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2029,all,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2030,all,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,1,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,2,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,3,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,4,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,5,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,6,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,7,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,8,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,9,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,10,0.0
+mock3_hvcts_top_bands,Council tax surcharge top bands,2031,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,1,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,2,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,3,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,4,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,5,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,6,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,7,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,8,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,9,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,10,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2026,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,1,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,2,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,3,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,4,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,5,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,6,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,7,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,8,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,9,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,10,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2027,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,1,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,2,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,3,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,4,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,5,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,6,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,7,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,8,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,9,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,10,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2028,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,1,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,2,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,3,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,4,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,5,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,6,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,7,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,8,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,9,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,10,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2029,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,1,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,2,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,3,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,4,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,5,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,6,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,7,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,8,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,9,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,10,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2030,all,0.0
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,1,-29.39879498342616
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,2,-51.9722922816663
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,3,-65.5661704771394
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,4,-83.56374053122362
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,5,-107.48631163961848
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,6,-134.42049188798507
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,7,-165.1125180080986
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,8,-217.05152701046043
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,9,-271.8634123264269
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,10,-275.4938482169425
+mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031,all,-137.30852212346153
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,1,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,2,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,3,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,4,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,5,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,6,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,7,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,8,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,9,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,10,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2026,all,0.0
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,1,-1.7911322558479132
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,2,-3.000561645663505
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,3,-3.9239436529191383
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,4,-6.851855989082761
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,5,-12.014248296839485
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,6,-9.55361307853562
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,7,-17.31798037618029
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,8,-17.429953766550575
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,9,-22.062467856361504
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,10,-28.303528329343667
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027,all,-11.902360715904747
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,1,-2.0986566252477807
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,2,-3.3564604058847722
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,3,-3.6308995838372495
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,4,-7.6080100448094
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,5,-12.909507755262869
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,6,-10.037126690235493
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,7,-18.513265817326516
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,8,-18.629878391443068
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,9,-22.26694161594974
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,10,-30.295568350889397
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2028,all,-12.601847875167186
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,1,-2.3835831283203053
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,2,-3.7239289542825107
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,3,-4.054205426938936
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,4,-8.041187451078168
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,5,-13.874716332619128
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,6,-9.56636840709277
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,7,-19.993784905395998
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,8,-19.01095024206535
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,9,-23.86753502063403
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,10,-31.031343277902177
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2029,all,-13.228958359101773
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,1,-2.460931225832125
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,2,-4.266854770497574
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,3,-4.185031251474449
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,4,-9.047576320968641
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,5,-14.629953872363044
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,6,-8.890470083742702
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,7,-22.51921560158622
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,8,-19.931222564033256
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,9,-24.794007549010708
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,10,-32.000364485485115
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2030,all,-13.913537756515684
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,1,-2.932700165936869
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,2,-5.213250668506252
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,3,-3.818189466619288
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,4,-7.162758189189023
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,5,-16.899386426437406
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,6,-10.515126727940473
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,7,-21.414130162842966
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,8,-21.930092444761264
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,9,-27.889334542409372
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,10,-31.84840810400183
+mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031,all,-14.632914761792891
