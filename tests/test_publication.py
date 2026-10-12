@@ -210,7 +210,7 @@ def test_binned_scatter_holds_no_household_level_data(rows):
             )
             == cell["income_band"]
             and band(
-                r["income_change"],
+                round(r["income_change"], 2),
                 SCATTER_BINS["change_band_width"],
                 SCATTER_BINS["change_min"],
                 SCATTER_BINS["change_max"],
@@ -246,6 +246,21 @@ def test_bands_hold_their_values_and_outer_bands_are_open(value, spec):
         assert edge == low
     else:
         assert edge == high - width
+
+
+def test_float_noise_around_zero_is_not_a_loss():
+    rows = [
+        {
+            "reform_id": "a",
+            "reform_name": "A",
+            "year": 2027,
+            "baseline_income": 20_100.0,
+            "income_change": -1e-12,
+            "household_weight": 100.0,
+        }
+    ] * SCATTER_MIN_HOUSEHOLDS
+    (cell,) = bin_scatter(rows)
+    assert cell["change_band"] == 0.0
 
 
 def test_small_cells_are_left_out():
