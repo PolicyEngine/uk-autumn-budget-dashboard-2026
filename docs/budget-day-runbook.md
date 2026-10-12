@@ -48,6 +48,16 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **`parameter_changes`**, wherever the measure can be expressed that way.
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (templates PR, in progress) are helpers to call from such a function.
 
+**Dated changes: key every year by its bare fiscal year.**
+
+| Key | What it means | Use it? |
+|---|---|---|
+| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028, on policyengine-uk 2.125.1 and on 2.126.12 | **Yes.** List every year the change applies, through 2030. |
+| `"2027-04-06": 0.21` | That one day only. It scores £0. | **Never.** |
+| `"2027-04-06.2100-12-31": 0.21` | From 6 April 2027 on, but only on policyengine-uk 2.126.12 or later. On the installed 2.125.1 it scores £0 (W4's certification evidence). | Not until the bundle moves to 2.126.12; the upgrade PR will say so. |
+
+The templates' `rate_change` and `threshold_change` build bare-year keys and refuse the other two. A measure that still scores £0 is refused at staging by the responsiveness gate, but it is better caught when it is written.
+
 Three things are refused:
 - closures, lambdas, nested functions and `functools.partial`;
 - `float("inf")` and other non-finite values;
