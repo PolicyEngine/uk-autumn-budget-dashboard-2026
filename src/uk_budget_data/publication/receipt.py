@@ -194,11 +194,17 @@ def combined_identities(
     reform_applied_before_data_load: bool,
     baseline_applied_before_data_load: bool,
 ):
-    """The (baseline, reform) identities of a combined run, and its members.
+    """The (baseline, reform) identities of a combined run, its members and
+    how they were composed.
 
     Each side is the ordered composition of the members' own identities,
     bound with the phase (before or after data load) that side's combined
     Scenario runs in. ``members`` must already be in application order.
+
+    Each member record says whether its baseline is one of the composed
+    baselines (``baseline_bound``), and the returned ``composition`` gives
+    each side's phase, so the gate can rebuild both identities from the
+    records alone (:func:`composition_problems`).
     """
     api, _ = receipt_api()
     baselines, reforms, records = [], [], []
@@ -207,20 +213,26 @@ def combined_identities(
         baseline, reform = measure_identities(member, config, revision)
         # Members without a baseline of their own share the configured one,
         # which the combined run applies once, so it is bound once.
-        if member.has_custom_baseline():
+        bound = member.has_custom_baseline() or not configured_included
+        if bound:
             baselines.append(baseline)
-        elif not configured_included:
-            baselines.append(baseline)
-            configured_included = True
+            configured_included |= not member.has_custom_baseline()
         reforms.append(reform)
         records.append(
             {
                 "id": member.id,
                 "baseline": json.loads(baseline.model_dump_json()),
                 "reform": json.loads(reform.model_dump_json()),
+                "baseline_bound": bound,
             }
         )
     name = "+".join(member.id for member in members)
+    composition = {
+        "reform_applied_before_data_load": reform_applied_before_data_load,
+        "baseline_applied_before_data_load": (
+            baseline_applied_before_data_load
+        ),
+    }
     try:
         return (
             api.composed_reform_identity(
@@ -234,9 +246,89 @@ def combined_identities(
                 name=name,
             ),
             records,
+            composition,
         )
     except (api.ReceiptError, ValueError) as error:
         raise ReceiptUnavailable(name, str(error)) from error
+
+
+# The fields of an identity its digest depends on (``name`` is a label).
+_IDENTITY_FIELDS = ("kind", "representation", "reform_sha256", "binding")
+
+
+def _identity_core(identity) -> Optional[tuple]:
+    if not isinstance(identity, dict):
+        return None
+    return tuple(identity.get(field) for field in _IDENTITY_FIELDS)
+
+
+def composition_problems(document: dict) -> list[str]:
+    """Ways a combined receipt's identities are not its members' composition.
+
+    Rebuilds each side's composed identity from the member records, in
+    record order, with the recorded phases, and compares it with the
+    execution receipt. A member whose baseline is not composed must share
+    one that is (the configured baseline, applied once).
+    """
+    dashboard = document["dashboard"]
+    members = dashboard.get("members") or []
+    composition = dashboard.get("composition")
+    if not members:
+        return []
+    if not isinstance(composition, dict) or set(composition) != {
+        "reform_applied_before_data_load",
+        "baseline_applied_before_data_load",
+    }:
+        return ["it does not record how its members were composed"]
+    api, _ = receipt_api()
+    name = "+".join(str(record.get("id")) for record in members)
+    try:
+        reforms = [
+            api.ReformIdentity.model_validate(record["reform"])
+            for record in members
+        ]
+        bound = [record for record in members if record["baseline_bound"]]
+        baselines = [
+            api.ReformIdentity.model_validate(record["baseline"])
+            for record in bound
+        ]
+        rebuilt = {
+            "reform": api.composed_reform_identity(
+                reforms,
+                applied_before_data_load=composition[
+                    "reform_applied_before_data_load"
+                ],
+                name=name,
+            ),
+            "baseline": api.composed_reform_identity(
+                baselines,
+                applied_before_data_load=composition[
+                    "baseline_applied_before_data_load"
+                ],
+                name=f"{name} baseline",
+            ),
+        }
+    except (api.ReceiptError, ValueError, KeyError, TypeError) as error:
+        return [f"its member records cannot be composed: {error}"]
+    problems = []
+    execution = document["execution_receipt"]
+    for side, identity in rebuilt.items():
+        if _identity_core(execution.get(side)) != _identity_core(
+            json.loads(identity.model_dump_json())
+        ):
+            problems.append(
+                f"its {side} identity is not the composition of its "
+                "member records"
+            )
+    composed = {_identity_core(record["baseline"]) for record in bound}
+    for record in members:
+        if not record["baseline_bound"] and (
+            _identity_core(record["baseline"]) not in composed
+        ):
+            problems.append(
+                f"member {record['id']}'s baseline is not part of the run"
+            )
+    return problems
 
 
 def dataset_years(sim) -> Optional[list[int]]:
@@ -313,6 +405,8 @@ class ReceiptInputs:
     members: Optional[list[dict]] = None
     # Combined runs: each member's published outputs when the run was made.
     member_outputs: Optional[dict[str, str]] = None
+    # Combined runs: each side's phase (see combined_identities).
+    composition: Optional[dict] = None
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
 
 
@@ -366,6 +460,7 @@ def build_receipt_document(
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,
+        "composition": inputs.composition,
         "config_baseline": (
             json.loads(inputs.config_baseline_identity.model_dump_json())
             if inputs.config_baseline_identity is not None

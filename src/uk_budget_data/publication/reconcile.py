@@ -685,6 +685,37 @@ def reconcile_artifact(
     receipt = (
         json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
     )
+    if measure_id is None:
+        ids = receipt.get("dashboard", {}).get("measure_ids") or []
+        if len(ids) == 1:
+            measure_id = ids[0]
+    budgetary = (
+        read_budgetary(artifact, measure_id) if measure_id is not None else {}
+    )
+    return reconcile_receipted(
+        receipt,
+        budgetary,
+        inputs,
+        measure_id=measure_id,
+        outputs_sha256=outputs_sha256,
+        supported_years=supported_years,
+    )
+
+
+def reconcile_receipted(
+    receipt: dict,
+    budgetary: dict[int, float],
+    inputs: Path,
+    *,
+    measure_id: Optional[str] = None,
+    outputs_sha256: Optional[str] = None,
+    supported_years: Optional[set[int]] = None,
+) -> dict:
+    """Reconcile already-read budgetary rows, described by their receipt.
+
+    The gate passes rows from the same capture it checked against the
+    receipt, so what is reconciled is exactly what was verified.
+    """
     dashboard = receipt.get("dashboard", {})
     if measure_id is None:
         ids = dashboard.get("measure_ids") or []
@@ -703,8 +734,12 @@ def reconcile_artifact(
         )
     if supported_years is None and dashboard.get("dataset_years") is not None:
         supported_years = set(dashboard["dataset_years"])
+    if not budgetary:
+        raise ReconciliationInputError(
+            f"no budgetary_impact rows for {measure_id}"
+        )
     return reconcile(
-        read_budgetary(artifact, measure_id),
+        budgetary,
         measure_id=measure_id,
         outputs_sha256=outputs_sha256,
         sources=load_sources(inputs / "sources"),
