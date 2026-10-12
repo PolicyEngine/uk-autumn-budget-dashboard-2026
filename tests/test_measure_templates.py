@@ -3,7 +3,6 @@
 PYTEST_DONT_REWRITE: receipt binding verifies this module's original bytecode.
 """
 
-import functools
 import subprocess
 
 import numpy as np
@@ -13,11 +12,16 @@ from hypothesis import strategies as st
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from tests.template_measures import (
+    allowance_modifier,
+    payment_modifier,
+    property_modifier,
+    vat_modifier,
+)
+from tests.unbindable_template_measures import partial_payment_modifier
 from uk_budget_data.measure_templates import (
     allowance_uprating,
-    apply_age_conditioned_allowance,
     apply_benefit_receipt_payment,
-    apply_property_band_surcharge,
     apply_vat_base_change,
     nearest_5p_weekly,
     pension_uprating,
@@ -256,80 +260,6 @@ def test_native_pension_responds_to_rates_without_total_income_override(
     )
     assert (_value(sim, "additional_state_pension", 2028) > 0) == (
         reported > old_rate * 52
-    )
-
-
-def vat_modifier(sim, rate_change=-0.025, start_year=2027, end_year=2028):
-    return apply_vat_base_change(
-        sim,
-        spending_variable="domestic_energy_consumption",
-        rate_change=rate_change,
-        start_year=start_year,
-        end_year=end_year,
-    )
-
-
-def payment_modifier(sim, amount=120, geography="GB", year=2027):
-    return apply_benefit_receipt_payment(
-        sim,
-        amount=amount,
-        eligible_benefits=["universal_credit", "guarantee_credit"],
-        geography=geography,
-        channel="cost_of_living_support_payment",
-        year=year,
-    )
-
-
-# W4's reproducer: a module global that wraps a template in a partial. Its
-# captured values are part of no digest, so the receipt must refuse the
-# modifier that reads it. Module level on purpose.
-PARTIAL_PAYMENT = functools.partial(
-    apply_benefit_receipt_payment,
-    amount=999,
-    eligible_benefits=["universal_credit"],
-    geography="UK",
-    channel="cost_of_living_support_payment",
-    year=2027,
-)
-
-
-def partial_payment_modifier(sim):
-    return PARTIAL_PAYMENT(sim)
-
-
-def allowance_modifier(
-    sim,
-    base_value=15_000,
-    taper_threshold=24_000,
-    taper_rate=0.5,
-    growth_by_year={"2027": 0, "2028": 0.0301, "2029": 0.02},
-):
-    values = allowance_uprating(ALLOWANCE_PATH, base_value, growth_by_year)[
-        ALLOWANCE_PATH
-    ]
-    return apply_age_conditioned_allowance(
-        sim,
-        allowance_by_year=values,
-        taper_threshold=taper_threshold,
-        taper_rate=taper_rate,
-    )
-
-
-def property_modifier(
-    sim,
-    lower_bound=1_000_000,
-    upper_bound=2_000_000,
-    amount=900,
-    start_year=2028,
-    end_year=2029,
-):
-    return apply_property_band_surcharge(
-        sim,
-        lower_bound=lower_bound,
-        upper_bound=upper_bound,
-        amount=amount,
-        start_year=start_year,
-        end_year=end_year,
     )
 
 
@@ -856,14 +786,9 @@ def test_receipt_binds_module_template_modifiers_and_refuses_closure():
         )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "until policyengine.py#571's module-state refusal (77277ebb) is "
-        "vendored with #579"
-    ),
-)
 def test_receipt_refuses_a_modifier_reading_a_partial_global():
+    """W4's reproducer (policyengine.py#571): a partial hides the values it
+    captured, so a module holding one cannot be bound."""
     receipt = _receipt_module()
     revision = {
         "repository": (
@@ -871,7 +796,7 @@ def test_receipt_refuses_a_modifier_reading_a_partial_global():
         ),
         "git_sha": "a" * 40,
     }
-    with pytest.raises(receipt.ReceiptError, match="PARTIAL_PAYMENT"):
+    with pytest.raises(receipt.ReceiptError, match="cannot be bound"):
         receipt.scenario_reform_identity(
             _policy(partial_payment_modifier).to_scenario(),
             code_revision=revision,
