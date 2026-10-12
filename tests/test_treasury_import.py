@@ -278,23 +278,22 @@ def test_a_measure_with_only_nil_figures_is_kept(tmp_path):
 
 @pytest.mark.parametrize("blank_first", [True, False])
 def test_a_blank_total_beside_a_printed_one_is_refused(blank_first):
-    """Review round 4: a total printed blank (nil) was skipped as a blank
-    row, so a nil total and a £100m total passed as one £100m total."""
+    """Review round 4: a total printed blank was skipped as a blank row, so
+    a nil total and a £100m total passed as one £100m total. A total must
+    print its figures; a blank one is refused."""
     rows = sheet_rows([(1, "A measure", "Tax", [100] * 5)])
     blank = (None, None, "Total policy decisions", None, *([None] * 5))
     position = next(
         i for i, row in enumerate(rows) if "Total policy decisions" in row
     )
     rows.insert(position if blank_first else position + 1, blank)
-    with pytest.raises(ScorecardError, match="appears twice"):
+    with pytest.raises(ScorecardError, match="prints no figures"):
         parse_rows(rows)
 
 
-def test_a_lone_blank_total_is_a_nil_total():
+def test_a_nil_total_printed_as_dashes_is_a_total():
     rows = sheet_rows([(1, "A measure", "Tax", [100] * 5)], totals=False)
-    rows.insert(
-        -1, (None, None, "Total policy decisions", None, *([None] * 5))
-    )
+    rows.insert(-1, (None, None, "Total policy decisions", None, *(["-"] * 5)))
     scorecard = parse_rows(rows)
     assert set(scorecard.totals_m[None].values()) == {0.0}
     with pytest.raises(TotalsMismatch):
@@ -307,32 +306,49 @@ SPEND = (None, 2, "Spend measure", "Spend", -100, -100, -100)
 GRAND_TOTAL = (None, None, "Total policy decisions", None, 100, 100, 100)
 
 
+MARK = ("\u00b9", None, "Total policy decisions", None)
+
+
 @pytest.mark.parametrize(
-    "rows",
+    "rows, message",
     [
-        # A heading in another column, then measures that cancel.
-        [HEADER, (None, "Total policy decisions", None, None), TAX, SPEND],
-        # A footnote quoting the total's words beside its own text.
-        [
-            HEADER,
-            TAX,
-            SPEND,
-            ("Total policy decisions", None, "See note 1", None),
-        ],
+        # Round 5: a heading, then measures that cancel.
+        (
+            [HEADER, (None, "Total policy decisions", None, None), TAX, SPEND],
+            "prints no figures",
+        ),
+        # Round 5: a footnote quoting the total's words beside its text.
+        (
+            [
+                HEADER,
+                TAX,
+                SPEND,
+                ("Total policy decisions", None, "See note 1", None),
+            ],
+            "beside other text",
+        ),
+        # Round 6: a heading in the description column before the measures.
+        (
+            [HEADER, (None, None, "Total policy decisions", None), TAX, SPEND],
+            "prints no figures",
+        ),
+        # Round 6: a marked blank total beside a real one, either order.
+        ([HEADER, TAX, MARK, GRAND_TOTAL], "prints no figures"),
+        ([HEADER, TAX, GRAND_TOTAL, MARK], "prints no figures"),
     ],
 )
-def test_a_heading_or_footnote_is_not_a_printed_total(rows):
-    """Review round 5: blank rows that only repeat a total's words were
-    read as nil totals, so a sheet with no printed total passed."""
-    with pytest.raises(TotalsMismatch, match="prints no"):
-        check_totals(parse_rows(rows))
+def test_a_total_row_that_is_not_plainly_a_total_is_refused(rows, message):
+    """Review rounds 5 and 6: headings, notes and blank totals were read as
+    nil totals, or skipped, so a sheet with no (or a contradictory)
+    printed total passed. Each is now refused for a person to check."""
+    with pytest.raises(ScorecardError, match=message):
+        parse_rows(rows)
 
 
-def test_a_footnote_beside_a_real_total_is_not_a_second_total():
-    rows = [
-        HEADER,
-        TAX,
-        GRAND_TOTAL,
-        ("Total policy decisions", None, "See note 1", None),
-    ]
+def test_a_total_with_a_footnote_marker_is_read():
+    """A marker beside a total's label does not hide the total."""
+    rows = [HEADER, TAX, (*MARK, 100, 100, 100)]
     assert check_totals(parse_rows(rows))
+    rows = [HEADER, TAX, (*MARK, 100, 100, 100), GRAND_TOTAL]
+    with pytest.raises(ScorecardError, match="appears twice"):
+        parse_rows(rows)
