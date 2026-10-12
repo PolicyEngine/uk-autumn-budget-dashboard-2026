@@ -1,0 +1,24 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 3, 12 October 2026. Not a real Budget. Skip one line when reading this CSV.
+line,measure,source,head,expected_classification,household_scorable,trap,reason
+1,Threshold freeze extension,Table 4.1,Tax,constructed_counterfactual,yes,,Income tax thresholds are frozen in the engine but its NICs thresholds uprate from 2028; the indexed 2031-32 counterfactual for every leg must be built by hand from Annex A.
+2,Pensioner Allowance,Table 4.1,Tax,modelled_new_variable,yes,,"No live parameter: the existing contrib pensioner allowance parameter is not wired to any formula, so a new variable or structural reform is needed."
+3,Warm Home Discount top-up,Table 4.1,Spend,modelled_new_variable,yes,,"The Warm Home Discount (and its £150 baseline) is not in the engine; needs a lump-sum variable keyed on benefit receipt on the qualifying date, England and Wales only."
+4,Capital Gains Tax,Table 4.1,Tax,modelled_param,yes,,Higher main rate and annual exempt amount are parameters; forestalling and the realisations response go in the ledger as not modelled.
+5,Employer NICs for under-22s,Table 4.1,Tax,modelled_new_variable,yes,,Employer-side; household static change is £0. Needs an age-based employer rate modifier; incidence parameters must be set to 0 for static household scoring.
+6,High Value Council Tax Surcharge bands,Table 4.1,Tax,modelled_param,yes,,"Surcharge bands are parameters, but the property-value data ceiling means the national figure must be ledgered as a data-coverage gap."
+7,Additional rate threshold,Table 4.1,Tax,modelled_param,yes,,Threshold parameter; in Scotland it applies to savings and dividends only.
+8,Local Housing Allowance,Table 4.1,Spend,modelled_param,yes,,LHA freeze switch and percentile parameter; Great Britain only.
+9,Fuel duty,Table 4.1,Tax,modelled_param,yes,,Date-keyed fuel duty parameter with mid-year steps (needs the fiscal-year blend fixes); households only.
+10,Class 4 NICs,Table 4.1,Tax,modelled_param,yes,,Class 4 main rate parameter.
+11,Employment Allowance,Table 4.1,Tax,ledger_business_side,no,trap: sits with 'Backing working people' and reads like a National Insurance cut for workers,The Employment Allowance reduces employers' secondary NICs bills; no household is liable and the engine has no Employment Allowance.
+12,Carried interest,Table 4.1,Tax,ledger_out_of_model_scope,no,trap: reads like a Capital Gains Tax change on households,Carried interest is a fund-manager regime with no representation in the survey data.
+13,Small Business Rate Relief,Table 4.1,Tax,ledger_business_side,no,,Business rates are paid by businesses.
+14,Visitor levy power,Table 4.1,Tax,ledger_out_of_model_scope,no,,"A local power with no rate set nationally; paid by visitors, not modelled."
+15,Your First Home,Table 4.1,Spend,ledger_spending,no,,An equity loan (a financial transaction) with a subsidy cost; not a tax-benefit transfer.
+16,HMRC compliance,Table 4.1,Tax,ledger_out_of_model_scope,no,,Compliance yield has no household tax-benefit representation.
+17,Defence,Table 4.1,Spend,ledger_spending,no,,Departmental spending.
+18,Insurance Premium Tax,Table 4.1,Tax,ledger_out_of_model_scope,no,,"Insurance premiums are partly household-borne, but the engine has no Insurance Premium Tax or insurance spending."
+19,Remote Gaming Duty,Table 4.1,Tax,ledger_business_side,no,,A duty on gambling operators' profits.
+20,Pension salary-sacrifice cap,Table 4.1,Tax,modelled_param,yes,"trap: the baseline already caps the exemption at £2,000 from April 2029; scoring a fresh cap against an uncapped baseline overstates it",Cap parameter already in the engine baseline (dated April 2029); the reform lowers it. Household static change is employee NICs only on the extra previously exempt sacrifice; employer NICs are not household income. The national figure needs the salary-sacrifice data allocation repaired and the earnings haircut/response switched off for the static run.
+S1,State Pension uprating rule from April 2030 (announced 29 September 2026),statement only,,already_in_baseline,no,trap: mentioned in the statement but already in the pre-measures forecast,Annex A's State Pension path already includes it; coding it again would double count.
+S2,"Savings and property income rates of 22%, 42% and 47% from April 2027 (Budget 2025)",Annex A only,,already_in_baseline,no,,Legislated at Budget 2025 and in the baseline; matters only for the landlord household's band use.
