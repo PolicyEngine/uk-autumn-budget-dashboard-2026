@@ -33,8 +33,7 @@ from uk_budget_data.publication.receipt import (
     receipt_api,
 )
 from uk_budget_data.publication.tables import (
-    SCATTER_SAMPLE_PER_MILLE,
-    sample_scatter,
+    bin_scatter,
 )
 
 
@@ -46,9 +45,7 @@ class GenerationReport:
     refused: dict[str, str] = field(default_factory=dict)
 
 
-def result_tables(
-    result: ReformResult, per_mille: int = SCATTER_SAMPLE_PER_MILLE
-) -> dict[str, list[dict]]:
+def result_tables(result: ReformResult) -> dict[str, list[dict]]:
     """An artifact's tables from one processed reform."""
     return {
         "budgetary_impact": result.budgetary_impact,
@@ -56,9 +53,7 @@ def result_tables(
         "winners_losers": result.winners_losers,
         "metrics": result.metrics,
         "income_curve": result.income_curve,
-        "household_scatter": sample_scatter(
-            result.household_scatter, per_mille
-        ),
+        "household_scatter_binned": bin_scatter(result.household_scatter),
         "constituency": result.constituency,
         "demographic_constituency": result.demographic_constituency,
     }

@@ -38,11 +38,15 @@ from uk_budget_data.publication.publish import (
 )
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import (
+    SCATTER_BINS,
+    SCATTER_MIN_HOUSEHOLDS,
+    SCATTER_ROUND_TO,
+    TABLES,
     TableError,
+    band,
+    bin_scatter,
     canonical_csv,
-    in_scatter_sample,
     parse_csv,
-    sample_scatter,
 )
 from uk_budget_data.publication.validate import table_problems
 
@@ -170,15 +174,103 @@ def test_float32_is_written_as_its_own_shortest_decimal():
     assert b"1.6612566\n" in canonical_csv("budgetary_impact", [row])
 
 
-@given(st.integers(0, 10**9))
-def test_scatter_sample_depends_only_on_the_household(household_id):
-    chosen = in_scatter_sample(household_id, 25)
-    rows = [
-        {"household_id": household_id, "year": year, "reform_id": measure}
-        for year in (2027, 2028)
-        for measure in ("a", "b")
+scatter_rows = st.lists(
+    st.fixed_dictionaries(
+        {
+            "reform_id": st.sampled_from(["a", "b"]),
+            "reform_name": st.just("A"),
+            "year": st.sampled_from([2027, 2028]),
+            "baseline_income": st.floats(-5_000, 300_000),
+            "income_change": st.floats(-10_000, 10_000),
+            "household_weight": st.floats(0, 5_000),
+            "household_id": st.integers(1, 10**6),
+        }
+    ),
+    max_size=200,
+)
+
+
+@given(scatter_rows)
+def test_binned_scatter_holds_no_household_level_data(rows):
+    binned = bin_scatter(rows)
+    columns = TABLES["household_scatter_binned"].column_names
+    assert "household_id" not in columns
+    assert "household_weight" not in columns
+    for cell in binned:
+        assert set(cell) == set(columns)
+        group = [
+            r
+            for r in rows
+            if (r["reform_id"], r["year"]) == (cell["reform_id"], cell["year"])
+            and band(
+                r["baseline_income"],
+                SCATTER_BINS["income_band_width"],
+                SCATTER_BINS["income_min"],
+                SCATTER_BINS["income_max"],
+            )
+            == cell["income_band"]
+            and band(
+                r["income_change"],
+                SCATTER_BINS["change_band_width"],
+                SCATTER_BINS["change_min"],
+                SCATTER_BINS["change_max"],
+            )
+            == cell["change_band"]
+        ]
+        # Every published cell pools at least the minimum of households,
+        # and its count is their weight, rounded.
+        assert len(group) >= SCATTER_MIN_HOUSEHOLDS
+        total = sum(r["household_weight"] for r in group)
+        assert abs(cell["households"] - total) <= SCATTER_ROUND_TO / 2 + 1e-6
+        assert cell["households"] % SCATTER_ROUND_TO == 0
+
+
+@given(scatter_rows, st.randoms())
+def test_binned_scatter_ignores_row_order(rows, random):
+    shuffled = list(rows)
+    random.shuffle(shuffled)
+    assert bin_scatter(shuffled) == bin_scatter(rows)
+
+
+@given(
+    st.floats(-1e7, 1e7),
+    st.sampled_from([(5_000.0, 0.0, 150_000.0), (100.0, -2_000.0, 2_000.0)]),
+)
+def test_bands_hold_their_values_and_outer_bands_are_open(value, spec):
+    width, low, high = spec
+    edge = band(value, width, low, high)
+    assert low <= edge <= high - width
+    if low <= value < high:
+        assert edge <= value < edge + width
+    elif value < low:
+        assert edge == low
+    else:
+        assert edge == high - width
+
+
+def test_small_cells_are_left_out():
+    row = {
+        "reform_id": "a",
+        "reform_name": "A",
+        "year": 2027,
+        "baseline_income": 20_100.0,
+        "income_change": -50.0,
+        "household_weight": 100.0,
+    }
+    few = [row] * (SCATTER_MIN_HOUSEHOLDS - 1)
+    assert bin_scatter(few) == []
+    enough = bin_scatter([row] * SCATTER_MIN_HOUSEHOLDS)
+    assert enough == [
+        {
+            "reform_id": "a",
+            "reform_name": "A",
+            "year": 2027,
+            "income_band": 20_000.0,
+            "change_band": -100.0,
+            "households": 100.0 * SCATTER_MIN_HOUSEHOLDS,
+        }
     ]
-    assert len(sample_scatter(rows, 25)) == (len(rows) if chosen else 0)
+    canonical_csv("household_scatter_binned", enough)
 
 
 # --- artifacts ------------------------------------------------------------
