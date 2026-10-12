@@ -21,10 +21,6 @@ from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication.artifacts import write_artifact
 from uk_budget_data.publication.reconcile import reconcile_artifact
-from uk_budget_data.publication.tables import (
-    SCATTER_SAMPLE_PER_MILLE,
-    in_scatter_sample,
-)
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
 BASIS = {
@@ -38,14 +34,6 @@ SOURCE_HEADER = (
     "source_id,document,table,row_id,row_label,fiscal_year,value_bn,basis,"
     "sign_convention,head,notes\n"
 )
-
-
-# Household ids that fall in the published scatter sample.
-SAMPLED_HOUSEHOLDS = [
-    household
-    for household in range(1, 5000)
-    if in_scatter_sample(household, SCATTER_SAMPLE_PER_MILLE)
-][:3]
 
 
 def module_level_modifier(sim, rate=0.21):
@@ -72,7 +60,7 @@ def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
         "winners_losers": [],
         "metrics": [],
         "income_curve": [],
-        "household_scatter": [],
+        "household_scatter_binned": [],
     }
     for year, value in values.items():
         base = {"reform_id": key, "reform_name": name, "year": year}
@@ -104,17 +92,33 @@ def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
                     "reform_net_income": income * 0.7 + value,
                 }
             )
-        for household in SAMPLED_HOUSEHOLDS:
-            tables["household_scatter"].append(
-                {
-                    **base,
-                    "baseline_income": 20000.0 + household,
-                    "income_change": value,
-                    "household_weight": 1000.0,
-                    "household_id": household,
-                }
-            )
+        tables["household_scatter_binned"].append(
+            {
+                **base,
+                "income_band": 20000.0,
+                "change_band": -100.0 if value < 0 else 0.0,
+                "households": 1000.0,
+            }
+        )
     return tables
+
+
+def make_household_rows(key: str, values: dict[int, float]) -> list[dict]:
+    """Household-level scatter rows that bin to make_tables' scatter cells."""
+    name = key.replace("_", " ").title()
+    return [
+        {
+            "reform_id": key,
+            "reform_name": name,
+            "year": year,
+            "baseline_income": 20_100.0,
+            "income_change": -50.0 if value < 0 else 50.0,
+            "household_weight": 100.0,
+            "household_id": household,
+        }
+        for year, value in values.items()
+        for household in range(1, 11)
+    ]
 
 
 class World:
