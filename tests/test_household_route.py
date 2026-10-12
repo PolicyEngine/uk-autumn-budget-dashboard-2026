@@ -297,3 +297,53 @@ def test_version_route_serves_runtime_identity(monkeypatch):
     assert body["packages"]["policyengine-core"] == metadata.version(
         "policyengine-core"
     )
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        "https://other.invalid/api/personal-impact",
+        "//other.invalid/api/personal-impact",
+        "http:/api/personal-impact",
+        "api/personal-impact",
+        "/\\other.invalid/api/personal-impact",
+        None,
+    ],
+)
+def test_a_fixture_can_only_call_the_deployment(tmp_path, route):
+    """Review round 3: a full URL checked another host's answers while the
+    receipt recorded the deployment's model identity."""
+    path = write_fixture(tmp_path, route=route)
+    with pytest.raises(FixtureError, match="route must be a path"):
+        load_fixture(path)
+
+
+def test_a_fixture_answered_by_another_host_cannot_pass(tmp_path):
+    import httpx
+
+    hosts = []
+
+    def handler(request):
+        hosts.append(request.url.host)
+        if request.url.path == "/api/version":
+            return httpx.Response(
+                200,
+                json={"service": "x", "git_sha": "a", "packages": EXPECTED},
+            )
+        answer = 100.0 if request.url.host == "other.invalid" else 0.0
+        return httpx.Response(
+            200, json={"policies": {"rate": {"years": [{"impact": answer}]}}}
+        )
+
+    client = httpx.Client(
+        base_url="https://deployed.invalid",
+        transport=httpx.MockTransport(handler),
+    )
+    foreign = write_fixture(
+        tmp_path,
+        name="foreign",
+        route="https://other.invalid/api/personal-impact",
+    )
+    receipt = run_checks(client, [foreign], EXPECTED)
+    assert not receipt["pass"]
+    assert "other.invalid" not in hosts
