@@ -124,6 +124,23 @@ describe("binding a receipt to its manifest entry", () => {
     );
   });
 
+  it.each([
+    ["unsupported_years", [], "the receipt's unsupported years"],
+    ["years", [2030], "the receipt's years"],
+  ])(
+    "refuses an entry whose %s differ from its receipt",
+    async (field, value, message) => {
+      // Review case: clearing unsupported_years would show 2031's row.
+      const entry = structuredClone(entries.alpha);
+      entry[field] = value;
+      const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+      const problems = await receiptProblems(receipt, "alpha", entry);
+      expect(problems.some((problem) => problem.startsWith(message))).toBe(
+        true,
+      );
+    },
+  );
+
   it("refuses a receipt edited outside its file list", async () => {
     // Review case: tree_clean and publishable changed, files unchanged.
     const entry = entries.alpha;

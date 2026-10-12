@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { usePublication } from "./usePublication";
 import {
   BASE_PATH,
@@ -7,11 +7,26 @@ import {
   fixtureJson,
 } from "../test/publicationFixture";
 
+// Every load the hook starts, so a test can wait for a stale one to finish.
+const { loads } = vi.hoisted(() => ({ loads: [] }));
+vi.mock("../utils/publication/load", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    loadPublication: (...args) => {
+      const promise = actual.loadPublication(...args);
+      loads.push(promise);
+      return promise;
+    },
+  };
+});
+
 const manifest = fixtureJson("manifest.json");
 const receiptOf = (id) => `${manifest.measures[id].artifact}/receipt.json`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  loads.length = 0;
 });
 
 describe("usePublication", () => {
@@ -64,9 +79,15 @@ describe("usePublication", () => {
     rerender({ ids: ["beta"] });
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.selection).toEqual(["beta"]);
+    expect(loads).toHaveLength(2);
+    // Let the stale load finish completely, and flush any update it makes;
+    // it must not replace the current selection.
     release();
-    // Let the stale request settle; it must not replace the current one.
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await act(async () => {
+      await Promise.allSettled(loads);
+    });
+    await expect(loads[0]).resolves.toMatchObject({ selection: ["alpha"] });
+    expect(result.current.status).toBe("ready");
     expect(result.current.selection).toEqual(["beta"]);
     expect(Object.keys(result.current.tablesByKey)).toEqual(["beta"]);
   });

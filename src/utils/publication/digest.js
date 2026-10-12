@@ -94,6 +94,10 @@ export async function artifactSha256(receipt) {
   });
 }
 
+function sameList(left, right) {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
 function sameSet(left, right) {
   const a = [...new Set(left ?? [])].sort();
   const b = [...new Set(right ?? [])].sort();
@@ -102,8 +106,9 @@ function sameSet(left, right) {
 
 /**
  * Every way a receipt is not the artifact a manifest entry names: its
- * digest, its key, its recorded digests and, for a combined run, its
- * members and their output snapshot. Empty when it is.
+ * digest, its key, its recorded digests, its years and unsupported years
+ * (which decide what may be shown) and, for a combined run, its members
+ * and their output snapshot. Empty when it is.
  */
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
@@ -123,6 +128,12 @@ export async function receiptProblems(receipt, key, entry) {
     if (digests[field] !== entry[field]) {
       problems.push(`the receipt's ${field} is not the manifest's`);
     }
+  }
+  if (!sameList(receipt?.execution_receipt?.years, entry.years)) {
+    problems.push("the receipt's years are not the manifest's");
+  }
+  if (!sameList(dashboard.unsupported_years, entry.unsupported_years ?? [])) {
+    problems.push("the receipt's unsupported years are not the manifest's");
   }
   if (Array.isArray(entry.measures)) {
     if (!sameSet(dashboard.measure_ids, entry.measures)) {
