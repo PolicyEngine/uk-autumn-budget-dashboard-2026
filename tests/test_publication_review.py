@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from policyengine_uk.utils.scenario import Scenario
 
 from tests.publication_support import World, make_tables
 from uk_budget_data.publication import manifest as m
@@ -698,3 +699,132 @@ def test_an_invalid_unapplied_baseline_is_a_problem_not_a_crash(world):
     document["dashboard"]["members"][1]["baseline"]["binding"] = []
     problems = composition_problems(document)
     assert problems and "cannot be composed" in problems[0]
+
+
+# --- round 5 (publication review) ------------------------------------------
+
+
+def test_a_structural_baseline_cannot_pass_as_the_configured_one(world):
+    """Review round 5 (blocker): copying a member's structural baseline
+    into the configured-baseline field let one of its applications be
+    left out. Only a configured baseline of current law or parameter
+    changes may be shared."""
+    from tests.fixed_shape_measures import module_level_modifier
+    from uk_budget_data.publication.receipt import (
+        composition_problems,
+        scenario_identity,
+    )
+
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    structural = json.loads(
+        scenario_identity(
+            Scenario(simulation_modifier=module_level_modifier),
+            name="structural baseline",
+            revision=world.revision(),
+        ).model_dump_json()
+    )
+    assert structural["binding"] == "code_revision"
+    records = _member_records(world, manifest)
+    for record, flag in zip(records, (True, False)):
+        record["baseline"] = dict(structural)
+        record["baseline_bound"] = flag
+    ids = [record["id"] for record in records]
+    forged = world.write(
+        "combined--" + "+".join(ids),
+        {2027: -2.0},
+        members=records,
+        measure_ids=ids,
+        member_outputs={
+            member: manifest.measures[member].outputs_sha256 for member in ids
+        },
+        config_baseline=structural,
+    )
+    assert any(
+        "beta has its own baseline" in p
+        for p in composition_problems(read_receipt(forged.path))
+    )
+
+
+def test_an_honest_configured_parameter_baseline_is_shared(world):
+    """Review round 5: the configured baseline was bound as a reform
+    dictionary and its members' as a scenario, so honest sharing of a
+    configured parameter baseline was refused."""
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication.generate import _config_baseline_identity
+    from uk_budget_data.publication.receipt import (
+        combined_identities,
+        composition_problems,
+    )
+
+    members = [
+        Reform(
+            id=name,
+            name=name.title(),
+            parameter_changes={
+                f"gov.hmrc.income_tax.rates.uk[{index}].rate": {"2027": rate}
+            },
+        )
+        for index, name, rate in ((0, "alpha", 0.21), (1, "beta", 0.41))
+    ]
+    config = DataConfig(
+        years=[2027],
+        baseline_parameter_changes={
+            "gov.hmrc.income_tax.allowances.personal_allowance.amount": {
+                "2027": 13000
+            }
+        },
+    )
+    revision = world.revision()
+    baseline, reform, records, composition = combined_identities(
+        members,
+        config,
+        revision,
+        reform_applied_before_data_load=False,
+        baseline_applied_before_data_load=False,
+    )
+    assert [r["baseline_bound"] for r in records] == [True, False]
+    document = {
+        "dashboard": {
+            "members": records,
+            "composition": composition,
+            "config_baseline": json.loads(
+                _config_baseline_identity(config, revision).model_dump_json()
+            ),
+        },
+        "execution_receipt": {
+            "baseline": json.loads(baseline.model_dump_json()),
+            "reform": json.loads(reform.model_dump_json()),
+        },
+    }
+    assert composition_problems(document) == []
+
+
+def test_only_a_receipt_module_with_the_current_rules_is_adopted(
+    monkeypatch,
+):
+    """Review round 5: any module with the right names was adopted as the
+    released one, including an older copy without supported_years or the
+    module-shape rules."""
+    import sys
+    import types
+
+    from uk_budget_data.publication import receipt as adapter
+
+    vendored, source = adapter.receipt_api()
+    assert source.startswith("vendored-w4-pr")
+
+    class OldReceipt:
+        model_fields = {"years": None}
+
+    older = types.ModuleType("policyengine.provenance.receipt")
+    for name in adapter._REQUIRED_API:
+        setattr(older, name, getattr(vendored, name))
+    older.ExecutionReceipt = OldReceipt
+    package = types.ModuleType("policyengine.provenance")
+    package.receipt = older
+    monkeypatch.setitem(sys.modules, "policyengine.provenance", package)
+    monkeypatch.setitem(sys.modules, "policyengine.provenance.receipt", older)
+    assert adapter.receipt_api()[0] is vendored
+    assert adapter._has_what_we_need(vendored)

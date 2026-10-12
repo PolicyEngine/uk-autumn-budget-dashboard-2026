@@ -204,6 +204,7 @@ class World:
         member_outputs=None,
         dataset_name: str = "enhanced_frs_2024_25",
         reform_identity=None,
+        config_baseline=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -222,14 +223,16 @@ class World:
             None, name=f"{key} baseline", revision=revision
         )
         composition = None
-        config_baseline = None
+        requested_config_baseline, config_baseline = config_baseline, None
         if members:
             members, composition, composed = self._compose(members)
             baseline_identity, composed_reform = composed
             reform_identity = reform_identity or composed_reform
             config_baseline = receipt_module.receipt_api()[
                 0
-            ].ReformIdentity.model_validate(World.configured_baseline())
+            ].ReformIdentity.model_validate(
+                requested_config_baseline or World.configured_baseline()
+            )
         inputs = dict(
             key=key,
             measure_ids=measure_ids or [key],
