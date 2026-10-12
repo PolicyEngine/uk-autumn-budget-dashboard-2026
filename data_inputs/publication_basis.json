@@ -1,0 +1,13 @@
+{
+  "forecast": {
+    "status": "pre_budget",
+    "source": "policyengine-uk default economic assumptions",
+    "vintage": "as shipped in the installed policyengine-uk"
+  },
+  "calibration": {
+    "status": "pre_budget",
+    "source": "policyengine-uk-data, the release pinned by the installed policyengine bundle",
+    "vintage": "as pinned by the installed bundle"
+  },
+  "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+}

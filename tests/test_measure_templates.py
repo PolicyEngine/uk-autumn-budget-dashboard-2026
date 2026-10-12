@@ -4,10 +4,7 @@ PYTEST_DONT_REWRITE: receipt binding verifies this module's original bytecode.
 """
 
 import calendar
-import importlib.util
 import subprocess
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -859,21 +856,12 @@ def test_property_surcharge_geography(region):
 
 
 def _receipt_module():
-    try:
-        from policyengine.provenance import receipt
+    """policyengine's receipt code: released, or the copy the dashboard
+    vendors until the release ships."""
+    from uk_budget_data.publication.receipt import receipt_api
 
-        return receipt
-    except ImportError:
-        folder = Path(__file__).parent / "vendor" / "execution_receipt_v1"
-        for name in ("canonical", "receipt"):
-            module_name = f"policyengine.provenance.{name}"
-            spec = importlib.util.spec_from_file_location(
-                module_name, folder / f"{name}.py"
-            )
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-        return sys.modules["policyengine.provenance.receipt"]
+    module, _ = receipt_api()
+    return module
 
 
 def test_receipt_binds_module_template_modifiers_and_refuses_closure():

@@ -1,0 +1,709 @@
+"""Reconcile a measure's fiscal costing against the Treasury's.
+
+For each model year the measure's fiscal impact is compared with the mapped
+Treasury costing on the gated basis (the static costing by default). A year
+passes when the difference is within the larger of a relative tolerance and
+an absolute floor. Anything larger fails unless a reviewed exception, bound
+to the exact outputs being published, accepts it. Years with no entered
+costing are ``awaiting_source``; rows a reviewer classified as not comparable
+are reported as such; years beyond the dataset's projection are
+``unsupported``. The post-behavioural figure is reported alongside and never
+gated.
+
+Responsiveness (does the measure move at all, in the right direction) is
+checked separately and cannot be waived by an exception; see
+``responsiveness.py``.
+
+The result is written as ``reconciliation.json`` beside the artifact::
+
+    uv run python -m uk_budget_data.publication.reconcile \\
+        public/data/artifacts/<measure>/<digest>/
+
+The tolerance numbers in ``data_inputs/treasury/policy.yaml`` are a proposal
+pending the team's decision.
+"""
+
+import argparse
+import csv
+import json
+import math
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Mapping, Optional
+
+import yaml
+
+from uk_budget_data.publication.responsiveness import (
+    ExpectedEffect,
+    check_responsiveness,
+)
+
+SCHEMA = "uk-budget-dashboard/reconciliation/v1"
+
+PASS = "pass"
+ACCEPTED = "accepted"
+FAILED = "failed"
+AWAITING_SOURCE = "awaiting_source"
+NOT_COMPARABLE = "not_comparable"
+UNSUPPORTED = "unsupported"
+
+# The team's closed list of explanation classes (drill 3 rubric).
+EXPLANATION_CLASSES = frozenset(
+    {
+        "behavioural",
+        "coverage_business",
+        "top_tail_data",
+        "timing_fiscal_calendar",
+        "incidence_basis",
+        "baseline_mismatch",
+        "data_forward_path",
+        "devolved",
+        "interaction",
+    }
+)
+
+BASES = ("static_costing", "post_behavioural")
+# A declared residual is typed to the nearest £1m.
+RESIDUAL_ROUNDING_BN = 0.0005
+_EPSILON = 1e-12
+
+
+class ReconciliationInputError(ValueError):
+    """Raised for malformed reconciliation inputs."""
+
+
+@dataclass(frozen=True)
+class Policy:
+    """Acceptance thresholds (a proposal until the team decides them)."""
+
+    relative_tolerance: float = 0.10
+    absolute_floor_bn: float = 0.05
+    comparator_basis: str = "static_costing"
+    zero_tolerance_bn: float = 0.0025
+    min_response_bn: float = 0.001
+    min_response_share: float = 0.05
+
+    def __post_init__(self):
+        if self.comparator_basis not in BASES:
+            raise ReconciliationInputError(
+                f"comparator_basis must be one of {BASES}"
+            )
+        for name in (
+            "relative_tolerance",
+            "absolute_floor_bn",
+            "zero_tolerance_bn",
+            "min_response_bn",
+            "min_response_share",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not (
+                isinstance(value, (int, float))
+                and math.isfinite(value)
+                and value >= 0
+            ):
+                raise ReconciliationInputError(
+                    f"{name} must be a finite number >= 0"
+                )
+        if not self.min_response_bn > 0:
+            raise ReconciliationInputError(
+                "min_response_bn must be above zero, so a measure that "
+                "does nothing can never count as moving"
+            )
+
+
+@dataclass(frozen=True)
+class SourceRow:
+    """One Treasury figure: a table row in one fiscal year on one basis."""
+
+    source_id: str
+    row_id: str
+    fiscal_year: str
+    value_bn: float
+    basis: str
+    row_label: str = ""
+
+
+@dataclass(frozen=True)
+class MappingRow:
+    """Links a measure to a Treasury row, or classifies it not comparable."""
+
+    measure_id: str
+    source_id: str
+    row_id: str
+    scale: float = 1.0
+    year_offset: int = 0
+    status: str = ""
+    reason: str = ""
+    reviewer: str = ""
+
+    def __post_init__(self):
+        if self.status not in ("", NOT_COMPARABLE):
+            raise ReconciliationInputError(
+                f"{self.measure_id}: mapping status must be blank or "
+                f"{NOT_COMPARABLE}"
+            )
+        if self.status == NOT_COMPARABLE and not (
+            self.reason and self.reviewer
+        ):
+            raise ReconciliationInputError(
+                f"{self.measure_id}: a not_comparable mapping needs a reason "
+                "and a reviewer"
+            )
+
+
+@dataclass(frozen=True)
+class ExceptionEntry:
+    """A reviewed acceptance of one year's residual for exact outputs."""
+
+    measure_id: str
+    fiscal_year: str
+    residual_bn: float
+    explanation_class: str
+    explanation: str
+    reviewer: str
+    accepted_at: str
+    outputs_sha256: str
+
+    def __post_init__(self):
+        if self.explanation_class not in EXPLANATION_CLASSES:
+            raise ReconciliationInputError(
+                f"{self.measure_id} {self.fiscal_year}: explanation_class "
+                f"{self.explanation_class!r} is not in the closed list"
+            )
+        for name in ("explanation", "reviewer", "accepted_at"):
+            if not str(getattr(self, name)).strip():
+                raise ReconciliationInputError(
+                    f"{self.measure_id} {self.fiscal_year}: exception needs "
+                    f"{name}"
+                )
+
+
+def fiscal_year_label(model_year: int, offset: int = 0) -> str:
+    """Model year 2027 is fiscal year ``2027-28``."""
+    start = model_year + offset
+    return f"{start}-{(start + 1) % 100:02d}"
+
+
+def allowance_bn(
+    treasury_bn: float,
+    policy: Policy,
+    printed_zero: Optional[bool] = None,
+) -> float:
+    """The largest acceptable absolute difference from a Treasury figure.
+
+    A figure the Treasury prints as zero tolerates only its own rounding.
+    A comparator that sums to zero from non-zero printed figures is not a
+    printed zero, so it gets the ordinary allowance.
+
+    Args:
+        treasury_bn: The comparator.
+        policy: Thresholds.
+        printed_zero: Whether every figure behind the comparator was printed
+            as zero. None means "infer from the comparator itself".
+    """
+    if printed_zero is None:
+        printed_zero = abs(treasury_bn) <= _EPSILON
+    if printed_zero:
+        return policy.zero_tolerance_bn
+    return max(
+        policy.relative_tolerance * abs(treasury_bn),
+        policy.absolute_floor_bn,
+    )
+
+
+def within_allowance(
+    pe_bn: float,
+    treasury_bn: float,
+    policy: Policy,
+    printed_zero: Optional[bool] = None,
+) -> bool:
+    """Whether a year passes without an exception (the bound is inclusive)."""
+    return (
+        abs(pe_bn - treasury_bn)
+        <= allowance_bn(treasury_bn, policy, printed_zero) + _EPSILON
+    )
+
+
+@dataclass(frozen=True)
+class Comparator:
+    """The Treasury side of one year on one basis."""
+
+    value_bn: Optional[float]
+    rows: list
+    missing: list
+    printed_zero: bool
+
+
+def _comparator(
+    measure_id: str,
+    model_year: int,
+    basis: str,
+    sources: list[SourceRow],
+    mapping: list[MappingRow],
+) -> Comparator:
+    """Sum the mapped Treasury rows for one year on one basis.
+
+    Every comparable mapping must contribute exactly one figure. If any has
+    none (not yet entered, or left blank), the comparator is incomplete and
+    its value is None, so a partial sum can never pass.
+    """
+    total = 0.0
+    used = []
+    missing = []
+    for link in mapping:
+        if link.measure_id != measure_id or link.status == NOT_COMPARABLE:
+            continue
+        label = fiscal_year_label(model_year, link.year_offset)
+        matches = [
+            row
+            for row in sources
+            if row.source_id == link.source_id
+            and row.row_id == link.row_id
+            and row.basis == basis
+            and row.fiscal_year == label
+        ]
+        if len(matches) > 1:
+            raise ReconciliationInputError(
+                f"{link.source_id} row {link.row_id} has {len(matches)} "
+                f"{basis} figures for {label}"
+            )
+        if not matches:
+            missing.append(
+                {
+                    "source_id": link.source_id,
+                    "row_id": link.row_id,
+                    "fiscal_year": label,
+                }
+            )
+            continue
+        row = matches[0]
+        total += link.scale * row.value_bn
+        used.append(
+            {
+                "source_id": row.source_id,
+                "row_id": row.row_id,
+                "fiscal_year": row.fiscal_year,
+                "value_bn": row.value_bn,
+                "scale": link.scale,
+            }
+        )
+    if missing or not used:
+        return Comparator(None, used, missing, False)
+    printed_zero = all(abs(row["value_bn"]) <= _EPSILON for row in used)
+    return Comparator(total, used, [], printed_zero)
+
+
+def reconcile(
+    budgetary: Mapping[int, float],
+    *,
+    measure_id: str,
+    outputs_sha256: str,
+    sources: list[SourceRow],
+    mapping: list[MappingRow],
+    exceptions: list[ExceptionEntry],
+    policy: Policy,
+    expected: list[ExpectedEffect],
+    supported_years: Optional[set[int]] = None,
+) -> dict:
+    """Build the reconciliation result for one measure's outputs.
+
+    Args:
+        budgetary: Model year -> fiscal impact in £bn (positive improves the
+            government balance, the Treasury's Exchequer sign).
+        measure_id: The measure.
+        outputs_sha256: Digest of the artifact outputs being reconciled.
+        sources: Entered Treasury figures.
+        mapping: Measure-to-row links and not-comparable classifications.
+        exceptions: Reviewed exceptions; only those naming this digest apply.
+        policy: Thresholds.
+        expected: Reviewed expected-effect declarations.
+        supported_years: Years the dataset supports, or None for all.
+
+    Returns:
+        The ``reconciliation.json`` document.
+    """
+    own_links = [m for m in mapping if m.measure_id == measure_id]
+    not_comparable = [m for m in own_links if m.status == NOT_COMPARABLE]
+    comparable = [m for m in own_links if m.status != NOT_COMPARABLE]
+    other = next(b for b in BASES if b != policy.comparator_basis)
+
+    rows = []
+    comparators: dict[int, Optional[float]] = {}
+    for year in sorted(budgetary):
+        pe = float(budgetary[year])
+        label = fiscal_year_label(year)
+        row: dict = {"year": year, "fiscal_year": label, "pe_bn": pe}
+        gated_side = _comparator(
+            measure_id, year, policy.comparator_basis, sources, mapping
+        )
+        alongside_side = _comparator(measure_id, year, other, sources, mapping)
+        gated, gated_rows = gated_side.value_bn, gated_side.rows
+        alongside, alongside_rows = (
+            alongside_side.value_bn,
+            alongside_side.rows,
+        )
+        comparators[year] = gated if gated is not None else alongside
+        if alongside is not None:
+            row["alongside"] = {
+                "basis": other,
+                "value_bn": alongside,
+                "residual_bn": pe - alongside,
+                "rows": alongside_rows,
+            }
+
+        if supported_years is not None and year not in supported_years:
+            row["status"] = UNSUPPORTED
+            row["reason"] = "Beyond the dataset's projected years"
+        elif not_comparable and not comparable:
+            # Every mapped row was classified out of scope.
+            row["status"] = NOT_COMPARABLE
+            row["reason"] = "; ".join(m.reason for m in not_comparable)
+            row["reviewer"] = "; ".join(m.reviewer for m in not_comparable)
+        elif gated is None:
+            row["status"] = AWAITING_SOURCE
+            if gated_side.missing:
+                row["missing"] = gated_side.missing
+        else:
+            residual = pe - gated
+            row["comparator"] = {
+                "basis": policy.comparator_basis,
+                "value_bn": gated,
+                "rows": gated_rows,
+            }
+            row["residual_bn"] = residual
+            row["allowance_bn"] = allowance_bn(
+                gated, policy, gated_side.printed_zero
+            )
+            if not_comparable:
+                row["excluded"] = [
+                    {"row_id": m.row_id, "reason": m.reason}
+                    for m in not_comparable
+                ]
+            if within_allowance(pe, gated, policy, gated_side.printed_zero):
+                row["status"] = PASS
+            else:
+                row["status"] = FAILED
+                for entry in exceptions:
+                    if (
+                        entry.measure_id == measure_id
+                        and entry.fiscal_year == label
+                        and entry.outputs_sha256 == outputs_sha256
+                    ):
+                        if (
+                            abs(entry.residual_bn - residual)
+                            <= RESIDUAL_ROUNDING_BN + _EPSILON
+                        ):
+                            row["status"] = ACCEPTED
+                            row["exception"] = {
+                                "explanation_class": entry.explanation_class,
+                                "explanation": entry.explanation,
+                                "reviewer": entry.reviewer,
+                                "accepted_at": entry.accepted_at,
+                                "residual_bn": entry.residual_bn,
+                            }
+                        else:
+                            row["exception_rejected"] = (
+                                f"declared residual {entry.residual_bn} does "
+                                f"not match {residual:.4f}"
+                            )
+        rows.append(row)
+
+    statuses = [row["status"] for row in rows]
+    if FAILED in statuses:
+        summary = FAILED
+    elif AWAITING_SOURCE in statuses:
+        summary = AWAITING_SOURCE
+    elif ACCEPTED in statuses:
+        summary = ACCEPTED
+    else:
+        summary = PASS
+
+    responsiveness = check_responsiveness(
+        budgetary,
+        measure_id=measure_id,
+        declarations=expected,
+        comparators_bn=comparators,
+        min_response_bn=policy.min_response_bn,
+        min_response_share=policy.min_response_share,
+        zero_tolerance_bn=policy.zero_tolerance_bn,
+        supported_years=supported_years,
+    )
+
+    return {
+        "schema": SCHEMA,
+        "measure_id": measure_id,
+        "outputs_sha256": outputs_sha256,
+        "policy": policy.__dict__,
+        "rows": rows,
+        "responsiveness": responsiveness,
+        "summary": {
+            "status": summary,
+            "years": {
+                status: statuses.count(status) for status in set(statuses)
+            },
+        },
+    }
+
+
+# --------------------------------------------------------------------------
+# Input files
+# --------------------------------------------------------------------------
+
+
+def load_policy(path: Path) -> Policy:
+    if not path.exists():
+        return Policy()
+    data = yaml.safe_load(path.read_text()) or {}
+    unknown = set(data) - set(Policy.__dataclass_fields__)
+    if unknown:
+        raise ReconciliationInputError(
+            f"{path}: unknown keys {sorted(unknown)}"
+        )
+    return Policy(**data)
+
+
+def _read_csv(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
+def load_sources(directory: Path) -> list[SourceRow]:
+    """Read every source sheet; rows with a blank value are not yet entered."""
+    rows = []
+    seen: set[tuple] = set()
+    for path in sorted(directory.glob("*.csv")):
+        for line in _read_csv(path):
+            value = (line.get("value_bn") or "").strip()
+            if value == "":
+                continue
+            if line["basis"] not in BASES:
+                raise ReconciliationInputError(
+                    f"{path}: basis {line['basis']!r}"
+                )
+            if line.get("sign_convention") != "exchequer_positive":
+                raise ReconciliationInputError(
+                    f"{path}: only exchequer_positive figures are supported"
+                )
+            try:
+                number = float(value)
+            except ValueError as error:
+                raise ReconciliationInputError(
+                    f"{path}: value_bn {value!r} is not a number"
+                ) from error
+            if not math.isfinite(number):
+                raise ReconciliationInputError(
+                    f"{path}: value_bn {value!r} is not finite"
+                )
+            identity = (
+                line["source_id"],
+                str(line["row_id"]),
+                line["fiscal_year"],
+                line["basis"],
+            )
+            if identity in seen:
+                raise ReconciliationInputError(
+                    f"{path}: {identity} is entered twice"
+                )
+            seen.add(identity)
+            rows.append(
+                SourceRow(
+                    source_id=line["source_id"],
+                    row_id=str(line["row_id"]),
+                    fiscal_year=line["fiscal_year"],
+                    value_bn=number,
+                    basis=line["basis"],
+                    row_label=line.get("row_label", ""),
+                )
+            )
+    return rows
+
+
+def load_mapping(path: Path) -> list[MappingRow]:
+    rows = [
+        MappingRow(
+            measure_id=line["measure_id"],
+            source_id=line.get("source_id", ""),
+            row_id=str(line.get("row_id", "")),
+            scale=float(line.get("scale") or 1.0),
+            year_offset=int(line.get("year_offset") or 0),
+            status=(line.get("status") or "").strip(),
+            reason=(line.get("reason") or "").strip(),
+            reviewer=(line.get("reviewer") or "").strip(),
+        )
+        for line in _read_csv(path)
+    ]
+    seen = set()
+    for row in rows:
+        identity = (row.measure_id, row.source_id, row.row_id)
+        if identity in seen:
+            raise ReconciliationInputError(
+                f"{path}: {identity} is mapped twice"
+            )
+        if not math.isfinite(row.scale):
+            raise ReconciliationInputError(
+                f"{path}: {identity} has a non-finite scale"
+            )
+        seen.add(identity)
+    return rows
+
+
+def load_exceptions(path: Path) -> list[ExceptionEntry]:
+    if not path.exists():
+        return []
+    entries = yaml.safe_load(path.read_text()) or []
+    if not isinstance(entries, list):
+        raise ReconciliationInputError(f"{path}: expected a list")
+    try:
+        return [
+            ExceptionEntry(
+                measure_id=entry["measure_id"],
+                fiscal_year=entry["fiscal_year"],
+                residual_bn=float(entry["residual_bn"]),
+                explanation_class=entry["explanation_class"],
+                explanation=str(entry["explanation"]),
+                reviewer=str(entry["reviewer"]),
+                accepted_at=str(entry["accepted_at"]),
+                outputs_sha256=entry["outputs_sha256"],
+            )
+            for entry in entries
+        ]
+    except KeyError as error:
+        raise ReconciliationInputError(
+            f"{path}: exception missing {error}"
+        ) from error
+
+
+def load_expected(path: Path) -> list[ExpectedEffect]:
+    return [
+        ExpectedEffect(
+            measure_id=line["measure_id"],
+            direction=line["direction"].strip(),
+            from_year=int(line["from_year"]),
+            to_year=int(line["to_year"]) if line.get("to_year") else None,
+            reviewer=(line.get("reviewer") or "").strip(),
+            note=(line.get("note") or "").strip(),
+        )
+        for line in _read_csv(path)
+    ]
+
+
+def read_budgetary(artifact: Path, measure_id: str) -> dict[int, float]:
+    rows = _read_csv(artifact / "budgetary_impact.csv")
+    budgetary = {
+        int(row["year"]): float(row["value"])
+        for row in rows
+        if row["reform_id"] == measure_id
+    }
+    if not budgetary:
+        raise ReconciliationInputError(
+            f"{artifact}: no budgetary_impact rows for {measure_id}"
+        )
+    return budgetary
+
+
+def reconcile_artifact(
+    artifact: Path,
+    inputs: Path,
+    *,
+    measure_id: Optional[str] = None,
+    outputs_sha256: Optional[str] = None,
+    supported_years: Optional[set[int]] = None,
+) -> dict:
+    """Reconcile an artifact directory using the inputs directory.
+
+    The measure, output digest and supported years default to the artifact's
+    ``receipt.json`` (``dashboard.measure_ids``,
+    ``execution_receipt.outputs_sha256`` and ``dashboard.dataset_years``).
+    """
+    receipt_path = artifact / "receipt.json"
+    receipt = (
+        json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
+    )
+    dashboard = receipt.get("dashboard", {})
+    if measure_id is None:
+        ids = dashboard.get("measure_ids") or []
+        if len(ids) != 1:
+            raise ReconciliationInputError(
+                "pass --measure-id: the receipt names " f"{len(ids)} measures"
+            )
+        measure_id = ids[0]
+    if outputs_sha256 is None:
+        outputs_sha256 = receipt.get("execution_receipt", {}).get(
+            "outputs_sha256"
+        )
+    if not outputs_sha256:
+        raise ReconciliationInputError(
+            "no outputs_sha256: pass --outputs-sha256 or supply receipt.json"
+        )
+    if supported_years is None and dashboard.get("dataset_years") is not None:
+        supported_years = set(dashboard["dataset_years"])
+    return reconcile(
+        read_budgetary(artifact, measure_id),
+        measure_id=measure_id,
+        outputs_sha256=outputs_sha256,
+        sources=load_sources(inputs / "sources"),
+        mapping=load_mapping(inputs / "mapping.csv"),
+        exceptions=load_exceptions(inputs / "exceptions.yaml"),
+        policy=load_policy(inputs / "policy.yaml"),
+        expected=load_expected(inputs / "expected_effects.csv"),
+        supported_years=supported_years,
+    )
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python -m uk_budget_data.publication.reconcile",
+        description="Reconcile an artifact against the Treasury costings.",
+    )
+    parser.add_argument("artifact", type=Path)
+    parser.add_argument(
+        "--inputs", type=Path, default=Path("data_inputs/treasury")
+    )
+    parser.add_argument("--measure-id", default=None)
+    parser.add_argument("--outputs-sha256", default=None)
+    parser.add_argument("--supported-years", nargs="+", type=int, default=None)
+    parser.add_argument(
+        "--no-write",
+        action="store_true",
+        help="print the result without writing reconciliation.json",
+    )
+    args = parser.parse_args(argv)
+    try:
+        result = reconcile_artifact(
+            args.artifact,
+            args.inputs,
+            measure_id=args.measure_id,
+            outputs_sha256=args.outputs_sha256,
+            supported_years=(
+                set(args.supported_years) if args.supported_years else None
+            ),
+        )
+    except ReconciliationInputError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    text = json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if not args.no_write:
+        (args.artifact / "reconciliation.json").write_text(text)
+    for row in result["rows"]:
+        comparator = row.get("comparator", {}).get("value_bn")
+        print(
+            f"{row['fiscal_year']}: ours {row['pe_bn']:+.3f}bn, Treasury "
+            f"{'—' if comparator is None else format(comparator, '+.3f') + 'bn'}"
+            f" -> {row['status']}"
+        )
+    print(
+        f"summary: {result['summary']['status']}; responsiveness: "
+        f"{result['responsiveness']['status']}"
+    )
+    ok = (
+        result["summary"]["status"] in (PASS, ACCEPTED)
+        and result["responsiveness"]["status"] == "responsive"
+    )
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

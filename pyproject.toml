@@ -24,6 +24,8 @@ dependencies = [
     "h5py>=3.0.0",
     "microdf-python>=0.3.0",
     "pydantic>=2.0.0",
+    "openpyxl>=3.1.0",
+    "pyyaml>=6.0",
     "rich>=13.0.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -57,13 +59,12 @@ addopts = "-v --tb=short"
 [tool.black]
 line-length = 79
 target-version = ["py313"]
-# Keep the upstream receipt compatibility fixtures byte-for-byte unchanged.
-extend-exclude = "/tests/vendor/execution_receipt_v1/"
+extend-exclude = "src/uk_budget_data/publication/_vendor_w4"
 
 [tool.ruff]
 line-length = 79
 target-version = "py313"
-extend-exclude = ["tests/vendor/execution_receipt_v1"]
+extend-exclude = ["src/uk_budget_data/publication/_vendor_w4"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

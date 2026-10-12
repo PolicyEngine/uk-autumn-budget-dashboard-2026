@@ -1,0 +1,21 @@
+# Reconciliation thresholds. PROPOSAL: these numbers await the team's
+# decision (see docs/budget-day-publication.md, decision 3).
+
+# A year passes when |ours - Treasury| <= max(relative_tolerance * |Treasury|,
+# absolute_floor_bn).
+relative_tolerance: 0.10
+absolute_floor_bn: 0.05
+
+# The basis that is gated. Table 4.1's post-behavioural figure is reported
+# alongside and never gated.
+comparator_basis: static_costing
+
+# A figure the Treasury prints as zero tolerates only its own rounding
+# (figures are rounded to the nearest £5m).
+zero_tolerance_bn: 0.0025
+
+# Responsiveness: where an effect is expected, ours must have the expected
+# sign and be at least this large, in £bn and as a share of the Treasury's
+# figure. No exception can waive this.
+min_response_bn: 0.001
+min_response_share: 0.05

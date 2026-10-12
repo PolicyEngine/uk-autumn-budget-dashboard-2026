@@ -1,0 +1,366 @@
+"""Canonical bytes for the dashboard's output tables.
+
+An artifact is identified by the digest of its files, so the same rows must
+always serialise to the same bytes: a fixed column order, rows sorted by the
+table's key, UTF-8, LF line endings, one final newline, and floats written
+in their shortest round-trip form. Non-finite numbers, unknown or missing
+columns and duplicate keys are refused, so a table that would mislead never
+gets a digest.
+"""
+
+import csv
+import hashlib
+import io
+import math
+from dataclasses import dataclass
+from typing import Any, Iterable, Mapping
+
+STR, INT, FLOAT, BOOL = "str", "int", "float", "bool"
+# Integers beyond this cannot all be told apart once read as floats (here, or
+# by the browser), so they are refused rather than collapsed together.
+MAX_EXACT_INTEGER = 2**53 - 1
+
+
+class TableError(ValueError):
+    """Raised when rows cannot be written as a canonical table."""
+
+
+@dataclass(frozen=True)
+class TableSpec:
+    """Column order, types and key of one output table."""
+
+    name: str
+    columns: tuple[tuple[str, str], ...]
+    key: tuple[str, ...]
+    required: bool = True
+
+    @property
+    def column_names(self) -> tuple[str, ...]:
+        return tuple(name for name, _ in self.columns)
+
+    @property
+    def filename(self) -> str:
+        return f"{self.name}.csv"
+
+
+TABLES: dict[str, TableSpec] = {
+    spec.name: spec
+    for spec in (
+        TableSpec(
+            "budgetary_impact",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("value", FLOAT),
+            ),
+            ("reform_id", "year"),
+        ),
+        TableSpec(
+            "distributional_impact",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("decile", STR),
+                ("value", FLOAT),
+            ),
+            ("reform_id", "year", "decile"),
+        ),
+        TableSpec(
+            "winners_losers",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("decile", STR),
+                ("avg_change", FLOAT),
+            ),
+            ("reform_id", "year", "decile"),
+        ),
+        TableSpec(
+            "metrics",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("people_affected", FLOAT),
+                ("gini_change", FLOAT),
+                ("poverty_change_pp", FLOAT),
+                ("poverty_change_pct", FLOAT),
+            ),
+            ("reform_id", "year"),
+        ),
+        TableSpec(
+            "income_curve",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("employment_income", FLOAT),
+                ("baseline_net_income", FLOAT),
+                ("reform_net_income", FLOAT),
+            ),
+            ("reform_id", "year", "employment_income"),
+        ),
+        # Households by baseline income band and income change band. No
+        # household-level rows: see bin_scatter.
+        TableSpec(
+            "household_scatter_binned",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("income_band", FLOAT),
+                ("change_band", FLOAT),
+                ("households", FLOAT),
+            ),
+            ("reform_id", "year", "income_band", "change_band"),
+        ),
+        TableSpec(
+            "constituency",
+            (
+                ("reform_id", STR),
+                ("year", INT),
+                ("constituency_code", STR),
+                ("constituency_name", STR),
+                ("average_gain", FLOAT),
+                ("relative_change", FLOAT),
+            ),
+            ("reform_id", "year", "constituency_code"),
+            required=False,
+        ),
+        TableSpec(
+            "demographic_constituency",
+            (
+                ("reform_id", STR),
+                ("year", INT),
+                ("constituency_code", STR),
+                ("constituency_name", STR),
+                ("num_children", STR),
+                ("is_married", BOOL),
+                ("average_gain", FLOAT),
+                ("relative_change", FLOAT),
+                ("household_count", FLOAT),
+            ),
+            (
+                "reform_id",
+                "year",
+                "constituency_code",
+                "num_children",
+                "is_married",
+            ),
+            required=False,
+        ),
+    )
+}
+
+
+def _coerce(value: Any, kind: str, where: str) -> Any:
+    """Convert one cell to its declared type, refusing anything ambiguous."""
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        raise TableError(f"{where}: missing value")
+    if kind == STR:
+        return str(value)
+    if kind == BOOL:
+        if isinstance(value, str) and value in ("True", "False"):
+            return value == "True"
+        if type(value).__name__ in ("bool", "bool_"):
+            return bool(value)
+        raise TableError(f"{where}: {value!r} is not a boolean")
+    if kind == INT and type(value).__name__ in (
+        "int",
+        "int8",
+        "int16",
+        "int32",
+        "int64",
+        "uint8",
+        "uint16",
+        "uint32",
+        "uint64",
+    ):
+        number = int(value)
+        if abs(number) > MAX_EXACT_INTEGER:
+            raise TableError(f"{where}: {value!r} is too large to keep exact")
+        return number
+    try:
+        # A float32 is written as its own shortest decimal, as pandas writes
+        # it, rather than as the longer exact double.
+        if type(value).__name__ == "float32":
+            value = str(value)
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise TableError(f"{where}: {value!r} is not a number") from error
+    if not math.isfinite(number):
+        raise TableError(f"{where}: {value!r} is not finite")
+    if kind == INT:
+        if number != int(number):
+            raise TableError(f"{where}: {value!r} is not a whole number")
+        if abs(number) > MAX_EXACT_INTEGER:
+            raise TableError(f"{where}: {value!r} is too large to keep exact")
+        return int(number)
+    return number
+
+
+def _text(value: Any) -> str:
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if isinstance(value, float):
+        return repr(value)
+    return str(value)
+
+
+def normalise(name: str, rows: Iterable[Mapping[str, Any]]) -> list[dict]:
+    """Type, check and sort rows of the named table.
+
+    Raises TableError for an unknown table, unknown or missing columns,
+    untypable or non-finite values, or two rows with the same key.
+    """
+    if name not in TABLES:
+        raise TableError(f"unknown table {name!r}")
+    spec = TABLES[name]
+    expected = set(spec.column_names)
+    typed = []
+    for index, row in enumerate(rows):
+        columns = set(row)
+        if columns != expected:
+            extra = sorted(columns - expected)
+            missing = sorted(expected - columns)
+            raise TableError(
+                f"{name} row {index}: unexpected columns {extra}, "
+                f"missing columns {missing}"
+            )
+        typed.append(
+            {
+                column: _coerce(row[column], kind, f"{name}.{column}[{index}]")
+                for column, kind in spec.columns
+            }
+        )
+    typed.sort(key=lambda row: tuple(row[column] for column in spec.key))
+    for previous, current in zip(typed, typed[1:]):
+        if all(previous[c] == current[c] for c in spec.key):
+            raise TableError(
+                f"{name}: duplicate key "
+                f"{tuple(current[c] for c in spec.key)}"
+            )
+    return typed
+
+
+def canonical_csv(name: str, rows: Iterable[Mapping[str, Any]]) -> bytes:
+    """The canonical bytes of the named table."""
+    typed = normalise(name, rows)
+    spec = TABLES[name]
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow(spec.column_names)
+    for row in typed:
+        writer.writerow([_text(row[column]) for column in spec.column_names])
+    return buffer.getvalue().encode("utf-8")
+
+
+def parse_csv(name: str, data: bytes) -> list[dict]:
+    """Read canonical bytes back into typed, sorted rows."""
+    reader = csv.DictReader(io.StringIO(data.decode("utf-8"), newline=""))
+    return normalise(name, reader)
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def records(table: Any) -> list[dict]:
+    """Rows of a pandas DataFrame, or a list of dicts unchanged."""
+    if hasattr(table, "to_dict"):
+        return table.to_dict("records")
+    return list(table)
+
+
+# The household scatter is published binned, never household by household:
+# each row is one cell of baseline income band by income change band, with
+# the weighted number of households in it. A band is named by its lower edge
+# in pounds a year. Values beyond the outer bands are counted in them, so the
+# outer bands are open-ended. Cells with fewer than SCATTER_MIN_HOUSEHOLDS
+# survey households are left out, and counts are rounded to the nearest
+# SCATTER_ROUND_TO households.
+SCATTER_BINS = {
+    "income_band_width": 5_000.0,
+    "income_min": 0.0,
+    "income_max": 150_000.0,
+    "change_band_width": 100.0,
+    "change_min": -2_000.0,
+    "change_max": 2_000.0,
+}
+SCATTER_MIN_HOUSEHOLDS = 10
+# Survey weights run to thousands, so counts are rounded to the nearest
+# thousand households: finer rounding would let differences between cells
+# reveal one household's weight.
+SCATTER_ROUND_TO = 1000
+
+
+def band(value: float, width: float, low: float, high: float) -> float:
+    """The lower edge of the band holding ``value``, outer bands open."""
+    edge = math.floor(value / width) * width
+    # Guard against rounding in the division (for example a tiny negative
+    # value whose quotient underflows to -0.0).
+    if edge > value:
+        edge -= width
+    elif edge + width <= value:
+        edge += width
+    return float(min(max(edge, low), high - width))
+
+
+def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
+    """Bin household-level scatter rows into publishable cells.
+
+    Args:
+        rows: One row per household, with ``reform_id``, ``reform_name``,
+            ``year``, ``baseline_income``, ``income_change`` and
+            ``household_weight``.
+
+    Returns:
+        One row per cell with at least SCATTER_MIN_HOUSEHOLDS households.
+    """
+    b = SCATTER_BINS
+    cells: dict[tuple, list] = {}
+    for row in rows:
+        key = (
+            row["reform_id"],
+            row["reform_name"],
+            int(row["year"]),
+            band(
+                float(row["baseline_income"]),
+                b["income_band_width"],
+                b["income_min"],
+                b["income_max"],
+            ),
+            band(
+                # Round to the penny first, so float noise around zero is
+                # not counted as a loss.
+                round(float(row["income_change"]), 2),
+                b["change_band_width"],
+                b["change_min"],
+                b["change_max"],
+            ),
+        )
+        cell = cells.setdefault(key, [0, 0.0])
+        cell[0] += 1
+        cell[1] += float(row["household_weight"])
+    binned = []
+    for (reform_id, name, year, income, change), (count, weight) in sorted(
+        cells.items()
+    ):
+        if count < SCATTER_MIN_HOUSEHOLDS:
+            continue
+        binned.append(
+            {
+                "reform_id": reform_id,
+                "reform_name": name,
+                "year": year,
+                "income_band": income,
+                "change_band": change,
+                "households": float(
+                    round(weight / SCATTER_ROUND_TO) * SCATTER_ROUND_TO
+                ),
+            }
+        )
+    return binned
