@@ -299,3 +299,40 @@ def test_a_lone_blank_total_is_a_nil_total():
     assert set(scorecard.totals_m[None].values()) == {0.0}
     with pytest.raises(TotalsMismatch):
         check_totals(scorecard)
+
+
+HEADER = (None, None, None, "Head", "2026-27", "2027-28", "2028-29")
+TAX = (None, 1, "Tax measure", "Tax", 100, 100, 100)
+SPEND = (None, 2, "Spend measure", "Spend", -100, -100, -100)
+GRAND_TOTAL = (None, None, "Total policy decisions", None, 100, 100, 100)
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        # A heading in another column, then measures that cancel.
+        [HEADER, (None, "Total policy decisions", None, None), TAX, SPEND],
+        # A footnote quoting the total's words beside its own text.
+        [
+            HEADER,
+            TAX,
+            SPEND,
+            ("Total policy decisions", None, "See note 1", None),
+        ],
+    ],
+)
+def test_a_heading_or_footnote_is_not_a_printed_total(rows):
+    """Review round 5: blank rows that only repeat a total's words were
+    read as nil totals, so a sheet with no printed total passed."""
+    with pytest.raises(TotalsMismatch, match="prints no"):
+        check_totals(parse_rows(rows))
+
+
+def test_a_footnote_beside_a_real_total_is_not_a_second_total():
+    rows = [
+        HEADER,
+        TAX,
+        GRAND_TOTAL,
+        ("Total policy decisions", None, "See note 1", None),
+    ]
+    assert check_totals(parse_rows(rows))
