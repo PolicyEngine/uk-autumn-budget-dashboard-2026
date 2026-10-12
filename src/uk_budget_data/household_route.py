@@ -43,6 +43,11 @@ from typing import Any, Optional
 
 RECEIPT_SCHEMA = "uk-budget-dashboard/household-receipt/v1"
 DEFAULT_TOLERANCE = 0.01
+# A fixture may loosen the tolerance, but never beyond £1: a looser check
+# would let a wrong answer through.
+MAX_TOLERANCE = 1.0
+# The packages whose versions a household check must pin.
+REQUIRED_PACKAGES = ("policyengine-uk", "policyengine-core")
 VERSION_ROUTE = "/api/version"
 
 # Manifest execution-identity block -> API package name.
@@ -128,8 +133,17 @@ def load_fixture(path: Path) -> tuple[dict, str]:
     for check in fixture["expect"]:
         if "path" not in check or "value" not in check:
             raise FixtureError(f"{path}: each expect needs path and value")
-        if not math.isfinite(float(check["value"])):
+        try:
+            value = float(check["value"])
+            tolerance = float(check.get("tolerance", DEFAULT_TOLERANCE))
+        except (TypeError, ValueError) as error:
+            raise FixtureError(f"{path}: {error}") from error
+        if not math.isfinite(value):
             raise FixtureError(f"{path}: expected values must be finite")
+        if not (math.isfinite(tolerance) and 0 <= tolerance <= MAX_TOLERANCE):
+            raise FixtureError(
+                f"{path}: tolerance must be between 0 and {MAX_TOLERANCE}"
+            )
     return fixture, hashlib.sha256(raw).hexdigest()
 
 
@@ -169,13 +183,21 @@ def expected_versions(manifest: Optional[dict], overrides: dict) -> dict:
 
 
 def identity_mismatches(api_identity: Optional[dict], expected: dict) -> list:
-    """List packages whose deployed version differs from the expected one."""
-    if not expected:
-        return []
-    if not api_identity:
-        return [{"error": "the API reported no identity"}]
+    """List packages whose deployed version differs from the expected one.
+
+    A check with no expected model and core versions, or an API that
+    reports no identity, is a problem in itself: a household answer cannot
+    be scored against an unknown model.
+    """
+    problems = [
+        {"error": f"no expected version for {name}"}
+        for name in REQUIRED_PACKAGES
+        if not expected.get(name)
+    ]
+    if not api_identity or "packages" not in api_identity:
+        return problems + [{"error": "the API reported no identity"}]
     packages = api_identity.get("packages") or {}
-    return [
+    return problems + [
         {"package": name, "expected": version, "actual": packages.get(name)}
         for name, version in sorted(expected.items())
         if packages.get(name) != version
@@ -291,11 +313,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     import httpx
 
     args = parse_args(argv)
-    manifest = (
-        json.loads(args.manifest.read_text())
-        if args.manifest and args.manifest.exists()
-        else None
-    )
+    if args.manifest and not args.manifest.exists():
+        print(f"error: {args.manifest} does not exist", file=sys.stderr)
+        return 2
+    manifest = json.loads(args.manifest.read_text()) if args.manifest else None
     expected = expected_versions(
         manifest,
         {

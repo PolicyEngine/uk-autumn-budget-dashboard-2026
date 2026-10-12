@@ -176,7 +176,51 @@ def test_no_identity_is_a_mismatch_when_versions_are_expected():
     assert identity_mismatches(None, EXPECTED) == [
         {"error": "the API reported no identity"}
     ]
-    assert identity_mismatches(None, {}) == []
+
+
+def test_nothing_to_check_against_is_a_mismatch():
+    """Review finding: no manifest and a 404 on /api/version passed."""
+    problems = identity_mismatches(None, {})
+    assert {"error": "no expected version for policyengine-uk"} in problems
+    assert {"error": "the API reported no identity"} in problems
+    assert identity_mismatches({"packages": {}}, {"policyengine-uk": "1"})
+
+
+def test_a_run_with_no_version_route_and_no_manifest_fails(tmp_path):
+    app = FastAPI()
+
+    @app.post("/api/personal-impact")
+    def impact(body: dict):
+        return {"policies": {"rate": {"years": [{"impact": 100.0}]}}}
+
+    receipt = run_checks(TestClient(app), [write_fixture(tmp_path)], {})
+    assert not receipt["pass"]
+
+
+@pytest.mark.parametrize("tolerance", ["inf", "nan", -0.01, 1.01, 1e9])
+def test_unbounded_tolerances_are_refused(tmp_path, tolerance):
+    path = write_fixture(tmp_path)
+    fixture = json.loads(path.read_text())
+    fixture["expect"][0]["tolerance"] = tolerance
+    path.write_text(json.dumps(fixture))
+    with pytest.raises(FixtureError, match="tolerance"):
+        load_fixture(path)
+
+
+def test_a_missing_manifest_named_on_the_command_line_fails(tmp_path):
+    from uk_budget_data.household_route import main
+
+    code = main(
+        [
+            "--base-url",
+            "http://127.0.0.1:9",
+            "--fixtures",
+            str(tmp_path),
+            "--manifest",
+            str(tmp_path / "missing.json"),
+        ]
+    )
+    assert code == 2
 
 
 def test_path_tokens():
