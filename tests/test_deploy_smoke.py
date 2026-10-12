@@ -23,23 +23,41 @@ BUILD = {
 }
 
 
-GOOD_ANSWER = {
-    "household_input": {"employment_income": 30000},
-    "years": {
-        "2026": {"baseline": {"household_net_income": 25000.0}},
-        "2027": {"baseline": {"household_net_income": 25500.0}},
-    },
-    "policies": {
-        "x": {
-            "name": "X",
-            "years": {
-                "2026": {"net_income_change": -12.5},
-                "2027": {"net_income_change": 0.0},
-            },
-        }
-    },
-    "totals": {"cumulative": -12.5},
-}
+YEARS = ["2026", "2027"]
+POLICIES = ["x", "y"]
+
+
+def answer(change=-12.5, years=YEARS, policies=POLICIES):
+    return {
+        "household_input": {"employment_income": 30000},
+        "years": {
+            year: {"baseline": {"household_net_income": 25000.0}}
+            for year in years
+        },
+        "policies": {
+            name: {
+                "name": name.upper(),
+                "years": {
+                    year: {"net_income_change": change} for year in years
+                },
+            }
+            for name in policies
+        },
+        "totals": {"cumulative": change},
+    }
+
+
+GOOD_ANSWER = answer()
+
+
+@pytest.fixture(autouse=True)
+def coverage(monkeypatch):
+    """Tests use their own expected years and policies."""
+    from uk_budget_data import deploy_smoke
+
+    monkeypatch.setattr(
+        deploy_smoke, "expected_coverage", lambda: (YEARS, POLICIES)
+    )
 
 
 def fake_api(
@@ -113,6 +131,17 @@ def test_a_route_that_never_answers_is_a_problem_not_a_crash():
     assert "ReadTimeout" in result["problems"][0]
 
 
+def _without(body, *path):
+    import copy
+
+    body = copy.deepcopy(body)
+    target = body
+    for step in path[:-1]:
+        target = target[step]
+    del target[path[-1]]
+    return body
+
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -121,40 +150,48 @@ def test_a_route_that_never_answers_is_a_problem_not_a_crash():
         {"error": "failed", "code": 500},
         0,
         [1, 2],
-        {
-            "household_input": {"employment_income": 30000},
-            "years": {},
-            "policies": {},
-            "totals": {"cumulative": 0},
-        },
-        {**GOOD_ANSWER, "policies": {}},
-        {
-            **GOOD_ANSWER,
-            "policies": {"x": {"years": {"2026": {"net_income_change": 1}}}},
-        },
-        {**GOOD_ANSWER, "years": {"2026": {"baseline": {}}}},
         {**GOOD_ANSWER, "detail": "Calculation error"},
+        {**GOOD_ANSWER, "policies": {}},
+        # Review round 2: nested errors, scalars, metadata and gaps.
+        {
+            "years": {"2026": {"baseline": {"error": "failed", "code": 500}}},
+            "policies": {"x": {"years": {"2026": {"code": 500}}}},
+        },
+        {
+            "years": {"2026": {"baseline": 0}},
+            "policies": {"x": {"years": {"2026": 0}}},
+        },
+        {
+            "years": {"2026": {"baseline": {"employment_income": 30000}}},
+            "policies": {
+                "x": {"years": {"2026": {"employment_income": 30000}}}
+            },
+        },
+        _without(GOOD_ANSWER, "policies", "y"),
+        _without(GOOD_ANSWER, "years", "2027"),
+        _without(GOOD_ANSWER, "policies", "x", "years", "2027"),
+        _without(
+            GOOD_ANSWER, "policies", "x", "years", "2026", "net_income_change"
+        ),
     ],
 )
-def test_answers_that_are_not_a_calculation_fail(body):
-    """Review finding: any finite number in a 200 used to pass."""
+def test_answers_that_are_not_a_complete_calculation_fail(body):
+    """Review findings: any finite number in a 200 used to pass."""
     result = run_smoke(fake_api(impact=body), SHA, BUILD)
     assert not result["pass"], body
 
 
 def test_zero_effects_are_a_valid_answer():
-    zero = {
-        **GOOD_ANSWER,
-        "policies": {
-            "x": {
-                "years": {
-                    "2026": {"net_income_change": 0.0},
-                    "2027": {"net_income_change": 0.0},
-                }
-            }
-        },
-    }
-    assert run_smoke(fake_api(impact=zero), SHA, BUILD)["pass"]
+    assert run_smoke(fake_api(impact=answer(change=0.0)), SHA, BUILD)["pass"]
+
+
+def test_the_expectation_comes_from_the_image_calculator(monkeypatch):
+    from uk_budget_data import deploy_smoke, personal_impact
+
+    monkeypatch.undo()
+    years, policies = deploy_smoke.expected_coverage()
+    assert years == [str(y) for y in personal_impact.YEARS]
+    assert policies == list(personal_impact.POLICY_IDS)
 
 
 @given(
@@ -192,7 +229,8 @@ def test_identity_problems_needs_an_object():
 
 
 def test_the_real_api_passes_its_own_smoke_test(monkeypatch):
-    """Differential: the API's /api/version agrees with the image's view."""
+    """Differential: the real API answers everything its calculator says."""
+    monkeypatch.undo()  # the real years and policies, not the test ones
     monkeypatch.setenv("GIT_SHA", SHA)
     result = run_smoke(TestClient(real_app), SHA)
     assert result["pass"], result["problems"]

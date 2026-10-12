@@ -49,15 +49,51 @@ def _has_finite_number(value: Any) -> bool:
     return bool(found) and all(math.isfinite(n) for n in found)
 
 
-def impact_problems(body: Any) -> list[str]:
-    """Ways a household answer is not a real calculation.
+def _finite(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
 
-    A 200 is not enough: the answer must be an object with no error, with a
-    baseline for at least one year, and with every policy covering those
-    same years with finite numbers. Zero effects are allowed, since a
-    measure can leave a household unchanged; whether the numbers are right
-    is for the household fixtures, not this check.
+
+def expected_coverage() -> tuple[list[str], list[str]]:
+    """The years and policies this build's household route must answer.
+
+    Read from the image's own calculator, so the expectation is this
+    build's, whichever version of it is deployed.
     """
+    from uk_budget_data import personal_impact
+
+    return (
+        [str(year) for year in personal_impact.YEARS],
+        list(personal_impact.POLICY_IDS),
+    )
+
+
+def impact_problems(
+    body: Any,
+    years: Optional[list[str]] = None,
+    policies: Optional[list[str]] = None,
+) -> list[str]:
+    """Ways a household answer is not a complete calculation.
+
+    A 200 is not enough. The answer must be an object with no error, with
+    ``household_net_income`` for every expected year, and with every
+    expected policy giving a finite ``net_income_change`` in every one of
+    those years. Zero effects are allowed: a measure can leave a household
+    unchanged. Whether the numbers are right is for the household
+    fixtures, not this check.
+
+    Args:
+        body: The parsed response.
+        years: Expected years (as JSON keys); default the calculator's.
+        policies: Expected policy ids; default the calculator's.
+    """
+    if years is None or policies is None:
+        default_years, default_policies = expected_coverage()
+        years = default_years if years is None else years
+        policies = default_policies if policies is None else policies
     route = "/api/personal-impact"
     if not isinstance(body, dict):
         return [f"{route} did not return an object"]
@@ -65,30 +101,34 @@ def impact_problems(body: Any) -> list[str]:
         return [f"{route} returned an error body"]
     if not all(math.isfinite(n) for n in numbers(body)):
         return [f"{route} returned a non-finite number"]
-    years = body.get("years")
-    if not isinstance(years, dict) or not years:
-        return [f"{route} returned no years"]
     problems = []
-    for year, entry in years.items():
-        if not isinstance(entry, dict) or not _has_finite_number(
-            entry.get("baseline")
+    answered_years = body.get("years")
+    if not isinstance(answered_years, dict):
+        answered_years = {}
+    for year in years:
+        entry = answered_years.get(year)
+        baseline = entry.get("baseline") if isinstance(entry, dict) else None
+        if not isinstance(baseline, dict) or not _finite(
+            baseline.get("household_net_income")
         ):
-            problems.append(f"{route} has no baseline for {year}")
-    policies = body.get("policies")
-    if not isinstance(policies, dict) or not policies:
-        return problems + [f"{route} returned no policies"]
-    for name, policy in policies.items():
+            problems.append(f"{route} has no baseline income for {year}")
+    answered = body.get("policies")
+    if not isinstance(answered, dict):
+        answered = {}
+    for name in policies:
+        policy = answered.get(name)
         policy_years = (
-            (policy or {}).get("years") if isinstance(policy, dict) else None
+            policy.get("years") if isinstance(policy, dict) else None
         )
-        if not isinstance(policy_years, dict) or set(policy_years) != set(
-            years
-        ):
-            problems.append(f"{route}: {name} does not cover every year")
+        if not isinstance(policy_years, dict):
+            problems.append(f"{route} has no result for {name}")
             continue
-        for year, entry in policy_years.items():
-            if not _has_finite_number(entry):
-                problems.append(f"{route}: {name} has no result for {year}")
+        for year in years:
+            entry = policy_years.get(year)
+            if not isinstance(entry, dict) or not _finite(
+                entry.get("net_income_change")
+            ):
+                problems.append(f"{route}: {name} has no change for {year}")
     return problems
 
 

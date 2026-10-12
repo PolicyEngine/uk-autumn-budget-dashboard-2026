@@ -17,7 +17,18 @@ import yaml
 REPO = Path(__file__).resolve().parent.parent
 CONFIG = yaml.safe_load((REPO / "cloudbuild.yaml").read_text())
 BUILD_ID = "0123abcd-4567-89ef-0123-456789abcdef"
-TAG = "b-0123abcd4567"
+
+
+def _base36(n: int) -> str:
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    out = ""
+    while n:
+        n, r = divmod(n, 36)
+        out = digits[r] + out
+    return out or "0"
+
+
+TAG = "b" + _base36(__import__("uuid").UUID(BUILD_ID).int)
 IMAGE = "europe-west1-docker.pkg.dev/p/r/uk-budget-api-2026@sha256:" + "d" * 64
 
 pytestmark = pytest.mark.skipif(
@@ -52,7 +63,9 @@ with open(os.environ["FAKE_LOG"], "a") as log:
     log.write(" ".join(args) + "\n")
 def save():
     json.dump(state, open(state_path, "w"))
-if args[:3] == ["run", "services", "list"]:
+if args[:3] == ["builds", "list", "--ongoing"]:
+    print("\n".join(state.get("ongoing", [])))
+elif args[:3] == ["run", "services", "list"]:
     if state.get("list_fails"):
         sys.exit("ERROR: the API is unavailable")
     print(state["name"] if state.get("exists") else "")
@@ -91,7 +104,7 @@ else:
 
 def run(script: str, tmp_path: Path, state: dict):
     bin_dir = tmp_path / "bin"
-    bin_dir.mkdir(exist_ok=True)
+    bin_dir.mkdir(parents=True, exist_ok=True)
     gcloud = bin_dir / "gcloud"
     gcloud.write_text(FAKE_GCLOUD)
     gcloud.chmod(0o755)
@@ -301,3 +314,79 @@ def test_the_uploaded_source_must_be_the_named_commit(tmp_path):
     assert "is not commit" in result.stderr
     extra = {**files, "local.py": "x\n"}
     assert verify_source(tmp_path / "extra", files, extra).returncode != 0
+
+
+def test_the_tag_names_the_whole_build_and_fits_a_hostname(
+    workspace, tmp_path
+):
+    result, _, _ = run(
+        step_script("deploy-candidate", workspace), tmp_path, service()
+    )
+    assert result.returncode == 0, result.stderr
+    tag = (workspace / "candidate_tag").read_text().strip()
+    assert tag == TAG and tag[0].isalpha()
+    host_label = f"{tag}---uk-budget-api-2026-qevs5bboca-ew"
+    assert len(host_label) <= 63
+
+
+def test_a_deploy_stops_while_another_is_running(tmp_path, workspace):
+    """Review round 2: concurrent deploys and bootstraps raced."""
+    result, log, _ = run(
+        step_script("exclusive", workspace),
+        tmp_path,
+        service(ongoing=["another-build"]),
+    )
+    assert result.returncode != 0
+    assert "Another deploy is running" in result.stderr
+    alone, _, _ = run(step_script("exclusive", workspace), tmp_path, service())
+    assert alone.returncode == 0, alone.stderr
+
+
+def test_promotion_stops_while_another_deploy_is_running(tmp_path, workspace):
+    (workspace / "candidate_revision").write_text("rev-new\n")
+    (workspace / "candidate_tag").write_text(TAG + "\n")
+    (workspace / "previous_traffic").write_text('[["rev-old", 100]]\n')
+    result, log, _ = run(
+        step_script("promote", workspace),
+        tmp_path,
+        service(ongoing=["another-build"]),
+    )
+    assert result.returncode != 0
+    assert not any(
+        line.startswith("run services update-traffic") for line in log
+    )
+
+
+def test_a_new_service_is_promoted_only_if_it_is_this_builds(
+    tmp_path, workspace
+):
+    """Review round 2: a bootstrap accepted any current traffic."""
+    someone_else = [{"revisionName": "rev-old", "percent": 100}]
+    result, log, _ = promote(tmp_path, workspace, someone_else, [])
+    assert result.returncode != 0
+    assert "not this build's new service" in result.stderr
+    ours = [
+        {"revisionName": "rev-new", "percent": 100, "tag": TAG, "url": "x"}
+    ]
+    result, _, _ = promote(tmp_path / "ours", workspace, ours, [])
+    assert result.returncode == 0, result.stderr
+
+
+def test_gcloud_would_upload_every_tracked_file():
+    """Review round 2: without .gcloudignore, .gitignore files were left out
+    of the upload, so the source check refused a correct commit."""
+    sdk = Path.home() / "google-cloud-sdk" / "lib"
+    if not (sdk / "googlecloudsdk").is_dir():
+        pytest.skip("needs the Google Cloud SDK")
+    import sys
+
+    sys.path[:0] = [str(sdk), str(sdk / "third_party")]
+    try:
+        from googlecloudsdk.command_lib.util import gcloudignore
+    finally:
+        del sys.path[:2]
+    chooser = gcloudignore.GetFileChooserForDir(str(REPO), write_on_disk=False)
+    tracked = subprocess.check_output(
+        ["git", "ls-files"], cwd=REPO, text=True
+    ).splitlines()
+    assert [path for path in tracked if not chooser.IsIncluded(path)] == []

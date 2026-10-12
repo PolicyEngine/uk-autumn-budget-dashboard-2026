@@ -7,10 +7,11 @@
 #   gcloud builds submit <dir> --project policyengine-apps \
 #     --config <dir>/cloudbuild.yaml --substitutions _GIT_SHA=<commit>
 #
-# The build checks that the uploaded source is exactly that public commit,
-# deploys the image it built by digest, smoke-tests a tag only this build
-# uses, and moves traffic only if traffic has not changed since the build
-# began. The log ends with the allocation it replaced and the command that
+# Only one deploy of this service runs at a time: a build that finds another
+# one running stops. The build checks that the uploaded source is exactly
+# that public commit (.gcloudignore makes gcloud upload every file), deploys
+# the image it built by digest, smoke-tests a tag only this build uses, and
+# moves traffic only if traffic has not changed since the build began. The log ends with the allocation it replaced and the command that
 # restores it. Creating the service, which must take traffic at once, needs
 # _ALLOW_CREATE=true as well.
 
@@ -22,6 +23,10 @@ substitutions:
   _REGION: europe-west1
   _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/uk-budget-api-2026
 
+# Marks this build as a deploy of the service, so concurrent deploys see
+# each other.
+tags: ['uk-budget-api-2026-deploy']
+
 options:
   logging: CLOUD_LOGGING_ONLY
   # _IMAGE refers to PROJECT_ID. Shell variables below are written $$name
@@ -29,6 +34,24 @@ options:
   dynamicSubstitutions: true
 
 steps:
+  # One deploy at a time. Any two overlapping deploys see each other here
+  # (a build is listed as ongoing from the moment it is queued), so the
+  # later one stops before deploying anything.
+  - id: exclusive
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        others=$$(gcloud builds list --ongoing \
+          --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
+          --format='value(id)')
+        if [ -n "$$others" ]; then
+          echo "Another deploy is running ($$others); stopping" >&2
+          exit 1
+        fi
+
   # The uploaded source must be byte for byte the public commit named, so
   # the commit /api/version reports is the code that was built.
   - id: verify-source
@@ -84,7 +107,15 @@ steps:
       - |
         set -euo pipefail
         image=$$(cat /workspace/image_ref)
-        tag="b-$$(echo "${BUILD_ID}" | tr -cd 'a-z0-9' | cut -c1-12)"
+        # The whole build id, in base 36 so the tagged hostname fits.
+        tag="b$$(python3 -c 'import string, sys, uuid
+        n = uuid.UUID(sys.argv[1]).int
+        digits = string.digits + string.ascii_lowercase
+        out = ""
+        while n:
+            n, r = divmod(n, 36)
+            out = digits[r] + out
+        print(out or "0")' "${BUILD_ID}")"
         echo "$$tag" > /workspace/candidate_tag
         common="--image $$image --region ${_REGION} --platform managed \
           --no-invoker-iam-check --memory 2Gi --cpu 2 --timeout 300 \
@@ -159,6 +190,13 @@ steps:
       - |
         set -euo pipefail
         candidate=$$(cat /workspace/candidate_revision)
+        others=$$(gcloud builds list --ongoing \
+          --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
+          --format='value(id)')
+        if [ -n "$$others" ]; then
+          echo "Another deploy is running ($$others); not promoting" >&2
+          exit 1
+        fi
         now=$$(gcloud run services describe ${_SERVICE} --region ${_REGION} \
           --format=json | python3 -c 'import json, sys
         traffic = json.load(sys.stdin)["status"].get("traffic", [])
@@ -166,7 +204,15 @@ steps:
                       if t.get("percent"))
         print(json.dumps(live))')
         before=$$(cat /workspace/previous_traffic)
-        if [ "$$before" != "[]" ] && [ "$$now" != "$$before" ]; then
+        if [ "$$before" = "[]" ]; then
+          # Just created: the only traffic must be this build's revision.
+          expected=$$(python3 -c 'import json, sys
+        print(json.dumps([[sys.argv[1], 100]]))' "$$candidate")
+          if [ "$$now" != "$$expected" ]; then
+            echo "Traffic is not this build's new service ($$now); not promoting" >&2
+            exit 1
+          fi
+        elif [ "$$now" != "$$before" ]; then
           echo "Traffic changed during this build ($$before -> $$now); not promoting" >&2
           exit 1
         fi
