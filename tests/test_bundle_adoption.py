@@ -1,6 +1,9 @@
 """Tests for verifying a policyengine release against its dispatch."""
 
 import json
+import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -176,3 +179,63 @@ def test_workflow_opens_a_draft_and_never_merges():
     triggers = workflow.get("on", workflow.get(True))
     assert set(triggers) == {"repository_dispatch", "workflow_dispatch"}
     assert triggers["repository_dispatch"]["types"] == ["policyengine-release"]
+
+
+# --- the workflow's bundle export (review finding, 12 October) ------------
+
+WORKFLOW = (
+    Path(__file__).resolve().parent.parent
+    / ".github"
+    / "workflows"
+    / "adopt-policyengine-release.yml"
+)
+
+
+def _export_filter() -> str:
+    match = re.search(r"jq -cse '([^']+)'", WORKFLOW.read_text())
+    assert match, "the workflow must parse the bundle with jq -cse"
+    return match.group(1)
+
+
+def _export(text: str):
+    """What the workflow would append to GITHUB_ENV, or None if refused."""
+    result = subprocess.run(
+        ["jq", "-cse", _export_filter()],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return f"BUNDLE_UK_JSON={result.stdout.strip()}\n"
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{}\n__BUNDLE__\nUV_INDEX_URL=https://example.invalid/simple",
+        '{} "UV_INDEX_URL=evil"',
+        '{} {"a": 1}',
+        "[1, 2]",
+        "not json",
+        "",
+    ],
+)
+def test_the_export_refuses_anything_but_one_json_object(text):
+    assert _export(text) is None
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
+@given(
+    st.dictionaries(
+        st.text(max_size=8),
+        st.one_of(st.text(), st.integers(), st.none()),
+        max_size=4,
+    )
+)
+def test_one_object_is_exported_on_exactly_one_line(bundle):
+    exported = _export(json.dumps(bundle, indent=2))
+    assert exported is not None
+    assert exported.count("\n") == 1
+    assert json.loads(exported.removeprefix("BUNDLE_UK_JSON=")) == bundle

@@ -57,11 +57,14 @@ jobs:
             echo "version=$version"
             echo "branch=adopt/policyengine-$version"
           } >> "$GITHUB_OUTPUT"
-          {
-            echo "BUNDLE_UK_JSON<<__BUNDLE__"
-            printf '%s\n' "$bundle"
-            echo "__BUNDLE__"
-          } >> "$GITHUB_ENV"
+          # Parse the bundle before exporting it: only a JSON object goes
+          # through, compacted onto one line, so no input can add lines
+          # (and so variables) to the job environment.
+          if ! bundle=$(printf '%s' "$bundle" | jq -cse 'if length == 1 and (.[0] | type) == "object" then .[0] else error("expected one JSON object") end'); then
+            echo "bundle.uk must be exactly one JSON object" >&2
+            exit 1
+          fi
+          printf 'BUNDLE_UK_JSON=%s\n' "$bundle" >> "$GITHUB_ENV"
 
       # An App token lets the upgrade PR trigger CI; a PR opened with the
       # default token does not start pull_request workflows.
