@@ -1,5 +1,5 @@
 # VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #579
-# (stacked on #571) at 69390c54de612e587cec3e0e3d09b0454b524b1e,
+# (stacked on #571) at f951bd59178ccabe05c55c9bfb14b23b53feb858,
 # src/policyengine/provenance/canonical.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
 # when the dashboard pins the policyengine release that contains PRs #571
