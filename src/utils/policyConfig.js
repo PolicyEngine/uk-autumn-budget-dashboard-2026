@@ -1,5 +1,39 @@
-// MOCK drill 3: no measures registered before the 12:30 statement release.
-export const POLICIES = [];
+// MOCK drill 3: measures from the 12:30 statement (MOCK-statement.md). Invented for a rehearsal.
+export const POLICIES = [
+  { id: "mock3_fuel_duty_phasing", name: "Fuel duty rises phased", color: "#0D9488",
+    description: "MOCK: 52.95p per litre to March 2027, 55.95p from April, 57.95p from October 2027",
+    explanation: "MOCK basis: statement. The January and March 2027 rises do not happen: 52.95p per litre to 31 March 2027, 55.95p from 1 April and 57.95p from 1 October 2027, then RPI uprating from April 2028. Baseline is the model's own schedule until Annex A. Includes 20% VAT on the duty change; calendar years in the charts." },
+  { id: "mock3_whd_top_up", name: "Warm Home Discount top-up", color: "#14B8A6",
+    description: "MOCK: an extra £100 for Warm Home Discount households in England and Wales, two winters",
+    explanation: "MOCK basis: statement. An extra £100 in winter 2026-27 and winter 2027-28 for households in England and Wales that get the Warm Home Discount. The model has no Warm Home Discount, so eligibility is approximated from receipt of Pension Credit or means-tested benefits." },
+  { id: "mock3_lha_30th_percentile", name: "Local Housing Allowance at the 30th percentile", color: "#2DD4BF",
+    description: "MOCK: LHA rates in Great Britain back to the 30th percentile of rents from April 2027",
+    explanation: "MOCK basis: statement. Local Housing Allowance rates return to the 30th percentile of local rents from April 2027 and are kept there each year, for private renters on Housing Benefit or Universal Credit in Great Britain." },
+  { id: "mock3_pensioner_allowance", name: "Pensioner Allowance", color: "#5EEAD4",
+    description: "MOCK: an allowance equal to the State Pension where above the Personal Allowance, from April 2027",
+    explanation: "MOCK basis: statement. From April 2027 people over State Pension age get an allowance equal to their State Pension where that is higher than the Personal Allowance, withdrawn above £30,000 of adjusted net income. The withdrawal rate (£1 for every £2) is provisional until Annex A." },
+  { id: "mock3_employer_ni_under_22", name: "Employer NI relief for under-22s", color: "#99F6E4",
+    description: "MOCK: no employer National Insurance on earnings of employees aged 21, up to the upper limit, from April 2027",
+    explanation: "MOCK basis: statement. Extends the employer National Insurance relief to employees aged under 22 from April 2027, up to the upper earnings limit. The model has no under-21 relief, so only employees aged 21 are affected. The figure is gross employer National Insurance; with fixed earnings households see no change." },
+  { id: "mock3_additional_rate_threshold", name: "Additional rate threshold £100,000", color: "#78350F",
+    description: "MOCK: the 45p rate starts at £100,000 instead of £125,140 from April 2027",
+    explanation: "MOCK basis: statement. From April 2027 the additional rate of income tax starts at £100,000 of income instead of £125,140 (England, Wales and Northern Ireland)." },
+  { id: "mock3_cgt_higher_rate_aea", name: "Capital Gains Tax: 28% higher rate, £2,000 exemption", color: "#92400E",
+    description: "MOCK: CGT higher rate 24% to 28% and annual exempt amount £3,000 to £2,000 from 6 April 2027",
+    explanation: "MOCK basis: statement. From 6 April 2027 the higher and additional rates of Capital Gains Tax rise from 24% to 28%, including residential property, and the annual exempt amount falls from £3,000 to £2,000. Static: no change in realisations." },
+  { id: "mock3_salary_sacrifice_cap", name: "Salary sacrifice NI limit £1,000", color: "#B45309",
+    description: "MOCK: the NI-exempt pension salary-sacrifice limit falls from £2,000 to £1,000 from April 2029",
+    explanation: "MOCK basis: statement. From 6 April 2029 pension salary sacrifice above £1,000 a year (down from £2,000) pays employee and employer National Insurance. Income tax relief on pension contributions continues." },
+  { id: "mock3_hvcts_top_bands", name: "Council tax surcharge: £5m and £10m bands", color: "#D97706",
+    description: "MOCK: £10,000 for English homes worth £5m to £10m and £15,000 from £10m, from April 2028",
+    explanation: "MOCK basis: statement. From April 2028 owners of homes in England worth £5 million to £10 million (2026 values) pay a £10,000 High Value Council Tax Surcharge and homes worth £10 million or more pay £15,000, uprated with CPI. Static." },
+  { id: "mock3_threshold_freeze_2032", name: "Thresholds frozen to April 2032", color: "#F59E0B",
+    description: "MOCK: Personal Allowance, higher rate threshold and main NI thresholds frozen for 2031-32",
+    explanation: "MOCK basis: statement. The Personal Allowance, the higher rate threshold and the main National Insurance thresholds stay at their 2030-31 levels for one more year, to April 2032." },
+  { id: "mock3_class4_main_rate", name: "Class 4 NI main rate 7%", color: "#FBBF24",
+    description: "MOCK: the self-employed Class 4 main rate rises from 6% to 7% from April 2027",
+    explanation: "MOCK basis: statement. From April 2027 the Class 4 National Insurance main rate on self-employed profits between the lower and upper profits limits rises from 6% to 7%." },
+];
 
 // Retained only for old shared URLs; these do not appear in the 2026 selector.
 export const LEGACY_POLICIES = [

@@ -9,7 +9,20 @@ from pathlib import Path
 
 from uk_budget_data.budget_years import POLICY_YEARS
 
-FEATURED_POLICIES = ()  # Empty until the drill 3 statement-derived list is locked.
+# MOCK drill 3: the 11 coded measures from the G1 coverage ledger.
+FEATURED_POLICIES = (
+    "mock3_fuel_duty_phasing",
+    "mock3_whd_top_up",
+    "mock3_lha_30th_percentile",
+    "mock3_pensioner_allowance",
+    "mock3_employer_ni_under_22",
+    "mock3_additional_rate_threshold",
+    "mock3_cgt_higher_rate_aea",
+    "mock3_salary_sacrifice_cap",
+    "mock3_hvcts_top_bands",
+    "mock3_threshold_freeze_2032",
+    "mock3_class4_main_rate",
+)
 NATIONAL_FIELDS = {
     "budgetary_impact": ("value",),
     "distributional_impact": ("value",),

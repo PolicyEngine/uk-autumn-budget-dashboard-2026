@@ -95,9 +95,21 @@ class TestReformDefinitions:
         """Autumn Budget 2025 reforms are defined."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        # Drill 3 (12 Oct 2026): the active list is empty before the
-        # 12:30 statement; measures are registered only after release.
-        assert get_autumn_budget_2026_reforms() == []
+        # Drill 3 (12 Oct 2026): the 11 coded measures from the 12:30
+        # statement, in coverage-ledger order.
+        assert [r.id for r in get_autumn_budget_2026_reforms()] == [
+            "mock3_fuel_duty_phasing",
+            "mock3_whd_top_up",
+            "mock3_lha_30th_percentile",
+            "mock3_pensioner_allowance",
+            "mock3_employer_ni_under_22",
+            "mock3_additional_rate_threshold",
+            "mock3_cgt_higher_rate_aea",
+            "mock3_salary_sacrifice_cap",
+            "mock3_hvcts_top_bands",
+            "mock3_threshold_freeze_2032",
+            "mock3_class4_main_rate",
+        ]
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""

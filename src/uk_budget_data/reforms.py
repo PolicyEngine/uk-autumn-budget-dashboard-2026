@@ -1570,6 +1570,45 @@ def _with_annex_a_state_pension(reform: Reform) -> Reform:
 # ---------------------------------------------------------------------------
 
 
+def _get_mock3_reforms() -> list[Reform]:
+    """MOCK drill 3 coded measures, in coverage-ledger order."""
+    from uk_budget_data.mock_drill3_cgt_hvcts import (
+        _create_mock3_cgt_higher_rate_aea,
+        _create_mock3_hvcts_top_bands,
+    )
+    from uk_budget_data.mock_drill3_employer_ni import (
+        _create_mock3_employer_ni_under_22,
+    )
+    from uk_budget_data.mock_drill3_fuel import _create_mock3_fuel_duty_phasing
+    from uk_budget_data.mock_drill3_housing_energy import (
+        _create_mock3_lha_30th_percentile,
+        _create_mock3_whd_top_up,
+    )
+    from uk_budget_data.mock_drill3_params import (
+        _create_mock3_additional_rate_threshold,
+        _create_mock3_class4_main_rate,
+        _create_mock3_salary_sacrifice_cap,
+        _create_mock3_threshold_freeze_2032,
+    )
+    from uk_budget_data.mock_drill3_pensioner_allowance import (
+        _create_mock3_pensioner_allowance,
+    )
+
+    return [
+        _create_mock3_fuel_duty_phasing(),  # 1
+        _create_mock3_whd_top_up(),  # 2
+        _create_mock3_lha_30th_percentile(),  # 3
+        _create_mock3_pensioner_allowance(),  # 4
+        _create_mock3_employer_ni_under_22(),  # 5
+        _create_mock3_additional_rate_threshold(),  # 7
+        _create_mock3_cgt_higher_rate_aea(),  # 8
+        _create_mock3_salary_sacrifice_cap(),  # 9
+        _create_mock3_hvcts_top_bands(),  # 10
+        _create_mock3_threshold_freeze_2032(),  # 12
+        _create_mock3_class4_main_rate(),  # 13
+    ]
+
+
 _AUTUMN_BUDGET_2026_REFORMS_CACHE: list[Reform] | None = None
 _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
@@ -1579,9 +1618,10 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the candidate and carried-over 2026 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
-        # MOCK drill 3 (12 Oct 2026): the active list starts empty before the
-        # 12:30 statement. Drill 2's mock2_* definitions stay above for history.
-        _AUTUMN_BUDGET_2026_REFORMS_CACHE = []
+        # MOCK drill 3 (12 Oct 2026): measures from the 12:30 statement, in
+        # coverage-ledger order. Imported lazily: some modules import from
+        # this one. Drill 2's mock2_* definitions stay above for history.
+        _AUTUMN_BUDGET_2026_REFORMS_CACHE = _get_mock3_reforms()
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 
