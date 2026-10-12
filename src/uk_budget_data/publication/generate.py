@@ -17,6 +17,7 @@ from typing import Callable, Optional
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
+    COMBINED_PREFIX,
     ArtifactRef,
     write_artifact,
 )
@@ -32,8 +33,7 @@ from uk_budget_data.publication.receipt import (
     receipt_api,
 )
 from uk_budget_data.publication.tables import (
-    SCATTER_SAMPLE_PER_MILLE,
-    sample_scatter,
+    bin_scatter,
 )
 
 
@@ -45,9 +45,7 @@ class GenerationReport:
     refused: dict[str, str] = field(default_factory=dict)
 
 
-def result_tables(
-    result: ReformResult, per_mille: int = SCATTER_SAMPLE_PER_MILLE
-) -> dict[str, list[dict]]:
+def result_tables(result: ReformResult) -> dict[str, list[dict]]:
     """An artifact's tables from one processed reform."""
     return {
         "budgetary_impact": result.budgetary_impact,
@@ -55,9 +53,7 @@ def result_tables(
         "winners_losers": result.winners_losers,
         "metrics": result.metrics,
         "income_curve": result.income_curve,
-        "household_scatter": sample_scatter(
-            result.household_scatter, per_mille
-        ),
+        "household_scatter_binned": bin_scatter(result.household_scatter),
         "constituency": result.constituency,
         "demographic_constituency": result.demographic_constituency,
         "briefing_deciles": result.briefing_deciles,
@@ -160,6 +156,11 @@ def generate_artifacts(
         )
 
     for reform in reforms:
+        if reform.id.startswith(COMBINED_PREFIX):
+            report.refused[reform.id] = (
+                f"a measure id may not start with {COMBINED_PREFIX!r}"
+            )
+            continue
         try:
             identities = measure_identities(reform, config, revision)
             run(reform, reform.id, identities, None, [reform.id])

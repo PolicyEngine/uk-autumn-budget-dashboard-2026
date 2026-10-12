@@ -326,12 +326,26 @@ def stage(
     if problems:
         raise PublishError(key, problems)
 
+    try:
+        relative = path.resolve().relative_to(data_root.resolve())
+    except ValueError:
+        raise PublishError(
+            key, [f"the artifact is not under the data root {data_root}"]
+        ) from None
+    if is_combined(key) != bool(dashboard.get("members")):
+        raise PublishError(
+            key,
+            [
+                "a combined key needs a combined artifact, and a measure "
+                "key a single-measure one"
+            ],
+        )
     group = working.combined if is_combined(key) else working.measures
     previous = group.get(key)
     entry = m.Entry(
         name=_entry_name(path, key),
         status=level,
-        artifact=str(path.resolve().relative_to(data_root.resolve())),
+        artifact=relative.as_posix(),
         outputs_sha256=digests["outputs_sha256"],
         receipt_sha256=digests["receipt_sha256"],
         execution_identity_sha256=digests["execution_identity_sha256"],

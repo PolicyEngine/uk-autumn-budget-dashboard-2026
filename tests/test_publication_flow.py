@@ -16,6 +16,7 @@ from hypothesis.stateful import (
 from tests.publication_support import (
     RATE_PATH,
     World,
+    make_household_rows,
     make_tables,
     module_level_modifier,
 )
@@ -58,7 +59,11 @@ def reform(key: str, rate: float = 0.21, **extra) -> Reform:
 def fake_process(values_by_key):
     def process(reform, config, baseline, reformed):
         tables = make_tables(reform.id, values_by_key[reform.id])
+        tables.pop("household_scatter_binned")
         return ReformResult(
+            household_scatter=make_household_rows(
+                reform.id, values_by_key[reform.id]
+            ),
             reform_id=reform.id,
             reform_name=reform.name,
             constituency=[],
@@ -348,6 +353,9 @@ MEASURES = ("alpha", "beta", "gamma")
 # Fiscal impact variants: the costing is always -1.0 a year, so variants 0
 # and 1 reconcile, 2 fails reconciliation, and 3 is inert.
 VARIANTS = (-1.0, -1.05, -3.0, 0.0)
+# Valid outputs are drawn more often, so sequences reach approved combined
+# runs and then disturb them.
+WEIGHTED_VARIANTS = (-1.0, -1.0, -1.05, -1.05, -3.0, 0.0)
 
 
 class PublicationMachine(RuleBasedStateMachine):
@@ -368,7 +376,10 @@ class PublicationMachine(RuleBasedStateMachine):
     def _args(self):
         return dict(data_root=self.world.data_root, inputs=self.world.inputs)
 
-    @rule(measure=st.sampled_from(MEASURES), variant=st.sampled_from(VARIANTS))
+    @rule(
+        measure=st.sampled_from(MEASURES),
+        variant=st.sampled_from(WEIGHTED_VARIANTS),
+    )
     def generate(self, measure, variant):
         reference = self.world.write(measure, {2027: variant, 2028: variant})
         self.world.reconcile(reference)
@@ -399,22 +410,61 @@ class PublicationMachine(RuleBasedStateMachine):
             pass
 
     @precondition(lambda self: self.manifest.entries())
+    @rule()
+    def approve_everything_approvable(self):
+        """Measures first, then combined runs, as on the day."""
+        for group in (self.manifest.measures, self.manifest.combined):
+            for key in sorted(group):
+                try:
+                    approve(self.manifest, key, "Reviewer", **self._args())
+                except PublishError:
+                    pass
+
+    @precondition(lambda self: self.latest)
+    @rule()
+    def stage_everything_generated(self):
+        for measure in sorted(self.latest):
+            try:
+                stage(self.manifest, self.latest[measure].path, **self._args())
+            except PublishError:
+                pass
+
+    @precondition(lambda self: self.manifest.entries())
     @rule(data=st.data())
     def withdraw_entry(self, data):
         key = data.draw(st.sampled_from(sorted(self.manifest.entries())))
         withdraw(self.manifest, key, "test")
 
+    @precondition(lambda self: len(self.latest) >= 2)
+    @rule()
+    def publish_the_package(self):
+        """The day's happy path: members, then their combined run."""
+        self.stage_everything_generated()
+        self.approve_everything_approvable()
+        approved = sorted(
+            key
+            for key, entry in self.manifest.measures.items()
+            if entry.status == m.APPROVED
+        )
+        if len(approved) >= 2:
+            self._stage_combined(approved)
+            self.approve_everything_approvable()
+
     @precondition(lambda self: len(self.manifest.measures) >= 2)
     @rule(data=st.data())
     def stage_combined(self, data):
-        members = sorted(
-            data.draw(
-                st.sets(
-                    st.sampled_from(sorted(self.manifest.measures)),
-                    min_size=2,
+        self._stage_combined(
+            sorted(
+                data.draw(
+                    st.sets(
+                        st.sampled_from(sorted(self.manifest.measures)),
+                        min_size=2,
+                    )
                 )
             )
         )
+
+    def _stage_combined(self, members):
         records = []
         for member in members:
             receipt = read_receipt(
@@ -501,6 +551,6 @@ class PublicationMachine(RuleBasedStateMachine):
 
 
 PublicationMachine.TestCase.settings = settings(
-    max_examples=30, stateful_step_count=14, deadline=None
+    max_examples=40, stateful_step_count=20, deadline=None
 )
 TestPublicationMachine = PublicationMachine.TestCase

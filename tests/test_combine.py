@@ -5,6 +5,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
+from tests.publication_support import broken_modifier
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -201,12 +202,19 @@ def test_a_combination_that_changes_more_than_its_members_is_inconsistent():
 
 
 def test_a_measure_that_cannot_run_on_a_household_cannot_be_combined():
-    """The legacy student-loan measure fails on the certified bundle."""
+    broken = measure("broken", simulation_modifier=broken_modifier)
+    savings = get_reform("savings_tax_increase_2pp")
+    combined = combine_measures([broken, savings], CONFIG)
+    with pytest.raises(CombineInconsistent, match="could not be applied"):
+        check_consistency(combined, [broken, savings], CONFIG, YEARS)
+
+
+def test_the_student_loan_measure_now_combines_consistently():
+    """It crashed on policyengine-uk 2.125.1 until its modifier was fixed."""
     student_loans = get_reform("freeze_student_loan_thresholds")
     savings = get_reform("savings_tax_increase_2pp")
     combined = combine_measures([student_loans, savings], CONFIG)
-    with pytest.raises(CombineInconsistent, match="could not be applied"):
-        check_consistency(combined, [student_loans, savings], CONFIG, YEARS)
+    check_consistency(combined, [student_loans, savings], CONFIG, YEARS)
 
 
 def test_sample_instants_bracket_each_fiscal_year():

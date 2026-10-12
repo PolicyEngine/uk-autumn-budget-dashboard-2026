@@ -44,8 +44,6 @@ NO_EFFECT_TOLERANCE = 1e-4
 def _effect(table: str, row: Mapping) -> Optional[float]:
     if table == "income_curve":
         return row["reform_net_income"] - row["baseline_net_income"]
-    if table == "household_scatter":
-        return row["income_change"]
     if table == "winners_losers":
         return row["avg_change"]
     if table == "briefing_deciles":

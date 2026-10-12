@@ -138,18 +138,19 @@ TABLES: dict[str, TableSpec] = {
             ),
             ("reform_id", "year", "employment_income"),
         ),
+        # Households by baseline income band and income change band. No
+        # household-level rows: see bin_scatter.
         TableSpec(
-            "household_scatter",
+            "household_scatter_binned",
             (
                 ("reform_id", STR),
                 ("reform_name", STR),
                 ("year", INT),
-                ("baseline_income", FLOAT),
-                ("income_change", FLOAT),
-                ("household_weight", FLOAT),
-                ("household_id", INT),
+                ("income_band", FLOAT),
+                ("change_band", FLOAT),
+                ("households", FLOAT),
             ),
-            ("reform_id", "year", "household_id"),
+            ("reform_id", "year", "income_band", "change_band"),
         ),
         TableSpec(
             "constituency",
@@ -351,27 +352,81 @@ def records(table: Any) -> list[dict]:
     return list(table)
 
 
-# Share of households kept in an artifact's scatter sample, per thousand.
-SCATTER_SAMPLE_PER_MILLE = 25
+# The household scatter is published binned, never household by household:
+# each row is one cell of baseline income band by income change band, with
+# the weighted number of households in it. A band is named by its lower edge
+# in pounds a year. Values beyond the outer bands are counted in them, so the
+# outer bands are open-ended. Cells with fewer than SCATTER_MIN_HOUSEHOLDS
+# survey households are left out, and counts are rounded to the nearest
+# SCATTER_ROUND_TO households.
+SCATTER_BINS = {
+    "income_band_width": 5_000.0,
+    "income_min": 0.0,
+    "income_max": 150_000.0,
+    "change_band_width": 100.0,
+    "change_min": -2_000.0,
+    "change_max": 2_000.0,
+}
+SCATTER_MIN_HOUSEHOLDS = 10
+SCATTER_ROUND_TO = 10
 
 
-def in_scatter_sample(household_id: int, per_mille: int) -> bool:
-    """Whether a household is in the published scatter sample.
+def band(value: float, width: float, low: float, high: float) -> float:
+    """The lower edge of the band holding ``value``, outer bands open."""
+    edge = math.floor(value / width) * width
+    return float(min(max(edge, low), high - width))
 
-    The choice depends only on the household id, so every measure and every
-    year samples the same households and their points can be combined.
+
+def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
+    """Bin household-level scatter rows into publishable cells.
+
+    Args:
+        rows: One row per household, with ``reform_id``, ``reform_name``,
+            ``year``, ``baseline_income``, ``income_change`` and
+            ``household_weight``.
+
+    Returns:
+        One row per cell with at least SCATTER_MIN_HOUSEHOLDS households.
     """
-    digest = hashlib.sha256(str(int(household_id)).encode()).hexdigest()
-    return int(digest[:8], 16) % 1000 < per_mille
-
-
-def sample_scatter(
-    rows: Iterable[Mapping[str, Any]],
-    per_mille: int = SCATTER_SAMPLE_PER_MILLE,
-) -> list[dict]:
-    """The published sample of the full household scatter."""
-    return [
-        dict(row)
-        for row in rows
-        if in_scatter_sample(row["household_id"], per_mille)
-    ]
+    b = SCATTER_BINS
+    cells: dict[tuple, list] = {}
+    for row in rows:
+        key = (
+            row["reform_id"],
+            row["reform_name"],
+            int(row["year"]),
+            band(
+                float(row["baseline_income"]),
+                b["income_band_width"],
+                b["income_min"],
+                b["income_max"],
+            ),
+            band(
+                float(row["income_change"]),
+                b["change_band_width"],
+                b["change_min"],
+                b["change_max"],
+            ),
+        )
+        cell = cells.setdefault(key, [0, 0.0])
+        cell[0] += 1
+        cell[1] += float(row["household_weight"])
+    binned = []
+    for (reform_id, name, year, income, change), (count, weight) in sorted(
+        cells.items()
+    ):
+        if count < SCATTER_MIN_HOUSEHOLDS:
+            continue
+        binned.append(
+            {
+                "reform_id": reform_id,
+                "reform_name": name,
+                "year": year,
+                "income_band": income,
+                "change_band": change,
+                "households": float(
+                    round(weight / SCATTER_ROUND_TO) * SCATTER_ROUND_TO
+                ),
+            }
+        )
+    return binned
