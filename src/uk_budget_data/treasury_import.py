@@ -162,11 +162,20 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
             cells[c] if c < len(cells) else None for c in sorted(year_columns)
         ]
         label_cells = [_text(c) for c in cells[:head_column] if _text(c)]
-        if all(_text(v) == "" for v in raw_values):
-            continue  # section heading, blank line or footnote
+        head = _text(cells[head_column]).lower()
+        if all(_text(v) == "" for v in raw_values) and head not in {
+            "tax",
+            "spend",
+        }:
+            # A section heading, blank line or footnote. A row with a Tax or
+            # Spend head is a measure even when every figure is blank (nil).
+            continue
         label = max(label_cells, key=len) if label_cells else ""
         lowered = label.lower()
         if lowered in TOTAL_LABELS:
+            if TOTAL_LABELS[lowered] in totals:
+                # A second printed total would silently replace the first.
+                raise ScorecardError(f"{label!r} appears twice")
             totals[TOTAL_LABELS[lowered]] = {
                 year: parse_figure(value)[0]
                 for year, value in zip(fiscal_years, raw_values)
@@ -185,7 +194,6 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         if number in seen_numbers:
             raise ScorecardError(f"measure {number} appears twice")
         seen_numbers.add(number)
-        head = _text(cells[head_column]).lower()
         if head not in {"tax", "spend"}:
             raise ScorecardError(f"measure {number}: head {head!r}")
         values: dict[str, Optional[float]] = {}
