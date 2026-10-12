@@ -44,6 +44,29 @@ def numbers(value: Any):
             yield from numbers(member)
 
 
+# Keys an API uses to report a failure. The household route never uses
+# them for a result, so one anywhere in an answer marks it as failed.
+ERROR_KEYS = frozenset({"error", "errors", "detail", "exception", "traceback"})
+
+
+def error_markers(value: Any, path: str = "") -> list[str]:
+    """Where in a JSON value a failure is reported, at any depth.
+
+    A key in ``ERROR_KEYS`` counts unless its value is null.
+    """
+    found = []
+    if isinstance(value, dict):
+        for key, member in value.items():
+            where = f"{path}.{key}" if path else str(key)
+            if key in ERROR_KEYS and member is not None:
+                found.append(where)
+            found += error_markers(member, where)
+    elif isinstance(value, list):
+        for index, member in enumerate(value):
+            found += error_markers(member, f"{path}[{index}]")
+    return found
+
+
 def _has_finite_number(value: Any) -> bool:
     found = list(numbers(value))
     return bool(found) and all(math.isfinite(n) for n in found)
@@ -78,7 +101,8 @@ def impact_problems(
 ) -> list[str]:
     """Ways a household answer is not a complete calculation.
 
-    A 200 is not enough. The answer must be an object with no error, with
+    A 200 is not enough. The answer must be an object reporting no failure
+    anywhere (see ``ERROR_KEYS``), with
     ``household_net_income`` for every expected year, and with every
     expected policy giving a finite ``net_income_change`` in every one of
     those years. Zero effects are allowed: a measure can leave a household
@@ -97,8 +121,9 @@ def impact_problems(
     route = "/api/personal-impact"
     if not isinstance(body, dict):
         return [f"{route} did not return an object"]
-    if "error" in body or "detail" in body:
-        return [f"{route} returned an error body"]
+    markers = error_markers(body)
+    if markers:
+        return [f"{route} reported a failure at {', '.join(markers)}"]
     if not all(math.isfinite(n) for n in numbers(body)):
         return [f"{route} returned a non-finite number"]
     problems = []

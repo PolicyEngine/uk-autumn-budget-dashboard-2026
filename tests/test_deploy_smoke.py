@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
 
+from uk_budget_data import deploy_smoke
 from uk_budget_data.api import app as real_app
 from uk_budget_data.deploy_smoke import (
     identity_problems,
@@ -235,3 +236,36 @@ def test_the_real_api_passes_its_own_smoke_test(monkeypatch):
     result = run_smoke(TestClient(real_app), SHA)
     assert result["pass"], result["problems"]
     assert all(math.isfinite(n) for n in numbers(result["version"]))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ("policies", "x", "years", "2026"),
+        ("years", "2027", "baseline"),
+        ("policies", "y"),
+    ],
+)
+@pytest.mark.parametrize("key", sorted(deploy_smoke.ERROR_KEYS))
+def test_a_failure_reported_beside_a_number_fails(path, key):
+    """Review round 3: an error beside a numeric fallback passed, because
+    only the top level was searched for failure markers."""
+    import copy
+
+    body = copy.deepcopy(GOOD_ANSWER)
+    target = body
+    for step in path:
+        target = target[step]
+    target[key] = "calculation failed"
+    problems = deploy_smoke.impact_problems(
+        body, years=YEARS, policies=POLICIES
+    )
+    assert problems and "reported a failure" in problems[0], problems
+
+
+def test_a_null_error_field_is_not_a_failure():
+    body = {**GOOD_ANSWER, "error": None}
+    assert (
+        deploy_smoke.impact_problems(body, years=YEARS, policies=POLICIES)
+        == []
+    )

@@ -42,13 +42,15 @@ def step_script(step_id: str, workspace: Path, **substitutions) -> str:
     values = {
         **CONFIG["substitutions"],
         "_GIT_SHA": "a" * 40,
-        **substitutions,
+        **{k: v for k, v in substitutions.items() if k.startswith("_")},
     }
     values["_IMAGE"] = values["_IMAGE"].replace("${PROJECT_ID}", "p")
     for name, value in values.items():
         script = script.replace("${" + name + "}", value)
-    script = script.replace("${PROJECT_ID}", "p").replace(
-        "${BUILD_ID}", BUILD_ID
+    script = (
+        script.replace("${PROJECT_ID}", "p")
+        .replace("${BUILD_ID}", BUILD_ID)
+        .replace("${LOCATION}", substitutions.get("LOCATION", "europe-west1"))
     )
     assert "${" not in script.replace("$${", ""), "unsubstituted variable"
     return script.replace("$$", "$").replace("/workspace", str(workspace))
@@ -64,7 +66,16 @@ with open(os.environ["FAKE_LOG"], "a") as log:
 def save():
     json.dump(state, open(state_path, "w"))
 if args[:3] == ["builds", "list", "--ongoing"]:
-    print("\n".join(state.get("ongoing", [])))
+    # Like Cloud Build, list only the builds in the location asked for
+    # (global when no --region is given). Ongoing builds are "id" or
+    # "id@location"; a bare id is in europe-west1.
+    region = (
+        args[args.index("--region") + 1] if "--region" in args else "global"
+    )
+    for build in state.get("ongoing", []):
+        name, _, location = build.partition("@")
+        if (location or "europe-west1") == region:
+            print(name)
 elif args[:3] == ["run", "services", "list"]:
     if state.get("list_fails"):
         sys.exit("ERROR: the API is unavailable")
@@ -118,7 +129,8 @@ def run(script: str, tmp_path: Path, state: dict):
     result = subprocess.run(
         ["bash", "-c", script], env=env, capture_output=True, text=True
     )
-    log = (tmp_path / "gcloud.log").read_text().splitlines()
+    log_file = tmp_path / "gcloud.log"
+    log = log_file.read_text().splitlines() if log_file.exists() else []
     return result, log, json.loads((tmp_path / "state.json").read_text())
 
 
@@ -340,6 +352,44 @@ def test_a_deploy_stops_while_another_is_running(tmp_path, workspace):
     assert "Another deploy is running" in result.stderr
     alone, _, _ = run(step_script("exclusive", workspace), tmp_path, service())
     assert alone.returncode == 0, alone.stderr
+
+
+def test_a_deploy_submitted_outside_the_region_stops_first(
+    tmp_path, workspace
+):
+    """Review round 3: builds are listed per location, so a deploy in
+    another location could not see one in europe-west1, or be seen."""
+    for location in ("global", "us-central1"):
+        result, log, _ = run(
+            step_script("exclusive", workspace, LOCATION=location),
+            tmp_path / location,
+            service(),
+        )
+        assert result.returncode != 0
+        assert "--region europe-west1" in result.stderr
+        assert log == []
+
+
+def test_another_deploy_in_the_region_is_seen(tmp_path, workspace):
+    """The listing asks for the deploy region, not the default global one."""
+    result, log, _ = run(
+        step_script("exclusive", workspace),
+        tmp_path,
+        service(ongoing=["another-build@europe-west1"]),
+    )
+    assert result.returncode != 0
+    assert all("--region europe-west1" in line for line in log)
+    (workspace / "candidate_revision").write_text("rev-new\n")
+    (workspace / "previous_traffic").write_text('[["rev-old", 100]]\n')
+    result, log, _ = run(
+        step_script("promote", workspace),
+        tmp_path / "promote",
+        service(ongoing=["another-build@europe-west1"]),
+    )
+    assert result.returncode != 0
+    assert not any(
+        line.startswith("run services update-traffic") for line in log
+    )
 
 
 def test_promotion_stops_while_another_deploy_is_running(tmp_path, workspace):

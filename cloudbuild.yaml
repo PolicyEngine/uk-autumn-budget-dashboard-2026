@@ -5,10 +5,13 @@
 #
 #   git archive <commit> | tar -x -C <empty dir>
 #   gcloud builds submit <dir> --project policyengine-apps \
+#     --region europe-west1 \
 #     --config <dir>/cloudbuild.yaml --substitutions _GIT_SHA=<commit>
 #
-# Only one deploy of this service runs at a time: a build that finds another
-# one running stops. The build checks that the uploaded source is exactly
+# Only one deploy of this service runs at a time: deploys must be submitted
+# to _REGION (gcloud builds submit --region europe-west1), a build anywhere
+# else stops before touching the service, and a build that finds another
+# deploy running in _REGION stops. The build checks that the uploaded source is exactly
 # that public commit (.gcloudignore makes gcloud upload every file), deploys
 # the image it built by digest, smoke-tests a tag only this build uses, and
 # moves traffic only if traffic has not changed since the build began. The log ends with the allocation it replaced and the command that
@@ -34,9 +37,12 @@ options:
   dynamicSubstitutions: true
 
 steps:
-  # One deploy at a time. Any two overlapping deploys see each other here
-  # (a build is listed as ongoing from the moment it is queued), so the
-  # later one stops before deploying anything.
+  # One deploy at a time. Builds are listed per location, so a deploy must
+  # run in _REGION: a build submitted anywhere else (including the default
+  # global location) stops here, before anything can touch the service.
+  # Any two overlapping deploys in _REGION then see each other (a build is
+  # listed as ongoing from the moment it is queued), so the later one stops
+  # before deploying anything.
   - id: exclusive
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
@@ -44,7 +50,11 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        others=$$(gcloud builds list --ongoing \
+        if [ "${LOCATION}" != "${_REGION}" ]; then
+          echo "Submit deploys with --region ${_REGION}; this build runs in ${LOCATION}" >&2
+          exit 1
+        fi
+        others=$$(gcloud builds list --ongoing --region ${_REGION} \
           --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
           --format='value(id)')
         if [ -n "$$others" ]; then
@@ -190,7 +200,7 @@ steps:
       - |
         set -euo pipefail
         candidate=$$(cat /workspace/candidate_revision)
-        others=$$(gcloud builds list --ongoing \
+        others=$$(gcloud builds list --ongoing --region ${_REGION} \
           --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
           --format='value(id)')
         if [ -n "$$others" ]; then
