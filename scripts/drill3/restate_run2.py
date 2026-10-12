@@ -20,7 +20,7 @@ comp = {}
 L = open("data_inputs/mock_drill3/drill3-run2-components.csv").read().splitlines()[1:]
 for r in csv.DictReader(L):
     comp[(r["measure_no"], int(r["year"]), r["metric"])] = float(r["value"])
-INTERACTION = -318.5
+INTERACTION = -318.4  # income-tax-only triple difference (gov_tax gave -318.5; non-IT heads 0.1m)
 FYI = {"2026-27": 2026, "2027-28": 2027, "2028-29": 2028, "2029-30": 2029, "2030-31": 2030, "2031-32": 2031}
 RERUN = {"1", "3", "7", "8", "10", "20"}
 L = open(out).read().split("\n"); first = L[0]
@@ -72,7 +72,7 @@ for r in rows[1:]:
         r[7] = cls; r[8] = "behavioural" if cls == "none_expected" else cls
         r[9] = f"Gap {g} (employee {ee:.1f} + employer {er:.1f}). Pipeline gov_balance adds income tax {it:.1f} the engine charges on above-cap sacrifice although relief continues (engine limitation, outside costing basis)"
     if no == "1+2":
-        r[5] = f"{INTERACTION}"; r[6] = "Static gov_tax change 2031-32: (m1+m2) - m1 - m2 (scripts/drill3/interaction_1_2.py, code 4b72684; m1/m2 modules unchanged for these legs)"
+        r[5] = f"{INTERACTION}"; r[6] = "Static income_tax change 2031-32: (m1+m2) - m1 - m2 (scripts/drill3/interaction_1_2.py income_tax, policy code 619dc67); gov_tax version -318.5, non-income-tax heads 0.1m; liability basis, cash-equivalence assumed as for measure 2 (in-year PAYE/Simple Assessment)"
         r[7] = r[8] = "interaction"; r[9] = "Gap -48% vs source -215 (kept separate); PROPOSED"
         r[11] = "computed separately (interaction run); not a carried sheet row"
 first = first.split(" Skip one line")[0].replace("Team figures from run 619dc67", "RUN 2 (complete, supersedes run 1): code 619dc67") + "; restated by scripts/drill3/restate_run2.py from drill3-run2-components.csv. Skip one line when reading this CSV."

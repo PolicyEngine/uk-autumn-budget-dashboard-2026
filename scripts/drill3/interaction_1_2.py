@@ -11,6 +11,8 @@ from uk_budget_data.reforms import get_reform
 
 DS = "/Users/vahid/drill2-data/microcosm_uk_2024_25.h5"
 Y = 2031
+import sys
+VAR = sys.argv[1] if len(sys.argv) > 1 else "gov_tax"
 m1, m2 = get_reform("mock3_threshold_freeze_2032"), get_reform("mock3_pensioner_allowance")
 both = Reform(
     id="mock3_m1_m2", name="m1+m2",
@@ -22,7 +24,7 @@ both = Reform(
 
 def tax(r, baseline):
     s = Microsimulation(dataset=DS, scenario=r.to_drill_scenario(baseline=baseline))
-    return float((s.calculate("gov_tax", Y)).sum()) / 1e6
+    return float((s.calculate(VAR, Y)).sum()) / 1e6
 
 out = {}
 for name, r in (("m1", m1), ("m2", m2), ("m1+m2", both)):
