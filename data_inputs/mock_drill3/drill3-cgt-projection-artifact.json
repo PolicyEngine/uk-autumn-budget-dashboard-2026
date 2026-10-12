@@ -1,7 +1,8 @@
 {
   "mock": true,
   "measure": "4 (mock3_cgt_higher_rate_aea) CGT projection data work, EXPERIMENTAL",
-  "parent_code_sha": "c3ac9dcdadd4aa54fc95a085b3c7536ae9552861",
+  "code_sha": "0d038bd7a795326e49d2c65733efdc69385edfb6",
+  "code_sha_note": "numbers computed under this commit; later commits change reporting strings only",
   "dataset": "/Users/vahid/drill2-data/microcosm_uk_2024_25.h5",
   "data_sha256": "aa31bdf67c977927ea2b325567d1cf7a79d94381239bc79918a0a0fc9c9588af",
   "inputs_csv": "data_inputs/mock_drill3/packet/MOCK-cgt-projection-inputs.csv",

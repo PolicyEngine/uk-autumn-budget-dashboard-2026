@@ -112,11 +112,11 @@ def combine(before_path: str, after_path: str):
     out["costing_crosscheck"] = {"liability_m": xcheck_liab, "cash_m": cash(xcheck_liab)}
 
     data_sha = sha256(DEFAULT_DATASET)
-    code_sha = subprocess.run(
+    code_sha = (sys.argv[4] if len(sys.argv) > 4 else subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
-    ).stdout.strip()
+    ).stdout.strip())
     common = dict(
-        code_sha=f"see receipt (parent {code_sha[:12]})",
+        code_sha=code_sha,
         data_sha256=data_sha,
         engine_version="policyengine-uk 2.125.1",
         core_version="policyengine-core 3.33.0",
@@ -159,6 +159,9 @@ def combine(before_path: str, after_path: str):
             "mock3_cgt_higher_rate_aea reform-baseline capital_gains_tax; cash = 7% L(FY) + 93% L(FY-1); "
             "benchmark = 4% x higher-rate chargeable gains + AEA contribution, same cash rule",
             "static (no forestalling/realisation response); full precision, round to £5m only for display",
+            f"engine/costing gap: implied higher-rate base = dL/0.04 = {out['after']['liability_m'][fy] / 0.04 / 1e3:.1f}bn vs packet "
+            f"{float(pk[fy]['higher_rate_chargeable_gains_bn']):.1f}bn (unexplained; candidates: engine gains not net of BADR/IR/carried interest or AEA, "
+            "dataset level, rate-band mapping - not investigated). "
             f"retained 2031-32 liability beyond forecast (93%): before {out['before']['cash_m']['retained_beyond_2031_32']:.2f}m, "
             f"after {out['after']['cash_m']['retained_beyond_2031_32']:.2f}m, costing {out['costing_crosscheck']['cash_m']['retained_beyond_2031_32']:.2f}m")
 
@@ -179,7 +182,8 @@ def combine(before_path: str, after_path: str):
     receipt = {
         "mock": True,
         "measure": "4 (mock3_cgt_higher_rate_aea) CGT projection data work, EXPERIMENTAL",
-        "parent_code_sha": code_sha,
+        "code_sha": code_sha,
+        "code_sha_note": "numbers computed under this commit; later commits change reporting strings only",
         "dataset": DEFAULT_DATASET,
         "data_sha256": data_sha,
         "inputs_csv": str(INPUTS_CSV.relative_to(ROOT)),
