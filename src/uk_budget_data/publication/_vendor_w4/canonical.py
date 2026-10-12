@@ -1,9 +1,9 @@
-# VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #579
-# (stacked on #571) at f951bd59178ccabe05c55c9bfb14b23b53feb858,
+# VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #588
+# (stacked on #579 and #571) at 1ec7c766fa4208b2b994a4c9adc982767aeb9304,
 # src/policyengine/provenance/canonical.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
-# when the dashboard pins the policyengine release that contains PRs #571
-# and #579; uk_budget_data.publication.receipt prefers the released module.
+# when the dashboard pins the policyengine release that contains PRs #571,
+# #579 and #588; uk_budget_data.publication.receipt prefers the released module.
 """Cross-language canonical JSON and content digests for receipts.
 
 Receipts are hashed in Python (this package, the scorecard), JavaScript (the

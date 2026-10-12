@@ -436,12 +436,25 @@ def test_only_module_level_modifiers_can_be_bound(world):
         )
 
 
-def test_non_finite_parameter_values_cannot_be_bound(world):
-    scenario = Scenario(parameter_changes={RATE_PATH: {"2027": math.inf}})
-    with pytest.raises(ReceiptUnavailable):
-        receipt_module.scenario_identity(
-            scenario, name="no cap", revision=world.revision()
+def test_infinity_binds_and_nan_does_not(world):
+    """policyengine.py#588 digests an infinite value (an uncapped
+    threshold) as a marked non-finite value; NaN has no one value to bind."""
+
+    def bind(value):
+        return receipt_module.scenario_identity(
+            Scenario(parameter_changes={RATE_PATH: {"2027": value}}),
+            name="no cap",
+            revision=world.revision(),
         )
+
+    uncapped = bind(math.inf)
+    assert uncapped.binding == "content"
+    assert uncapped.reform_sha256 not in {
+        bind(-math.inf).reform_sha256,
+        bind(1e308).reform_sha256,
+    }
+    with pytest.raises(ReceiptUnavailable):
+        bind(math.nan)
 
 
 def test_current_law_is_bound_as_current_law(world):
