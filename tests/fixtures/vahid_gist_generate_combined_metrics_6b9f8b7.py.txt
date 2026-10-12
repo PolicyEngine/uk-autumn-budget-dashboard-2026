@@ -1,0 +1,698 @@
+"""Generate all metrics for the combined Autumn Budget 2025 reform analysis.
+
+This script calculates:
+1. Winners/losers by decile (percentage gaining/losing income)
+2. Gini index change (inequality impact)
+3. Poverty rates (overall, child, working-age, pensioner - BHC and AHC)
+4. Budgetary impact by year
+5. Distributional impact by decile
+6. Constituency impact by year (650 constituencies)
+
+Uses the existing uk_budget_data infrastructure.
+"""
+
+from pathlib import Path
+
+import h5py
+import numpy as np
+import pandas as pd
+from microdf import MicroSeries
+from policyengine_uk import Microsimulation
+
+from uk_budget_data.reforms import _create_combined_autumn_budget_reform
+
+
+def create_simulations():
+    """Create baseline and reformed microsimulations.
+
+    For combined Autumn Budget:
+    - Baseline = pre-budget parameters (what would have been without the budget)
+    - Reformed = pe-uk current law (Autumn Budget baked in)
+
+    Uses the same Scenario-based approach as the pipeline for consistency.
+    """
+    reform = _create_combined_autumn_budget_reform()
+
+    # Get scenarios using the same method as pipeline
+    baseline_scenario = reform.to_baseline_scenario()
+    reform_scenario = reform.to_scenario()
+
+    # Create simulations using scenarios (same as pipeline)
+    if baseline_scenario:
+        baseline = Microsimulation(scenario=baseline_scenario)
+    else:
+        baseline = Microsimulation()
+
+    reformed = Microsimulation(scenario=reform_scenario)
+
+    return baseline, reformed
+
+
+def calculate_winners_losers_by_decile(
+    baseline, reformed, year: int
+) -> pd.DataFrame:
+    """Calculate percentage of households gaining/losing by decile.
+
+    Returns DataFrame with columns:
+    - decile: Income decile (1-10) or "All"
+    - gain_more_5pct: % gaining more than 5%
+    - gain_less_5pct: % gaining 1-5%
+    - no_change: % with <1% change
+    - lose_less_5pct: % losing 1-5%
+    - lose_more_5pct: % losing more than 5%
+    """
+    baseline_income = baseline.calculate(
+        "household_net_income", period=year, map_to="household"
+    )
+    reform_income = reformed.calculate(
+        "household_net_income", period=year, map_to="household"
+    )
+    household_decile = baseline.calculate(
+        "household_income_decile", period=year, map_to="household"
+    )
+    household_count = baseline.calculate(
+        "household_count_people", period=year, map_to="household"
+    )
+    household_weight = baseline.calculate(
+        "household_weight", period=year, map_to="household"
+    )
+
+    # Calculate percentage change
+    income_change = reform_income.values - baseline_income.values
+    capped_baseline = np.maximum(baseline_income.values, 1)
+    pct_change = (income_change / capped_baseline) * 100
+
+    # Weight by people in household
+    weights = household_weight.values * household_count.values
+
+    results = []
+
+    for decile in list(range(1, 11)) + ["All"]:
+        if decile == "All":
+            mask = household_decile.values >= 1
+        else:
+            mask = household_decile.values == decile
+
+        if mask.sum() == 0:
+            continue
+
+        decile_weights = weights[mask]
+        decile_pct_change = pct_change[mask]
+        total_weight = decile_weights.sum()
+
+        # Calculate proportions
+        gain_more_5 = (
+            decile_weights[decile_pct_change > 5].sum() / total_weight * 100
+        )
+        gain_less_5 = (
+            decile_weights[
+                (decile_pct_change > 0.01) & (decile_pct_change <= 5)
+            ].sum()
+            / total_weight
+            * 100
+        )
+        no_change = (
+            decile_weights[np.abs(decile_pct_change) <= 0.01].sum()
+            / total_weight
+            * 100
+        )
+        lose_less_5 = (
+            decile_weights[
+                (decile_pct_change < -0.01) & (decile_pct_change >= -5)
+            ].sum()
+            / total_weight
+            * 100
+        )
+        lose_more_5 = (
+            decile_weights[decile_pct_change < -5].sum() / total_weight * 100
+        )
+
+        results.append(
+            {
+                "year": year,
+                "decile": str(decile) if isinstance(decile, int) else decile,
+                "gain_more_5pct": round(gain_more_5, 2),
+                "gain_less_5pct": round(gain_less_5, 2),
+                "no_change": round(no_change, 2),
+                "lose_less_5pct": round(lose_less_5, 2),
+                "lose_more_5pct": round(lose_more_5, 2),
+            }
+        )
+
+    return pd.DataFrame(results)
+
+
+def calculate_budgetary_impact(baseline, reformed, year: int) -> dict:
+    """Calculate revenue/cost impact for a year."""
+    baseline_balance = baseline.calculate("gov_balance", period=year).sum()
+    reformed_balance = reformed.calculate("gov_balance", period=year).sum()
+    impact = (reformed_balance - baseline_balance) / 1e9
+    return {"year": year, "budgetary_impact_bn": round(impact, 2)}
+
+
+def calculate_gini_change(baseline, reformed, year: int) -> dict:
+    """Calculate Gini coefficient change."""
+    baseline_equiv = baseline.calculate(
+        "equiv_household_net_income", period=year, map_to="household"
+    )
+    reformed_equiv = reformed.calculate(
+        "equiv_household_net_income", period=year, map_to="household"
+    )
+    hh_count = baseline.calculate(
+        "household_count_people", period=year, map_to="household"
+    )
+    hh_weight = baseline.calculate(
+        "household_weight", period=year, map_to="household"
+    )
+
+    # Ensure non-negative values
+    baseline_equiv_values = np.maximum(baseline_equiv.values, 0)
+    reformed_equiv_values = np.maximum(reformed_equiv.values, 0)
+    adjusted_weights = hh_weight.values * hh_count.values
+
+    baseline_gini = MicroSeries(
+        baseline_equiv_values, weights=adjusted_weights
+    ).gini()
+    reformed_gini = MicroSeries(
+        reformed_equiv_values, weights=adjusted_weights
+    ).gini()
+
+    gini_change_pct = ((reformed_gini - baseline_gini) / baseline_gini) * 100
+
+    return {
+        "year": year,
+        "baseline_gini": round(baseline_gini, 4),
+        "reformed_gini": round(reformed_gini, 4),
+        "gini_change_pct": round(gini_change_pct, 2),
+    }
+
+
+def calculate_poverty_rates(baseline, reformed, year: int) -> dict:
+    """Calculate poverty rate changes for all demographics."""
+    person_weight = baseline.calculate(
+        "person_weight", period=year, map_to="person"
+    ).values
+    is_child = baseline.calculate(
+        "is_child", period=year, map_to="person"
+    ).values
+    is_wa_adult = baseline.calculate(
+        "is_WA_adult", period=year, map_to="person"
+    ).values
+    is_sp_age = baseline.calculate(
+        "is_SP_age", period=year, map_to="person"
+    ).values
+
+    # BHC poverty
+    baseline_poverty_bhc = baseline.calculate(
+        "in_poverty_bhc", period=year, map_to="person"
+    ).values
+    reformed_poverty_bhc = reformed.calculate(
+        "in_poverty_bhc", period=year, map_to="person"
+    ).values
+
+    # AHC poverty
+    baseline_poverty_ahc = baseline.calculate(
+        "in_poverty_ahc", period=year, map_to="person"
+    ).values
+    reformed_poverty_ahc = reformed.calculate(
+        "in_poverty_ahc", period=year, map_to="person"
+    ).values
+
+    def calc_rate(in_poverty, weights, mask=None):
+        if mask is not None:
+            return (weights[in_poverty & mask].sum() / weights[mask].sum()) * 100
+        return (weights[in_poverty].sum() / weights.sum()) * 100
+
+    # Overall poverty
+    baseline_overall_bhc = calc_rate(baseline_poverty_bhc, person_weight)
+    reformed_overall_bhc = calc_rate(reformed_poverty_bhc, person_weight)
+    baseline_overall_ahc = calc_rate(baseline_poverty_ahc, person_weight)
+    reformed_overall_ahc = calc_rate(reformed_poverty_ahc, person_weight)
+
+    # Child poverty
+    baseline_child_bhc = calc_rate(baseline_poverty_bhc, person_weight, is_child)
+    reformed_child_bhc = calc_rate(reformed_poverty_bhc, person_weight, is_child)
+    baseline_child_ahc = calc_rate(baseline_poverty_ahc, person_weight, is_child)
+    reformed_child_ahc = calc_rate(reformed_poverty_ahc, person_weight, is_child)
+
+    # Working-age poverty
+    baseline_wa_bhc = calc_rate(baseline_poverty_bhc, person_weight, is_wa_adult)
+    reformed_wa_bhc = calc_rate(reformed_poverty_bhc, person_weight, is_wa_adult)
+    baseline_wa_ahc = calc_rate(baseline_poverty_ahc, person_weight, is_wa_adult)
+    reformed_wa_ahc = calc_rate(reformed_poverty_ahc, person_weight, is_wa_adult)
+
+    # Pensioner poverty
+    baseline_pensioner_bhc = calc_rate(baseline_poverty_bhc, person_weight, is_sp_age)
+    reformed_pensioner_bhc = calc_rate(reformed_poverty_bhc, person_weight, is_sp_age)
+    baseline_pensioner_ahc = calc_rate(baseline_poverty_ahc, person_weight, is_sp_age)
+    reformed_pensioner_ahc = calc_rate(reformed_poverty_ahc, person_weight, is_sp_age)
+
+    return {
+        "year": year,
+        # Overall BHC
+        "overall_bhc_baseline": round(baseline_overall_bhc, 2),
+        "overall_bhc_reformed": round(reformed_overall_bhc, 2),
+        "overall_bhc_change_pp": round(reformed_overall_bhc - baseline_overall_bhc, 2),
+        "overall_bhc_change_pct": round(
+            ((reformed_overall_bhc - baseline_overall_bhc) / baseline_overall_bhc) * 100, 2
+        ),
+        # Overall AHC
+        "overall_ahc_baseline": round(baseline_overall_ahc, 2),
+        "overall_ahc_reformed": round(reformed_overall_ahc, 2),
+        "overall_ahc_change_pp": round(reformed_overall_ahc - baseline_overall_ahc, 2),
+        "overall_ahc_change_pct": round(
+            ((reformed_overall_ahc - baseline_overall_ahc) / baseline_overall_ahc) * 100, 2
+        ),
+        # Child BHC
+        "child_bhc_baseline": round(baseline_child_bhc, 2),
+        "child_bhc_reformed": round(reformed_child_bhc, 2),
+        "child_bhc_change_pp": round(reformed_child_bhc - baseline_child_bhc, 2),
+        "child_bhc_change_pct": round(
+            ((reformed_child_bhc - baseline_child_bhc) / baseline_child_bhc) * 100, 2
+        ),
+        # Child AHC
+        "child_ahc_baseline": round(baseline_child_ahc, 2),
+        "child_ahc_reformed": round(reformed_child_ahc, 2),
+        "child_ahc_change_pp": round(reformed_child_ahc - baseline_child_ahc, 2),
+        "child_ahc_change_pct": round(
+            ((reformed_child_ahc - baseline_child_ahc) / baseline_child_ahc) * 100, 2
+        ),
+        # Working-age BHC
+        "wa_bhc_baseline": round(baseline_wa_bhc, 2),
+        "wa_bhc_reformed": round(reformed_wa_bhc, 2),
+        "wa_bhc_change_pp": round(reformed_wa_bhc - baseline_wa_bhc, 2),
+        "wa_bhc_change_pct": round(
+            ((reformed_wa_bhc - baseline_wa_bhc) / baseline_wa_bhc) * 100, 2
+        ),
+        # Working-age AHC
+        "wa_ahc_baseline": round(baseline_wa_ahc, 2),
+        "wa_ahc_reformed": round(reformed_wa_ahc, 2),
+        "wa_ahc_change_pp": round(reformed_wa_ahc - baseline_wa_ahc, 2),
+        "wa_ahc_change_pct": round(
+            ((reformed_wa_ahc - baseline_wa_ahc) / baseline_wa_ahc) * 100, 2
+        ),
+        # Pensioner BHC
+        "pensioner_bhc_baseline": round(baseline_pensioner_bhc, 2),
+        "pensioner_bhc_reformed": round(reformed_pensioner_bhc, 2),
+        "pensioner_bhc_change_pp": round(reformed_pensioner_bhc - baseline_pensioner_bhc, 2),
+        "pensioner_bhc_change_pct": round(
+            ((reformed_pensioner_bhc - baseline_pensioner_bhc) / baseline_pensioner_bhc) * 100, 2
+        ) if baseline_pensioner_bhc > 0 else 0,
+        # Pensioner AHC
+        "pensioner_ahc_baseline": round(baseline_pensioner_ahc, 2),
+        "pensioner_ahc_reformed": round(reformed_pensioner_ahc, 2),
+        "pensioner_ahc_change_pp": round(reformed_pensioner_ahc - baseline_pensioner_ahc, 2),
+        "pensioner_ahc_change_pct": round(
+            ((reformed_pensioner_ahc - baseline_pensioner_ahc) / baseline_pensioner_ahc) * 100, 2
+        ) if baseline_pensioner_ahc > 0 else 0,
+    }
+
+
+def calculate_distributional_impact(baseline, reformed, year: int) -> list:
+    """Calculate average income change by decile."""
+    baseline_income = baseline.calculate(
+        "household_net_income", period=year, map_to="household"
+    )
+    reformed_income = reformed.calculate(
+        "household_net_income", period=year, map_to="household"
+    )
+    decile = baseline.calculate(
+        "household_income_decile", period=year, map_to="household"
+    )
+    hh_count = baseline.calculate(
+        "household_count_people", period=year, map_to="household"
+    )
+    hh_weight = baseline.calculate(
+        "household_weight", period=year, map_to="household"
+    )
+
+    income_change = reformed_income.values - baseline_income.values
+    weighted_people = hh_count.values * hh_weight.values
+
+    results = []
+    for d in range(1, 11):
+        mask = decile.values == d
+        if weighted_people[mask].sum() > 0:
+            avg_change = (
+                (income_change[mask] * weighted_people[mask]).sum()
+                / weighted_people[mask].sum()
+            )
+            results.append({
+                "year": year,
+                "decile": str(d),
+                "avg_change": round(avg_change, 2),
+            })
+
+    # Overall average
+    valid = decile.values >= 1
+    overall_avg = (
+        (income_change[valid] * weighted_people[valid]).sum()
+        / weighted_people[valid].sum()
+    )
+    results.append({
+        "year": year,
+        "decile": "All",
+        "avg_change": round(overall_avg, 2),
+    })
+
+    return results
+
+
+def load_constituency_data():
+    """Load constituency weights and info."""
+    # Weights are in data/ directory, constituencies in data_inputs/
+    weights_path = Path("data/parliamentary_constituency_weights.h5")
+    constituencies_path = Path("data_inputs/constituencies_2024.csv")
+
+    if not weights_path.exists():
+        raise FileNotFoundError(f"Constituency weights not found: {weights_path}")
+    if not constituencies_path.exists():
+        raise FileNotFoundError(f"Constituencies file not found: {constituencies_path}")
+
+    with h5py.File(weights_path, "r") as f:
+        weights = f["2025"][...]
+
+    constituency_df = pd.read_csv(constituencies_path)
+
+    return weights, constituency_df
+
+
+def calculate_constituency_impact(
+    baseline, reformed, year: int, constituency_weights: np.ndarray, constituency_df: pd.DataFrame
+) -> list:
+    """Calculate constituency-level impacts.
+
+    Returns list of dicts with:
+    - year: fiscal year
+    - constituency_code: ONS code
+    - constituency_name: name
+    - average_gain: £/year average change per household
+    - relative_change: % change in income
+    """
+    baseline_income = baseline.calculate(
+        "household_net_income", period=year, map_to="household"
+    ).values
+    reform_income = reformed.calculate(
+        "household_net_income", period=year, map_to="household"
+    ).values
+
+    results = []
+    for i in range(len(constituency_df)):
+        name = constituency_df.iloc[i]["name"]
+        code = constituency_df.iloc[i]["code"]
+        weight = constituency_weights[i]
+
+        baseline_ms = MicroSeries(baseline_income, weights=weight)
+        reform_ms = MicroSeries(reform_income, weights=weight)
+
+        avg_change = (reform_ms.sum() - baseline_ms.sum()) / baseline_ms.count()
+        avg_baseline = baseline_ms.sum() / baseline_ms.count()
+        rel_change = (avg_change / avg_baseline) * 100 if avg_baseline > 0 else 0
+
+        results.append({
+            "year": year,
+            "constituency_code": code,
+            "constituency_name": name,
+            "average_gain": round(avg_change, 2),
+            "relative_change": round(rel_change, 4),
+        })
+
+    return results
+
+
+def main():
+    """Run all calculations and print/save results."""
+    years = [2026, 2027, 2028, 2029, 2030]
+
+    print("=" * 70)
+    print("COMBINED AUTUMN BUDGET 2025 - ALL METRICS")
+    print("=" * 70)
+
+    print("\nCreating simulations (this may take a few minutes)...")
+    baseline, reformed = create_simulations()
+
+    # Load constituency data
+    print("Loading constituency data...")
+    try:
+        constituency_weights, constituency_df = load_constituency_data()
+        has_constituency_data = True
+        print(f"Loaded {len(constituency_df)} constituencies")
+    except FileNotFoundError as e:
+        print(f"Warning: {e}")
+        print("Constituency impact will be skipped.")
+        has_constituency_data = False
+        constituency_weights = None
+        constituency_df = None
+
+    all_winners_losers = []
+    all_budgetary = []
+    all_gini = []
+    all_poverty = []
+    all_distributional = []
+    all_constituency = []
+
+    for year in years:
+        print(f"\n{'=' * 70}")
+        print(f"YEAR {year}-{str(year + 1)[-2:]}")
+        print("=" * 70)
+
+        # Winners/Losers
+        print("\nCalculating winners/losers...")
+        wl_df = calculate_winners_losers_by_decile(baseline, reformed, year)
+        all_winners_losers.append(wl_df)
+
+        print("\nWinners and Losers by Decile:")
+        print(wl_df.to_string(index=False))
+
+        # Budgetary impact
+        print("\nCalculating budgetary impact...")
+        budgetary = calculate_budgetary_impact(baseline, reformed, year)
+        all_budgetary.append(budgetary)
+        print(f"Budgetary impact: £{budgetary['budgetary_impact_bn']}bn")
+
+        # Gini
+        print("\nCalculating Gini change...")
+        gini = calculate_gini_change(baseline, reformed, year)
+        all_gini.append(gini)
+        print(f"Gini: {gini['baseline_gini']} -> {gini['reformed_gini']} ({gini['gini_change_pct']}%)")
+
+        # Poverty
+        print("\nCalculating poverty rates...")
+        poverty = calculate_poverty_rates(baseline, reformed, year)
+        all_poverty.append(poverty)
+
+        print(f"\nPoverty Rates:")
+        print(f"  Overall (BHC): {poverty['overall_bhc_baseline']}% -> {poverty['overall_bhc_reformed']}% ({poverty['overall_bhc_change_pp']:+.2f}pp)")
+        print(f"  Overall (AHC): {poverty['overall_ahc_baseline']}% -> {poverty['overall_ahc_reformed']}% ({poverty['overall_ahc_change_pp']:+.2f}pp)")
+        print(f"  Child (BHC):   {poverty['child_bhc_baseline']}% -> {poverty['child_bhc_reformed']}% ({poverty['child_bhc_change_pp']:+.2f}pp)")
+        print(f"  Child (AHC):   {poverty['child_ahc_baseline']}% -> {poverty['child_ahc_reformed']}% ({poverty['child_ahc_change_pp']:+.2f}pp)")
+        print(f"  Working-age (BHC): {poverty['wa_bhc_baseline']}% -> {poverty['wa_bhc_reformed']}% ({poverty['wa_bhc_change_pp']:+.2f}pp)")
+        print(f"  Pensioner (BHC): {poverty['pensioner_bhc_baseline']}% -> {poverty['pensioner_bhc_reformed']}% ({poverty['pensioner_bhc_change_pp']:+.2f}pp)")
+
+        # Distributional
+        print("\nCalculating distributional impact...")
+        distributional = calculate_distributional_impact(baseline, reformed, year)
+        all_distributional.extend(distributional)
+
+        # Constituency impact
+        if has_constituency_data:
+            print("\nCalculating constituency impact...")
+            constituency = calculate_constituency_impact(
+                baseline, reformed, year, constituency_weights, constituency_df
+            )
+            all_constituency.extend(constituency)
+            print(f"  Calculated impact for {len(constituency)} constituencies")
+
+    # Summary tables
+    print("\n" + "=" * 70)
+    print("SUMMARY TABLES")
+    print("=" * 70)
+
+    # Budgetary impact table
+    print("\n### Budgetary Impact (£bn):")
+    budgetary_df = pd.DataFrame(all_budgetary)
+    print(budgetary_df.to_string(index=False))
+
+    # Gini table
+    print("\n### Gini Index Change:")
+    gini_df = pd.DataFrame(all_gini)
+    print(gini_df.to_string(index=False))
+
+    # Poverty table
+    print("\n### Poverty Rates:")
+    poverty_df = pd.DataFrame(all_poverty)
+    print(poverty_df.to_string(index=False))
+
+    # Distributional table
+    print("\n### Distributional Impact (£/year):")
+    distributional_df = pd.DataFrame(all_distributional)
+    pivot = distributional_df.pivot(index="decile", columns="year", values="avg_change")
+    print(pivot.to_string())
+
+    # Winners/losers combined
+    print("\n### Winners/Losers by Decile (All Years):")
+    wl_combined = pd.concat(all_winners_losers, ignore_index=True)
+    print(wl_combined.to_string(index=False))
+
+    # Markdown tables for blog
+    print("\n" + "=" * 70)
+    print("MARKDOWN TABLES FOR BLOG POST")
+    print("=" * 70)
+
+    # Revenue table
+    print("\n**Table 1: Combined revenue impact (£ billion)**\n")
+    print("| Fiscal year | Revenue impact |")
+    print("| ----------- | -------------- |")
+    for b in all_budgetary:
+        print(f"| {b['year']}-{str(b['year'] + 1)[-2:]} | {b['budgetary_impact_bn']:+.2f} |")
+
+    # Inequality table
+    print("\n**Table 2: Inequality impact**\n")
+    print("| Fiscal year | Baseline Gini | Reformed Gini | Change |")
+    print("| ----------- | ------------- | ------------- | ------ |")
+    for g in all_gini:
+        print(f"| {g['year']}-{str(g['year'] + 1)[-2:]} | {g['baseline_gini']} | {g['reformed_gini']} | {g['gini_change_pct']:+.2f}% |")
+
+    # Poverty table
+    print("\n**Table 3: Poverty rate changes (pp)**\n")
+    print("| Measure | " + " | ".join([f"{y}-{str(y+1)[-2:]}" for y in years]) + " |")
+    print("| ------- | " + " | ".join(["-------"] * len(years)) + " |")
+
+    measures = [
+        ("Overall (BHC)", "overall_bhc_change_pp"),
+        ("Overall (AHC)", "overall_ahc_change_pp"),
+        ("Child (BHC)", "child_bhc_change_pp"),
+        ("Child (AHC)", "child_ahc_change_pp"),
+        ("Working-age (BHC)", "wa_bhc_change_pp"),
+        ("Working-age (AHC)", "wa_ahc_change_pp"),
+        ("Pensioner (BHC)", "pensioner_bhc_change_pp"),
+        ("Pensioner (AHC)", "pensioner_ahc_change_pp"),
+    ]
+    for measure_name, col in measures:
+        values = " | ".join([f"{all_poverty[i][col]:+.2f}" for i in range(len(years))])
+        print(f"| {measure_name} | {values} |")
+
+    # Winners/losers table for 2026
+    print("\n**Table 4: Winners and losers (2026-27)**\n")
+    print("| Decile | Gain >5% | Gain <5% | No change | Lose <5% | Lose >5% |")
+    print("| ------ | -------- | -------- | --------- | -------- | -------- |")
+    wl_2026 = wl_combined[wl_combined["year"] == 2026]
+    for _, row in wl_2026.iterrows():
+        print(f"| {row['decile']} | {row['gain_more_5pct']}% | {row['gain_less_5pct']}% | {row['no_change']}% | {row['lose_less_5pct']}% | {row['lose_more_5pct']}% |")
+
+    # Constituency summary
+    if all_constituency:
+        constituency_df = pd.DataFrame(all_constituency)
+        print("\n### Constituency Impact Summary:")
+        print(f"Total constituencies: {len(constituency_df['constituency_code'].unique())}")
+        print(f"Years: {sorted(constituency_df['year'].unique())}")
+
+        # Top 10 gaining and losing constituencies for 2026
+        const_2026 = constituency_df[constituency_df["year"] == 2026].sort_values("average_gain")
+
+        print("\n**Top 10 constituencies losing the most (2026-27):**")
+        for _, row in const_2026.head(10).iterrows():
+            print(f"  {row['constituency_name']}: £{row['average_gain']:.2f} ({row['relative_change']:.2f}%)")
+
+        print("\n**Top 10 constituencies gaining the most (2026-27):**")
+        for _, row in const_2026.tail(10).iloc[::-1].iterrows():
+            print(f"  {row['constituency_name']}: £{row['average_gain']:.2f} ({row['relative_change']:.2f}%)")
+
+    # Save all data to CSV
+    print("\n" + "=" * 70)
+    print("SAVING DATA TO CSV")
+    print("=" * 70)
+
+    budgetary_df.to_csv("public/data/combined_budgetary_impact.csv", index=False)
+    gini_df.to_csv("public/data/combined_gini.csv", index=False)
+    poverty_df.to_csv("public/data/combined_poverty.csv", index=False)
+    distributional_df.to_csv("public/data/combined_distributional.csv", index=False)
+    wl_combined.to_csv("public/data/combined_winners_losers.csv", index=False)
+
+    print("Saved CSV files:")
+    print("  - public/data/combined_budgetary_impact.csv")
+    print("  - public/data/combined_gini.csv")
+    print("  - public/data/combined_poverty.csv")
+    print("  - public/data/combined_distributional.csv")
+    print("  - public/data/combined_winners_losers.csv")
+
+    if all_constituency:
+        constituency_df.to_csv("public/data/combined_constituency.csv", index=False)
+        print("  - public/data/combined_constituency.csv")
+
+    # Save metrics to single text file
+    print("\n" + "=" * 70)
+    print("SAVING DATA TO TEXT FILES")
+    print("=" * 70)
+
+    metrics_txt_path = "public/data/combined_metrics.txt"
+    with open(metrics_txt_path, "w") as f:
+        f.write("=" * 80 + "\n")
+        f.write("COMBINED AUTUMN BUDGET 2025 - ALL METRICS\n")
+        f.write("=" * 80 + "\n\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("1. BUDGETARY IMPACT (£bn)\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(budgetary_df.to_csv(index=False))
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("2. GINI COEFFICIENT\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(gini_df.to_csv(index=False))
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("3. POVERTY RATES BY YEAR AND DEMOGRAPHIC\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(poverty_df.to_csv(index=False))
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("4. DISTRIBUTIONAL IMPACT BY DECILE (£/year)\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(distributional_df.to_csv(index=False))
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("5. WINNERS AND LOSERS BY DECILE (%)\n")
+        f.write("=" * 80 + "\n\n")
+        f.write(wl_combined.to_csv(index=False))
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("END OF METRICS DATA\n")
+        f.write("=" * 80 + "\n")
+
+    print(f"Saved: {metrics_txt_path}")
+
+    # Save constituency to separate text file
+    if all_constituency:
+        constituency_txt_path = "public/data/combined_constituency.txt"
+        with open(constituency_txt_path, "w") as f:
+            f.write("=" * 80 + "\n")
+            f.write("COMBINED AUTUMN BUDGET 2025 - CONSTITUENCY IMPACT\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(f"Total constituencies: {len(constituency_df['constituency_code'].unique())}\n")
+            f.write(f"Years: {sorted(constituency_df['year'].unique())}\n")
+            f.write(f"Total rows: {len(constituency_df)}\n\n")
+
+            f.write("=" * 80 + "\n")
+            f.write("CONSTITUENCY DATA (ALL YEARS)\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(constituency_df.to_csv(index=False))
+            f.write("\n")
+
+            f.write("=" * 80 + "\n")
+            f.write("END OF CONSTITUENCY DATA\n")
+            f.write("=" * 80 + "\n")
+
+        print(f"Saved: {constituency_txt_path}")
+
+    print("\nDone!")
+
+
+if __name__ == "__main__":
+    main()
+

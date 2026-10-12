@@ -60,6 +60,9 @@ def result_tables(
         ),
         "constituency": result.constituency,
         "demographic_constituency": result.demographic_constituency,
+        "briefing_deciles": result.briefing_deciles,
+        "briefing_winners_losers": result.briefing_winners_losers,
+        "briefing_poverty": result.briefing_poverty,
     }
 
 

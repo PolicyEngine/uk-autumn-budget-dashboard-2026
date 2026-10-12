@@ -1,20 +1,9 @@
-"""Generate Plotly JSON charts for blog posts from dashboard data.
-
-This script reads the dashboard CSV outputs and generates Plotly JSON files
-that can be directly embedded in policyengine-app-v2 blog posts.
-
-Charts include:
-- Distributional impact (relative %) with year slider
-- Winners and losers (absolute £) with year slider
-- Revenue comparison across years
+"""Generate per-measure Plotly JSON from approved publication artifacts.
 
 Usage:
-    python scripts/generate_blog_charts.py --all
-    python scripts/generate_blog_charts.py fuel_duty_freeze
-
-Examples:
-    python scripts/generate_blog_charts.py --all
-    python scripts/generate_blog_charts.py fuel_duty_freeze
+    uv run python scripts/generate_blog_charts.py \
+        --manifest public/data/manifest.json --keys measure-a measure-b \
+        --out-dir public/briefing/3/
 """
 
 import argparse
@@ -22,6 +11,10 @@ import json
 from pathlib import Path
 
 import pandas as pd
+
+from uk_budget_data.publication import briefing_export as export
+from uk_budget_data.publication.publish import PublishError
+from uk_budget_data.publication.reconcile import fiscal_year_label
 
 # PolicyEngine app-v2 design system
 # See: policyengine-app-v2/app/src/designTokens/colors.ts
@@ -48,7 +41,10 @@ FONT_FAMILY = "Inter, sans-serif"
 
 
 def create_distributional_chart(
-    df: pd.DataFrame, reform_id: str, years: list
+    df: pd.DataFrame,
+    reform_id: str,
+    years: list,
+    labels: list[str] | None = None,
 ) -> dict:
     """Create distributional impact chart (relative %) with year slider.
 
@@ -74,6 +70,7 @@ def create_distributional_chart(
         lambda x: decile_order.index(x) + 1 if x in decile_order else 0
     )
 
+    labels = labels or [fiscal_year_label(year) for year in years]
     # Create traces for each year
     traces = []
     for i, year in enumerate(years):
@@ -102,7 +99,7 @@ def create_distributional_chart(
                     "color": COLORS["text"],
                 },
                 "visible": i == 0,
-                "name": str(year),
+                "name": labels[i],
             }
         )
 
@@ -114,7 +111,7 @@ def create_distributional_chart(
             {
                 "method": "update",
                 "args": [{"visible": visibility}],
-                "label": str(year),
+                "label": labels[i],
             }
         )
 
@@ -174,7 +171,10 @@ def create_distributional_chart(
 
 
 def create_winners_losers_chart(
-    df: pd.DataFrame, reform_id: str, years: list
+    df: pd.DataFrame,
+    reform_id: str,
+    years: list,
+    labels: list[str] | None = None,
 ) -> dict:
     """Create winners/losers chart (absolute £) with year slider.
 
@@ -194,12 +194,13 @@ def create_winners_losers_chart(
     # Filter out 'all' decile
     reform_data = reform_data[reform_data["decile"] != "all"]
 
+    labels = labels or [fiscal_year_label(year) for year in years]
     # Create traces for each year
     traces = []
     for i, year in enumerate(years):
-        year_data = reform_data[reform_data["year"] == year].sort_values(
-            "decile"
-        )
+        year_data = reform_data[reform_data["year"] == year].copy()
+        year_data["decile_num"] = year_data["decile"].astype(int)
+        year_data = year_data.sort_values("decile_num")
         if year_data.empty:
             continue
 
@@ -224,7 +225,7 @@ def create_winners_losers_chart(
                     "color": COLORS["text"],
                 },
                 "visible": i == 0,
-                "name": str(year),
+                "name": labels[i],
             }
         )
 
@@ -236,7 +237,7 @@ def create_winners_losers_chart(
             {
                 "method": "update",
                 "args": [{"visible": visibility}],
-                "label": str(year),
+                "label": labels[i],
             }
         )
 
@@ -293,70 +294,64 @@ def create_winners_losers_chart(
 
 
 def create_revenue_chart(
-    df: pd.DataFrame, reform_id: str, obr_df: pd.DataFrame = None
+    df: pd.DataFrame,
+    reform_id: str,
+    reconciliation: dict | None = None,
+    labels: dict[int, str] | None = None,
 ) -> dict:
-    """Create a revenue comparison bar chart across years.
-
-    Args:
-        df: DataFrame with budgetary_impact.csv data
-        reform_id: The reform ID to filter for
-        obr_df: Optional DataFrame with OBR estimates
-
-    Returns:
-        Plotly JSON chart specification
-    """
+    """Fiscal costing, with only passed or accepted receipted comparators."""
     reform_data = df[df["reform_id"] == reform_id].copy()
-
     if reform_data.empty:
         raise ValueError(f"No data found for {reform_id}")
-
     reform_data = reform_data.sort_values("year")
     years = reform_data["year"].tolist()
-    pe_values = reform_data["value"].tolist()
-
+    labels = labels or {year: fiscal_year_label(year) for year in years}
     traces = [
         {
-            "x": [str(y) for y in years],
-            "y": pe_values,
+            "x": [labels[year] for year in years],
+            "y": reform_data["value"].tolist(),
             "type": "bar",
             "name": "PolicyEngine",
             "marker": {"color": COLORS["primary"]},
             "hovertemplate": "Year %{x}<br>PolicyEngine: £%{y:.2f}bn<extra></extra>",
         }
     ]
-
-    # Add OBR comparison if available
-    if obr_df is not None:
-        obr_data = obr_df[obr_df["reform_id"] == reform_id]
-        if not obr_data.empty:
-            obr_data = obr_data.sort_values("year")
-            obr_years = obr_data["year"].tolist()
-
-            # OBR static
-            if "obr_static_value" in obr_data.columns:
-                traces.append(
-                    {
-                        "x": [str(y) for y in obr_years],
-                        "y": obr_data["obr_static_value"].tolist(),
-                        "type": "bar",
-                        "name": "OBR (static)",
-                        "marker": {"color": COLORS["gray_light"]},
-                        "hovertemplate": "Year %{x}<br>OBR static: £%{y:.2f}bn<extra></extra>",
-                    }
-                )
-
-            # OBR behavioural
-            if "obr_post_behavioural_value" in obr_data.columns:
-                traces.append(
-                    {
-                        "x": [str(y) for y in obr_years],
-                        "y": obr_data["obr_post_behavioural_value"].tolist(),
-                        "type": "bar",
-                        "name": "OBR (behavioural)",
-                        "marker": {"color": COLORS["gray"]},
-                        "hovertemplate": "Year %{x}<br>OBR behavioural: £%{y:.2f}bn<extra></extra>",
-                    }
-                )
+    comparators = {}
+    for row in (reconciliation or {}).get("rows", []):
+        if row["status"] not in ("pass", "accepted"):
+            continue
+        for kind in ("comparator", "alongside"):
+            comparator = row.get(kind)
+            if not comparator:
+                continue
+            sources = ", ".join(
+                f"{source['source_id']}/{source['row_id']}"
+                for source in comparator["rows"]
+            )
+            basis = comparator["basis"]
+            name = f"Treasury {sources} ({basis})"
+            trace = comparators.setdefault(
+                name,
+                {
+                    "x": [],
+                    "y": [],
+                    "customdata": [],
+                    "type": "bar",
+                    "name": name,
+                    "marker": {
+                        "color": (
+                            COLORS["gray_light"]
+                            if kind == "comparator"
+                            else COLORS["gray"]
+                        )
+                    },
+                    "hovertemplate": "Year %{x}<br>%{customdata}<br>£%{y:.2f}bn<extra></extra>",
+                },
+            )
+            trace["x"].append(labels[row["year"]])
+            trace["y"].append(comparator["value_bn"])
+            trace["customdata"].append(name)
+    traces.extend(comparators.values())
 
     return {
         "data": traces,
@@ -399,123 +394,84 @@ def create_revenue_chart(
     }
 
 
-def generate_charts_for_reform(
-    reform_id: str,
-    output_dir: Path,
-    distributional_df: pd.DataFrame,
-    winners_losers_df: pd.DataFrame,
-    budgetary_df: pd.DataFrame,
-    obr_df: pd.DataFrame = None,
-    years: list = None,
-) -> None:
-    """Generate all charts for a single reform."""
-    reform_output_dir = output_dir / reform_id
-    reform_output_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Generating charts for {reform_id}...")
-
-    # Get available years for this reform
-    if years is None:
-        years = sorted(
-            distributional_df[distributional_df["reform_id"] == reform_id][
-                "year"
-            ]
-            .unique()
-            .tolist()
+def generate(
+    manifest: Path,
+    keys: list[str],
+    out_dir: Path,
+    *,
+    inputs: Path = Path("data_inputs/treasury"),
+) -> dict:
+    """Gate the complete requested set before preparing or writing files."""
+    loaded = export.load(manifest, keys, inputs=inputs)
+    for key, artifact in loaded["entries"].items():
+        if artifact["entry"].measures:
+            raise PublishError(
+                "export", [f"{key} is not a standalone measure"]
+            )
+        export.require_tables(
+            key,
+            artifact,
+            ("distributional_impact", "winners_losers", "budgetary_impact"),
         )
-
-    try:
-        dist_chart = create_distributional_chart(
-            distributional_df, reform_id, years
+    outputs = {}
+    for key, artifact in loaded["entries"].items():
+        tables = artifact["tables"]
+        years = sorted(artifact["entry"].years)
+        labels = export.year_labels(artifact)
+        source = export.source_line(artifact, loaded["stamp"])
+        reconciliation_path = (
+            Path(manifest).parent
+            / artifact["entry"].artifact
+            / "reconciliation.json"
         )
-        with open(reform_output_dir / "distributional.json", "w") as f:
-            json.dump(dist_chart, f, indent=2)
-        print("  + Distributional chart (relative %): distributional.json")
-    except ValueError as e:
-        print(f"  - Distributional chart: {e}")
+        reconciliation = json.loads(reconciliation_path.read_text())
+        charts = {
+            "distributional": create_distributional_chart(
+                pd.DataFrame(tables["distributional_impact"]),
+                key,
+                years,
+                labels,
+            ),
+            "winners_losers": create_winners_losers_chart(
+                pd.DataFrame(tables["winners_losers"]), key, years, labels
+            ),
+            "revenue": create_revenue_chart(
+                pd.DataFrame(tables["budgetary_impact"]),
+                key,
+                reconciliation,
+                dict(zip(years, labels, strict=True)),
+            ),
+        }
+        for name, chart in charts.items():
+            stamped = export.stamp_plotly(chart, source, loaded["stamp"])
+            outputs[f"{key}/{name}.json"] = (
+                json.dumps(stamped, indent=2, allow_nan=False) + "\n"
+            )
+    return export.write_export(out_dir, outputs, loaded)
 
-    try:
-        wl_chart = create_winners_losers_chart(
-            winners_losers_df, reform_id, years
-        )
-        with open(reform_output_dir / "winners_losers.json", "w") as f:
-            json.dump(wl_chart, f, indent=2)
-        print("  + Winners/losers chart (absolute £): winners_losers.json")
-    except ValueError as e:
-        print(f"  - Winners/losers chart: {e}")
 
-    try:
-        revenue_chart = create_revenue_chart(budgetary_df, reform_id, obr_df)
-        with open(reform_output_dir / "revenue.json", "w") as f:
-            json.dump(revenue_chart, f, indent=2)
-        print("  + Revenue chart: revenue.json")
-    except ValueError as e:
-        print(f"  - Revenue chart: {e}")
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate Plotly JSON charts for blog posts"
-    )
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--keys", nargs="+", required=True)
+    parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument(
-        "reform_id",
-        nargs="?",
-        help="Reform ID to generate charts for (omit for all reforms)",
+        "--inputs", type=Path, default=Path("data_inputs/treasury")
     )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Generate charts for all reforms in the data",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("public/data/blog_charts"),
-        help="Output directory for JSON files",
-    )
-
-    args = parser.parse_args()
-
-    if not args.reform_id and not args.all:
-        parser.error("Either provide a reform_id or use --all")
-
-    # Read data
-    data_dir = Path("public/data")
-
-    distributional_df = pd.read_csv(data_dir / "distributional_impact.csv")
-    winners_losers_df = pd.read_csv(data_dir / "winners_losers.csv")
-    budgetary_df = pd.read_csv(data_dir / "budgetary_impact.csv")
-
-    obr_path = Path("data_inputs/obr_estimates.csv")
-    obr_df = pd.read_csv(obr_path) if obr_path.exists() else None
-
-    # Determine which reforms to process
-    if args.all:
-        reform_ids = budgetary_df["reform_id"].unique().tolist()
-        # Exclude combined policies
-        reform_ids = [r for r in reform_ids if "combined" not in r]
-    else:
-        reform_ids = [args.reform_id]
-
-    # Generate charts
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-
-    for reform_id in reform_ids:
-        generate_charts_for_reform(
-            reform_id=reform_id,
-            output_dir=args.output_dir,
-            distributional_df=distributional_df,
-            winners_losers_df=winners_losers_df,
-            budgetary_df=budgetary_df,
-            obr_df=obr_df,
+    args = parser.parse_args(argv)
+    try:
+        receipt = generate(
+            args.manifest, args.keys, args.out_dir, inputs=args.inputs
         )
-        print()
-
-    print(f"\nAll charts saved to {args.output_dir}/")
+    except (PublishError, ValueError, OSError) as error:
+        print(f"Briefing export refused: {error}")
+        return 1
     print(
-        "To embed in a blog post, copy the JSON content into a ```plotly code block."
+        f"Exported {len(receipt['files'])} charts from publication manifest "
+        f"rev {receipt['manifest_revision']} to {args.out_dir}"
     )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

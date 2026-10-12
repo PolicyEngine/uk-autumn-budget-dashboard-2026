@@ -14,7 +14,12 @@ table is read.
 from collections import defaultdict
 from typing import Mapping, Optional
 
-from uk_budget_data.publication.tables import TABLES
+from uk_budget_data.publication.tables import (
+    BRIEFING_TABLES,
+    TABLES,
+    TableError,
+    normalise,
+)
 
 ROWS_PER_YEAR = {
     "budgetary_impact": 1,
@@ -43,6 +48,12 @@ def _effect(table: str, row: Mapping) -> Optional[float]:
         return row["income_change"]
     if table == "winners_losers":
         return row["avg_change"]
+    if table == "briefing_deciles":
+        return row["avg_change_gbp"]
+    if table == "briefing_poverty":
+        return row["change_pp"]
+    if table == "briefing_winners_losers":
+        return row["share_pct"] - (100 if row["category"] == "no_change" else 0)
     if table in ("budgetary_impact", "distributional_impact"):
         return row["value"]
     return None
@@ -74,6 +85,12 @@ def table_problems(
                 problems.append(f"{name}: missing")
             continue
         rows = tables[name]
+        if name in BRIEFING_TABLES:
+            try:
+                normalise(name, rows)
+            except TableError as error:
+                problems.append(str(error))
+                continue
         foreign = {row["reform_id"] for row in rows} - {key}
         if foreign:
             problems.append(f"{name}: rows for {sorted(foreign)}")
@@ -86,7 +103,7 @@ def table_problems(
         for year in years:
             matching = by_year.get(year, [])
             if not matching:
-                if spec.required:
+                if spec.required or name in BRIEFING_TABLES:
                     problems.append(f"{name}: missing {year}")
                 continue
             count = expected_rows.get(name)

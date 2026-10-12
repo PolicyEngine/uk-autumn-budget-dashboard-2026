@@ -14,6 +14,7 @@ from policyengine_uk import Microsimulation
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from uk_budget_data.briefing_calculator import BriefingCalculator
 from uk_budget_data.calculators import (
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -110,6 +111,7 @@ class ReformProcessor:
         )
         self.constituency_calc = ConstituencyCalculator()
         self.demographic_calc = DemographicConstituencyCalculator()
+        self.briefing_calc = BriefingCalculator()
 
     def process(
         self,
@@ -141,10 +143,20 @@ class ReformProcessor:
         all_household_scatter = []
         all_constituency = []
         all_demographic = []
+        all_briefing = {
+            "briefing_deciles": [],
+            "briefing_winners_losers": [],
+            "briefing_poverty": [],
+        }
 
         scenario = self.reform.to_scenario()
 
         for year in self.config.years:
+            for name, rows in self.briefing_calc.calculate(
+                baseline, reformed, reform_id, year
+            ).items():
+                all_briefing[name].extend(rows)
+
             # Distributional (also returns dataframe for other calcs)
             distributional, decile_df = self.distributional_calc.calculate(
                 baseline, reformed, reform_id, reform_name, year
@@ -197,6 +209,7 @@ class ReformProcessor:
             household_scatter=all_household_scatter,
             constituency=all_constituency,
             demographic_constituency=all_demographic,
+            **all_briefing,
         )
 
     def _calculate_constituency(

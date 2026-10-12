@@ -110,6 +110,9 @@ class ReformResult(BaseModel):
     household_scatter: list[dict]
     constituency: list[dict]
     demographic_constituency: list[dict]
+    briefing_deciles: list[dict] = Field(default_factory=list)
+    briefing_winners_losers: list[dict] = Field(default_factory=list)
+    briefing_poverty: list[dict] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
