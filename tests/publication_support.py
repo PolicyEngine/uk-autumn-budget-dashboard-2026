@@ -36,21 +36,6 @@ SOURCE_HEADER = (
 )
 
 
-def module_level_modifier(sim, rate=0.21):
-    """A structural measure written the way receipts can bind it.
-
-    It lives here, not in a test module: pytest rewrites test modules'
-    assertions on import, and the receipt refuses to bind a function whose
-    loaded code no longer matches its source file.
-    """
-    return sim
-
-
-def broken_modifier(sim, message="this measure cannot run"):
-    """A structural measure that fails whenever it is applied."""
-    raise RuntimeError(message)
-
-
 def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
     """A complete, valid set of tables whose fiscal impact is ``values``."""
     name = key.replace("_", " ").title()
@@ -145,8 +130,21 @@ class World:
             self.root / "manifest.json"
         )
         receipt_module.load_bundle_manifest = lambda: self.bundle
+        # The receipt code projects the dataset itself to find the years it
+        # supports; the dummy dataset is not a real one, so stand in with
+        # the years World's simulations report.
+        self._receipt_api, _ = receipt_module.receipt_api()
+        self._original_projection = getattr(
+            self._receipt_api, "_projected_years", None
+        )
+        if self._original_projection is not None:
+            self._receipt_api._projected_years = lambda *args: tuple(
+                DATASET_YEARS
+            )
 
     def close(self):
+        if self._original_projection is not None:
+            self._receipt_api._projected_years = self._original_projection
         certification.default_bundle_source_path = self._original_path
         receipt_module.load_bundle_manifest = self._original_loader
         shutil.rmtree(self.root, ignore_errors=True)

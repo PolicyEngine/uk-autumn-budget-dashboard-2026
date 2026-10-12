@@ -1,5 +1,5 @@
 # VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #579
-# (stacked on #571) at 69390c54de612e587cec3e0e3d09b0454b524b1e,
+# (stacked on #571) at f951bd59178ccabe05c55c9bfb14b23b53feb858,
 # src/policyengine/provenance/receipt.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
 # when the dashboard pins the policyengine release that contains PRs #571
@@ -32,7 +32,9 @@ Rules every valid v1 receipt satisfies:
   model and core versions, the simulated dataset bytes and the running
   wrapper version; otherwise the receipt is ``uncertified``.
 - ``years`` is sorted and unique, and each reported year has the meaning
-  ``fiscal_year`` gives it.
+  ``fiscal_year`` gives it. ``supported_years`` are the years the installed
+  model projects the dataset to; a reported year outside them is
+  unsupported, and its results are provisional.
 - ``data`` names the artifact the bundle resolves for ``data.dataset``, and
   ``data.dataset_sha256`` is the hash the bundle pins for it: a receipt
   never gives an artifact's name to other bytes. A receipt built from a
@@ -67,18 +69,20 @@ import __future__
 
 import ast
 import datetime
+import dis
 import functools
 import hashlib
+import importlib.util
 import inspect
 import json
 import math
 import operator
 import platform
 import re
+import struct
 import sys
-import textwrap
 import zipfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from importlib import metadata
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
@@ -171,6 +175,7 @@ COMPOSITION_REPRESENTATION: Literal["policyengine-uk.scenario_composition/v1"] =
 #: v1 rules that JSON Schema cannot express. Published in the schema file.
 CROSS_FIELD_RULES: tuple[str, ...] = (
     "years is sorted ascending with no duplicates, and each year is written as an integer (2027, not 2027.0).",
+    "supported_years is sorted ascending with no duplicates. A year in years that is not in supported_years is unsupported: the model does not project the dataset to it, so a consumer must show its results as provisional or not at all.",
     "certification_status certified requires certificate; uncertified forbids it.",
     "certificate.country_id equals country_id.",
     "certificate.certified_for_model_version equals model.version.",
@@ -188,7 +193,7 @@ DIGEST_RULES: dict[str, str] = {
     "execution_identity_sha256": "{schema_version, country_id, wrapper, model, core, data, certification_status, certificate?} where certificate keeps only bundle_version, country_id, certificate_sha256, compatibility_basis, certified_for_model_version, certified_for_core_version, certified_dataset_sha256 and certified_by",
     "receipt_sha256": "the whole receipt without runtime and without reform.name and baseline.name",
     "certificate.certificate_sha256": "the bundle manifest's data_releases.<country_id> record",
-    "reform.reform_sha256": "{representation, payload} where payload is the reform exactly as given in that representation; for policyengine-uk.scenario_composition/v1 the payload is {applied_before_data_load, application: parameter_changes_then_modifiers, members: [{representation, reform_sha256, binding}, ...]} with members in application order",
+    "reform.reform_sha256": "RFC 8785 over {representation, payload} where payload is the reform exactly as given in that representation, nulls kept (a null in a reform can mean something, unlike an absent receipt field); for policyengine-uk.scenario_composition/v1 the payload is {applied_before_data_load, application: parameter_changes_then_modifiers, members: [{representation, reform_sha256, binding}, ...]} with members in application order",
     "outputs_sha256": "the canonical output payload the receipt binds",
 }
 
@@ -359,7 +364,10 @@ class ReformIdentity(_Contract):
     reform_sha256: Optional[str] = Field(
         default=None,
         pattern=SHA256_PATTERN,
-        description="content_sha256 of {'representation': ..., 'payload': ...}.",
+        description=(
+            "SHA-256 of the RFC 8785 serialisation of {'representation': ..., "
+            "'payload': ...}, nulls kept (unlike content_sha256)."
+        ),
     )
     binding: Literal["content", "code_revision"] = Field(
         default="content",
@@ -438,6 +446,15 @@ class ExecutionReceipt(_Contract):
     baseline: ReformIdentity
     fiscal_year: FiscalYearConvention
     years: list[int] = Field(min_length=1)
+    supported_years: list[int] = Field(
+        description=(
+            "Years the installed model projects this dataset to, from its data "
+            "year (policyengine-uk's extend_single_year_dataset, no formula run). "
+            "A year in years that is not here is unsupported: policyengine-core "
+            "fills it by carrying or uprating the latest inputs, so its results "
+            "are not evidence and must be shown as provisional or not at all."
+        ),
+    )
     outputs_sha256: Optional[str] = Field(
         default=None,
         pattern=SHA256_PATTERN,
@@ -449,16 +466,22 @@ class ExecutionReceipt(_Contract):
     @classmethod
     def _schema_version_is_an_integer(cls, value: Any) -> Any:
         # ``True == 1``, so a Literal[1] alone would accept a boolean.
-        if isinstance(value, bool):
+        if _is_boolean(value):
             raise ValueError("schema_version must be the integer 1, not a boolean.")
         return value
 
-    @field_validator("years")
+    @field_validator("years", "supported_years")
     @classmethod
     def _sorted_unique_years(cls, years: list[int]) -> list[int]:
         if years != sorted(set(years)):
             raise ValueError("years must be sorted and unique.")
         return years
+
+    @property
+    def unsupported_years(self) -> list[int]:
+        """Reported years outside the dataset's projection (see supported_years)."""
+
+        return sorted(set(self.years) - set(self.supported_years))
 
     @model_validator(mode="after")
     def _identity_rules(self) -> ExecutionReceipt:
@@ -643,6 +666,24 @@ def content_sha256(value: Any) -> str:
         raise ReceiptError(str(exc)) from exc
 
 
+def _payload_sha256(value: Any) -> str:
+    """Digest of a reform payload: strict JSON with nulls kept, RFC 8785, SHA-256.
+
+    Unlike :func:`content_sha256`, nulls are not removed: in a reform a null
+    can mean something (``Scenario.from_reform({"p": {"2027": None}})``
+    removes a value that ``{"p": {}}`` keeps), so the payload is digested
+    exactly as given.
+    """
+
+    converted = strict_json_value(value)
+    try:
+        return canonical_sha256(converted)
+    except RecursionError as exc:
+        raise ReceiptError("The value is nested too deeply.") from exc
+    except CanonicalJSONError as exc:
+        raise ReceiptError(str(exc)) from exc
+
+
 # --- Helpers -------------------------------------------------------------
 
 
@@ -708,7 +749,7 @@ def reform_identity(
         raise ReceiptError("Bind a Scenario with scenario_reform_identity().")
     if representation == COMPOSITION_REPRESENTATION:
         raise ReceiptError("Bind a composition with composed_reform_identity().")
-    digest = content_sha256({"representation": representation, "payload": payload})
+    digest = _payload_sha256({"representation": representation, "payload": payload})
     return ReformIdentity(
         kind="reform", representation=representation, reform_sha256=digest, name=name
     )
@@ -745,16 +786,6 @@ def _top_level_code(module_code: CodeType) -> dict[str, list[CodeType]]:
     return found
 
 
-def _source_matches_loaded_code(source: str, code: CodeType, qualname: str) -> bool:
-    """Whether compiling ``source`` reproduces the loaded code (nested code too)."""
-
-    module_code = _compile_module_source(textwrap.dedent(source), code)
-    if module_code is None:
-        return False
-    compiled = _top_level_code(module_code).get(qualname, [])
-    return len(compiled) == 1 and _code_shape(compiled[0]) == _code_shape(code)
-
-
 #: Value types a typed encoding preserves exactly. Subclasses (enums, named
 #: tuples, bool-like ints) are refused rather than flattened.
 _TYPED_SCALARS = (type(None), bool, int, float, str)
@@ -780,7 +811,8 @@ def _typed_value(value: Any, path: str = "$") -> dict[str, Any]:
     if kind is float:
         if not math.isfinite(value):
             raise ReceiptError(f"{path}: {value} is not a finite number.")
-        return {"type": "float", "value": value}
+        # By its bits: 0.0 and -0.0 compare equal but behave differently.
+        return {"type": "float", "hex": value.hex()}
     if kind is str:
         return {"type": "str", "value": value}
     if kind in (tuple, list):
@@ -808,27 +840,80 @@ _COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
 _SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
 
 
+def _walrus_targets(node: ast.AST) -> list[str]:
+    """``:=`` targets inside a comprehension, which bind its enclosing scope.
+
+    A lambda inside it is a scope of its own: only its default values are
+    evaluated outside it.
+    """
+
+    names: list[str] = []
+    if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+        names.append(node.target.id)
+    if isinstance(node, ast.Lambda):
+        for default in [*node.args.defaults, *node.args.kw_defaults]:
+            if default is not None:
+                names.extend(_walrus_targets(default))
+        return names
+    for child in ast.iter_child_nodes(node):
+        names.extend(_walrus_targets(child))
+    return names
+
+
 def _expression_bindings(node: Optional[ast.AST]) -> list[str]:
     """Names an expression binds in its enclosing scope.
 
-    Plain targets bind; inside a comprehension or lambda only ``:=`` targets
-    reach the enclosing scope (a comprehension's loop variable is its own).
+    Plain targets bind. A comprehension's own loop variables do not, but a
+    ``:=`` inside it binds the enclosing scope (PEP 572). A lambda's body is
+    its own scope; only its default values are evaluated outside it.
     """
 
     if node is None:
         return []
     if isinstance(node, ast.Name):
         return [node.id] if isinstance(node.ctx, ast.Store) else []
-    if isinstance(node, _COMPREHENSIONS + (ast.Lambda,)):
-        return [
-            child.target.id
-            for child in ast.walk(node)
-            if isinstance(child, ast.NamedExpr) and isinstance(child.target, ast.Name)
-        ]
-    names: list[str] = []
+    if isinstance(node, ast.Lambda):
+        names: list[str] = []
+        for default in [*node.args.defaults, *node.args.kw_defaults]:
+            names.extend(_expression_bindings(default))
+        return names
+    if isinstance(node, _COMPREHENSIONS):
+        return _walrus_targets(node)
+    names = []
     for child in ast.iter_child_nodes(node):
         names.extend(_expression_bindings(child))
     return names
+
+
+def _definition_time_expressions(statement: ast.stmt) -> list[ast.AST]:
+    """What a ``def`` or ``class`` evaluates in its enclosing scope."""
+
+    if isinstance(statement, ast.ClassDef):
+        return [
+            *statement.decorator_list,
+            *statement.bases,
+            *(keyword.value for keyword in statement.keywords),
+        ]
+    if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        arguments = statement.args
+        annotations = [
+            argument.annotation
+            for argument in [
+                *arguments.posonlyargs,
+                *arguments.args,
+                *arguments.kwonlyargs,
+                *(item for item in (arguments.vararg, arguments.kwarg) if item),
+            ]
+            if argument.annotation is not None
+        ]
+        return [
+            *statement.decorator_list,
+            *arguments.defaults,
+            *(default for default in arguments.kw_defaults if default is not None),
+            *annotations,
+            *([statement.returns] if statement.returns is not None else []),
+        ]
+    return []
 
 
 def _scope_statements(body: Sequence[ast.stmt]) -> list[ast.stmt]:
@@ -852,7 +937,10 @@ def _statement_bindings(statement: ast.stmt) -> list[str]:
     """Names a module-scope statement itself binds (not its nested statements)."""
 
     if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        return [statement.name]
+        names = [statement.name]
+        for expression in _definition_time_expressions(statement):
+            names += _expression_bindings(expression)
+        return names
     if isinstance(statement, (ast.Import, ast.ImportFrom)):
         return [(alias.asname or alias.name).split(".")[0] for alias in statement.names]
     if isinstance(statement, (ast.For, ast.AsyncFor)):
@@ -907,6 +995,9 @@ def _literal_bindings(tree: ast.Module) -> dict[str, list[Any]]:
             and statement.value is not None
         ):
             names, value = [statement.target.id], statement.value
+            # Module annotations run unless postponed; counting a := in one
+            # when it does not run only refuses more.
+            computed.update(_expression_bindings(statement.annotation))
         if value is not None:
             try:
                 literal = ast.literal_eval(value)
@@ -938,11 +1029,38 @@ def _literal_defaults(definition: ast.FunctionDef) -> Optional[dict[str, Any]]:
     return {"defaults": defaults, "kwdefaults": kwdefaults}
 
 
-def _same_typed(left: Any, right: Any) -> bool:
-    try:
-        return _typed_value(left) == _typed_value(right)
-    except ReceiptError:
+def _same_literal(left: Any, right: Any) -> bool:
+    """Whether two literal values are the same value of the same types.
+
+    Covers everything ``ast.literal_eval`` returns. Unlike ``==``, ``1`` is
+    not ``1.0`` or ``True``, a tuple is not a list, floats compare by their
+    bits (``0.0`` is not ``-0.0``) and a dictionary's key order counts.
+    """
+
+    kind = type(left)
+    if kind is not type(right):
         return False
+    if kind is float:
+        return struct.pack("<d", left) == struct.pack("<d", right)
+    if kind is complex:
+        return _same_literal(left.real, right.real) and _same_literal(
+            left.imag, right.imag
+        )
+    if kind in (tuple, list):
+        return len(left) == len(right) and all(map(_same_literal, left, right))
+    if kind is dict:
+        return len(left) == len(right) and all(
+            _same_literal(left_key, right_key) and _same_literal(left_item, right_item)
+            for (left_key, left_item), (right_key, right_item) in zip(
+                left.items(), right.items()
+            )
+        )
+    if kind in (set, frozenset):
+        # Set members are distinct, so a match for each one is a bijection.
+        return len(left) == len(right) and all(
+            any(_same_literal(item, other) for other in right) for item in left
+        )
+    return bool(left == right)
 
 
 def _function_defaults(function: Any) -> dict[str, Any]:
@@ -952,31 +1070,106 @@ def _function_defaults(function: Any) -> dict[str, Any]:
     }
 
 
-def _module_functions(module: Any, filename: str) -> list[Any]:
-    """The functions an imported module defines at module scope in ``filename``."""
+def _shared_default_object(
+    functions: Sequence[Any], constants: Optional[Mapping[str, Any]] = None
+) -> Optional[str]:
+    """Where two default values are one mutable object, if any are.
 
-    return [
-        value
-        for value in vars(module).values()
-        if inspect.isfunction(value)
+    ``first=[], second=[]`` makes two lists, but ``__defaults__`` can be set
+    to one list twice, and code that mutates one or tests ``first is
+    second`` then behaves differently under the same digest. Looks through
+    every default of every function given, inside tuples, lists and
+    dictionaries too (a container holding itself counts), and through the
+    module's literal constants given as ``constants``.
+    """
+
+    owners: dict[int, str] = {}
+    roots: list[tuple[str, Any]] = [
+        (f"constant {name}", value) for name, value in (constants or {}).items()
+    ]
+    for function in functions:
+        name = function.__code__.co_qualname
+        defaults = list(enumerate(function.__defaults__ or ()))
+        kwdefaults = list((function.__kwdefaults__ or {}).items())
+        roots.extend(
+            (f"{name} default {key}", value) for key, value in defaults + kwdefaults
+        )
+    pending = roots
+    while pending:
+        path, value = pending.pop()
+        if isinstance(value, (list, dict, set, bytearray)):
+            if id(value) in owners:
+                return (
+                    f"{path} and {owners[id(value)]} are one "
+                    f"{type(value).__name__} object"
+                )
+            owners[id(value)] = path
+        if isinstance(value, dict):
+            pending.extend((f"{path}[{key!r}]", item) for key, item in value.items())
+        elif isinstance(value, (list, tuple)):
+            pending.extend(
+                (f"{path}[{index}]", item) for index, item in enumerate(value)
+            )
+    return None
+
+
+def _module_functions(module: Any, filename: str) -> list[Any]:
+    """The functions an imported module defines at module scope in ``filename``.
+
+    Includes those a decorator wrapped (found through ``__wrapped__``). A
+    function counts as module-level by its code object's own qualified name,
+    which ``functools.wraps`` cannot copy onto a wrapper.
+    """
+
+    found: dict[int, Any] = {}
+    for value in vars(module).values():
+        function = _unwrapped(value, module, filename)
+        if function is not None:
+            found[id(function)] = function
+    return list(found.values())
+
+
+def _from_this_file(value: Any, module: Any, filename: str) -> bool:
+    """A function defined at module scope in ``filename`` (not a wrapper)."""
+
+    return (
+        inspect.isfunction(value)
         and value.__module__ == module.__name__
         and value.__code__.co_filename == filename
-        and "." not in value.__qualname__
-        and "<" not in value.__qualname__
-    ]
+        and "." not in value.__code__.co_qualname
+        and "<" not in value.__code__.co_qualname
+    )
+
+
+def _unwrapped(value: Any, module: Any, filename: str) -> Any:
+    """The function a decorator wrapped (``__wrapped__``), when there is one."""
+
+    for _ in range(16):
+        if _from_this_file(value, module, filename):
+            return value
+        value = getattr(value, "__wrapped__", None)
+        if value is None:
+            return None
+    return None
 
 
 def _module_differs_from_source(
-    module: Any, module_source: str, code: CodeType
+    module: Any, module_source: str, code: CodeType, *, also_check: Any = None
 ) -> Optional[str]:
     """How the imported module differs from its source as read now, if it does.
 
-    For every function defined at module scope in that file: it must use the
-    module's own globals, compile from the source to the loaded code
-    (ignoring file and line numbers), and, where the source's defaults are
-    literals, hold those defaults. Every module-scope name all of whose
-    bindings assign literals (``RATE = 0.21``, in a block or not) must still
-    hold one of those values, with the same type.
+    The source is compiled as a whole module (so a function compiles in its
+    module's context, imports included) and compared with what was imported,
+    ignoring file names and line numbers:
+    - every function defined at module scope in that file, and ``also_check``
+      (the modifier), must use the module's own globals, match that code, and,
+      where the source's defaults are literals, hold those defaults;
+    - a name the source binds only with ``def`` must still be that function
+      (or a decorator's wrapper of it, through ``__wrapped__``), not another
+      module's function or any other object;
+    - every module-scope name all of whose bindings assign literals
+      (``RATE = 0.21``, in a block or not) must still hold one of those
+      values, with the same type.
     """
 
     module_code = _compile_module_source(module_source, code)
@@ -984,13 +1177,36 @@ def _module_differs_from_source(
         return "its source no longer compiles"
     tree = ast.parse(module_source)
     compiled = _top_level_code(module_code)
+    filename = code.co_filename
     definitions: dict[str, list[ast.FunctionDef]] = {}
+    otherwise_bound: set[str] = set()
     for statement in _scope_statements(tree.body):
         if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
             definitions.setdefault(statement.name, []).append(statement)  # type: ignore[arg-type]
+            for expression in _definition_time_expressions(statement):
+                otherwise_bound.update(_expression_bindings(expression))
+        else:
+            otherwise_bound.update(_statement_bindings(statement))
     namespace = vars(module)
-    for function in _module_functions(module, code.co_filename):
-        name = function.__qualname__
+    for name in definitions:
+        if name in otherwise_bound:
+            continue
+        if name not in namespace:
+            return f"function {name} is no longer defined"
+        function = _unwrapped(namespace[name], module, filename)
+        if function is None:
+            return (
+                f"{name} is no longer the function its source defines "
+                f"(it is {type(namespace[name]).__name__})"
+            )
+        if function.__code__.co_qualname != name:
+            # Another function from the file, each still matching its source.
+            return f"{name} is bound to {function.__code__.co_qualname}"
+    functions = _module_functions(module, filename)
+    if also_check is not None and all(item is not also_check for item in functions):
+        functions.append(also_check)
+    for function in functions:
+        name = function.__code__.co_qualname
         if function.__globals__ is not namespace:
             return f"function {name} does not use its module's globals"
         shapes = {_code_shape(item) for item in compiled.get(name, [])}
@@ -1006,7 +1222,7 @@ def _module_differs_from_source(
         literal_sources = [item for item in sources if item is not None]
         if literal_sources and len(literal_sources) == len(sources):
             if not any(
-                _same_typed(item, _function_defaults(function))
+                _same_literal(item, _function_defaults(function))
                 for item in literal_sources
             ):
                 return f"function {name}'s default arguments differ from the source"
@@ -1014,10 +1230,486 @@ def _module_differs_from_source(
         if name not in namespace:
             return f"{name} is no longer defined"
         current = namespace[name]
-        if not any(_same_typed(current, value) for value in values):
+        if not any(_same_literal(current, value) for value in values):
             shown = values[0] if len(values) == 1 else values
             return f"{name} is {current!r} at run time but {shown!r} in the source"
     return None
+
+
+#: Names the import system sets on every module. Reading one reads nothing
+#: the module's source and location do not already fix.
+_MODULE_DUNDERS = frozenset(
+    {
+        "__builtins__",
+        "__cached__",
+        "__doc__",
+        "__file__",
+        "__loader__",
+        "__name__",
+        "__package__",
+        "__spec__",
+    }
+)
+#: Instructions that read a module global by name. ``LOAD_NAME`` and
+#: ``LOAD_FROM_DICT_OR_GLOBALS`` read a class body's own names first, so
+#: counting them may refuse more than needed, never less.
+_GLOBAL_READS = frozenset({"LOAD_GLOBAL", "LOAD_NAME", "LOAD_FROM_DICT_OR_GLOBALS"})
+_GLOBAL_WRITES = frozenset({"STORE_GLOBAL", "DELETE_GLOBAL"})
+
+
+def _code_objects(code: CodeType) -> Iterator[CodeType]:
+    """A code object and every code object nested in it."""
+
+    yield code
+    for constant in code.co_consts:
+        if isinstance(constant, CodeType):
+            yield from _code_objects(constant)
+
+
+def _wrapper_chain(value: Any, module: Any, filename: str) -> list[Any]:
+    """The functions from ``filename`` that calling ``value`` can run.
+
+    Follows ``__wrapped__`` from a decorator's wrapper to the function it
+    wraps, keeping each step whose code is in the file and runs with the
+    module's globals (a wrapper defined in another module is not this
+    module's state).
+    """
+
+    chain = []
+    for _ in range(16):
+        if value is None:
+            break
+        if (
+            inspect.isfunction(value)
+            and value.__code__.co_filename == filename
+            and value.__globals__ is vars(module)
+        ):
+            chain.append(value)
+        value = getattr(value, "__wrapped__", None)
+    return chain
+
+
+def _type_name(value: Any) -> str:
+    kind = type(value)
+    if kind.__module__ == "builtins":
+        return kind.__qualname__
+    return f"{kind.__module__}.{kind.__qualname__}"
+
+
+def _import_bindings(tree: ast.Module) -> tuple[set[str], bool]:
+    """Module-scope names every one of whose bindings is an import.
+
+    Also says whether the module has a star import, which binds names its
+    source does not list.
+    """
+
+    imported: set[str] = set()
+    other: set[str] = set()
+    star = False
+    for statement in _scope_statements(tree.body):
+        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+            for alias in statement.names:
+                if alias.name == "*":
+                    star = True
+                else:
+                    imported.add((alias.asname or alias.name).split(".")[0])
+        else:
+            other.update(_statement_bindings(statement))
+    return imported - other, star
+
+
+def _unbindable_global(modifier: Any, module: Any, module_source: str) -> Optional[str]:
+    """A module global the modifier reads whose value the digest cannot bind.
+
+    Follows the modifier's code, nested code included, and the code of every
+    function defined in the file that it reads by name, and judges each
+    module global read:
+    - a name all of whose bindings assign literals is checked by value
+      elsewhere, and a name bound only with ``def`` is checked against the
+      source elsewhere and followed here;
+    - a name bound only by import must hold a module or a callable other
+      than a ``functools.partial``: code in another module is bound by the
+      code revision or the installed versions, but an imported value is not
+      bound at all;
+    - a name the source does not bind is a builtin, a name the import system
+      sets, or (after a star import) imported; any other such name was set on
+      the module after import;
+    - anything else (a ``functools.partial`` or other object built at import,
+      a value computed from the environment, a file or the clock, a class
+      defined in the file) is refused. So is code that assigns or deletes a
+      module global, since what it reads then depends on earlier calls.
+
+    Run after :func:`_module_differs_from_source`, which checks the literal
+    values and that each ``def`` name is still its function.
+    """
+
+    tree = ast.parse(module_source)
+    filename = modifier.__code__.co_filename
+    definitions: set[str] = set()
+    otherwise_bound: set[str] = set()
+    for statement in _scope_statements(tree.body):
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            definitions.add(statement.name)
+            for expression in _definition_time_expressions(statement):
+                otherwise_bound.update(_expression_bindings(expression))
+        else:
+            otherwise_bound.update(_statement_bindings(statement))
+    functions_only = definitions - otherwise_bound
+    literals = set(_literal_bindings(tree))
+    imports, star = _import_bindings(tree)
+    source_bound = definitions | otherwise_bound
+    namespace = vars(module)
+    missing = object()
+    pending = [modifier]
+    seen: set[int] = set()
+    while pending:
+        function = pending.pop()
+        if id(function) in seen:
+            continue
+        seen.add(id(function))
+        reader = function.__code__.co_qualname
+        for code in _code_objects(function.__code__):
+            for instruction in dis.get_instructions(code):
+                name = instruction.argval
+                if instruction.opname in _GLOBAL_WRITES:
+                    return (
+                        f"{reader} assigns or deletes the module global {name}, "
+                        "so what the module reads depends on earlier calls"
+                    )
+                if instruction.opname not in _GLOBAL_READS:
+                    continue
+                value = namespace.get(name, missing)
+                if name in functions_only:
+                    pending.extend(_wrapper_chain(value, module, filename))
+                    continue
+                if name in literals:
+                    continue
+                if name in imports or (
+                    star and name not in source_bound and value is not missing
+                ):
+                    if value is missing or inspect.ismodule(value):
+                        continue
+                    if callable(value) and not isinstance(value, functools.partial):
+                        continue
+                    return (
+                        f"{reader} reads {name}, an imported value of type "
+                        f"{_type_name(value)}, which no source the digest names fixes"
+                    )
+                if name not in source_bound:
+                    if value is missing and name in _NAMESPACE_BUILTINS:
+                        return (
+                            f"{reader} calls {name}(), which reaches module state "
+                            "or runs code the digest does not name"
+                        )
+                    if value is missing or name in _MODULE_DUNDERS:
+                        continue
+                    return (
+                        f"{reader} reads {name}, a value of type "
+                        f"{_type_name(value)} set on the module after import"
+                    )
+                if inspect.isclass(value):
+                    return (
+                        f"{reader} reads {name}, a class defined in the file, whose "
+                        "attributes are module state the digest does not bind"
+                    )
+                return (
+                    f"{reader} reads {name}, a value of type {_type_name(value)} "
+                    "computed by the module rather than a literal constant, a "
+                    "function defined in the file or an import"
+                )
+    return None
+
+
+#: Nodes that bind names or run code in a scope of their own; a module whose
+#: top level a digest can bind holds none of them in definition-time code.
+_SCOPED_EVALUATION = (
+    ast.NamedExpr,
+    ast.Lambda,
+    ast.ListComp,
+    ast.SetComp,
+    ast.DictComp,
+    ast.GeneratorExp,
+    ast.Await,
+    ast.Yield,
+    ast.YieldFrom,
+)
+#: Singletons whose identity is the same in every process.
+_IDENTITY_CONSTANTS = (None, True, False, Ellipsis)
+#: Builtins that reach a module's namespace or run code without naming it.
+_NAMESPACE_BUILTINS = frozenset(
+    {"globals", "vars", "locals", "exec", "eval", "compile", "__import__"}
+)
+
+
+def _is_literal(node: ast.expr) -> bool:
+    try:
+        ast.literal_eval(node)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return False
+    return True
+
+
+def _is_main_guard(statement: ast.stmt) -> bool:
+    """``if __name__ == "__main__":`` with no ``else``: it never runs on import."""
+
+    if not isinstance(statement, ast.If) or statement.orelse:
+        return False
+    test = statement.test
+    if not (
+        isinstance(test, ast.Compare)
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+    ):
+        return False
+    sides = [test.left, test.comparators[0]]
+    names = [side for side in sides if isinstance(side, ast.Name)]
+    constants = [side for side in sides if isinstance(side, ast.Constant)]
+    return (
+        len(names) == 1
+        and names[0].id == "__name__"
+        and len(constants) == 1
+        and constants[0].value == "__main__"
+    )
+
+
+def _identity_problem(tree: ast.Module) -> Optional[str]:
+    """Code that tells equal values apart by identity, anywhere in the module.
+
+    The compiler may make equal immutable constants one object (``(1,) is
+    (1,)`` can be true), and a value encoding cannot tell one object from two
+    equal ones, so ``is`` is allowed only against ``None``, ``True``,
+    ``False``, ``...`` or ``type(...)``, and ``id()`` is refused.
+    """
+
+    def plain(node: ast.expr) -> bool:
+        if isinstance(node, ast.Constant) and any(
+            node.value is constant for constant in _IDENTITY_CONSTANTS
+        ):
+            return True
+        return (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "type"
+        )
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            lefts = [node.left, *node.comparators[:-1]]
+            for left, op, right in zip(lefts, node.ops, node.comparators):
+                if isinstance(op, (ast.Is, ast.IsNot)) and not (
+                    plain(left) or plain(right)
+                ):
+                    return f"line {node.lineno} compares identities"
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "id"
+        ):
+            return f"line {node.lineno} calls id()"
+    return None
+
+
+def _module_statement_problem(tree: ast.Module) -> Optional[str]:
+    """Why a modifier's module is not one whose state a digest can bind.
+
+    At module level the module may hold only docstrings, ``pass``, imports,
+    assignments of a literal to one name (annotated or not), undecorated
+    ``def`` statements, and an ``if __name__ == "__main__":`` block (which
+    never runs on import). Each name is bound once. Definition-time code
+    (defaults, annotations) holds no ``:=``, lambda, comprehension, ``await``
+    or ``yield``. Then every module-level name is a literal (checked by
+    value), a function (checked against the source) or an import (checked
+    against what the import binds), and nothing else can hold state:
+    conditional or repeated bindings, objects built at import, decorators
+    and class definitions are what this shuts out.
+    """
+
+    bound: dict[str, int] = {}
+
+    def bind(name: str, line: int) -> Optional[str]:
+        if name in bound:
+            return f"{name} is bound twice (lines {bound[name]} and {line})"
+        bound[name] = line
+        return None
+
+    def evaluates(nodes: Sequence[Optional[ast.AST]]) -> Optional[ast.AST]:
+        for root in nodes:
+            if root is None:
+                continue
+            for node in ast.walk(root):
+                if isinstance(node, _SCOPED_EVALUATION):
+                    return node
+        return None
+
+    for statement in tree.body:
+        line = statement.lineno
+        problem: Optional[str] = None
+        if isinstance(statement, ast.Pass) or _is_main_guard(statement):
+            continue
+        if isinstance(statement, ast.Expr) and isinstance(
+            statement.value, ast.Constant
+        ):
+            if isinstance(statement.value.value, str):
+                continue
+        if isinstance(statement, (ast.Import, ast.ImportFrom)):
+            for alias in statement.names:
+                if alias.name == "*":
+                    continue
+                name = alias.asname or alias.name.split(".")[0]
+                problem = problem or bind(name, line)
+        elif isinstance(statement, ast.Assign):
+            if len(statement.targets) != 1 or not isinstance(
+                statement.targets[0], ast.Name
+            ):
+                return f"line {line} assigns to something other than one name"
+            name = statement.targets[0].id
+            if not _is_literal(statement.value):
+                return f"line {line} assigns {name} something other than a literal"
+            problem = bind(name, line)
+        elif isinstance(statement, ast.AnnAssign):
+            if not isinstance(statement.target, ast.Name):
+                return f"line {line} assigns to something other than one name"
+            name = statement.target.id
+            if evaluates([statement.annotation]):
+                return f"line {line} binds a name in the annotation of {name}"
+            if statement.value is not None:
+                if not _is_literal(statement.value):
+                    return f"line {line} assigns {name} something other than a literal"
+                problem = bind(name, line)
+        elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if statement.decorator_list:
+                return f"line {line} decorates {statement.name}"
+            if evaluates(_definition_time_expressions(statement)):
+                return (
+                    f"line {line}: a default or annotation of {statement.name} "
+                    "binds a name or runs code in a scope of its own"
+                )
+            problem = bind(statement.name, line)
+        elif isinstance(statement, ast.ClassDef):
+            return f"line {line} defines class {statement.name}"
+        else:
+            return f"line {line} is a module-level {type(statement).__name__} statement"
+        if problem:
+            return problem
+    return None
+
+
+def _module_shape_problem(tree: ast.Module) -> Optional[str]:
+    """Why a modifier's module cannot be bound, with the reason, if it cannot."""
+
+    problem = _module_statement_problem(tree)
+    if problem:
+        return (
+            f"{problem}; a module whose modifier is bound holds at module level "
+            "only imports, literal constants and undecorated functions, each "
+            "name bound once"
+        )
+    identity = _identity_problem(tree)
+    if identity:
+        return (
+            f"{identity}, but a digest of values cannot tell one object from two "
+            "equal ones (compare with == instead)"
+        )
+    return None
+
+
+def _module_state_problem(
+    module: Any, tree: ast.Module, functions: Sequence[Any]
+) -> Optional[str]:
+    """How the imported module's namespace holds state its source does not fix.
+
+    For a module :func:`_module_shape_problem` accepts. Every name in the
+    namespace other than dunders must be one the source binds: a literal or
+    a function (checked elsewhere), or an import, which must still be what
+    its import statement binds and must hold a module or a callable other
+    than a ``functools.partial`` (``from __future__`` features excepted).
+    A star import supplies names its source does not list; each must be
+    that module's own attribute, judged the same way. Functions must carry
+    no attributes, and no two literal constants or defaults may be one
+    mutable object.
+    """
+
+    namespace = vars(module)
+    missing = object()
+    literals: set[str] = set()
+    definitions: set[str] = set()
+    imported: dict[str, tuple[Any, str, bool]] = {}
+    star_modules: list[Any] = []
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            literals.add(statement.targets[0].id)  # type: ignore[attr-defined]
+        elif isinstance(statement, ast.AnnAssign) and statement.value is not None:
+            literals.add(statement.target.id)  # type: ignore[attr-defined]
+        elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            definitions.add(statement.name)
+        elif isinstance(statement, ast.Import):
+            for alias in statement.names:
+                target = alias.name if alias.asname else alias.name.split(".")[0]
+                imported[alias.asname or target] = (
+                    sys.modules.get(target, missing),
+                    f"import {alias.name}",
+                    False,
+                )
+        elif isinstance(statement, ast.ImportFrom):
+            base = importlib.util.resolve_name(
+                "." * statement.level + (statement.module or ""),
+                module.__package__,
+            )
+            source_module = sys.modules.get(base, missing)
+            for alias in statement.names:
+                if alias.name == "*":
+                    star_modules.append(source_module)
+                    continue
+                expected = getattr(source_module, alias.name, missing)
+                if expected is missing:
+                    expected = sys.modules.get(f"{base}.{alias.name}", missing)
+                imported[alias.asname or alias.name] = (
+                    expected,
+                    f"from {base} import {alias.name}",
+                    base == "__future__",
+                )
+
+    def judged(name: str, value: Any) -> Optional[str]:
+        if inspect.ismodule(value) or (
+            callable(value) and not isinstance(value, functools.partial)
+        ):
+            return None
+        return (
+            f"{name} is an imported value of type {_type_name(value)}, which no "
+            "source the digest names fixes"
+        )
+
+    for name, (expected, statement, future) in imported.items():
+        value = namespace.get(name, missing)
+        if expected is missing or value is not expected:
+            return f"{name} is not what `{statement}` binds"
+        problem = None if future else judged(name, value)
+        if problem:
+            return problem
+    for name, value in namespace.items():
+        if name.startswith("__") and name.endswith("__"):
+            continue
+        if name in literals or name in definitions or name in imported:
+            continue
+        if any(getattr(source, name, missing) is value for source in star_modules):
+            problem = judged(name, value)
+            if problem:
+                return problem
+            continue
+        return (
+            f"{name} is a value of type {_type_name(value)} set on the module, "
+            "not bound by its source"
+        )
+    for function in functions:
+        if function.__dict__:
+            attributes = ", ".join(sorted(function.__dict__))
+            return (
+                f"function {function.__code__.co_qualname} carries attributes "
+                f"({attributes}), state the digest does not bind"
+            )
+    return _shared_default_object(
+        functions, {name: namespace.get(name) for name in sorted(literals)}
+    )
 
 
 def _sha256_text(text: str) -> str:
@@ -1034,25 +1726,25 @@ def _modifier_identity(
     and ``code_revision``. None of these depends on where the code is checked
     out or which Python runs it.
 
-    The digest may only name code that ran, so the module's source is checked
-    against what was imported (ignoring file names and line numbers):
-    - the modifier, and every other function defined at module scope in that
-      file, must use the module's own globals and compile to the loaded code,
-      nested code included; literal default arguments must match the source;
-    - every module-scope name all of whose bindings assign literals
-      (``RATE = 0.21``, at top level or in a block) must still hold one of
-      those values, with the same type.
-    A file edited after import, or a literal constant reassigned at run time,
-    is refused. The default arguments of every function in the module are
-    bound by value, with their types (``1`` is not ``1.0``, a tuple is not a
-    list, ``None`` is not a missing key).
+    The module must have a shape whose state its source fixes
+    (:func:`_module_shape_problem`): at module level only imports, literal
+    constants and undecorated functions, each name bound once, and no code
+    that tells equal values apart by identity. Then the module's source is
+    checked against what was imported (ignoring file names and line numbers):
+    every function must compile to the loaded code, use the module's globals,
+    carry no attributes and keep its literal defaults; every literal constant
+    must keep its exact value; every import must still be what it binds and
+    hold a module or a callable other than a partial; the namespace may hold
+    no other names; no two constants or defaults may be one mutable object;
+    and the modifier may not reach module state through ``globals()`` and the
+    like or assign module globals. A file edited after import, or anything
+    reassigned at run time, is refused. Default arguments are bound by value,
+    with their types (``1`` is not ``1.0``, a tuple is not a list, ``None`` is
+    not a missing key).
 
-    A module that defines one function name more than once with different
-    code (``if FLAG: def helper(): ... else: def helper(): ...``) is refused,
-    because which definition the source selects now cannot be checked.
-
-    Not covered: other module state (objects built at import, imported
-    modules, class bodies and methods) and data read at run time;
+    Not covered: state in other modules (``params.PAYMENT`` read through
+    ``import params``) and data read at run time; code in other modules is
+    bound by ``code_revision`` or the installed versions, and
     ``code_revision`` names the code, not the process. Receipts are claims by
     their producer: this protects an honest producer against mistakes, not a
     reader against a producer who builds code to mislead.
@@ -1100,32 +1792,48 @@ def _modifier_identity(
         raise ReceiptError(
             "The modifier's source is unavailable, so it cannot be bound."
         ) from exc
-    if not _source_matches_loaded_code(source, code, modifier.__qualname__):
-        raise ReceiptError(
-            f"{modifier.__module__}.{modifier.__qualname__} no longer matches its "
-            "source file (edited after import?), so it cannot be bound."
-        )
-    difference = _module_differs_from_source(module, module_source, code)
+    tree = ast.parse(module_source)
+    shape = _module_shape_problem(tree)
+    if shape is not None:
+        raise ReceiptError(f"{modifier.__module__} cannot be bound: {shape}.")
+    difference = _module_differs_from_source(
+        module, module_source, code, also_check=modifier
+    )
     if difference is not None:
         raise ReceiptError(
             f"{modifier.__module__} no longer matches its source file: {difference} "
             "(edited or reassigned after import?), so it cannot be bound."
         )
+    # The modifier is among the module's functions: a def name missing from
+    # its module is refused above.
+    functions = sorted(
+        _module_functions(module, code.co_filename),
+        key=lambda f: f.__code__.co_qualname,
+    )
+    state = _module_state_problem(module, tree, functions)
+    if state is not None:
+        raise ReceiptError(
+            f"{modifier.__module__}: {state}, so the modifier cannot be bound."
+        )
+    unbindable = _unbindable_global(modifier, module, module_source)
+    if unbindable is not None:
+        raise ReceiptError(
+            f"{modifier.__module__}: {unbindable}, so the modifier cannot be bound. "
+            "Put the value in a literal constant or a default argument in that file."
+        )
     # Default arguments are runtime values, so they are bound by value, with
     # their types, for the modifier and every function in its module.
     module_defaults: dict[str, Any] = {}
-    for function in sorted(
-        _module_functions(module, code.co_filename), key=lambda f: f.__qualname__
-    ):
+    for function in functions:
         if not function.__defaults__ and not function.__kwdefaults__:
             continue
         try:
-            module_defaults[function.__qualname__] = _typed_value(
-                _function_defaults(function), function.__qualname__
+            module_defaults[function.__code__.co_qualname] = _typed_value(
+                _function_defaults(function), function.__code__.co_qualname
             )
         except ReceiptError as exc:
             raise ReceiptError(
-                f"{function.__qualname__}'s default arguments cannot be bound: {exc}"
+                f"{function.__code__.co_qualname}'s default arguments cannot be bound: {exc}"
             ) from exc
     return {
         "module": modifier.__module__,
@@ -1201,7 +1909,7 @@ def scenario_reform_identity(
             )
         payload["simulation_modifier"] = _modifier_identity(modifier, code_revision)
         binding = "code_revision"
-    digest = content_sha256(
+    digest = _payload_sha256(
         {"representation": "policyengine-uk.scenario/v1", "payload": payload}
     )
     return ReformIdentity(
@@ -1290,7 +1998,7 @@ def composed_reform_identity(
             binding = "code_revision"
     if not bound:
         return ReformIdentity(kind="current_law", name=name)
-    digest = content_sha256(
+    digest = _payload_sha256(
         {
             "representation": COMPOSITION_REPRESENTATION,
             "payload": {
@@ -1471,6 +2179,13 @@ def build_execution_receipt(
         ) from exc
 
 
+def _is_boolean(value: Any) -> bool:
+    numpy = sys.modules.get("numpy")
+    return isinstance(value, bool) or (
+        numpy is not None and isinstance(value, numpy.bool_)
+    )
+
+
 def _receipt_years(years: Any) -> list[int]:
     """Sorted unique years, refusing anything that is not a sequence of integers."""
 
@@ -1478,7 +2193,7 @@ def _receipt_years(years: Any) -> list[int]:
         raise ReceiptError(f"years must be a sequence of integers, not {years!r}.")
     result = set()
     for year in years:
-        if isinstance(year, bool) or not (
+        if _is_boolean(year) or not (
             isinstance(year, int)
             or _numpy_scalar(year)
             and isinstance(year.item(), int)
@@ -1488,6 +2203,31 @@ def _receipt_years(years: Any) -> list[int]:
     if not result:
         raise ReceiptError("A receipt covers at least one year.")
     return sorted(result)
+
+
+@functools.lru_cache(maxsize=8)
+def _projected_years(
+    dataset_path: str, dataset_sha256: str, model_version: str
+) -> tuple[int, ...]:
+    """Years the installed policyengine-uk projects a single-year dataset to.
+
+    The same rule as the qualification ``supported_years`` gate: build the
+    multi-year dataset as ``policyengine_uk.Simulation`` does for a
+    single-year file, without running a formula, and keep the years from the
+    dataset's own year onwards. Cached by file bytes and model version.
+    """
+
+    from policyengine_uk.data.dataset_schema import UKSingleYearDataset
+    from policyengine_uk.data.economic_assumptions import extend_single_year_dataset
+    from policyengine_uk.system import system
+
+    dataset = UKSingleYearDataset(dataset_path)
+    first = int(str(dataset.time_period)[:4])
+    multi_year = extend_single_year_dataset(dataset, system.parameters)
+    years = getattr(multi_year, "years", None)
+    if years is None:
+        years = list(multi_year.datasets)
+    return tuple(sorted(int(year) for year in years if int(year) >= first))
 
 
 def _certificate_fields(
@@ -1662,6 +2402,9 @@ def _build(
         baseline=baseline,
         fiscal_year=uk_fiscal_year_convention(),
         years=_receipt_years(years),
+        supported_years=list(
+            _projected_years(str(dataset_path), actual_sha256, model.version)
+        ),
         outputs_sha256=content_sha256(outputs) if outputs is not None else None,
         runtime=RuntimeContext(
             python_version=platform.python_version(),

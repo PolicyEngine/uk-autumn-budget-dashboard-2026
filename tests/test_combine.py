@@ -5,7 +5,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
-from tests.publication_support import broken_modifier
+from tests.fixed_shape_measures import broken_modifier
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
