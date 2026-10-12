@@ -406,3 +406,51 @@ def test_exports_consume_exactly_the_bytes_they_checked(world, monkeypatch):
     monkeypatch.setattr(exports, "check", check_then_tamper)
     with pytest.raises(PublishError, match="does not match its receipt"):
         exports.load_approved(["alpha"], **args(world))
+
+
+# --- round 2 (#20 review): copied entry fields stay bound to the receipt ---
+
+
+def test_relabelling_a_combined_entry_with_other_members_is_caught(world):
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    approved(world, manifest, "gamma")
+    old = combined(world, manifest, ["alpha", "beta"], {2027: -2.0})
+    key = stage(manifest, old.path, **args(world))
+    approve(manifest, key, "María", **args(world))
+    assert check(manifest, **args(world)) == []
+
+    # The reviewer's case: the manifest now claims Alpha and Gamma, with
+    # their current outputs, while the receipt and approval are unchanged.
+    entry = manifest.combined[key]
+    entry.measures = ["alpha", "gamma"]
+    entry.member_outputs_sha256 = {
+        id: manifest.measures[id].outputs_sha256 for id in entry.measures
+    }
+    failures = check(manifest, **args(world))
+    assert any("members are not the artifact's" in f for f in failures)
+    assert any("member snapshot is not the artifact's" in f for f in failures)
+
+
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("unsupported_years", [], "unsupported years are not"),
+        ("years", [2027], "years are not the artifact's"),
+        ("name", "Something else", "name is not the artifact's"),
+        ("measures", ["alpha"], "names combined-run members"),
+    ],
+)
+def test_a_measure_entry_cannot_restate_what_its_receipt_says(
+    world, field, value, message
+):
+    # 2031 is beyond the dataset's projection, so the receipt reports it
+    # unsupported: clearing that in the manifest would show its row.
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha", {**VALUES, 2031: -3.0})
+    assert manifest.measures["alpha"].unsupported_years == [2031]
+    assert check(manifest, **args(world)) == []
+    setattr(manifest.measures["alpha"], field, value)
+    failures = check(manifest, **args(world))
+    assert any(message in f for f in failures), failures
