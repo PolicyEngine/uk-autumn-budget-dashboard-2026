@@ -147,27 +147,41 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
     raise ScorecardError("no header row with at least three fiscal years")
 
 
-def _label_column(cells: list, head_column: int) -> Optional[int]:
-    """The column of a row's longest label before the Head column."""
-    texts = [
-        (len(_text(cell)), column)
-        for column, cell in enumerate(cells[:head_column])
-        if _text(cell)
-    ]
-    return max(texts)[1] if texts else None
+# Footnote markers that may sit beside a total's label: digits, asterisks,
+# daggers and superscript figures, at most three characters.
+_MARKER = re.compile(r"[0-9*\u2020\u2021\u00b9\u00b2\u00b3\u2070-\u2079]{1,3}")
 
 
 def _cells(row: tuple, first_year_column: int) -> list:
     return list(row) + [None] * (first_year_column + 1 - len(row))
 
 
+def _total_label(label_cells: list[str], row: tuple) -> Optional[str]:
+    """The total a row prints, or None if it names no total.
+
+    A total row's labels are one total label and, at most, footnote
+    markers. Anything else beside a total label is ambiguous (a heading,
+    a note, two totals) and is refused rather than guessed at.
+    """
+    totals = [cell for cell in label_cells if cell.lower() in TOTAL_LABELS]
+    if not totals:
+        return None
+    others = [cell for cell in label_cells if cell not in totals]
+    if len(totals) > 1 or any(not _MARKER.fullmatch(cell) for cell in others):
+        raise ScorecardError(
+            f"a total label beside other text in {row!r}; check this row"
+        )
+    return totals[0]
+
+
 def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     """Parse a scorecard from its cell values, row by row.
 
-    A total is a row whose only label is a total label. A total whose
-    figures are all blank is a nil total, but only when its label sits in
-    the column the measures' descriptions use: a heading or footnote that
-    repeats a total's words is not a printed total.
+    A total is a row whose labels are a total label and, at most, footnote
+    markers, and it must print its figures (the Treasury prints a nil
+    figure as "-"). A row that only repeats a total's words with no
+    figures, or puts other text beside them, is refused: such a row could
+    be a heading, a note or a total, and the importer does not guess.
     """
     header_index, year_columns, head_column = _find_header(rows)
     fiscal_years = [year_columns[c] for c in sorted(year_columns)]
@@ -175,13 +189,6 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     measures: list[Measure] = []
     totals: dict[Optional[str], dict[str, float]] = {}
     seen_numbers: set[str] = set()
-    description_columns = {
-        _label_column(cells, head_column)
-        for cells in (
-            _cells(row, first_year_column) for row in rows[header_index + 1 :]
-        )
-        if _text(cells[head_column]).lower() in {"tax", "spend"}
-    }
 
     for row in rows[header_index + 1 :]:
         cells = _cells(row, first_year_column)
@@ -191,17 +198,18 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         label_cells = [_text(c) for c in cells[:head_column] if _text(c)]
         head = _text(cells[head_column]).lower()
         label = max(label_cells, key=len) if label_cells else ""
-        lowered = label.lower()
         blank = all(_text(v) == "" for v in raw_values)
-        is_total = (
-            lowered in TOTAL_LABELS
-            and len(label_cells) == 1
-            and (
-                not blank
-                or _label_column(cells, head_column) in description_columns
+        total = _total_label(label_cells, row)
+        if total is not None and blank:
+            raise ScorecardError(
+                f"{total!r} prints no figures in {row!r}; a total needs its "
+                "figures (nil is '-')"
             )
-        )
-        if blank and not is_total and head not in {"tax", "spend"}:
+        is_total = total is not None
+        lowered = total.lower() if is_total else label.lower()
+        if is_total:
+            label = total
+        if blank and head not in {"tax", "spend"}:
             # A section heading, blank line or footnote. A row with a Tax or
             # Spend head is a measure even when every figure is blank (nil).
             continue
