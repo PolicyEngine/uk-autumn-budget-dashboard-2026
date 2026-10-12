@@ -141,6 +141,25 @@ MOCK3_SS_CAP_FIRST_YEAR = 2029
 MOCK3_SS_CAP = 1_000
 
 
+# Costing 20's static basis is "before corporation-tax offsets or wage
+# pass-through": the engine's employer-NI wage pass-through and earnings
+# behavioural response are held at zero in both scenarios.
+MOCK3_SS_STATIC_OFF = (
+    "employer_ni_fixed_employer_cost_change",
+    "employment_income_behavioral_response",
+)
+
+
+def _mock3_ss_static_modifier(sim):
+    import numpy as np
+
+    for year in range(2026, 2032):
+        for variable in MOCK3_SS_STATIC_OFF:
+            n = len(np.asarray(sim.calculate("age", year)))
+            sim.set_input(variable, year, np.zeros(n))
+    return sim
+
+
 def _create_mock3_salary_sacrifice_cap() -> Reform:
     """Mock 3 measure 9: salary-sacrifice NI exemption limit halves to £1,000.
 
@@ -173,6 +192,8 @@ def _create_mock3_salary_sacrifice_cap() -> Reform:
             SS_REDUCTION_RATE_PATH: _from(2026, 0),
             SS_HAIRCUT_RATE_PATH: _from(2026, 0),
         },
+        baseline_simulation_modifier=_mock3_ss_static_modifier,
+        simulation_modifier=_mock3_ss_static_modifier,
     )
 
 
