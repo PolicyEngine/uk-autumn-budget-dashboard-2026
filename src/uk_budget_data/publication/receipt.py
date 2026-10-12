@@ -287,10 +287,20 @@ def composition_problems(document: dict) -> list[str]:
             api.ReformIdentity.model_validate(record["reform"])
             for record in members
         ]
+        # Every member baseline is a valid identity, applied or not.
+        own_baselines = [
+            api.ReformIdentity.model_validate(record["baseline"])
+            for record in members
+        ]
+        if any(
+            type(record["baseline_bound"]) is not bool for record in members
+        ):
+            return ["its member records do not say which baselines it applied"]
         bound = [record for record in members if record["baseline_bound"]]
         baselines = [
-            api.ReformIdentity.model_validate(record["baseline"])
-            for record in bound
+            identity
+            for identity, record in zip(own_baselines, members)
+            if record["baseline_bound"]
         ]
         rebuilt = {
             "reform": api.composed_reform_identity(
@@ -320,11 +330,22 @@ def composition_problems(document: dict) -> list[str]:
                 f"its {side} identity is not the composition of its "
                 "member records"
             )
+    # Only the configured baseline is shared, so applied once for every
+    # member that uses it. A member's own baseline is applied for that
+    # member: it may never be left out, even when another member's is the
+    # same (a modifier applied twice is not a modifier applied once).
+    configured = _identity_core(dashboard.get("config_baseline"))
     composed = {_identity_core(record["baseline"]) for record in bound}
     for record in members:
-        if not record["baseline_bound"] and (
-            _identity_core(record["baseline"]) not in composed
-        ):
+        if record["baseline_bound"]:
+            continue
+        own = _identity_core(record["baseline"])
+        if configured is None or own != configured:
+            problems.append(
+                f"member {record['id']} has its own baseline, which the "
+                "run must apply"
+            )
+        elif own not in composed:
             problems.append(
                 f"member {record['id']}'s baseline is not part of the run"
             )

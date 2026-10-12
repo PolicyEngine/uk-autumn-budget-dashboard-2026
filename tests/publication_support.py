@@ -222,10 +222,14 @@ class World:
             None, name=f"{key} baseline", revision=revision
         )
         composition = None
+        config_baseline = None
         if members:
             members, composition, composed = self._compose(members)
             baseline_identity, composed_reform = composed
             reform_identity = reform_identity or composed_reform
+            config_baseline = receipt_module.receipt_api()[
+                0
+            ].ReformIdentity.model_validate(World.configured_baseline())
         inputs = dict(
             key=key,
             measure_ids=measure_ids or [key],
@@ -240,6 +244,7 @@ class World:
             members=members,
             member_outputs=member_outputs,
             composition=composition,
+            config_baseline_identity=config_baseline,
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)
@@ -258,16 +263,35 @@ class World:
         )
 
     @staticmethod
+    def configured_baseline() -> dict:
+        """The configured baseline World's combined runs record: current
+        law, as generate records a config with no baseline changes."""
+        api, _ = receipt_module.receipt_api()
+        return json.loads(
+            api.reform_identity(
+                None, None, name="configured baseline"
+            ).model_dump_json()
+        )
+
+    @staticmethod
     def _compose(records):
         """Compose member records the way combined_identities does: every
         reform in order, and each distinct baseline once."""
         api, _ = receipt_module.receipt_api()
         records = [dict(record) for record in records]
-        seen = []
+        # As combined_identities: a member on the configured baseline
+        # (current law here) shares it, applied once; a member with its own
+        # baseline has it applied.
+        configured = World.configured_baseline()
+        configured_core = {k: v for k, v in configured.items() if k != "name"}
+        configured_bound = False
         for record in records:
             core = {k: v for k, v in record["baseline"].items() if k != "name"}
-            record.setdefault("baseline_bound", core not in seen)
-            seen.append(core)
+            shared = core == configured_core
+            record.setdefault(
+                "baseline_bound", not shared or not configured_bound
+            )
+            configured_bound |= shared and record["baseline_bound"]
         composition = {
             "reform_applied_before_data_load": False,
             "baseline_applied_before_data_load": False,

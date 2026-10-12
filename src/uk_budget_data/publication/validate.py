@@ -4,11 +4,9 @@ These are the national checks from the team's published-data validator
 (``scripts/validate_published_data.py`` on PR #3), applied to one artifact:
 every required year is covered, each table has exactly the rows it should
 for each year, the decile sets are exact, and a measure shows no effect
-before the year it starts. (The validator's check that the household sample
-is identical across years does not apply: an artifact's sample is chosen by
-household id, and which households fall in the plotted income range varies
-by year.) Types, finiteness and duplicate keys are already enforced when a
-table is read.
+before the year it starts, and the household scatter samples the same
+households in every year, as the validator requires. Types, finiteness and
+duplicate keys are already enforced when a table is read.
 """
 
 from collections import defaultdict
@@ -128,4 +126,19 @@ def table_problems(
                     f"starts in {effective_from_year}"
                 )
 
+    sample = tables.get("household_scatter")
+    if sample:
+        households = {
+            year: {
+                row["household_id"] for row in sample if row["year"] == year
+            }
+            for year in years
+        }
+        if any(not ids for ids in households.values()) or (
+            len({frozenset(ids) for ids in households.values()}) > 1
+        ):
+            problems.append(
+                "household_scatter: the sampled households differ between "
+                "years"
+            )
     return problems

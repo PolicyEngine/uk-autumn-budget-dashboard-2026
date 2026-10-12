@@ -234,9 +234,17 @@ def _members_problems(
             )
         own = read_receipt(artifact_dir(entry, data_root))["execution_receipt"]
         for side in ("reform", "baseline"):
-            if own[side].get("reform_sha256") != member[side].get(
-                "reform_sha256"
-            ) or own[side].get("kind") != member[side].get("kind"):
+            # Kind, representation, digest and binding: everything an
+            # identity's meaning depends on (its name is a label).
+            if not isinstance(member.get(side), dict) or any(
+                own[side].get(field) != member[side].get(field)
+                for field in (
+                    "kind",
+                    "representation",
+                    "reform_sha256",
+                    "binding",
+                )
+            ):
                 problems.append(
                     f"member {member['id']} was combined with a different "
                     f"{side} definition from its published artifact"
