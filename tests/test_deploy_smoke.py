@@ -74,6 +74,29 @@ def test_failing_routes_fail():
     assert not run_smoke(fake_api(impact_status=500), SHA, BUILD)["pass"]
 
 
+class _TimesOut:
+    """A client whose household route never answers."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    def request(self, method, route, **kwargs):
+        if route == "/api/personal-impact":
+            import httpx
+
+            raise httpx.ReadTimeout("timed out")
+        return self.inner.request(method, route, **kwargs)
+
+
+def test_a_route_that_never_answers_is_a_problem_not_a_crash():
+    result = run_smoke(_TimesOut(fake_api()), SHA, BUILD)
+    assert not result["pass"]
+    assert result["problems"][0].startswith(
+        "/api/personal-impact did not answer"
+    )
+    assert "ReadTimeout" in result["problems"][0]
+
+
 def test_an_answer_with_no_numbers_fails():
     result = run_smoke(fake_api(impact={"policies": {}}), SHA, BUILD)
     assert result["problems"] == ["/api/personal-impact returned no numbers"]

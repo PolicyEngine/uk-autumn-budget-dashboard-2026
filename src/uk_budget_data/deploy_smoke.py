@@ -22,6 +22,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from typing import Any, Optional
 
 from uk_budget_data.runtime_identity import runtime_identity
@@ -69,6 +70,23 @@ def identity_problems(
     return problems
 
 
+def _request(client, method: str, route: str, problems: list, **kwargs):
+    """Send one request; a failure to answer is a problem, not a crash."""
+    started = time.monotonic()
+    try:
+        response = client.request(method, route, **kwargs)
+    except Exception as error:  # noqa: BLE001 - reported as a problem
+        problems.append(
+            f"{route} did not answer after "
+            f"{time.monotonic() - started:.0f}s: {type(error).__name__}"
+        )
+        return None
+    if response.status_code != 200:
+        problems.append(f"{route} returned HTTP {response.status_code}")
+        return None
+    return response
+
+
 def run_smoke(
     client, expected_git_sha: str, expected: Optional[dict] = None
 ) -> dict:
@@ -76,24 +94,18 @@ def run_smoke(
     expected = expected or runtime_identity()
     problems: list[str] = []
 
-    health = client.get("/api/health")
-    if health.status_code != 200:
-        problems.append(f"/api/health returned HTTP {health.status_code}")
+    _request(client, "GET", "/api/health", problems)
 
-    version = client.get("/api/version")
-    if version.status_code != 200:
-        problems.append(f"/api/version returned HTTP {version.status_code}")
-        reported = None
-    else:
+    reported = None
+    version = _request(client, "GET", "/api/version", problems)
+    if version is not None:
         reported = version.json()
         problems += identity_problems(reported, expected_git_sha, expected)
 
-    impact = client.post("/api/personal-impact", json=SMOKE_HOUSEHOLD)
-    if impact.status_code != 200:
-        problems.append(
-            f"/api/personal-impact returned HTTP {impact.status_code}"
-        )
-    else:
+    impact = _request(
+        client, "POST", "/api/personal-impact", problems, json=SMOKE_HOUSEHOLD
+    )
+    if impact is not None:
         found = list(numbers(impact.json()))
         if not found:
             problems.append("/api/personal-impact returned no numbers")
