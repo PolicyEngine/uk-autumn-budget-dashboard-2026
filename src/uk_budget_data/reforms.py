@@ -414,30 +414,21 @@ def _connect_student_loan_variables(sim: Simulation) -> Simulation:
     policyengine-uk student_loan_repayment variable to the tax/revenue totals.
 
     Note: Requires policyengine-uk-data with student_loan_plan imputation.
+
+    In policyengine-uk 2.125.1, ``gov_tax``, ``household_tax`` and
+    ``hbai_household_net_income`` count ``student_loan_repayments``, whose
+    formula returns the modelled ``student_loan_repayment``. The dataset
+    supplies its own ``student_loan_repayments`` values, which mask that
+    formula, so they are deleted here. (Earlier versions listed the
+    components in ``adds``; that attribute is now ``None``.)
     """
-    # Connect policyengine-uk's modelled repayments to government revenue
-    # Replace reported repayments with modelled repayments
-    sim.tax_benefit_system.variables["gov_tax"].adds.remove(
-        "student_loan_repayments"
-    )
-    sim.tax_benefit_system.variables["gov_tax"].adds.append(
-        "student_loan_repayment"
-    )
-
-    sim.tax_benefit_system.variables["household_tax"].adds.remove(
-        "student_loan_repayments"
-    )
-    sim.tax_benefit_system.variables["household_tax"].adds.append(
-        "student_loan_repayment"
-    )
-
-    # Update HBAI household income
-    sim.tax_benefit_system.variables[
-        "hbai_household_net_income"
-    ].subtracts.append("student_loan_repayment")
-    sim.tax_benefit_system.variables["hbai_household_net_income"].adds.append(
-        "student_loan_repayments"
-    )
+    variable = sim.tax_benefit_system.variables["student_loan_repayments"]
+    if not variable.formulas:
+        raise RuntimeError(
+            "student_loan_repayments has no formula in this policyengine-uk "
+            "version, so modelled repayments cannot replace the reported ones"
+        )
+    sim.delete_arrays("student_loan_repayments")
     return sim
 
 
