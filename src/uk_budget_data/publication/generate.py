@@ -80,9 +80,32 @@ def _default_process(reform: Reform, config: DataConfig, baseline, reformed):
 
 
 def _default_build(dataset_path: Optional[str], scenario=None):
+    """Build a microsimulation, recording the dataset's hash at load.
+
+    A bundle dataset loaded by name has its hash recorded by policyengine's
+    materializer. A dataset given as a local path does not, so it is hashed
+    here immediately before the simulation reads it, never later: a hash
+    taken at receipt time could describe bytes put in place after others
+    ran.
+    """
+    from policyengine.utils.hashing import sha256_file
+
     from uk_budget_data.pipeline import build_microsimulation
 
-    return build_microsimulation(dataset_path, scenario)
+    load_hash = (
+        sha256_file(dataset_path)
+        if dataset_path and Path(dataset_path).is_file()
+        else None
+    )
+    sim = build_microsimulation(dataset_path, scenario)
+    bundle = getattr(sim, "policyengine_bundle", None)
+    if (
+        load_hash is not None
+        and isinstance(bundle, dict)
+        and not bundle.get("runtime_dataset_sha256")
+    ):
+        bundle["runtime_dataset_sha256"] = load_hash
+    return sim
 
 
 def generate_artifacts(

@@ -76,8 +76,8 @@ def test_parameter_changes_are_merged():
     combined = combine_measures(
         [
             measure("b", {HIGHER_RATE: {"2027": 0.41}}),
-            measure("a", {BASIC_RATE: {"2027": 0.21}}),
-            measure("c", {BASIC_RATE: {"2028": 0.22}}),
+            measure("a", {BASIC_RATE: {"2027": 0.21, "2028": 0.22}}),
+            measure("c", {SAVINGS_BASIC: {"2028": 0.22}}),
         ],
         CONFIG,
     )
@@ -85,23 +85,39 @@ def test_parameter_changes_are_merged():
     assert combined.parameter_changes == {
         BASIC_RATE: {"2027": 0.21, "2028": 0.22},
         HIGHER_RATE: {"2027": 0.41},
+        SAVINGS_BASIC: {"2028": 0.22},
     }
     assert combined.simulation_modifier is None
     assert combined.to_baseline_scenario() is None
 
 
-def test_agreeing_members_combine_and_conflicting_ones_do_not():
-    same = {BASIC_RATE: {"2027": 0.21}}
-    combine_measures([measure("a", same), measure("b", same)], CONFIG)
+@pytest.mark.parametrize(
+    "second",
+    [
+        {BASIC_RATE: {"2027": 0.22}},  # a different value
+        {BASIC_RATE: {"2027": 0.21}},  # the same value
+        {BASIC_RATE: {"2028": 0.21}},  # a different year
+    ],
+)
+def test_two_members_may_never_touch_one_parameter(second):
+    """policyengine.py composition v1 requires disjoint parameters."""
+    first = measure("a", {BASIC_RATE: {"2027": 0.21}})
     with pytest.raises(CombineConflict) as error:
-        combine_measures(
-            [measure("a", same), measure("b", {BASIC_RATE: {"2027": 0.22}})],
-            CONFIG,
-        )
+        combine_measures([first, measure("b", second)], CONFIG)
     message = str(error.value)
-    assert (
-        BASIC_RATE in message and "in a but" in message and "in b" in message
+    assert BASIC_RATE in message and "both a and b" in message
+
+
+def test_members_sharing_the_configured_baseline_combine():
+    config = DataConfig(
+        years=YEARS, baseline_parameter_changes={BASIC_RATE: {"2027": 0.19}}
     )
+    a = measure("a", {HIGHER_RATE: {"2027": 0.41}})
+    b = measure("b", {SAVINGS_BASIC: {"2028": 0.22}})
+    sides = merged_changes([a, b], config)
+    assert sides["baseline"]["parameter_changes"] == {
+        BASIC_RATE: {"2027": 0.19}
+    }
 
 
 def test_members_without_their_own_baseline_use_the_configured_one():
