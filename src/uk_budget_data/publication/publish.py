@@ -88,9 +88,18 @@ def recompute_reconciliation(
         return None, [f"reconciliation: {error}"]
 
 
-def binding_problems(document: dict, path: Path, entry: m.Entry) -> list[str]:
-    """Ways the artifact on disk is not the one the manifest entry names."""
-    digests = document["dashboard"]["digests"]
+def binding_problems(
+    document: dict, path: Path, entry: m.Entry, key: str
+) -> list[str]:
+    """Ways the artifact on disk is not the one the manifest entry names.
+
+    Besides the digests, every field the entry copies from the receipt
+    (name, years, unsupported years, and a combined run's members and
+    member snapshot) must still say what the receipt says, so nothing that
+    reads the manifest alone can be told something else.
+    """
+    dashboard = document["dashboard"]
+    digests = dashboard["digests"]
     problems = []
     actual = artifact_sha256(document)
     if actual != entry.artifact_sha256:
@@ -105,6 +114,23 @@ def binding_problems(document: dict, path: Path, entry: m.Entry) -> list[str]:
     ):
         if digests[name] != getattr(entry, name):
             problems.append(f"the artifact's {name} is not the entry's")
+    if entry.name != _entry_name(path, key):
+        problems.append("the entry's name is not the artifact's")
+    if entry.years != document["execution_receipt"]["years"]:
+        problems.append("the entry's years are not the artifact's")
+    if entry.unsupported_years != dashboard["unsupported_years"]:
+        problems.append("the entry's unsupported years are not the artifact's")
+    if is_combined(key):
+        if entry.measures != list(dashboard.get("measure_ids") or []):
+            problems.append("the entry's members are not the artifact's")
+        if entry.member_outputs_sha256 != dashboard.get(
+            "member_outputs_sha256"
+        ):
+            problems.append(
+                "the entry's member snapshot is not the artifact's"
+            )
+    elif entry.measures is not None or entry.member_outputs_sha256 is not None:
+        problems.append("a measure's entry names combined-run members")
     return problems
 
 
@@ -215,7 +241,7 @@ def gate_problems(
     if path.name != artifact_sha256(document)[:16]:
         problems.append("its directory is not named by its digest")
     if entry is not None:
-        problems += binding_problems(document, path, entry)
+        problems += binding_problems(document, path, entry, key)
     problems += dashboard_problems(document)
     problems += _identity_problems(document, manifest)
     info: dict = {"document": document, "reconciliation": None}
