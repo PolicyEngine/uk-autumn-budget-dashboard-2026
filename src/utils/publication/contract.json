@@ -256,6 +256,45 @@
       ],
       "required": true
     },
+    "household_scatter": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "baseline_income",
+          "float"
+        ],
+        [
+          "income_change",
+          "float"
+        ],
+        [
+          "household_weight",
+          "float"
+        ],
+        [
+          "household_id",
+          "int"
+        ]
+      ],
+      "file": "household_scatter.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "household_id"
+      ],
+      "required": false
+    },
     "household_scatter_binned": {
       "columns": [
         [

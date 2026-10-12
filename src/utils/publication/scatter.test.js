@@ -23,14 +23,29 @@ const tablesByKey = Object.fromEntries(
   ),
 );
 
-describe("the published scatter table", () => {
-  it("has no household ids or weights", () => {
+describe("the published scatter tables", () => {
+  it("bins cells with no household ids or weights", () => {
     const columns = contract.tables.household_scatter_binned.columns.map(
       ([name]) => name,
     );
     expect(columns).not.toContain("household_id");
     expect(columns).not.toContain("household_weight");
-    expect(contract.tables).not.toHaveProperty("household_scatter");
+  });
+
+  it("keeps the household scatter's published columns, and no more", () => {
+    // Max kept the household-level scatter as published (cos d1397): the
+    // same columns as public/data/household_scatter.csv.
+    expect(
+      contract.tables.household_scatter.columns.map(([name]) => name),
+    ).toEqual([
+      "reform_id",
+      "reform_name",
+      "year",
+      "baseline_income",
+      "income_change",
+      "household_weight",
+      "household_id",
+    ]);
   });
 });
 

@@ -16,7 +16,13 @@
       "baseline_applied_before_data_load": false,
       "reform_applied_before_data_load": false
     },
-    "config_baseline": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
     "dataset_years": [
       2024,
       2025,
@@ -39,7 +45,7 @@
       "metrics.csv": "18b42d0c427b860c94e6a09368df17cac1e9ae300be603a186879311ca069be1",
       "winners_losers.csv": "ac5a5533dec07262219948f920d4a155f53fe9bda6f761d3512f905c13ecdc11"
     },
-    "generated_at": "2026-10-12T14:59:33.811527+00:00",
+    "generated_at": "2026-10-12T16:44:44.309103+00:00",
     "generator_argv": [
       "test"
     ],
@@ -76,7 +82,7 @@
           "kind": "current_law",
           "name": "beta baseline"
         },
-        "baseline_bound": false,
+        "baseline_bound": true,
         "id": "beta",
         "reform": {
           "binding": "content",
