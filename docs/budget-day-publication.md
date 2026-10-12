@@ -27,9 +27,9 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 | Treasury Table 4.1 import with a printed-totals check | #16 | Landing on gates |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
 | A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |
-| Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in | #19 | Landing on gates |
+| Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in. The household scatter is published binned, with no household ids or weights | #19 | Landing on gates |
 | The page shows only published figures: unavailable instead of zero, combined statistics only from the combined run, no hardcoded 2026 | #20 | Modules, components and tests done; wiring into the page follows #3 |
-| Briefing exports from an approved manifest only; hardcoded figures removed | In progress | |
+| Briefing exports from an approved manifest only; hardcoded figures removed | #22 | Landing on gates |
 | Drill fixes as tested measure templates and regressions, no mock measures | In progress | |
 | Production Vercel project | Created 12 October | Below |
 | `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
@@ -101,11 +101,12 @@ public/data/
   manifest.json
   artifacts/<measure id, or combined--<ids>>/<digest prefix>/
     budgetary_impact.csv  distributional_impact.csv  winners_losers.csv
-    metrics.csv  income_curve.csv  household_scatter.csv
+    metrics.csv  income_curve.csv  household_scatter_binned.csv
     [constituency.csv  demographic_constituency.csv]
     receipt.json  reconciliation.json
 ```
 
+- **No household-level rows.** The household scatter is published as binned cells: the weighted number of households in each £5,000 baseline income band × £100 income change band. The outer bands are open-ended, cells with fewer than 10 survey households are left out, and counts are rounded to the nearest 10. Whether to replace the household-level `household_scatter.csv` that `main` and the 2025 site publish is with Max.
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
