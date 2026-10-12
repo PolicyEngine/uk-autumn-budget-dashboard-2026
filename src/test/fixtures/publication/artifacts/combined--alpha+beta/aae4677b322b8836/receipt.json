@@ -12,6 +12,10 @@
         "vintage": "v1"
       }
     },
+    "composition": {
+      "baseline_applied_before_data_load": false,
+      "reform_applied_before_data_load": false
+    },
     "config_baseline": null,
     "dataset_years": [
       2024,
@@ -25,7 +29,7 @@
     "digests": {
       "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
       "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
-      "receipt_sha256": "34e69526c7e7cbb611ad605711549349fcbe9a9ac9ec8eacb5ef2a205a614e2a"
+      "receipt_sha256": "ba01ffa2184983f43c3af4e2608bf721882ae877586252ba46befb41c6966705"
     },
     "files": {
       "budgetary_impact.csv": "e1dff70f7a86e12cce96d63551de4a71cfd9215f8f6035afbb7977cffbcef781",
@@ -35,7 +39,7 @@
       "metrics.csv": "18b42d0c427b860c94e6a09368df17cac1e9ae300be603a186879311ca069be1",
       "winners_losers.csv": "ac5a5533dec07262219948f920d4a155f53fe9bda6f761d3512f905c13ecdc11"
     },
-    "generated_at": "2026-10-12T09:43:04.320707+00:00",
+    "generated_at": "2026-10-12T14:02:20.697509+00:00",
     "generator_argv": [
       "test"
     ],
@@ -56,6 +60,7 @@
           "kind": "current_law",
           "name": "alpha baseline"
         },
+        "baseline_bound": true,
         "id": "alpha",
         "reform": {
           "binding": "content",
@@ -71,6 +76,7 @@
           "kind": "current_law",
           "name": "beta baseline"
         },
+        "baseline_bound": false,
         "id": "beta",
         "reform": {
           "binding": "content",
@@ -93,7 +99,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "combined--alpha+beta baseline"
+      "name": "alpha+beta baseline"
     },
     "certificate": {
       "bundle_version": "6.2.6",
@@ -139,9 +145,9 @@
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "combined--alpha+beta",
-      "reform_sha256": "7c84e97d08a11b872ce0669bc42c257be971e8282b9c035c1b498834a414f578",
-      "representation": "policyengine-uk.scenario/v1"
+      "name": "alpha+beta",
+      "reform_sha256": "97df9c1529ec4a5bc96ac90004c822141f66dd6917498e7c04dab2477299e0ae",
+      "representation": "policyengine-uk.scenario_composition/v1"
     },
     "runtime": {
       "platform": "darwin",

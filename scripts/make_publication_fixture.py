@@ -56,7 +56,10 @@ try:
     stage(manifest, combined.path, **args)
     approve(manifest, "combined--alpha+beta", "Reviewer", **args)
     m.save_manifest(manifest, world.data_root)
-    shutil.copytree(world.data_root, out, dirs_exist_ok=True)
+    # Replace the fixture outright, so no artifact from an earlier run
+    # survives beside the new ones.
+    shutil.rmtree(out, ignore_errors=True)
+    shutil.copytree(world.data_root, out)
     print(json.dumps({k: (e.status, e.unsupported_years) for k, e in manifest.entries().items()}))
 finally:
     world.close()

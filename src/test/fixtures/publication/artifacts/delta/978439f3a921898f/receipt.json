@@ -12,6 +12,7 @@
         "vintage": "v1"
       }
     },
+    "composition": null,
     "config_baseline": null,
     "dataset_years": [
       2024,
@@ -35,7 +36,7 @@
       "metrics.csv": "7e37d39e6cae7fae6b00105287572d99eb62b1960ad9d0c8c3f858fcd28a6d32",
       "winners_losers.csv": "b124424d0b2c8993d24cfb075ab18356e10d8cacce9b808894dc7e40a11e931d"
     },
-    "generated_at": "2026-10-12T09:43:04.245307+00:00",
+    "generated_at": "2026-10-12T14:02:20.300653+00:00",
     "generator_argv": [
       "test"
     ],
