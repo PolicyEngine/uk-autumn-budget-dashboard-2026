@@ -103,8 +103,25 @@ TABLES: dict[str, TableSpec] = {
             ),
             ("reform_id", "year", "employment_income"),
         ),
-        # Households by baseline income band and income change band. No
-        # household-level rows: see bin_scatter.
+        # The household scatter the dashboard has always published (cos
+        # d1397): the same columns as public/data/household_scatter.csv, for
+        # a weighted sample of households (see sample_household_scatter).
+        TableSpec(
+            "household_scatter",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("baseline_income", FLOAT),
+                ("income_change", FLOAT),
+                ("household_weight", FLOAT),
+                ("household_id", INT),
+            ),
+            ("reform_id", "year", "household_id"),
+            required=False,
+        ),
+        # Households by baseline income band and income change band: see
+        # bin_scatter.
         TableSpec(
             "household_scatter_binned",
             (
@@ -295,6 +312,87 @@ SCATTER_MIN_HOUSEHOLDS = 10
 # thousand households: finer rounding would let differences between cells
 # reveal one household's weight.
 SCATTER_ROUND_TO = 1000
+
+
+# The household scatter keeps the sample size and seed of the script that
+# has always made public/data/household_scatter.csv.
+SCATTER_SAMPLE_SIZE = 500
+SCATTER_SAMPLE_SEED = 42
+
+
+def _sampling_key(household_id: int, weight: float, seed: int) -> float:
+    """A household's key for weighted sampling without replacement.
+
+    Taking the smallest keys -log(u)/weight, with u uniform in (0, 1),
+    samples households with probability rising with their weight
+    (Efraimidis and Spirakis). Here u comes from a hash of the seed and
+    the household id, so a household's key depends on nothing else: every
+    measure and combined run, whatever its baseline, keeps the same
+    households wherever they are eligible.
+    """
+    digest = hashlib.sha256(f"{seed}:{household_id}".encode()).digest()
+    u = (int.from_bytes(digest[:8], "big") + 1) / (2**64 + 2)
+    return -math.log(u) / weight
+
+
+def sample_household_scatter(
+    rows: Iterable[Mapping[str, Any]],
+    size: int = SCATTER_SAMPLE_SIZE,
+    seed: int = SCATTER_SAMPLE_SEED,
+) -> list[dict]:
+    """The household scatter as the dashboard has always published it.
+
+    Like scripts/sample_household_scatter.py: households present in every
+    year are sampled once, weighted by their first-year weight, and kept
+    in every year, with the same columns as public/data/
+    household_scatter.csv. The sample is by household, not by draw order,
+    so it is the same across measures (see _sampling_key).
+
+    Args:
+        rows: One row per household and year, with ``reform_id``,
+            ``reform_name``, ``year``, ``baseline_income``,
+            ``income_change``, ``household_weight`` and ``household_id``.
+        size: Households to keep.
+        seed: Seed of the sampling keys.
+    """
+    columns = TABLES["household_scatter"].column_names
+    rows = [{name: row[name] for name in columns} for row in rows]
+    if not rows:
+        return []
+    years = sorted({int(row["year"]) for row in rows})
+    present = [
+        {int(row["household_id"]) for row in rows if row["year"] == year}
+        for year in years
+    ]
+    common = set.intersection(*present)
+    first_weight = {
+        int(row["household_id"]): float(row["household_weight"])
+        for row in rows
+        if row["year"] == years[0]
+    }
+    eligible = sorted(
+        household
+        for household in common
+        if math.isfinite(first_weight[household])
+        and first_weight[household] > 0
+    )
+    chosen = set(
+        sorted(
+            eligible,
+            key=lambda household: (
+                _sampling_key(household, first_weight[household], seed),
+                household,
+            ),
+        )[:size]
+    )
+    return sorted(
+        (row for row in rows if int(row["household_id"]) in chosen),
+        key=lambda row: (
+            row["reform_id"],
+            int(row["year"]),
+            int(row["household_id"]),
+        ),
+    )
 
 
 def band(value: float, width: float, low: float, high: float) -> float:

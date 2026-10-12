@@ -39,6 +39,7 @@ from uk_budget_data.publication.receipt import (
 )
 from uk_budget_data.publication.tables import (
     bin_scatter,
+    sample_household_scatter,
 )
 
 
@@ -58,6 +59,9 @@ def result_tables(result: ReformResult) -> dict[str, list[dict]]:
         "winners_losers": result.winners_losers,
         "metrics": result.metrics,
         "income_curve": result.income_curve,
+        "household_scatter": sample_household_scatter(
+            result.household_scatter
+        ),
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "constituency": result.constituency,
         "demographic_constituency": result.demographic_constituency,
