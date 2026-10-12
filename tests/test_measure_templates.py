@@ -3,6 +3,7 @@
 PYTEST_DONT_REWRITE: receipt binding verifies this module's original bytecode.
 """
 
+import functools
 import subprocess
 
 import numpy as np
@@ -277,6 +278,23 @@ def payment_modifier(sim, amount=120, geography="GB", year=2027):
         channel="cost_of_living_support_payment",
         year=year,
     )
+
+
+# W4's reproducer: a module global that wraps a template in a partial. Its
+# captured values are part of no digest, so the receipt must refuse the
+# modifier that reads it. Module level on purpose.
+PARTIAL_PAYMENT = functools.partial(
+    apply_benefit_receipt_payment,
+    amount=999,
+    eligible_benefits=["universal_credit"],
+    geography="UK",
+    channel="cost_of_living_support_payment",
+    year=2027,
+)
+
+
+def partial_payment_modifier(sim):
+    return PARTIAL_PAYMENT(sim)
 
 
 def allowance_modifier(
@@ -835,4 +853,26 @@ def test_receipt_binds_module_template_modifiers_and_refuses_closure():
     with pytest.raises(receipt.ReceiptError, match="closes over|module-level"):
         receipt.scenario_reform_identity(
             Scenario(simulation_modifier=closure), code_revision=revision
+        )
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "until policyengine.py#571's module-state refusal (77277ebb) is "
+        "vendored with #579"
+    ),
+)
+def test_receipt_refuses_a_modifier_reading_a_partial_global():
+    receipt = _receipt_module()
+    revision = {
+        "repository": (
+            "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026"
+        ),
+        "git_sha": "a" * 40,
+    }
+    with pytest.raises(receipt.ReceiptError, match="PARTIAL_PAYMENT"):
+        receipt.scenario_reform_identity(
+            _policy(partial_payment_modifier).to_scenario(),
+            code_revision=revision,
         )

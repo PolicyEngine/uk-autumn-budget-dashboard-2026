@@ -103,7 +103,7 @@ def test_vat_helper_measure_and_parameter_measure_pass_consistency():
         Reform(
             id="standard_rate_rise",
             name="Standard rate rise",
-            parameter_changes={"gov.hmrc.vat.standard_rate": {2027: 0.3}},
+            parameter_changes={"gov.hmrc.vat.standard_rate": {"2027": 0.3}},
         ),
     ]
     config = DataConfig(years=[2027])
