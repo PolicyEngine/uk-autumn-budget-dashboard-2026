@@ -32,6 +32,7 @@ from uk_budget_data.mock_drill3_ss_calibration import (
     allocate_arrays,
     kish_ess,
 )
+from uk_budget_data.drill_setup import drill_scenario
 from uk_budget_data.reforms import get_reform
 
 DATA = "/Users/vahid/drill2-data/microcosm_uk_2024_25.h5"
@@ -39,6 +40,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKET = ROOT / "data_inputs/mock_drill3/packet"
 OUT_JSON = ROOT / "data_inputs/mock_drill3/drill3-ss-calibration-artifact.json"
 CAL_YEAR = 2026
+STATIC_OFF = (
+    "salary_sacrifice_broad_base_haircut",
+    "employer_ni_fixed_employer_cost_change",
+    "employment_income_behavioral_response",
+)
 
 
 def sha(p):
@@ -55,10 +61,8 @@ def load_targets():
 
 
 def household_index(sim, year):
-    hh_id = sim.calculate("household_id", year).values
-    p_hh = sim.calculate("person_household_id", year).values
-    order = {h: i for i, h in enumerate(hh_id)}
-    return np.array([order[h] for h in p_hh]), len(hh_id)
+    hh = sim.populations["household"]
+    return np.asarray(hh.members_entity_id), hh.count
 
 
 def main(skip_reform=False):
@@ -66,7 +70,7 @@ def main(skip_reform=False):
     y = CAL_YEAR
     ei = sim.calculate("employment_income", y).values
     ss = sim.calculate("pension_contributions_via_salary_sacrifice", y).values
-    country = sim.calculate("country", y).values.astype(str)
+    country = sim.calculate("country", y, map_to="person").values.astype(str)
     hw = sim.calculate("household_weight", y).values
     pidx, nh = household_index(sim, y)
     sac = ss > 0
@@ -114,8 +118,13 @@ def main(skip_reform=False):
     if not skip_reform:
         reform = get_reform("mock3_salary_sacrifice_cap")
         for year in (2029, 2031):
-            base = Microsimulation(dataset=DATA)
-            ref = Microsimulation(dataset=DATA, reform=reform.parameter_changes)
+            base = Microsimulation(dataset=DATA, scenario=drill_scenario())
+            ref = Microsimulation(dataset=DATA, scenario=reform.to_drill_scenario())
+            # Static: incidence/behavioural legs OFF in both runs.
+            for s in (base, ref):
+                npers = s.populations["person"].count
+                for v in STATIC_OFF:
+                    s.set_input(v, year, np.zeros(npers))
             hwy = base.calculate("household_weight", year).values
             pidx_y, _ = household_index(base, year)
             out = {}
@@ -158,6 +167,7 @@ def main(skip_reform=False):
         "after": after,
         "total_rounded_diagnostic_residual_m": after["relief_total_m"] - targets["salary_sacrifice_it_relief_total_rounded"][0],
         "measure20_static_revenue_m": revenue,
+        "static_off_set_to_zero_both_runs": list(STATIC_OFF),
     }
     OUT_JSON.write_text(json.dumps(artifact, indent=2))
     print("artifact sha256", sha(OUT_JSON))
