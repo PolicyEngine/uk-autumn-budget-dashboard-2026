@@ -10,6 +10,10 @@ A measure that cannot be receipted is refused and reported; the others are
 still written.
 """
 
+import atexit
+import hashlib
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
@@ -82,24 +86,48 @@ def _default_process(reform: Reform, config: DataConfig, baseline, reformed):
     return ReformProcessor(reform, config).process(baseline, reformed)
 
 
+_PRIVATE_COPIES: Optional[Path] = None
+
+
+def _private_copy(dataset_path: str) -> tuple[str, str]:
+    """A private, read-only copy of a local dataset, and its bytes' SHA-256.
+
+    The file is read once: those bytes are both hashed and written to the
+    copy the simulation loads, so a change to the original while (or after)
+    the simulation reads it cannot make the hash describe other bytes. The
+    copy keeps the original's file name and lives in a private directory
+    until the process exits, because the receipt re-reads the loaded file.
+    """
+    global _PRIVATE_COPIES
+    data = Path(dataset_path).read_bytes()
+    digest = hashlib.sha256(data).hexdigest()
+    if _PRIVATE_COPIES is None:
+        _PRIVATE_COPIES = Path(tempfile.mkdtemp(prefix="uk-budget-datasets-"))
+        atexit.register(shutil.rmtree, _PRIVATE_COPIES, ignore_errors=True)
+    target = _PRIVATE_COPIES / digest / Path(dataset_path).name
+    if not target.exists():
+        target.parent.mkdir(mode=0o700, exist_ok=True)
+        partial = target.with_name(target.name + ".part")
+        partial.write_bytes(data)
+        partial.chmod(0o400)
+        partial.rename(target)
+    return str(target), digest
+
+
 def _default_build(dataset_path: Optional[str], scenario=None):
     """Build a microsimulation, recording the dataset's hash at load.
 
     A bundle dataset loaded by name has its hash recorded by policyengine's
-    materializer. A dataset given as a local path does not, so it is hashed
-    here immediately before the simulation reads it, never later: a hash
-    taken at receipt time could describe bytes put in place after others
-    ran.
+    materializer. A dataset given as a local path does not, so the
+    simulation loads a private copy of exactly the bytes hashed here
+    (:func:`_private_copy`): a hash taken from the path at any other moment
+    could describe bytes other than those that ran.
     """
-    from policyengine.utils.hashing import sha256_file
-
     from uk_budget_data.pipeline import build_microsimulation
 
-    load_hash = (
-        sha256_file(dataset_path)
-        if dataset_path and Path(dataset_path).is_file()
-        else None
-    )
+    load_hash = None
+    if dataset_path and Path(dataset_path).is_file():
+        dataset_path, load_hash = _private_copy(dataset_path)
     sim = build_microsimulation(dataset_path, scenario)
     bundle = getattr(sim, "policyengine_bundle", None)
     if (
@@ -158,6 +186,7 @@ def generate_artifacts(
         members,
         measure_ids,
         member_outputs=None,
+        composition=None,
     ):
         baseline_identity, reform_identity = identities
         baseline_scenario = (
@@ -180,6 +209,7 @@ def generate_artifacts(
                 config_baseline_identity=config_baseline,
                 members=members,
                 member_outputs=member_outputs,
+                composition=composition,
             )
             if argv is not None:
                 inputs.generator_argv = argv
@@ -224,7 +254,12 @@ def generate_artifacts(
                 combined.to_baseline_scenario()
                 or config.get_baseline_scenario()
             )
-            baseline_identity, reform_identity, records = combined_identities(
+            (
+                baseline_identity,
+                reform_identity,
+                records,
+                composition,
+            ) = combined_identities(
                 ordered,
                 config,
                 revision,
@@ -254,6 +289,7 @@ def generate_artifacts(
                 records,
                 ids,
                 member_outputs=(snapshot if all(snapshot.values()) else None),
+                composition=composition,
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason

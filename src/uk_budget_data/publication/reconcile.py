@@ -29,6 +29,7 @@ import json
 import math
 import sys
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Mapping, Optional
 
@@ -550,44 +551,106 @@ def load_mapping(path: Path) -> list[MappingRow]:
     return rows
 
 
+def _reviewed_text(entry: dict, name: str, where: str) -> str:
+    """A field a reviewer must fill in: non-empty text, never coerced.
+
+    YAML reads an empty field as null; ``str(None)`` would make it the
+    non-empty text "None". A timestamp YAML parsed as a date is accepted
+    in ISO form.
+    """
+    if name not in entry:
+        raise ReconciliationInputError(f"{where}: missing {name!r}")
+    value = entry[name]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if not isinstance(value, str) or not value.strip():
+        raise ReconciliationInputError(
+            f"{where}: {name} must be filled in, not {value!r}"
+        )
+    return value.strip()
+
+
 def load_exceptions(path: Path) -> list[ExceptionEntry]:
     if not path.exists():
         return []
     entries = yaml.safe_load(path.read_text()) or []
     if not isinstance(entries, list):
         raise ReconciliationInputError(f"{path}: expected a list")
-    try:
-        return [
-            ExceptionEntry(
-                measure_id=entry["measure_id"],
-                fiscal_year=entry["fiscal_year"],
-                residual_bn=float(entry["residual_bn"]),
-                explanation_class=entry["explanation_class"],
-                explanation=str(entry["explanation"]),
-                reviewer=str(entry["reviewer"]),
-                accepted_at=str(entry["accepted_at"]),
-                outputs_sha256=entry["outputs_sha256"],
+    loaded = []
+    for index, entry in enumerate(entries):
+        where = f"{path}: exception {index + 1}"
+        if not isinstance(entry, dict):
+            raise ReconciliationInputError(f"{where}: expected a mapping")
+        if "residual_bn" not in entry:
+            raise ReconciliationInputError(f"{where}: missing 'residual_bn'")
+        residual = entry["residual_bn"]
+        if isinstance(residual, bool) or not isinstance(
+            residual, (int, float)
+        ):
+            raise ReconciliationInputError(
+                f"{where}: residual_bn must be a number"
             )
-            for entry in entries
-        ]
-    except KeyError as error:
-        raise ReconciliationInputError(
-            f"{path}: exception missing {error}"
-        ) from error
+        if not math.isfinite(residual):
+            raise ReconciliationInputError(
+                f"{where}: residual_bn must be finite"
+            )
+        loaded.append(
+            ExceptionEntry(
+                measure_id=_reviewed_text(entry, "measure_id", where),
+                fiscal_year=_reviewed_text(entry, "fiscal_year", where),
+                residual_bn=float(residual),
+                explanation_class=_reviewed_text(
+                    entry, "explanation_class", where
+                ),
+                explanation=_reviewed_text(entry, "explanation", where),
+                reviewer=_reviewed_text(entry, "reviewer", where),
+                accepted_at=_reviewed_text(entry, "accepted_at", where),
+                outputs_sha256=_reviewed_text(entry, "outputs_sha256", where),
+            )
+        )
+    return loaded
 
 
 def load_expected(path: Path) -> list[ExpectedEffect]:
-    return [
-        ExpectedEffect(
-            measure_id=line["measure_id"],
-            direction=line["direction"].strip(),
-            from_year=int(line["from_year"]),
-            to_year=int(line["to_year"]) if line.get("to_year") else None,
-            reviewer=(line.get("reviewer") or "").strip(),
-            note=(line.get("note") or "").strip(),
-        )
-        for line in _read_csv(path)
-    ]
+    """Reviewed expectations: each names its reviewer, and a measure has at
+    most one expectation for any year, so no declaration can be overridden
+    by another one's position in the file."""
+    effects = []
+    for number, line in enumerate(_read_csv(path), start=2):
+        where = f"{path}: line {number}"
+        reviewer = (line.get("reviewer") or "").strip()
+        if not reviewer:
+            raise ReconciliationInputError(
+                f"{where}: an expected effect needs its reviewer"
+            )
+        try:
+            effect = ExpectedEffect(
+                measure_id=line["measure_id"],
+                direction=line["direction"].strip(),
+                from_year=int(line["from_year"]),
+                to_year=int(line["to_year"]) if line.get("to_year") else None,
+                reviewer=reviewer,
+                note=(line.get("note") or "").strip(),
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise ReconciliationInputError(f"{where}: {error}") from error
+        for other in effects:
+            if other.measure_id == effect.measure_id and _overlap(
+                other, effect
+            ):
+                raise ReconciliationInputError(
+                    f"{where}: {effect.measure_id} already has an expected "
+                    f"effect for some of these years ({other.direction} "
+                    f"from {other.from_year}); give each year one expectation"
+                )
+        effects.append(effect)
+    return effects
+
+
+def _overlap(a: ExpectedEffect, b: ExpectedEffect) -> bool:
+    a_end = math.inf if a.to_year is None else a.to_year
+    b_end = math.inf if b.to_year is None else b.to_year
+    return a.from_year <= b_end and b.from_year <= a_end
 
 
 def read_budgetary(artifact: Path, measure_id: str) -> dict[int, float]:
@@ -622,6 +685,37 @@ def reconcile_artifact(
     receipt = (
         json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
     )
+    if measure_id is None:
+        ids = receipt.get("dashboard", {}).get("measure_ids") or []
+        if len(ids) == 1:
+            measure_id = ids[0]
+    budgetary = (
+        read_budgetary(artifact, measure_id) if measure_id is not None else {}
+    )
+    return reconcile_receipted(
+        receipt,
+        budgetary,
+        inputs,
+        measure_id=measure_id,
+        outputs_sha256=outputs_sha256,
+        supported_years=supported_years,
+    )
+
+
+def reconcile_receipted(
+    receipt: dict,
+    budgetary: dict[int, float],
+    inputs: Path,
+    *,
+    measure_id: Optional[str] = None,
+    outputs_sha256: Optional[str] = None,
+    supported_years: Optional[set[int]] = None,
+) -> dict:
+    """Reconcile already-read budgetary rows, described by their receipt.
+
+    The gate passes rows from the same capture it checked against the
+    receipt, so what is reconciled is exactly what was verified.
+    """
     dashboard = receipt.get("dashboard", {})
     if measure_id is None:
         ids = dashboard.get("measure_ids") or []
@@ -640,8 +734,12 @@ def reconcile_artifact(
         )
     if supported_years is None and dashboard.get("dataset_years") is not None:
         supported_years = set(dashboard["dataset_years"])
+    if not budgetary:
+        raise ReconciliationInputError(
+            f"no budgetary_impact rows for {measure_id}"
+        )
     return reconcile(
-        read_budgetary(artifact, measure_id),
+        budgetary,
         measure_id=measure_id,
         outputs_sha256=outputs_sha256,
         sources=load_sources(inputs / "sources"),
