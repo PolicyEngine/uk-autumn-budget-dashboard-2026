@@ -50,7 +50,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 Every published measure is receipted, and the receipt can only bind a measure written in one of these forms:
 
 - **`parameter_changes`**, wherever the measure can be expressed that way.
-- **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (templates PR, in progress) are helpers to call from such a function.
+- **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
+- **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
 **Dated changes: key every year by its bare fiscal year.**
 

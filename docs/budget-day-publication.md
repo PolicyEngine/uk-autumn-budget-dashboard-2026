@@ -1,6 +1,6 @@
 # Publishing the Budget dashboard incrementally
 
-**Status, 12 October.** Max ruled that changes which only fix bugs or add opt-in tooling are obvious improvements and land on the normal review gates. Most of this design is therefore landing (see "Status of the work"). Five questions remain for Vahid and María; they are below. Comment on the PR that adds this file.
+**Status, 12 October.** Max ruled that changes which only fix bugs or add opt-in tooling are obvious improvements and land on the normal review gates. Most of this design is therefore landing (see "Status of the work"). Six questions remain for Vahid and María; they are below. Comment on the PR that adds this file.
 
 The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by 07:00 on 29 October. There is no model freeze; the model keeps improving through Budget day. So each number on the dashboard and in the briefing has to carry evidence of what produced it, and pass checks, before it is published, measure by measure as measures are coded.
 
@@ -13,6 +13,7 @@ The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by
 | 3 | **Should `main` require checks before a merge?** | Python tests, Certified data, Python lint, Frontend build, Frontend tests, Frontend lint and Publication gate. Emergency bypass by Max only, recorded. |
 | 4 | **How does #3 land, and with it the Personal impact tab?** W5 will not rebase, rewrite or supersede #3 or the drill branches (#4, #7, #9), and builds so they keep working. | Tell us when you expect to merge #3. The page wiring in #20 follows it, and #3's household route replaces the lifecycle calculator (see "The household API" below). |
 | 5 | **When is the rehearsal?** | A full run on the deployed routes by Friday 23 October: intake, dashboard and briefing, including one model upgrade and regeneration, and again after any material change. |
+| 6 | **Where do Budget-day `simulation_modifier` functions live?** A receipt binds a modifier only from a module holding nothing but imports, literal constants and undecorated functions (policyengine.py#571). `reforms.py` keeps caches it fills at run time, so a modifier defined there cannot be receipted: today `rail_fares_freeze`, `freeze_student_loan_thresholds` and every measure on the pre-budget baseline are refused. | A new `src/uk_budget_data/budget_measures.py` of that shape holds every modifier, and `reforms.py` imports them. We can make that move in a PR after #3 lands, or you can make it in #3. |
 
 The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain proposals until the methodology call (cos d1344) is ruled.
 
@@ -106,7 +107,8 @@ public/data/
     receipt.json  reconciliation.json
 ```
 
-- **No household-level rows.** The household scatter is published as binned cells: the weighted number of households in each £5,000 baseline income band × £100 income change band. The outer bands are open-ended, cells with fewer than 10 survey households are left out, and counts are rounded to the nearest 1,000 (rounding to 10 would let differences between cells reveal one household's weight). The household-level `household_scatter.csv` that `main` and the 2025 site publish stays as it is: Max decided on 12 October to keep both (cos d1397).
+- **The household scatter, as today.** Max decided on 12 October to keep the household-level scatter files that `main` and the 2025 site publish (cos d1397), so each artifact carries `household_scatter.csv` with exactly today's columns (reform, year, baseline income, income change, household weight and household id) for a weighted sample of 500 households, as `scripts/sample_household_scatter.py` makes it: seed 42, households present in every year, kept in every year. The sample is drawn household by household (each gets a key from its id and weight), so every measure and combined run shows the same households wherever they are in the plotted range, and the dots move rather than reshuffle when measures are combined.
+- **And binned.** Each artifact also carries `household_scatter_binned.csv`: the weighted number of households in each £5,000 baseline income band × £100 income change band, outer bands open-ended, cells with fewer than 10 survey households left out, counts rounded to the nearest 1,000. The page can use either.
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
@@ -147,6 +149,7 @@ The receipt binds a measure by what it is, so a measure has to be written in a f
 
 - **Prefer `parameter_changes`.** They are bound by content.
 - **A `simulation_modifier` must be a module-level function**, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. It is bound by its source and this repository's commit. Closures, lambdas, nested functions and `functools.partial` are refused, because the values they capture cannot be bound. The tested measure templates are helpers to call from such a function.
+- **Its module must have a fixed shape**: at module level only docstrings, imports, one-name literal assignments and undecorated functions, each name bound once, and nothing that changes module state at run time (no caches filled through `global`, no classes, decorators, computed assignments or calls at import). Anything else makes every modifier in the module unbindable, with the line named. `tests/template_measures.py` is a working example (question 6).
 - **Values must be finite.** `float("inf")` for "no cap" cannot be bound; use a fixed finite sentinel the model treats as unbounded.
 - **A combined run** is bound as the ordered list of its members' identities. Before simulating, the dashboard checks that no two members set the same parameter differently, and that every value a member sets alone still holds in the combined scenario.
 
