@@ -110,6 +110,12 @@ function typed(text, kind, where) {
   if (!DECIMAL.test(text) || !Number.isFinite(number)) {
     throw new TableError(`${where}: ${JSON.stringify(text)} is not a number`);
   }
+  // A non-zero figure that underflows to zero would read as no effect.
+  if (number === 0 && /[1-9]/.test(text.split(/[eE]/)[0])) {
+    throw new TableError(
+      `${where}: ${JSON.stringify(text)} underflows to zero`,
+    );
+  }
   return number;
 }
 

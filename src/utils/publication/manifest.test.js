@@ -61,6 +61,9 @@ describe("parseManifest refusals", () => {
       delete m.combined["combined--alpha+beta"].measures,
     "a displayable entry on another execution identity": (m) =>
       (m.measures.alpha.execution_identity_sha256 = "f".repeat(64)),
+    "a missing artifact digest": (m) => delete m.measures.alpha.artifact_sha256,
+    "a key used as both a measure and a combined run": (m) =>
+      (m.combined.alpha = structuredClone(m.combined["combined--alpha+beta"])),
   };
 
   it.each(Object.entries(cases))("refuses %s", (_, change) => {

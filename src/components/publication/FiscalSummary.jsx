@@ -50,7 +50,15 @@ function FiscalSummary({ series, ids, measureNames = {} }) {
         <tbody>
           {ids.map((id) => (
             <tr key={id}>
-              <th scope="row">{name(id)}</th>
+              <th scope="row">
+                {name(id)}
+                {series.some((row) => row.provisionalIds.includes(id)) && (
+                  <span className="publication-provisional-marker">
+                    {" "}
+                    (provisional)
+                  </span>
+                )}
+              </th>
               {series.map((row) => (
                 <Cell
                   key={row.year}

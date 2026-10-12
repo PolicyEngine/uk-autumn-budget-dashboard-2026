@@ -42,7 +42,17 @@ try:
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]
         records.append({"id": member, "reform": receipt["reform"], "baseline": receipt["baseline"]})
-    combined = world.write("combined--alpha+beta", {2030: -2.75, 2031: -3.0}, members=records, measure_ids=["alpha", "beta"], rate=0.3)
+    combined = world.write(
+        "combined--alpha+beta",
+        {2030: -2.75, 2031: -3.0},
+        members=records,
+        measure_ids=["alpha", "beta"],
+        rate=0.3,
+        member_outputs={
+            member: manifest.measures[member].outputs_sha256
+            for member in ("alpha", "beta")
+        },
+    )
     stage(manifest, combined.path, **args)
     approve(manifest, "combined--alpha+beta", "Reviewer", **args)
     m.save_manifest(manifest, world.data_root)

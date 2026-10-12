@@ -66,6 +66,7 @@ function entryProblems(key, entry, { combined }) {
     "outputs_sha256",
     "receipt_sha256",
     "execution_identity_sha256",
+    "artifact_sha256",
   ]) {
     if (typeof entry[field] !== "string" || !DIGEST.test(entry[field])) {
       problems.push(`${where}.${field} is not a SHA-256 digest`);
@@ -144,6 +145,13 @@ export function parseManifest(json) {
       !DIGEST.test(execution.execution_identity_sha256)
     ) {
       problems.push("execution.execution_identity_sha256 is not a digest");
+    }
+  }
+  if (isPlainObject(groups.measures) && isPlainObject(groups.combined)) {
+    for (const key of Object.keys(groups.measures)) {
+      if (Object.hasOwn(groups.combined, key)) {
+        problems.push(`${key} is both a measure and a combined run`);
+      }
     }
   }
   if (problems.length === 0) {

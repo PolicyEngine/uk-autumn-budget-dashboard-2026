@@ -12,7 +12,9 @@
         "vintage": "v1"
       }
     },
+    "composition_order": null,
     "config_baseline": null,
+    "dataset_sha256_taken": "at receipt",
     "dataset_years": [
       2024,
       2025,
@@ -24,62 +26,31 @@
     ],
     "digests": {
       "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
-      "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
-      "receipt_sha256": "34e69526c7e7cbb611ad605711549349fcbe9a9ac9ec8eacb5ef2a205a614e2a"
+      "outputs_sha256": "fdeac4d5a85cd6d208e3841ff163d1e9fa35905c55e1abae364dabec41ad030c",
+      "receipt_sha256": "a8e1875c73afa71c2b5b650bac4bcb2af3a6a32348a36d0b4f65229c3bb5649e"
     },
     "files": {
-      "budgetary_impact.csv": "e1dff70f7a86e12cce96d63551de4a71cfd9215f8f6035afbb7977cffbcef781",
-      "distributional_impact.csv": "ba4f0ed29608cb721800509d306666dbf7c4e57ad9203c06d740156473eddd4b",
-      "household_scatter_binned.csv": "c5ef9d6167e9e596131595a38dcbac69923eb2fd35f6cdd2d0755fa0680ee432",
-      "income_curve.csv": "be4a6924f52dbedb4cee1a07ddf90b68ed9bb1b85668652b2f17a8dbf0a62c80",
-      "metrics.csv": "18b42d0c427b860c94e6a09368df17cac1e9ae300be603a186879311ca069be1",
-      "winners_losers.csv": "ac5a5533dec07262219948f920d4a155f53fe9bda6f761d3512f905c13ecdc11"
+      "budgetary_impact.csv": "c96e1097293e06f6c97d9d04d35058e15477661645e293f1116871c4d54fd1b1",
+      "distributional_impact.csv": "ea608743d3dfe640ddc76af8a8a49214815d02fca48e0dcafac67934ca5fba83",
+      "household_scatter_binned.csv": "69ba19e502f8eed16f98e55ce1ae6a39b0f7ddda816a183e450f70353717bf10",
+      "income_curve.csv": "77201e23823f66761acdc06183e278cf83373ff23f22295c8ea339f763ba4ed9",
+      "metrics.csv": "9e8a71f0b708e0018a1b41789cfbaf87d727c5cdf8dd127dea51711876fed109",
+      "winners_losers.csv": "b3d52ed70b4344a7e96b40a1d0cd7251e7321c3f36caf9fe9e5618ed2269b5f6"
     },
-    "generated_at": "2026-10-12T01:21:33.998264+00:00",
+    "generated_at": "2026-10-12T09:05:56.384295+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "combined--alpha+beta",
+    "key": "gamma",
     "measure_ids": [
-      "alpha",
-      "beta"
+      "gamma"
     ],
-    "members": [
-      {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "alpha baseline"
-        },
-        "id": "alpha",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "alpha",
-          "reform_sha256": "487549c1dd1892271cc9dc7359430b122bf91554f9c62fa66d757e9d958a8af0",
-          "representation": "policyengine-uk.scenario/v1"
-        }
-      },
-      {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "beta baseline"
-        },
-        "id": "beta",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "beta",
-          "reform_sha256": "2d8f8cb5e8af901724e39b39806d68c0f0751a45a20c3ebd6b4b0a8a8524f6bc",
-          "representation": "policyengine-uk.scenario/v1"
-        }
-      }
-    ],
+    "member_outputs_sha256": null,
+    "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr579@712c36a",
+    "receipt_source": "vendored-w4-pr579@9672ad3",
     "tree_clean": true,
     "unsupported_years": [
       2031
@@ -89,7 +60,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "combined--alpha+beta baseline"
+      "name": "gamma baseline"
     },
     "certificate": {
       "bundle_version": "6.2.6",
@@ -130,13 +101,13 @@
       "name": "policyengine-uk",
       "version": "2.125.1"
     },
-    "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
+    "outputs_sha256": "fdeac4d5a85cd6d208e3841ff163d1e9fa35905c55e1abae364dabec41ad030c",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "combined--alpha+beta",
-      "reform_sha256": "7c84e97d08a11b872ce0669bc42c257be971e8282b9c035c1b498834a414f578",
+      "name": "gamma",
+      "reform_sha256": "8095810ca41e2f0197d2621b880b8beb96b4316c20af381200d0194a6e33e87d",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

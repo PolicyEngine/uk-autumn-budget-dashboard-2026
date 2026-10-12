@@ -56,10 +56,28 @@ describe("parseTable", () => {
   });
 
   it("refuses a missing, non-numeric or non-finite number, never zero", () => {
-    for (const bad of ["", "abc", "Infinity", "NaN", "1e999", "0x10", " 1"]) {
+    for (const bad of [
+      "",
+      "abc",
+      "Infinity",
+      "NaN",
+      "1e999",
+      "0x10",
+      " 1",
+      "1e-400",
+    ]) {
       expect(() =>
         parseTable("budgetary_impact", `${header}\nx,X,2030,${bad}\n`),
       ).toThrow(TableError);
+    }
+  });
+
+  it("still reads a real zero", () => {
+    for (const zero of ["0", "0.0", "-0.0", "0e5"]) {
+      expect(
+        parseTable("budgetary_impact", `${header}\nx,X,2030,${zero}\n`)[0]
+          .value === 0,
+      ).toBe(true);
     }
   });
 

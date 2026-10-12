@@ -98,6 +98,18 @@ export function availableCombinedSets(manifest) {
     .map((entry) => uniqueIds(entry.measures));
 }
 
+/**
+ * Whether figures from this target must carry the provisional label: its
+ * own entry is provisional, or, for a combined run, any member is.
+ */
+export function isProvisionalTarget(manifest, target) {
+  if (!target) return false;
+  if (target.entry.status === "provisional") return true;
+  return (target.entry.measures ?? []).some(
+    (id) => measureEntry(manifest, id)?.status === "provisional",
+  );
+}
+
 /** True when the entry publishes this year and the dataset supports it. */
 export function isSupported(entry, year) {
   return (
@@ -129,6 +141,7 @@ function readCell({ tablesByKey, key, entry, table, column, year, match }) {
 function summarise({ manifest, tablesByKey, ids, target, cell }) {
   const standalone = {};
   const reasons = {};
+  const provisionalIds = [];
   for (const id of ids) {
     const entry = measureEntry(manifest, id);
     const availability = isDisplayable(entry)
@@ -141,6 +154,9 @@ function summarise({ manifest, tablesByKey, ids, target, cell }) {
         };
     standalone[id] = availability.value;
     reasons[id] = availability.reason;
+    if (availability.value !== null && entry.status === "provisional") {
+      provisionalIds.push(id);
+    }
   }
 
   let combined = { value: null, reason: REASONS.noSelection };
@@ -171,7 +187,10 @@ function summarise({ manifest, tablesByKey, ids, target, cell }) {
     combined: combined.value,
     combinedKey: target ? target.key : null,
     combinedReason: combined.reason,
-    provisional: target ? target.entry.status === "provisional" : false,
+    provisional:
+      (combined.value !== null && isProvisionalTarget(manifest, target)) ||
+      provisionalIds.length > 0,
+    provisionalIds,
     interaction,
   };
 }
@@ -289,7 +308,7 @@ export function combinedStats({ manifest, tablesByKey, selectedIds, year }) {
     status: "available",
     key: target.key,
     year,
-    provisional: target.entry.status === "provisional",
+    provisional: isProvisionalTarget(manifest, target),
     ...statistics,
   };
 }

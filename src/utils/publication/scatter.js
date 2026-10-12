@@ -9,7 +9,14 @@
  */
 
 import contract from "./contract.json";
-import { combinedEntryFor, isSupported, REASONS, uniqueIds } from "./select";
+import { measureAvailability } from "./manifest";
+import {
+  combinedEntryFor,
+  isProvisionalTarget,
+  isSupported,
+  REASONS,
+  uniqueIds,
+} from "./select";
 
 export const SCATTER_BINS = contract.scatter_bins;
 
@@ -41,7 +48,10 @@ export function scatterSeries({ manifest, tablesByKey, selectedIds, year }) {
   if (!target) {
     return {
       status: "unavailable",
-      reason: ids.length > 1 ? REASONS.noCombinedRun : REASONS.notPublished,
+      reason:
+        ids.length > 1
+          ? REASONS.noCombinedRun
+          : measureAvailability(manifest, ids[0]).reason,
     };
   }
   if (!isSupported(target.entry, year)) {
@@ -72,7 +82,7 @@ export function scatterSeries({ manifest, tablesByKey, selectedIds, year }) {
   return {
     status: "available",
     key: target.key,
-    provisional: target.entry.status === "provisional",
+    provisional: isProvisionalTarget(manifest, target),
     points,
   };
 }

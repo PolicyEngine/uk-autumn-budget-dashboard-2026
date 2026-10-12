@@ -33,11 +33,15 @@ export const BASE_PATH = "/uk/autumn-budget-2026";
  * A fetch stand-in that serves the fixture under `${BASE_PATH}/data/`.
  *
  * @param {{overrides?: Object<string, Uint8Array|string|number>,
- *   delays?: Object<string, Promise>}} [options] - `overrides` maps a path
+ *   delays?: Object<string, Promise>, ignoreAbort?: boolean}} [options] - `overrides` maps a path
  *   under the data directory to replacement bytes, or to an HTTP status;
  *   `delays` maps a path to a promise to wait for before answering.
  */
-export function fixtureFetch({ overrides = {}, delays = {} } = {}) {
+export function fixtureFetch({
+  overrides = {},
+  delays = {},
+  ignoreAbort = false,
+} = {}) {
   const calls = [];
   const prefix = `${BASE_PATH}/data/`;
   const fetchImpl = async (url, init = {}) => {
@@ -45,7 +49,9 @@ export function fixtureFetch({ overrides = {}, delays = {} } = {}) {
     if (!url.startsWith(prefix)) return new Response(null, { status: 404 });
     const path = decodeURIComponent(url.slice(prefix.length));
     if (delays[path]) await delays[path];
-    if (init.signal?.aborted) {
+    // ignoreAbort answers even after an abort, as a browser can once a
+    // response has arrived, so tests reach the hook's own stale guard.
+    if (init.signal?.aborted && !ignoreAbort) {
       throw new DOMException("The operation was aborted.", "AbortError");
     }
     if (Object.hasOwn(overrides, path)) {

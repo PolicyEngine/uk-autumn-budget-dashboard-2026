@@ -78,8 +78,8 @@ describe("scatterSeries", () => {
         tablesByKey,
         selectedIds: ["delta"],
         year: 2030,
-      }).status,
-    ).toBe("unavailable");
+      }),
+    ).toEqual({ status: "unavailable", reason: "Awaiting approval" });
   });
 });
 

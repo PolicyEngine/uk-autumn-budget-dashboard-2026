@@ -181,6 +181,31 @@ describe("selection on the fixture", () => {
     ).toThrow();
   });
 
+  it("labels a provisional measure's own figure beside an approved one", () => {
+    const [row] = fiscalSeries({
+      manifest,
+      tablesByKey,
+      selectedIds: ["alpha", "gamma"],
+      years: [2030],
+    });
+    expect(row.standalone.gamma).toBe(0.5);
+    expect(row.provisionalIds).toEqual(["gamma"]);
+    expect(row.provisional).toBe(true);
+  });
+
+  it("labels a combined run with a provisional member as provisional", () => {
+    const changed = structuredClone(manifest);
+    changed.measures.beta.status = "provisional";
+    const stats = combinedStats({
+      manifest: changed,
+      tablesByKey,
+      selectedIds: ["alpha", "beta"],
+      year: 2030,
+    });
+    expect(stats.status).toBe("available");
+    expect(stats.provisional).toBe(true);
+  });
+
   it("treats a combined run as unavailable once a member has changed", () => {
     const changed = structuredClone(manifest);
     changed.measures.alpha.outputs_sha256 = "e".repeat(64);

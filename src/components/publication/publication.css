@@ -133,3 +133,9 @@
 .publication-tooltip p {
   margin: 0;
 }
+
+.publication-provisional-marker {
+  font-weight: 400;
+  color: #7a5a1f;
+  font-size: 0.85em;
+}

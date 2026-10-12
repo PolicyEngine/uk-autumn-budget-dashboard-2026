@@ -52,7 +52,10 @@ describe("usePublication", () => {
     let release;
     const gate = new Promise((resolve) => (release = resolve));
     const alpha = receiptOf("alpha");
-    const fetchImpl = fixtureFetch({ delays: { [alpha]: gate } });
+    const fetchImpl = fixtureFetch({
+      delays: { [alpha]: gate },
+      ignoreAbort: true,
+    });
     vi.stubGlobal("fetch", fetchImpl);
     const { result, rerender } = renderHook(
       ({ ids }) => usePublication(BASE_PATH, ids),
