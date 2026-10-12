@@ -37,6 +37,7 @@ from uk_budget_data.publication.artifacts import (
     read_receipt,
     read_tables,
 )
+from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
     certificate_problems,
@@ -141,6 +142,17 @@ def _members_problems(
     dashboard = document["dashboard"]
     recorded = dashboard.get("member_outputs_sha256")
     problems = []
+    ids = sorted(dashboard.get("measure_ids") or [])
+    records = sorted(m["id"] for m in dashboard.get("members") or [])
+    if not ids or records != ids:
+        problems.append(
+            "its member records do not match its measure ids "
+            f"({records} against {ids})"
+        )
+    if recorded is not None and sorted(recorded) != ids:
+        problems.append("its member snapshot does not cover its members")
+    if dashboard.get("key") != combined_key(ids):
+        problems.append("its key does not name exactly its members")
     if not recorded:
         problems.append(
             "it does not record its members' outputs; generate it after "
@@ -209,8 +221,9 @@ def gate_problems(
     info: dict = {"document": document, "reconciliation": None}
 
     if level in (m.PROVISIONAL, m.APPROVED):
-        if not dashboard["publishable"]:
-            problems += [f"not publishable: {r}" for r in dashboard["reasons"]]
+        if dashboard.get("publishable") is not True:
+            reasons = dashboard.get("reasons") or ["no reason recorded"]
+            problems += [f"not publishable: {r}" for r in reasons]
         else:
             problems += [
                 f"certificate: {problem}"
@@ -293,7 +306,7 @@ def _entry_name(path: Path, key: str) -> str:
 def _mark_dependants_stale(
     manifest: m.Manifest, key: str, outputs: Optional[str]
 ) -> None:
-    for combined_key, entry in manifest.combined.items():
+    for _, entry in manifest.combined.items():
         if key not in (entry.measures or []):
             continue
         if (

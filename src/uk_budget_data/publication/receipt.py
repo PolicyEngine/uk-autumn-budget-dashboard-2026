@@ -529,14 +529,22 @@ def dashboard_problems(document: dict) -> list[str]:
     end = projection_end_year()
     if end is None:
         problems.append("the installed model's projection end is unknown")
-    elif supported[-1] != end:
+        return problems
+    if supported[-1] != end:
         problems.append(
             f"its dataset years end in {supported[-1]}, but the installed "
             f"model projects to {end}"
         )
-    if unsupported != [year for year in years if year not in supported]:
+    # Only years beyond the projection end may be unsupported. Every
+    # reported year up to it must be in the dataset, so truncating the
+    # declared range cannot hide a year.
+    beyond = [year for year in years if year > end]
+    if unsupported != beyond:
         problems.append(
-            "its unsupported years are not the reported years beyond the "
-            "dataset's"
+            "its unsupported years are not exactly the reported years "
+            f"beyond {end}"
         )
+    missing = [y for y in years if y <= end and y not in supported]
+    if missing:
+        problems.append(f"its dataset years leave out {missing}")
     return problems

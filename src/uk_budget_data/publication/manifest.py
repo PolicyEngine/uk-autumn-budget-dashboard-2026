@@ -151,15 +151,20 @@ def manifest_path(data_root: Path = DATA_ROOT) -> Path:
     return data_root / MANIFEST_FILE
 
 
+def parse_manifest(raw: bytes, where: str = "manifest") -> Manifest:
+    """Parse manifest bytes, checking the schema."""
+    manifest = Manifest.model_validate(json.loads(raw))
+    if manifest.schema_id != SCHEMA:
+        raise ValueError(f"{where}: schema is {manifest.schema_id!r}")
+    return manifest
+
+
 def load_manifest(data_root: Path = DATA_ROOT) -> Manifest:
     """Read the manifest, or an empty one if none has been written."""
     path = manifest_path(data_root)
     if not path.exists():
         return Manifest()
-    manifest = Manifest.model_validate(json.loads(path.read_text()))
-    if manifest.schema_id != SCHEMA:
-        raise ValueError(f"{path}: schema is {manifest.schema_id!r}")
-    return manifest
+    return parse_manifest(path.read_bytes(), str(path))
 
 
 def save_manifest(manifest: Manifest, data_root: Path = DATA_ROOT) -> Manifest:
