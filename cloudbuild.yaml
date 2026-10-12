@@ -1,35 +1,117 @@
+# Build and deploy the household API, uk-budget-api-2026.
+#
+# A new revision takes no traffic until it passes a smoke test on its own
+# tagged URL. Run from a clean checkout of main:
+#
+#   gcloud builds submit --project policyengine-apps \
+#     --config cloudbuild.yaml --substitutions _GIT_SHA=$(git rev-parse HEAD)
+#
+# The build writes the revision it promoted, and the one it replaced, to the
+# build log ("Promoted ... replacing ..."). Roll back with:
+#
+#   gcloud run services update-traffic uk-budget-api-2026 \
+#     --project policyengine-apps --region europe-west1 \
+#     --to-revisions <replaced revision>=100
+
+substitutions:
+  _GIT_SHA: ''
+  _SERVICE: uk-budget-api-2026
+  _REGION: europe-west1
+  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/uk-budget-api-2026
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  # _IMAGE refers to PROJECT_ID. Shell variables below are written $$name
+  # so Cloud Build leaves them for bash.
+  dynamicSubstitutions: true
+
 steps:
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: require-commit
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        if ! echo "${_GIT_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+          echo "_GIT_SHA must be the full commit being deployed" >&2
+          exit 1
+        fi
+
+  - id: build
+    name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '--build-arg'
-      - 'GIT_SHA=$COMMIT_SHA'
+      - 'GIT_SHA=${_GIT_SHA}'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/uk-budget-api-2026'
+      - '${_IMAGE}:${_GIT_SHA}'
       - '.'
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/uk-budget-api-2026']
+  - id: push
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_IMAGE}:${_GIT_SHA}']
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+  # Deploy with no traffic, tagged "candidate". A service's first revision
+  # must take traffic, so on first creation it does; nothing links to the
+  # service until the smoke test below has passed.
+  - id: deploy-candidate
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
     args:
-      - 'run'
-      - 'deploy'
-      - 'uk-budget-api-2026'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/uk-budget-api-2026'
-      - '--region'
-      - 'europe-west1'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--memory'
-      - '2Gi'
-      - '--cpu'
-      - '2'
-      - '--timeout'
-      - '300'
+      - '-c'
+      - |
+        set -euo pipefail
+        common="--image ${_IMAGE}:${_GIT_SHA} --region ${_REGION} \
+          --platform managed --no-invoker-iam-check --memory 2Gi --cpu 2 \
+          --timeout 300 --tag candidate \
+          --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
+        if gcloud run services describe ${_SERVICE} --region ${_REGION} \
+            --format='value(metadata.name)' >/dev/null 2>&1; then
+          gcloud run services describe ${_SERVICE} --region ${_REGION} \
+            --format=json | python3 -c 'import json, sys
+        traffic = json.load(sys.stdin)["status"].get("traffic", [])
+        print(next((t["revisionName"] for t in traffic
+                    if t.get("percent") == 100), ""))' > /workspace/previous_revision
+          gcloud run deploy ${_SERVICE} $$common --no-traffic
+        else
+          : > /workspace/previous_revision
+          gcloud run deploy ${_SERVICE} $$common
+        fi
+        gcloud run services describe ${_SERVICE} --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        traffic = json.load(sys.stdin)["status"]["traffic"]
+        candidate = next(t for t in traffic if t.get("tag") == "candidate")
+        print(candidate["revisionName"])
+        print(candidate["url"], file=open("/workspace/candidate_url", "w"))' \
+          > /workspace/candidate_revision
+        echo "Candidate $$(cat /workspace/candidate_revision) at $$(cat /workspace/candidate_url)"
+
+  # Smoke-test the candidate from inside the image just built, so the
+  # versions it expects are this build's own.
+  - id: smoke
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        docker run --rm ${_IMAGE}:${_GIT_SHA} uv run --no-sync python -m \
+          uk_budget_data.deploy_smoke \
+          --base-url "$$(cat /workspace/candidate_url)" \
+          --expect-git-sha ${_GIT_SHA}
+
+  - id: promote
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        candidate=$$(cat /workspace/candidate_revision)
+        previous=$$(cat /workspace/previous_revision)
+        gcloud run services update-traffic ${_SERVICE} --region ${_REGION} \
+          --to-revisions "$${candidate}=100"
+        echo "Promoted $${candidate} replacing $${previous:-nothing (first deploy)}"
 
 images:
-  - 'gcr.io/$PROJECT_ID/uk-budget-api-2026'
+  - '${_IMAGE}:${_GIT_SHA}'

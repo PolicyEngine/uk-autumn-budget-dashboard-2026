@@ -1612,6 +1612,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "h5py" },
+    { name = "httpx" },
     { name = "microdf-python" },
     { name = "numpy" },
     { name = "pandas" },
@@ -1635,6 +1636,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "h5py", specifier = ">=3.0.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.100.0" },
     { name = "microdf-python", specifier = ">=0.3.0" },
     { name = "numpy", specifier = ">=1.24.0" },
