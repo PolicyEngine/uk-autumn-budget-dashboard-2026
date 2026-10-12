@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 RECEIPT_SCHEMA = "uk-budget-dashboard/household-receipt/v1"
 DEFAULT_TOLERANCE = 0.01
@@ -128,6 +129,22 @@ def load_fixture(path: Path) -> tuple[dict, str]:
     for key in ("name", "route", "request", "expect", "source"):
         if key not in fixture:
             raise FixtureError(f"{path}: missing {key!r}")
+    route = fixture["route"]
+    parts = urlsplit(route) if isinstance(route, str) else None
+    if (
+        parts is None
+        or parts.scheme
+        or parts.netloc
+        or not route.startswith("/")
+        or route.startswith("//")
+        or "\\" in route
+    ):
+        # A full URL would send the request to another host, while the
+        # receipt records the deployment's identity.
+        raise FixtureError(
+            f"{path}: route must be a path on the deployment, like "
+            "/api/personal-impact"
+        )
     if not fixture["expect"]:
         raise FixtureError(f"{path}: 'expect' is empty")
     for check in fixture["expect"]:
