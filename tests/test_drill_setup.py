@@ -102,7 +102,7 @@ def test_dataset_and_runtime_mismatch_fail_closed(tmp_path, monkeypatch):
     monkeypatch.setattr(
         drill_setup,
         "runtime_versions",
-        lambda: {"policyengine-uk": "2.120.0", "policyengine-core": "3.32.5"},
+        lambda: {"policyengine-uk": "2.125.1", "policyengine-core": "3.32.5"},
     )
     with pytest.raises(RuntimeError, match="engine mismatch"):
         drill_setup.verify_runtime()
@@ -120,7 +120,14 @@ def test_pre_start_rejects_results_but_publication_rejects_empty(
 
     for name in NATIONAL_FIELDS:
         (tmp_path / f"{name}.csv").write_text("reform_id,year,value\n")
-    # Post-release, registered measures fail the empty-start check.
+    # An empty registry passes the empty-start check (the live registry holds
+    # the drill 3 measures after the 12:30 release, so patch it empty).
+    monkeypatch.setattr(reforms, "get_autumn_budget_2026_reforms", lambda: [])
+    assert validate_pre_start(tmp_path) == []
+    # Any registered measure fails the empty-start check.
+    monkeypatch.setattr(
+        reforms, "get_autumn_budget_2026_reforms", lambda: [object()]
+    )
     assert "Active drill reforms remain before the statement release" in (
         validate_pre_start(tmp_path)
     )
@@ -146,8 +153,8 @@ def test_mock_api_baseline_and_old_policy_rejection(monkeypatch):
     client = TestClient(app)
     health = client.get("/api/health").json()
     assert health["versions"] == {
-        "policyengine-uk": "2.120.0",
-        "policyengine-core": "3.32.17",
+        "policyengine-uk": "2.125.1",
+        "policyengine-core": "3.33.0",
     }
     result = client.post(
         "/api/personal-impact",
@@ -156,7 +163,9 @@ def test_mock_api_baseline_and_old_policy_rejection(monkeypatch):
     assert result.status_code == 200, result.text
     assert result.json()["baseline_only"] is True
     assert result.json()["policies"] == {}
-    assert len(result.json()["years"]) == 6
+    assert list(result.json()["years"]) == [
+        str(year) for year in range(2025, 2032)
+    ]
     assert (
         client.post(
             "/api/personal-impact",
@@ -214,8 +223,8 @@ def test_modifier_reads_frozen_baseline_before_caching_nics(baseline):
 def test_latest_runtime_is_distinct_from_dataset_build():
     provenance = drill_setup.drill_provenance()
     assert provenance["runtime"] == {
-        "policyengine-uk": "2.120.0",
-        "policyengine-core": "3.32.17",
+        "policyengine-uk": "2.125.1",
+        "policyengine-core": "3.33.0",
     }
     assert provenance["dataset_build"] == {
         "policyengine-uk": "2.100.0",
@@ -259,4 +268,41 @@ def test_annual_override_applies_before_modifier_on_native_engine():
     assert observed == [250]
     assert (
         sim.tax_benefit_system.parameters.get_child(path)("2029-01-01") == 250
+    )
+
+
+def test_mock_api_supports_terminal_calendar_boundary(monkeypatch):
+    """2032 annual output supports explicit fiscal-boundary scoring work."""
+    from fastapi.testclient import TestClient
+
+    from uk_budget_data.api import app
+
+    monkeypatch.setenv("NEXT_PUBLIC_MOCK", "1")
+    client = TestClient(app)
+    result = client.post(
+        "/api/personal-impact",
+        json={
+            "employment_income": 30000,
+            "policy_ids": [],
+            "years": [2031, 2032],
+        },
+    )
+    assert result.status_code == 200, result.text
+    assert list(result.json()["years"]) == ["2031", "2032"]
+    assert result.json()["period_basis"] == "engine_annual_mixed"
+    assert result.json()["fiscal_conversion_applied"] is False
+    for year in ("2031", "2032"):
+        assert math.isfinite(
+            result.json()["years"][year]["baseline"]["household_net_income"]
+        )
+    assert (
+        client.post(
+            "/api/personal-impact",
+            json={
+                "employment_income": 30000,
+                "policy_ids": [],
+                "years": [2033],
+            },
+        ).status_code
+        == 422
     )

@@ -5,8 +5,8 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 
-MODEL_VERSION = "2.120.0"
-CORE_VERSION = "3.32.17"
+MODEL_VERSION = "2.125.1"
+CORE_VERSION = "3.33.0"
 DATASET_BUILD_MODEL_VERSION = "2.100.0"
 DATASET_BUILD_CORE_VERSION = "3.32.5"
 DATASET_BUILD_PYTHON_VERSION = "3.14.6"

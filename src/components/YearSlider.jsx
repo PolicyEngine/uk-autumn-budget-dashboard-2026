@@ -1,7 +1,8 @@
+import budgetYears from "../uk_budget_data/budget_years.json";
 import { useState, useEffect, useRef } from "react";
 import "./YearSlider.css";
 
-const YEARS = [2026, 2027, 2028, 2029, 2030];
+const YEARS = budgetYears.policy_years;
 
 function YearSlider({ selectedYear, onYearChange }) {
   const [isPlaying, setIsPlaying] = useState(false);

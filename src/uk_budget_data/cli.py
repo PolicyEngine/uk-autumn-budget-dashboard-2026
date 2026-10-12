@@ -1,6 +1,8 @@
 """Command-line interface for UK Budget Data generation."""
 
 import argparse
+import csv
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -8,6 +10,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.lifetime_impact import (
     GRADUATE_STARTING_INCOME,
     calculate_lifetime_impact,
@@ -20,6 +23,67 @@ from uk_budget_data.reforms import (
 )
 
 console = Console()
+
+RESET_CSV_FILES = (
+    "budgetary_impact.csv",
+    "distributional_impact.csv",
+    "winners_losers.csv",
+    "metrics.csv",
+    "household_scatter.csv",
+    "income_curve.csv",
+    "obr_comparison.csv",
+    "constituency.csv",
+    "demographic_constituency.csv",
+)
+
+
+def reset_drill_data(
+    directory: Path,
+    frontend_config: Path,
+    active_policy_ids=None,
+    check_only=False,
+) -> list[str]:
+    """Reset named generated CSVs only after both active registries are empty.
+
+    Validate all files before writing any. Keep schema headers, references,
+    geography, unknown files and private inputs intact. No force bypass exists.
+    """
+    if active_policy_ids is None:
+        active_policy_ids = [r.id for r in get_autumn_budget_2026_reforms()]
+    if active_policy_ids:
+        raise ValueError(
+            "Active backend drill measures remain; remove them during Monday setup"
+        )
+    source = frontend_config.read_text()
+    declarations = list(
+        re.finditer(r"^\s*export\s+const\s+POLICIES\s*=", source, re.MULTILINE)
+    )
+    if len(declarations) != 1 or not re.match(
+        r"\s*\[\s*\]\s*;", source[declarations[0].end() :]
+    ):
+        raise ValueError(
+            "Active or unrecognised frontend registry; require export const POLICIES = [];"
+        )
+    headers = {}
+    for name in RESET_CSV_FILES:
+        path = directory / name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Missing or unsafe generated CSV: {name}")
+        with path.open(newline="") as file:
+            header = file.readline()
+        fields = next(csv.reader([header]), [])
+        if (
+            not {"reform_id", "year"}.issubset(fields)
+            or len(fields) != len(set(fields))
+            or any(not field for field in fields)
+        ):
+            raise ValueError(f"Invalid generated CSV header: {name}")
+        headers[path] = header
+    if not check_only:
+        for path, header in headers.items():
+            with path.open("w", newline="") as file:
+                file.write(header)
+    return list(RESET_CSV_FILES)
 
 
 def parse_args(args: list[str] = None) -> argparse.Namespace:
@@ -38,6 +102,23 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     subparsers = parser.add_subparsers(
         dest="command", help="Available commands"
+    )
+
+    reset_parser = subparsers.add_parser(
+        "reset", help="Restore schema-only drill CSVs after registry removal"
+    )
+    reset_parser.add_argument(
+        "--output-dir", type=Path, default=Path("./public/data")
+    )
+    reset_parser.add_argument(
+        "--frontend-config",
+        type=Path,
+        default=Path("./src/utils/policyConfig.js"),
+    )
+    reset_parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Validate reset prerequisites without writing files",
     )
 
     # Dashboard data generation command
@@ -84,8 +165,10 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--years",
         nargs="+",
         type=int,
-        default=[2026, 2027, 2028, 2029, 2030],
-        help="Years to calculate (default: 2026 2027 2028 2029 2030)",
+        default=POLICY_YEARS.copy(),
+        help="Years to calculate (default: "
+        + " ".join(map(str, POLICY_YEARS))
+        + ")",
     )
 
     generate_parser.add_argument(
@@ -352,6 +435,20 @@ def main(args: list[str] = None) -> int:
 
     if parsed.command == "generate":
         return run_generate(parsed)
+    elif parsed.command == "reset":
+        try:
+            files = reset_drill_data(
+                parsed.output_dir,
+                parsed.frontend_config,
+                check_only=parsed.check_only,
+            )
+        except (ValueError, OSError) as error:
+            console.print(f"[red]Reset blocked: {error}[/red]")
+            return 1
+        console.print(
+            f"{'Checked' if parsed.check_only else 'Reset'} {len(files)} generated CSVs; run --pre-start validation next"
+        )
+        return 0
     elif parsed.command == "lifetime":
         return run_lifetime(parsed)
     else:

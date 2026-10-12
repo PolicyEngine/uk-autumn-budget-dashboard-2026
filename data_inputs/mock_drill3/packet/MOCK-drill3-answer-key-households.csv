@@ -1,0 +1,174 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 3, 12 October 2026. Not a real Budget. Skip one line when reading this CSV.
+household,measure,scoring_year,key_statutory,key_statutory_as_at_1340,changed_by_1420
+H1,1 threshold freeze extension,2031-32,-175.00,-175.00,no
+H1,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H1,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H1,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H1,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H1,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H1,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H1,6 HVCTS bands,2028-29,0.00,0.00,no
+H1,7 additional rate threshold,2027-28,0.00,0.00,no
+H1,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H1,9 fuel duty,2026-27,11.00,11.00,no
+H1,9 fuel duty,2027-28,35.64,35.64,no
+H1,10 Class 4 NICs,2027-28,0.00,0.00,no
+H1,1 and 2 together (stacked),2031-32,-175.00,-175.00,no
+H2,1 threshold freeze extension,2031-32,-130.00,-130.00,no
+H2,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H2,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H2,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H2,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H2,4 Capital Gains Tax,2027-28,-749.20,-749.20,no
+H2,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H2,6 HVCTS bands,2028-29,0.00,0.00,no
+H2,7 additional rate threshold,2027-28,0.00,0.00,no
+H2,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H2,9 fuel duty,2026-27,11.00,11.00,no
+H2,9 fuel duty,2027-28,35.64,35.64,no
+H2,10 Class 4 NICs,2027-28,0.00,0.00,no
+H2,1 and 2 together (stacked),2031-32,-130.00,-130.00,no
+H3,1 threshold freeze extension,2031-32,-52.00,-52.00,no
+H3,2 Pensioner Allowance,2027-28,93.28,93.28,no
+H3,2 Pensioner Allowance,2031-32,399.56,399.56,no
+H3,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H3,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H3,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H3,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H3,6 HVCTS bands,2028-29,0.00,0.00,no
+H3,7 additional rate threshold,2027-28,0.00,0.00,no
+H3,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H3,9 fuel duty,2026-27,0.00,0.00,no
+H3,9 fuel duty,2027-28,0.00,0.00,no
+H3,10 Class 4 NICs,2027-28,0.00,0.00,no
+H3,1 and 2 together (stacked),2031-32,399.56,399.56,no
+H4,1 threshold freeze extension,2031-32,0.00,0.00,no
+H4,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H4,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H4,3 Warm Home Discount top-up,2026-27,100.00,100.00,no
+H4,3 Warm Home Discount top-up,2027-28,100.00,100.00,no
+H4,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H4,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H4,6 HVCTS bands,2028-29,0.00,0.00,no
+H4,7 additional rate threshold,2027-28,0.00,0.00,no
+H4,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H4,9 fuel duty,2026-27,0.00,0.00,no
+H4,9 fuel duty,2027-28,0.00,0.00,no
+H4,10 Class 4 NICs,2027-28,0.00,0.00,no
+H4,1 and 2 together (stacked),2031-32,0.00,0.00,no
+H5,1 threshold freeze extension,2031-32,-104.00,-104.00,no
+H5,2 Pensioner Allowance,2027-28,134.36,134.36,no
+H5,2 Pensioner Allowance,2031-32,567.22,567.22,no
+H5,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H5,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H5,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H5,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H5,6 HVCTS bands,2028-29,0.00,0.00,no
+H5,7 additional rate threshold,2027-28,0.00,0.00,no
+H5,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H5,9 fuel duty,2026-27,8.80,8.80,no
+H5,9 fuel duty,2027-28,28.51,28.51,no
+H5,10 Class 4 NICs,2027-28,0.00,0.00,no
+H5,1 and 2 together (stacked),2031-32,567.22,567.22,no
+H6,1 threshold freeze extension,2031-32,-32.76,-32.76,no
+H6,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H6,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H6,3 Warm Home Discount top-up,2026-27,100.00,100.00,no
+H6,3 Warm Home Discount top-up,2027-28,100.00,100.00,no
+H6,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H6,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H6,6 HVCTS bands,2028-29,0.00,0.00,no
+H6,7 additional rate threshold,2027-28,0.00,0.00,no
+H6,8 Local Housing Allowance,2027-28,1320.00,1140.00,yes
+H6,9 fuel duty,2026-27,8.80,8.80,no
+H6,9 fuel duty,2027-28,28.51,28.51,no
+H6,10 Class 4 NICs,2027-28,0.00,0.00,no
+H6,1 and 2 together (stacked),2031-32,-32.76,-32.76,no
+H7,1 threshold freeze extension,2031-32,-32.76,-32.76,no
+H7,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H7,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H7,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H7,3 Warm Home Discount top-up,2027-28,100.00,100.00,no
+H7,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H7,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H7,6 HVCTS bands,2028-29,0.00,0.00,no
+H7,7 additional rate threshold,2027-28,0.00,0.00,no
+H7,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H7,9 fuel duty,2026-27,0.00,0.00,no
+H7,9 fuel duty,2027-28,0.00,0.00,no
+H7,10 Class 4 NICs,2027-28,0.00,0.00,no
+H7,1 and 2 together (stacked),2031-32,-32.76,-32.76,no
+H8,1 threshold freeze extension,2031-32,-32.76,-32.76,no
+H8,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H8,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H8,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H8,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H8,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H8,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H8,6 HVCTS bands,2028-29,0.00,0.00,no
+H8,7 additional rate threshold,2027-28,0.00,0.00,no
+H8,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H8,9 fuel duty,2026-27,16.50,16.50,no
+H8,9 fuel duty,2027-28,53.46,53.46,no
+H8,10 Class 4 NICs,2027-28,0.00,0.00,no
+H8,1 and 2 together (stacked),2031-32,-32.76,-32.76,no
+H9,1 threshold freeze extension,2031-32,-237.20,-237.20,no
+H9,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H9,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H9,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H9,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H9,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H9,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H9,6 HVCTS bands,2028-29,0.00,0.00,no
+H9,7 additional rate threshold,2027-28,0.00,0.00,no
+H9,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H9,9 fuel duty,2026-27,27.50,27.50,no
+H9,9 fuel duty,2027-28,89.10,89.10,no
+H9,10 Class 4 NICs,2027-28,-377.00,-377.00,no
+H9,1 and 2 together (stacked),2031-32,-237.20,-237.20,no
+H10,1 threshold freeze extension,2031-32,-117.20,-117.20,no
+H10,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H10,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H10,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H10,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H10,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H10,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H10,6 HVCTS bands,2028-29,-2500.00,-2500.00,no
+H10,7 additional rate threshold,2027-28,-1257.00,-1257.00,no
+H10,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H10,9 fuel duty,2026-27,13.20,13.20,no
+H10,9 fuel duty,2027-28,42.77,42.77,no
+H10,10 Class 4 NICs,2027-28,0.00,0.00,no
+H10,1 and 2 together (stacked),2031-32,-117.20,-117.20,no
+H11,1 threshold freeze extension,2031-32,-74.20,-74.20,no
+H11,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H11,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H11,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H11,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H11,4 Capital Gains Tax,2027-28,0.00,0.00,no
+H11,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H11,6 HVCTS bands,2028-29,0.00,0.00,no
+H11,7 additional rate threshold,2027-28,-627.48,-627.48,no
+H11,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H11,9 fuel duty,2026-27,9.90,9.90,no
+H11,9 fuel duty,2027-28,32.08,32.08,no
+H11,10 Class 4 NICs,2027-28,0.00,0.00,no
+H11,1 and 2 together (stacked),2031-32,-74.20,-74.20,no
+H12,1 threshold freeze extension,2031-32,-221.20,-221.20,no
+H12,2 Pensioner Allowance,2027-28,0.00,0.00,no
+H12,2 Pensioner Allowance,2031-32,0.00,0.00,no
+H12,3 Warm Home Discount top-up,2026-27,0.00,0.00,no
+H12,3 Warm Home Discount top-up,2027-28,0.00,0.00,no
+H12,4 Capital Gains Tax,2027-28,-2560.00,-2560.00,no
+H12,5 employer NICs for under-22s,2027-28,0.00,0.00,no
+H12,6 HVCTS bands,2028-29,0.00,0.00,no
+H12,7 additional rate threshold,2027-28,0.00,0.00,no
+H12,8 Local Housing Allowance,2027-28,0.00,0.00,no
+H12,9 fuel duty,2026-27,12.10,12.10,no
+H12,9 fuel duty,2027-28,39.20,39.20,no
+H12,10 Class 4 NICs,2027-28,0.00,0.00,no
+H12,1 and 2 together (stacked),2031-32,-221.20,-221.20,no
+H13,20 pension salary-sacrifice cap,2029-30,-20.00,-20.00,no
+H13,20 pension salary-sacrifice cap,2031-32,-20.00,-20.00,no
+H14,20 pension salary-sacrifice cap,2029-30,-80.00,-80.00,no
+H14,20 pension salary-sacrifice cap,2031-32,-80.00,-80.00,no

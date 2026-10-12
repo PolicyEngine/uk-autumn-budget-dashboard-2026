@@ -1,0 +1,10 @@
+MOCK DATA: independent synthetic diagnostic records; not national microdata. Skip one line when reading this CSV.
+record_id,nation,tax_year,contractual_salary_before_sacrifice,pension_salary_sacrifice,initial_weight
+S1,England,2026-27,30000,2000,100000
+S2,England,2026-27,54000,4000,100000
+S3,Scotland,2026-27,50000,4000,100000
+S4,Scotland,2026-27,80000,12000,100000
+S5,England,2026-27,150000,10000,100000
+S6,Scotland,2026-27,160000,10000,100000
+S7,England,2026-27,45000,5000,100000
+S8,Scotland,2026-27,46000,4000,100000

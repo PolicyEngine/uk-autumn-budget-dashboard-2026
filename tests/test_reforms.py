@@ -95,11 +95,21 @@ class TestReformDefinitions:
         """Autumn Budget 2025 reforms are defined."""
         from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        ids = [r.id for r in get_autumn_budget_2026_reforms()]
-        assert {
-            "mock2_state_pension_personal_allowance",
-            "mock2_energy_price_payment",
-        } <= set(ids)
+        # Drill 3 (12 Oct 2026): the 11 coded measures from the 12:30
+        # statement, in coverage-ledger order.
+        assert [r.id for r in get_autumn_budget_2026_reforms()] == [
+            "mock3_fuel_duty_phasing",
+            "mock3_whd_top_up",
+            "mock3_lha_30th_percentile",
+            "mock3_pensioner_allowance",
+            "mock3_employer_ni_under_22",
+            "mock3_additional_rate_threshold",
+            "mock3_cgt_higher_rate_aea",
+            "mock3_salary_sacrifice_cap",
+            "mock3_hvcts_top_bands",
+            "mock3_threshold_freeze_2032",
+            "mock3_class4_main_rate",
+        ]
 
     def test_all_reforms_have_required_fields(self):
         """All reforms have id and name."""
@@ -574,15 +584,17 @@ class TestForecastYearRange:
 class TestAutumnBudget2026Reforms:
     """Tests for the Autumn Budget 2026 candidate measures."""
 
-    def test_only_drill2_measures_after_statement_release(self):
+    def test_no_drill_measures_before_statement_release(self):
         from uk_budget_data.reforms import (
             get_autumn_budget_2026_reforms,
             get_reform,
         )
 
-        ids = [r.id for r in get_autumn_budget_2026_reforms()]
-        assert len(ids) == len(set(ids))
-        assert get_reform("mock2_energy_price_payment") is not None
+        # Drill 3: only mock3_* measures from the 12:30 statement are active.
+        assert all(
+            r.id.startswith("mock3_") for r in get_autumn_budget_2026_reforms()
+        )
+        assert get_reform("mock2_energy_price_payment") is None
         assert get_reform("mock_nics_threshold_rise") is None
 
     def test_enacted_2025_measures_still_resolve_by_id(self):

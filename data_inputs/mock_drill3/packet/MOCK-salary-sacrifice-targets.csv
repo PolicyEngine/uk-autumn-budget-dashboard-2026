@@ -1,0 +1,6 @@
+MOCK DATA: synthetic national calibration benchmarks for rehearsal; not HMRC statistics. Skip one line when reading this CSV.
+tax_year,target,geography,value_m,default_role
+2026-27,salary_sacrifice_it_relief_basic,UK,266.004,bind_band
+2026-27,salary_sacrifice_it_relief_higher,UK,2613.492,bind_band
+2026-27,salary_sacrifice_it_relief_additional,UK,1155.000,bind_band
+2026-27,salary_sacrifice_it_relief_total_rounded,UK,4034.5,diagnostic_only

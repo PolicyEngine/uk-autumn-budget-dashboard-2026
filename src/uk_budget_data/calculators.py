@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from microdf import MicroDataFrame, MicroSeries
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 
 def _as_weighted(df) -> MicroDataFrame:
     """Return df as a MicroDataFrame weighted by household_weight.
@@ -41,9 +43,7 @@ class BaseCalculator(ABC):
 class BudgetaryImpactCalculator(BaseCalculator):
     """Calculates budgetary impact (cost/revenue) of reforms."""
 
-    years: list[int] = field(
-        default_factory=lambda: [2026, 2027, 2028, 2029, 2030]
-    )
+    years: list[int] = field(default_factory=lambda: POLICY_YEARS.copy())
 
     # Reforms that use student_loan_repayments_modelled instead of gov_balance
     STUDENT_LOAN_REFORMS = ["freeze_student_loan_thresholds"]
@@ -848,7 +848,7 @@ def get_standard_calculators(
     Returns:
         Dict mapping calculator name to calculator instance.
     """
-    years = years or [2026, 2027, 2028, 2029, 2030]
+    years = years or POLICY_YEARS.copy()
 
     return {
         "budgetary": BudgetaryImpactCalculator(years=years),

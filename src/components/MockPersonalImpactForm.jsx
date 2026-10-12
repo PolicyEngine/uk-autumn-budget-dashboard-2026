@@ -28,6 +28,7 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
     tenure_type: "OWNED_OUTRIGHT",
     state_pension_income: 0,
     private_pension_income: 0,
+    pension_contributions_salary_sacrifice: 0,
     partner_state_pension_income: 0,
     partner_private_pension_income: 0,
     age_2025: 35,
@@ -79,6 +80,7 @@ export default function MockPersonalImpactForm({ onSubmit, isLoading }) {
       {moneyField("self_employment_income", "Your annual self-employment profits (2025)")}
       {moneyField("state_pension_income", "Your annual State Pension", "Enter the annual amount expected in the model year.")}
       {moneyField("private_pension_income", "Your annual private pension")}
+      {moneyField("pension_contributions_salary_sacrifice", "Pension salary sacrifice (£ a year)", "Employee pension contributions made through salary sacrifice.")}
       {moneyField("capital_gains", "Your annual capital gains", "Gains realised in each year, before the annual exempt amount. The mock rate rise applies from 6 April 2027.", 1000)}
       <div className="form-group">
         <label htmlFor="income_growth_percent">Expected annual income growth</label>

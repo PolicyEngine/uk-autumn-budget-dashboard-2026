@@ -4,6 +4,13 @@ MOCK DATA: rehearsal Budget for PolicyEngine drill 2. Not a real Budget.
 """
 
 import pytest
+
+# Drill 2's mock2_* measures were retired from the active registry for drill 3
+# (12 Oct 2026); their definitions remain for history and the results are on
+# branch drill2-mock-budget (PR #7).
+pytestmark = pytest.mark.skip(
+    reason="drill 2 measures retired from the registry"
+)
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
 

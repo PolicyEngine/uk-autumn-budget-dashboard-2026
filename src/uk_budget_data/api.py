@@ -89,6 +89,13 @@ class APIHouseholdInput(BaseModel):
     bus_spending: float = Field(default=0.0, ge=0)
     capital_gains: float = Field(default=0.0, ge=0)
     region: str = Field(default="LONDON", description="UK household region")
+    brma: str | None = Field(
+        default=None,
+        description=(
+            "Broad Rental Market Area (policyengine-uk BRMAName member); "
+            "None keeps the engine default (Maidstone)"
+        ),
+    )
     fuel_type: str = Field(default="PETROL", description="PETROL or DIESEL")
     self_employment_income: float = Field(default=0, ge=0)
     fuel_litres: float = Field(default=0, ge=0)
@@ -111,6 +118,24 @@ class APIHouseholdInput(BaseModel):
         default=None, description="Featured policy IDs to calculate"
     )
 
+    years: list[int] | None = Field(
+        default=None,
+        description="MOCK annual years; 2032 supports terminal fiscal-boundary work",
+    )
+
+    @field_validator("years")
+    @classmethod
+    def validate_years(cls, value):
+        from uk_budget_data.budget_years import validate_household_years
+
+        if value is None:
+            return value
+        if os.environ.get("NEXT_PUBLIC_MOCK") != "1":
+            raise ValueError(
+                "Custom calendar years require the MOCK drill backend"
+            )
+        return validate_household_years(value)
+
     @field_validator("tenure_type")
     @classmethod
     def validate_tenure(cls, value):
@@ -130,6 +155,18 @@ class APIHouseholdInput(BaseModel):
         """Accept only PolicyEngine-UK region identifiers."""
         if value not in Region.__members__ or value == "UNKNOWN":
             raise ValueError("Unknown UK region")
+        return value
+
+    @field_validator("brma")
+    @classmethod
+    def validate_brma(cls, value):
+        """Accept only PolicyEngine-UK Broad Rental Market Area identifiers."""
+        from policyengine_uk.variables.household.demographic.locations import (
+            BRMAName,
+        )
+
+        if value is not None and value not in BRMAName.__members__:
+            raise ValueError("Unknown Broad Rental Market Area")
         return value
 
     @field_validator("fuel_type")
@@ -175,7 +212,9 @@ class APIHouseholdInput(BaseModel):
 
 def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
     """Convert API input to the format expected by PersonalImpactCalculator."""
-    return HouseholdInput(**api_input.model_dump(exclude={"policy_ids"}))
+    return HouseholdInput(
+        **api_input.model_dump(exclude={"policy_ids", "years"})
+    )
 
 
 def convert_to_native(obj):
@@ -216,7 +255,9 @@ async def calculate_personal_impact(data: APIHouseholdInput):
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
         results = calculator.calculate(
-            household_input, policy_ids=data.policy_ids
+            household_input,
+            policy_ids=data.policy_ids,
+            **({"years": data.years} if data.years is not None else {}),
         )
         return convert_to_native(results)
     except ValueError as e:

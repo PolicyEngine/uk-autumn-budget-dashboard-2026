@@ -12,6 +12,8 @@ import HouseholdChart from "./components/HouseholdChart";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import YearSlider from "./components/YearSlider";
 
+import budgetYears from "./uk_budget_data/budget_years.json";
+
 import { POLICIES, LEGACY_POLICIES, CHART_POLICIES } from "./utils/policyConfig";
 
 function parseCSV(csvText) {
@@ -164,7 +166,7 @@ function App() {
 
       // Build budgetary impact data for chart (2026-2029)
       // Always include all policy keys for smooth animations
-      const years = [2026, 2027, 2028, 2029, 2030];
+      const years = budgetYears.policy_years;
       const budgetData = years.map((year) => {
         const dataPoint = { year };
         let netImpact = 0;
@@ -422,8 +424,9 @@ function App() {
               )}
             </p>
             <p role="note" className="dashboard-intro">
-              MOCK drill 2 setup. UK 2.120.0 runs a dataset built on UK 2.100.0;
-              calibration under this runtime is unvalidated.
+              MOCK drill 3 setup. policyengine.py 6.2.7 (UK 2.125.1) runs the
+              Microcosm national dataset built on UK 2.100.0; national figures are
+              unvalidated under this engine.
               no measures or costings are published before statement release.
               Constituency estimates are unavailable for this national release.
             </p>

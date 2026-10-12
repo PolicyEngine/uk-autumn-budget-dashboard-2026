@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import App from "./App";
+import { POLICIES } from "./utils/policyConfig";
 
 vi.mock("./components/BudgetaryImpactChart", () => ({
-  default: ({ data }) => <div data-testid="budget-chart">{JSON.stringify(data?.[0])}</div>,
+  default: ({ data }) => <div data-testid="budget-chart">{JSON.stringify(data)}</div>,
 }));
 vi.mock("./components/DistributionalChart", () => ({ default: () => null }));
 vi.mock("./components/WaterfallChart", () => ({ default: () => null }));
@@ -18,6 +19,35 @@ vi.mock("./components/YearSlider", () => ({ default: () => null }));
 afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState({}, "", "/uk/autumn-budget-2026");
+});
+
+it("retains the terminal-year budget figure in chart data", async () => {
+  // The drill registry is empty before release, so register one stand-in measure.
+  const policy = { id: "mock_terminal_year_test", name: "Terminal-year test", color: "#319795",
+    description: "Test measure", explanation: "MOCK basis: test only." };
+  vi.resetModules();
+  vi.doMock("./utils/policyConfig", async (importOriginal) => {
+    const original = await importOriginal();
+    return { ...original, POLICIES: [policy], CHART_POLICIES: [policy, ...original.LEGACY_POLICIES],
+      PERSONAL_IMPACT_POLICY_ORDER: [policy.id] };
+  });
+  const { default: StandInApp } = await import("./App");
+  vi.stubGlobal("fetch", vi.fn(async (url) => ({
+    ok: true,
+    text: async () => {
+      const path = `public${new URL(url, "http://localhost").pathname.replace(/^\/uk\/autumn-budget-2026/, "")}`;
+      const csv = readFileSync(path, "utf8");
+      return path.endsWith("budgetary_impact.csv")
+        ? `${csv.trim()}\n${policy.id},${policy.name},2031,2.5\n`
+        : csv;
+    },
+  })));
+  window.history.replaceState({}, "", `/uk/autumn-budget-2026?policies=${policy.id}`);
+  render(<StandInApp />);
+  await waitFor(() => expect(screen.getByTestId("budget-chart")).toHaveTextContent('"year":2031'));
+  expect(screen.getByTestId("budget-chart")).toHaveTextContent('"netImpact":2.5');
+  vi.doUnmock("./utils/policyConfig");
+  vi.resetModules();
 });
 
 function useCheckedInData() {
@@ -39,7 +69,7 @@ describe("dashboard URL behavior", () => {
     useCheckedInData();
     window.history.replaceState({}, "", "/uk/autumn-budget-2026?policies=");
     render(<App />);
-    expect(await screen.findByText(/Select policies to analyse their impact/)).toBeInTheDocument();
+    expect(await screen.findByText(/Select policies to analyse their impact|Awaiting the 12:30 statement/)).toBeInTheDocument();
   });
 
 
