@@ -291,8 +291,9 @@ def apply_vat_base_change(
     the bill before multiplying by that change; by default the installed
     reduced rate is the baseline. Supply ``baseline_rate`` for another base.
     Annual bounds are inclusive, with no implicit fiscal/calendar proration.
-    Write only ``vat``: the engine derives ``vat_change`` and resources from
-    it. An explicitly supplied zero bill is valid; an absent input is refused.
+    Wrap the current ``vat`` formula: the engine derives ``vat_change`` and
+    resources from it. Missing spending defaults to the variable's native
+    value (zero for spending inputs). Repeated calls add their adjustments.
     Call from a module-level modifier with finite JSON default arguments.
     """
     years = _annual_years(start_year, end_year)
@@ -302,34 +303,44 @@ def apply_vat_base_change(
     )
     if variable.entity.key != "household":
         raise ValueError("Eligible spending must be on the household entity")
-    if not _stored_input_periods(sim, spending_variable):
-        raise ValueError(
-            f"Missing eligible-spending input: {spending_variable}"
+    explicit_rate = (
+        None
+        if baseline_rate is None
+        else _finite_number(baseline_rate, "baseline_rate")
+    )
+    if explicit_rate is not None and (
+        explicit_rate < 0 or explicit_rate + delta < 0
+    ):
+        raise ValueError("Baseline and reformed VAT rates must be nonnegative")
+    native = sim.tax_benefit_system.get_variable("vat")
+
+    def formula(household, period, parameters):
+        previous = native.get_formula(period)
+        current = (
+            previous(household, period, parameters)
+            if previous is not None
+            else household.empty_array()
         )
-    _ensure_not_stored(sim, "vat")
-    changes = {}
-    for year in years:
+        if period.start.year not in years:
+            return current
         old_rate = (
-            sim.tax_benefit_system.parameters(year).gov.hmrc.vat.reduced_rate
-            if baseline_rate is None
-            else baseline_rate
+            parameters(period).gov.hmrc.vat.reduced_rate
+            if explicit_rate is None
+            else explicit_rate
         )
         old_rate = _finite_number(old_rate, "baseline_rate")
         if old_rate < 0 or old_rate + delta < 0:
             raise ValueError(
                 "Baseline and reformed VAT rates must be nonnegative"
             )
-        spending = np.asarray(sim.calculate(spending_variable, year))
+        spending = np.asarray(household(spending_variable, period))
         if not np.isfinite(spending).all() or (spending < 0).any():
             raise ValueError(
                 "Eligible spending must be finite and nonnegative"
             )
-        changes[year] = np.asarray(
-            sim.calculate("vat", year)
-        ) + spending * delta / (1 + old_rate)
-    for year, values in changes.items():
-        sim.set_input("vat", year, values)
-    sim._invalidate_all_caches()
+        return current + spending * delta / (1 + old_rate)
+
+    _replace_formula(sim, "vat", formula)
     return sim
 
 
@@ -511,11 +522,10 @@ def apply_property_band_surcharge(
     if not 0 <= lower < upper or amount < 0:
         raise ValueError("Select ordered nonnegative bounds and amount")
     native = sim.tax_benefit_system.get_variable(channel, check_existence=True)
-    if native.entity.key != "household":
+    if native.entity.key != "household" or not native.formulas:
         raise ValueError(
-            "Property surcharge channel must be a household variable"
+            "Property surcharge channel must have a household formula"
         )
-    _ensure_not_stored(sim, channel)
     country_enum = sim.tax_benefit_system.get_variable(
         "country"
     ).possible_values
@@ -524,34 +534,36 @@ def apply_property_band_surcharge(
     ).possible_values
     if geography != "UK" and geography not in country_enum.__members__:
         raise ValueError("Select a country enum name or UK")
-    params = sim.tax_benefit_system.parameters
-    changes = {}
-    for year in years:
-        # The UK wrapper decodes enums at the top level even when passed
-        # decode_enums=False. Normalize using the variable's native enum.
-        tenure = tenure_enum.encode(sim.calculate("tenure_type", year))
+
+    def formula(household, period, parameters):
+        previous = native.get_formula(period)
+        current = (
+            previous(household, period, parameters)
+            if previous is not None
+            else household.empty_array()
+        )
+        if period.start.year not in years:
+            return current
+        tenure = household("tenure_type", period)
         owners = (tenure == tenure_enum.OWNED_OUTRIGHT) | (
             tenure == tenure_enum.OWNED_WITH_MORTGAGE
         )
-        country = country_enum.encode(sim.calculate("country", year))
+        country = household("country", period)
         in_geography = (
-            np.ones(len(country), dtype=bool)
+            np.ones(household.count, dtype=bool)
             if geography == "UK"
             else country == country_enum[geography]
         )
-        index = params(
-            year
+        index = parameters(
+            period
         ).gov.economic_assumptions.indices.obr.per_capita.gdp
-        base_index = params(
+        base_index = parameters(
             value_year
         ).gov.economic_assumptions.indices.obr.per_capita.gdp
-        value = np.asarray(sim.calculate("main_residence_value", year))
+        value = np.asarray(household("main_residence_value", period))
         value = value / (index / base_index)
         in_band = owners & in_geography & (value >= lower) & (value < upper)
-        changes[year] = (
-            np.asarray(sim.calculate(channel, year)) + in_band * amount
-        )
-    for year, values in changes.items():
-        sim.set_input(channel, year, values)
-    sim._invalidate_all_caches()
+        return current + in_band * amount
+
+    _replace_formula(sim, channel, formula)
     return sim

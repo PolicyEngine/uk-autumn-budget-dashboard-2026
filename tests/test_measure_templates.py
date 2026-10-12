@@ -476,14 +476,13 @@ def test_vat_is_counted_once_in_income_and_receipts(year):
     assert _value(reformed, "vat_change", year) == pytest.approx(-40, abs=0.01)
 
 
-def test_vat_refuses_missing_input_but_accepts_explicit_zero():
-    with pytest.raises(ValueError, match="Missing eligible-spending"):
-        Simulation(
-            situation=_situation(),
-            scenario=_policy(vat_modifier).to_scenario(),
-        )
+@pytest.mark.parametrize("spending", [None, 0])
+def test_vat_missing_input_and_explicit_zero_have_no_effect(spending):
+    inputs = (
+        {} if spending is None else {"domestic_energy_consumption": spending}
+    )
     sim = Simulation(
-        situation=_situation(domestic_energy_consumption=0),
+        situation=_situation(**inputs),
         scenario=_policy(vat_modifier).to_scenario(),
     )
     assert _value(sim, "vat_change") == 0
@@ -512,11 +511,11 @@ def vat_household_template():
 def test_vat_resources_equal_opposite_government_receipts(
     vat_household_template, spending, delta
 ):
-    # Only holder inputs change here; the VAT helper leaves the system's
-    # formulas/parameters intact. Both clones own their arrays and caches.
-    sim = vat_household_template.clone(clone_tax_benefit_system=False)
+    # Each example owns the formula being wrapped and its baseline, so
+    # wrappers cannot accumulate across property-test examples.
+    sim = vat_household_template.clone()
     sim.set_input("domestic_energy_consumption", 2027, [spending])
-    sim.baseline = sim.clone(clone_tax_benefit_system=False)
+    sim.baseline = sim.clone()
     # Warm cached downstream results: helper must invalidate them too.
     income_before = _value(sim, "household_net_income")
     balance_before = _value(sim, "gov_balance")
