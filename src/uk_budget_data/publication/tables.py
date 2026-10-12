@@ -301,10 +301,13 @@ def _check_briefing(name: str, rows: list[dict]) -> None:
                     for column in ("baseline_rate_pct", "reform_rate_pct")
                 ):
                     raise TableError(f"{label}: poverty rate outside [0, 100]")
-                if abs(
-                    row["change_pp"]
-                    - (row["reform_rate_pct"] - row["baseline_rate_pct"])
-                ) > 1e-9:
+                if (
+                    abs(
+                        row["change_pp"]
+                        - (row["reform_rate_pct"] - row["baseline_rate_pct"])
+                    )
+                    > 1e-9
+                ):
                     raise TableError(f"{label}: inconsistent poverty change")
             continue
         if {row["decile"] for row in matching} != BRIEFING_DECILES:
@@ -314,13 +317,19 @@ def _check_briefing(name: str, rows: list[dict]) -> None:
                 decile_rows = [
                     row for row in matching if row["decile"] == decile
                 ]
-                if {row["category"] for row in decile_rows} != BRIEFING_CATEGORIES:
-                    raise TableError(f"{label}: incomplete category in {decile}")
+                if {
+                    row["category"] for row in decile_rows
+                } != BRIEFING_CATEGORIES:
+                    raise TableError(
+                        f"{label}: incomplete category in {decile}"
+                    )
                 shares = [row["share_pct"] for row in decile_rows]
                 if any(not 0 <= value <= 100 for value in shares):
                     raise TableError(f"{label}: share outside [0, 100]")
                 if abs(math.fsum(shares) - 100) > 1e-9:
-                    raise TableError(f"{label}: shares in {decile} do not sum to 100")
+                    raise TableError(
+                        f"{label}: shares in {decile} do not sum to 100"
+                    )
 
 
 def canonical_csv(name: str, rows: Iterable[Mapping[str, Any]]) -> bytes:

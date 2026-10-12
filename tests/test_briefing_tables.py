@@ -3,8 +3,12 @@
 import copy
 
 import pytest
-from publication_support import World, make_tables
 
+from tests.publication_support import (
+    World,
+    make_household_rows,
+    make_tables,
+)
 from uk_budget_data.models import ReformResult
 from uk_budget_data.publication.artifacts import (
     ArtifactError,
@@ -43,7 +47,12 @@ def complete_tables():
             )
             for category in sorted(BRIEFING_CATEGORIES):
                 tables["briefing_winners_losers"].append(
-                    {**base, "decile": decile, "category": category, "share_pct": 20.0}
+                    {
+                        **base,
+                        "decile": decile,
+                        "category": category,
+                        "share_pct": 20.0,
+                    }
                 )
         for measure, housing, group in sorted(BRIEFING_POVERTY_KEYS):
             tables["briefing_poverty"].append(
@@ -63,15 +72,21 @@ def complete_tables():
 def test_optional_briefing_tables_preserve_existing_artifacts():
     old = make_tables(KEY, dict.fromkeys(YEARS, -1.0))
     assert table_problems(old, key=KEY, years=YEARS) == []
+    tables = {k: v for k, v in old.items() if k != "household_scatter_binned"}
     result = ReformResult(
         reform_id=KEY,
         reform_name="Alpha",
         constituency=[],
         demographic_constituency=[],
-        **old,
+        household_scatter=make_household_rows(KEY, dict.fromkeys(YEARS, -1.0)),
+        **tables,
     )
     generated = result_tables(result)
-    for name in ("briefing_deciles", "briefing_winners_losers", "briefing_poverty"):
+    for name in (
+        "briefing_deciles",
+        "briefing_winners_losers",
+        "briefing_poverty",
+    ):
         assert generated[name] == []
         assert TABLES[name].required is False
         assert TABLES[name].filename not in table_files(generated, KEY)
@@ -85,16 +100,24 @@ def test_briefing_tables_are_canonical_hashed_and_receipted():
         receipt = read_receipt(reference.path)
         restored = read_tables(reference.path)
         assert table_problems(restored, key=KEY, years=YEARS) == []
-        for name in ("briefing_deciles", "briefing_winners_losers", "briefing_poverty"):
+        for name in (
+            "briefing_deciles",
+            "briefing_winners_losers",
+            "briefing_poverty",
+        ):
             data = (reference.path / TABLES[name].filename).read_bytes()
-            assert receipt["dashboard"]["files"][TABLES[name].filename] == sha256_bytes(data)
+            assert receipt["dashboard"]["files"][
+                TABLES[name].filename
+            ] == sha256_bytes(data)
             assert parse_csv(name, data) == normalise(name, tables[name])
             assert canonical_csv(name, reversed(tables[name])) == data
     finally:
         world.close()
 
 
-@pytest.mark.parametrize("name", ["briefing_deciles", "briefing_winners_losers", "briefing_poverty"])
+@pytest.mark.parametrize(
+    "name", ["briefing_deciles", "briefing_winners_losers", "briefing_poverty"]
+)
 def test_briefing_tables_require_columns_and_finite_numbers(name):
     tables = complete_tables()
     rows = copy.deepcopy(tables[name])
@@ -112,7 +135,9 @@ def test_briefing_tables_require_columns_and_finite_numbers(name):
         canonical_csv(name, rows)
 
 
-@pytest.mark.parametrize("name", ["briefing_deciles", "briefing_winners_losers"])
+@pytest.mark.parametrize(
+    "name", ["briefing_deciles", "briefing_winners_losers"]
+)
 def test_briefing_decile_sets_are_exact(name):
     rows = complete_tables()[name]
     rows[0]["decile"] = "11"
@@ -154,12 +179,20 @@ def test_poverty_dimensions_rates_and_changes_are_enforced():
 
 def test_present_briefing_tables_cover_every_receipted_year():
     tables = complete_tables()
-    for name in ("briefing_deciles", "briefing_winners_losers", "briefing_poverty"):
+    for name in (
+        "briefing_deciles",
+        "briefing_winners_losers",
+        "briefing_poverty",
+    ):
         tables[name] = [row for row in tables[name] if row["year"] == YEARS[0]]
     problems = table_problems(tables, key=KEY, years=YEARS)
     assert set(problems) == {
         f"{name}: missing {YEARS[1]}"
-        for name in ("briefing_deciles", "briefing_winners_losers", "briefing_poverty")
+        for name in (
+            "briefing_deciles",
+            "briefing_winners_losers",
+            "briefing_poverty",
+        )
     }
 
 
@@ -172,6 +205,15 @@ def test_artifact_writer_refuses_invalid_briefing_before_writing():
 
 def test_no_briefing_effect_before_effective_year():
     tables = complete_tables()
-    problems = table_problems(tables, key=KEY, years=YEARS, effective_from_year=2029)
-    for name in ("briefing_deciles", "briefing_winners_losers", "briefing_poverty"):
-        assert any(problem.startswith(name) and "before the measure" in problem for problem in problems)
+    problems = table_problems(
+        tables, key=KEY, years=YEARS, effective_from_year=2029
+    )
+    for name in (
+        "briefing_deciles",
+        "briefing_winners_losers",
+        "briefing_poverty",
+    ):
+        assert any(
+            problem.startswith(name) and "before the measure" in problem
+            for problem in problems
+        )

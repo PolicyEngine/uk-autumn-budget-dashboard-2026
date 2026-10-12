@@ -7,7 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from microdf import MicroDataFrame
 
 from uk_budget_data.briefing_calculator import (
@@ -22,9 +23,7 @@ YEAR = 2027
 KEY = "synthetic"
 N = 32
 POSITIVE = st.floats(min_value=0.1, max_value=10_000, allow_nan=False)
-FINITE = st.floats(
-    min_value=-100_000, max_value=500_000, allow_nan=False
-)
+FINITE = st.floats(min_value=-100_000, max_value=500_000, allow_nan=False)
 PROPERTY_SETTINGS = settings(max_examples=30, deadline=None)
 
 
@@ -75,16 +74,21 @@ def simulation_pairs(draw):
             st.lists(st.booleans(), min_size=N, max_size=N)
         )
     baseline = FrameSimulation(
-        MicroDataFrame(pd.DataFrame(household_data), weights="household_weight"),
+        MicroDataFrame(
+            pd.DataFrame(household_data), weights="household_weight"
+        ),
         MicroDataFrame(pd.DataFrame(people_data), weights="person_weight"),
     )
     reform = FrameSimulation(
         MicroDataFrame(
-            pd.DataFrame({**household_data, "household_net_income": incomes + changes}),
+            pd.DataFrame(
+                {**household_data, "household_net_income": incomes + changes}
+            ),
             weights="household_weight",
         ),
         MicroDataFrame(
-            pd.DataFrame({**people_data, **reform_people}), weights="person_weight"
+            pd.DataFrame({**people_data, **reform_people}),
+            weights="person_weight",
         ),
     )
     return baseline, reform
@@ -113,13 +117,16 @@ def test_unchanged_households_are_always_no_change(simulations):
 
 @PROPERTY_SETTINGS
 @given(simulation_pairs(), st.floats(min_value=0.01, max_value=100))
-def test_weight_scaling_leaves_shares_and_poverty_rates_unchanged(simulations, scale):
+def test_weight_scaling_leaves_shares_and_poverty_rates_unchanged(
+    simulations, scale
+):
     baseline, reform = simulations
     original = BriefingCalculator().calculate(baseline, reform, KEY, YEAR)
     scaled = FrameSimulation(
         MicroDataFrame(
             pd.DataFrame(baseline.households).assign(
-                household_weight=baseline.households["household_weight"].values * scale
+                household_weight=baseline.households["household_weight"].values
+                * scale
             ),
             weights="household_weight",
         ),
@@ -133,12 +140,17 @@ def test_weight_scaling_leaves_shares_and_poverty_rates_unchanged(simulations, s
     recalculated = BriefingCalculator().calculate(scaled, reform, KEY, YEAR)
     for name, numeric in (
         ("briefing_winners_losers", ("share_pct",)),
-        ("briefing_poverty", ("baseline_rate_pct", "reform_rate_pct", "change_pp")),
+        (
+            "briefing_poverty",
+            ("baseline_rate_pct", "reform_rate_pct", "change_pp"),
+        ),
         ("briefing_deciles", ("avg_change_gbp",)),
     ):
         for expected, actual in zip(original[name], recalculated[name]):
             for column in numeric:
-                assert actual[column] == pytest.approx(expected[column], abs=1e-9)
+                assert actual[column] == pytest.approx(
+                    expected[column], abs=1e-9
+                )
 
 
 @PROPERTY_SETTINGS
@@ -146,18 +158,20 @@ def test_weight_scaling_leaves_shares_and_poverty_rates_unchanged(simulations, s
 def test_identical_reform_has_zero_poverty_and_decile_change(simulations):
     baseline, _ = simulations
     tables = BriefingCalculator().calculate(baseline, baseline, KEY, YEAR)
-    assert all(row["avg_change_gbp"] == 0 for row in tables["briefing_deciles"])
+    assert all(
+        row["avg_change_gbp"] == 0 for row in tables["briefing_deciles"]
+    )
     assert all(row["change_pp"] == 0 for row in tables["briefing_poverty"])
 
 
 @pytest.fixture(scope="module")
 def gist():
-    saved = Path(
-        "/Users/maxghenis/PolicyEngine/_drafts/continuous-budget-ci/w5/reference/"
-        "vahid-gist-generate_combined_metrics@6b9f8b7.py"
+    # The exact archived gist source travels with the tests.
+    path = (
+        Path(__file__).parent
+        / "fixtures"
+        / "vahid_gist_generate_combined_metrics_6b9f8b7.py.txt"
     )
-    # Exact archived source also travels with the tests so CI needs no network.
-    path = saved if saved.exists() else Path(__file__).parent / "fixtures" / "vahid_gist_generate_combined_metrics_6b9f8b7.py.txt"
     loader = SourceFileLoader("vahid_combined_reference", str(path))
     spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
@@ -171,11 +185,16 @@ def test_winners_losers_agree_with_saved_gist(gist, simulations):
     baseline, reform = simulations
     expected = gist.calculate_winners_losers_by_decile(baseline, reform, YEAR)
     rows = calculate_winners_losers_by_decile(baseline, reform, YEAR, KEY)
-    actual = {(row["decile"], row["category"]): row["share_pct"] for row in rows}
+    actual = {
+        (row["decile"], row["category"]): row["share_pct"] for row in rows
+    }
     for row in expected.to_dict("records"):
         for category in CATEGORIES:
             column = category if category == "no_change" else f"{category}pct"
-            assert round(actual[(row["decile"].lower(), category)], 2) == row[column]
+            assert (
+                round(actual[(row["decile"].lower(), category)], 2)
+                == row[column]
+            )
 
 
 @PROPERTY_SETTINGS
@@ -215,7 +234,9 @@ def test_absolute_poverty_rates_agree_with_saved_gist(gist, simulations):
 
 
 def test_winners_losers_threshold_boundaries_and_one_pound_baseline_cap():
-    changes_pct = np.array([-5.001, -5, -0.011, -0.01, 0, 0.01, 0.011, 5, 5.001])
+    changes_pct = np.array(
+        [-5.001, -5, -0.011, -0.01, 0, 0.01, 0.011, 5, 5.001]
+    )
     deciles = np.repeat(np.arange(1, 11), len(changes_pct))
     original = np.tile([-100, 0, 0, 0, 0, 0, 0, 0, 0], 10)
     changes = np.tile(changes_pct, 10) / 100
@@ -226,18 +247,26 @@ def test_winners_losers_threshold_boundaries_and_one_pound_baseline_cap():
         "household_count_people": np.ones(len(deciles)),
     }
     baseline = FrameSimulation(
-        MicroDataFrame(pd.DataFrame(household_data), weights="household_weight"), None
+        MicroDataFrame(
+            pd.DataFrame(household_data), weights="household_weight"
+        ),
+        None,
     )
     reform = FrameSimulation(
         MicroDataFrame(
-            pd.DataFrame({**household_data, "household_net_income": original + changes}),
+            pd.DataFrame(
+                {**household_data, "household_net_income": original + changes}
+            ),
             weights="household_weight",
-        ), None
+        ),
+        None,
     )
     rows = calculate_winners_losers_by_decile(baseline, reform, YEAR, KEY)
     expected_counts = dict(zip(CATEGORIES, [1, 2, 3, 2, 1]))
     for row in rows:
-        assert row["share_pct"] == pytest.approx(expected_counts[row["category"]] / 9 * 100)
+        assert row["share_pct"] == pytest.approx(
+            expected_counts[row["category"]] / 9 * 100
+        )
 
 
 def test_zero_weight_population_is_refused():
@@ -249,7 +278,9 @@ def test_zero_weight_population_is_refused():
             "household_count_people": np.ones(10),
         }
     )
-    simulation = FrameSimulation(MicroDataFrame(data, weights="household_weight"), None)
+    simulation = FrameSimulation(
+        MicroDataFrame(data, weights="household_weight"), None
+    )
     with pytest.raises(ValueError, match="no positive weighted population"):
         calculate_winners_losers_by_decile(simulation, simulation, YEAR, KEY)
 
@@ -262,14 +293,26 @@ def test_relative_poverty_reads_model_relative_series(simulations):
     weights = baseline.people["person_weight"].values
     for row in rows:
         group = row["group"]
-        mask = np.ones(N, dtype=bool) if group == "overall" else baseline.people[
-            {"child": "is_child", "working_age": "is_WA_adult", "pensioner": "is_SP_age"}[group]
-        ].values
+        mask = (
+            np.ones(N, dtype=bool)
+            if group == "overall"
+            else baseline.people[
+                {
+                    "child": "is_child",
+                    "working_age": "is_WA_adult",
+                    "pensioner": "is_SP_age",
+                }[group]
+            ].values
+        )
         variable = (
-            f"in_relative_poverty_{row['housing']}" if row["measure"] == "relative"
+            f"in_relative_poverty_{row['housing']}"
+            if row["measure"] == "relative"
             else f"in_poverty_{row['housing']}"
         )
-        for simulation, column in ((baseline, "baseline_rate_pct"), (reform, "reform_rate_pct")):
+        for simulation, column in (
+            (baseline, "baseline_rate_pct"),
+            (reform, "reform_rate_pct"),
+        ):
             poor = simulation.people[variable].values
             expected = weights[poor & mask].sum() / weights[mask].sum() * 100
             assert row[column] == pytest.approx(expected)

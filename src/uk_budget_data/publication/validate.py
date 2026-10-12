@@ -51,7 +51,9 @@ def _effect(table: str, row: Mapping) -> Optional[float]:
     if table == "briefing_poverty":
         return row["change_pp"]
     if table == "briefing_winners_losers":
-        return row["share_pct"] - (100 if row["category"] == "no_change" else 0)
+        return row["share_pct"] - (
+            100 if row["category"] == "no_change" else 0
+        )
     if table in ("budgetary_impact", "distributional_impact"):
         return row["value"]
     return None

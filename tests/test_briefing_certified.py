@@ -58,15 +58,17 @@ def _assert_export_binding(directory, manifest_path, references, keys):
     assert receipt["manifest_sha256"] == _sha256(manifest_path)
     assert set(receipt["keys"]) == set(keys)
     assert len(receipt["generator_git_sha"]) == 40
-    assert datetime.fromisoformat(receipt["generated_at"]).tzinfo == timezone.utc
+    assert (
+        datetime.fromisoformat(receipt["generated_at"]).tzinfo == timezone.utc
+    )
     assert receipt["files"]
     for filename, digest in receipt["files"].items():
         assert _sha256(directory / filename) == digest
     for key in keys:
-        execution = read_receipt(references[key].path)["execution_receipt"]
+        digests = read_receipt(references[key].path)["dashboard"]["digests"]
         binding = receipt["artifacts"][key]
         for field in ("outputs_sha256", "execution_identity_sha256"):
-            assert binding[field] == execution[field]
+            assert binding[field] == digests[field]
     return receipt
 
 
@@ -118,12 +120,15 @@ def test_tiny_simulations_publish_and_export_briefing(tmp_path, monkeypatch):
     )
     if not tiny_is_certified:
         assert unmodified["dashboard"]["publishable"] is False
-        assert "the model and data pair is not certified" in unmodified[
-            "dashboard"
-        ]["reasons"]
+        assert (
+            "the model and data pair is not certified"
+            in unmodified["dashboard"]["reasons"]
+        )
         fixture_bundle = copy.deepcopy(bundle)
         fixture_release = fixture_bundle["data_releases"]["uk"]
-        fixture_release["datasets"][TINY_DATASET] = copy.deepcopy(tiny_reference)
+        fixture_release["datasets"][TINY_DATASET] = copy.deepcopy(
+            tiny_reference
+        )
         fixture_release["certified_data_artifact"].update(
             dataset=TINY_DATASET, sha256=dataset_sha256
         )
@@ -220,12 +225,21 @@ def test_tiny_simulations_publish_and_export_briefing(tmp_path, monkeypatch):
             json.dumps(reconciliation)
         )
         stage(manifest, reference.path, data_root=data_root, inputs=inputs)
-        approve(manifest, key, "Test reviewer", data_root=data_root, inputs=inputs)
+        approve(
+            manifest, key, "Test reviewer", data_root=data_root, inputs=inputs
+        )
     stage(
-        manifest, references[package_key].path, data_root=data_root, inputs=inputs
+        manifest,
+        references[package_key].path,
+        data_root=data_root,
+        inputs=inputs,
     )
     approve(
-        manifest, package_key, "Test reviewer", data_root=data_root, inputs=inputs
+        manifest,
+        package_key,
+        "Test reviewer",
+        data_root=data_root,
+        inputs=inputs,
     )
     assert check(manifest, data_root=data_root, inputs=inputs) == []
     m.save_manifest(manifest, data_root)

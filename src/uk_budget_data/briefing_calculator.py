@@ -29,9 +29,7 @@ GROUP_VARIABLES = {
 
 
 def _values(simulation, variable: str, year: int, entity: str):
-    return simulation.calculate(
-        variable, period=year, map_to=entity
-    ).values
+    return simulation.calculate(variable, period=year, map_to=entity).values
 
 
 def _weights(values, label: str):
@@ -69,28 +67,30 @@ def _households(baseline, reformed, year: int):
         "household_weight",
     )
     if not (
-        np.isfinite(baseline_income).all()
-        and np.isfinite(reform_income).all()
+        np.isfinite(baseline_income).all() and np.isfinite(reform_income).all()
     ):
         raise ValueError("household_net_income must be finite")
-    return baseline_income, reform_income, deciles, _weights(
-        weights * counts, "weighted people"
+    return (
+        baseline_income,
+        reform_income,
+        deciles,
+        _weights(weights * counts, "weighted people"),
     )
 
 
 def _decile_masks(deciles):
     # Gist lines 90–94 and 333–347: All excludes invalid deciles below 1.
     for decile in DECILES:
-        yield decile, deciles >= 1 if decile == "all" else deciles == int(decile)
+        yield decile, (
+            deciles >= 1 if decile == "all" else deciles == int(decile)
+        )
 
 
 def calculate_distributional_impact(
     baseline, reformed, year: int, reform_id: str
 ) -> list[dict]:
     """Person-weighted annual household income change, gist lines 311–357."""
-    original, reform, deciles, weights = _households(
-        baseline, reformed, year
-    )
+    original, reform, deciles, weights = _households(baseline, reformed, year)
     change = reform - original
     rows = []
     for decile, mask in _decile_masks(deciles):
@@ -112,9 +112,7 @@ def calculate_winners_losers_by_decile(
     baseline, reformed, year: int, reform_id: str
 ) -> list[dict]:
     """Five person-weighted income-change shares, gist lines 51–142."""
-    original, reform, deciles, weights = _households(
-        baseline, reformed, year
-    )
+    original, reform, deciles, weights = _households(baseline, reformed, year)
     # Gist lines 80–83: cap baseline at £1 before computing percent change.
     change_pct = (reform - original) / np.maximum(original, 1) * 100
     # These are percent thresholds: no change is ±0.01%, not ±1%.
@@ -162,10 +160,11 @@ def calculate_poverty_rates(
         }
     )
     rows = []
-    # The gist (lines 205–219) calculated only in_poverty_bhc/ahc. Its
-    # absolute/relative split is new here: policyengine-uk 2.125.1 defines
-    # in_poverty_* against the fixed 2010/11 median uprated for inflation,
-    # and in_relative_poverty_* against the current median (60% in both).
+    # The gist (lines 205–219) calculated only in_poverty_bhc/ahc. The
+    # relative series is new here. In policyengine-uk 2.125.1, in_poverty_*
+    # is absolute poverty: 60% of a reference-year median held constant in
+    # real terms (FYE 2025 from FYE 2022 onward). in_relative_poverty_* is
+    # 60% of the contemporary median.
     for (measure, housing), variable in POVERTY_VARIABLES.items():
         original = np.asarray(
             _values(baseline, variable, year, "person"), dtype=bool
