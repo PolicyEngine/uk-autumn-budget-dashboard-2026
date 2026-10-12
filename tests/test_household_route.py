@@ -308,6 +308,8 @@ def test_version_route_serves_runtime_identity(monkeypatch):
         "api/personal-impact",
         "/\\other.invalid/api/personal-impact",
         None,
+        "//[",
+        "http://[/api",
     ],
 )
 def test_a_fixture_can_only_call_the_deployment(tmp_path, route):
@@ -347,3 +349,19 @@ def test_a_fixture_answered_by_another_host_cannot_pass(tmp_path):
     receipt = run_checks(client, [foreign], EXPECTED)
     assert not receipt["pass"]
     assert "other.invalid" not in hosts
+
+
+def test_a_route_that_cannot_be_parsed_fails_its_fixture_not_the_run(
+    tmp_path,
+):
+    """Review round 4: a route the URL parser rejects raised out of the
+    checker, so no receipt was written for the other fixtures."""
+    bad = write_fixture(tmp_path, name="bad", route="//[")
+    good = write_fixture(tmp_path, name="good")
+    receipt = run_checks(fake_api(100.0), [bad, good], EXPECTED)
+    statuses = {
+        result["name"]: result["status"] for result in receipt["fixtures"]
+    }
+    assert not receipt["pass"]
+    assert statuses["good"] == "pass"
+    assert statuses["bad"] != "pass"

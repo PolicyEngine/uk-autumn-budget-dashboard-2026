@@ -130,7 +130,10 @@ def load_fixture(path: Path) -> tuple[dict, str]:
         if key not in fixture:
             raise FixtureError(f"{path}: missing {key!r}")
     route = fixture["route"]
-    parts = urlsplit(route) if isinstance(route, str) else None
+    try:
+        parts = urlsplit(route) if isinstance(route, str) else None
+    except ValueError:
+        parts = None
     if (
         parts is None
         or parts.scheme
