@@ -120,7 +120,9 @@ def test_pre_start_rejects_results_but_publication_rejects_empty(
 
     for name in NATIONAL_FIELDS:
         (tmp_path / f"{name}.csv").write_text("reform_id,year,value\n")
-    # Drill 3 setup: the registry is empty, so the empty-start check passes.
+    # An empty registry passes the empty-start check (the live registry holds
+    # the drill 3 measures after the 12:30 release, so patch it empty).
+    monkeypatch.setattr(reforms, "get_autumn_budget_2026_reforms", lambda: [])
     assert validate_pre_start(tmp_path) == []
     # Any registered measure fails the empty-start check.
     monkeypatch.setattr(

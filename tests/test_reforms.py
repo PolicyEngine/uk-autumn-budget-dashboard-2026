@@ -590,7 +590,10 @@ class TestAutumnBudget2026Reforms:
             get_reform,
         )
 
-        assert get_autumn_budget_2026_reforms() == []
+        # Drill 3: only mock3_* measures from the 12:30 statement are active.
+        assert all(
+            r.id.startswith("mock3_") for r in get_autumn_budget_2026_reforms()
+        )
         assert get_reform("mock2_energy_price_payment") is None
         assert get_reform("mock_nics_threshold_rise") is None
 
