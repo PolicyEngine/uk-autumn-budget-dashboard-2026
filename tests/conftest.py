@@ -6,7 +6,8 @@ dataset pinned by the installed policyengine.py bundle, which needs
 certified-data job sets ``REQUIRE_CERTIFIED_DATA=1``: a missing token then
 fails those tests, and any certified-data test that skips for another reason
 fails the session, so removing or breaking the credential can never turn the
-check green.
+check green. A module skipped while being collected also fails the session
+then, since its tests can no longer be told apart.
 """
 
 import os
@@ -49,8 +50,18 @@ def pytest_runtest_makereport(item, call):
         item.config._certified_data_skips.append(item.nodeid)
 
 
+def pytest_collectreport(report):
+    if report.skipped:
+        _COLLECTION_SKIPS.append(report.nodeid)
+
+
+_COLLECTION_SKIPS: list[str] = []
+
+
 def pytest_sessionfinish(session, exitstatus):
-    skips = getattr(session.config, "_certified_data_skips", [])
+    skips = getattr(session.config, "_certified_data_skips", []) + [
+        f"{nodeid} (skipped while collecting)" for nodeid in _COLLECTION_SKIPS
+    ]
     if certified_data_required() and skips:
         reporter = session.config.pluginmanager.get_plugin("terminalreporter")
         if reporter is not None:
