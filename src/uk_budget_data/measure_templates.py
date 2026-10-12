@@ -446,11 +446,12 @@ def apply_age_conditioned_allowance(
     taper_rate,
     eligibility_variable="is_SP_age",
 ):
-    """Apply a rounded allowance path, then taper, with the native PA floor.
+    """Apply the age taper and standard floor, then the native PA taper.
 
     Pass the inner annual mapping returned by ``allowance_uprating``. The
     standard allowance, its high-income taper and basic-rate limit remain
-    the engine's own rules. The extra allowance tapers to that standard PA.
+    the engine's own rules. The extra allowance tapers to the untapered
+    standard PA before the native high-income reduction is applied.
     Eligibility is explicit (default: State Pension age) and read per person.
     """
     threshold = _finite_number(taper_threshold, "taper_threshold")
@@ -479,13 +480,19 @@ def apply_age_conditioned_allowance(
         income = person("adjusted_net_income", period) - person(
             "gift_aid_grossed_up", period
         )
-        higher = np.ceil(
+        higher = (
             amounts[period.start.year]
             - np.maximum(0, income - threshold) * taper
         )
+        pa = parameters(
+            period
+        ).gov.hmrc.income_tax.allowances.personal_allowance
+        untapered = np.maximum(pa.amount, higher)
+        reduction = np.maximum(0, income - pa.maximum_ANI) * pa.reduction_rate
+        age_allowance = np.maximum(0, np.ceil(untapered - reduction))
         return np.where(
             person(eligibility_variable, period),
-            np.maximum(standard, higher),
+            age_allowance,
             standard,
         )
 
