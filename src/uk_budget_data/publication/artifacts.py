@@ -170,28 +170,65 @@ def read_receipt(path: Path) -> dict:
 
 def read_tables(path: Path) -> dict[str, list[dict]]:
     """Typed rows of every table file in an artifact."""
-    tables = {}
-    for name, spec in TABLES.items():
-        file = path / spec.filename
-        if file.exists():
-            tables[name] = parse_csv(name, file.read_bytes())
-    return tables
+    return captured_tables(capture(path))
 
 
-def file_problems(path: Path, document: dict) -> list[str]:
-    """Ways the files on disk differ from what the receipt lists.
+@dataclass(frozen=True)
+class Captured:
+    """An artifact's receipt and files, each read from disk exactly once.
+
+    Every check of an artifact runs on one capture, so a file changed
+    while the checks run cannot pass one check in one version and another
+    check in another.
+    """
+
+    path: Path
+    document: dict
+    files: dict[str, bytes]
+
+
+def capture(path: Path) -> Captured:
+    """Read an artifact's receipt and every table or listed file once."""
+    receipt = path / RECEIPT_FILE
+    if not receipt.exists():
+        raise ArtifactError(f"{path}: no {RECEIPT_FILE}")
+    document = json.loads(receipt.read_bytes())
+    listed = (
+        (document.get("dashboard") or {}).get("files")
+        if isinstance(document, dict)
+        else None
+    ) or {}
+    names = {spec.filename for spec in TABLES.values()} | set(listed)
+    files = {}
+    for name in sorted(names):
+        file = path / name
+        if Path(name).name == name and file.is_file():
+            files[name] = file.read_bytes()
+    return Captured(path, document, files)
+
+
+def captured_tables(captured: Captured) -> dict[str, list[dict]]:
+    """Typed rows of every table file in a capture."""
+    return {
+        name: parse_csv(name, captured.files[spec.filename])
+        for name, spec in TABLES.items()
+        if spec.filename in captured.files
+    }
+
+
+def captured_file_problems(captured: Captured) -> list[str]:
+    """Ways a capture's files differ from what its receipt lists.
 
     Every listed file must exist with the listed digest and be in canonical
     form, and no unlisted table file may be present.
     """
-    listed = (document.get("dashboard") or {}).get("files") or {}
+    listed = (captured.document.get("dashboard") or {}).get("files") or {}
     problems = []
     for name, digest in sorted(listed.items()):
-        file = path / name
-        if not file.exists():
+        data = captured.files.get(name)
+        if data is None:
             problems.append(f"{name} is missing")
             continue
-        data = file.read_bytes()
         if sha256_bytes(data) != digest:
             problems.append(f"{name} does not match its recorded digest")
             continue
@@ -202,6 +239,12 @@ def file_problems(path: Path, document: dict) -> list[str]:
         except (TableError, KeyError) as error:
             problems.append(f"{name}: {error}")
     for spec in TABLES.values():
-        if (path / spec.filename).exists() and spec.filename not in listed:
+        if spec.filename in captured.files and spec.filename not in listed:
             problems.append(f"{spec.filename} is present but not receipted")
     return problems
+
+
+def file_problems(path: Path, document: dict) -> list[str]:
+    """Ways the files on disk differ from what ``document`` lists."""
+    on_disk = capture(path)
+    return captured_file_problems(Captured(path, document, on_disk.files))

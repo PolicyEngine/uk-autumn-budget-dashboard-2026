@@ -6,11 +6,12 @@ number, or a way a check passed vacuously, and shows it is now refused.
 
 import json
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
 
-from tests.publication_support import World
+from tests.publication_support import World, make_tables
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import (
@@ -106,7 +107,7 @@ def test_changed_treasury_inputs_reach_an_approved_entry(world):
 # --- blocker 3: a combined run is bound to the member outputs it went with -
 
 
-def combined(world, manifest, members, values):
+def combined(world, manifest, members, values, **kwargs):
     records = []
     for member in sorted(members):
         receipt = read_receipt(
@@ -128,6 +129,7 @@ def combined(world, manifest, members, values):
             member: manifest.measures[member].outputs_sha256
             for member in members
         },
+        **kwargs,
     )
 
 
@@ -406,3 +408,198 @@ def test_exports_consume_exactly_the_bytes_they_checked(world, monkeypatch):
     monkeypatch.setattr(exports, "check", check_then_tamper)
     with pytest.raises(PublishError, match="does not match its receipt"):
         exports.load_approved(["alpha"], **args(world))
+
+
+# --- round 2 (#20 review): copied entry fields stay bound to the receipt ---
+
+
+def test_relabelling_a_combined_entry_with_other_members_is_caught(world):
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    approved(world, manifest, "gamma")
+    old = combined(world, manifest, ["alpha", "beta"], {2027: -2.0})
+    key = stage(manifest, old.path, **args(world))
+    approve(manifest, key, "María", **args(world))
+    assert check(manifest, **args(world)) == []
+
+    # The reviewer's case: the manifest now claims Alpha and Gamma, with
+    # their current outputs, while the receipt and approval are unchanged.
+    entry = manifest.combined[key]
+    entry.measures = ["alpha", "gamma"]
+    entry.member_outputs_sha256 = {
+        id: manifest.measures[id].outputs_sha256 for id in entry.measures
+    }
+    failures = check(manifest, **args(world))
+    assert any("members are not the artifact's" in f for f in failures)
+    assert any("member snapshot is not the artifact's" in f for f in failures)
+
+
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("unsupported_years", [], "unsupported years are not"),
+        ("years", [2027], "years are not the artifact's"),
+        ("name", "Something else", "name is not the artifact's"),
+        ("measures", ["alpha"], "names combined-run members"),
+    ],
+)
+def test_a_measure_entry_cannot_restate_what_its_receipt_says(
+    world, field, value, message
+):
+    # 2031 is beyond the dataset's projection, so the receipt reports it
+    # unsupported: clearing that in the manifest would show its row.
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha", {**VALUES, 2031: -3.0})
+    assert manifest.measures["alpha"].unsupported_years == [2031]
+    assert check(manifest, **args(world)) == []
+    setattr(manifest.measures["alpha"], field, value)
+    failures = check(manifest, **args(world))
+    assert any(message in f for f in failures), failures
+
+
+# --- round 3 (publication review) ------------------------------------------
+
+
+def test_a_combined_receipt_must_be_its_members_composition(world):
+    """Review round 3 (blocker): a combined artifact claiming Alpha and
+    Beta, whose execution receipt bound Alpha alone, was approved."""
+    from uk_budget_data.publication.receipt import receipt_api
+
+    api, _ = receipt_api()
+    manifest = m.Manifest()
+    alpha = approved(world, manifest, "alpha")
+    approved(world, manifest, "beta")
+    alone = api.ReformIdentity.model_validate(
+        read_receipt(alpha.path)["execution_receipt"]["reform"]
+    )
+    composed_alone = api.composed_reform_identity(
+        [alone], applied_before_data_load=False, name="alpha+beta"
+    )
+    for identity in (alone, composed_alone):
+        claim = combined(
+            world,
+            manifest,
+            ["alpha", "beta"],
+            {2027: -2.0},
+            reform_identity=identity,
+        )
+        with pytest.raises(PublishError, match="not the composition"):
+            stage(manifest, claim.path, **args(world))
+    honest = combined(world, manifest, ["alpha", "beta"], {2027: -2.0})
+    stage(manifest, honest.path, **args(world))
+
+
+def test_a_combined_receipt_must_record_its_composition():
+    from uk_budget_data.publication.receipt import composition_problems
+
+    document = {
+        "dashboard": {"members": [{"id": "alpha"}], "composition": None},
+        "execution_receipt": {},
+    }
+    assert composition_problems(document) == [
+        "it does not record how its members were composed"
+    ]
+
+
+def test_a_manifest_without_its_basis_or_with_another_identity_fails(world):
+    """Review round 3: deleting the manifest's basis let a measure on
+    another forecast be approved beside it, and an edited identity with
+    its old digest checked clean."""
+    manifest = m.Manifest()
+    approved(world, manifest, "alpha")
+    assert check(manifest, **args(world)) == []
+
+    no_basis = manifest.model_copy(deep=True)
+    no_basis.basis = None
+    assert any(
+        "no forecast and calibration basis" in f
+        for f in check(no_basis, **args(world))
+    )
+
+    edited = manifest.model_copy(deep=True)
+    edited.execution.identity["wrapper"]["version"] = "0.0.0"
+    assert any(
+        "execution identity is not the one it ran on" in f
+        for f in check(edited, **args(world))
+    )
+
+    no_execution = manifest.model_copy(deep=True)
+    no_execution.execution = None
+    assert any(
+        "records no execution identity" in f
+        for f in check(no_execution, **args(world))
+    )
+
+
+def test_rows_for_years_the_receipt_does_not_report_are_refused(world):
+    """Review round 3: rows for an undeclared 2028 were filtered out of the
+    approval checks but still exported."""
+    world.costing("alpha", {2027: -1.0, 2028: -9.0})
+    reference = world.write(
+        "alpha",
+        {2027: -1.0},
+        tables=make_tables("alpha", {2027: -1.0, 2028: -9.0}),
+    )
+    world.reconcile(reference)
+    with pytest.raises(PublishError, match="does not report: \\[2028\\]"):
+        stage(m.Manifest(), reference.path, **args(world))
+
+
+def test_the_gate_reconciles_the_bytes_it_verified(world, monkeypatch):
+    """Review round 3: a table replaced between the integrity check and
+    reconciliation was reconciled unverified."""
+    from uk_budget_data.publication import publish
+
+    manifest = m.Manifest()
+    reference = approved(world, manifest, "alpha")
+    world.costing("alpha", {2027: -9.0, 2028: -2.0})
+    assert any(
+        "reconciliation is failed" in f for f in check(manifest, **args(world))
+    )
+
+    real = publish.captured_file_problems
+    table = reference.path / "budgetary_impact.csv"
+    original = table.read_bytes()
+
+    def check_then_replace(captured):
+        problems = real(captured)
+        table.write_bytes(original.replace(b"-1.0", b"-9.0"))
+        return problems
+
+    monkeypatch.setattr(publish, "captured_file_problems", check_then_replace)
+    try:
+        failures = check(manifest, **args(world))
+    finally:
+        table.write_bytes(original)
+    assert any("reconciliation is failed" in f for f in failures)
+
+
+def test_the_simulation_loads_exactly_the_bytes_that_were_hashed(
+    tmp_path, monkeypatch
+):
+    """Review round 3: a dataset swapped in while the simulation loaded it,
+    and restored afterwards, ran without its hash describing it."""
+    import hashlib
+    from types import SimpleNamespace
+
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication.generate import _default_build
+
+    dataset = tmp_path / "enhanced_frs_2024_25.h5"
+    dataset.write_bytes(b"certified bytes")
+    loaded = []
+
+    def build(path, scenario):
+        dataset.write_bytes(b"other bytes")
+        loaded.append(Path(path).read_bytes())
+        dataset.write_bytes(b"certified bytes")
+        return SimpleNamespace(policyengine_bundle={})
+
+    monkeypatch.setattr(pipeline, "build_microsimulation", build)
+    sim = _default_build(str(dataset))
+    assert loaded == [b"certified bytes"]
+    assert (
+        sim.policyengine_bundle["runtime_dataset_sha256"]
+        == hashlib.sha256(loaded[0]).hexdigest()
+    )

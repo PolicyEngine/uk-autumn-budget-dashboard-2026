@@ -27,20 +27,23 @@ combined run that included different outputs for that measure as stale, in
 the same write.
 """
 
+import json
 from pathlib import Path
 from typing import Optional
 
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
-    file_problems,
+    capture,
+    captured_file_problems,
+    captured_tables,
     read_receipt,
-    read_tables,
 )
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
     certificate_problems,
+    composition_problems,
     dashboard_problems,
     document_problems,
     load_execution_receipt,
@@ -50,7 +53,7 @@ from uk_budget_data.publication.reconcile import (
     PASS,
     ReconciliationInputError,
     load_expected,
-    reconcile_artifact,
+    reconcile_receipted,
 )
 from uk_budget_data.publication.responsiveness import RESPONSIVE
 from uk_budget_data.publication.validate import table_problems
@@ -79,18 +82,39 @@ def artifact_dir(entry: m.Entry, data_root: Path) -> Path:
 
 
 def recompute_reconciliation(
-    path: Path, inputs: Path
+    document: dict, tables: dict, key: str, inputs: Path
 ) -> tuple[Optional[dict], list[str]]:
-    """Reconcile an artifact afresh against the current Treasury inputs."""
+    """Reconcile a captured artifact afresh against the Treasury inputs.
+
+    ``tables`` are the rows the gate checked against ``document``, so what
+    is reconciled is exactly what was verified.
+    """
+    budgetary = {
+        row["year"]: row["value"]
+        for row in tables.get("budgetary_impact") or []
+        if row["reform_id"] == key
+    }
     try:
-        return reconcile_artifact(path, inputs), []
+        return (
+            reconcile_receipted(document, budgetary, inputs, measure_id=key),
+            [],
+        )
     except (ReconciliationInputError, ValueError, OSError) as error:
         return None, [f"reconciliation: {error}"]
 
 
-def binding_problems(document: dict, path: Path, entry: m.Entry) -> list[str]:
-    """Ways the artifact on disk is not the one the manifest entry names."""
-    digests = document["dashboard"]["digests"]
+def binding_problems(
+    document: dict, tables: dict, entry: m.Entry, key: str
+) -> list[str]:
+    """Ways the artifact on disk is not the one the manifest entry names.
+
+    Besides the digests, every field the entry copies from the receipt
+    (name, years, unsupported years, and a combined run's members and
+    member snapshot) must still say what the receipt says, so nothing that
+    reads the manifest alone can be told something else.
+    """
+    dashboard = document["dashboard"]
+    digests = dashboard["digests"]
     problems = []
     actual = artifact_sha256(document)
     if actual != entry.artifact_sha256:
@@ -105,24 +129,61 @@ def binding_problems(document: dict, path: Path, entry: m.Entry) -> list[str]:
     ):
         if digests[name] != getattr(entry, name):
             problems.append(f"the artifact's {name} is not the entry's")
+    if entry.name != _name_from(tables, key):
+        problems.append("the entry's name is not the artifact's")
+    if entry.years != document["execution_receipt"]["years"]:
+        problems.append("the entry's years are not the artifact's")
+    if entry.unsupported_years != dashboard["unsupported_years"]:
+        problems.append("the entry's unsupported years are not the artifact's")
+    if is_combined(key):
+        if entry.measures != list(dashboard.get("measure_ids") or []):
+            problems.append("the entry's members are not the artifact's")
+        if entry.member_outputs_sha256 != dashboard.get(
+            "member_outputs_sha256"
+        ):
+            problems.append(
+                "the entry's member snapshot is not the artifact's"
+            )
+    elif entry.measures is not None or entry.member_outputs_sha256 is not None:
+        problems.append("a measure's entry names combined-run members")
     return problems
 
 
 def _identity_problems(document: dict, manifest: m.Manifest) -> list[str]:
+    """Ways the artifact's provenance is not the manifest's.
+
+    A manifest holding any entry must record the one execution identity
+    and the one forecast and calibration basis its entries share, and the
+    whole identity it records (not only its digest) must be the one this
+    artifact ran on.
+    """
     digests = document["dashboard"]["digests"]
     problems = []
-    if (
-        manifest.execution is not None
-        and digests["execution_identity_sha256"]
-        != manifest.execution.execution_identity_sha256
-    ):
+    if manifest.execution is None:
+        problems.append("the manifest records no execution identity")
+    else:
+        if (
+            digests["execution_identity_sha256"]
+            != manifest.execution.execution_identity_sha256
+        ):
+            problems.append(
+                "it ran on a different execution identity from the manifest"
+            )
+        try:
+            identity = load_execution_receipt(document).execution_identity()
+        except (ValueError, KeyError) as error:
+            problems.append(f"its execution identity cannot be read: {error}")
+        else:
+            if json.loads(json.dumps(identity)) != manifest.execution.identity:
+                problems.append(
+                    "the manifest's execution identity is not the one it "
+                    "ran on"
+                )
+    if manifest.basis is None:
         problems.append(
-            "it ran on a different execution identity from the manifest"
+            "the manifest records no forecast and calibration basis"
         )
-    if (
-        manifest.basis is not None
-        and document["dashboard"]["basis"] != manifest.basis
-    ):
+    elif document["dashboard"]["basis"] != manifest.basis:
         problems.append("its forecast and calibration basis differs")
     return problems
 
@@ -153,6 +214,7 @@ def _members_problems(
         problems.append("its member snapshot does not cover its members")
     if dashboard.get("key") != combined_key(ids):
         problems.append("its key does not name exactly its members")
+    problems += composition_problems(document)
     if not recorded:
         problems.append(
             "it does not record its members' outputs; generate it after "
@@ -201,12 +263,16 @@ def gate_problems(
     value carries the receipt document and reconciliation summary.
     """
     try:
-        document = read_receipt(path)
+        captured = capture(path)
     except (ValueError, OSError) as error:
         return [str(error)], {}
-    problems = document_problems(document) + file_problems(path, document)
+    document = captured.document
+    problems = document_problems(document) + captured_file_problems(captured)
     if problems:
         return problems, {"document": document}
+    # Every later check reads these rows, parsed from the bytes whose
+    # digests were just checked; nothing is read from disk again.
+    tables = captured_tables(captured)
     dashboard = document["dashboard"]
     if dashboard["key"] != key:
         return [f"the receipt is for {dashboard['key']!r}"], {
@@ -215,10 +281,15 @@ def gate_problems(
     if path.name != artifact_sha256(document)[:16]:
         problems.append("its directory is not named by its digest")
     if entry is not None:
-        problems += binding_problems(document, path, entry)
+        problems += binding_problems(document, tables, entry, key)
     problems += dashboard_problems(document)
     problems += _identity_problems(document, manifest)
-    info: dict = {"document": document, "reconciliation": None}
+    problems += _year_problems(document, tables)
+    info: dict = {
+        "document": document,
+        "tables": tables,
+        "reconciliation": None,
+    }
 
     if level in (m.PROVISIONAL, m.APPROVED):
         if dashboard.get("publishable") is not True:
@@ -241,7 +312,9 @@ def gate_problems(
         }[level]
         problems += _members_problems(document, manifest, data_root, need)
     else:
-        reconciliation, errors = recompute_reconciliation(path, inputs)
+        reconciliation, errors = recompute_reconciliation(
+            document, tables, key, inputs
+        )
         if reconciliation is not None and (
             reconciliation["outputs_sha256"] != outputs
         ):
@@ -276,7 +349,7 @@ def gate_problems(
             if effect.measure_id == key
         ]
         problems += table_problems(
-            _supported_rows(read_tables(path), years),
+            _supported_rows(tables, years),
             key=key,
             years=years,
             effective_from_year=min(declared) if declared else None,
@@ -290,6 +363,27 @@ def gate_problems(
     return problems, info
 
 
+def _year_problems(document: dict, tables: dict) -> list[str]:
+    """Rows for years the receipt does not report.
+
+    Checked on every table before unsupported years are set aside, so a
+    row for an undeclared year is refused rather than filtered out of the
+    checks while still reaching anything that reads the tables.
+    """
+    reported = set(document["execution_receipt"]["years"])
+    problems = []
+    for name, rows in sorted(tables.items()):
+        extra = sorted(
+            {row["year"] for row in rows if "year" in row} - reported
+        )
+        if extra:
+            problems.append(
+                f"{name} has rows for years its receipt does not report: "
+                f"{extra}"
+            )
+    return problems
+
+
 def _supported_rows(tables: dict, years: list[int]) -> dict:
     keep = set(years)
     return {
@@ -298,8 +392,8 @@ def _supported_rows(tables: dict, years: list[int]) -> dict:
     }
 
 
-def _entry_name(path: Path, key: str) -> str:
-    rows = read_tables(path).get("budgetary_impact") or []
+def _name_from(tables: dict, key: str) -> str:
+    rows = tables.get("budgetary_impact") or []
     return rows[0]["reform_name"] if rows else key
 
 
@@ -407,7 +501,7 @@ def stage(
     group = working.combined if is_combined(key) else working.measures
     previous = group.get(key)
     entry = m.Entry(
-        name=_entry_name(path, key),
+        name=_name_from(info["tables"], key),
         status=level,
         artifact=relative.as_posix(),
         outputs_sha256=digests["outputs_sha256"],

@@ -238,3 +238,39 @@ def test_repeated_fiscal_year_columns_are_refused():
 def test_non_finite_figures_are_refused(bad):
     with pytest.raises(ScorecardError, match="finite"):
         parse_figure(bad)
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Total policy decisions",
+        "Total tax policy decisions",
+        "Total spending policy decisions",
+    ],
+)
+def test_a_total_printed_twice_is_refused(label):
+    """Review round 3: a second total row replaced the first, so a
+    contradictory total (999 beside 100) disappeared."""
+    rows = sheet_rows([(1, "A measure", "Tax", [100] * 5)])
+    rows.insert(-1, (None, None, label, None, *([999] * 5)))
+    with pytest.raises(ScorecardError, match="appears twice"):
+        parse_rows(rows)
+
+
+def test_a_measure_with_only_nil_figures_is_kept(tmp_path):
+    """Review round 3: a numbered measure whose figures were all blank was
+    taken for a heading and left out of both exports."""
+    measures = [
+        (1, "A measure", "Tax", [100] * 5),
+        (2, "A measure with nil figures", "Spend", [None] * 5),
+    ]
+    scorecard = parse_rows(sheet_rows(measures))
+    assert [m.number for m in scorecard.measures] == ["1", "2"]
+    nil = scorecard.measures[1]
+    assert nil.head == "spend"
+    assert set(nil.values_m.values()) == {0.0}
+    check_totals(scorecard)
+    rows = source_rows(scorecard, "S", "Budget 2026")
+    nil_rows = [row for row in rows if row["row_id"] == "2"]
+    assert len(rows) == 10 and len(nil_rows) == 5
+    assert {row["value_bn"] for row in nil_rows} == {"0.0000"}

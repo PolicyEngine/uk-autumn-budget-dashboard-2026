@@ -205,28 +205,43 @@ class World:
         tables=None,
         member_outputs=None,
         dataset_name: str = "enhanced_frs_2024_25",
+        reform_identity=None,
     ):
-        """Generate an artifact for ``key`` with the given fiscal impact."""
+        """Generate an artifact for ``key`` with the given fiscal impact.
+
+        With ``members`` (records of id, reform and baseline identities),
+        the artifact is a combined run: its identities are the members'
+        composition, as ``receipt.combined_identities`` builds them, unless
+        ``reform_identity`` is given to test a receipt that is not.
+        """
         revision = self.revision(clean)
         scenario = Scenario(
             parameter_changes={
                 RATE_PATH: {str(y): rate for y in sorted(values)}
             }
         )
+        baseline_identity = receipt_module.scenario_identity(
+            None, name=f"{key} baseline", revision=revision
+        )
+        composition = None
+        if members:
+            members, composition, composed = self._compose(members)
+            baseline_identity, composed_reform = composed
+            reform_identity = reform_identity or composed_reform
         inputs = dict(
             key=key,
             measure_ids=measure_ids or [key],
             years=sorted(values),
-            baseline_identity=receipt_module.scenario_identity(
-                None, name=f"{key} baseline", revision=revision
-            ),
-            reform_identity=receipt_module.scenario_identity(
+            baseline_identity=baseline_identity,
+            reform_identity=reform_identity
+            or receipt_module.scenario_identity(
                 scenario, name=key, revision=revision
             ),
             basis=BASIS,
             revision=revision,
             members=members,
             member_outputs=member_outputs,
+            composition=composition,
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)
@@ -243,6 +258,43 @@ class World:
         return write_artifact(
             tables or make_tables(key, values), key, build, self.artifacts
         )
+
+    @staticmethod
+    def _compose(records):
+        """Compose member records the way combined_identities does: every
+        reform in order, and each distinct baseline once."""
+        api, _ = receipt_module.receipt_api()
+        records = [dict(record) for record in records]
+        seen = []
+        for record in records:
+            core = {k: v for k, v in record["baseline"].items() if k != "name"}
+            record.setdefault("baseline_bound", core not in seen)
+            seen.append(core)
+        composition = {
+            "reform_applied_before_data_load": False,
+            "baseline_applied_before_data_load": False,
+        }
+        name = "+".join(record["id"] for record in records)
+        composed = (
+            api.composed_reform_identity(
+                [
+                    api.ReformIdentity.model_validate(record["baseline"])
+                    for record in records
+                    if record["baseline_bound"]
+                ],
+                applied_before_data_load=False,
+                name=f"{name} baseline",
+            ),
+            api.composed_reform_identity(
+                [
+                    api.ReformIdentity.model_validate(record["reform"])
+                    for record in records
+                ],
+                applied_before_data_load=False,
+                name=name,
+            ),
+        )
+        return records, composition, composed
 
     def register(self, dataset_name: str, dataset: Path):
         """Name ``dataset``'s bytes in the bundle as ``dataset_name``.

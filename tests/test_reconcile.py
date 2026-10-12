@@ -21,6 +21,7 @@ from uk_budget_data.publication.reconcile import (
     allowance_bn,
     fiscal_year_label,
     load_exceptions,
+    load_expected,
     load_mapping,
     load_policy,
     load_sources,
@@ -575,3 +576,104 @@ def test_a_printed_zero_keeps_its_rounding_tolerance():
     row = result["rows"][0]
     assert row["allowance_bn"] == POLICY.zero_tolerance_bn
     assert row["status"] == FAILED
+
+
+# --- round 3: reviewed inputs must actually be reviewed --------------------
+
+EXCEPTION = """- measure_id: m
+  fiscal_year: 2027-28
+  residual_bn: -0.5
+  explanation_class: behavioural
+  explanation: The costing includes a behavioural yield.
+  reviewer: Reviewer
+  accepted_at: 2026-10-28T15:00:00Z
+  outputs_sha256: abc
+"""
+
+
+@pytest.mark.parametrize(
+    "field", ["explanation", "reviewer", "accepted_at", "explanation_class"]
+)
+@pytest.mark.parametrize("blank", ["", " ''", " null", " []", " 3"])
+def test_an_exception_with_a_blank_review_field_is_refused(
+    tmp_path, field, blank
+):
+    """Review round 3: YAML read a blank field as null, and str(None) made
+    it the reviewed text "None", so an unreviewed exception was accepted."""
+    lines = [
+        f"  {field}:{blank}" if line.strip().startswith(f"{field}:") else line
+        for line in EXCEPTION.splitlines()
+    ]
+    path = tmp_path / "exceptions.yaml"
+    path.write_text("\n".join(lines) + "\n")
+    with pytest.raises(ReconciliationInputError, match=field):
+        load_exceptions(path)
+
+
+def test_a_complete_exception_loads_with_its_timestamp(tmp_path):
+    path = tmp_path / "exceptions.yaml"
+    path.write_text(EXCEPTION)
+    (entry,) = load_exceptions(path)
+    assert entry.reviewer == "Reviewer"
+    assert entry.accepted_at.startswith("2026-10-28T15:00:00")
+    assert entry.residual_bn == -0.5
+
+
+EXPECTED_HEADER = "measure_id,direction,from_year,to_year,reviewer,note\n"
+
+
+def test_an_expected_effect_needs_its_reviewer(tmp_path):
+    """Review round 3: an unreviewed declaration overrode the Treasury's
+    sign and let a wrong-direction measure through."""
+    path = tmp_path / "expected_effects.csv"
+    path.write_text(EXPECTED_HEADER + "m,positive,2027,,,\n")
+    with pytest.raises(ReconciliationInputError, match="reviewer"):
+        load_expected(path)
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        ["m,positive,2027,,A,", "m,negative,2027,,B,"],
+        ["m,positive,2027,,A,", "m,negative,2029,2030,B,"],
+        ["m,negative,2028,2029,A,", "m,positive,2026,2028,B,"],
+        ["m,positive,2027,2028,A,", "m,positive,2028,,B,"],
+    ],
+)
+def test_overlapping_expected_effects_are_refused(tmp_path, rows):
+    """Review round 3: with two declarations for a year, the first in the
+    file won, so reordering the file changed the verdict."""
+    for order in (rows, rows[::-1]):
+        path = tmp_path / "expected_effects.csv"
+        path.write_text(EXPECTED_HEADER + "\n".join(order) + "\n")
+        with pytest.raises(ReconciliationInputError, match="already has"):
+            load_expected(path)
+
+
+def test_separate_years_and_measures_may_each_have_an_expectation(tmp_path):
+    path = tmp_path / "expected_effects.csv"
+    path.write_text(
+        EXPECTED_HEADER
+        + "m,positive,2026,2027,A,\nm,negative,2028,,B,\nn,negative,2027,,C,\n"
+    )
+    assert [e.direction for e in load_expected(path)] == [
+        "positive",
+        "negative",
+        "negative",
+    ]
+
+
+@pytest.mark.parametrize("direction", ["positive", "negative"])
+def test_an_exact_zero_is_inert_even_with_no_floor(direction):
+    """Review round 3: every sampled floor was positive, so the property
+    above passed with the explicit zero guard removed."""
+    result = check_responsiveness(
+        {2027: 0.0},
+        measure_id="m",
+        declarations=[ExpectedEffect("m", direction, 2027, reviewer="R")],
+        comparators_bn={2027: None},
+        min_response_bn=0.0,
+        min_response_share=0.0,
+        zero_tolerance_bn=0.0,
+    )
+    assert result["status"] == INERT
