@@ -71,6 +71,17 @@ class ReceiptUnavailable(RuntimeError):
         self.reason = reason
 
 
+def _has_what_we_need(module) -> bool:
+    """Whether a receipt module has the rules this package relies on, not
+    only the names: receipts that record the years the dataset is
+    projected to (#571), and infinite values bound as marked non-finite
+    values (#588, which carries #571's module-shape rules)."""
+    if not all(hasattr(module, name) for name in _REQUIRED_API):
+        return False
+    fields = getattr(module.ExecutionReceipt, "model_fields", {})
+    return "supported_years" in fields and hasattr(module, "NONFINITE_KEY")
+
+
 def receipt_api() -> tuple[Any, str]:
     """policyengine's receipt module and a label saying which copy it is.
 
@@ -81,9 +92,7 @@ def receipt_api() -> tuple[Any, str]:
         from policyengine.provenance import receipt as released
     except ImportError:
         released = None
-    if released is not None and all(
-        hasattr(released, name) for name in _REQUIRED_API
-    ):
+    if released is not None and _has_what_we_need(released):
         return released, f"policyengine=={metadata.version('policyengine')}"
     from uk_budget_data.publication._vendor_w4 import receipt as vendored
 
@@ -334,7 +343,16 @@ def composition_problems(document: dict) -> list[str]:
     # member that uses it. A member's own baseline is applied for that
     # member: it may never be left out, even when another member's is the
     # same (a modifier applied twice is not a modifier applied once).
-    configured = _identity_core(dashboard.get("config_baseline"))
+    # The configured baseline may be shared only when it is current law or
+    # parameter changes alone (bound by content): applying those once is
+    # the same as applying them for each member. A structural baseline
+    # (bound by code revision) is never shared, whatever it is called.
+    config = dashboard.get("config_baseline")
+    shareable = isinstance(config, dict) and (
+        config.get("kind") == "current_law"
+        or config.get("binding") == "content"
+    )
+    configured = _identity_core(config) if shareable else None
     composed = {_identity_core(record["baseline"]) for record in bound}
     for record in members:
         if record["baseline_bound"]:

@@ -147,17 +147,44 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
     raise ScorecardError("no header row with at least three fiscal years")
 
 
+def _label_column(cells: list, head_column: int) -> Optional[int]:
+    """The column of a row's longest label before the Head column."""
+    texts = [
+        (len(_text(cell)), column)
+        for column, cell in enumerate(cells[:head_column])
+        if _text(cell)
+    ]
+    return max(texts)[1] if texts else None
+
+
+def _cells(row: tuple, first_year_column: int) -> list:
+    return list(row) + [None] * (first_year_column + 1 - len(row))
+
+
 def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
-    """Parse a scorecard from its cell values, row by row."""
+    """Parse a scorecard from its cell values, row by row.
+
+    A total is a row whose only label is a total label. A total whose
+    figures are all blank is a nil total, but only when its label sits in
+    the column the measures' descriptions use: a heading or footnote that
+    repeats a total's words is not a printed total.
+    """
     header_index, year_columns, head_column = _find_header(rows)
     fiscal_years = [year_columns[c] for c in sorted(year_columns)]
     first_year_column = min(year_columns)
     measures: list[Measure] = []
     totals: dict[Optional[str], dict[str, float]] = {}
     seen_numbers: set[str] = set()
+    description_columns = {
+        _label_column(cells, head_column)
+        for cells in (
+            _cells(row, first_year_column) for row in rows[header_index + 1 :]
+        )
+        if _text(cells[head_column]).lower() in {"tax", "spend"}
+    }
 
     for row in rows[header_index + 1 :]:
-        cells = list(row) + [None] * (first_year_column + 1 - len(row))
+        cells = _cells(row, first_year_column)
         raw_values = [
             cells[c] if c < len(cells) else None for c in sorted(year_columns)
         ]
@@ -165,16 +192,20 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         head = _text(cells[head_column]).lower()
         label = max(label_cells, key=len) if label_cells else ""
         lowered = label.lower()
-        # Totals are recognised before blank rows are skipped: a total
-        # printed blank is a nil total, and still counts as printed.
-        if lowered not in TOTAL_LABELS and (
-            all(_text(v) == "" for v in raw_values)
-            and head not in {"tax", "spend"}
-        ):
+        blank = all(_text(v) == "" for v in raw_values)
+        is_total = (
+            lowered in TOTAL_LABELS
+            and len(label_cells) == 1
+            and (
+                not blank
+                or _label_column(cells, head_column) in description_columns
+            )
+        )
+        if blank and not is_total and head not in {"tax", "spend"}:
             # A section heading, blank line or footnote. A row with a Tax or
             # Spend head is a measure even when every figure is blank (nil).
             continue
-        if lowered in TOTAL_LABELS:
+        if is_total:
             if TOTAL_LABELS[lowered] in totals:
                 # A second printed total would silently replace the first.
                 raise ScorecardError(f"{label!r} appears twice")

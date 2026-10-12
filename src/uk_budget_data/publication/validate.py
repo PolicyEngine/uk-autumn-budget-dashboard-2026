@@ -14,6 +14,7 @@ from typing import Mapping, Optional
 
 from uk_budget_data.publication.tables import (
     BRIEFING_TABLES,
+    SCATTER_SAMPLE_SIZE,
     TABLES,
     TableError,
     normalise,
@@ -140,5 +141,11 @@ def table_problems(
             problems.append(
                 "household_scatter: the sampled households differ between "
                 "years"
+            )
+        sampled = {row["household_id"] for row in sample}
+        if len(sampled) > SCATTER_SAMPLE_SIZE:
+            problems.append(
+                f"household_scatter: {len(sampled)} households, more than "
+                f"the {SCATTER_SAMPLE_SIZE} sampled"
             )
     return problems
