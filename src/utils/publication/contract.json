@@ -1,0 +1,327 @@
+{
+  "deciles": [
+    "1st",
+    "2nd",
+    "3rd",
+    "4th",
+    "5th",
+    "6th",
+    "7th",
+    "8th",
+    "9th",
+    "10th"
+  ],
+  "displayable": [
+    "approved",
+    "provisional"
+  ],
+  "manifest_file": "manifest.json",
+  "manifest_schema": "uk-budget-dashboard/publication-manifest/v1",
+  "receipt_file": "receipt.json",
+  "statuses": [
+    "staged",
+    "provisional",
+    "approved",
+    "stale",
+    "withdrawn"
+  ],
+  "tables": {
+    "budgetary_impact": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "value",
+          "float"
+        ]
+      ],
+      "file": "budgetary_impact.csv",
+      "key": [
+        "reform_id",
+        "year"
+      ],
+      "required": true
+    },
+    "constituency": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "constituency_code",
+          "str"
+        ],
+        [
+          "constituency_name",
+          "str"
+        ],
+        [
+          "average_gain",
+          "float"
+        ],
+        [
+          "relative_change",
+          "float"
+        ]
+      ],
+      "file": "constituency.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "constituency_code"
+      ],
+      "required": false
+    },
+    "demographic_constituency": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "constituency_code",
+          "str"
+        ],
+        [
+          "constituency_name",
+          "str"
+        ],
+        [
+          "num_children",
+          "str"
+        ],
+        [
+          "is_married",
+          "bool"
+        ],
+        [
+          "average_gain",
+          "float"
+        ],
+        [
+          "relative_change",
+          "float"
+        ],
+        [
+          "household_count",
+          "float"
+        ]
+      ],
+      "file": "demographic_constituency.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "constituency_code",
+        "num_children",
+        "is_married"
+      ],
+      "required": false
+    },
+    "distributional_impact": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "decile",
+          "str"
+        ],
+        [
+          "value",
+          "float"
+        ]
+      ],
+      "file": "distributional_impact.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "decile"
+      ],
+      "required": true
+    },
+    "household_scatter": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "baseline_income",
+          "float"
+        ],
+        [
+          "income_change",
+          "float"
+        ],
+        [
+          "household_weight",
+          "float"
+        ],
+        [
+          "household_id",
+          "int"
+        ]
+      ],
+      "file": "household_scatter.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "household_id"
+      ],
+      "required": true
+    },
+    "income_curve": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "employment_income",
+          "float"
+        ],
+        [
+          "baseline_net_income",
+          "float"
+        ],
+        [
+          "reform_net_income",
+          "float"
+        ]
+      ],
+      "file": "income_curve.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "employment_income"
+      ],
+      "required": true
+    },
+    "metrics": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "people_affected",
+          "float"
+        ],
+        [
+          "gini_change",
+          "float"
+        ],
+        [
+          "poverty_change_pp",
+          "float"
+        ],
+        [
+          "poverty_change_pct",
+          "float"
+        ]
+      ],
+      "file": "metrics.csv",
+      "key": [
+        "reform_id",
+        "year"
+      ],
+      "required": true
+    },
+    "winners_losers": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "decile",
+          "str"
+        ],
+        [
+          "avg_change",
+          "float"
+        ]
+      ],
+      "file": "winners_losers.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "decile"
+      ],
+      "required": true
+    }
+  },
+  "winners_groups": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "all"
+  ]
+}

@@ -1,0 +1,74 @@
+/**
+ * Digests that tie what the page shows to the manifest.
+ *
+ * A manifest entry names its artifact's `outputs_sha256`. That is the SHA-256
+ * of the artifact's file-digest map, serialised as canonical JSON (RFC 8785)
+ * with null object members dropped, which is the rule the Python side uses.
+ * So the page can check an artifact in two steps:
+ *
+ * 1. the receipt's file-digest map hashes to the entry's `outputs_sha256`;
+ * 2. each fetched file hashes to its value in that map.
+ *
+ * A file that fails either step is never shown.
+ */
+
+import canonicalize from "canonicalize";
+
+function toBytes(input) {
+  if (typeof input === "string") return new TextEncoder().encode(input);
+  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  if (ArrayBuffer.isView(input)) {
+    return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+  }
+  throw new TypeError("sha256Hex needs a string or bytes");
+}
+
+/** SHA-256 of a string (as UTF-8) or of bytes, in lowercase hex. */
+export async function sha256Hex(input) {
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    toBytes(input),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+/** Remove object members whose value is null, at every depth. */
+export function dropNulls(value) {
+  if (Array.isArray(value)) return value.map(dropNulls);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, member]) => member !== null)
+        .map(([key, member]) => [key, dropNulls(member)]),
+    );
+  }
+  return value;
+}
+
+/** SHA-256 of a value's canonical JSON, with null members dropped. */
+export async function jcsSha256(value) {
+  return sha256Hex(canonicalize(dropNulls(value)));
+}
+
+function fileDigests(receipt) {
+  const files = receipt?.dashboard?.files;
+  return files !== null && typeof files === "object" && !Array.isArray(files)
+    ? files
+    : null;
+}
+
+/** Step 1: the receipt's file digests are the ones the manifest entry names. */
+export async function verifyReceiptFiles(receipt, entry) {
+  const files = fileDigests(receipt);
+  if (!files || Object.keys(files).length === 0) return false;
+  return (await jcsSha256(files)) === entry.outputs_sha256;
+}
+
+/** Step 2: a fetched file's content is the one the receipt lists. */
+export async function verifyFile(name, content, receipt) {
+  const files = fileDigests(receipt);
+  if (!files || !Object.hasOwn(files, name)) return false;
+  return (await sha256Hex(content)) === files[name];
+}
