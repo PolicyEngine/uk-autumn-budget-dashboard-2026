@@ -44,6 +44,68 @@ def numbers(value):
         yield value
 
 
+def briefing_data(path):
+    """The machine-readable copy of a chart's data embedded in its page."""
+    match = re.search(
+        r'<script id="briefing-data" type="application/json">(.*?)</script>',
+        path.read_text(),
+        re.S,
+    )
+    assert match, f"No briefing-data block in {path}"
+    return json.loads(match.group(1))
+
+
+GROUP_LABELS = {
+    "overall": "Overall",
+    "child": "Child",
+    "working_age": "Working-age",
+    "pensioner": "Pensioner",
+}
+# Winners and losers columns: All, an empty spacer, then deciles 10 to 1.
+SHARE_COLUMNS = {"all": 0, **{str(n): 12 - n for n in range(1, 11)}}
+
+
+def expected_combined_payloads(rows, years):
+    """What each combined chart must embed, from the artifact rows alone."""
+    labels = {year: f"{year}-{(year + 1) % 100:02d}" for year in years}
+    distributional = {label: [None] * 10 for label in labels.values()}
+    shares = {label: {} for label in labels.values()}
+    poverty = {}
+    constituencies = {label: {} for label in labels.values()}
+    for row in rows["briefing_deciles"]:
+        if row["year"] in labels and row["decile"] != "all":
+            distributional[labels[row["year"]]][int(row["decile"]) - 1] = (
+                round(row["avg_change_gbp"], 1)
+            )
+    for row in rows["briefing_winners_losers"]:
+        if row["year"] in labels:
+            column = shares[labels[row["year"]]].setdefault(
+                row["category"], [None] * 12
+            )
+            column[SHARE_COLUMNS[row["decile"]]] = round(row["share_pct"], 1)
+    for row in rows["briefing_poverty"]:
+        if row["year"] in labels:
+            poverty.setdefault(row["measure"], {}).setdefault(
+                row["housing"], {}
+            ).setdefault(GROUP_LABELS[row["group"]], {})[
+                labels[row["year"]]
+            ] = round(
+                row["change_pp"], 1
+            )
+    for row in rows.get("constituency", []):
+        if row["year"] in labels:
+            constituencies[labels[row["year"]]][row["constituency_code"]] = {
+                "name": row["constituency_name"],
+                "value": round(row["average_gain"], 1),
+            }
+    return {
+        "distributional.html": distributional,
+        "winners_losers.html": shares,
+        "poverty_inequality.html": poverty,
+        "constituency_map.html": constituencies,
+    }
+
+
 @pytest.fixture
 def world():
     instance = World()
@@ -226,6 +288,22 @@ def test_every_chart_data_number_is_receipted(seed, years):
             actual = list(numbers(payload))
             assert actual, filename
             assert set(actual) <= allowed, filename
+        # Exact payloads, built independently from the rows: every value at
+        # its own year, decile, category, group and constituency.
+        oracle = expected_combined_payloads(expected, years)
+        for filename, variable in (
+            ("distributional.html", "data"),
+            ("winners_losers.html", "data"),
+            ("poverty_inequality.html", "povertyData"),
+            ("constituency_map.html", "dataByYear"),
+        ):
+            assert (
+                html_payload(combined_out / filename, variable)
+                == oracle[filename]
+            ), filename
+            assert (
+                briefing_data(combined_out / filename) == oracle[filename]
+            ), filename
         deciles = html_payload(combined_out / "distributional.html", "data")
         for year in years:
             label = f"{year}-{(year + 1) % 100:02d}"
@@ -257,6 +335,12 @@ def test_every_chart_data_number_is_receipted(seed, years):
                         for row in tables[key][table]
                         if row["year"] == year
                     }
+                    # Every decile row for the year is plotted, exactly
+                    # once; the chart leaves out the whole-population row.
+                    plotted = [_decile_label(table, x) for x in trace["x"]]
+                    assert sorted(plotted) == sorted(
+                        set(rows) - {"all"}
+                    ), filename
                     expected_y = [
                         rows[_decile_label(table, x)] for x in trace["x"]
                     ]
@@ -428,3 +512,93 @@ def test_the_export_receipt_binds_the_treasury_inputs(world, tmp_path):
     from uk_budget_data.publication.briefing_export import inputs_digest
 
     assert receipt["treasury_inputs_sha256"] == inputs_digest(world.inputs)
+
+
+def test_treasury_inputs_are_gated_drawn_and_hashed_from_one_snapshot(
+    world, tmp_path, monkeypatch
+):
+    """Review round 3: inputs read after the gate could put a figure in a
+    chart that the receipt's input digest did not cover."""
+    from uk_budget_data.publication import briefing_export
+    from uk_budget_data.publication.briefing_export import inputs_digest
+
+    approved_world(world)
+    source = world.inputs / "sources" / "S.csv"
+    original = source.read_bytes()
+    before = inputs_digest(world.inputs)
+    changed = re.sub(
+        rb"(alpha,alpha,2027-28,)[^,]+,", rb"\g<1>918273.645,", original
+    )
+    assert changed != original
+    real_check = briefing_export.exports.check
+
+    def check_then_change(*args, **kwargs):
+        failures = real_check(*args, **kwargs)
+        source.write_bytes(changed)
+        return failures
+
+    real_stamp = briefing_export.stamp_plotly
+
+    def stamp_then_restore(*args, **kwargs):
+        chart = real_stamp(*args, **kwargs)
+        source.write_bytes(original)
+        return chart
+
+    monkeypatch.setattr(briefing_export.exports, "check", check_then_change)
+    monkeypatch.setattr(briefing_export, "stamp_plotly", stamp_then_restore)
+    receipt = blog.generate(
+        world.data_root / "manifest.json",
+        ["alpha"],
+        tmp_path / "out",
+        inputs=world.inputs,
+    )
+    chart = (tmp_path / "out" / "alpha" / "revenue.json").read_text()
+    assert "918273.645" not in chart
+    assert receipt["treasury_inputs_sha256"] == before
+
+
+def test_years_come_from_the_receipt_not_the_manifest(world):
+    """Review round 3: a manifest entry with its unsupported years cleared
+    put 2031 in a chart. The gate now refuses that entry, and the export
+    reads its years from the receipt and refuses any disagreement."""
+    from uk_budget_data.publication import briefing_export
+    from uk_budget_data.publication.publish import check
+
+    manifest, _ = approved_world(world, years=(2027, 2031))
+    arguments = {"data_root": world.data_root, "inputs": world.inputs}
+    assert check(manifest, **arguments) == []
+    manifest.measures["alpha"].unsupported_years = []
+    assert any("unsupported years" in f for f in check(manifest, **arguments))
+
+    entry = manifest.measures["alpha"]
+    from uk_budget_data.publication.artifacts import read_receipt
+
+    artifact = {
+        "entry": entry,
+        "receipt": read_receipt(world.data_root / entry.artifact),
+    }
+    with pytest.raises(PublishError, match="years are not its receipt's"):
+        briefing_export.supported_years(artifact)
+    entry.unsupported_years = [2031]
+    assert briefing_export.supported_years(artifact) == [2027]
+    assert briefing_export.unavailable_years(artifact) == [2031]
+
+
+def test_an_unshown_year_is_named_on_the_chart(world, tmp_path):
+    """Review round 3: years beyond the projection vanished silently."""
+    approved_world(world, years=(2027, 2031))
+    out = tmp_path / "blog"
+    blog.generate(
+        world.data_root / "manifest.json", ["alpha"], out, inputs=world.inputs
+    )
+    chart = json.loads((out / "alpha" / "revenue.json").read_text())
+    assert "Not shown: 2031-32" in chart["layout"]["meta"]["source"]
+    combined_out = tmp_path / "combined"
+    combined.generate(
+        world.data_root / "manifest.json",
+        COMBINED_KEY,
+        combined_out,
+        inputs=world.inputs,
+    )
+    page = (combined_out / "distributional.html").read_text()
+    assert "Not shown: 2031-32" in page

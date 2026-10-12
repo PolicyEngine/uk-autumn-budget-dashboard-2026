@@ -815,43 +815,47 @@ def generate(
     inputs: Path = Path("data_inputs/treasury"),
 ) -> dict:
     """Preflight the combined artifact, prepare every chart, then write it."""
-    loaded = export.load(manifest, [key], inputs=inputs)
-    artifact = loaded["entries"][key]
-    if not artifact["entry"].measures:
-        raise PublishError("export", [f"{key} is not a combined artifact"])
-    export.require_tables(
-        key,
-        artifact,
-        ("briefing_deciles", "briefing_winners_losers", "briefing_poverty"),
-    )
-    distributional, winners_losers, poverty, constituencies = chart_data(
-        artifact
-    )
-    years = export.year_labels(artifact)
-    source = export.source_line(artifact, loaded["stamp"])
-    charts = {
-        "distributional.html": (
-            create_distributional_html(distributional, years),
-            distributional,
-        ),
-        "winners_losers.html": (
-            create_winners_losers_html(winners_losers, years),
-            winners_losers,
-        ),
-        "poverty_inequality.html": (
-            create_poverty_html(poverty, years),
-            poverty,
-        ),
-        "constituency_map.html": (
-            create_constituency_map_html(constituencies, years),
-            constituencies,
-        ),
-    }
-    outputs = {
-        name: export.stamp_html(content, source, loaded["stamp"], payload)
-        for name, (content, payload) in charts.items()
-    }
-    return export.write_export(out_dir, outputs, loaded, inputs=inputs)
+    with export.gated(manifest, [key], inputs=inputs) as loaded:
+        artifact = loaded["entries"][key]
+        if not artifact["entry"].measures:
+            raise PublishError("export", [f"{key} is not a combined artifact"])
+        export.require_tables(
+            key,
+            artifact,
+            (
+                "briefing_deciles",
+                "briefing_winners_losers",
+                "briefing_poverty",
+            ),
+        )
+        distributional, winners_losers, poverty, constituencies = chart_data(
+            artifact
+        )
+        years = export.year_labels(artifact)
+        source = export.source_line(artifact, loaded["stamp"])
+        charts = {
+            "distributional.html": (
+                create_distributional_html(distributional, years),
+                distributional,
+            ),
+            "winners_losers.html": (
+                create_winners_losers_html(winners_losers, years),
+                winners_losers,
+            ),
+            "poverty_inequality.html": (
+                create_poverty_html(poverty, years),
+                poverty,
+            ),
+            "constituency_map.html": (
+                create_constituency_map_html(constituencies, years),
+                constituencies,
+            ),
+        }
+        outputs = {
+            name: export.stamp_html(content, source, loaded["stamp"], payload)
+            for name, (content, payload) in charts.items()
+        }
+        return export.write_export(out_dir, outputs, loaded)
 
 
 def main(argv: list[str] | None = None) -> int:

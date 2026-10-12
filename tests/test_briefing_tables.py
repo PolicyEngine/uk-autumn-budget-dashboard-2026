@@ -15,6 +15,7 @@ from uk_budget_data.publication.artifacts import (
     read_receipt,
     read_tables,
     table_files,
+    write_artifact,
 )
 from uk_budget_data.publication.generate import result_tables
 from uk_budget_data.publication.tables import (
@@ -196,11 +197,18 @@ def test_present_briefing_tables_cover_every_receipted_year():
     }
 
 
-def test_artifact_writer_refuses_invalid_briefing_before_writing():
+def test_artifact_writer_refuses_invalid_briefing_before_writing(tmp_path):
+    """Review round 3: this used to call table_files, never the writer."""
     tables = complete_tables()
     tables["briefing_winners_losers"][0]["share_pct"] = 21
     with pytest.raises(ArtifactError, match="do not sum to 100"):
         table_files(tables, KEY)
+    receipts = []
+    root = tmp_path / "artifacts"
+    with pytest.raises(ArtifactError, match="do not sum to 100"):
+        write_artifact(tables, KEY, receipts.append, root)
+    assert receipts == []
+    assert not root.exists()
 
 
 def test_no_briefing_effect_before_effective_year():

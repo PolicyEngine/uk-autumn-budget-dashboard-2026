@@ -405,47 +405,53 @@ def generate(
     inputs: Path = Path("data_inputs/treasury"),
 ) -> dict:
     """Gate the complete requested set before preparing or writing files."""
-    loaded = export.load(manifest, keys, inputs=inputs)
-    for key, artifact in loaded["entries"].items():
-        if artifact["entry"].measures:
-            raise PublishError(
-                "export", [f"{key} is not a standalone measure"]
-            )
-        export.require_tables(
-            key,
-            artifact,
-            ("distributional_impact", "winners_losers", "budgetary_impact"),
-        )
-    outputs = {}
-    for key, artifact in loaded["entries"].items():
-        tables = artifact["tables"]
-        years = export.supported_years(artifact)
-        labels = export.year_labels(artifact, years)
-        source = export.source_line(artifact, loaded["stamp"])
-        reconciliation = export.treasury_comparison(artifact, inputs)
-        charts = {
-            "distributional": create_distributional_chart(
-                pd.DataFrame(tables["distributional_impact"]),
+    with export.gated(manifest, keys, inputs=inputs) as loaded:
+        for key, artifact in loaded["entries"].items():
+            if artifact["entry"].measures:
+                raise PublishError(
+                    "export", [f"{key} is not a standalone measure"]
+                )
+            export.require_tables(
                 key,
-                years,
-                labels,
-            ),
-            "winners_losers": create_winners_losers_chart(
-                pd.DataFrame(tables["winners_losers"]), key, years, labels
-            ),
-            "revenue": create_revenue_chart(
-                pd.DataFrame(tables["budgetary_impact"]),
-                key,
-                reconciliation,
-                dict(zip(years, labels, strict=True)),
-            ),
-        }
-        for name, chart in charts.items():
-            stamped = export.stamp_plotly(chart, source, loaded["stamp"])
-            outputs[f"{key}/{name}.json"] = (
-                json.dumps(stamped, indent=2, allow_nan=False) + "\n"
+                artifact,
+                (
+                    "distributional_impact",
+                    "winners_losers",
+                    "budgetary_impact",
+                ),
             )
-    return export.write_export(out_dir, outputs, loaded, inputs=inputs)
+        outputs = {}
+        for key, artifact in loaded["entries"].items():
+            tables = artifact["tables"]
+            years = export.supported_years(artifact)
+            labels = export.year_labels(artifact, years)
+            source = export.source_line(artifact, loaded["stamp"])
+            reconciliation = export.treasury_comparison(
+                artifact, loaded["inputs"]
+            )
+            charts = {
+                "distributional": create_distributional_chart(
+                    pd.DataFrame(tables["distributional_impact"]),
+                    key,
+                    years,
+                    labels,
+                ),
+                "winners_losers": create_winners_losers_chart(
+                    pd.DataFrame(tables["winners_losers"]), key, years, labels
+                ),
+                "revenue": create_revenue_chart(
+                    pd.DataFrame(tables["budgetary_impact"]),
+                    key,
+                    reconciliation,
+                    dict(zip(years, labels, strict=True)),
+                ),
+            }
+            for name, chart in charts.items():
+                stamped = export.stamp_plotly(chart, source, loaded["stamp"])
+                outputs[f"{key}/{name}.json"] = (
+                    json.dumps(stamped, indent=2, allow_nan=False) + "\n"
+                )
+        return export.write_export(out_dir, outputs, loaded)
 
 
 def main(argv: list[str] | None = None) -> int:

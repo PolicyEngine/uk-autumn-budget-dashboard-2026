@@ -3,6 +3,9 @@
 import html
 import json
 import subprocess
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,30 +19,91 @@ from uk_budget_data.publication.receipt import (
 from uk_budget_data.publication.tables import sha256_bytes
 
 
-def load(manifest: Path, keys: list[str], *, inputs: Path) -> dict:
-    """Resolve the canonical manifest path, then use the publication gate."""
+def _digest_files(files: dict[str, bytes]) -> str:
+    digests = {name: sha256_bytes(data) for name, data in files.items()}
+    return sha256_bytes(json.dumps(digests, sort_keys=True).encode("utf-8"))
+
+
+def _read_inputs(inputs: Path) -> dict[str, bytes]:
+    inputs = Path(inputs)
+    return {
+        str(path.relative_to(inputs)): path.read_bytes()
+        for path in sorted(inputs.rglob("*"))
+        if path.is_file()
+    }
+
+
+@contextmanager
+def gated(manifest: Path, keys: list[str], *, inputs: Path) -> Iterator[dict]:
+    """Gate the requested keys on one private snapshot of the inputs.
+
+    Every Treasury input file is read once, into memory, and written to a
+    private temporary directory. The gate, the Treasury comparisons in the
+    charts and the export receipt's ``treasury_inputs_sha256`` all use that
+    snapshot, so a file changed during the export cannot reach a chart
+    without reaching its receipt, nor be gated in one version and drawn or
+    hashed in another. Yields the publication gate's result, plus
+    ``inputs`` (the snapshot directory) and ``treasury_inputs_sha256``.
+    """
     manifest = Path(manifest)
     if manifest.name != MANIFEST_FILE:
         raise PublishError("export", ["--manifest must name manifest.json"])
     if not keys or len(keys) != len(set(keys)):
         raise PublishError("export", ["request distinct artifact keys"])
-    return exports.load_approved(
-        keys, data_root=manifest.parent, inputs=Path(inputs)
-    )
+    files = _read_inputs(inputs)
+    with tempfile.TemporaryDirectory(prefix="treasury-inputs-") as tmp:
+        snapshot = Path(tmp)
+        for name, data in files.items():
+            path = snapshot / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        loaded = exports.load_approved(
+            keys, data_root=manifest.parent, inputs=snapshot
+        )
+        loaded["inputs"] = snapshot
+        loaded["treasury_inputs_sha256"] = _digest_files(files)
+        yield loaded
+
+
+def _receipt_years(artifact: dict) -> tuple[list[int], list[int]]:
+    """The years and unsupported years the captured receipt states.
+
+    The manifest entry repeats them; they must agree, but the receipt (the
+    bytes the gate checked) is what charts use.
+    """
+    document = artifact["receipt"]
+    years = list(document["execution_receipt"]["years"])
+    unsupported = list(document["dashboard"]["unsupported_years"])
+    entry = artifact["entry"]
+    if entry.years != years or entry.unsupported_years != unsupported:
+        raise PublishError(
+            "export",
+            [f"{entry.name}: the manifest's years are not its receipt's"],
+        )
+    return years, unsupported
 
 
 def supported_years(artifact: dict) -> list[int]:
     """The artifact's years a chart may show: never an unsupported one.
 
-    Years beyond the dataset's projection are unavailable, not figures.
+    Read from the captured receipt. Years beyond the dataset's projection
+    are unavailable, not figures.
     """
-    entry = artifact["entry"]
-    years = sorted(y for y in entry.years if y not in entry.unsupported_years)
-    if not years:
+    years, unsupported = _receipt_years(artifact)
+    shown = sorted(y for y in years if y not in unsupported)
+    if not shown:
         raise PublishError(
-            "export", [f"{entry.name} has no supported years to show"]
+            "export",
+            [f"{artifact['entry'].name} has no supported years to show"],
         )
-    return years
+    return shown
+
+
+def unavailable_years(artifact: dict) -> list[int]:
+    """The artifact's years that no chart shows, because they are beyond
+    the dataset's projection."""
+    years, unsupported = _receipt_years(artifact)
+    return sorted(y for y in years if y in unsupported)
 
 
 def require_tables(key: str, artifact: dict, names: tuple[str, ...]) -> None:
@@ -109,25 +173,28 @@ def treasury_comparison(artifact: dict, inputs: Path) -> dict:
 
 
 def inputs_digest(inputs: Path) -> str:
-    """One digest over every Treasury input file the export may have used."""
-    inputs = Path(inputs)
-    files = {
-        str(path.relative_to(inputs)): sha256_bytes(path.read_bytes())
-        for path in sorted(inputs.rglob("*"))
-        if path.is_file()
-    }
-    return sha256_bytes(json.dumps(files, sort_keys=True).encode("utf-8"))
+    """One digest over every Treasury input file in a directory."""
+    return _digest_files(_read_inputs(inputs))
 
 
 def source_line(artifact: dict, stamp: dict) -> str:
-    """The displayed source names the versions which ran, from the receipt."""
+    """The displayed source names the versions which ran, from the receipt.
+
+    It also names any years not shown because they are beyond the
+    dataset's projection, so a missing year is never read as no effect.
+    """
     execution = artifact["receipt"]["execution_receipt"]
-    return (
+    line = (
         f"PolicyEngine UK {execution['model']['version']}, "
         f"data {execution['data']['release_version']}, "
         f"publication manifest rev {stamp['manifest_revision']} "
         f"({stamp['manifest_sha256'][:12]})"
     )
+    missing = unavailable_years(artifact)
+    if missing:
+        labels = ", ".join(year_labels(artifact, missing))
+        line += f". Not shown: {labels}, beyond the dataset's projected years"
+    return line
 
 
 def json_payload(value) -> str:
@@ -185,13 +252,13 @@ def write_export(
     out_dir: Path,
     outputs: dict[str, str],
     loaded: dict,
-    *,
-    inputs: Path | None = None,
 ) -> dict:
     """Write already prepared charts and a receipt binding all their bytes.
 
-    The destination must be new or empty, so the receipt describes exactly
-    what is in it: nothing left from an earlier export survives beside it.
+    ``loaded`` comes from :func:`gated`; the receipt records the digest of
+    the Treasury input snapshot the gate and the charts used. The
+    destination must be new or empty, so the receipt describes exactly what
+    is in it: nothing left from an earlier export survives beside it.
     """
     out_dir = Path(out_dir)
     if out_dir.exists() and any(out_dir.iterdir()):
@@ -222,9 +289,7 @@ def write_export(
         "artifacts": artifacts,
         "files": files,
         "generator_git_sha": git_sha,
-        "treasury_inputs_sha256": (
-            inputs_digest(inputs) if inputs is not None else None
-        ),
+        "treasury_inputs_sha256": loaded["treasury_inputs_sha256"],
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     if len(artifacts) == 1:
