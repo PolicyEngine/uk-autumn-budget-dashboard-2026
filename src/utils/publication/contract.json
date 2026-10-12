@@ -11,6 +11,85 @@
     "9th",
     "10th"
   ],
+  "digest_vectors": [
+    {
+      "sha256": "77fd7c5c19fdb811dbe28c973d1cf9d47c3bc08699c2a99fce2353f892c2de32",
+      "value": {
+        "budgetary_impact.csv": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "distributional_impact.csv": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "metrics.csv": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "sha256": "da2328d3aeaaa89e876dd1d38e17422a614cd038180e15745691295f0178a7bb",
+      "value": {
+        "a": [
+          1,
+          2.5,
+          -0.0,
+          1e+21,
+          "\u00e9 "
+        ],
+        "m": {
+          "a": null,
+          "b": true
+        },
+        "z": null
+      }
+    },
+    {
+      "sha256": "55effe1a402707fdcec1e3a521714fac22f68453bc51aa092516441f0a00d91d",
+      "value": {
+        "A": 5,
+        "a": 6,
+        "z": 3,
+        "\u00e9": 4,
+        "\u20ac": 1,
+        "\ud83d\ude00": 2
+      }
+    },
+    {
+      "sha256": "4b41818d0a2f463b6b99d61835bd16cb67f52b14cd0bca12465d4b1a5592f163",
+      "value": {
+        "text": "quote \" backslash \\ tab \t newline \n bell \u0007 \u2028"
+      }
+    },
+    {
+      "sha256": "91b8b40b90bc211a3d010078ef50b74d134501cc4746d093ba98d624bbe4e0ac",
+      "value": {
+        "n": [
+          0,
+          -1,
+          0.1,
+          1e-07,
+          1e-06,
+          1.2345678901234568e+20,
+          5e-324,
+          1.5e+300
+        ]
+      }
+    },
+    {
+      "sha256": "433db951c79b32fa6ac9fabeb6d006bc2f5daaa28e2bf94fb3d4cf8c6901e030",
+      "value": {
+        "nested": [
+          {
+            "drop": null,
+            "keep": [
+              null,
+              1
+            ]
+          },
+          null,
+          {
+            "deep": {
+              "x": null
+            }
+          }
+        ]
+      }
+    }
+  ],
   "displayable": [
     "approved",
     "provisional"
