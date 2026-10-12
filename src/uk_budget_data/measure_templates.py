@@ -293,16 +293,27 @@ def _replace_formula(sim, name, formula):
     _apply_reform_class(FormulaReform, sim)
 
 
+# Audited receipt selectors; Pension Credit components need receipt gates.
+_BENEFIT_RECEIPT_GATES = {
+    "universal_credit": None,
+    "guarantee_credit": "in_receipt_of_guarantee_credit",
+    "savings_credit": "pension_credit",
+}
+
+
 def apply_benefit_receipt_payment(
     sim, *, amount, eligible_benefits, geography, channel, year
 ):
     """Add a lump sum once per household, based on actual annual receipt.
 
-    Receipt on a payment date is approximated by annual receipt. Benefits
-    are read on their native person, benefit-unit or household entity before
-    household ``any`` projection. For guarantee credit, the engine's receipt
-    indicator also enforces age eligibility and Pension Credit take-up.
-    Savings credit is gated by actual Pension Credit receipt too.
+    Receipt on a payment date is approximated by annual receipt. Only
+    ``universal_credit``, ``guarantee_credit`` and ``savings_credit`` are
+    supported. Universal Credit is natively gated by ``would_claim_uc``.
+    The two Pension Credit components are entitlement amounts: guarantee
+    credit additionally requires ``in_receipt_of_guarantee_credit``, which
+    enforces eligibility and take-up, and savings credit requires positive
+    actual ``pension_credit`` receipt. All are projected from benefit units
+    with household ``any``.
     ``geography`` is ``GB`` (excludes Northern Ireland) or ``UK``.
     Choose an existing household income/benefit channel with a formula and
     the appropriate tax/means-test treatment, e.g. the cost-of-living channel.
@@ -328,6 +339,11 @@ def apply_benefit_receipt_payment(
         raise ValueError("Payment channel must have a household formula")
     benefits = {}
     for name in eligible_benefits:
+        if name not in _BENEFIT_RECEIPT_GATES:
+            raise ValueError(
+                f"Unsupported receipt selector: {name}; choose "
+                + ", ".join(_BENEFIT_RECEIPT_GATES)
+            )
         variable = sim.tax_benefit_system.get_variable(
             name, check_existence=True
         )
@@ -354,13 +370,10 @@ def apply_benefit_receipt_payment(
                 positive = household.any(household.members(name, period) > 0)
             else:
                 received = household.members.benunit(name, period) > 0
-                if name == "guarantee_credit":
-                    received &= household.members.benunit(
-                        "in_receipt_of_guarantee_credit", period
-                    )
-                if name == "savings_credit":
+                receipt_gate = _BENEFIT_RECEIPT_GATES[name]
+                if receipt_gate is not None:
                     received &= (
-                        household.members.benunit("pension_credit", period) > 0
+                        household.members.benunit(receipt_gate, period) > 0
                     )
                 positive = household.any(received)
             eligible |= positive
