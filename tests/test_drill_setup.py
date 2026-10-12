@@ -102,7 +102,7 @@ def test_dataset_and_runtime_mismatch_fail_closed(tmp_path, monkeypatch):
     monkeypatch.setattr(
         drill_setup,
         "runtime_versions",
-        lambda: {"policyengine-uk": "2.120.0", "policyengine-core": "3.32.5"},
+        lambda: {"policyengine-uk": "2.125.1", "policyengine-core": "3.32.5"},
     )
     with pytest.raises(RuntimeError, match="engine mismatch"):
         drill_setup.verify_runtime()
@@ -146,8 +146,8 @@ def test_mock_api_baseline_and_old_policy_rejection(monkeypatch):
     client = TestClient(app)
     health = client.get("/api/health").json()
     assert health["versions"] == {
-        "policyengine-uk": "2.120.0",
-        "policyengine-core": "3.32.17",
+        "policyengine-uk": "2.125.1",
+        "policyengine-core": "3.33.0",
     }
     result = client.post(
         "/api/personal-impact",
@@ -216,8 +216,8 @@ def test_modifier_reads_frozen_baseline_before_caching_nics(baseline):
 def test_latest_runtime_is_distinct_from_dataset_build():
     provenance = drill_setup.drill_provenance()
     assert provenance["runtime"] == {
-        "policyengine-uk": "2.120.0",
-        "policyengine-core": "3.32.17",
+        "policyengine-uk": "2.125.1",
+        "policyengine-core": "3.33.0",
     }
     assert provenance["dataset_build"] == {
         "policyengine-uk": "2.100.0",

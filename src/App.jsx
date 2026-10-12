@@ -424,8 +424,9 @@ function App() {
               )}
             </p>
             <p role="note" className="dashboard-intro">
-              MOCK drill 2 setup. UK 2.120.0 runs a dataset built on UK 2.100.0;
-              calibration under this runtime is unvalidated.
+              MOCK drill 3 setup. policyengine.py 6.2.7 (UK 2.125.1) runs the
+              Microcosm national dataset built on UK 2.100.0; national figures are
+              unvalidated under this engine.
               no measures or costings are published before statement release.
               Constituency estimates are unavailable for this national release.
             </p>
