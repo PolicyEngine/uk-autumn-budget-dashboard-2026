@@ -36,7 +36,7 @@
       "metrics.csv": "491434ec9f06fd87d3ba375920f074d2fb9c9f40ac071d0c66bba66d277b03e9",
       "winners_losers.csv": "d868aaa18a43441d5a6f5af8b9022a19645fa6d23a4c9d17346b04d3836e16d5"
     },
-    "generated_at": "2026-10-12T16:44:44.116913+00:00",
+    "generated_at": "2026-10-12T17:10:41.058754+00:00",
     "generator_argv": [
       "test"
     ],
@@ -49,7 +49,7 @@
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr579@f951bd5",
+    "receipt_source": "vendored-w4-pr588@1ec7c76",
     "tree_clean": true,
     "unsupported_years": [
       2031
