@@ -82,17 +82,21 @@ def _merge(
     member_id: str,
     side: str,
 ) -> None:
-    """Add one member's parameter changes, refusing conflicting values."""
+    """Add one member's parameter changes.
+
+    Members must change disjoint parameters (policyengine.py's composition
+    v1): a second member touching a parameter another has changed is
+    refused, even with the same value, since how two changes to one
+    parameter merge depends on their form.
+    """
     for path, periods in (changes or {}).items():
-        existing = merged.setdefault(path, {})
-        for period, value in periods.items():
-            if period in existing and not _same(existing[period], value):
-                raise CombineConflict(
-                    f"{side}: {path} for {period} is {existing[period]!r} "
-                    f"in {owners[(path, period)]} but {value!r} in {member_id}"
-                )
-            existing[period] = value
-            owners.setdefault((path, period), member_id)
+        if path in owners and owners[path] != member_id:
+            raise CombineConflict(
+                f"{side}: {path} is changed by both {owners[path]} and "
+                f"{member_id}; make them one measure"
+            )
+        owners[path] = member_id
+        merged.setdefault(path, {}).update(periods)
 
 
 def merged_changes(measures: list[Reform], config: DataConfig) -> dict:
@@ -106,22 +110,35 @@ def merged_changes(measures: list[Reform], config: DataConfig) -> dict:
         "reform": {"parameter_changes": {}, "modifiers": []},
     }
     owners: dict = {"baseline": {}, "reform": {}}
+    configured_merged = False
     for member in member_order(measures):
         if member.has_custom_baseline():
             baseline_changes = member.baseline_parameter_changes
             baseline_modifier = member.baseline_simulation_modifier
-        else:
+            baseline_owner = member.id
+        elif not configured_merged:
+            # The configured baseline is shared, so it is applied once.
             baseline_changes = config.baseline_parameter_changes
             baseline_modifier = None
-        for side, changes, modifier in (
-            ("baseline", baseline_changes, baseline_modifier),
-            ("reform", member.parameter_changes, member.simulation_modifier),
+            baseline_owner = "the configured baseline"
+            configured_merged = True
+        else:
+            baseline_changes, baseline_modifier = None, None
+            baseline_owner = "the configured baseline"
+        for side, changes, modifier, owner in (
+            ("baseline", baseline_changes, baseline_modifier, baseline_owner),
+            (
+                "reform",
+                member.parameter_changes,
+                member.simulation_modifier,
+                member.id,
+            ),
         ):
             _merge(
                 sides[side]["parameter_changes"],
                 owners[side],
                 changes,
-                member.id,
+                owner,
                 side,
             )
             # Every member's modifier runs, once per member, in member

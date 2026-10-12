@@ -168,10 +168,18 @@ class World:
         years=DATASET_YEARS,
         dataset_name: str = "enhanced_frs_2024_25",
     ):
-        """A stand-in simulation carrying what the receipt builder reads."""
+        """A stand-in simulation carrying what the receipt builder reads.
+
+        Like policyengine's materializer, it records the dataset's hash when
+        the simulation is built.
+        """
+        source = Path(dataset or self._dataset)
         return SimpleNamespace(
             policyengine_bundle={
-                "runtime_dataset_source": str(dataset or self._dataset),
+                "runtime_dataset_source": str(source),
+                "runtime_dataset_sha256": hashlib.sha256(
+                    source.read_bytes()
+                ).hexdigest(),
                 "country_id": "uk",
                 "runtime_dataset": dataset_name,
             },

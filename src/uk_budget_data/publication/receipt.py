@@ -31,7 +31,7 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-pr579@9672ad3"
+VENDORED_SOURCE = "vendored-w4-pr579@69390c5"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 
@@ -42,11 +42,6 @@ BASIS_STATUSES = ("pre_budget", "updated")
 # manifest file.
 ARTIFACTS_PREFIX = "public/data/artifacts/"
 MANIFEST_PATH = "public/data/manifest.json"
-# How uk_budget_data.publication.combine applies a combined run's members.
-COMPOSITION_ORDER = (
-    "merged parameter changes first, then each member's modifier in member "
-    "order, all inside one simulation modifier"
-)
 # Dashboard fields that describe one generation run rather than what was
 # generated, left out of the artifact digest.
 VOLATILE_DASHBOARD_FIELDS = ("generated_at", "generator_argv")
@@ -207,9 +202,16 @@ def combined_identities(
     """
     api, _ = receipt_api()
     baselines, reforms, records = [], [], []
+    configured_included = False
     for member in members:
         baseline, reform = measure_identities(member, config, revision)
-        baselines.append(baseline)
+        # Members without a baseline of their own share the configured one,
+        # which the combined run applies once, so it is bound once.
+        if member.has_custom_baseline():
+            baselines.append(baseline)
+        elif not configured_included:
+            baselines.append(baseline)
+            configured_included = True
         reforms.append(reform)
         records.append(
             {
@@ -314,32 +316,6 @@ class ReceiptInputs:
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
 
 
-def _with_dataset_hash(sim):
-    """The simulation, with the SHA-256 of the dataset it loaded recorded.
-
-    policyengine.py's receipt (from PR #571) refuses a simulation whose
-    managed loader recorded no hash of the dataset bytes at load time
-    (``policyengine_bundle["runtime_dataset_sha256"]``). Installed releases
-    before that PR record none. In that case the file is hashed here, now,
-    and the receipt document says so (``dataset_sha256_taken``): the receipt
-    still names the exact bytes on disk, but not as checked at load time.
-
-    Returns (simulation, "at load" or "at receipt").
-    """
-    from types import SimpleNamespace
-
-    from policyengine.utils.hashing import sha256_file
-
-    bundle = dict(getattr(sim, "policyengine_bundle", None) or {})
-    if bundle.get("runtime_dataset_sha256"):
-        return sim, "at load"
-    source = bundle.get("runtime_dataset_source")
-    if not source or not Path(source).exists():
-        return sim, "at load"
-    bundle["runtime_dataset_sha256"] = sha256_file(source)
-    return SimpleNamespace(policyengine_bundle=bundle), "at receipt"
-
-
 def build_receipt_document(
     sim_baseline, sim_reform, inputs: ReceiptInputs
 ) -> dict:
@@ -353,8 +329,6 @@ def build_receipt_document(
     years = sorted(set(int(year) for year in inputs.years))
     outputs = dict(sorted(inputs.file_digests.items()))
     supported = dataset_years(sim_reform)
-    sim_reform, hashed_at = _with_dataset_hash(sim_reform)
-    sim_baseline, _ = _with_dataset_hash(sim_baseline)
     try:
         receipt = api.build_execution_receipt_for_microsimulation(
             sim_reform,
@@ -392,12 +366,6 @@ def build_receipt_document(
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,
-        # How the members were combined, which the composition identity's
-        # representation does not yet say (policyengine-uk 2.125.1 would
-        # run a Scenario's modifier before its parameter changes).
-        "composition_order": (
-            COMPOSITION_ORDER if inputs.members is not None else None
-        ),
         "config_baseline": (
             json.loads(inputs.config_baseline_identity.model_dump_json())
             if inputs.config_baseline_identity is not None
@@ -421,7 +389,6 @@ def build_receipt_document(
         ),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
-        "dataset_sha256_taken": hashed_at,
         "publishable": not reasons,
         "reasons": reasons,
     }
