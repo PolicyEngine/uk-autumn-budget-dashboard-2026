@@ -28,6 +28,7 @@ from uk_budget_data.publication.artifacts import (
 from uk_budget_data.publication.manifest import load_manifest
 from uk_budget_data.publication.receipt import (
     BASIS_PATH,
+    CodeRevision,
     ReceiptInputs,
     ReceiptUnavailable,
     build_receipt_document,
@@ -35,7 +36,7 @@ from uk_budget_data.publication.receipt import (
     combined_identities,
     load_basis,
     measure_identities,
-    receipt_api,
+    scenario_identity,
 )
 from uk_budget_data.publication.tables import (
     bin_scatter,
@@ -51,8 +52,14 @@ class GenerationReport:
     refused: dict[str, str] = field(default_factory=dict)
 
 
-def result_tables(result: ReformResult) -> dict[str, list[dict]]:
-    """An artifact's tables from one processed reform."""
+def result_tables(
+    result: ReformResult, years: Optional[list[int]] = None
+) -> dict[str, list[dict]]:
+    """An artifact's tables from one processed reform.
+
+    ``years`` are the years the run reported; the household scatter keeps
+    only households present in every one of them.
+    """
     return {
         "budgetary_impact": result.budgetary_impact,
         "distributional_impact": result.distributional_impact,
@@ -60,7 +67,7 @@ def result_tables(result: ReformResult) -> dict[str, list[dict]]:
         "metrics": result.metrics,
         "income_curve": result.income_curve,
         "household_scatter": sample_household_scatter(
-            result.household_scatter
+            result.household_scatter, years=years
         ),
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "constituency": result.constituency,
@@ -68,16 +75,14 @@ def result_tables(result: ReformResult) -> dict[str, list[dict]]:
     }
 
 
-def _config_baseline_identity(config: DataConfig):
-    api, _ = receipt_api()
-    return api.reform_identity(
-        config.baseline_parameter_changes or None,
-        (
-            "policyengine-uk.reform_dict/v1"
-            if config.baseline_parameter_changes
-            else None
-        ),
+def _config_baseline_identity(config: DataConfig, revision: CodeRevision):
+    """The configured baseline, bound exactly as a member that uses it binds
+    its baseline (``receipt.measure_identities``), so the gate can tell a
+    shared configured baseline from a member's own."""
+    return scenario_identity(
+        config.get_baseline_scenario(),
         name="configured baseline",
+        revision=revision,
     )
 
 
@@ -176,7 +181,7 @@ def generate_artifacts(
     written_outputs: dict[str, str] = {}
     revision = code_revision(repo_root)
     basis = load_basis(repo_root / BASIS_PATH)
-    config_baseline = _config_baseline_identity(config)
+    config_baseline = _config_baseline_identity(config, revision)
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
 
@@ -217,7 +222,10 @@ def generate_artifacts(
             return build_receipt_document(baseline, reformed, inputs)
 
         reference = write_artifact(
-            result_tables(result), key, build_receipt, artifacts_root
+            result_tables(result, list(config.years)),
+            key,
+            build_receipt,
+            artifacts_root,
         )
         report.written.append(reference)
         written_outputs[key] = reference.outputs_sha256

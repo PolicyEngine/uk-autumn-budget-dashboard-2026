@@ -13,7 +13,7 @@ import hashlib
 import io
 import math
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Optional
 
 STR, INT, FLOAT, BOOL = "str", "int", "float", "bool"
 # Integers beyond this cannot all be told apart once read as floats (here, or
@@ -339,14 +339,17 @@ def sample_household_scatter(
     rows: Iterable[Mapping[str, Any]],
     size: int = SCATTER_SAMPLE_SIZE,
     seed: int = SCATTER_SAMPLE_SEED,
+    years: Optional[Iterable[int]] = None,
 ) -> list[dict]:
     """The household scatter as the dashboard has always published it.
 
     Like scripts/sample_household_scatter.py: households present in every
     year are sampled once, weighted by their first-year weight, and kept
     in every year, with the same columns as public/data/
-    household_scatter.csv. The sample is by household, not by draw order,
-    so it is the same across measures (see _sampling_key).
+    household_scatter.csv. The sample is by household, not by draw order:
+    it depends only on the households, their first-year weights and the
+    seed. Weights are the dataset's, which a measure's own baseline leaves
+    unchanged unless it rewrites them, so measures share their sample.
 
     Args:
         rows: One row per household and year, with ``reform_id``,
@@ -354,12 +357,16 @@ def sample_household_scatter(
             ``income_change``, ``household_weight`` and ``household_id``.
         size: Households to keep.
         seed: Seed of the sampling keys.
+        years: Every year the run reported. A household must be present in
+            each, so a year with no rows in range empties the sample. By
+            default, the years the rows cover.
     """
     columns = TABLES["household_scatter"].column_names
     rows = [{name: row[name] for name in columns} for row in rows]
-    if not rows:
+    covered = {int(row["year"]) for row in rows}
+    years = sorted(covered if years is None else {int(y) for y in years})
+    if not rows or not years or not set(years) <= covered:
         return []
-    years = sorted({int(row["year"]) for row in rows})
     present = [
         {int(row["household_id"]) for row in rows if row["year"] == year}
         for year in years

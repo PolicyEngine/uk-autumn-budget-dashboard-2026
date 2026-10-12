@@ -6,8 +6,12 @@ a weighted sample of households kept in every year. Invariants:
 
 - the columns are exactly the published file's;
 - at most SCATTER_SAMPLE_SIZE households, the same ones in every year;
-- the sample depends only on the households, never on the measure: two
-  measures over the same households keep the same ones;
+- the sample depends only on the households, their first-year weights and
+  the seed, never on the measure's reform: two measures over the same
+  households and weights keep the same ones (weights are the dataset's,
+  which a baseline changes only if it rewrites them);
+- a household must be present in every reported year, and the sample
+  never holds more than SCATTER_SAMPLE_SIZE households;
 - removing other households never drops a sampled household that remains
   eligible (so measures whose baselines move a few households across the
   income range still share almost all of their sample);
@@ -140,3 +144,22 @@ def test_a_sample_that_differs_between_years_is_refused():
         "household_scatter: the sampled households differ between years"
         in (problems)
     )
+
+
+def test_a_year_with_no_households_in_range_empties_the_sample():
+    """Review round 5: a year with no rows was missing from the
+    intersection, so the sample kept households absent from that year."""
+    data = rows("alpha", {1: 1.0, 2: 1.0}, years=(2027,))
+    assert sample_household_scatter(data, years=[2027, 2028]) == []
+    assert ids(sample_household_scatter(data, years=[2027])) == {1, 2}
+
+
+def test_more_households_than_the_sample_size_are_refused():
+    """Review round 5: the validator did not limit the sample's size."""
+    households = {n: 1.0 for n in range(SCATTER_SAMPLE_SIZE + 1)}
+    problems = table_problems(
+        {"household_scatter": rows("alpha", households)},
+        key="alpha",
+        years=[2027, 2028],
+    )
+    assert any("more than the 500 sampled" in p for p in problems)
