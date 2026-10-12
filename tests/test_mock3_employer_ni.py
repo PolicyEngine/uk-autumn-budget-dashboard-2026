@@ -20,7 +20,7 @@ from uk_budget_data.mock_drill3_employer_ni import (
 YEAR = 2027
 RATE = 0.15
 ST = 5_000.0
-UEL = 50_269.96
+UEL = 50_269.96  # engine native UEL (relief uses Annex A UST 50,270)
 
 
 def _situation(age, employment_income, year=YEAR):
@@ -81,14 +81,14 @@ def test_age_21_on_30k():
 
 
 def test_age_21_above_uel():
-    # Relief stops at the UEL: 15% x (50,269.96 - 5,000) = £6,790.49.
+    # Relief stops at the Annex A UST: 15% x (50,270 - 5,000) = £6,790.50.
     # Above the UEL the 15% still applies: baseline 15% x 55,000 = £8,250,
     # reform 15% x (60,000 - 50,269.96) = £1,459.51.
     assert _change(21, 60_000, "ni_employer") == pytest.approx(
         -RATE * (UEL - ST), abs=0.01
     )
     assert _change(21, 60_000, "ni_employer") == pytest.approx(
-        -6_790.49, abs=0.01
+        -6_790.50, abs=0.01
     )
 
 

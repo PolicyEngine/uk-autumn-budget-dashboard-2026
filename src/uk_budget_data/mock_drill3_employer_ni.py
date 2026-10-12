@@ -32,6 +32,12 @@ from uk_budget_data.models import Reform
 MOCK3_EMPLOYER_NI_YEARS = range(2027, 2032)
 MOCK3_EMPLOYER_NI_AGE = 21  # under-21s already relieved in law
 WEEKS_IN_YEAR = 52
+# Annex A: Upper Secondary Threshold £50,270 (constant) and Secondary
+# Threshold £5,000 to 2030-31, £5,100 in 2031-32 (engine native matches ST).
+# baseline_mismatch: Annex A baseline already zero-rates under-21s; the
+# engine does not. No effect on the age-21 increment scored here.
+MOCK3_UPPER_SECONDARY_THRESHOLD = 50_270
+MOCK3_ANNEX_A_SECONDARY_THRESHOLD = {y: (5_100 if y == 2031 else 5_000) for y in range(2027, 2032)}
 
 
 def _mock3_age_21_relief(sim: Simulation, year: int) -> np.ndarray:
@@ -45,8 +51,8 @@ def _mock3_age_21_relief(sim: Simulation, year: int) -> np.ndarray:
         f"{year}-04-30"
     ).gov.hmrc.national_insurance.class_1
     rate = class_1.rates.employer
-    st = class_1.thresholds.secondary_threshold * WEEKS_IN_YEAR
-    uel = class_1.thresholds.upper_earnings_limit * WEEKS_IN_YEAR
+    st = MOCK3_ANNEX_A_SECONDARY_THRESHOLD[year]
+    uel = MOCK3_UPPER_SECONDARY_THRESHOLD  # Annex A constant, not engine UEL
     charge = np.asarray(sim.calculate("ni_class_1_employer", period=year))
     age = np.asarray(sim.calculate("age", period=year))
     cap = rate * max(uel - st, 0)
