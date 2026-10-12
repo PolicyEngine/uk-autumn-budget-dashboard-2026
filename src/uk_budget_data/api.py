@@ -89,6 +89,13 @@ class APIHouseholdInput(BaseModel):
     bus_spending: float = Field(default=0.0, ge=0)
     capital_gains: float = Field(default=0.0, ge=0)
     region: str = Field(default="LONDON", description="UK household region")
+    brma: str | None = Field(
+        default=None,
+        description=(
+            "Broad Rental Market Area (policyengine-uk BRMAName member); "
+            "None keeps the engine default (Maidstone)"
+        ),
+    )
     fuel_type: str = Field(default="PETROL", description="PETROL or DIESEL")
     self_employment_income: float = Field(default=0, ge=0)
     fuel_litres: float = Field(default=0, ge=0)
@@ -148,6 +155,18 @@ class APIHouseholdInput(BaseModel):
         """Accept only PolicyEngine-UK region identifiers."""
         if value not in Region.__members__ or value == "UNKNOWN":
             raise ValueError("Unknown UK region")
+        return value
+
+    @field_validator("brma")
+    @classmethod
+    def validate_brma(cls, value):
+        """Accept only PolicyEngine-UK Broad Rental Market Area identifiers."""
+        from policyengine_uk.variables.household.demographic.locations import (
+            BRMAName,
+        )
+
+        if value is not None and value not in BRMAName.__members__:
+            raise ValueError("Unknown Broad Rental Market Area")
         return value
 
     @field_validator("fuel_type")

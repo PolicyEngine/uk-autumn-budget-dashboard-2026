@@ -36,6 +36,8 @@ class HouseholdInput:
     bus_spending: float = 0.0
     capital_gains: float = 0.0
     region: str = "LONDON"
+    # Broad Rental Market Area; None keeps the engine default (Maidstone).
+    brma: str | None = None
     fuel_type: str = "PETROL"
     self_employment_income: float = 0.0
     fuel_litres: float = 0.0
@@ -141,15 +143,16 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
             benunit_members.append(child_id)
             household_members.append(child_id)
 
+    household_entity = {
+        "members": household_members,
+        "region": {year: household.region},
+    }
+    if household.brma is not None:
+        household_entity["brma"] = {year: household.brma}
     return {
         "people": people,
         "benunits": {"benunit": {"members": benunit_members}},
-        "households": {
-            "household": {
-                "members": household_members,
-                "region": {year: household.region},
-            }
-        },
+        "households": {"household": household_entity},
     }
 
 
@@ -415,6 +418,8 @@ class PersonalImpactCalculator:
                 ),
                 "bus_fare_spending": household.bus_spending,
             }
+            if household.brma is not None:
+                household_inputs["brma"] = household.brma
 
             def metrics(parameters=None, bus_saving=0):
                 inputs = dict(household_inputs)
