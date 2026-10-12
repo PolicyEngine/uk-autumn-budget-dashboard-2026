@@ -1,9 +1,10 @@
 """Keyed, immutable artifacts.
 
 Generating a measure writes one new directory holding that measure's tables
-and its receipt, named by the measure and the receipt's digest:
+and its receipt, named by the measure and the artifact digest (the receipt
+document without its run-specific fields; see ``receipt.artifact_sha256``):
 
-    public/data/artifacts/<key>/<receipt digest prefix>/
+    public/data/artifacts/<key>/<artifact digest prefix>/
 
 A directory is written once, atomically, and never changed, so generating
 one measure cannot overwrite or erase another, and anything that names an
@@ -21,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
+from uk_budget_data.publication.receipt import artifact_sha256
 from uk_budget_data.publication.tables import (
     TABLES,
     TableError,
@@ -50,6 +52,7 @@ class ArtifactRef:
     outputs_sha256: str
     receipt_sha256: str
     execution_identity_sha256: str
+    artifact_sha256: str
     created: bool
 
 
@@ -103,10 +106,11 @@ def write_artifact(
             document for these exact files.
         root: The artifacts directory.
 
-    If an artifact with the same receipt digest already exists with the same
-    files, nothing is written. If it exists with different files, that is an
-    error: published bytes are never replaced.
+    If an artifact with the same digest already exists with the same files
+    and the same receipt content, nothing is written. If it exists with any
+    difference, that is an error: published bytes are never replaced.
     """
+
     check_key(key)
     files = table_files(tables, key)
     digests = {name: sha256_bytes(data) for name, data in files.items()}
@@ -115,13 +119,15 @@ def write_artifact(
     if document["dashboard"]["files"] != dict(sorted(digests.items())):
         raise ArtifactError(f"{key}: the receipt lists different files")
 
-    target = root / key / recorded["receipt_sha256"][:16]
+    digest = artifact_sha256(document)
+    target = root / key / digest[:16]
     reference = dict(
         key=key,
         path=target,
         outputs_sha256=recorded["outputs_sha256"],
         receipt_sha256=recorded["receipt_sha256"],
         execution_identity_sha256=recorded["execution_identity_sha256"],
+        artifact_sha256=digest,
     )
     if target.exists():
         for name, data in files.items():
@@ -130,6 +136,14 @@ def write_artifact(
                 raise ArtifactError(
                     f"{target} already exists with different {name}"
                 )
+        try:
+            stored = artifact_sha256(read_receipt(target))
+        except (ArtifactError, ValueError) as error:
+            raise ArtifactError(f"{target}: {error}") from error
+        if stored != digest:
+            raise ArtifactError(
+                f"{target} already exists with a different receipt"
+            )
         return ArtifactRef(**reference, created=False)
 
     target.parent.mkdir(parents=True, exist_ok=True)

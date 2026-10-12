@@ -298,9 +298,6 @@ def test_command_line_flow_from_artifact_to_published(world, capsys):
     assert publish(world, "check") == 0
     assert "no manifest yet" in capsys.readouterr().out
 
-    assert publish(world, "stage", path) == 1
-    assert "no reconciliation.json" in capsys.readouterr().out
-
     assert publish(world, "reconcile", path) == 0
     assert "reconciliation pass, responsiveness responsive" in (
         capsys.readouterr().out

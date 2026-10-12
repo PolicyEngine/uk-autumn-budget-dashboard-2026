@@ -247,3 +247,33 @@ def test_certified_skip_allowed_locally(pytester, monkeypatch):
     )
     result.assert_outcomes(skipped=1)
     assert result.ret == 0
+
+
+MODULE_SKIPPED_WHILE_COLLECTING = """
+import pytest
+
+pytest.skip("cannot import the dataset helpers", allow_module_level=True)
+
+@pytest.mark.certified_data
+def test_never_collected():
+    assert True
+"""
+
+
+def test_a_module_skipped_while_collecting_fails_when_required(
+    pytester, monkeypatch
+):
+    result = run_isolated(
+        pytester, monkeypatch, MODULE_SKIPPED_WHILE_COLLECTING, "hf_x", True
+    )
+    assert result.ret == pytest.ExitCode.TESTS_FAILED
+    result.stdout.fnmatch_lines(["*skipped while collecting*"])
+
+
+def test_a_module_skipped_while_collecting_is_allowed_locally(
+    pytester, monkeypatch
+):
+    result = run_isolated(
+        pytester, monkeypatch, MODULE_SKIPPED_WHILE_COLLECTING, "hf_x", False
+    )
+    assert result.ret in (0, pytest.ExitCode.NO_TESTS_COLLECTED)

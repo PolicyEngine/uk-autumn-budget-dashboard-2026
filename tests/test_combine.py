@@ -133,14 +133,16 @@ def test_generic_combination_reproduces_the_hand_built_2025_reform():
     assert sides["reform"]["parameter_changes"] == (
         hand_built.parameter_changes or {}
     )
-    assert {m.__name__ for m in sides["baseline"]["modifiers"]} == {
+    # Lists in member order (by id), so a dropped or repeated modifier
+    # shows.
+    assert [m.__name__ for m in sides["baseline"]["modifiers"]] == [
         "_set_pre_budget_dividend_rates",
         "_connect_student_loan_variables",
-    }
-    assert {m.__name__ for m in sides["reform"]["modifiers"]} == {
-        "_rail_fares_freeze_modifier",
+    ]
+    assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
         "_connect_student_loan_variables",
-    }
+        "_rail_fares_freeze_modifier",
+    ]
 
 
 def test_engine_wipes_a_modifiers_parameters_when_given_changes_too():
@@ -224,3 +226,15 @@ def test_sample_instants_bracket_each_fiscal_year():
         "2027-04-30",
         "2027-12-31",
     ]
+
+
+def shared_modifier(sim):
+    return sim
+
+
+def test_a_modifier_shared_by_two_members_runs_once_for_each():
+    """Review finding: a shared modifier was silently applied once."""
+    a = measure("a", simulation_modifier=shared_modifier)
+    b = measure("b", simulation_modifier=shared_modifier)
+    sides = merged_changes([a, b], CONFIG)
+    assert sides["reform"]["modifiers"] == [shared_modifier, shared_modifier]

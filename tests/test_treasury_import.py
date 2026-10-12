@@ -220,3 +220,21 @@ def test_round_trip_and_any_large_slip_is_caught(table, which, year, error):
     if abs(error) > allowance:
         with pytest.raises(TotalsMismatch):
             check_totals(slipped)
+
+
+def test_repeated_fiscal_year_columns_are_refused():
+    rows = [
+        ("", "", "Head", "2026-27", "2026-27", "2028-29"),
+        ("1", "A measure", "Tax", 100, 200, 300),
+        ("", "Total policy decisions", "", 100, 200, 300),
+    ]
+    with pytest.raises(ScorecardError, match="repeat: 2026-27"):
+        parse_rows(rows)
+
+
+@pytest.mark.parametrize(
+    "bad", ["NaN", "nan", "inf", "-Infinity", float("nan")]
+)
+def test_non_finite_figures_are_refused(bad):
+    with pytest.raises(ScorecardError, match="finite"):
+        parse_figure(bad)

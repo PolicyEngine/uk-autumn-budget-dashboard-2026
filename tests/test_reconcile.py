@@ -437,3 +437,141 @@ def test_loaders_reject_bad_inputs(tmp_path):
     with pytest.raises(ReconciliationInputError, match="basis"):
         load_sources(inputs / "sources")
     assert load_mapping(inputs / "mapping.csv")[0].scale == 1.0
+
+
+# --- review findings (12 October) -----------------------------------------
+
+
+def test_a_partly_entered_comparator_is_awaiting_not_passed():
+    """Two mapped rows, one entered: the partial sum must never pass."""
+    result = run(
+        {2027: 1.0},
+        [source(2027, 1.0, row_id="1")],
+        mapping=[link(row_id="1"), link(row_id="2")],
+        expected=[ExpectedEffect("m", "positive", 2027)],
+    )
+    row = result["rows"][0]
+    assert row["status"] == AWAITING_SOURCE
+    assert row["missing"] == [
+        {"source_id": "S", "row_id": "2", "fiscal_year": "2027-28"}
+    ]
+    assert result["summary"]["status"] == AWAITING_SOURCE
+
+
+def test_a_missing_comparable_row_beside_an_excluded_one_is_awaiting():
+    result = run(
+        {2027: 1.0},
+        [],
+        mapping=[
+            link(row_id="1"),
+            link(
+                row_id="2",
+                status=NOT_COMPARABLE,
+                reason="Scottish rates",
+                reviewer="Reviewer",
+            ),
+        ],
+        expected=[ExpectedEffect("m", "positive", 2027)],
+    )
+    assert result["rows"][0]["status"] == AWAITING_SOURCE
+    assert result["summary"]["status"] == AWAITING_SOURCE
+
+
+def test_excluded_rows_leave_the_comparable_ones_gated():
+    result = run(
+        {2027: 1.0},
+        [source(2027, 1.0, row_id="1"), source(2027, 9.0, row_id="2")],
+        mapping=[
+            link(row_id="1"),
+            link(
+                row_id="2",
+                status=NOT_COMPARABLE,
+                reason="Scottish rates",
+                reviewer="Reviewer",
+            ),
+        ],
+    )
+    row = result["rows"][0]
+    assert row["status"] == PASS
+    assert row["comparator"]["value_bn"] == 1.0
+    assert row["excluded"] == [{"row_id": "2", "reason": "Scottish rates"}]
+
+
+def test_the_same_figure_entered_twice_is_refused(tmp_path):
+    sheet = tmp_path / "sources"
+    sheet.mkdir()
+    header = (
+        "source_id,document,table,row_id,row_label,fiscal_year,value_bn,"
+        "basis,sign_convention,head,notes\n"
+    )
+    line = "S,Doc,T,1,Row,2027-28,1.0,static_costing,exchequer_positive,tax,\n"
+    (sheet / "a.csv").write_text(header + line)
+    (sheet / "b.csv").write_text(header + line)
+    with pytest.raises(ReconciliationInputError, match="entered twice"):
+        load_sources(sheet)
+
+
+def test_duplicate_figures_reaching_reconcile_are_refused():
+    with pytest.raises(ReconciliationInputError, match="2 static_costing"):
+        run({2027: 2.0}, [source(2027, 1.0), source(2027, 1.0)])
+
+
+def test_a_row_mapped_twice_is_refused(tmp_path):
+    path = tmp_path / "mapping.csv"
+    path.write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,"
+        "reviewer\nm,S,1,,,,,\nm,S,1,,,,,\n"
+    )
+    with pytest.raises(ReconciliationInputError, match="mapped twice"):
+        load_mapping(path)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("min_response_bn", 0),
+        ("min_response_bn", float("inf")),
+        ("relative_tolerance", float("inf")),
+        ("absolute_floor_bn", float("nan")),
+        ("zero_tolerance_bn", -1),
+    ],
+)
+def test_thresholds_must_be_finite_and_the_floor_positive(field, value):
+    with pytest.raises(ReconciliationInputError):
+        Policy(**{field: value})
+
+
+@given(
+    st.floats(min_value=1e-9, max_value=10),
+    st.sampled_from(["positive", "negative"]),
+)
+def test_an_exact_zero_is_inert_whatever_the_floor(floor, direction):
+    result = check_responsiveness(
+        {2027: 0.0},
+        measure_id="m",
+        declarations=[ExpectedEffect("m", direction, 2027)],
+        comparators_bn={2027: None},
+        min_response_bn=floor,
+        min_response_share=0.0,
+        zero_tolerance_bn=0.0,
+    )
+    assert result["status"] == INERT
+
+
+def test_a_comparator_summing_to_zero_is_not_a_printed_zero():
+    """+£1bn and -£1bn printed: a correct +£4m net gets the ordinary floor."""
+    result = run(
+        {2027: 0.004},
+        [source(2027, 1.0, row_id="1"), source(2027, -1.0, row_id="2")],
+        mapping=[link(row_id="1"), link(row_id="2")],
+    )
+    row = result["rows"][0]
+    assert row["allowance_bn"] == POLICY.absolute_floor_bn
+    assert row["status"] == PASS
+
+
+def test_a_printed_zero_keeps_its_rounding_tolerance():
+    result = run({2027: 0.004}, [source(2027, 0.0)])
+    row = result["rows"][0]
+    assert row["allowance_bn"] == POLICY.zero_tolerance_bn
+    assert row["status"] == FAILED
