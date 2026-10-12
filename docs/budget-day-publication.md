@@ -80,8 +80,8 @@ The drill project `uk-autumn-budget-2026-drill` is unchanged. It sets `NEXT_PUBL
 | Serving | Revision `uk-budget-api-2026-00001-gow`. A service's first revision must take traffic; nothing links to it |
 | Limits | 2 CPU, 2 GiB, 300 s, public calls with the invoker IAM check off (as on the 2025 `uk-autumn-budget-lifecycle`) |
 | Images | `europe-west1-docker.pkg.dev/policyengine-apps/cloud-run-source-deploy/uk-budget-api-2026:<commit>` |
-| Deploy | No trigger. From a clean checkout of `main`: `gcloud builds submit --project policyengine-apps --config cloudbuild.yaml --substitutions _GIT_SHA=$(git rev-parse HEAD)` |
-| Rollback | The build log names the revision it replaced. `gcloud run services update-traffic uk-budget-api-2026 --project policyengine-apps --region europe-west1 --to-revisions <replaced revision>=100` |
+| Deploy | No trigger. `gcloud builds submit` on an exact `git archive` of a pushed commit, with `_GIT_SHA` naming it (runbook, "Before the day"). The build checks the source is that commit, deploys by image digest under a tag only it uses, smoke-tests that tag, and promotes only if traffic has not changed meanwhile (#21). |
+| Rollback | The build log ends with the allocation it replaced and the `gcloud run services update-traffic … --to-revisions …` command that restores it. |
 
 What else is in the project, read on 12 October: the 2025 services `uk-autumn-budget-dashboard` (2 CPU, 8 GiB) and `uk-autumn-budget-lifecycle` (1 CPU, 512 MiB), each deployed by a Cloud Build trigger on `main` of its own repository. Before 12 October no 2026 service existed there or in `policyengine-api` or `policyengine-household-api`, and no Cloud Build trigger in `policyengine-apps` or `policyengine-api` built this repository. Cloud Run is not enabled in `policyengine-app-v2`, and `policyengine-research` was not readable.
 
@@ -212,7 +212,7 @@ A script posts each household fixture through the deployed household route. It:
 - compares each answer to an independently computed expected value (±£0.01, as in the drills);
 - writes a household receipt.
 
-The same script is the runbook's household step and the post-deploy smoke test.
+This is separate from the deploy's smoke test (#21), which checks only that a new revision answers with a real calculation, not that the answers are right. The household fixtures are the check on the answers.
 
 ## Deployment and rollback
 
