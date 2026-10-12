@@ -158,7 +158,7 @@ These API results retain the engine's annual mixed basis (`period_basis=engine_a
 | Drill start: statement released | 12:30:07 | Start SHA `212f3dc`; `MOCK-statement.md` opened at 12:30:07 BST (sha256 verified `69c93e92…`) |
 | G1 measure list locked | 12:53:31 (late; due 12:45) | María locked ledger commit `c4a384e` on PR #9: 20 lines, 11 coded (1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13), 9 ledger; no changes |
 | G2 first numbers (preview URL) | 13:14:41 | Code/data `4e6dfb1` (policy source identical to generation SHA `9bd9e3f`; data `c857e96`); María's 11 hand-checked households confirmed on PR #9; statement reconciliation rows present; preview https://uk-autumn-budget-2026-drill-git-drill3-moc-483daf-policy-engine.vercel.app (Vercel ready, SSO, `x-robots-tag: noindex`). Qualifications: provisional statement/native baselines; fuel calendar-year VAT-inclusive; national figures unvalidated under this engine; API BRMA input and form salary-sacrifice field open; signed-in banner/calculator smoke open |
-| Documents released | | |
+| Documents released | 13:40:14 | 13:40 files opened at 13:40:14 BST (hashes verified before release); code at release `83dd174` |
 | G3 re-based; national sheet filled | | |
 | Correction notice released | | |
 | G5 correction re-run and re-pinned | | |
