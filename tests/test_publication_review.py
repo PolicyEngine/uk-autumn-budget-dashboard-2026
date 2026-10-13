@@ -880,3 +880,115 @@ def test_a_package_upgraded_after_loading_cannot_be_receipted(
     monkeypatch.setitem(loaded._LOADED, "policyengine-uk", "0.0.0")
     with pytest.raises(Exception, match="installed now"):
         world.write("alpha", VALUES)
+
+
+# --- round 7 (publication review) ------------------------------------------
+
+
+def _bad_config_runs(world, measures, combined_sets=None):
+    from unittest.mock import patch
+
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+
+    path = "gov.hmrc.income_tax.rates.uk[0].rate"
+    config = DataConfig(
+        years=[2027, 2028],
+        baseline_parameter_changes={path: {"2027": None}},
+    )
+    values = {2027: -1.0, 2028: -2.0}
+    keys = [m.id for m in measures] + [
+        "combined--" + "+".join(sorted(x.id for x in members))
+        for members in combined_sets or []
+    ]
+    with patch.object(
+        generate, "code_revision", lambda root: world.revision()
+    ):
+        return generate.generate_artifacts(
+            measures,
+            config,
+            combined_sets=combined_sets,
+            artifacts_root=world.artifacts,
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process(dict.fromkeys(keys, values)),
+        )
+
+
+def _measure(name, index, own_baseline):
+    from uk_budget_data.models import Reform
+
+    path = f"gov.hmrc.income_tax.rates.uk[{index}].rate"
+    return Reform(
+        id=name,
+        name=name.title(),
+        parameter_changes={path: {"2027": 0.21 + index / 100}},
+        baseline_parameter_changes=(
+            {path: {"2027": 0.19 + index / 100}} if own_baseline else None
+        ),
+    )
+
+
+def test_a_run_using_a_malformed_configured_baseline_refuses_only_itself(
+    world,
+):
+    """Review round 7: a run that used the malformed configured baseline
+    raised out of generation, so later measures were never written."""
+    report = _bad_config_runs(
+        world, [_measure("beta", 1, False), _measure("alpha", 0, True)]
+    )
+    assert [r.key for r in report.written] == ["alpha"]
+    assert "invalid scenario" in report.refused["beta"]
+
+
+def test_a_combined_set_of_own_baselines_ignores_the_configured_one(world):
+    """Review round 7: a combined set whose members all bring their own
+    baselines still bound the configured baseline, and was refused."""
+    alpha, gamma = _measure("alpha", 0, True), _measure("gamma", 1, True)
+    report = _bad_config_runs(world, [alpha, gamma], [[alpha, gamma]])
+    assert report.refused == {}
+    assert sorted(r.key for r in report.written) == [
+        "alpha",
+        "combined--alpha+gamma",
+        "gamma",
+    ]
+
+
+def test_versions_are_recorded_when_the_package_is_imported():
+    """Review round 7: versions were first recorded at the first receipt
+    call, after the model was imported. The package now records them on
+    import, before anything imports policyengine. Checked in a fresh
+    process, where nothing else has called the receipt code."""
+    import subprocess
+    import sys
+
+    probe = (
+        "import uk_budget_data\n"
+        "from uk_budget_data.publication._vendor_w4.loaded import "
+        "loaded_versions\n"
+        "print(sorted(loaded_versions()))\n"
+    )
+    output = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert output.strip() == str(
+        ["policyengine", "policyengine-core", "policyengine-uk"]
+    )
+
+
+def test_a_receipt_module_without_the_version_recorder_is_not_adopted():
+    """Review round 7: the capability check did not require the recorder."""
+    import types
+
+    from uk_budget_data.publication import receipt as adapter
+
+    vendored, _ = adapter.receipt_api()
+    without = types.ModuleType("receipt_without_recorder")
+    for name in (*adapter._REQUIRED_API, "NONFINITE_KEY"):
+        setattr(without, name, getattr(vendored, name))
+    assert not adapter._has_what_we_need(without)
+    without.loaded_versions = vendored.loaded_versions
+    assert adapter._has_what_we_need(without)
