@@ -16,10 +16,16 @@ COPY src/ ./src/
 # Install dependencies and the package
 RUN uv sync --frozen --no-dev
 
+# Build identity reported by /api/version for deployed-route checks
+ARG GIT_SHA=""
+ENV GIT_SHA=${GIT_SHA}
+
 # Cloud Run uses PORT env var
 ENV PORT=8080
 
 EXPOSE 8080
 
 # Run with uvicorn
-CMD ["uv", "run", "uvicorn", "uk_budget_data.api:app", "--host", "0.0.0.0", "--port", "8080"]
+# --no-sync: the image is already synced; without it uv rebuilds the package
+# on every container start.
+CMD ["uv", "run", "--no-sync", "uvicorn", "uk_budget_data.api:app", "--host", "0.0.0.0", "--port", "8080"]
