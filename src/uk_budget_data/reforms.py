@@ -415,7 +415,7 @@ def _connect_student_loan_variables(sim: Simulation) -> Simulation:
 
     Note: Requires policyengine-uk-data with student_loan_plan imputation.
 
-    In policyengine-uk 2.125.1, ``gov_tax``, ``household_tax`` and
+    In policyengine-uk 2.125.1 and 2.126.12, ``gov_tax``, ``household_tax`` and
     ``hbai_household_net_income`` count ``student_loan_repayments``, whose
     formula returns the modelled ``student_loan_repayment``. The dataset
     supplies its own ``student_loan_repayments`` values, which mask that
