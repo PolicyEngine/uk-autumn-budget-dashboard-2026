@@ -46,7 +46,7 @@ def test_payment_refuses_unreviewed_pension_credit_selectors(selector):
 @pytest.mark.parametrize("claim", [False, True])
 def test_payment_guarantee_credit_selector_requires_actual_receipt(claim):
     sim = Simulation(situation=_pensioner(claim=claim))
-    # The component is positive even for nonclaimants in UK 2.125.1.
+    # The component is positive even for nonclaimants.
     assert sim.calculate("guarantee_credit", 2027)[0] > 0
     assert bool(sim.calculate("in_receipt_of_guarantee_credit", 2027)[0]) is (
         claim

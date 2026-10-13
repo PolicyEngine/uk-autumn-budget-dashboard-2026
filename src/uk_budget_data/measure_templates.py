@@ -6,7 +6,11 @@ execution receipts cannot bind closure factories or partially applied helpers.
 
 There is no ``monthly_schedule`` helper: monthly policies must be expressed
 as fiscal-year values, with the team choosing the aggregation methodology.
-Parameter builders refuse interval keys on the installed UK engine.
+Parameter builders key every value by its bare fiscal year and refuse any
+other key. policyengine-uk 2.126.12 would read a ``"start.stop"`` interval
+in the national run, but the household calculator applies a change only
+where the key is the year itself, so a bare year is the only key both read
+(``tests/test_measure_keys.py``).
 
 Runtime helpers wrap a variable's formula, so they must be applied after
 the data is loaded (a modifier's default phase): they refuse a variable
@@ -102,7 +106,8 @@ def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
     """Build explicit annual rates; the caller supplies the parameter's units.
 
     ISO dates are deliberately refused: ``2029-04-01`` denotes one day,
-    not a rate that continues until the next change.
+    not a rate that continues until the next change. Intervals are refused
+    too (see the module docstring).
     """
     _validate_parameter_path(path)
     return {path: _annual_values(values)}
@@ -352,7 +357,8 @@ def _replace_formula(sim, name, formula):
     _apply_reform_class(FormulaReform, sim)
 
 
-# These selectors have verified receipt semantics in UK 2.125.1. The two
+# These selectors' receipt semantics are pinned by
+# ``tests/test_measure_template_receipt.py`` on the bundle's engine. The two
 # Pension Credit components are entitlement amounts, so require the native
 # receipt gate alongside the selected component before awarding a payment.
 _BENEFIT_RECEIPT_GATES = {

@@ -71,8 +71,18 @@ def test_native_nics_match_all_four_frozen_bands(year, income_source):
 
 
 @pytest.mark.parametrize("income_source", ["employee", "self_employed"])
-def test_native_nics_resume_uprating_in_2031(income_source):
-    """UK 2.125.1 resumes CPI uprating in FY 2031-32, after the freeze.
+def test_native_nics_follow_income_tax_thresholds_in_2031(income_source):
+    """From 2031-32 the native NIC bands follow the income tax thresholds.
+
+    The freeze ends after 2030-31. policyengine-uk 2.126.12 then indexes
+    the personal allowance and the basic rate limit by September CPI with
+    the statutory round-ups, and keeps each NICs threshold equal to its
+    income tax equivalent: the lower profits limit and primary threshold to
+    the personal allowance, the upper profits and earnings limits to the
+    higher rate threshold, Class 1 as the weekly equivalent
+    (``parameters/gov/hmrc/create_threshold_indexation.py``). On 2.125.1
+    each frozen band was uprated by CPI on its own, and this test expected
+    that.
 
     Model 2031 is a policy year in this dashboard, but its native NIC bands
     are no longer frozen. Keep this boundary explicit instead of silently
@@ -91,12 +101,20 @@ def test_native_nics_resume_uprating_in_2031(income_source):
         path: parameters.get_child(path)("2031-01-01")
         for path in NATIVE_NIC_THRESHOLDS
     }
-    cpi = parameters.gov.economic_assumptions.indices.obr.consumer_price_index
-    uprating_factor = cpi("2031-01-01") / cpi("2030-01-01")
-    assert uprating_factor > 1
-    for path, frozen in NATIVE_NIC_THRESHOLDS.items():
-        assert thresholds[path] == pytest.approx(frozen * uprating_factor)
+    income_tax = parameters("2031-01-01").gov.hmrc.income_tax
+    personal_allowance = income_tax.allowances.personal_allowance.amount
+    higher_rate_threshold = (
+        personal_allowance + income_tax.rates.uk.thresholds[1]
+    )
+    # No longer frozen: both income tax thresholds have risen.
+    assert personal_allowance > 12_570
+    assert higher_rate_threshold > 50_270
     primary, upper, lower_profits, upper_profits = thresholds.values()
+    assert lower_profits == personal_allowance
+    assert upper_profits == higher_rate_threshold
+    # Class 1 thresholds are weekly, to the penny.
+    assert primary == pytest.approx(personal_allowance / 52, abs=0.005)
+    assert upper == pytest.approx(higher_rate_threshold / 52, abs=0.005)
     expected = (
         (upper - primary) * 52 * 0.08 + (60_000 - upper * 52) * 0.02
         if employee

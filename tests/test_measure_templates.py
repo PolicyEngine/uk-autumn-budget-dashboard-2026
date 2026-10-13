@@ -56,7 +56,7 @@ def test_annual_builders_validate_paths_and_explicit_years(builder):
     "key",
     [
         "2026-04-06",  # one day: scores nothing
-        "2026-04-06.2100-12-31",  # an interval: scores nothing on 2.125.1
+        "2026-04-06.2100-12-31",  # an interval: the household calculator ignores it
         "year:2026:5",
         "2026-04",
     ],
@@ -64,11 +64,11 @@ def test_annual_builders_validate_paths_and_explicit_years(builder):
 def test_only_bare_fiscal_years_are_accepted(builder, key):
     """A Budget measure keyed any other way can silently do nothing.
 
-    On the installed policyengine-uk 2.125.1 a bare year names the whole UK
-    fiscal year (``utils/parameters.py: uk_fiscal_year_period``) and a lone
-    date names one day. Interval keys are read correctly only from 2.126.12
-    (#2305); W4's certification evidence shows one scoring nothing on
-    2.125.1. Allow them only once the bundle moves.
+    On policyengine-uk 2.126.12 a bare year names the whole UK fiscal year
+    and a lone date names one day. The national run reads an interval, but
+    the household calculator applies a change only where the key is the
+    year itself, so a bare year is the only key both read
+    (``tests/test_measure_keys.py``).
     """
     with pytest.raises(ValueError, match="four-digit"):
         builder(FUEL_PATH, {key: 0.6})
@@ -235,7 +235,7 @@ def test_state_pension_uprating_paths_conditionally_round_both_pensions():
 def test_native_pension_responds_to_rates_without_total_income_override(
     pension_type, path, age, reported
 ):
-    # UK 2.125.1 splits reported pension at the legislated baseline rate.
+    # policyengine-uk splits reported pension at the legislated baseline rate.
     # Partial records and protected/additional amounts now respond natively;
     # applying a second total-pension scaling modifier would count it twice.
     situation = _pensioner(2028, income=0, age=age)
