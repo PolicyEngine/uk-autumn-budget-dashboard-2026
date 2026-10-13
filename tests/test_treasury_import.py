@@ -487,9 +487,10 @@ def test_figures_outside_the_year_columns_are_refused():
 def test_a_numbered_subtotal_with_any_marker_is_not_a_measure(label):
     """Round 8: an unfamiliar marker on a numbered, Tax-headed subtotal made
     it a nil measure, so its contradictory subtotal was never checked."""
-    with pytest.raises(ScorecardError):
+    # Number 9 is no other row's, so only the label can be refused.
+    with pytest.raises(ScorecardError, match="Head column|unrecognised total"):
         parse_rows(
-            [HEADER, TAX, (None, 1, label, "Tax", 0, 0, 0), GRAND_TOTAL]
+            [HEADER, TAX, (None, 9, label, "Tax", 0, 0, 0), GRAND_TOTAL]
         )
 
 
