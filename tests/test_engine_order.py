@@ -18,7 +18,7 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data.reforms import _set_pre_budget_dividend_rates
+from uk_budget_data.reforms import _set_pre_budget_dividend_rates, get_reform
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 
@@ -51,6 +51,50 @@ def test_the_engine_keeps_the_dividend_baseline_beside_parameter_changes(
     # ...and the parameter change is applied too.
     allowance = parameters.gov.hmrc.income_tax.allowances.personal_allowance
     assert allowance.amount == 13_000
+
+
+DIVIDENDS = "gov.hmrc.income_tax.rates.dividends"
+PRE_BUDGET_RATES = {
+    f"{DIVIDENDS}[0].rate": {"2027": 0.0875},
+    f"{DIVIDENDS}[1].rate": {"2027": 0.3375},
+}
+
+
+def test_the_modifier_gives_exactly_the_tax_of_the_same_rates_as_changes():
+    """Differential: the modifier's pre-Budget rates, beside a parameter
+    change, give to the penny the tax that the same rates entered as plain
+    parameter changes give."""
+    by_modifier = Simulation(
+        situation=_situation(),
+        scenario=Scenario(
+            simulation_modifier=_set_pre_budget_dividend_rates,
+            parameter_changes={ALLOWANCE: {"2027": 13_000}},
+        ),
+    )
+    by_changes = Simulation(
+        situation=_situation(),
+        scenario=Scenario(
+            parameter_changes={ALLOWANCE: {"2027": 13_000}, **PRE_BUDGET_RATES}
+        ),
+    )
+    assert by_modifier.calculate("income_tax", 2027)[0] == pytest.approx(
+        by_changes.calculate("income_tax", 2027)[0], abs=0.01
+    )
+
+
+def test_the_combined_measure_baseline_keeps_the_pre_budget_dividend_rates():
+    """The combined Autumn Budget measure's baseline has both parameter
+    changes and the dividend modifier. On 2.125.1 the parameter rebuild
+    discarded the modifier, so the combined baseline already had the
+    post-Budget rates and the combined figure left out the dividend rise."""
+    scenario = get_reform("autumn_budget_2026_combined").to_baseline_scenario()
+    assert scenario.parameter_changes and scenario.simulation_modifier
+    sim = Simulation(situation=_situation(), scenario=scenario)
+    dividends = sim.tax_benefit_system.parameters(
+        "2027-06-01"
+    ).gov.hmrc.income_tax.rates.dividends
+    assert dividends.rates[0] == pytest.approx(0.0875)
+    assert dividends.rates[1] == pytest.approx(0.3375)
 
 
 def test_the_modifier_changes_the_tax_the_engine_computes():
