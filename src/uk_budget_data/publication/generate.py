@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
+from pydantic import ValidationError
+
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -208,6 +210,7 @@ def generate_artifacts(
         measure_ids,
         member_outputs=None,
         composition=None,
+        uses_config_baseline=False,
     ):
         baseline_identity, reform_identity = identities
         baseline_scenario = (
@@ -228,9 +231,7 @@ def generate_artifacts(
                 basis=basis,
                 revision=revision,
                 config_baseline_identity=(
-                    config_baseline()
-                    if members or not reform.has_custom_baseline()
-                    else None
+                    config_baseline() if uses_config_baseline else None
                 ),
                 members=members,
                 member_outputs=member_outputs,
@@ -261,10 +262,23 @@ def generate_artifacts(
             continue
         try:
             identities = measure_identities(reform, config, revision)
-            run(reform, reform.id, identities, None, [reform.id])
+            run(
+                reform,
+                reform.id,
+                identities,
+                None,
+                [reform.id],
+                uses_config_baseline=not reform.has_custom_baseline(),
+            )
         except ReceiptUnavailable as error:
             report.refused[reform.id] = error.reason
             on_progress(f"{reform.id}: REFUSED: {error.reason}")
+        except ValidationError as error:
+            # A scenario the configuration cannot build (a malformed
+            # configured baseline, say) refuses this run, not the others.
+            reason = f"invalid scenario: {str(error).splitlines()[0]}"
+            report.refused[reform.id] = reason
+            on_progress(f"{reform.id}: REFUSED: {reason}")
 
     for members in combined_sets or []:
         from uk_budget_data.publication import combine
@@ -318,10 +332,17 @@ def generate_artifacts(
                 ids,
                 member_outputs=(snapshot if all(snapshot.values()) else None),
                 composition=composition,
+                uses_config_baseline=any(
+                    not member.has_custom_baseline() for member in ordered
+                ),
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason
             on_progress(f"{key}: REFUSED: {error.reason}")
+        except ValidationError as error:
+            reason = f"invalid scenario: {str(error).splitlines()[0]}"
+            report.refused[key] = reason
+            on_progress(f"{key}: REFUSED: {reason}")
         except (combine.CombineConflict, combine.CombineInconsistent) as error:
             report.refused[key] = str(error)
             on_progress(f"{key}: REFUSED: {error}")
