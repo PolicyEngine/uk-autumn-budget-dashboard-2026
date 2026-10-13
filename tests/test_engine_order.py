@@ -5,8 +5,9 @@ bundle) applies a Scenario's parameter changes and then its simulation
 modifier, in both phases (``simulation.py``: "A scenario's parameter
 changes rebuild the parameters from the statutory tree, so they come before
 its modifier, whose edits a rebuild would discard"). On 2.125.1 the modifier
-ran first and the rebuild discarded its edits, which is why
-``publication.combine`` composes changes and modifiers into one modifier.
+ran first and the rebuild discarded its edits. ``publication.combine``
+relies on the new order: a combined scenario carries its members' merged
+parameter changes itself, and its modifier runs only their modifiers.
 
 The dividend measure's baseline sets the pre-Budget dividend rates with a
 modifier (``reforms._set_pre_budget_dividend_rates``), because those rates
