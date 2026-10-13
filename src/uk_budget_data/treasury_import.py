@@ -176,9 +176,11 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
     raise ScorecardError("no header row with at least three fiscal years")
 
 
-# Footnote markers that may sit beside a total's label: digits, asterisks,
-# daggers and superscript figures, at most three characters.
-_MARKER = re.compile(r"[0-9*\u2020\u2021\u00b9\u00b2\u00b3\u2070-\u2079]{1,3}")
+# Footnote markers that may sit in a cell of their own beside a total's
+# label: daggers and superscript figures, at most three characters. A digit
+# or an asterisk is not one: in a column whose header was not recognised it
+# would be a printed figure or the negligible marker.
+_MARKER = re.compile(r"[\u2020\u2021\u00b9\u00b2\u00b3\u2070-\u2079]{1,3}")
 
 
 def _cells(row: tuple, first_year_column: int) -> list:
@@ -237,6 +239,20 @@ def _is_figure(cell) -> bool:
     return bool(re.fullmatch(r"-?[\d,]+(?:\.\d+)?", _text(cell)))
 
 
+def _figure_like(cell) -> bool:
+    """Whether a cell could be a printed figure: a number, a nil or
+    negligible marker, or digits with no words (a figure in a form the
+    importer does not read, such as one printed with a Unicode minus)."""
+    if _is_figure(cell):
+        return True
+    text = _text(cell)
+    if text == "" or isinstance(cell, bool):
+        return False
+    if text in NIL or text == NEGLIGIBLE:
+        return True
+    return bool(re.search(r"\d", text)) and not re.search(r"[^\W\d_]", text)
+
+
 def _mentions_a_total(label: str) -> bool:
     """Whether a label uses the word total or subtotal anywhere."""
     return bool(_TOTAL_WORD.search(_total_key(label)))
@@ -259,10 +275,11 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     seen_numbers: set[str] = set()
 
     for row in rows[:header_index]:
-        # A title may mention totals; a row that also carries a figure
-        # could be a printed total and is refused.
+        # A title may mention totals; a row that also carries a figure, a
+        # nil or a negligible marker could be a printed total and is
+        # refused.
         if any(_mentions_a_total(_text(cell)) for cell in row) and any(
-            _is_figure(cell) for cell in row
+            _figure_like(cell) for cell in row
         ):
             raise ScorecardError(
                 f"a total label above the header in {row!r}; check this row"
@@ -331,16 +348,30 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
                 for year, value in zip(fiscal_years, raw_values)
             }
             continue
-        numbers = [
-            _text(c)
-            for c in cells[:head_column]
-            if re.fullmatch(r"\d+[a-z]?", _text(c))
+        number_columns = [
+            column
+            for column, cell in enumerate(cells[:head_column])
+            if re.fullmatch(r"\d+[a-z]?", _text(cell))
         ]
+        numbers = [_text(cells[column]) for column in number_columns]
         if len(numbers) != 1 or not label or label == numbers[0]:
             raise ScorecardError(
                 f"cannot read the measure number and description in {row!r}"
             )
         number = numbers[0]
+        # Left of Head a measure prints its number and words. Anything else
+        # that could be a figure sits in a column the header did not name
+        # as a fiscal year (a blank or unfamiliar header cell), where it
+        # would never be read or checked against a total.
+        if any(
+            _figure_like(cell)
+            for column, cell in enumerate(cells[:head_column])
+            if column != number_columns[0]
+        ):
+            raise ScorecardError(
+                f"a figure left of the Head column in {row!r}; is a "
+                "fiscal-year column missing its header?"
+            )
         if number in seen_numbers:
             raise ScorecardError(f"measure {number} appears twice")
         seen_numbers.add(number)

@@ -1,0 +1,16 @@
+{
+  "name": "example: request shape only (draft)",
+  "draft": true,
+  "route": "/api/personal-impact",
+  "request": {
+    "employment_income": 0,
+    "income_growth_rate": 0.0,
+    "is_married": false,
+    "partner_income": 0,
+    "children_ages": []
+  },
+  "expect": [
+    {"path": "REPLACE.WITH.RESPONSE.PATH", "value": 0.0}
+  ],
+  "source": "Draft. Shows the request shape of the API on main; replace the path and value with an independently computed answer before removing \"draft\"."
+}

@@ -1,0 +1,3 @@
+# Upload every file. The household API build (cloudbuild.yaml) checks that
+# the uploaded source is exactly the commit named, so nothing may be left out:
+# without this file gcloud would leave out the .gitignore files.

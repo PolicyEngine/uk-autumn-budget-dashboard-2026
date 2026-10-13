@@ -402,7 +402,7 @@ def test_a_total_with_a_footnote_marker_is_read():
                 (None, 1, "Total tax policy decisions\u00b9", "Tax", 0, 0, 0),
                 GRAND_TOTAL,
             ],
-            "Head column",
+            "beside other text",
         ),
         # Round 7: a contradictory total above the header.
         (
@@ -488,7 +488,9 @@ def test_a_numbered_subtotal_with_any_marker_is_not_a_measure(label):
     """Round 8: an unfamiliar marker on a numbered, Tax-headed subtotal made
     it a nil measure, so its contradictory subtotal was never checked."""
     # Number 9 is no other row's, so only the label can be refused.
-    with pytest.raises(ScorecardError, match="Head column|unrecognised total"):
+    with pytest.raises(
+        ScorecardError, match="beside other text|unrecognised total"
+    ):
         parse_rows(
             [HEADER, TAX, (None, 9, label, "Tax", 0, 0, 0), GRAND_TOTAL]
         )
@@ -526,7 +528,9 @@ def test_a_label_that_mentions_a_total_is_never_a_measure(label):
     """Round 9: a subtotal whose label did not begin with 'Total' (a
     leading marker, a zero-width character, other wording) was read as a
     measure on a numbered, Tax-headed row."""
-    with pytest.raises(ScorecardError, match="Head column|unrecognised total"):
+    with pytest.raises(
+        ScorecardError, match="beside other text|unrecognised total"
+    ):
         parse_rows(
             [HEADER, TAX, (None, 9, label, "Tax", 0, 0, 0), GRAND_TOTAL]
         )
@@ -548,3 +552,105 @@ def test_an_unrecognised_year_column_in_the_header_is_refused():
         parse_rows(
             [header, (None, 1, "Tax measure", "-", "Tax", 100, 100, 100)]
         )
+
+
+# A sheet with a column left of Head whose header is blank: a hidden or
+# merged fiscal-year column.
+WIDE_HEADER = (None, None, None, None, "Head", "2026-27", "2027-28", "2028-29")
+WIDE_TAX = (None, 1, "Tax measure", None, "Tax", 100, 100, 100)
+WIDE_TOTAL = (None, None, "Total policy decisions", None, None, 100, 100, 100)
+
+
+def _with(row, value):
+    return (*row[:3], value, *row[4:])
+
+
+def test_a_sheet_with_an_unused_blank_column_is_read():
+    """The refusals below are about what the column holds, not the column."""
+    assert check_totals(parse_rows([WIDE_HEADER, WIDE_TAX, WIDE_TOTAL]))
+
+
+@pytest.mark.parametrize("header_cell", [None, "Later years"])
+@pytest.mark.parametrize(
+    "figure", [999, 0, "999", "*", "-", "\u2013", "\u2212999", "1,000", 2.5]
+)
+def test_a_total_figure_in_an_unlabelled_column_is_refused(
+    header_cell, figure
+):
+    """Round 10: left of Head, a column with a blank or wordy header became
+    a label column, and a total's figure there passed as a footnote marker,
+    so it was never read or checked."""
+    rows = [
+        _with(WIDE_HEADER, header_cell),
+        WIDE_TAX,
+        _with(WIDE_TOTAL, figure),
+    ]
+    with pytest.raises(ScorecardError, match="beside other text"):
+        parse_rows(rows)
+
+
+@pytest.mark.parametrize("header_cell", [None, "Later years"])
+@pytest.mark.parametrize(
+    "figure, message",
+    [
+        ("-", "left of the Head"),
+        ("\u2014", "left of the Head"),
+        ("*", "left of the Head"),
+        (-5, "left of the Head"),
+        (2.5, "left of the Head"),
+        ("-5", "left of the Head"),
+        ("\u22125", "left of the Head"),
+        ("(5)", "left of the Head"),
+        # A whole number reads as a second measure number.
+        (5, "cannot read the measure number"),
+    ],
+)
+def test_a_measure_figure_in_an_unlabelled_column_is_refused(
+    header_cell, figure, message
+):
+    """Round 10: a measure's figure in such a column was taken for another
+    label and ignored."""
+    rows = [
+        _with(WIDE_HEADER, header_cell),
+        _with(WIDE_TAX, figure),
+        WIDE_TOTAL,
+    ]
+    with pytest.raises(ScorecardError, match=message):
+        parse_rows(rows)
+
+
+def test_a_lettered_measure_number_and_a_superscript_marker_are_still_read():
+    """What the round-10 refusals must leave alone: a measure numbered
+    '12a', words with figures in them, and a superscript footnote marker in
+    a cell of its own beside a total."""
+    rows = [
+        WIDE_HEADER,
+        (None, "12a", "Raise the rate to 22% from 2027", None, "Tax", 1, 1, 1),
+        ("\u00b9", None, "Total policy decisions", "\u2020", None, 1, 1, 1),
+    ]
+    scorecard = parse_rows(rows)
+    assert [measure.number for measure in scorecard.measures] == ["12a"]
+    assert check_totals(scorecard)
+
+
+@pytest.mark.parametrize("figure", ["-", "*", "\u2212100", "\u2013", 0])
+def test_a_total_above_the_header_printed_without_numbers_is_refused(figure):
+    """Round 10: a total above the header was refused only when it carried
+    a number, so one printed as nil, negligible or with a Unicode minus was
+    never checked against the measures."""
+    above = (
+        None,
+        None,
+        "Total spending policy decisions",
+        None,
+        *[figure] * 3,
+    )
+    nil_total = (None, None, "Total policy decisions", None, 0, 0, 0)
+    with pytest.raises(ScorecardError, match="above the header"):
+        parse_rows([above, HEADER, TAX, SPEND, nil_total])
+
+
+def test_a_title_that_mentions_totals_is_not_a_total():
+    title = ("Table 4.1: total policy decisions", None, "\u00a3 million")
+    nil_total = (None, None, "Total policy decisions", None, 0, 0, 0)
+    assert check_totals(parse_rows([title, HEADER, TAX, SPEND, nil_total]))
