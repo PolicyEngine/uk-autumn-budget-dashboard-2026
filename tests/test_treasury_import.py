@@ -510,3 +510,41 @@ def test_any_total_like_label_above_the_header_is_refused():
     ]
     with pytest.raises(ScorecardError, match="above the header"):
         parse_rows(rows)
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Subtotal: tax policy decisions",
+        "\u00b9 Total tax policy decisions",
+        "\u200bTotal tax policy decisions",
+        "(a) Total tax policy decisions",
+        "Net total tax policy decisions",
+    ],
+)
+def test_a_label_that_mentions_a_total_is_never_a_measure(label):
+    """Round 9: a subtotal whose label did not begin with 'Total' (a
+    leading marker, a zero-width character, other wording) was read as a
+    measure on a numbered, Tax-headed row."""
+    with pytest.raises(ScorecardError, match="Head column|unrecognised total"):
+        parse_rows(
+            [HEADER, TAX, (None, 9, label, "Tax", 0, 0, 0), GRAND_TOTAL]
+        )
+
+
+def test_an_unrecognised_year_column_in_the_header_is_refused():
+    """Round 9: a '2029/30' column left of Head became a label column."""
+    header = (
+        None,
+        None,
+        None,
+        "2029/30",
+        "Head",
+        "2026-27",
+        "2027-28",
+        "2028-29",
+    )
+    with pytest.raises(ScorecardError, match="year-like"):
+        parse_rows(
+            [header, (None, 1, "Tax measure", "-", "Tax", 100, 100, 100)]
+        )
