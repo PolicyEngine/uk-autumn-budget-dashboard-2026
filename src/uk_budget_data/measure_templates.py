@@ -277,9 +277,7 @@ def apply_vat_base_change(
     native = sim.tax_benefit_system.get_variable("vat")
 
     def formula(household, period, parameters):
-        current = _call_formula(
-            native.get_formula(period), household, period, parameters
-        )
+        current = _call_formula(native, household, period, parameters)
         if period.start.year not in years:
             return current
         old_rate = (
@@ -303,11 +301,16 @@ def apply_vat_base_change(
     return sim
 
 
-def _call_formula(formula, entity, period, parameters):
-    """Run a variable's previous formula as policyengine-core does: a
-    two-argument formula takes no parameters."""
+def _call_formula(variable, entity, period, parameters):
+    """A variable's previous value, computed as policyengine-core does.
+
+    A period with no formula takes the variable's default value (the
+    wrapped variable holds no stored input: _replace_formula refuses one);
+    a two-argument formula takes no parameters.
+    """
+    formula = variable.get_formula(period)
     if formula is None:
-        return entity.empty_array()
+        return entity.filled_array(variable.default_value)
     if formula.__code__.co_argcount == 2:
         return formula(entity, period)
     return formula(entity, period, parameters)
@@ -373,6 +376,11 @@ def apply_benefit_receipt_payment(
     native = sim.tax_benefit_system.get_variable(channel, check_existence=True)
     if native.entity.key != "household" or not native.formulas:
         raise ValueError("Payment channel must have a household formula")
+    if native.definition_period != YEAR:
+        raise ValueError(
+            "Payment channel must be annual: the payment is a one-off "
+            "amount in the year"
+        )
     benefits = {}
     for name in eligible_benefits:
         if name not in _BENEFIT_RECEIPT_GATES:
@@ -390,12 +398,7 @@ def apply_benefit_receipt_payment(
         benefits[name] = variable.entity.key
 
     def formula(household, period, parameters):
-        native_formula = native.get_formula(period)
-        current = (
-            native_formula(household, period, parameters)
-            if native_formula is not None
-            else household.empty_array()
-        )
+        current = _call_formula(native, household, period, parameters)
         if period.start.year != year:
             return current
         eligible = np.zeros(household.count, dtype=bool)
@@ -458,9 +461,7 @@ def apply_age_conditioned_allowance(
     native = sim.tax_benefit_system.get_variable("personal_allowance")
 
     def formula(person, period, parameters):
-        standard = _call_formula(
-            native.get_formula(period), person, period, parameters
-        )
+        standard = _call_formula(native, person, period, parameters)
         if period.start.year not in amounts:
             return standard
         income = person("adjusted_net_income", period) - person(
@@ -537,9 +538,7 @@ def apply_property_band_surcharge(
         raise ValueError("Select a country enum name or UK")
 
     def formula(household, period, parameters):
-        current = _call_formula(
-            native.get_formula(period), household, period, parameters
-        )
+        current = _call_formula(native, household, period, parameters)
         if period.start.year not in years:
             return current
         tenure = household("tenure_type", period)

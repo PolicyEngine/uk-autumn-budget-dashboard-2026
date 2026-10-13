@@ -8,11 +8,12 @@ arguments, and a channel whose formula is monthly.
 import pytest
 from policyengine_core.reforms import Reform as CoreReform
 from policyengine_uk import Simulation
-from policyengine_uk.model_api import Variable
-from policyengine_uk.utils.scenario import _apply_reform_class
+from policyengine_uk.model_api import YEAR, Person, Variable
+from policyengine_uk.utils.scenario import Scenario, _apply_reform_class
 
 from uk_budget_data.measure_templates import (
     apply_age_conditioned_allowance,
+    apply_benefit_receipt_payment,
     apply_property_band_surcharge,
     apply_vat_base_change,
 )
@@ -137,4 +138,105 @@ def test_a_monthly_channel_is_refused_for_an_annual_surcharge():
             start_year=2027,
             end_year=2027,
             channel="fuel_duty",
+        )
+
+
+# --- round 4 of the template review ----------------------------------------
+
+
+class personal_allowance(Variable):
+    value_type = float
+    entity = Person
+    definition_period = YEAR
+    label = "Personal allowance with no formula"
+    default_value = 20_000
+
+
+class _NoFormulaAllowance(CoreReform):
+    def apply(self):
+        self.replace_variable(personal_allowance)
+
+
+def _replace_allowance_with_a_default(sim):
+    _apply_reform_class(_NoFormulaAllowance, sim)
+
+
+def test_a_previous_allowance_with_no_formula_keeps_its_default():
+    """The previous value of a variable with no formula is its default, as
+    in policyengine-core; it was taken as zero, so a £20,000 allowance
+    became £15,000 in the measure's year and nothing outside it."""
+    sim = Simulation(
+        situation={
+            "people": {
+                "p": {
+                    "age": {2027: 75, 2028: 75},
+                    "private_pension_income": {2027: 30_000, 2028: 30_000},
+                }
+            },
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {
+                "h": {
+                    "members": ["p"],
+                    "region": {2027: "LONDON", 2028: "LONDON"},
+                }
+            },
+        },
+        scenario=Scenario(
+            simulation_modifier=_replace_allowance_with_a_default,
+            applied_before_data_load=True,
+        ),
+    )
+    apply_age_conditioned_allowance(
+        sim,
+        allowance_by_year={2028: 15_000},
+        taper_threshold=24_000,
+        taper_rate=0,
+    )
+    assert sim.calculate("personal_allowance", 2027)[0] == 20_000
+    assert sim.calculate("personal_allowance", 2028)[0] == 20_000
+
+
+def _claimant():
+    return Simulation(
+        situation={
+            "people": {"p": {"age": {2027: 40}}},
+            "benunits": {
+                "b": {"members": ["p"], "would_claim_uc": {2027: True}}
+            },
+            "households": {
+                "h": {"members": ["p"], "region": {2027: "LONDON"}}
+            },
+        }
+    )
+
+
+def test_the_payment_wrapper_runs_a_two_argument_formula():
+    sim = _with_two_argument_formula(
+        _claimant(), "cost_of_living_support_payment"
+    )
+    assert sim.calculate("universal_credit", 2027)[0] > 0
+    apply_benefit_receipt_payment(
+        sim,
+        amount=120,
+        eligible_benefits=["universal_credit"],
+        geography="UK",
+        channel="cost_of_living_support_payment",
+        year=2027,
+    )
+    # The previous formula's £100 plus the £120 payment.
+    assert sim.calculate("cost_of_living_support_payment", 2027)[
+        0
+    ] == pytest.approx(220.0)
+
+
+def test_a_monthly_payment_channel_is_refused():
+    """A monthly channel paid the one-off amount every month."""
+    with pytest.raises(ValueError, match="must be annual"):
+        apply_benefit_receipt_payment(
+            _claimant(),
+            amount=120,
+            eligible_benefits=["universal_credit"],
+            geography="UK",
+            channel="monthly_epg_subsidy",
+            year=2027,
         )
