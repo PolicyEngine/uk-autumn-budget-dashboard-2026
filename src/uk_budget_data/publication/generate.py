@@ -36,6 +36,7 @@ from uk_budget_data.publication.receipt import (
     build_receipt_document,
     code_revision,
     combined_identities,
+    is_code_defect,
     load_basis,
     measure_identities,
     scenario_identity,
@@ -151,20 +152,16 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
-# The models whose validation errors mean the configuration cannot build a
-# scenario: policyengine-uk's Scenario and the dashboard's Reform.
-SCENARIO_MODELS = ("Scenario", Reform.__name__)
-
-
 def _scenarios(subject: str, build_them: Callable):
     """Run a step that builds scenarios, refusing the run (not stopping the
     generation) when the configuration cannot build one. Only a Scenario or
     Reform that fails validation is caught: a calculator failure, or a
-    receipt model failing its own validation, still raises."""
+    receipt model failing its own validation (``is_code_defect``), still
+    raises."""
     try:
         return build_them()
     except ValidationError as error:
-        if error.title not in SCENARIO_MODELS:
+        if is_code_defect(error):
             raise
         raise ReceiptUnavailable(
             subject, f"invalid scenario: {str(error).splitlines()[0]}"
@@ -220,7 +217,9 @@ def generate_artifacts(
                 configured_identity.append(
                     _config_baseline_identity(config, revision)
                 )
-            except ValueError as error:  # pydantic's ValidationError included
+            except ValueError as error:  # a malformed Scenario included
+                if is_code_defect(error):
+                    raise
                 raise ReceiptUnavailable(
                     "configured baseline", str(error).splitlines()[0]
                 ) from error
