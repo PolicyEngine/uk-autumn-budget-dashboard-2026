@@ -150,6 +150,10 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
                 raise ScorecardError(
                     "the header row needs exactly one 'Head' column"
                 )
+            if head_columns[0] > min(years):
+                raise ScorecardError(
+                    "the 'Head' column must come before the fiscal years"
+                )
             for column, label in years.items():
                 start, end = FISCAL_YEAR.match(label).groups()
                 if (int(start) + 1) % 100 != int(end):
@@ -188,7 +192,9 @@ def _total_label(label_cells: list[str], row: tuple) -> Optional[str]:
 # A footnote marker printed on the end of a label: superscript figures,
 # asterisks, daggers, or up to two digits straight after a letter.
 _TRAILING_MARKER = re.compile(
-    r"(?:[\u00b9\u00b2\u00b3\u2070-\u2079*\u2020\u2021]+|(?<=[a-z])\d{1,2})$"
+    r"(?:[\u00b9\u00b2\u00b3\u2070-\u2079*\u2020\u2021]+"
+    r"|(?<=[a-z])\s*\d{1,2}"
+    r"|\s*\((?:\d{1,2}|[a-z])\))$"
 )
 
 
@@ -214,7 +220,7 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     seen_numbers: set[str] = set()
 
     for row in rows[:header_index]:
-        if any(_total_key(_text(cell)) in TOTAL_LABELS for cell in row):
+        if any(_total_key(_text(cell)).startswith("total") for cell in row):
             raise ScorecardError(
                 f"a total label above the header in {row!r}; check this row"
             )
@@ -240,15 +246,11 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         label = max(label_cells, key=len) if label_cells else ""
         blank = all(_text(v) == "" for v in raw_values)
         total = _total_label(label_cells, row)
-        is_numbered_measure = head in {"tax", "spend"} and any(
-            re.fullmatch(r"\d+[a-z]?", cell) for cell in label_cells
-        )
-        if (
-            total is None
-            and not is_numbered_measure
-            and any(
-                _total_key(cell).startswith("total") for cell in label_cells
-            )
+        # Any other label that begins "Total" is refused, even on a row
+        # numbered and headed like a measure: a subtotal with an unfamiliar
+        # marker would otherwise be imported as a measure.
+        if total is None and any(
+            _total_key(cell).startswith("total") for cell in label_cells
         ):
             raise ScorecardError(
                 f"an unrecognised total in {row!r}; check this row"
