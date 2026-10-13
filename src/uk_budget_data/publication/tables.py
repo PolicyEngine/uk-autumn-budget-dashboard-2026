@@ -432,8 +432,9 @@ def _sampling_key(household_id: int, weight: float, seed: int) -> float:
     Taking the smallest keys -log(u)/weight, with u uniform in (0, 1),
     samples households with probability rising with their weight
     (Efraimidis and Spirakis). Here u comes from a hash of the seed and
-    the household id, so a household's key depends on nothing else: every
-    measure and combined run, whatever its baseline, keeps the same
+    the household id, so a household's key depends only on its id, its
+    weight and the seed: runs over the same households and weights (every
+    run whose baseline leaves the dataset's weights alone) keep the same
     households wherever they are eligible.
     """
     digest = hashlib.sha256(f"{seed}:{household_id}".encode()).digest()

@@ -184,7 +184,22 @@ def generate_artifacts(
     written_outputs: dict[str, str] = {}
     revision = code_revision(repo_root)
     basis = load_basis(repo_root / BASIS_PATH)
-    config_baseline = _config_baseline_identity(config, revision)
+    configured_identity: list = []
+
+    def config_baseline():
+        # Bound when a run first records it, so a configured baseline that
+        # no requested run uses cannot stop the others.
+        if not configured_identity:
+            try:
+                configured_identity.append(
+                    _config_baseline_identity(config, revision)
+                )
+            except ValueError as error:  # pydantic's ValidationError included
+                raise ReceiptUnavailable(
+                    "configured baseline", str(error).splitlines()[0]
+                ) from error
+        return configured_identity[0]
+
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
 
@@ -215,7 +230,11 @@ def generate_artifacts(
                 file_digests=file_digests,
                 basis=basis,
                 revision=revision,
-                config_baseline_identity=config_baseline,
+                config_baseline_identity=(
+                    config_baseline()
+                    if members or not reform.has_custom_baseline()
+                    else None
+                ),
                 members=members,
                 member_outputs=member_outputs,
                 composition=composition,

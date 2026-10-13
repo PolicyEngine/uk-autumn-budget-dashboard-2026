@@ -115,13 +115,24 @@ def parse_figure(value) -> tuple[Optional[float], bool]:
     return number, False
 
 
+# Dashes a fiscal-year label may be printed with: en, em, figure and minus.
+_DASHES = str.maketrans(
+    {"\u2013": "-", "\u2014": "-", "\u2012": "-", "\u2212": "-"}
+)
+
+
+def _year_label(value) -> str:
+    """A fiscal-year header as 2029-30, whichever dash it was printed with."""
+    return _text(value).translate(_DASHES)
+
+
 def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
     """Locate the header row, its fiscal-year columns and the head column."""
     for index, row in enumerate(rows):
         years = {
-            column: _text(cell)
+            column: _year_label(cell)
             for column, cell in enumerate(row)
-            if FISCAL_YEAR.match(_text(cell))
+            if FISCAL_YEAR.match(_year_label(cell))
         }
         if len(years) >= 3:
             labels = list(years.values())
@@ -163,7 +174,7 @@ def _total_label(label_cells: list[str], row: tuple) -> Optional[str]:
     markers. Anything else beside a total label is ambiguous (a heading,
     a note, two totals) and is refused rather than guessed at.
     """
-    totals = [cell for cell in label_cells if cell.lower() in TOTAL_LABELS]
+    totals = [cell for cell in label_cells if _total_key(cell) in TOTAL_LABELS]
     if not totals:
         return None
     others = [cell for cell in label_cells if cell not in totals]
@@ -171,7 +182,19 @@ def _total_label(label_cells: list[str], row: tuple) -> Optional[str]:
         raise ScorecardError(
             f"a total label beside other text in {row!r}; check this row"
         )
-    return totals[0]
+    return _total_key(totals[0])
+
+
+# A footnote marker printed on the end of a label: superscript figures,
+# asterisks, daggers, or up to two digits straight after a letter.
+_TRAILING_MARKER = re.compile(
+    r"(?:[\u00b9\u00b2\u00b3\u2070-\u2079*\u2020\u2021]+|(?<=[a-z])\d{1,2})$"
+)
+
+
+def _total_key(label: str) -> str:
+    """A label as a total is looked up: lower case, footnote marker off."""
+    return _TRAILING_MARKER.sub("", label.strip().lower()).strip()
 
 
 def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
@@ -190,23 +213,60 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     totals: dict[Optional[str], dict[str, float]] = {}
     seen_numbers: set[str] = set()
 
+    for row in rows[:header_index]:
+        if any(_total_key(_text(cell)) in TOTAL_LABELS for cell in row):
+            raise ScorecardError(
+                f"a total label above the header in {row!r}; check this row"
+            )
+
     for row in rows[header_index + 1 :]:
         cells = _cells(row, first_year_column)
         raw_values = [
             cells[c] if c < len(cells) else None for c in sorted(year_columns)
         ]
+        stray = [
+            column
+            for column, cell in enumerate(cells)
+            if column > head_column
+            and column not in year_columns
+            and _text(cell)
+        ]
+        if stray:
+            raise ScorecardError(
+                f"figures outside the fiscal-year columns in {row!r}"
+            )
         label_cells = [_text(c) for c in cells[:head_column] if _text(c)]
         head = _text(cells[head_column]).lower()
         label = max(label_cells, key=len) if label_cells else ""
         blank = all(_text(v) == "" for v in raw_values)
         total = _total_label(label_cells, row)
-        if total is not None and blank:
-            raise ScorecardError(
-                f"{total!r} prints no figures in {row!r}; a total needs its "
-                "figures (nil is '-')"
+        is_numbered_measure = head in {"tax", "spend"} and any(
+            re.fullmatch(r"\d+[a-z]?", cell) for cell in label_cells
+        )
+        if (
+            total is None
+            and not is_numbered_measure
+            and any(
+                _total_key(cell).startswith("total") for cell in label_cells
             )
+        ):
+            raise ScorecardError(
+                f"an unrecognised total in {row!r}; check this row"
+            )
+        if total is not None:
+            # A total prints every figure (nil is '-') and has no Head.
+            if any(_text(v) == "" for v in raw_values):
+                raise ScorecardError(
+                    f"{total!r} does not print every year's figure in "
+                    f"{row!r} (nil is '-')"
+                )
+            if _text(cells[head_column]):
+                raise ScorecardError(
+                    f"{total!r} has text in its Head column in {row!r}; "
+                    "check this row"
+                )
         is_total = total is not None
-        lowered = total.lower() if is_total else label.lower()
+        lowered = total if is_total else label.lower()
         if is_total:
             label = total
         if blank and head not in {"tax", "spend"}:
