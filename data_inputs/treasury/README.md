@@ -22,6 +22,10 @@ For each model year, with the Treasury figure on the gated basis (`static_costin
 - **not_comparable**: a reviewer classified the row as outside scope or on a different basis.
 - **unsupported**: the year is beyond the dataset's projected years.
 
+Every year the artifact reports (its receipt's `years`) must have exactly one model output, a finite number. A year with none **fails**, and no exception can accept it. Two rows for one year, or a value that is not a finite number, are refused.
+
+A `policy.yaml` that exists must hold the thresholds as a mapping. An empty file, or one that reads as `false`, `0` or a list, is refused rather than taken for the defaults.
+
 ## Exceptions
 
 ```yaml
@@ -33,10 +37,12 @@ For each model year, with the Treasury figure on the gated basis (`static_costin
   reviewer: María Juaristi
   accepted_at: "2026-10-28T15:05:00Z"
   outputs_sha256: <the artifact's outputs_sha256>
+  comparator_sha256: <comparator.sha256 of this year's row in reconciliation.json>
 ```
 
 - `explanation_class` is one of `behavioural`, `coverage_business`, `top_tail_data`, `timing_fiscal_calendar`, `incidence_basis`, `baseline_mismatch`, `data_forward_path`, `devolved`, `interaction`.
 - An exception applies only to the outputs it names. If the measure is regenerated and its numbers change, the exception lapses.
+- It also applies only to the Treasury comparison it names. `comparator_sha256` covers the gated basis, every Treasury figure behind the comparison with its scale and year offset, and the rows classified not comparable. If any of them changes (a corrected figure, a remapped row, a different basis), the exception lapses, even when the total is the same.
 - A declared residual that does not match the computed one is rejected.
 
 ## Responsiveness
