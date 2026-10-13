@@ -25,31 +25,31 @@
     ],
     "digests": {
       "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
-      "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b",
-      "receipt_sha256": "9c5682da808b4c7d5ff779231b2effcb14a325c16daf8d5b4e0c675f629ff2f6"
+      "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
+      "receipt_sha256": "73061ef6ffc35005fd743ffb2d8eb9c34096ba0592300b60781bd86d3bea497c"
     },
     "files": {
-      "budgetary_impact.csv": "80d5826957bfa018e1aa0168089792acaeebfa188d45594f73fe0def362518e1",
-      "distributional_impact.csv": "092553312b5052e5205470191a09e7d87aebdca34ab2b011c332609636f07e89",
-      "household_scatter_binned.csv": "51de3e2ff13fe1a4fff13b154b1eb728c5589130a58edcb279b904b3fa803900",
-      "income_curve.csv": "1caa6397175f671b6d1447127c488eb7c3cc466cf5baa6d5d135e26cc2392b76",
-      "metrics.csv": "fb97b7f019e21ec5fae20628d2fd207910d2fe8b45e21eb0454f84b06e3d3fa2",
-      "winners_losers.csv": "be960fdb277f370a52e03a7fadf8359371d7740e6e518c16483fa06fbc609a8f"
+      "budgetary_impact.csv": "e07b7072a626ab1572d2e4709e400e628802baaf424c68a8331a74f1e0b0b73a",
+      "distributional_impact.csv": "a798f5ef2b215af6fdc366080496221f9d1936a86bcee137e367526b34f6ac55",
+      "household_scatter_binned.csv": "f6e21fc8bb8b66f3f5fbbb91b757c6bd045b6517a52d0c8bb646d8af2d4e6bf7",
+      "income_curve.csv": "df6aa54c5b6fd1f68639dfc32866025ba4d4060d8015d6f4388ccddf70e5d4de",
+      "metrics.csv": "491434ec9f06fd87d3ba375920f074d2fb9c9f40ac071d0c66bba66d277b03e9",
+      "winners_losers.csv": "d868aaa18a43441d5a6f5af8b9022a19645fa6d23a4c9d17346b04d3836e16d5"
     },
-    "generated_at": "2026-10-12T18:41:43.499962+00:00",
+    "generated_at": "2026-10-13T14:04:20.969169+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "beta",
+    "key": "alpha",
     "measure_ids": [
-      "beta"
+      "alpha"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-pr588@1ec7c76",
+    "receipt_source": "vendored-w4-pr588@cab895b",
     "tree_clean": true,
     "unsupported_years": [
       2031
@@ -59,7 +59,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "beta baseline"
+      "name": "alpha baseline"
     },
     "certificate": {
       "bundle_version": "6.2.6",
@@ -100,13 +100,13 @@
       "name": "policyengine-uk",
       "version": "2.125.1"
     },
-    "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b",
+    "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "beta",
-      "reform_sha256": "60568525333f54a1ad5dfa81e4c22865981aaec5e3add1a46d25f4e2dc7aeeb8",
+      "name": "alpha",
+      "reform_sha256": "1c39d019a47e8c0a2f113051f8eb67b2a4df0bbd09ae7bda5223b17d69577ae5",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
