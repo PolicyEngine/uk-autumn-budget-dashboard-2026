@@ -1,6 +1,8 @@
 """Tests for data models."""
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from pydantic import ValidationError
 
 
@@ -211,3 +213,65 @@ class TestDataConfig:
 
         config = DataConfig()
         assert config.get_baseline_scenario() is None
+
+
+RATE = "gov.hmrc.income_tax.rates.uk[{}].rate"
+
+
+def _modifier(sim):
+    return sim
+
+
+_baseline_sides = st.sampled_from([None, {}, {RATE.format(1): {"2027": 0.41}}])
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    own_changes=_baseline_sides,
+    own_modifier=st.booleans(),
+    configured=_baseline_sides,
+)
+def test_a_single_measure_keeps_the_old_baseline_precedence(
+    own_changes, own_modifier, configured
+):
+    """Property: for a single measure the one rule is the precedence every
+    caller used before it: its own baseline, else the configured one, else
+    current law."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    reform = Reform(
+        id="m",
+        name="M",
+        parameter_changes={RATE.format(0): {"2027": 0.21}},
+        baseline_parameter_changes=own_changes,
+        baseline_simulation_modifier=_modifier if own_modifier else None,
+    )
+    config = DataConfig(years=[2027], baseline_parameter_changes=configured)
+    old = reform.to_baseline_scenario() or config.get_baseline_scenario()
+    new = reform.baseline_scenario_for(config)
+    assert (new is None) == (old is None)
+    if new is not None:
+        assert new.parameter_changes == old.parameter_changes
+        assert new.simulation_modifier is old.simulation_modifier
+
+
+@settings(max_examples=60, deadline=None)
+@given(own_changes=_baseline_sides, configured=_baseline_sides)
+def test_a_combined_measure_without_config_never_falls_back(
+    own_changes, configured
+):
+    """Property: a run that does not use the configured baseline never gets
+    it, whatever its own baseline is, even none at all."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    reform = Reform(
+        id="c",
+        name="C",
+        baseline_parameter_changes=own_changes,
+    )
+    config = DataConfig(years=[2027], baseline_parameter_changes=configured)
+    scenario = reform.baseline_scenario_for(config, uses_config=False)
+    if own_changes is None:
+        assert scenario is None
+    else:
+        assert scenario.parameter_changes == own_changes

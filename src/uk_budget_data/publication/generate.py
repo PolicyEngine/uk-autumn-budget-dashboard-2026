@@ -88,10 +88,14 @@ def _config_baseline_identity(config: DataConfig, revision: CodeRevision):
     )
 
 
-def _default_process(reform: Reform, config: DataConfig, baseline, reformed):
+def _default_process(
+    reform: Reform, config: DataConfig, baseline, reformed, baseline_scenario
+):
     from uk_budget_data.pipeline import ReformProcessor
 
-    return ReformProcessor(reform, config).process(baseline, reformed)
+    return ReformProcessor(reform, config).process(
+        baseline, reformed, baseline_scenario
+    )
 
 
 _PRIVATE_COPIES: Optional[Path] = None
@@ -147,13 +151,21 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
+# The models whose validation errors mean the configuration cannot build a
+# scenario: policyengine-uk's Scenario and the dashboard's Reform.
+SCENARIO_MODELS = ("Scenario", Reform.__name__)
+
+
 def _scenarios(subject: str, build_them: Callable):
     """Run a step that builds scenarios, refusing the run (not stopping the
-    generation) when the configuration cannot build one. Only scenario
-    construction is caught: a calculator or receipt failure still raises."""
+    generation) when the configuration cannot build one. Only a Scenario or
+    Reform that fails validation is caught: a calculator failure, or a
+    receipt model failing its own validation, still raises."""
     try:
         return build_them()
     except ValidationError as error:
+        if error.title not in SCENARIO_MODELS:
+            raise
         raise ReceiptUnavailable(
             subject, f"invalid scenario: {str(error).splitlines()[0]}"
         ) from error
@@ -182,7 +194,7 @@ def generate_artifacts(
         generator_argv: The command line, recorded in each receipt.
         build: Builds a microsimulation from (dataset path, scenario).
         process: Runs the calculators for (reform, config, baseline, reform
-            simulation) and returns a ReformResult.
+            simulation, baseline scenario) and returns a ReformResult.
         on_progress: Called with a line of progress text.
 
     A combined run records the outputs each member had when it was made:
@@ -198,9 +210,7 @@ def generate_artifacts(
     configured_identity: list = []
 
     def baseline_for(reform: Reform, uses_config_baseline: bool):
-        from uk_budget_data.publication.combine import run_baseline
-
-        return run_baseline(reform, config, uses_config_baseline)
+        return reform.baseline_scenario_for(config, uses_config_baseline)
 
     def config_baseline():
         # Bound when a run first records it, so a configured baseline that
@@ -236,7 +246,7 @@ def generate_artifacts(
         reform_scenario = _scenarios(key, reform.to_scenario)
         baseline = build(dataset_path, baseline_scenario)
         reformed = build(dataset_path, reform_scenario)
-        result = process(reform, config, baseline, reformed)
+        result = process(reform, config, baseline, reformed, baseline_scenario)
 
         def build_receipt(file_digests):
             inputs = ReceiptInputs(

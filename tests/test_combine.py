@@ -161,28 +161,35 @@ def test_generic_combination_reproduces_the_hand_built_2025_reform():
     ]
 
 
-def test_engine_wipes_a_modifiers_parameters_when_given_changes_too():
-    """Why the combiner applies parameter changes before modifiers.
+def test_the_engine_and_the_combiner_agree_on_changes_beside_a_modifier():
+    """Differential: one scenario handed to the engine, and the combiner's
+    single modifier, give the same parameters.
 
-    Handed to the engine as one scenario, the dividend baseline modifier's
-    rates are wiped by the savings baseline's parameter changes.
+    The combiner applies parameter changes and then modifiers inside one
+    modifier because policyengine-uk 2.125.1 ran a scenario's modifier
+    first, and the parameter rebuild then wiped the dividend baseline's
+    rates (the engine alone gave 0.1075). From 2.126.12 the engine applies
+    them in the combiner's order.
     """
     dividend = get_reform("dividend_tax_increase_2pp")
     savings = get_reform("savings_tax_increase_2pp")
-    instants = ["2027-04-06"]
-    alone = parameter_snapshot(
-        dividend.to_baseline_scenario(), instants, "alone"
-    )
-    naive = parameter_snapshot(
+    instants = ["2027-04-06", "2028-04-30"]
+    engine = parameter_snapshot(
         Scenario(
             simulation_modifier=dividend.baseline_simulation_modifier,
             parameter_changes=savings.baseline_parameter_changes,
         ),
         instants,
-        "naive",
+        "engine",
     )
-    assert alone[DIVIDEND_BASIC] == (0.0875,)
-    assert naive[DIVIDEND_BASIC] == (0.1075,)
+    combined = parameter_snapshot(
+        combine_measures([dividend, savings], CONFIG).to_baseline_scenario(),
+        instants,
+        "combined",
+    )
+    assert engine[DIVIDEND_BASIC][0] == 0.0875
+    assert engine[SAVINGS_BASIC][1] == 0.20
+    assert engine == combined
 
 
 def test_combination_keeps_a_modifiers_parameters_and_is_consistent():

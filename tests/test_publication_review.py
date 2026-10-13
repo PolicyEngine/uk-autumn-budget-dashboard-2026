@@ -873,8 +873,9 @@ def test_a_package_upgraded_after_loading_cannot_be_receipted(
 ):
     """policyengine.py#571 (round 9): a receipt names the installed
     versions, so a package upgraded after it was loaded would be named as
-    code that did not run. The dashboard records the versions when the
-    receipt code is first used, and the receipt refuses a mismatch."""
+    code that did not run. The dashboard records the versions when it is
+    imported, before policyengine is, and the receipt refuses a
+    mismatch."""
     from uk_budget_data.publication._vendor_w4 import loaded
 
     monkeypatch.setitem(loaded._LOADED, "policyengine-uk", "0.0.0")
@@ -1018,7 +1019,7 @@ def test_a_calculator_failure_is_raised_not_called_an_invalid_scenario(
     from uk_budget_data.models import DataConfig, ReformResult
     from uk_budget_data.publication import generate
 
-    def broken_process(reform, config, baseline, reformed):
+    def broken_process(reform, config, baseline, reformed, baseline_scenario):
         return ReformResult(
             reform_id=reform.id, reform_name=reform.name, constituency="x"
         )
@@ -1092,3 +1093,135 @@ def test_members_with_empty_own_baselines_never_use_the_configured_one(world):
         and configured in (scenario.parameter_changes or {})
         for scenario in scenarios
     )
+
+
+def test_the_income_curve_uses_the_run_baseline_through_the_processor(world):
+    """Review round 9: the processor worked out the income curve's baseline
+    again with its own rule, so members with empty own baselines got the
+    configured baseline for the curve while every other table, the receipt
+    and the gate used current law. The real processor now takes the run's
+    baseline scenario."""
+    from unittest.mock import patch
+
+    from tests.test_pipeline import _processor_with_spies
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication import generate
+
+    configured = "gov.hmrc.income_tax.rates.uk[2].rate"
+    config = DataConfig(
+        years=[2027, 2028],
+        baseline_parameter_changes={configured: {"2027": 0.5}},
+    )
+    members = [
+        Reform(
+            id=name,
+            name=name.title(),
+            parameter_changes={
+                f"gov.hmrc.income_tax.rates.uk[{index}].rate": {"2027": rate}
+            },
+            baseline_parameter_changes={},
+        )
+        for index, name, rate in ((0, "alpha", 0.21), (1, "beta", 0.41))
+    ]
+    values = {2027: -1.0, 2028: -2.0}
+    tables = fake_process(
+        dict.fromkeys(["alpha", "beta", "combined--alpha+beta"], values)
+    )
+    built = {}
+    curves = {}
+
+    def build(dataset, scenario=None):
+        sim = world.sim()
+        built[id(sim)] = scenario
+        return sim
+
+    def process(reform, config, baseline, reformed, baseline_scenario):
+        processor = _processor_with_spies(reform, config)
+        processor.process(baseline, reformed, baseline_scenario)
+        calls = processor.income_curve_calc.calls
+        assert len(calls) == len(config.years)
+        curves[reform.id] = (
+            [call[0] for call in calls],
+            built[id(baseline)],
+        )
+        return tables(reform, config, baseline, reformed, baseline_scenario)
+
+    with patch.object(
+        generate, "code_revision", lambda root: world.revision()
+    ):
+        report = generate.generate_artifacts(
+            members,
+            config,
+            combined_sets=[members],
+            artifacts_root=world.artifacts,
+            build=build,
+            process=process,
+        )
+    assert report.refused == {}
+    assert set(curves) == {"alpha", "beta", "combined--alpha+beta"}
+    for curve_scenarios, population in curves.values():
+        for curve in curve_scenarios:
+            # The curve's baseline is the population's, object for object...
+            assert curve is population
+            # ...and neither falls back to the configured baseline.
+            assert curve is None or configured not in (
+                curve.parameter_changes or {}
+            )
+
+
+def test_the_default_process_hands_the_baseline_scenario_on():
+    from unittest.mock import patch
+
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.pipeline import ReformProcessor
+    from uk_budget_data.publication.generate import _default_process
+
+    seen = []
+    scenario = object()
+
+    def record(self, baseline, reformed, baseline_scenario):
+        seen.append(baseline_scenario)
+
+    with patch.object(ReformProcessor, "process", record):
+        _default_process(
+            Reform(id="m", name="M"),
+            DataConfig(years=[2027]),
+            object(),
+            object(),
+            scenario,
+        )
+    assert seen == [scenario]
+
+
+def test_a_receipt_model_failing_validation_is_raised_not_refused(world):
+    """Review round 9: a receipt model's ValidationError while the
+    current-law side was bound was reported as an invalid scenario."""
+    from unittest.mock import patch
+
+    from pydantic import BaseModel, ValidationError
+
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate, receipt
+
+    class ReformIdentity(BaseModel):
+        name: int
+
+    api, _ = receipt.receipt_api()
+
+    def broken(*args, **kwargs):
+        ReformIdentity(name="not a number")
+
+    with (
+        patch.object(generate, "code_revision", lambda root: world.revision()),
+        patch.object(api, "reform_identity", broken),
+    ):
+        with pytest.raises(ValidationError, match="ReformIdentity"):
+            generate.generate_artifacts(
+                [_measure("alpha", 0, False)],
+                DataConfig(years=[2027, 2028]),
+                artifacts_root=world.artifacts,
+                build=lambda dataset, scenario=None: world.sim(),
+                process=fake_process({"alpha": {2027: -1.0, 2028: -2.0}}),
+            )

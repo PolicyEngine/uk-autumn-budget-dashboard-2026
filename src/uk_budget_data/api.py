@@ -21,6 +21,7 @@ from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
 )
+from uk_budget_data.runtime_identity import runtime_identity
 
 app = FastAPI(
     title="UK Budget Personal Impact API",
@@ -189,6 +190,12 @@ async def calculate_personal_impact_stream(data: APIHouseholdInput):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.get("/api/version")
+async def version():
+    """Report this build's identity for deployed-route household checks."""
+    return runtime_identity()
 
 
 class APILifecycleInput(BaseModel):
