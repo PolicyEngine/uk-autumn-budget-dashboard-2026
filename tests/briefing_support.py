@@ -107,7 +107,7 @@ def approved_world(world, seed=1, years=(2027, 2028), *, tables_by_key=None):
         for index, key in enumerate(("alpha", "beta", COMBINED_KEY))
     }
 
-    def process(reform, config, baseline, reformed):
+    def process(reform, config, baseline, reformed, baseline_scenario):
         tables = {
             name: rows
             for name, rows in tables_by_key[reform.id].items()
