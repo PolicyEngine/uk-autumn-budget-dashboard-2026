@@ -5,7 +5,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
-from tests.fixed_shape_measures import broken_modifier
+from tests.fixed_shape_measures import broken_modifier, module_level_modifier
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -162,14 +162,13 @@ def test_generic_combination_reproduces_the_hand_built_2025_reform():
 
 
 def test_the_engine_and_the_combiner_agree_on_changes_beside_a_modifier():
-    """Differential: one scenario handed to the engine, and the combiner's
-    single modifier, give the same parameters.
+    """Differential: a hand-written scenario and the combiner's give the
+    same parameters.
 
-    The combiner applies parameter changes and then modifiers inside one
-    modifier because policyengine-uk 2.125.1 ran a scenario's modifier
-    first, and the parameter rebuild then wiped the dividend baseline's
-    rates (the engine alone gave 0.1075). From 2.126.12 the engine applies
-    them in the combiner's order.
+    On policyengine-uk 2.125.1 a scenario's modifier ran first, and the
+    parameter rebuild then wiped the dividend baseline's rates (the engine
+    alone gave 0.1075). From 2.126.12 the engine applies the changes first,
+    so the modifier's rates survive beside the savings baseline's changes.
     """
     dividend = get_reform("dividend_tax_increase_2pp")
     savings = get_reform("savings_tax_increase_2pp")
@@ -190,6 +189,59 @@ def test_the_engine_and_the_combiner_agree_on_changes_beside_a_modifier():
     assert engine[DIVIDEND_BASIC][0] == 0.0875
     assert engine[SAVINGS_BASIC][1] == 0.20
     assert engine == combined
+
+
+UC_REBALANCING = "gov.dwp.universal_credit.rebalancing.active"
+BUILD_YEARS = range(2025, 2030)
+# No earnings, and limited capability for work-related activity: the
+# Universal Credit rebalancing step stores this claimant's health element
+# while the simulation is built, from the parameters as they are then.
+LCWRA_CLAIMANT = {
+    "people": {
+        "person": {
+            "age": {year: 30 + year - 2025 for year in BUILD_YEARS},
+            "employment_income": {year: 0 for year in BUILD_YEARS},
+            "uc_limited_capability_for_WRA": {
+                year: True for year in BUILD_YEARS
+            },
+        }
+    },
+    "benunits": {"benunit": {"members": ["person"]}},
+    "households": {"household": {"members": ["person"]}},
+}
+
+
+def _household_result(scenario):
+    from policyengine_uk import Simulation
+
+    sim = Simulation(situation=LCWRA_CLAIMANT, scenario=scenario)
+    return {
+        variable: float(sim.calculate(variable, 2027).sum())
+        for variable in ("universal_credit", "household_net_income")
+    }
+
+
+def test_a_member_gives_the_same_household_result_combined_as_alone():
+    """Review round 10: the combination applied its members' parameter
+    changes inside its modifier, which policyengine-uk 2.126.12 runs after
+    the Universal Credit rebalancing step. Switching rebalancing off then
+    did nothing in a combined run: this claimant's Universal Credit stayed
+    at current law (about 10,475 a year) where the measure alone gives
+    about 7,883, while every parameter agreed and ``check_consistency``
+    passed."""
+    changes = {UC_REBALANCING: {"2027": False}}
+    alone = measure("a", changes)
+    does_nothing = measure("b", simulation_modifier=module_level_modifier)
+    combined = combine_measures([alone, does_nothing], CONFIG)
+    check_consistency(combined, [alone, does_nothing], CONFIG, [2027])
+    result = _household_result(alone.to_scenario())
+    assert _household_result(combined.to_scenario()) == result
+    # Not vacuous: the change moves this household.
+    assert result != _household_result(None)
+    # The changes are the scenario's own, so the engine applies them where
+    # it applies the member's; the modifier only runs the members'.
+    assert combined.to_scenario().parameter_changes == changes
+    assert combined.simulation_modifier is not None
 
 
 def test_combination_keeps_a_modifiers_parameters_and_is_consistent():

@@ -27,6 +27,8 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Optional
 
+from pydantic import ValidationError
+
 from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
@@ -180,6 +182,26 @@ def is_publication_path(path: str) -> bool:
     )
 
 
+# The models whose validation errors mean a measure's configuration cannot
+# build a scenario: policyengine-uk's Scenario and the dashboard's Reform.
+SCENARIO_MODELS = ("Scenario", "Reform")
+
+
+def is_code_defect(error: BaseException) -> bool:
+    """Whether an error is a model other than Scenario or Reform failing
+    its own validation.
+
+    That is a defect in the receipt code or its models, not a measure that
+    cannot be bound, so it must stop generation and not be reported as one
+    measure's refusal. pydantic's ValidationError is a ValueError, which
+    the adapters below otherwise turn into a refusal.
+    """
+    return (
+        isinstance(error, ValidationError)
+        and error.title not in SCENARIO_MODELS
+    )
+
+
 def scenario_identity(scenario, *, name: str, revision: CodeRevision):
     """Bind one side of a measure: a Scenario, or None for current law."""
     api, _ = receipt_api()
@@ -190,6 +212,8 @@ def scenario_identity(scenario, *, name: str, revision: CodeRevision):
             scenario, code_revision=revision.as_binding(), name=name
         )
     except (api.ReceiptError, ValueError) as error:
+        if is_code_defect(error):
+            raise
         raise ReceiptUnavailable(name, str(error)) from error
 
 
@@ -273,6 +297,8 @@ def combined_identities(
             composition,
         )
     except (api.ReceiptError, ValueError) as error:
+        if is_code_defect(error):
+            raise
         raise ReceiptUnavailable(name, str(error)) from error
 
 

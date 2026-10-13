@@ -5,17 +5,22 @@ exactly the selected measures, never from adding standalone results. This
 module builds that combined measure and checks it before it is simulated.
 
 **Order.** Members are applied in order of measure id. The combined
-scenario applies the members' merged parameter changes first and then each
-member's modifier in that order, all inside one modifier. The changes must
-come first: applying them rebuilds the parameters
-(``Simulation.apply_parameter_changes``), which would discard a modifier's
-parameter edits. They are composed into one modifier because
-policyengine-uk 2.125.1 ran a scenario's ``simulation_modifier`` before its
-``parameter_changes``. From 2.126.12 the engine applies a scenario's
-changes before its modifier itself, and ``tests/test_combine.py`` checks
-that it and this composition give the same parameters, so the single
-modifier is no longer needed; retiring it is a follow-up for after Budget
-day. The receipt binds the members in the same order.
+scenario carries the members' merged parameter changes as its own
+``parameter_changes`` and one modifier that runs each member's modifier in
+that order. policyengine-uk 2.126.12 applies a scenario's parameter changes
+first, before the steps that read parameters while a simulation is built
+(the Universal Credit rebalancing inputs, and the structural reforms that
+parameters switch on), and runs its modifier last. So every member's
+changes and modifier take effect in the combination where they do when the
+member is run alone. The receipt binds the members in the same order.
+
+On policyengine-uk 2.125.1 the engine ran a scenario's modifier before its
+parameter changes, whose rebuild then discarded the modifier's parameter
+edits, so the changes used to be applied inside the modifier. On 2.126.12
+that would apply them after the build steps above, and a member that
+changes a parameter those steps read (whether Universal Credit rebalancing
+is active, for one) would give a different result combined than alone.
+``tests/test_engine_order.py`` fails on an engine with the old order.
 
 **Conflicts.** Two members that set the same parameter for the same period
 to different values cannot be combined.
@@ -154,20 +159,25 @@ def merged_changes(measures: list[Reform], config: DataConfig) -> dict:
 def _compose(
     parameter_changes: dict, modifiers: list[Callable]
 ) -> tuple[Optional[dict], Optional[Callable]]:
-    """One side of the combined measure as (parameter changes, modifier)."""
+    """One side of the combined measure as (parameter changes, modifier).
+
+    The merged parameter changes stay on the Scenario, so the engine applies
+    them where it applies a member's own: before the steps that read
+    parameters while a simulation is built (the Universal Credit
+    rebalancing inputs, and the structural reforms that parameters switch
+    on). The modifier runs each member's modifier, in member order, where
+    the engine runs a member's own: after those steps.
+    """
+    changes = parameter_changes or None
     if not modifiers:
-        return (parameter_changes or None), None
+        return changes, None
 
     def apply_members(sim):
-        # Parameters first: the engine's own mechanism reloads the tree, so
-        # it must run before any modifier that sets parameters.
-        if parameter_changes:
-            sim.apply_parameter_changes(parameter_changes)
         for modifier in modifiers:
             modifier(sim)
         return sim
 
-    return None, apply_members
+    return changes, apply_members
 
 
 def combine_measures(measures: list[Reform], config: DataConfig) -> Reform:
