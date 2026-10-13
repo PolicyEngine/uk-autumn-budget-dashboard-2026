@@ -16,6 +16,10 @@ COPY src/ ./src/
 # Install dependencies and the package
 RUN uv sync --frozen --no-dev
 
+# Build identity reported by /api/version for deployed-route checks
+ARG GIT_SHA=""
+ENV GIT_SHA=${GIT_SHA}
+
 # Cloud Run uses PORT env var
 ENV PORT=8080
 
