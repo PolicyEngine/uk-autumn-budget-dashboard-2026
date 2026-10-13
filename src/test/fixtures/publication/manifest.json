@@ -15,7 +15,7 @@
     "combined--alpha+beta": {
       "approval": {
         "artifact_sha256": "c1aa131eb93ee6f5e65c91fbdb11b3cd14e5f595a717d2a6e1b0cbab6c073303",
-        "at": "2026-10-13T14:04:21.155642+00:00",
+        "at": "2026-10-13T14:39:26.228481+00:00",
         "by": "Reviewer",
         "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610"
       },
@@ -89,7 +89,7 @@
     "alpha": {
       "approval": {
         "artifact_sha256": "ca32feb51f70eae60e6b148b406f3f7141bb47bdbbf9468e1d27a4b3873c903c",
-        "at": "2026-10-13T14:04:21.090692+00:00",
+        "at": "2026-10-13T14:39:26.151859+00:00",
         "by": "Reviewer",
         "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40"
       },
@@ -115,7 +115,7 @@
     "beta": {
       "approval": {
         "artifact_sha256": "5a28a770e9edaa53db827bbad14aed460aac38d29a100b0b1d464b7dbb401da3",
-        "at": "2026-10-13T14:04:21.100449+00:00",
+        "at": "2026-10-13T14:39:26.162659+00:00",
         "by": "Reviewer",
         "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b"
       },
@@ -182,5 +182,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-13T14:04:21.155714+00:00"
+  "updated_at": "2026-10-13T14:39:26.228554+00:00"
 }
