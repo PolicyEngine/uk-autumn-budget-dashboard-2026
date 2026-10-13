@@ -24,6 +24,7 @@ import csv
 import math
 import re
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -31,7 +32,9 @@ from typing import Optional
 FISCAL_YEAR = re.compile(r"^(\d{4})-(\d{2})$")
 # Each printed figure is rounded; the Treasury rounds to the nearest £5m, so
 # a total can differ from the sum of its rows by up to £2.5m per row plus
-# £2.5m for the total itself.
+# £2.5m for the total itself. This is a known blind spot: an error smaller
+# than the allowance (which grows with the number of rows), or two errors
+# that cancel, pass the totals check.
 ROUNDING_PER_FIGURE_M = 2.5
 NEGLIGIBLE = "*"
 NIL = {"-", "–", "—", ""}
@@ -150,6 +153,17 @@ def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
                 raise ScorecardError(
                     "the header row needs exactly one 'Head' column"
                 )
+            stray = [
+                _text(cell)
+                for column, cell in enumerate(row)
+                if column not in years
+                and column not in head_columns
+                and re.search(r"\d", _text(cell))
+            ]
+            if stray:
+                raise ScorecardError(
+                    f"the header row has unrecognised year-like cells: {stray}"
+                )
             if head_columns[0] > min(years):
                 raise ScorecardError(
                     "the 'Head' column must come before the fiscal years"
@@ -198,9 +212,34 @@ _TRAILING_MARKER = re.compile(
 )
 
 
+# Characters that carry no words: format characters (zero-width spaces and
+# joiners), and markers or brackets before a label's first letter.
+_LEADING_NOISE = re.compile(r"^[^a-z]+")
+_TOTAL_WORD = re.compile(r"(?:^|[^a-z])(?:sub-?)?total(?:s)?(?:$|[^a-z])")
+
+
 def _total_key(label: str) -> str:
-    """A label as a total is looked up: lower case, footnote marker off."""
-    return _TRAILING_MARKER.sub("", label.strip().lower()).strip()
+    """A label as a total is looked up: lower case, format characters and
+    leading markers off, trailing footnote marker off."""
+    text = "".join(
+        char for char in label if unicodedata.category(char) != "Cf"
+    )
+    text = _LEADING_NOISE.sub("", text.strip().lower())
+    return _TRAILING_MARKER.sub("", text).strip()
+
+
+def _is_figure(cell) -> bool:
+    """Whether a cell holds a number, as a value or as text."""
+    if isinstance(cell, bool):
+        return False
+    if isinstance(cell, (int, float)):
+        return True
+    return bool(re.fullmatch(r"-?[\d,]+(?:\.\d+)?", _text(cell)))
+
+
+def _mentions_a_total(label: str) -> bool:
+    """Whether a label uses the word total or subtotal anywhere."""
+    return bool(_TOTAL_WORD.search(_total_key(label)))
 
 
 def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
@@ -220,7 +259,11 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     seen_numbers: set[str] = set()
 
     for row in rows[:header_index]:
-        if any(_total_key(_text(cell)).startswith("total") for cell in row):
+        # A title may mention totals; a row that also carries a figure
+        # could be a printed total and is refused.
+        if any(_mentions_a_total(_text(cell)) for cell in row) and any(
+            _is_figure(cell) for cell in row
+        ):
             raise ScorecardError(
                 f"a total label above the header in {row!r}; check this row"
             )
@@ -249,8 +292,12 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         # Any other label that begins "Total" is refused, even on a row
         # numbered and headed like a measure: a subtotal with an unfamiliar
         # marker would otherwise be imported as a measure.
-        if total is None and any(
-            _total_key(cell).startswith("total") for cell in label_cells
+        # A blank row with no Head is a heading or footnote ("Totals may not
+        # sum due to rounding") and carries no figure, so it is skipped below.
+        if (
+            total is None
+            and (not blank or head in {"tax", "spend"})
+            and any(_mentions_a_total(cell) for cell in label_cells)
         ):
             raise ScorecardError(
                 f"an unrecognised total in {row!r}; check this row"
