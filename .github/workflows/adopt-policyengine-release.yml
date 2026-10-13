@@ -16,6 +16,10 @@ on:
       bundle_uk_json:
         description: The dispatch payload's bundle.uk object, as JSON
         required: true
+      qualification_json:
+        description: The dispatch payload's qualification object, as JSON (null for none)
+        required: false
+        default: "null"
 
 permissions:
   contents: write
@@ -36,9 +40,9 @@ jobs:
       PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
       PAYLOAD_BUNDLE_UK_JSON: ${{ toJSON(github.event.client_payload.bundle.uk) }}
       PAYLOAD_QUALIFICATION_JSON: ${{ toJSON(github.event.client_payload.qualification) }}
-      PAYLOAD_RELEASE_URL: ${{ github.event.client_payload.release_url }}
       INPUT_VERSION: ${{ inputs.version }}
       INPUT_BUNDLE_UK_JSON: ${{ inputs.bundle_uk_json }}
+      INPUT_QUALIFICATION_JSON: ${{ inputs.qualification_json }}
       HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
     steps:
       - name: Read and validate the release identity
@@ -67,6 +71,16 @@ jobs:
             exit 1
           fi
           printf 'BUNDLE_UK_JSON=%s\n' "$bundle" >> "$GITHUB_ENV"
+          qualification="$PAYLOAD_QUALIFICATION_JSON"
+          if [ -z "$qualification" ] || [ "$qualification" = "null" ]; then
+            qualification="${INPUT_QUALIFICATION_JSON:-null}"
+          fi
+          # Not -e: null is a valid answer here, and error() still fails.
+          if ! qualification=$(printf '%s' "$qualification" | jq -cs 'if length == 1 and ((.[0] | type) == "object" or .[0] == null) then .[0] else error("expected one JSON object or null") end'); then
+            echo "qualification must be one JSON object, or null" >&2
+            exit 1
+          fi
+          printf 'QUALIFICATION_JSON=%s\n' "$qualification" >> "$GITHUB_ENV"
 
       # An App token lets the upgrade PR trigger CI; a PR opened with the
       # default token does not start pull_request workflows.
@@ -83,21 +97,53 @@ jobs:
           ref: main
           token: ${{ steps.app.outputs.token || github.token }}
 
-      - name: Stop if this release is already adopted or proposed
+      # Proposes only a release newer than the one main pins. A branch left
+      # by a run that pushed but could not open its pull request is rebuilt
+      # (with a lease on exactly what was seen there), so a retry recovers.
+      - name: Stop if this release is not newer, or is already proposed
         id: dedupe
         env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ steps.release.outputs.branch }}
         run: |
-          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
-            echo "Branch $BRANCH already exists; nothing to do."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          elif grep -A1 '^name = "policyengine"$' uv.lock | grep -q "^version = \"$VERSION\"$"; then
-            echo "uv.lock already pins policyengine $VERSION; nothing to do."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+          # Whether plain version $1 is newer than plain version $2.
+          newer() {
+            local IFS=.
+            local -a a=($1) b=($2)
+            local i
+            for i in 0 1 2; do
+              if (( 10#${a[i]} > 10#${b[i]} )); then return 0; fi
+              if (( 10#${a[i]} < 10#${b[i]} )); then return 1; fi
+            done
+            return 1
+          }
+          current=$(grep -A1 '^name = "policyengine"$' uv.lock | sed -n 's/^version = "\(.*\)"$/\1/p')
+          if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::uv.lock does not pin a plain policyengine version"
+            exit 1
           fi
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if ! newer "$VERSION" "$current"; then
+            echo "uv.lock pins policyengine $current; $VERSION is not newer, so nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          orphan=""
+          if remote=$(git ls-remote --exit-code --heads origin "$BRANCH"); then
+            proposals=$(gh pr list --head "$BRANCH" --state all --json number --jq length)
+            if [ "$proposals" != "0" ]; then
+              echo "Branch $BRANCH already has a pull request; nothing to do."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            orphan="${remote%%[[:space:]]*}"
+            echo "::warning::$BRANCH exists with no pull request, left by an incomplete run; rebuilding it"
+          fi
+          {
+            echo "skip=false"
+            echo "orphan=$orphan"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Install uv
         if: steps.dedupe.outputs.skip == 'false'
@@ -121,9 +167,12 @@ jobs:
         if: steps.dedupe.outputs.skip == 'false'
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          CURRENT: ${{ steps.dedupe.outputs.current }}
         run: >-
           uv run python -m uk_budget_data.bundle_adoption
-          --version "$VERSION" --bundle-uk-json "$BUNDLE_UK_JSON"
+          --version "$VERSION" --current-version "$CURRENT"
+          --bundle-uk-json "$BUNDLE_UK_JSON"
+          --qualification-json "$QUALIFICATION_JSON"
 
       - name: Open the draft pull request
         if: steps.dedupe.outputs.skip == 'false'
@@ -131,26 +180,36 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ steps.release.outputs.branch }}
+          ORPHAN: ${{ steps.dedupe.outputs.orphan }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$BRANCH"
           git add pyproject.toml uv.lock
           git commit -m "Adopt policyengine $VERSION"
-          git push origin "$BRANCH"
+          if [ -n "$ORPHAN" ]; then
+            # Replace only the incomplete branch the dedupe step saw.
+            git push --force-with-lease="refs/heads/$BRANCH:$ORPHAN" origin "$BRANCH"
+          else
+            git push origin "$BRANCH"
+          fi
+          # The release page is built from the validated version, never taken
+          # from the dispatch. JSON evidence goes in a fenced block with every
+          # backtick escaped (still the same JSON), so it cannot end the fence.
+          release_url="https://github.com/PolicyEngine/policyengine.py/releases/tag/$VERSION"
           {
             echo "**Draft, opened automatically. Do not merge until every published measure is regenerated and re-gated on this release.**"
             echo
-            echo "policyengine.py released \`$VERSION\`${PAYLOAD_RELEASE_URL:+ ($PAYLOAD_RELEASE_URL)}. The installed wheel's bundle was checked against the release dispatch and matches:"
+            echo "policyengine.py released \`$VERSION\` ($release_url). The installed wheel's bundle was checked against the release dispatch and matches:"
             echo
             echo '```json'
-            printf '%s\n' "$BUNDLE_UK_JSON"
+            printf '%s\n' "$BUNDLE_UK_JSON" | sed 's/`/\\u0060/g'
             echo '```'
             echo
-            echo "Qualification reported by the dispatch:"
+            echo "Qualification reported by the dispatch, and checked:"
             echo
             echo '```json'
-            printf '%s\n' "${PAYLOAD_QUALIFICATION_JSON:-null}"
+            printf '%s\n' "$QUALIFICATION_JSON" | sed 's/`/\\u0060/g'
             echo '```'
             echo
             echo "## Before merging"
