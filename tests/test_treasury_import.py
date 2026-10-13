@@ -474,3 +474,38 @@ def test_figures_outside_the_year_columns_are_refused():
     rows = [HEADER, (*TAX, 100), GRAND_TOTAL]
     with pytest.raises(ScorecardError, match="outside the fiscal-year"):
         parse_rows(rows)
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Total tax policy decisions 1",
+        "Total tax policy decisions (a)",
+        "Total tax policy decisions (1)",
+    ],
+)
+def test_a_numbered_subtotal_with_any_marker_is_not_a_measure(label):
+    """Round 8: an unfamiliar marker on a numbered, Tax-headed subtotal made
+    it a nil measure, so its contradictory subtotal was never checked."""
+    with pytest.raises(ScorecardError):
+        parse_rows(
+            [HEADER, TAX, (None, 1, label, "Tax", 0, 0, 0), GRAND_TOTAL]
+        )
+
+
+def test_a_head_column_after_the_years_is_refused():
+    """Round 8: with Head after the years, figures fell among the labels."""
+    header = (None, None, None, "2026-27", "2027-28", "2028-29", "Head")
+    with pytest.raises(ScorecardError, match="before the fiscal years"):
+        parse_rows([header, (None, 7, "Tax measure", 100, 100, 100, "Tax")])
+
+
+def test_any_total_like_label_above_the_header_is_refused():
+    rows = [
+        (None, None, "Total policy decisions (\u00a3m)", None, 999, 999, 999),
+        HEADER,
+        TAX,
+        GRAND_TOTAL,
+    ]
+    with pytest.raises(ScorecardError, match="above the header"):
+        parse_rows(rows)
