@@ -196,11 +196,10 @@ def scenario_identity(scenario, *, name: str, revision: CodeRevision):
 def measure_identities(reform, config, revision: CodeRevision):
     """The (baseline, reform) identities of one measure.
 
-    The baseline is the measure's own baseline when it has one, otherwise
-    the configured baseline, otherwise current law: the same precedence the
-    pipeline uses to build the simulations.
+    The baseline is ``Reform.baseline_scenario_for``, the one the
+    simulations are built with.
     """
-    baseline = reform.to_baseline_scenario() or config.get_baseline_scenario()
+    baseline = reform.baseline_scenario_for(config)
     return (
         scenario_identity(
             baseline, name=f"{reform.id} baseline", revision=revision

@@ -227,7 +227,7 @@ def test_income_curve_uses_the_same_baseline_as_the_population(own_baseline):
         ),
     )
     processor = _processor_with_spies(reform, config)
-    processor.process(object(), object())
+    processor.process(object(), object(), reform.baseline_scenario_for(config))
     baseline_scenario = processor.income_curve_calc.calls[0][0]
     expected = (
         reform.to_baseline_scenario()
