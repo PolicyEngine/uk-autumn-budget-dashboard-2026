@@ -75,11 +75,17 @@ def _has_what_we_need(module) -> bool:
     """Whether a receipt module has the rules this package relies on, not
     only the names: receipts that record the years the dataset is
     projected to (#571), and infinite values bound as marked non-finite
-    values (#588, which carries #571's module-shape rules)."""
+    values (#588, which carries #571's module-shape rules), and refusing a
+    run whose packages were upgraded after loading."""
     if not all(hasattr(module, name) for name in _REQUIRED_API):
         return False
     fields = getattr(module.ExecutionReceipt, "model_fields", {})
-    return "supported_years" in fields and hasattr(module, "NONFINITE_KEY")
+    return (
+        "supported_years" in fields
+        and hasattr(module, "NONFINITE_KEY")
+        # It refuses a run upgraded after loading (policyengine.py#571).
+        and hasattr(module, "loaded_versions")
+    )
 
 
 def receipt_api() -> tuple[Any, str]:
