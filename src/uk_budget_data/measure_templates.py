@@ -327,17 +327,19 @@ def _replace_formula(sim, name, formula):
     The previous variable is computed by ``_call_formula``, which follows
     core for a formula or a default. It is refused instead when core would
     compute it some other way: a neutralised variable (core returns its
-    default without running its formulas) or one built from ``adds`` and
-    ``subtracts`` with no formula (core sums them).
+    default without running its formulas) or one with ``adds`` or
+    ``subtracts`` (core sums them wherever no formula applies).
     """
     _ensure_not_stored(sim, name)
     current = sim.tax_benefit_system.get_variable(name)
     if getattr(current, "is_neutralized", False):
         raise ValueError(f"{name} is neutralised; a template cannot wrap it")
-    if not current.formulas and (current.adds or current.subtracts):
+    if current.adds or current.subtracts:
+        # Core sums them in any period without a formula, including before
+        # a dated formula starts; the wrapper would take the default there.
         raise ValueError(
-            f"{name} is built from adds or subtracts with no formula; a "
-            "template cannot wrap it"
+            f"{name} is built from adds or subtracts; a template cannot "
+            "wrap it"
         )
     replacement = type(
         name, (Variable,), {"formula": formula, "__module__": __name__}

@@ -316,3 +316,60 @@ def test_a_variable_core_computes_otherwise_is_not_wrapped(prior, message):
             taper_threshold=24_000,
             taper_rate=0,
         )
+
+
+def _dated_formula(person, period, parameters):
+    return person.empty_array() + 1
+
+
+_DATED_FROM_2030 = type(
+    "personal_allowance",
+    (Variable,),
+    {"formula_2030_01_01": _dated_formula, "__module__": __name__},
+)
+
+
+class _DatedFormula(CoreReform):
+    def apply(self):
+        self.update_variable(_DATED_FROM_2030)
+
+
+def _adds_then_a_dated_formula(sim):
+    _apply_reform_class(_AddsAllowance, sim)
+    _apply_reform_class(_DatedFormula, sim)
+
+
+def test_inherited_adds_beside_a_later_formula_are_not_wrapped():
+    """Round 6: a formula starting in 2030 beside inherited adds slipped
+    past the 'no formula' condition, and the wrapper took the default
+    before 2030 where core sums the adds."""
+    sim = Simulation(
+        situation={
+            "people": {
+                "p": {
+                    "age": {2027: 75, 2028: 75},
+                    "private_pension_income": {2027: 30_000, 2028: 30_000},
+                }
+            },
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {
+                "h": {
+                    "members": ["p"],
+                    "region": {2027: "LONDON", 2028: "LONDON"},
+                }
+            },
+        },
+        scenario=Scenario(
+            simulation_modifier=_adds_then_a_dated_formula,
+            applied_before_data_load=True,
+        ),
+    )
+    variable = sim.tax_benefit_system.get_variable("personal_allowance")
+    assert variable.formulas and variable.adds
+    with pytest.raises(ValueError, match="adds or subtracts"):
+        apply_age_conditioned_allowance(
+            sim,
+            allowance_by_year={2028: 15_000},
+            taper_threshold=24_000,
+            taper_rate=0,
+        )
