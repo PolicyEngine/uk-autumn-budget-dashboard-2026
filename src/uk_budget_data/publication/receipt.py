@@ -31,7 +31,7 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-pr588@1ec7c76"
+VENDORED_SOURCE = "vendored-w4-pr588@cab895b"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 
@@ -95,7 +95,17 @@ def receipt_api() -> tuple[Any, str]:
     if released is not None and _has_what_we_need(released):
         return released, f"policyengine=={metadata.version('policyengine')}"
     from uk_budget_data.publication._vendor_w4 import receipt as vendored
+    from uk_budget_data.publication._vendor_w4.loaded import (
+        record_loaded_versions,
+    )
 
+    # The installed policyengine predates the version recorder, so record
+    # the versions here, when the receipt code is first used (the first
+    # record is kept). A package upgraded later in the same process is
+    # then refused at receipt time rather than named as the code that ran.
+    record_loaded_versions(
+        ("policyengine", "policyengine-uk", "policyengine-core")
+    )
     return vendored, VENDORED_SOURCE
 
 
