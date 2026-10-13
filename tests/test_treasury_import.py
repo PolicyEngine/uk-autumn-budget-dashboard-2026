@@ -287,7 +287,7 @@ def test_a_blank_total_beside_a_printed_one_is_refused(blank_first):
         i for i, row in enumerate(rows) if "Total policy decisions" in row
     )
     rows.insert(position if blank_first else position + 1, blank)
-    with pytest.raises(ScorecardError, match="prints no figures"):
+    with pytest.raises(ScorecardError, match="does not print every"):
         parse_rows(rows)
 
 
@@ -315,7 +315,7 @@ MARK = ("\u00b9", None, "Total policy decisions", None)
         # Round 5: a heading, then measures that cancel.
         (
             [HEADER, (None, "Total policy decisions", None, None), TAX, SPEND],
-            "prints no figures",
+            "does not print every",
         ),
         # Round 5: a footnote quoting the total's words beside its text.
         (
@@ -330,11 +330,11 @@ MARK = ("\u00b9", None, "Total policy decisions", None)
         # Round 6: a heading in the description column before the measures.
         (
             [HEADER, (None, None, "Total policy decisions", None), TAX, SPEND],
-            "prints no figures",
+            "does not print every",
         ),
         # Round 6: a marked blank total beside a real one, either order.
-        ([HEADER, TAX, MARK, GRAND_TOTAL], "prints no figures"),
-        ([HEADER, TAX, GRAND_TOTAL, MARK], "prints no figures"),
+        ([HEADER, TAX, MARK, GRAND_TOTAL], "does not print every"),
+        ([HEADER, TAX, GRAND_TOTAL, MARK], "does not print every"),
     ],
 )
 def test_a_total_row_that_is_not_plainly_a_total_is_refused(rows, message):
@@ -351,4 +351,126 @@ def test_a_total_with_a_footnote_marker_is_read():
     assert check_totals(parse_rows(rows))
     rows = [HEADER, TAX, (*MARK, 100, 100, 100), GRAND_TOTAL]
     with pytest.raises(ScorecardError, match="appears twice"):
+        parse_rows(rows)
+
+
+@pytest.mark.parametrize(
+    "rows, message",
+    [
+        # Round 7: one printed dash, the other years blank.
+        (
+            [
+                HEADER,
+                TAX,
+                SPEND,
+                (None, None, "Total policy decisions", None, "-", None, None),
+            ],
+            "does not print every",
+        ),
+        # Round 7: a note in the Head column of a total.
+        (
+            [
+                HEADER,
+                TAX,
+                SPEND,
+                (None, None, "Total policy decisions", "See note 1", 0, 0, 0),
+            ],
+            "Head column",
+        ),
+        # Round 7: a second total label in the Head column.
+        (
+            [
+                HEADER,
+                TAX,
+                (
+                    None,
+                    None,
+                    "Total policy decisions",
+                    "Total policy decisions",
+                    100,
+                    100,
+                    100,
+                ),
+            ],
+            "Head column",
+        ),
+        # Round 7: a subtotal with an inline marker, numbered like a measure.
+        (
+            [
+                HEADER,
+                TAX,
+                (None, 1, "Total tax policy decisions\u00b9", "Tax", 0, 0, 0),
+                GRAND_TOTAL,
+            ],
+            "Head column",
+        ),
+        # Round 7: a contradictory total above the header.
+        (
+            [
+                (None, None, "Total policy decisions", None, 999, 999, 999),
+                HEADER,
+                TAX,
+                GRAND_TOTAL,
+            ],
+            "above the header",
+        ),
+        # An unrecognised total is refused, not taken for a measure.
+        (
+            [
+                HEADER,
+                TAX,
+                (
+                    None,
+                    None,
+                    "Total policy decisions excluding X",
+                    None,
+                    100,
+                    100,
+                    100,
+                ),
+            ],
+            "unrecognised total",
+        ),
+    ],
+)
+def test_more_ambiguous_total_rows_are_refused(rows, message):
+    with pytest.raises(ScorecardError, match=message):
+        parse_rows(rows)
+
+
+@pytest.mark.parametrize("inline", ["\u00b9", "1", "*"])
+def test_an_inline_marker_does_not_hide_a_total(inline):
+    """Round 7: 'Total policy decisions¹' was not read as a total, so a
+    blank one vanished beside a real one."""
+    marked = (
+        None,
+        None,
+        f"Total policy decisions{inline}",
+        None,
+        100,
+        100,
+        100,
+    )
+    with pytest.raises(ScorecardError, match="appears twice"):
+        parse_rows([HEADER, TAX, marked, GRAND_TOTAL])
+    assert check_totals(parse_rows([HEADER, TAX, marked]))
+
+
+def test_a_year_printed_with_an_en_dash_is_read():
+    """Round 7: a 2029\u201330 column was not recognised, so its contradictory
+    total was never checked."""
+    rows = [
+        (*HEADER, "2029\u201330"),
+        (*TAX, 100),
+        (*GRAND_TOTAL, 999),
+    ]
+    scorecard = parse_rows(rows)
+    assert scorecard.fiscal_years[-1] == "2029-30"
+    with pytest.raises(TotalsMismatch, match="2029-30"):
+        check_totals(scorecard)
+
+
+def test_figures_outside_the_year_columns_are_refused():
+    rows = [HEADER, (*TAX, 100), GRAND_TOTAL]
+    with pytest.raises(ScorecardError, match="outside the fiscal-year"):
         parse_rows(rows)
