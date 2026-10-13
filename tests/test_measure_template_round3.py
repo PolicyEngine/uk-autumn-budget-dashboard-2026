@@ -240,3 +240,79 @@ def test_a_monthly_payment_channel_is_refused():
             channel="monthly_epg_subsidy",
             year=2027,
         )
+
+
+# --- round 5 of the template review ----------------------------------------
+
+
+class _AbolishAllowance(CoreReform):
+    def apply(self):
+        self.neutralize_variable("personal_allowance")
+
+
+def _abolish_allowance(sim):
+    _apply_reform_class(_AbolishAllowance, sim)
+
+
+# Core reads a variable's attributes from its own class body, so the
+# replacement is built with every attribute in its namespace.
+_ALLOWANCE_FROM_ADDS = type(
+    "personal_allowance",
+    (Variable,),
+    {
+        "value_type": float,
+        "entity": Person,
+        "definition_period": YEAR,
+        "label": "Personal allowance built from adds",
+        "adds": ["private_pension_income"],
+        "__module__": __name__,
+    },
+)
+
+
+class _AddsAllowance(CoreReform):
+    def apply(self):
+        self.replace_variable(_ALLOWANCE_FROM_ADDS)
+
+
+def _allowance_from_adds(sim):
+    _apply_reform_class(_AddsAllowance, sim)
+
+
+@pytest.mark.parametrize(
+    "prior, message",
+    [
+        (_abolish_allowance, "neutralised"),
+        (_allowance_from_adds, "adds or subtracts"),
+    ],
+)
+def test_a_variable_core_computes_otherwise_is_not_wrapped(prior, message):
+    """A neutralised variable would be revived by the wrapper, and one built
+    from adds would lose them; both are refused."""
+    sim = Simulation(
+        situation={
+            "people": {
+                "p": {
+                    "age": {2027: 75, 2028: 75},
+                    "private_pension_income": {2027: 30_000, 2028: 30_000},
+                }
+            },
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {
+                "h": {
+                    "members": ["p"],
+                    "region": {2027: "LONDON", 2028: "LONDON"},
+                }
+            },
+        },
+        scenario=Scenario(
+            simulation_modifier=prior, applied_before_data_load=True
+        ),
+    )
+    with pytest.raises(ValueError, match=message):
+        apply_age_conditioned_allowance(
+            sim,
+            allowance_by_year={2028: 15_000},
+            taper_threshold=24_000,
+            taper_rate=0,
+        )

@@ -7,6 +7,11 @@ execution receipts cannot bind closure factories or partially applied helpers.
 There is no ``monthly_schedule`` helper: monthly policies must be expressed
 as fiscal-year values, with the team choosing the aggregation methodology.
 Parameter builders refuse interval keys on the installed UK engine.
+
+Runtime helpers wrap a variable's formula, so they must be applied after
+the data is loaded (a modifier's default phase): they refuse a variable
+that already holds stored values, and values loaded after a wrapper was
+installed would hide it for their periods.
 """
 
 import math
@@ -317,8 +322,23 @@ def _call_formula(variable, entity, period, parameters):
 
 
 def _replace_formula(sim, name, formula):
-    """Replace on this simulation only, preserving native variable metadata."""
+    """Replace on this simulation only, preserving native variable metadata.
+
+    The previous variable is computed by ``_call_formula``, which follows
+    core for a formula or a default. It is refused instead when core would
+    compute it some other way: a neutralised variable (core returns its
+    default without running its formulas) or one built from ``adds`` and
+    ``subtracts`` with no formula (core sums them).
+    """
     _ensure_not_stored(sim, name)
+    current = sim.tax_benefit_system.get_variable(name)
+    if getattr(current, "is_neutralized", False):
+        raise ValueError(f"{name} is neutralised; a template cannot wrap it")
+    if not current.formulas and (current.adds or current.subtracts):
+        raise ValueError(
+            f"{name} is built from adds or subtracts with no formula; a "
+            "template cannot wrap it"
+        )
     replacement = type(
         name, (Variable,), {"formula": formula, "__module__": __name__}
     )
