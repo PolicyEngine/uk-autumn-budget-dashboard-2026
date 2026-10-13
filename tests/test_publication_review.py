@@ -954,29 +954,38 @@ def test_a_combined_set_of_own_baselines_ignores_the_configured_one(world):
     ]
 
 
-def test_versions_are_recorded_when_the_package_is_imported():
-    """Review round 7: versions were first recorded at the first receipt
-    call, after the model was imported. The package now records them on
-    import, before anything imports policyengine. Checked in a fresh
-    process, where nothing else has called the receipt code."""
+def test_versions_are_recorded_before_policyengine_is_imported():
+    """Review rounds 7 and 8: the package records the three versions when
+    it is imported, before anything imports policyengine_uk. A fresh
+    process spies on the version lookups the recorder makes."""
     import subprocess
     import sys
 
     probe = (
+        "import sys\n"
+        "from importlib import metadata\n"
+        "real = metadata.version\n"
+        "seen = {}\n"
+        "def spy(name):\n"
+        "    seen.setdefault(name, 'policyengine_uk' in sys.modules)\n"
+        "    return real(name)\n"
+        "metadata.version = spy\n"
         "import uk_budget_data\n"
         "from uk_budget_data.publication._vendor_w4.loaded import "
         "loaded_versions\n"
-        "print(sorted(loaded_versions()))\n"
+        "names = ('policyengine', 'policyengine-uk', 'policyengine-core')\n"
+        "print(sorted(loaded_versions()) == sorted(names))\n"
+        "print([seen.get(name) for name in names])\n"
     )
     output = subprocess.run(
         [sys.executable, "-c", probe],
         capture_output=True,
         text=True,
         check=True,
-    ).stdout
-    assert output.strip() == str(
-        ["policyengine", "policyengine-core", "policyengine-uk"]
-    )
+    ).stdout.split("\n")
+    assert output[0] == "True"
+    # Each version was looked up while policyengine_uk was not yet loaded.
+    assert output[1] == "[False, False, False]"
 
 
 def test_a_receipt_module_without_the_version_recorder_is_not_adopted():
@@ -992,3 +1001,94 @@ def test_a_receipt_module_without_the_version_recorder_is_not_adopted():
     assert not adapter._has_what_we_need(without)
     without.loaded_versions = vendored.loaded_versions
     assert adapter._has_what_we_need(without)
+
+
+# --- round 8 (publication review) ------------------------------------------
+
+
+def test_a_calculator_failure_is_raised_not_called_an_invalid_scenario(
+    world,
+):
+    """Review round 8: the catch for scenarios a configuration cannot build
+    covered the whole run, so a calculator bug became a quiet refusal."""
+    from unittest.mock import patch
+
+    from pydantic import ValidationError
+
+    from uk_budget_data.models import DataConfig, ReformResult
+    from uk_budget_data.publication import generate
+
+    def broken_process(reform, config, baseline, reformed):
+        return ReformResult(
+            reform_id=reform.id, reform_name=reform.name, constituency="x"
+        )
+
+    with patch.object(
+        generate, "code_revision", lambda root: world.revision()
+    ):
+        with pytest.raises(ValidationError):
+            generate.generate_artifacts(
+                [_measure("alpha", 0, False)],
+                DataConfig(years=[2027, 2028]),
+                artifacts_root=world.artifacts,
+                build=lambda dataset, scenario=None: world.sim(),
+                process=broken_process,
+            )
+
+
+def test_members_with_empty_own_baselines_never_use_the_configured_one(world):
+    """Review round 8: members whose own baselines were empty made the
+    combined baseline empty, and the run fell back to the configured
+    baseline while its receipt said current law."""
+    from unittest.mock import patch
+
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication import generate
+
+    configured = "gov.hmrc.income_tax.rates.uk[2].rate"
+    config = DataConfig(
+        years=[2027, 2028],
+        baseline_parameter_changes={configured: {"2027": 0.5}},
+    )
+    members = [
+        Reform(
+            id=name,
+            name=name.title(),
+            parameter_changes={
+                f"gov.hmrc.income_tax.rates.uk[{index}].rate": {"2027": rate}
+            },
+            baseline_parameter_changes={},
+        )
+        for index, name, rate in ((0, "alpha", 0.21), (1, "beta", 0.41))
+    ]
+    scenarios = []
+
+    def build(dataset, scenario=None):
+        scenarios.append(scenario)
+        return world.sim()
+
+    values = {2027: -1.0, 2028: -2.0}
+    with patch.object(
+        generate, "code_revision", lambda root: world.revision()
+    ):
+        report = generate.generate_artifacts(
+            members,
+            config,
+            combined_sets=[members],
+            artifacts_root=world.artifacts,
+            build=build,
+            process=fake_process(
+                {
+                    "alpha": values,
+                    "beta": values,
+                    "combined--alpha+beta": values,
+                }
+            ),
+        )
+    assert report.refused == {}
+    assert not any(
+        scenario is not None
+        and configured in (scenario.parameter_changes or {})
+        for scenario in scenarios
+    )

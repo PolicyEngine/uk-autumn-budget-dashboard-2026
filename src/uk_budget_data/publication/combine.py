@@ -265,6 +265,20 @@ def _changed(snapshot: dict, plain: dict) -> dict:
     return changed
 
 
+def run_baseline(reform: Reform, config: DataConfig, uses_config: bool):
+    """The baseline a run simulates: its own, else the configured one when
+    the run uses it, else current law.
+
+    A combined set whose members all bring their own baselines (even empty
+    ones) does not use the configured baseline, so it never falls back to
+    it, whatever its merged baseline turns out to be.
+    """
+    own = reform.to_baseline_scenario()
+    if own is None and uses_config:
+        return config.get_baseline_scenario()
+    return own
+
+
 def check_consistency(
     combined: Reform,
     members: list[Reform],
@@ -283,8 +297,17 @@ def check_consistency(
     plain = parameter_snapshot(None, instants, "current law")
     problems = []
 
+    combined_uses_config = any(
+        not member.has_custom_baseline() for member in members
+    )
+
     def effective_baseline(measure: Reform):
-        return measure.to_baseline_scenario() or config.get_baseline_scenario()
+        uses_config = (
+            combined_uses_config
+            if measure is combined
+            else not measure.has_custom_baseline()
+        )
+        return run_baseline(measure, config, uses_config)
 
     for side, scenario_of in (
         ("baseline", effective_baseline),
