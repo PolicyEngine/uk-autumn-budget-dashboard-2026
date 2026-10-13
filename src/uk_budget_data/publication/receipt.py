@@ -105,10 +105,10 @@ def receipt_api() -> tuple[Any, str]:
         record_loaded_versions,
     )
 
-    # The installed policyengine predates the version recorder, so record
-    # the versions here, when the receipt code is first used (the first
-    # record is kept). A package upgraded later in the same process is
-    # then refused at receipt time rather than named as the code that ran.
+    # uk_budget_data records the versions when it is imported, before
+    # anything imports policyengine. This call is only a fallback for a
+    # process that reaches the receipt code some other way; the first
+    # record is kept, so it never replaces the import-time one.
     record_loaded_versions(
         ("policyengine", "policyengine-uk", "policyengine-core")
     )

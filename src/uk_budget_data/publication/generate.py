@@ -147,6 +147,18 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
+def _scenarios(subject: str, build_them: Callable):
+    """Run a step that builds scenarios, refusing the run (not stopping the
+    generation) when the configuration cannot build one. Only scenario
+    construction is caught: a calculator or receipt failure still raises."""
+    try:
+        return build_them()
+    except ValidationError as error:
+        raise ReceiptUnavailable(
+            subject, f"invalid scenario: {str(error).splitlines()[0]}"
+        ) from error
+
+
 def generate_artifacts(
     reforms: list[Reform],
     config: DataConfig,
@@ -185,6 +197,11 @@ def generate_artifacts(
     basis = load_basis(repo_root / BASIS_PATH)
     configured_identity: list = []
 
+    def baseline_for(reform: Reform, uses_config_baseline: bool):
+        from uk_budget_data.publication.combine import run_baseline
+
+        return run_baseline(reform, config, uses_config_baseline)
+
     def config_baseline():
         # Bound when a run first records it, so a configured baseline that
         # no requested run uses cannot stop the others.
@@ -213,11 +230,12 @@ def generate_artifacts(
         uses_config_baseline=False,
     ):
         baseline_identity, reform_identity = identities
-        baseline_scenario = (
-            reform.to_baseline_scenario() or config.get_baseline_scenario()
+        baseline_scenario = _scenarios(
+            key, lambda: baseline_for(reform, uses_config_baseline)
         )
+        reform_scenario = _scenarios(key, reform.to_scenario)
         baseline = build(dataset_path, baseline_scenario)
-        reformed = build(dataset_path, reform.to_scenario())
+        reformed = build(dataset_path, reform_scenario)
         result = process(reform, config, baseline, reformed)
 
         def build_receipt(file_digests):
@@ -261,7 +279,10 @@ def generate_artifacts(
             )
             continue
         try:
-            identities = measure_identities(reform, config, revision)
+            identities = _scenarios(
+                reform.id,
+                lambda: measure_identities(reform, config, revision),
+            )
             run(
                 reform,
                 reform.id,
@@ -273,12 +294,6 @@ def generate_artifacts(
         except ReceiptUnavailable as error:
             report.refused[reform.id] = error.reason
             on_progress(f"{reform.id}: REFUSED: {error.reason}")
-        except ValidationError as error:
-            # A scenario the configuration cannot build (a malformed
-            # configured baseline, say) refuses this run, not the others.
-            reason = f"invalid scenario: {str(error).splitlines()[0]}"
-            report.refused[reform.id] = reason
-            on_progress(f"{reform.id}: REFUSED: {reason}")
 
     for members in combined_sets or []:
         from uk_budget_data.publication import combine
@@ -286,22 +301,18 @@ def generate_artifacts(
         ordered = combine.member_order(members)
         ids = [member.id for member in ordered]
         key = combine.combined_key(ids)
-        try:
+        uses_config = any(
+            not member.has_custom_baseline() for member in ordered
+        )
+
+        def prepare():
             combined = combine.combine_measures(ordered, config)
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
             )
             # Bind each side with the phase its combined Scenario runs in.
-            combined_baseline = (
-                combined.to_baseline_scenario()
-                or config.get_baseline_scenario()
-            )
-            (
-                baseline_identity,
-                reform_identity,
-                records,
-                composition,
-            ) = combined_identities(
+            combined_baseline = baseline_for(combined, uses_config)
+            return combined, combined_identities(
                 ordered,
                 config,
                 revision,
@@ -314,6 +325,14 @@ def generate_artifacts(
                     else False
                 ),
             )
+
+        try:
+            combined, (
+                baseline_identity,
+                reform_identity,
+                records,
+                composition,
+            ) = _scenarios(key, prepare)
             combined = combined.model_copy(update={"id": key})
             snapshot = {
                 member: written_outputs.get(member)
@@ -332,17 +351,11 @@ def generate_artifacts(
                 ids,
                 member_outputs=(snapshot if all(snapshot.values()) else None),
                 composition=composition,
-                uses_config_baseline=any(
-                    not member.has_custom_baseline() for member in ordered
-                ),
+                uses_config_baseline=uses_config,
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason
             on_progress(f"{key}: REFUSED: {error.reason}")
-        except ValidationError as error:
-            reason = f"invalid scenario: {str(error).splitlines()[0]}"
-            report.refused[key] = reason
-            on_progress(f"{key}: REFUSED: {reason}")
         except (combine.CombineConflict, combine.CombineInconsistent) as error:
             report.refused[key] = str(error)
             on_progress(f"{key}: REFUSED: {error}")
