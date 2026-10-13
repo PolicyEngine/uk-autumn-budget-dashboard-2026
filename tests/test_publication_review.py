@@ -1225,3 +1225,105 @@ def test_a_receipt_model_failing_validation_is_raised_not_refused(world):
                 build=lambda dataset, scenario=None: world.sim(),
                 process=fake_process({"alpha": {2027: -1.0, 2028: -2.0}}),
             )
+
+
+class _BrokenIdentity:
+    """A receipt function that fails a receipt model's own validation, for
+    the call whose ``name`` matches (or every call)."""
+
+    def __init__(self, real, only_name=None):
+        self.real = real
+        self.only_name = only_name
+
+    def __call__(self, *args, **kwargs):
+        from pydantic import BaseModel
+
+        class ReformIdentity(BaseModel):
+            name: int
+
+        if self.only_name is None or kwargs.get("name") == self.only_name:
+            ReformIdentity(name="not a number")
+        return self.real(*args, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "function, only_name, combined, configured",
+    [
+        # A measure's own side, bound from its Scenario.
+        ("scenario_reform_identity", None, False, False),
+        # The configured baseline, bound when a run first records it.
+        ("scenario_reform_identity", "configured baseline", False, True),
+        # A combined run's composed identities.
+        ("composed_reform_identity", None, True, False),
+    ],
+    ids=["measure", "configured baseline", "combined"],
+)
+def test_no_adapter_reports_a_receipt_model_defect_as_a_refusal(
+    world, function, only_name, combined, configured
+):
+    """Review round 10: pydantic's ValidationError is a ValueError, so the
+    adapters that turn a measure's ValueError into a refusal also swallowed
+    a receipt model failing its own validation, on every path but the
+    current-law one fixed in round 9."""
+    from unittest.mock import patch
+
+    from pydantic import ValidationError
+
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate, receipt
+
+    api, _ = receipt.receipt_api()
+    members = [_measure("alpha", 0, True), _measure("beta", 1, True)]
+    reforms = members if combined else [_measure("alpha", 0, not configured)]
+    config = DataConfig(
+        years=[2027, 2028],
+        baseline_parameter_changes=(
+            {"gov.hmrc.income_tax.rates.uk[2].rate": {"2027": 0.46}}
+            if configured
+            else None
+        ),
+    )
+    values = {2027: -1.0, 2028: -2.0}
+    broken = _BrokenIdentity(getattr(api, function), only_name)
+    with (
+        patch.object(generate, "code_revision", lambda root: world.revision()),
+        patch.object(api, function, broken),
+    ):
+        with pytest.raises(ValidationError, match="ReformIdentity"):
+            generate.generate_artifacts(
+                reforms,
+                config,
+                combined_sets=[members] if combined else None,
+                artifacts_root=world.artifacts,
+                build=lambda dataset, scenario=None: world.sim(),
+                process=fake_process(
+                    dict.fromkeys(
+                        ["alpha", "beta", "combined--alpha+beta"], values
+                    )
+                ),
+            )
+
+
+def test_a_code_defect_is_any_model_but_a_scenario_or_a_reform():
+    from pydantic import BaseModel, ValidationError
+
+    from uk_budget_data.models import Reform
+    from uk_budget_data.publication.receipt import is_code_defect
+
+    class ReformIdentity(BaseModel):
+        name: int
+
+    def error_of(build):
+        with pytest.raises(ValidationError) as caught:
+            build()
+        return caught.value
+
+    assert is_code_defect(error_of(lambda: ReformIdentity(name="x")))
+    assert not is_code_defect(
+        error_of(lambda: Scenario(parameter_changes={"a": "x"}))
+    )
+    assert not is_code_defect(
+        error_of(lambda: Reform(id="a", name="A", parameter_changes="x"))
+    )
+    assert not is_code_defect(ValueError("an ordinary refusal"))
