@@ -14,14 +14,14 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "5cb6f3dcfa5e908254b449edca0b0e0fd87edf5ccca9f168c20644a909b6d936",
-        "at": "2026-10-13T15:26:52.781268+00:00",
+        "artifact_sha256": "9856ecca0cc7dda3d0f6f1b81fc0f4b0ca5eede3879798817f93e7262112442e",
+        "at": "2026-10-13T16:40:31.968056+00:00",
         "by": "Reviewer",
         "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610"
       },
-      "artifact": "artifacts/combined--alpha+beta/5cb6f3dcfa5e9082",
-      "artifact_sha256": "5cb6f3dcfa5e908254b449edca0b0e0fd87edf5ccca9f168c20644a909b6d936",
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "artifact": "artifacts/combined--alpha+beta/9856ecca0cc7dda3",
+      "artifact_sha256": "9856ecca0cc7dda3d0f6f1b81fc0f4b0ca5eede3879798817f93e7262112442e",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "measures": [
         "alpha",
         "beta"
@@ -32,7 +32,7 @@
       },
       "name": "Combined--Alpha+Beta",
       "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
-      "receipt_sha256": "e4612da4e5584f195270fb4d1aba74b9263d83cb6be87c6025c70cb29c3a2800",
+      "receipt_sha256": "36a8bd0960d593e59458264b7fa0545043775563414fb7cabb40231063f188ee",
       "status": "approved",
       "unsupported_years": [
         2031
@@ -44,15 +44,15 @@
     }
   },
   "execution": {
-    "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+    "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
     "identity": {
       "certificate": {
-        "bundle_version": "6.2.6",
-        "certificate_sha256": "95ba582ab99aa58e11709a3f0def976a9bf0ae9bb5139ec13bb70275b05ca10d",
+        "bundle_version": "6.3.3",
+        "certificate_sha256": "1abdf161d1c115b609747e08b91ab450891a84ee395828395477f3d20be92a50",
         "certified_by": "policyengine.py bundle certification",
         "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
         "certified_for_core_version": "3.33.0",
-        "certified_for_model_version": "2.125.1",
+        "certified_for_model_version": "2.126.12",
         "compatibility_basis": "legacy_compatible_model_package",
         "country_id": "uk"
       },
@@ -71,34 +71,34 @@
         "dataset_revision": "1.58.0",
         "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
         "dataset_uri": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.58.0",
-        "release_manifest_revision": "fdeba38517bd86067f34c0a5d8ed8923efb3b10a",
+        "release_manifest_revision": "0aa3eee1cdae8f8125f4aff126a8f01957595dc3",
         "release_version": "1.58.0"
       },
       "model": {
         "name": "policyengine-uk",
-        "version": "2.125.1"
+        "version": "2.126.12"
       },
       "schema_version": 1,
       "wrapper": {
         "name": "policyengine",
-        "version": "6.2.6"
+        "version": "6.3.3"
       }
     }
   },
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "677d1d614af52679dd9ab1e939d4038d9de9b13b8e2657def6172b440f51f94f",
-        "at": "2026-10-13T15:26:52.719597+00:00",
+        "artifact_sha256": "2653a4b17c6c578c6e29b02004b68f5b5bebe52747a3d2e6a451ab62f4204014",
+        "at": "2026-10-13T16:40:31.873397+00:00",
         "by": "Reviewer",
         "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40"
       },
-      "artifact": "artifacts/alpha/677d1d614af52679",
-      "artifact_sha256": "677d1d614af52679dd9ab1e939d4038d9de9b13b8e2657def6172b440f51f94f",
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "artifact": "artifacts/alpha/2653a4b17c6c578c",
+      "artifact_sha256": "2653a4b17c6c578c6e29b02004b68f5b5bebe52747a3d2e6a451ab62f4204014",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "name": "Alpha",
       "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
-      "receipt_sha256": "73061ef6ffc35005fd743ffb2d8eb9c34096ba0592300b60781bd86d3bea497c",
+      "receipt_sha256": "e7ce9c774dfd61dd2159dab39493f4999c327fc918daaaf8214b3383d48cbfed",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -114,17 +114,17 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "fe683e6d5f11fa4afa2a58db1fdd08c260b6ebfd840f688af5a66cb6eb6ab4ff",
-        "at": "2026-10-13T15:26:52.728981+00:00",
+        "artifact_sha256": "e727429ae730b476a9e7d302713b6b7d21bd56f7e7b458691df7201d15c18197",
+        "at": "2026-10-13T16:40:31.885450+00:00",
         "by": "Reviewer",
         "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b"
       },
-      "artifact": "artifacts/beta/fe683e6d5f11fa4a",
-      "artifact_sha256": "fe683e6d5f11fa4afa2a58db1fdd08c260b6ebfd840f688af5a66cb6eb6ab4ff",
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "artifact": "artifacts/beta/e727429ae730b476",
+      "artifact_sha256": "e727429ae730b476a9e7d302713b6b7d21bd56f7e7b458691df7201d15c18197",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "name": "Beta",
       "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b",
-      "receipt_sha256": "9c5682da808b4c7d5ff779231b2effcb14a325c16daf8d5b4e0c675f629ff2f6",
+      "receipt_sha256": "2287c68d42eeccc0f3e7201797e5297b010725e9aeaf5ea8422158ef2fa45bf7",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -139,12 +139,12 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/2704e17c9c705a3f",
-      "artifact_sha256": "2704e17c9c705a3f6d0f4afae4d971dfc9a51c63d58c68b0a081be4c3b21d479",
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "artifact": "artifacts/delta/c22ac040e86957bc",
+      "artifact_sha256": "c22ac040e86957bcc38e9a950dfedffe97aaf26fe008455d86f978393cdac579",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "name": "Delta",
       "outputs_sha256": "6b4e169f5e20e4d16c3d278f4f4fec3428f6b86b7555fa3d3c68d37308a1fd84",
-      "receipt_sha256": "f64ef6271303a0c95c92855c5e6ac4dd0adc5ae45fa41591e46148025738601b",
+      "receipt_sha256": "0bf55b50af3a2702c92f23d01ccc756e1929f4d5dc6d087de76ae907d6df91c8",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "pass"
@@ -159,12 +159,12 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/3c8a5653cfc1de3a",
-      "artifact_sha256": "3c8a5653cfc1de3ac368320d67d1c221054b285f6c29d5b2845656783b3f4d9a",
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "artifact": "artifacts/gamma/8a3f4d5530c89689",
+      "artifact_sha256": "8a3f4d5530c896893ce9f80390ea996fadd497f5808d9d830f7bc1cde9d0e614",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "name": "Gamma",
       "outputs_sha256": "fdeac4d5a85cd6d208e3841ff163d1e9fa35905c55e1abae364dabec41ad030c",
-      "receipt_sha256": "9add9b6f90bb554e0d0aec4a179129c9c57cb3f4eea3eee000be715d62a02dac",
+      "receipt_sha256": "017bea837e35b814b85b889b76dc245ba696c9551eb24da6dc9d28fe5e40f96a",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "awaiting_source"
@@ -182,5 +182,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-13T15:26:52.781393+00:00"
+  "updated_at": "2026-10-13T16:40:31.968125+00:00"
 }

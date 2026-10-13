@@ -33,9 +33,9 @@
       2030
     ],
     "digests": {
-      "execution_identity_sha256": "24b391ea9fc42591b8be1a863a0589f83d7799dee62a3669e4bd2af8d1262490",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
       "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
-      "receipt_sha256": "e4612da4e5584f195270fb4d1aba74b9263d83cb6be87c6025c70cb29c3a2800"
+      "receipt_sha256": "36a8bd0960d593e59458264b7fa0545043775563414fb7cabb40231063f188ee"
     },
     "files": {
       "budgetary_impact.csv": "e1dff70f7a86e12cce96d63551de4a71cfd9215f8f6035afbb7977cffbcef781",
@@ -45,7 +45,7 @@
       "metrics.csv": "18b42d0c427b860c94e6a09368df17cac1e9ae300be603a186879311ca069be1",
       "winners_losers.csv": "ac5a5533dec07262219948f920d4a155f53fe9bda6f761d3512f905c13ecdc11"
     },
-    "generated_at": "2026-10-13T15:26:52.759873+00:00",
+    "generated_at": "2026-10-13T16:40:31.943997+00:00",
     "generator_argv": [
       "test"
     ],
@@ -108,13 +108,13 @@
       "name": "alpha+beta baseline"
     },
     "certificate": {
-      "bundle_version": "6.2.6",
-      "certificate_sha256": "95ba582ab99aa58e11709a3f0def976a9bf0ae9bb5139ec13bb70275b05ca10d",
+      "bundle_version": "6.3.3",
+      "certificate_sha256": "1abdf161d1c115b609747e08b91ab450891a84ee395828395477f3d20be92a50",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "certified_for_core_version": "3.33.0",
-      "certified_for_model_version": "2.125.1",
+      "certified_for_model_version": "2.126.12",
       "compatibility_basis": "legacy_compatible_model_package",
       "country_id": "uk"
     },
@@ -133,7 +133,7 @@
       "dataset_revision": "1.58.0",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "dataset_uri": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.58.0",
-      "release_manifest_revision": "fdeba38517bd86067f34c0a5d8ed8923efb3b10a",
+      "release_manifest_revision": "0aa3eee1cdae8f8125f4aff126a8f01957595dc3",
       "release_version": "1.58.0"
     },
     "fiscal_year": {
@@ -144,7 +144,7 @@
     },
     "model": {
       "name": "policyengine-uk",
-      "version": "2.125.1"
+      "version": "2.126.12"
     },
     "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
     "receipt_type": "policyengine.execution_receipt",
@@ -171,7 +171,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.2.6"
+      "version": "6.3.3"
     },
     "years": [
       2030,
