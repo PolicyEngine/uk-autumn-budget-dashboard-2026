@@ -21,17 +21,18 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 
 | Work | Where | State |
 |---|---|---|
-| CI fails rather than skips, and runs on every PR base | #12 | Landing on gates. The org data token was granted on 12 October |
-| Certified bundle 6.2.6 (UK 2.125.1, data 1.58.0); the student loan freeze, which crashed on it, fixed | #13 | Landing on gates |
-| Household route checker and `/api/version` | #15 | Landing on gates |
-| Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | Landing on gates. The service exists (below) |
+| CI fails rather than skips, and runs on every PR base | #12 | **Merged** 12 October (3ae8edd) |
+| Certified bundle 6.2.6 (UK 2.125.1, data 1.58.0); the student loan freeze, which crashed on it, fixed | #13 | **Merged** 13 October (c8e1788) |
+| Certified bundle 6.3.3 (UK 2.126.12, data 1.58.0): a scenario's parameter changes now come before its modifier, and interval keys are read | #25 | Landing on gates. **Afterwards #3 needs `main` merged in**, so its numbers come from 2.126.12 |
+| Household route checker and `/api/version` | #15 | **Merged** 13 October (8401528) |
+| Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | **Merged** 13 October (18601b0). The service exists (below) |
 | Treasury Table 4.1 import with a printed-totals check | #16 | Landing on gates |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
 | A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |
-| Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in. The household scatter is published binned, with no household ids or weights | #19 | Landing on gates |
+| Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in. The household scatter as today (sampled, same columns) and binned | #19 | Landing on gates |
 | The page shows only published figures: unavailable instead of zero, combined statistics only from the combined run, no hardcoded 2026 | #20 | Modules, components and tests done; wiring into the page follows #3 |
 | Briefing exports from an approved manifest only; hardcoded figures removed | #22 | Landing on gates |
-| Drill fixes as tested measure templates and regressions, no mock measures | In progress | |
+| Drill fixes as tested measure templates and regressions, no mock measures | #23 | Landing on gates |
 | Production Vercel project | Created 12 October | Below |
 | `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
 | Runbook | [`budget-day-runbook.md`](budget-day-runbook.md) | Draft, yours to rewrite |
@@ -239,3 +240,8 @@ A first draft is in [`budget-day-runbook.md`](budget-day-runbook.md), with the c
 | — | Rollback |
 
 The runbook records the actual household URL and the production publishing triggers. It is rehearsed end to end on the deployed routes by 23 October, and again after any material change.
+
+## Follow-ups after Budget day
+
+- **Retire the combiner's single-modifier composition.** `publication.combine` composes a combined run's parameter changes and modifiers into one modifier, because policyengine-uk 2.125.1 ran a scenario's modifier before its parameter changes. From 2.126.12 (#25) the engine applies them in the right order, so the combined scenario could carry them directly. The current composition is still correct and matches W4's composition semantics, so it stays until after Budget day (agreed with the coordinating session, 13 October).
+- **Delete the vendored receipt code** (`publication/_vendor_w4`) once the dashboard pins a policyengine release containing policyengine.py #571, #579 and #588.
