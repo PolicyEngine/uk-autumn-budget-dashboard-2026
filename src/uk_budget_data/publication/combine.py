@@ -6,13 +6,16 @@ module builds that combined measure and checks it before it is simulated.
 
 **Order.** Members are applied in order of measure id. The combined
 scenario applies the members' merged parameter changes first and then each
-member's modifier in that order. This is deliberate: policyengine-uk runs a
-scenario's ``simulation_modifier`` before its ``parameter_changes``, and
-applying parameter changes reloads the parameter tree
-(``Simulation.apply_parameter_changes`` calls ``reset_parameters``), so a
-modifier that sets parameters would be wiped if the combination were handed
-to the engine as one modifier plus parameter changes. The receipt binds the
-members in the same order.
+member's modifier in that order, all inside one modifier. The changes must
+come first: applying them rebuilds the parameters
+(``Simulation.apply_parameter_changes``), which would discard a modifier's
+parameter edits. They are composed into one modifier because
+policyengine-uk 2.125.1 ran a scenario's ``simulation_modifier`` before its
+``parameter_changes``. From 2.126.12 the engine applies a scenario's
+changes before its modifier itself, and ``tests/test_combine.py`` checks
+that it and this composition give the same parameters, so the single
+modifier is no longer needed; retiring it is a follow-up for after Budget
+day. The receipt binds the members in the same order.
 
 **Conflicts.** Two members that set the same parameter for the same period
 to different values cannot be combined.
