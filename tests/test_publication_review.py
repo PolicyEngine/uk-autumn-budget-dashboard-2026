@@ -828,3 +828,55 @@ def test_only_a_receipt_module_with_the_current_rules_is_adopted(
     monkeypatch.setitem(sys.modules, "policyengine.provenance.receipt", older)
     assert adapter.receipt_api()[0] is vendored
     assert adapter._has_what_we_need(vendored)
+
+
+# --- round 6 (publication review) ------------------------------------------
+
+
+def test_an_unused_configured_baseline_cannot_stop_a_measure(world):
+    """Review round 6: the configured baseline was bound before any run,
+    so a malformed one stopped a measure that brings its own baseline."""
+    from unittest.mock import patch
+
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication import generate
+
+    path = "gov.hmrc.income_tax.rates.uk[0].rate"
+    values = {2027: -1.0, 2028: -2.0}
+    config = DataConfig(
+        years=[2027, 2028],
+        baseline_parameter_changes={path: {"2027": None}},
+    )
+    member = Reform(
+        id="alpha",
+        name="Alpha",
+        parameter_changes={path: {"2027": 0.21}},
+        baseline_parameter_changes={path: {"2027": 0.19}},
+    )
+    with patch.object(
+        generate, "code_revision", lambda root: world.revision()
+    ):
+        report = generate.generate_artifacts(
+            [member],
+            config,
+            artifacts_root=world.artifacts,
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process({"alpha": values}),
+        )
+    assert [r.key for r in report.written] == ["alpha"]
+    assert report.refused == {}
+
+
+def test_a_package_upgraded_after_loading_cannot_be_receipted(
+    world, monkeypatch
+):
+    """policyengine.py#571 (round 9): a receipt names the installed
+    versions, so a package upgraded after it was loaded would be named as
+    code that did not run. The dashboard records the versions when the
+    receipt code is first used, and the receipt refuses a mismatch."""
+    from uk_budget_data.publication._vendor_w4 import loaded
+
+    monkeypatch.setitem(loaded._LOADED, "policyengine-uk", "0.0.0")
+    with pytest.raises(Exception, match="installed now"):
+        world.write("alpha", VALUES)
