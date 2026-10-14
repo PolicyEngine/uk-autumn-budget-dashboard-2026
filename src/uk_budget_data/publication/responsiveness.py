@@ -14,13 +14,17 @@ of the Treasury's own costing for that year. A measure with no expectation
 at all is ``undeclared`` and cannot be published.
 """
 
+import math
+import numbers
 from dataclasses import dataclass
-from typing import Mapping, Optional
+from typing import Collection, Mapping, Optional
 
 RESPONSIVE = "responsive"
 INERT = "inert"
 WRONG_DIRECTION = "wrong_direction"
 UNDECLARED = "undeclared"
+# An expected year with no model output at all.
+MISSING = "missing"
 
 POSITIVE = "positive"
 NEGATIVE = "negative"
@@ -62,6 +66,23 @@ def _sign(value: float) -> str:
     return POSITIVE if value > 0 else NEGATIVE
 
 
+def finite_impact(value, label: str) -> float:
+    """A fiscal impact as a float: a real number, finite, never a bool.
+
+    NaN compares false with everything, so it would pass a minimum-size
+    check and take a sign; an infinite impact would pass any comparison.
+    """
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise ValueError(f"{label} must be a number, not {value!r}")
+    try:
+        number = float(value)
+    except OverflowError as error:  # an int too large for a float
+        raise ValueError(f"{label} must be finite, not {value!r}") from error
+    if not math.isfinite(number):
+        raise ValueError(f"{label} must be finite, not {value!r}")
+    return number
+
+
 def expected_direction(
     year: int,
     declarations: list[ExpectedEffect],
@@ -92,6 +113,7 @@ def check_responsiveness(
     min_response_share: float,
     zero_tolerance_bn: float,
     supported_years: Optional[set[int]] = None,
+    years: Optional[Collection[int]] = None,
 ) -> dict:
     """Check that the measure moves in the expected direction, enough.
 
@@ -108,19 +130,30 @@ def check_responsiveness(
         zero_tolerance_bn: A Treasury figure within this of zero implies no
             expectation (the Treasury's own rounding).
         supported_years: Years the dataset supports; others are not checked.
+        years: Years that must have a model output (the artifact's), as
+            well as those in ``budgetary``. An expected year with none is
+            ``missing``.
 
     Returns:
         ``{"status", "rows"}``. Status is ``wrong_direction`` if any expected
-        year has the wrong sign, else ``inert`` if any expected year is below
-        the minimum, else ``undeclared`` if no year carried an expectation,
-        else ``responsive``.
+        year has the wrong sign, else ``missing`` if any expected year has
+        no model output, else ``inert`` if any expected year is below the
+        minimum, else ``undeclared`` if no year carried an expectation, else
+        ``responsive``.
+
+    Raises:
+        ValueError: if an impact is not a finite number.
     """
+    impacts = {
+        year: finite_impact(value, f"{measure_id}'s impact in {year}")
+        for year, value in budgetary.items()
+    }
     own = [d for d in declarations if d.measure_id == measure_id]
     rows = []
-    for year in sorted(budgetary):
+    for year in sorted(set(impacts) | set(years or ())):
         if supported_years is not None and year not in supported_years:
             continue
-        value = float(budgetary[year])
+        value = impacts.get(year)
         comparator = comparators_bn.get(year)
         direction, basis = expected_direction(
             year, own, comparator, zero_tolerance_bn
@@ -130,8 +163,10 @@ def check_responsiveness(
         minimum = min_response_bn
         if comparator is not None:
             minimum = max(minimum, min_response_share * abs(comparator))
+        if value is None:
+            status = MISSING
         # An exact zero never counts as moving, whatever the thresholds.
-        if value == 0 or abs(value) < minimum:
+        elif value == 0 or abs(value) < minimum:
             status = INERT
         elif _sign(value) != direction:
             status = WRONG_DIRECTION
@@ -150,6 +185,8 @@ def check_responsiveness(
     statuses = {row["status"] for row in rows}
     if WRONG_DIRECTION in statuses:
         overall = WRONG_DIRECTION
+    elif MISSING in statuses:
+        overall = MISSING
     elif INERT in statuses:
         overall = INERT
     elif not rows:

@@ -52,6 +52,7 @@ from uk_budget_data.publication.reconcile import (
     ACCEPTED,
     PASS,
     ReconciliationInputError,
+    budgetary_from_rows,
     load_expected,
     reconcile_receipted,
 )
@@ -89,12 +90,12 @@ def recompute_reconciliation(
     ``tables`` are the rows the gate checked against ``document``, so what
     is reconciled is exactly what was verified.
     """
-    budgetary = {
-        row["year"]: row["value"]
-        for row in tables.get("budgetary_impact") or []
-        if row["reform_id"] == key
-    }
     try:
+        # One finite output per year: a repeated year is refused, not
+        # silently replaced by whichever row came last.
+        budgetary = budgetary_from_rows(
+            tables.get("budgetary_impact") or [], key, "budgetary_impact"
+        )
         return (
             reconcile_receipted(document, budgetary, inputs, measure_id=key),
             [],

@@ -348,6 +348,22 @@ class World:
     def exception(
         self, measure: str, year: int, residual: float, outputs: str
     ):
+        """A reviewed exception naming the Treasury comparison as it stands,
+        as a reviewer copies comparator.sha256 from reconciliation.json."""
+        from uk_budget_data.publication.reconcile import (
+            comparison_sha256,
+            load_mapping,
+            load_policy,
+            load_sources,
+        )
+
+        comparator = comparison_sha256(
+            measure,
+            year,
+            load_sources(self.inputs / "sources"),
+            load_mapping(self.inputs / "mapping.csv"),
+            load_policy(self.inputs / "policy.yaml"),
+        )
         path = self.inputs / "exceptions.yaml"
         entries = json.loads(path.read_text()) if path.exists() else []
         entries.append(
@@ -360,6 +376,7 @@ class World:
                 "reviewer": "Reviewer",
                 "accepted_at": "2026-10-28T15:00:00Z",
                 "outputs_sha256": outputs,
+                "comparator_sha256": comparator or "c" * 64,
             }
         )
         path.write_text(json.dumps(entries))  # JSON is valid YAML
