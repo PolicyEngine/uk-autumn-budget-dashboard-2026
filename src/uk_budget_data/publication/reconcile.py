@@ -121,12 +121,8 @@ class Policy:
             "min_response_bn",
             "min_response_share",
         ):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not (
-                isinstance(value, (int, float))
-                and math.isfinite(value)
-                and value >= 0
-            ):
+            value = _finite(getattr(self, name), name)
+            if not value >= 0:
                 raise ReconciliationInputError(
                     f"{name} must be a finite number >= 0"
                 )
@@ -163,7 +159,20 @@ class MappingRow:
     reviewer: str = ""
 
     def __post_init__(self):
-        _finite(self.scale, f"{self.measure_id}: mapping scale")
+        scale = _finite(self.scale, f"{self.measure_id}: mapping scale")
+        # Every figure is entered with the Exchequer sign, so a comparator
+        # never needs its sign flipped; a scale of zero would drop the row
+        # without the review a not_comparable classification needs.
+        if not scale > 0:
+            raise ReconciliationInputError(
+                f"{self.measure_id}: mapping scale must be above zero, not "
+                f"{self.scale!r}; classify the row not_comparable instead"
+            )
+        if scale != 1 and not (self.reason and self.reviewer):
+            raise ReconciliationInputError(
+                f"{self.measure_id}: a mapping scaled by {self.scale!r} needs "
+                "a reason and a reviewer"
+            )
         if isinstance(self.year_offset, bool) or not isinstance(
             self.year_offset, int
         ):
@@ -382,6 +391,37 @@ def comparison_sha256(
     ).sha256
 
 
+def _one_exception_each(exceptions: list[ExceptionEntry]) -> None:
+    """Refuse two exceptions for one measure, year and outputs: which one
+    the record names would depend on their order."""
+    seen = set()
+    for entry in exceptions:
+        key = (entry.measure_id, entry.fiscal_year, entry.outputs_sha256)
+        if key in seen:
+            raise ReconciliationInputError(
+                f"{entry.measure_id} {entry.fiscal_year}: two exceptions for "
+                "the same outputs; keep one"
+            )
+        seen.add(key)
+
+
+def _whole_years(values, label: str) -> list[int]:
+    """A list of years: whole numbers, never bools or text."""
+    if isinstance(values, (str, bytes, dict)) or not isinstance(
+        values, (list, tuple, set, frozenset)
+    ):
+        raise ReconciliationInputError(
+            f"{label} must be a list of years, not {values!r}"
+        )
+    if any(
+        isinstance(year, bool) or not isinstance(year, int) for year in values
+    ):
+        raise ReconciliationInputError(
+            f"{label} must be whole numbers, not {values!r}"
+        )
+    return sorted(set(values))
+
+
 def _checked_budgetary(
     budgetary: Mapping[int, float], years: Collection[int], measure_id: str
 ) -> dict[int, float]:
@@ -440,15 +480,17 @@ def reconcile(
             number or is for a year the artifact does not report, or for a
             comparator that overflows.
     """
-    years = sorted(set(years))
-    if not years or any(
-        isinstance(year, bool) or not isinstance(year, int) for year in years
-    ):
+    years = _whole_years(years, f"{measure_id}: the artifact's years")
+    if not years:
         raise ReconciliationInputError(
-            f"{measure_id}: the artifact's years must be whole numbers, not "
-            f"{years!r}"
+            f"{measure_id}: the artifact reports no years"
+        )
+    if supported_years is not None:
+        supported_years = set(
+            _whole_years(supported_years, f"{measure_id}: supported years")
         )
     budgetary = _checked_budgetary(budgetary, years, measure_id)
+    _one_exception_each(exceptions)
     own_links = [m for m in mapping if m.measure_id == measure_id]
     not_comparable = [m for m in own_links if m.status == NOT_COMPARABLE]
     comparable = [m for m in own_links if m.status != NOT_COMPARABLE]
@@ -732,22 +774,12 @@ def load_exceptions(path: Path) -> list[ExceptionEntry]:
             raise ReconciliationInputError(f"{where}: expected a mapping")
         if "residual_bn" not in entry:
             raise ReconciliationInputError(f"{where}: missing 'residual_bn'")
-        residual = entry["residual_bn"]
-        if isinstance(residual, bool) or not isinstance(
-            residual, (int, float)
-        ):
-            raise ReconciliationInputError(
-                f"{where}: residual_bn must be a number"
-            )
-        if not math.isfinite(residual):
-            raise ReconciliationInputError(
-                f"{where}: residual_bn must be finite"
-            )
+        residual = _finite(entry["residual_bn"], f"{where}: residual_bn")
         loaded.append(
             ExceptionEntry(
                 measure_id=_reviewed_text(entry, "measure_id", where),
                 fiscal_year=_reviewed_text(entry, "fiscal_year", where),
-                residual_bn=float(residual),
+                residual_bn=residual,
                 explanation_class=_reviewed_text(
                     entry, "explanation_class", where
                 ),
@@ -760,6 +792,7 @@ def load_exceptions(path: Path) -> list[ExceptionEntry]:
                 ),
             )
         )
+    _one_exception_each(loaded)
     return loaded
 
 
@@ -852,6 +885,37 @@ def read_budgetary(artifact: Path, measure_id: str) -> dict[int, float]:
     return budgetary
 
 
+def _measure_from(receipt: dict, flag: Optional[str]) -> str:
+    """The measure to reconcile: the one the receipt names, or for a
+    combined artifact (which names its members) the one passed in."""
+    ids = receipt.get("dashboard", {}).get("measure_ids") or []
+    if flag is None:
+        if len(ids) != 1:
+            raise ReconciliationInputError(
+                f"pass --measure-id: the receipt names {len(ids)} measures"
+            )
+        return ids[0]
+    if len(ids) == 1 and flag != ids[0]:
+        raise ReconciliationInputError(
+            f"--measure-id {flag!r} is not the measure the receipt names "
+            f"({ids[0]!r})"
+        )
+    return flag
+
+
+def _agrees(name: str, flag, stated):
+    """What the receipt states, or the flag where it states nothing. A flag
+    that contradicts the receipt is refused: it would reconcile outputs,
+    years or digests other than the ones the receipt binds."""
+    if stated is None:
+        return flag
+    if flag is not None and flag != stated:
+        raise ReconciliationInputError(
+            f"--{name} {flag!r} contradicts the receipt's {stated!r}"
+        )
+    return stated
+
+
 def reconcile_artifact(
     artifact: Path,
     inputs: Path,
@@ -863,41 +927,86 @@ def reconcile_artifact(
 ) -> dict:
     """Reconcile an artifact directory using the inputs directory.
 
-    The measure, output digest, years and supported years default to the
-    artifact's ``receipt.json`` (``dashboard.measure_ids``,
-    ``execution_receipt.outputs_sha256``, ``execution_receipt.years`` and
-    ``dashboard.dataset_years``).
+    See ``reconcile_receipted`` for what the receipt supplies.
     """
     receipt_path = artifact / "receipt.json"
     receipt = (
         json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
     )
+    measure_id = _measure_from(receipt, measure_id)
+    return reconcile_receipted(
+        receipt,
+        read_budgetary(artifact, measure_id),
+        inputs,
+        measure_id=measure_id,
+        outputs_sha256=outputs_sha256,
+        supported_years=supported_years,
+        years=years,
+    )
+
+
+def reconcile_receipted(
+    receipt: dict,
+    budgetary: dict[int, float],
+    inputs: Path,
+    *,
+    measure_id: Optional[str] = None,
+    outputs_sha256: Optional[str] = None,
+    supported_years: Optional[set[int]] = None,
+    years: Optional[list[int]] = None,
+) -> dict:
+    """Reconcile already-read budgetary rows, described by their receipt.
+
+    The measure, output digest, years and supported years come from the
+    receipt (``dashboard.measure_ids``, ``execution_receipt.outputs_sha256``,
+    ``execution_receipt.years`` and ``dashboard.dataset_years``). An
+    argument may supply one the receipt does not state; one that
+    contradicts the receipt is refused.
+    """
+    measure_id = _measure_from(receipt, measure_id)
+    execution = receipt.get("execution_receipt", {})
     dashboard = receipt.get("dashboard", {})
-    if measure_id is None:
-        ids = dashboard.get("measure_ids") or []
-        if len(ids) != 1:
-            raise ReconciliationInputError(
-                "pass --measure-id: the receipt names " f"{len(ids)} measures"
-            )
-        measure_id = ids[0]
-    if outputs_sha256 is None:
-        outputs_sha256 = receipt.get("execution_receipt", {}).get(
-            "outputs_sha256"
-        )
+    outputs_sha256 = _agrees(
+        "outputs-sha256", outputs_sha256, execution.get("outputs_sha256")
+    )
     if not outputs_sha256:
         raise ReconciliationInputError(
             "no outputs_sha256: pass --outputs-sha256 or supply receipt.json"
         )
-    if supported_years is None and dashboard.get("dataset_years") is not None:
-        supported_years = set(dashboard["dataset_years"])
-    if years is None:
-        years = receipt.get("execution_receipt", {}).get("years")
+    stated_years = execution.get("years")
+    years = _agrees(
+        "years",
+        None if years is None else _whole_years(years, "--years"),
+        (
+            None
+            if stated_years is None
+            else _whole_years(stated_years, "the receipt's years")
+        ),
+    )
     if not years:
         raise ReconciliationInputError(
             "no years: pass --years or supply receipt.json"
         )
+    stated_supported = dashboard.get("dataset_years")
+    supported = _agrees(
+        "supported-years",
+        (
+            None
+            if supported_years is None
+            else _whole_years(supported_years, "--supported-years")
+        ),
+        (
+            None
+            if stated_supported is None
+            else _whole_years(stated_supported, "the receipt's dataset_years")
+        ),
+    )
+    if not budgetary:
+        raise ReconciliationInputError(
+            f"no budgetary_impact rows for {measure_id}"
+        )
     return reconcile(
-        read_budgetary(artifact, measure_id),
+        budgetary,
         measure_id=measure_id,
         outputs_sha256=outputs_sha256,
         sources=load_sources(inputs / "sources"),
@@ -906,7 +1015,7 @@ def reconcile_artifact(
         policy=load_policy(inputs / "policy.yaml"),
         expected=load_expected(inputs / "expected_effects.csv"),
         years=years,
-        supported_years=supported_years,
+        supported_years=None if supported is None else set(supported),
     )
 
 

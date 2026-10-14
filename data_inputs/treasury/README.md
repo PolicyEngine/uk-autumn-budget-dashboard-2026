@@ -7,7 +7,7 @@
 | File | What goes in it | Who fills it |
 |---|---|---|
 | `sources/<source_id>.csv` | Treasury figures: one row per table row, fiscal year and basis, in £bn with the Exchequer sign (positive improves the public finances). `uk_budget_data.treasury_import` writes Table 4.1 (`post_behavioural`) and a blank `static_costing` sheet. | Reconciler. Static figures come from the policy costings document. A blank `value_bn` means "not entered yet". |
-| `mapping.csv` | Which Treasury row each measure is compared with. `scale` defaults to 1 and `year_offset` to 0 (model year 2027 is fiscal year 2027-28). Several rows for one measure are summed. `status: not_comparable` needs a `reason` and a `reviewer`. | Reconciler |
+| `mapping.csv` | Which Treasury row each measure is compared with. `scale` defaults to 1 and `year_offset` to 0 (model year 2027 is fiscal year 2027-28). Several rows for one measure are summed. `status: not_comparable` needs a `reason` and a `reviewer`, and so does any `scale` other than 1. A scale must be above zero: every figure is entered with the Exchequer sign, so none needs flipping, and a row that should not count is classified `not_comparable`. | Reconciler |
 | `expected_effects.csv` | What each measure should do: `direction` (`positive` improves the government balance, `negative` worsens it) from `from_year` to `to_year`. Needed before the Treasury figures arrive; afterwards the sign of the Treasury's own figure is used for any year not declared. | Integrator, when the measure is coded |
 | `exceptions.yaml` | Reviewed acceptances of a year's residual. | Reviewer |
 | `policy.yaml` | The thresholds. They are a proposal until the team agrees them. | — |
@@ -21,6 +21,8 @@ For each model year, with the Treasury figure on the gated basis (`static_costin
 - **awaiting_source**: no figure entered for that year yet.
 - **not_comparable**: a reviewer classified the row as outside scope or on a different basis.
 - **unsupported**: the year is beyond the dataset's projected years.
+
+The measure, output digest, years and supported years come from the artifact's `receipt.json`. A command-line flag may supply one the receipt does not state, and one that contradicts the receipt is refused.
 
 Every year the artifact reports (its receipt's `years`) must have exactly one model output, a finite number. A year with none **fails**, and no exception can accept it. Two rows for one year, or a value that is not a finite number, are refused.
 
@@ -44,6 +46,7 @@ A `policy.yaml` that exists must hold the thresholds as a mapping. An empty file
 - An exception applies only to the outputs it names. If the measure is regenerated and its numbers change, the exception lapses.
 - It also applies only to the Treasury comparison it names. `comparator_sha256` covers the gated basis, every Treasury figure behind the comparison with its scale and year offset, and the rows classified not comparable. If any of them changes (a corrected figure, a remapped row, a different basis), the exception lapses, even when the total is the same.
 - A declared residual that does not match the computed one is rejected.
+- One exception per measure, year and outputs: a second is refused.
 
 ## Responsiveness
 

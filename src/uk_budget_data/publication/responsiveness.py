@@ -74,7 +74,10 @@ def finite_impact(value, label: str) -> float:
     """
     if isinstance(value, bool) or not isinstance(value, numbers.Real):
         raise ValueError(f"{label} must be a number, not {value!r}")
-    number = float(value)
+    try:
+        number = float(value)
+    except OverflowError as error:  # an int too large for a float
+        raise ValueError(f"{label} must be finite, not {value!r}") from error
     if not math.isfinite(number):
         raise ValueError(f"{label} must be finite, not {value!r}")
     return number
