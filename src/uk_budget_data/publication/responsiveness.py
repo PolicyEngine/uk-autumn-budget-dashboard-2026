@@ -60,6 +60,9 @@ class ExpectedEffect:
                 f"{self.measure_id}: direction must be positive or negative, "
                 f"not {self.direction!r}"
             )
+        whole_year(self.from_year, f"{self.measure_id}: from_year")
+        if self.to_year is not None:
+            whole_year(self.to_year, f"{self.measure_id}: to_year")
         if self.to_year is not None and self.to_year < self.from_year:
             raise ValueError(f"{self.measure_id}: to_year before from_year")
 
@@ -67,6 +70,23 @@ class ExpectedEffect:
         return year >= self.from_year and (
             self.to_year is None or year <= self.to_year
         )
+
+
+def whole_year(value, label: str) -> int:
+    """A model year: a whole number, never a bool or a fraction."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{label} must be a whole year, not {value!r}")
+    return value
+
+
+def threshold(value, label: str, *, above_zero: bool = False) -> float:
+    """A responsiveness threshold: finite, and not negative (above zero
+    where a zero would let a measure that does nothing count as moving)."""
+    number = finite_impact(value, label)
+    if number < 0 or (above_zero and number == 0):
+        bound = "above zero" if above_zero else "zero or more"
+        raise ValueError(f"{label} must be {bound}, not {value!r}")
+    return number
 
 
 def overlaps(a: ExpectedEffect, b: ExpectedEffect) -> bool:
@@ -172,21 +192,51 @@ def check_responsiveness(
         ``responsive``.
 
     Raises:
-        ValueError: if an impact is not a finite number, or the measure has
-            two declarations for one year.
+        ValueError: for a year that is not a whole number, an impact,
+            comparator, threshold or minimum that is not a finite number
+            (or a negative threshold), or two declarations for one measure
+            and year.
     """
+    # Everything is checked here, whoever calls: the file loaders refuse
+    # these inputs, and so must this public entry point.
     impacts = {
-        year: finite_impact(value, f"{measure_id}'s impact in {year}")
+        whole_year(year, f"{measure_id}'s model year"): finite_impact(
+            value, f"{measure_id}'s impact in {year}"
+        )
         for year, value in budgetary.items()
     }
+    comparators = {
+        whole_year(year, f"{measure_id}'s comparator year"): (
+            None
+            if value is None
+            else finite_impact(value, f"the Treasury's figure for {year}")
+        )
+        for year, value in comparators_bn.items()
+    }
+    min_response_bn = threshold(
+        min_response_bn, "min_response_bn", above_zero=True
+    )
+    min_response_share = threshold(min_response_share, "min_response_share")
+    zero_tolerance_bn = threshold(zero_tolerance_bn, "zero_tolerance_bn")
+    years = [whole_year(year, "a reported year") for year in years or ()]
+    if supported_years is not None:
+        supported_years = {
+            whole_year(year, "a supported year") for year in supported_years
+        }
+    for declaration in declarations:
+        if not isinstance(declaration, ExpectedEffect):
+            raise ValueError(
+                f"an expected effect must be an ExpectedEffect, not "
+                f"{declaration!r}"
+            )
+    one_declaration_a_year(list(declarations))
     own = [d for d in declarations if d.measure_id == measure_id]
-    one_declaration_a_year(own)
     rows = []
-    for year in sorted(set(impacts) | set(years or ())):
+    for year in sorted(set(impacts) | set(years)):
         if supported_years is not None and year not in supported_years:
             continue
         value = impacts.get(year)
-        comparator = comparators_bn.get(year)
+        comparator = comparators.get(year)
         direction, basis = expected_direction(
             year, own, comparator, zero_tolerance_bn
         )
@@ -194,7 +244,10 @@ def check_responsiveness(
             continue
         minimum = min_response_bn
         if comparator is not None:
-            minimum = max(minimum, min_response_share * abs(comparator))
+            minimum = finite_impact(
+                max(minimum, min_response_share * abs(comparator)),
+                f"{measure_id}'s minimum response in {year}",
+            )
         if value is None:
             status = MISSING
         # An exact zero never counts as moving, whatever the thresholds.
