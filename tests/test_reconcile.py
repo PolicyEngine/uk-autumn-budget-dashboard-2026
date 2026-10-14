@@ -155,7 +155,7 @@ def test_not_comparable_needs_reason_and_reviewer():
         {2027: 1.0},
         [],
         mapping=mapping,
-        expected=[ExpectedEffect("m", "positive", 2027)],
+        expected=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
     )
     assert result["rows"][0]["status"] == NOT_COMPARABLE
     assert result["rows"][0]["reviewer"] == "Reviewer"
@@ -267,7 +267,7 @@ def test_no_expectation_at_all_is_undeclared():
 
 
 def test_declared_window_applies_before_any_treasury_figure():
-    expected = [ExpectedEffect("m", "negative", 2028)]
+    expected = [ExpectedEffect("m", "negative", 2028, reviewer="R")]
     moving = run({2027: 0.0, 2028: -1.0}, [], expected=expected)
     assert moving["responsiveness"]["status"] == RESPONSIVE
     assert [r["year"] for r in moving["responsiveness"]["rows"]] == [2028]
@@ -284,9 +284,9 @@ def test_table_41_alone_sets_the_expectation():
 
 def test_expected_effect_validation():
     with pytest.raises(ValueError, match="direction"):
-        ExpectedEffect("m", "up", 2027)
+        ExpectedEffect("m", "up", 2027, reviewer="R")
     with pytest.raises(ValueError, match="to_year"):
-        ExpectedEffect("m", "positive", 2028, 2027)
+        ExpectedEffect("m", "positive", 2028, 2027, reviewer="R")
 
 
 # --- properties -----------------------------------------------------------
@@ -492,7 +492,7 @@ def test_a_partly_entered_comparator_is_awaiting_not_passed():
         {2027: 1.0},
         [source(2027, 1.0, row_id="1")],
         mapping=[link(row_id="1"), link(row_id="2")],
-        expected=[ExpectedEffect("m", "positive", 2027)],
+        expected=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
     )
     row = result["rows"][0]
     assert row["status"] == AWAITING_SOURCE
@@ -515,7 +515,7 @@ def test_a_missing_comparable_row_beside_an_excluded_one_is_awaiting():
                 reviewer="Reviewer",
             ),
         ],
-        expected=[ExpectedEffect("m", "positive", 2027)],
+        expected=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
     )
     assert result["rows"][0]["status"] == AWAITING_SOURCE
     assert result["summary"]["status"] == AWAITING_SOURCE
@@ -593,7 +593,7 @@ def test_an_exact_zero_is_inert_whatever_the_floor(floor, direction):
     result = check_responsiveness(
         {2027: 0.0},
         measure_id="m",
-        declarations=[ExpectedEffect("m", direction, 2027)],
+        declarations=[ExpectedEffect("m", direction, 2027, reviewer="R")],
         comparators_bn={2027: None},
         min_response_bn=floor,
         min_response_share=0.0,
@@ -880,7 +880,7 @@ def test_a_non_finite_model_output_is_refused(tmp_path, value):
         check_responsiveness(
             {2027: number},
             measure_id="m",
-            declarations=[ExpectedEffect("m", "positive", 2027)],
+            declarations=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
             comparators_bn={},
             min_response_bn=POLICY.min_response_bn,
             min_response_share=POLICY.min_response_share,
@@ -1026,9 +1026,7 @@ def test_a_mapping_scale_must_be_above_zero(scale):
 
 
 def test_a_scaled_mapping_needs_a_reason_and_reviewer():
-    with pytest.raises(
-        ReconciliationInputError, match="reason and a reviewer"
-    ):
+    with pytest.raises(ReconciliationInputError, match="the reason for"):
         link(scale=0.5)
     assert (
         link(scale=0.5, reason="Scotland's share", reviewer="R").scale == 0.5
@@ -1148,3 +1146,102 @@ def test_two_exceptions_for_the_same_outputs_are_refused(tmp_path):
         ]["status"]
         == ACCEPTED
     )
+
+
+# --- third review of #17 --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "reason, reviewer", [(" ", " "), (True, True), ("", "R"), ("Share", None)]
+)
+@pytest.mark.parametrize(
+    "fields",
+    [{"scale": 0.008}, {"status": NOT_COMPARABLE}],
+    ids=["scaled", "not comparable"],
+)
+def test_a_reviewed_mapping_needs_real_review_text(reason, reviewer, fields):
+    """Review N5: whitespace or True passed as a reviewer, so a direct
+    caller scaled a £5bn figure to compare with £40m."""
+    with pytest.raises(ReconciliationInputError, match="must be filled in"):
+        link(reason=reason, reviewer=reviewer, **fields)
+
+
+def test_a_row_mapped_twice_is_refused_by_reconcile_itself():
+    """Review N6: the loader refused it, but reconcile() summed both, so
+    one £5bn figure became a £10bn comparator."""
+    with pytest.raises(ReconciliationInputError, match="mapped twice"):
+        run({2027: 10.0}, [source(2027, 5.0)], mapping=[link(), link()])
+
+
+def test_an_expected_effect_needs_a_reviewer_wherever_it_is_built():
+    """Review N7: a declaration with no reviewer overrode the Treasury's
+    sign through the direct API."""
+    for reviewer in ("", " ", None, True):
+        with pytest.raises(ValueError, match="reviewer"):
+            ExpectedEffect("m", "positive", 2027, reviewer=reviewer)
+
+
+@pytest.mark.parametrize("order", [1, -1])
+def test_two_declarations_for_one_year_are_refused_in_any_order(order):
+    """Review N7: opposite overlapping declarations gave responsive or
+    wrong_direction depending on their order."""
+    declarations = [
+        ExpectedEffect("m", "positive", 2027, reviewer="A"),
+        ExpectedEffect("m", "negative", 2026, 2027, reviewer="B"),
+    ][::order]
+    with pytest.raises(ValueError, match="two expected effects"):
+        run({2027: 0.004}, [source(2027, -0.004)], expected=declarations)
+    with pytest.raises(ValueError, match="two expected effects"):
+        check_responsiveness(
+            {2027: 0.004},
+            measure_id="m",
+            declarations=declarations,
+            comparators_bn={},
+            min_response_bn=POLICY.min_response_bn,
+            min_response_share=POLICY.min_response_share,
+            zero_tolerance_bn=POLICY.zero_tolerance_bn,
+        )
+
+
+def _combined_receipt():
+    return {
+        "dashboard": {
+            "key": "combined--a+b",
+            "measure_ids": ["a", "b"],
+            "dataset_years": [2027],
+        },
+        "execution_receipt": {"outputs_sha256": DIGEST, "years": [2027]},
+    }
+
+
+def test_a_combined_receipts_key_binds_the_measure(tmp_path):
+    """Review N8: with several measure_ids any --measure-id was accepted, so
+    another measure's outputs could take an exception under this receipt."""
+    from uk_budget_data.publication.reconcile import reconcile_receipted
+
+    inputs = write_inputs(tmp_path)
+    with pytest.raises(ReconciliationInputError, match="output key"):
+        reconcile_receipted(
+            _combined_receipt(), {2027: 1.5}, inputs, measure_id="foreign"
+        )
+    result = reconcile_receipted(_combined_receipt(), {2027: 1.5}, inputs)
+    assert result["measure_id"] == "combined--a+b"
+
+
+def test_a_huge_source_figure_is_refused_cleanly():
+    """Review N9: the multiplication raised OverflowError before the check."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        source(2027, 10**400)
+
+
+def test_the_residual_reported_alongside_is_finite_too():
+    """Review N10: the post-behavioural residual overflowed to -inf, which
+    is not JSON, in a passing reconciliation."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run(
+            {2027: -1e308},
+            [
+                source(2027, -1e308),
+                source(2027, 1e308, basis="post_behavioural"),
+            ],
+        )
