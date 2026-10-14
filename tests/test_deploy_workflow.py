@@ -60,8 +60,9 @@ if name == "git":
 elif name == "curl":
     out = json.dumps({"git_sha": state["live_sha"]})
 elif args[:2] == ["builds", "submit"]:
-    state["submitted_dir"] = args[2]
-    state["submitted_files"] = sorted(os.listdir(args[2]))
+    if "--no-source" not in args:
+        state["submitted_dir"] = args[2]
+        state["submitted_files"] = sorted(os.listdir(args[2]))
     out = state.get("build_id", "")
 elif args[:2] == ["builds", "describe"]:
     statuses = state["statuses"]
@@ -74,8 +75,13 @@ elif args[:2] == ["builds", "log"]:
 elif args[:2] == ["builds", "list"]:
     out = state.get("ongoing", "")
 elif args[:3] == ["run", "services", "describe"]:
-    if flag("--format=") == "json":
-        out = json.dumps({"status": {"traffic": state.get("traffic", [])}})
+    if state.get("service_unreadable"):
+        code = 1
+    elif flag("--format=") == "json":
+        out = json.dumps(
+            {"status": {"traffic": state.get("traffic", []),
+                        "url": state.get("url")}}
+        )
     else:
         out = state["url"]
 elif args[:3] == ["run", "revisions", "describe"]:
@@ -121,6 +127,7 @@ def run(tmp_path: Path, script: str, state: dict, **env):
             "GITHUB_OUTPUT": str(output),
             "GITHUB_REF": "refs/heads/main",
             "GITHUB_SHA": COMMIT,
+            "GITHUB_WORKSPACE": "/checkout",
             "WIF_PROVIDER": "projects/1/locations/global/workloadIdentityPools/p/providers/q",
             "DEPLOY_SERVICE_ACCOUNT": "deployer@policyengine-apps.iam.gserviceaccount.com",
             "POLL_SECONDS": "0",
@@ -236,7 +243,9 @@ def test_the_default_commit_is_mains_head_and_an_older_one_may_be_named(
 
 def test_the_build_is_submitted_like_a_manual_deploy(tmp_path):
     """An exact archive of the commit, to europe-west1 (cloudbuild.yaml
-    stops a build anywhere else), with the commit as _GIT_SHA."""
+    stops a build anywhere else), with the commit as _GIT_SHA, through the
+    workflow checkout's pipeline (review M2: an older commit's own
+    cloudbuild.yaml may lack today's safeguards)."""
     result, state, outputs = run(
         tmp_path,
         step("deploy", "build"),
@@ -252,11 +261,33 @@ def test_the_build_is_submitted_like_a_manual_deploy(tmp_path):
     for flag, value in [
         ("--project", "policyengine-apps"),
         ("--region", "europe-west1"),
-        ("--config", f"{directory}/cloudbuild.yaml"),
+        ("--config", "/checkout/cloudbuild.yaml"),
         ("--substitutions", f"_GIT_SHA={COMMIT}"),
     ]:
         assert submit[submit.index(flag) + 1] == value
     assert "--async" in submit
+    assert directory == submit[3]
+
+
+def test_both_pipelines_come_from_mains_checkout():
+    for job, config in [
+        ("deploy", "cloudbuild.yaml"),
+        ("rollback", "cloudbuild-rollback.yaml"),
+    ]:
+        steps = WORKFLOW["jobs"][job]["steps"]
+        checkout = next(
+            i
+            for i, s in enumerate(steps)
+            if s.get("uses", "").startswith("actions/checkout@")
+        )
+        submit = next(
+            i
+            for i, s in enumerate(steps)
+            if "gcloud builds submit" in s.get("run", "")
+        )
+        assert checkout < submit
+        assert steps[checkout]["with"]["persist-credentials"] is False
+        assert f'"$GITHUB_WORKSPACE/{config}"' in steps[submit]["run"]
 
 
 def test_a_submission_without_a_build_id_stops(tmp_path):
@@ -283,19 +314,59 @@ def test_the_deploy_waits_for_the_build_to_succeed(tmp_path, log_denied):
     assert len(calls(state, "gcloud", "builds", "describe")) == 3
 
 
+@pytest.mark.parametrize("job", ["deploy", "rollback"])
 @pytest.mark.parametrize(
     "status", ["FAILURE", "TIMEOUT", "CANCELLED", "INTERNAL_ERROR", ""]
 )
-def test_a_build_that_does_not_succeed_fails_the_deploy(tmp_path, status):
+def test_a_build_that_does_not_succeed_reports_the_traffic_it_finds(
+    tmp_path, job, status
+):
+    """Review M4: a build cancelled after it promoted had moved traffic,
+    and the run said it had not."""
     result, state, _ = run(
         tmp_path,
-        step("deploy", "Wait for the build"),
-        {"statuses": ["WORKING", status]},
+        step(job, "Wait for the build"),
+        {
+            "statuses": ["WORKING", status],
+            "traffic": [{"revisionName": REVISION, "percent": 100}],
+            "log_denied": True,
+        },
         BUILD=BUILD_ID,
+        BEFORE="uk-budget-api-2026-00001-old=100",
     )
     assert result.returncode != 0
     assert f"ended {status}" in result.stdout
+    assert f"Serving now: {REVISION}=100" in result.stdout
+    assert "(before: uk-budget-api-2026-00001-old=100)" in result.stdout
     assert calls(state, "gcloud", "builds", "log")
+
+
+def test_a_failed_build_says_so_when_the_service_cannot_be_read(tmp_path):
+    result, _, _ = run(
+        tmp_path,
+        step("deploy", "Wait for the build"),
+        {"statuses": ["FAILURE"], "service_unreadable": True},
+        BUILD=BUILD_ID,
+        BEFORE="x=100",
+    )
+    assert result.returncode != 0
+    assert "Serving now: unknown" in result.stdout
+
+
+@pytest.mark.parametrize("job", ["deploy", "rollback"])
+def test_the_traffic_before_is_recorded(tmp_path, job):
+    traffic = [
+        {"revisionName": "uk-budget-api-2026-00003-xyz", "percent": 90},
+        {"revisionName": REVISION, "percent": 10},
+        {"revisionName": "uk-budget-api-2026-00004-new", "tag": "b1"},
+    ]
+    result, _, outputs = run(
+        tmp_path, step(job, "Record the traffic"), {"traffic": traffic}
+    )
+    assert result.returncode == 0, result.stderr
+    assert outputs["traffic"] == (
+        f"uk-budget-api-2026-00003-xyz=90,{REVISION}=10"
+    )
 
 
 @pytest.mark.parametrize("live, ok", [(COMMIT, True), ("c" * 40, False)])
@@ -349,69 +420,73 @@ def test_a_rollback_runs_from_main(tmp_path):
     assert result.returncode == 0
 
 
-def revision(service="uk-budget-api-2026", ready="True", commit=COMMIT):
-    return {
-        "metadata": {
-            "labels": {
-                "serving.knative.dev/service": service,
-                "commit-sha": commit,
-            }
-        },
-        "status": {"conditions": [{"type": "Ready", "status": ready}]},
-    }
-
-
-LIVE = [
-    {"revisionName": "uk-budget-api-2026-00003-xyz", "percent": 100},
-    {"revisionName": REVISION, "tag": "old"},
-]
-
-
-def test_a_rollback_moves_all_traffic_and_says_how_to_undo_it(tmp_path):
+def test_the_rollback_is_submitted_to_the_rollback_pipeline(tmp_path):
+    """Review M1 and M3: the pipeline, not this workflow, checks the
+    revision, smoke-tests it and moves traffic, under the deploys' lock."""
     result, state, outputs = run(
         tmp_path,
-        step("rollback", "move"),
-        {"revisions": {REVISION: revision()}, "traffic": LIVE},
+        step("rollback", "build"),
+        {"build_id": BUILD_ID},
         REVISION=REVISION,
     )
     assert result.returncode == 0, result.stderr
-    assert state["moved_to"] == f"{REVISION}=100"
-    assert outputs["commit"] == COMMIT
-    assert "--to-revisions uk-budget-api-2026-00003-xyz=100" in result.stdout
+    assert outputs["build"] == BUILD_ID
+    (submit,) = calls(state, "gcloud", "builds", "submit")
+    assert "--no-source" in submit and "--async" in submit
+    for flag, value in [
+        ("--project", "policyengine-apps"),
+        ("--region", "europe-west1"),
+        ("--config", "/checkout/cloudbuild-rollback.yaml"),
+        ("--substitutions", f"_REVISION={REVISION}"),
+    ]:
+        assert submit[submit.index(flag) + 1] == value
+    assert not calls(state, "gcloud", "run", "services", "update-traffic")
+
+
+def test_the_workflow_never_moves_traffic_itself():
+    """Only the pipelines move traffic, so their lock covers every path."""
+    assert "update-traffic" not in WORKFLOW_PATH.read_text()
+
+
+def labelled(commit=COMMIT):
+    return {"metadata": {"labels": {"commit-sha": commit}}}
 
 
 @pytest.mark.parametrize(
-    "revisions, ongoing, message",
+    "traffic, live, ok",
     [
-        ({}, "", ""),
-        ({REVISION: revision(service="other")}, "", "belongs to other"),
-        ({REVISION: revision(ready="False")}, "", "is not ready"),
-        ({REVISION: revision()}, BUILD_ID, "A deploy is running"),
+        ([{"revisionName": REVISION, "percent": 100}], COMMIT, True),
+        ([{"revisionName": REVISION, "percent": 100}], "c" * 40, False),
+        (
+            [
+                {"revisionName": REVISION, "percent": 90},
+                {
+                    "revisionName": "uk-budget-api-2026-00003-xyz",
+                    "percent": 10,
+                },
+            ],
+            COMMIT,
+            False,
+        ),
+        (
+            [{"revisionName": "uk-budget-api-2026-00003-xyz", "percent": 100}],
+            COMMIT,
+            False,
+        ),
     ],
 )
-def test_a_rollback_that_cannot_be_trusted_moves_nothing(
-    tmp_path, revisions, ongoing, message
-):
-    result, state, _ = run(
-        tmp_path,
-        step("rollback", "move"),
-        {"revisions": revisions, "ongoing": ongoing, "traffic": LIVE},
-        REVISION=REVISION,
-    )
-    assert result.returncode != 0
-    assert "moved_to" not in state
-    assert message in result.stdout + result.stderr
-
-
-@pytest.mark.parametrize("live, ok", [(COMMIT, True), ("c" * 40, False)])
-def test_after_a_rollback_the_live_service_serves_its_commit(
-    tmp_path, live, ok
+def test_after_a_rollback_all_traffic_is_on_the_revision_serving_its_commit(
+    tmp_path, traffic, live, ok
 ):
     result, _, _ = run(
         tmp_path,
         step("rollback", "Check the live service"),
-        {"url": URL, "live_sha": live},
-        COMMIT=COMMIT,
+        {
+            "url": URL,
+            "live_sha": live,
+            "traffic": traffic,
+            "revisions": {REVISION: labelled()},
+        },
         REVISION=REVISION,
     )
-    assert (result.returncode == 0) is ok
+    assert (result.returncode == 0) is ok, result.stdout + result.stderr

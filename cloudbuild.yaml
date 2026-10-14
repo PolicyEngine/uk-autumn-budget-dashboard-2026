@@ -26,8 +26,8 @@ substitutions:
   _REGION: europe-west1
   _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/uk-budget-api-2026
 
-# Marks this build as a deploy of the service, so concurrent deploys see
-# each other.
+# Marks this build as a deploy of the service, so concurrent deploys and
+# rollbacks (cloudbuild-rollback.yaml carries the same tag) see each other.
 tags: ['uk-budget-api-2026-deploy']
 
 options:
