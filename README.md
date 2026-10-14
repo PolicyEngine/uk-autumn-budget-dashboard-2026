@@ -156,9 +156,15 @@ generate_all_data(config=config)
 # Run all tests
 pytest
 
+# Run on four worker processes, as CI does
+pytest -n 4
+
 # Run with coverage
 pytest --cov=uk_budget_data
 ```
+
+Mark any test that takes minutes with `@pytest.mark.slow`: under `-n`,
+slow tests are collected first so each starts on its own worker.
 
 ## Available reforms
 
