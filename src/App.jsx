@@ -6,6 +6,7 @@ import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
+import ConstituencyRankings from "./components/ConstituencyRankings";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import HouseholdChart from "./components/HouseholdChart";
@@ -595,6 +596,12 @@ function App() {
                         />
                       )}
                     </div>
+
+                    {/* Constituency top and bottom 10, directly below the map */}
+                    <ConstituencyRankings
+                      selectedPolicies={selectedPolicies}
+                      selectedYear={distributionalYear}
+                    />
 
                     {/* Row 3: Net Income Analysis Charts */}
                     <div className="charts-grid charts-row-3">

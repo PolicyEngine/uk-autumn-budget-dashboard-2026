@@ -1,3 +1,7 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Certification pins hash these files byte for byte (see
+# src/test/constituencyChecks.js), so no checkout may convert their line endings.
+public/data/*.csv -text
