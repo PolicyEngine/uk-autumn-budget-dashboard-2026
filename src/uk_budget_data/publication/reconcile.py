@@ -146,6 +146,10 @@ class SourceRow:
     row_label: str = ""
 
     def __post_init__(self):
+        if self.basis not in BASES:
+            raise ReconciliationInputError(
+                f"{self.source_id} row {self.row_id}: basis {self.basis!r}"
+            )
         _finite(
             self.value_bn,
             f"{self.source_id} row {self.row_id} in {self.fiscal_year}",
@@ -414,6 +418,33 @@ def _one_exception_each(exceptions: list[ExceptionEntry]) -> None:
         seen.add(key)
 
 
+def _inputs_of_their_types(**collections) -> None:
+    """Each input is the validated type: anything else skipped the checks
+    its constructor makes."""
+    kinds = {
+        "sources": SourceRow,
+        "mapping": MappingRow,
+        "exceptions": ExceptionEntry,
+        "expected": ExpectedEffect,
+    }
+    for name, items in collections.items():
+        for item in items:
+            if not isinstance(item, kinds[name]):
+                raise ReconciliationInputError(
+                    f"{name} must hold {kinds[name].__name__}, not {item!r}"
+                )
+
+
+def _one_source_each(sources: list[SourceRow]) -> None:
+    """Refuse a Treasury figure entered twice, as load_sources does."""
+    seen = set()
+    for row in sources:
+        identity = (row.source_id, row.row_id, row.fiscal_year, row.basis)
+        if identity in seen:
+            raise ReconciliationInputError(f"{identity} is entered twice")
+        seen.add(identity)
+
+
 def _one_mapping_each(mapping: list[MappingRow]) -> None:
     """Refuse a Treasury row mapped twice to one measure: its figure would
     be summed twice, a scale nobody reviewed."""
@@ -509,7 +540,18 @@ def reconcile(
         supported_years = set(
             _whole_years(supported_years, f"{measure_id}: supported years")
         )
+    if not isinstance(policy, Policy):
+        raise ReconciliationInputError(
+            f"policy must be a Policy, not {policy!r}"
+        )
+    _inputs_of_their_types(
+        sources=sources,
+        mapping=mapping,
+        exceptions=exceptions,
+        expected=expected,
+    )
     budgetary = _checked_budgetary(budgetary, years, measure_id)
+    _one_source_each(sources)
     _one_exception_each(exceptions)
     _one_mapping_each(mapping)
     own_links = [m for m in mapping if m.measure_id == measure_id]
@@ -628,17 +670,22 @@ def reconcile(
     else:
         summary = PASS
 
-    responsiveness = check_responsiveness(
-        budgetary,
-        measure_id=measure_id,
-        declarations=expected,
-        comparators_bn=comparators,
-        min_response_bn=policy.min_response_bn,
-        min_response_share=policy.min_response_share,
-        zero_tolerance_bn=policy.zero_tolerance_bn,
-        supported_years=supported_years,
-        years=years,
-    )
+    try:
+        responsiveness = check_responsiveness(
+            budgetary,
+            measure_id=measure_id,
+            declarations=expected,
+            comparators_bn=comparators,
+            min_response_bn=policy.min_response_bn,
+            min_response_share=policy.min_response_share,
+            zero_tolerance_bn=policy.zero_tolerance_bn,
+            supported_years=supported_years,
+            years=years,
+        )
+    except ReconciliationInputError:
+        raise
+    except ValueError as error:
+        raise ReconciliationInputError(str(error)) from error
 
     return {
         "schema": SCHEMA,
