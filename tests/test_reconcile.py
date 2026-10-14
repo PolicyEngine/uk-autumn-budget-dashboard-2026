@@ -556,7 +556,9 @@ def test_the_same_figure_entered_twice_is_refused(tmp_path):
 
 
 def test_duplicate_figures_reaching_reconcile_are_refused():
-    with pytest.raises(ReconciliationInputError, match="2 static_costing"):
+    """The direct API refuses a figure entered twice, as load_sources does,
+    before any comparison sees it."""
+    with pytest.raises(ReconciliationInputError, match="entered twice"):
         run({2027: 2.0}, [source(2027, 1.0), source(2027, 1.0)])
 
 
@@ -717,15 +719,20 @@ def test_separate_years_and_measures_may_each_have_an_expectation(tmp_path):
 @pytest.mark.parametrize("direction", ["positive", "negative"])
 def test_an_exact_zero_is_inert_even_with_no_floor(direction):
     """Review round 3: every sampled floor was positive, so the property
-    above passed with the explicit zero guard removed."""
-    result = check_responsiveness(
-        {2027: 0.0},
+    above passed with the explicit zero guard removed. Round 4 closed the
+    gap the other way: a zero floor is refused, as Policy refuses it, and
+    an exact zero stays inert at the smallest floor there is."""
+    arguments = dict(
         measure_id="m",
         declarations=[ExpectedEffect("m", direction, 2027, reviewer="R")],
         comparators_bn={2027: None},
-        min_response_bn=0.0,
         min_response_share=0.0,
         zero_tolerance_bn=0.0,
+    )
+    with pytest.raises(ValueError, match="above zero"):
+        check_responsiveness({2027: 0.0}, min_response_bn=0.0, **arguments)
+    result = check_responsiveness(
+        {2027: 0.0}, min_response_bn=5e-324, **arguments
     )
     assert result["status"] == INERT
 
@@ -1244,4 +1251,117 @@ def test_the_residual_reported_alongside_is_finite_too():
                 source(2027, -1e308),
                 source(2027, 1e308, basis="post_behavioural"),
             ],
+        )
+
+
+# --- fourth review of #17 -------------------------------------------------
+
+
+def _respond(**overrides):
+    arguments = dict(
+        measure_id="m",
+        declarations=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
+        comparators_bn={2027: 5.0},
+        min_response_bn=POLICY.min_response_bn,
+        min_response_share=POLICY.min_response_share,
+        zero_tolerance_bn=POLICY.zero_tolerance_bn,
+    )
+    budgetary = overrides.pop("budgetary", {2027: 1e-6})
+    arguments.update(overrides)
+    return check_responsiveness(budgetary, **arguments)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"min_response_bn": float("nan")},
+        {"min_response_bn": -1.0},
+        {"min_response_bn": 0.0},
+        {"min_response_share": float("nan")},
+        {"min_response_share": -0.05},
+        {"zero_tolerance_bn": float("inf")},
+        {"comparators_bn": {2027: float("nan")}},
+        {"comparators_bn": {2027: float("inf")}},
+    ],
+)
+def test_responsiveness_refuses_thresholds_and_comparators_policy_would(
+    overrides,
+):
+    """Review N11: a NaN or negative threshold, or a NaN comparator, made
+    the minimum-size check vacuous, so £1,000 counted as moving against a
+    £5bn costing."""
+    with pytest.raises(ValueError):
+        _respond(**overrides)
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [(2026.5, 2027.5), (True, None), (2027, float("inf")), ("2027", None)],
+)
+def test_a_declaration_spans_whole_years(bounds):
+    """Review N12: fractional, boolean or infinite bounds overrode the
+    Treasury's direction through both gates; the file loader refused them."""
+    with pytest.raises(ValueError, match="whole year"):
+        ExpectedEffect("m", "positive", *bounds, reviewer="R")
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"budgetary": {2027.5: 1.0}},
+        {"budgetary": {True: 1.0}},
+        {"comparators_bn": {2027.5: 5.0}},
+        {"years": [2027.5]},
+        {"supported_years": {"2027"}},
+    ],
+)
+def test_responsiveness_years_are_whole(overrides):
+    with pytest.raises(ValueError, match="whole year"):
+        _respond(**overrides)
+
+
+def test_every_supplied_input_is_checked_not_only_the_used_ones():
+    """Review N13: an unknown basis, a duplicated figure or another
+    measure's overlapping declarations passed the direct API when no
+    mapping used them; the loaders refused them."""
+    good = source(2027, 5.0)
+    with pytest.raises(ReconciliationInputError, match="basis"):
+        source(2028, 1.0, basis="typo")
+    duplicate = source(2027, 1.0, row_id="8")
+    with pytest.raises(ReconciliationInputError, match="entered twice"):
+        run({2027: 5.0}, [good, duplicate, duplicate])
+    other = [
+        ExpectedEffect("other", "positive", 2027, reviewer="R"),
+        ExpectedEffect("other", "negative", 2027, reviewer="R"),
+    ]
+    with pytest.raises(ReconciliationInputError, match="two expected"):
+        run({2027: 5.0}, [good], expected=other)
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("sources", [("S", "1", "2027-28", 5.0, "static_costing")]),
+        ("mapping", [{"measure_id": "m"}]),
+        ("exceptions", [object()]),
+        ("expected", [("m", "positive", 2027)]),
+        ("policy", {"relative_tolerance": float("nan")}),
+    ],
+)
+def test_reconcile_takes_only_validated_input_types(field, value):
+    """Anything but the validated dataclass skipped its constructor's
+    checks."""
+    arguments = {"sources": [source(2027, 5.0)], field: value}
+    with pytest.raises(ReconciliationInputError, match="must"):
+        run({2027: 5.0}, arguments.pop("sources"), **arguments)
+
+
+def test_the_minimum_response_is_finite():
+    """Review N14: a finite share times a finite comparator overflowed to
+    an infinite minimum, which is not JSON."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run(
+            {2027: 5.0},
+            [source(2027, 5.0)],
+            policy=Policy(min_response_share=1e308),
         )
