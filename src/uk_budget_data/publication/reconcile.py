@@ -46,6 +46,7 @@ from uk_budget_data.publication.responsiveness import (
     ExpectedEffect,
     check_responsiveness,
     finite_impact,
+    overlaps,
 )
 
 SCHEMA = "uk-budget-dashboard/reconciliation/v1"
@@ -144,6 +145,12 @@ class SourceRow:
     basis: str
     row_label: str = ""
 
+    def __post_init__(self):
+        _finite(
+            self.value_bn,
+            f"{self.source_id} row {self.row_id} in {self.fiscal_year}",
+        )
+
 
 @dataclass(frozen=True)
 class MappingRow:
@@ -168,11 +175,13 @@ class MappingRow:
                 f"{self.measure_id}: mapping scale must be above zero, not "
                 f"{self.scale!r}; classify the row not_comparable instead"
             )
-        if scale != 1 and not (self.reason and self.reviewer):
-            raise ReconciliationInputError(
-                f"{self.measure_id}: a mapping scaled by {self.scale!r} needs "
-                "a reason and a reviewer"
-            )
+        if scale != 1:
+            for name in ("reason", "reviewer"):
+                _reviewed(
+                    getattr(self, name),
+                    f"{self.measure_id}: the {name} for a mapping scaled by "
+                    f"{self.scale!r}",
+                )
         if isinstance(self.year_offset, bool) or not isinstance(
             self.year_offset, int
         ):
@@ -184,13 +193,13 @@ class MappingRow:
                 f"{self.measure_id}: mapping status must be blank or "
                 f"{NOT_COMPARABLE}"
             )
-        if self.status == NOT_COMPARABLE and not (
-            self.reason and self.reviewer
-        ):
-            raise ReconciliationInputError(
-                f"{self.measure_id}: a not_comparable mapping needs a reason "
-                "and a reviewer"
-            )
+        if self.status == NOT_COMPARABLE:
+            for name in ("reason", "reviewer"):
+                _reviewed(
+                    getattr(self, name),
+                    f"{self.measure_id}: the {name} for a not_comparable "
+                    "mapping",
+                )
 
 
 @dataclass(frozen=True)
@@ -405,6 +414,17 @@ def _one_exception_each(exceptions: list[ExceptionEntry]) -> None:
         seen.add(key)
 
 
+def _one_mapping_each(mapping: list[MappingRow]) -> None:
+    """Refuse a Treasury row mapped twice to one measure: its figure would
+    be summed twice, a scale nobody reviewed."""
+    seen = set()
+    for row in mapping:
+        identity = (row.measure_id, row.source_id, row.row_id)
+        if identity in seen:
+            raise ReconciliationInputError(f"{identity} is mapped twice")
+        seen.add(identity)
+
+
 def _whole_years(values, label: str) -> list[int]:
     """A list of years: whole numbers, never bools or text."""
     if isinstance(values, (str, bytes, dict)) or not isinstance(
@@ -491,6 +511,7 @@ def reconcile(
         )
     budgetary = _checked_budgetary(budgetary, years, measure_id)
     _one_exception_each(exceptions)
+    _one_mapping_each(mapping)
     own_links = [m for m in mapping if m.measure_id == measure_id]
     not_comparable = [m for m in own_links if m.status == NOT_COMPARABLE]
     comparable = [m for m in own_links if m.status != NOT_COMPARABLE]
@@ -516,7 +537,14 @@ def reconcile(
             row["alongside"] = {
                 "basis": other,
                 "value_bn": alongside,
-                "residual_bn": None if pe is None else pe - alongside,
+                "residual_bn": (
+                    None
+                    if pe is None
+                    else _finite(
+                        pe - alongside,
+                        f"{measure_id}'s {label} {other} residual",
+                    )
+                ),
                 "rows": alongside_rows,
             }
 
@@ -820,7 +848,7 @@ def load_expected(path: Path) -> list[ExpectedEffect]:
         except (KeyError, TypeError, ValueError) as error:
             raise ReconciliationInputError(f"{where}: {error}") from error
         for other in effects:
-            if other.measure_id == effect.measure_id and _overlap(
+            if other.measure_id == effect.measure_id and overlaps(
                 other, effect
             ):
                 raise ReconciliationInputError(
@@ -830,12 +858,6 @@ def load_expected(path: Path) -> list[ExpectedEffect]:
                 )
         effects.append(effect)
     return effects
-
-
-def _overlap(a: ExpectedEffect, b: ExpectedEffect) -> bool:
-    a_end = math.inf if a.to_year is None else a.to_year
-    b_end = math.inf if b.to_year is None else b.to_year
-    return a.from_year <= b_end and b.from_year <= a_end
 
 
 def budgetary_from_rows(
@@ -886,9 +908,19 @@ def read_budgetary(artifact: Path, measure_id: str) -> dict[int, float]:
 
 
 def _measure_from(receipt: dict, flag: Optional[str]) -> str:
-    """The measure to reconcile: the one the receipt names, or for a
-    combined artifact (which names its members) the one passed in."""
-    ids = receipt.get("dashboard", {}).get("measure_ids") or []
+    """The measure to reconcile: the output key the receipt states, else
+    the one measure it names. A flag may only repeat it; a combined
+    artifact's measure_ids name its members, so only its key binds."""
+    dashboard = receipt.get("dashboard", {})
+    key = dashboard.get("key")
+    if key is not None:
+        if flag is not None and flag != key:
+            raise ReconciliationInputError(
+                f"--measure-id {flag!r} is not the receipt's output key "
+                f"({key!r})"
+            )
+        return key
+    ids = dashboard.get("measure_ids") or []
     if flag is None:
         if len(ids) != 1:
             raise ReconciliationInputError(
