@@ -33,9 +33,11 @@
             "row_id": "beta",
             "scale": 1.0,
             "source_id": "S",
-            "value_bn": -2.2
+            "value_bn": -2.2,
+            "year_offset": 0
           }
         ],
+        "sha256": "96e1ffc31ea5a6872a396695bbc774ca1148a204fb956503ccb06a49d7a27a71",
         "value_bn": -2.2
       },
       "fiscal_year": "2030-31",

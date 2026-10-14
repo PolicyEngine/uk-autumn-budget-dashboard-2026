@@ -33,9 +33,11 @@
             "row_id": "delta",
             "scale": 1.0,
             "source_id": "S",
-            "value_bn": 0.7
+            "value_bn": 0.7,
+            "year_offset": 0
           }
         ],
+        "sha256": "865e86a11ce84b956320403bd103f201f44f243efb0879cdfe3f39126f65b1c9",
         "value_bn": 0.7
       },
       "fiscal_year": "2030-31",

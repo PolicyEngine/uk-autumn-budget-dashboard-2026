@@ -33,9 +33,11 @@
             "row_id": "alpha",
             "scale": 1.0,
             "source_id": "S",
-            "value_bn": -1.1
+            "value_bn": -1.1,
+            "year_offset": 0
           }
         ],
+        "sha256": "d1963b306a26f74fa4328809dae8c1615077ec2497107cffb753737b7de2e2ca",
         "value_bn": -1.1
       },
       "fiscal_year": "2030-31",
