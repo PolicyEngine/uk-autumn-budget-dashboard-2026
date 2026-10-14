@@ -38,8 +38,12 @@ from typing import Callable, Optional
 
 from uk_budget_data.certified_data import load_bundle_manifest
 
-VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
-SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+# ASCII digits with no leading zeros, matched as the whole string (a
+# trailing newline does not match).
+VERSION_PATTERN = re.compile(
+    r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+)
+SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 QUALIFIED_EXACT_PAIR = "qualified_exact_pair"
 
@@ -70,7 +74,7 @@ def installed_identity(manifest: dict) -> dict:
 
 def version_tuple(version: str) -> tuple[int, int, int]:
     """A plain release version as numbers, so 6.10.0 is after 6.9.0."""
-    if not VERSION_PATTERN.match(version or ""):
+    if not VERSION_PATTERN.fullmatch(version or ""):
         raise ValueError(f"version {version!r} is not a plain release version")
     major, minor, patch = version.split(".")
     return int(major), int(minor), int(patch)
@@ -110,7 +114,7 @@ def qualification_problems(
             f"the qualification is for pair {uk.get('pair_id')!r}, but the "
             f"packaged bundle names {pair!r}"
         )
-    if not SHA256_PATTERN.match(str(uk.get("receipt_sha256"))):
+    if not SHA256_PATTERN.fullmatch(str(uk.get("receipt_sha256"))):
         problems.append("the qualification's receipt_sha256 is not a SHA-256")
     return problems
 
@@ -144,7 +148,7 @@ def check_release(
     qualification backs the pair (see ``qualification_problems``).
     """
     problems = []
-    if not VERSION_PATTERN.match(version or ""):
+    if not VERSION_PATTERN.fullmatch(version or ""):
         return [f"version {version!r} is not a plain release version"]
     try:
         if version_tuple(version) <= version_tuple(current_version):
@@ -158,7 +162,7 @@ def check_release(
     if missing:
         return [f"the dispatch omits {', '.join(missing)}"]
     for name in ("dataset_sha256", "certificate_sha256"):
-        if not SHA256_PATTERN.match(str(bundle_uk[name])):
+        if not SHA256_PATTERN.fullmatch(str(bundle_uk[name])):
             problems.append(f"{name} is not a SHA-256")
 
     manifest = manifest if manifest is not None else load_bundle_manifest()

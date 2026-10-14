@@ -25,8 +25,11 @@ permissions:
   contents: write
   pull-requests: write
 
+# One queue per version: a dispatch for one release never cancels another
+# release's queued run. Runs for the same version are serialised, and the
+# dedupe step and the push lease handle what one leaves for the next.
 concurrency:
-  group: adopt-policyengine-release
+  group: adopt-policyengine-release-${{ github.event.client_payload.version || inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -51,7 +54,7 @@ jobs:
           version="${PAYLOAD_VERSION:-$INPUT_VERSION}"
           # Bash matches the whole string (grep would match any one line),
           # so a version with a line break cannot add outputs below.
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if ! [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "::error::the version is not a plain release version"
             exit 1
           fi
@@ -95,7 +98,10 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: main
-          token: ${{ steps.app.outputs.token || github.token }}
+          # No token left in .git/config: the steps below install and import
+          # the newly released package. Steps that reach the remote pass the
+          # token to that one git command only.
+          persist-credentials: false
 
       # Proposes only a release newer than the one main pins. A branch left
       # by a run that pushed but could not open its pull request is rebuilt
@@ -107,6 +113,15 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ steps.release.outputs.branch }}
         run: |
+          # The token for one git command, in its environment only.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$auth"
+          remote_git() {
+            GIT_CONFIG_COUNT=1 \
+              GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+              GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+              git "$@"
+          }
           # Whether plain version $1 is newer than plain version $2.
           newer() {
             local IFS=.
@@ -119,7 +134,7 @@ jobs:
             return 1
           }
           current=$(grep -A1 '^name = "policyengine"$' uv.lock | sed -n 's/^version = "\(.*\)"$/\1/p')
-          if ! [[ "$current" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if ! [[ "$current" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "::error::uv.lock does not pin a plain policyengine version"
             exit 1
           fi
@@ -129,16 +144,30 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Exactly this ref: ls-remote matches a pattern against the end of
+          # any ref, so refs/heads/zz/$BRANCH would match too.
+          ref="refs/heads/$BRANCH"
+          listing=$(remote_git ls-remote origin "$ref")
+          shas=$(printf '%s\n' "$listing" | awk -v ref="$ref" '$2 == ref {print $1}')
+          count=$(printf '%s' "$shas" | awk 'END {print NR}')
+          if [ "$count" -gt 1 ]; then
+            echo "::error::$ref is listed more than once"
+            exit 1
+          fi
           orphan=""
-          if remote=$(git ls-remote --exit-code --heads origin "$BRANCH"); then
-            proposals=$(gh pr list --head "$BRANCH" --state all --json number --jq length)
-            if [ "$proposals" != "0" ]; then
-              echo "Branch $BRANCH already has a pull request; nothing to do."
+          if [ "$count" -eq 1 ]; then
+            # Only this repository's pull requests: gh matches the branch
+            # name alone, so a fork's branch of the same name would match.
+            proposals=$(gh pr list --head "$BRANCH" --state all --json number,state,headRepository,headRepositoryOwner \
+              | jq -r --arg repo "$GITHUB_REPOSITORY" '[.[] | select((.headRepositoryOwner.login + "/" + .headRepository.name) == $repo) | "#\(.number) (\(.state | ascii_downcase))"] | join(", ")')
+            if [ -n "$proposals" ]; then
+              # A closed one counts: closing the bot's draft rejects the release.
+              echo "Branch $BRANCH already proposed in $proposals; nothing to do."
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            orphan="${remote%%[[:space:]]*}"
-            echo "::warning::$BRANCH exists with no pull request, left by an incomplete run; rebuilding it"
+            orphan="$shas"
+            echo "::warning::$BRANCH exists with no pull request from this repository, left by an incomplete run; rebuilding it"
           fi
           {
             echo "skip=false"
@@ -187,11 +216,19 @@ jobs:
           git switch -c "$BRANCH"
           git add pyproject.toml uv.lock
           git commit -m "Adopt policyengine $VERSION"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$auth"
+          push() {
+            GIT_CONFIG_COUNT=1 \
+              GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+              GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
+              git push "$@"
+          }
           if [ -n "$ORPHAN" ]; then
             # Replace only the incomplete branch the dedupe step saw.
-            git push --force-with-lease="refs/heads/$BRANCH:$ORPHAN" origin "$BRANCH"
+            push --force-with-lease="refs/heads/$BRANCH:$ORPHAN" origin "$BRANCH"
           else
-            git push origin "$BRANCH"
+            push origin "$BRANCH"
           fi
           # The release page is built from the validated version, never taken
           # from the dispatch. JSON evidence goes in a fenced block with every

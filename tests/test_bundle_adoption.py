@@ -466,30 +466,43 @@ LOCK = (
 )
 
 
-def _dedupe(tmp_path, version, *, locked="6.2.6", branch=None, prs="0"):
+REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
+
+
+def _pr(number, state="OPEN", owner="PolicyEngine", name=None):
+    return {
+        "number": number,
+        "state": state,
+        "headRepositoryOwner": {"login": owner},
+        "headRepository": {"name": name or REPOSITORY.split("/")[1]},
+    }
+
+
+def _dedupe(tmp_path, version, *, locked="6.2.6", refs=(), prs=()):
     """Run the workflow's dedupe step with stub git and gh; return its exit,
-    outputs and log. ``branch`` is the remote branch's sha, if it exists."""
+    outputs and log. ``refs`` are the (sha, ref) lines ls-remote lists;
+    ``prs`` the pull requests gh lists for the branch name."""
     work, bin_dir = tmp_path / "work", tmp_path / "bin"
     work.mkdir()
     bin_dir.mkdir()
     (work / "uv.lock").write_text(LOCK.format(version=locked))
-    if branch:
-        _stub(
-            bin_dir, "git", f'printf "%s\\trefs/heads/%s\\n" {branch} "$5"\n'
-        )
-    else:
-        _stub(bin_dir, "git", "exit 2\n")
-    _stub(bin_dir, "gh", f"echo {prs}\n")
+    listing = "".join(f"{sha}\t{ref}\n" for sha, ref in refs)
+    (tmp_path / "listing").write_text(listing)
+    _stub(bin_dir, "git", f'cat "{tmp_path / "listing"}"\n')
+    (tmp_path / "prs.json").write_text(json.dumps(list(prs)))
+    _stub(bin_dir, "gh", f'cat "{tmp_path / "prs.json"}"\n')
     output = tmp_path / "output"
     output.write_text("")
     result = subprocess.run(
         ["bash", "-e", "-o", "pipefail", "-c", _step("dedupe")],
         cwd=work,
         env={
-            "PATH": f"{bin_dir}:/usr/bin:/bin",
+            "PATH": f"{bin_dir}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
             "VERSION": version,
             "BRANCH": f"adopt/policyengine-{version}",
             "GITHUB_OUTPUT": str(output),
+            "GITHUB_REPOSITORY": REPOSITORY,
+            "GH_TOKEN": "token",
         },
         capture_output=True,
         text=True,
@@ -498,6 +511,10 @@ def _dedupe(tmp_path, version, *, locked="6.2.6", branch=None, prs="0"):
         line.split("=", 1) for line in output.read_text().splitlines()
     )
     return result.returncode, outputs, result.stdout + result.stderr
+
+
+def _branch(version="6.3.0", sha="a" * 40):
+    return [(sha, f"refs/heads/adopt/policyengine-{version}")]
 
 
 @pytest.mark.parametrize(
@@ -541,20 +558,98 @@ def test_the_workflow_refuses_a_lock_without_a_plain_version(tmp_path):
     assert "skip" not in outputs
 
 
-def test_a_branch_with_a_pull_request_is_left_alone(tmp_path):
-    code, outputs, _ = _dedupe(tmp_path, "6.3.0", branch="a" * 40, prs="1")
+@pytest.mark.parametrize("state", ["OPEN", "CLOSED", "MERGED"])
+def test_a_branch_with_a_pull_request_is_left_alone(tmp_path, state):
+    """A closed one counts too: closing the bot's draft rejects the release."""
+    code, outputs, log = _dedupe(
+        tmp_path, "6.3.0", refs=_branch(), prs=[_pr(42, state)]
+    )
     assert code == 0
     assert outputs["skip"] == "true"
+    assert f"#42 ({state.lower()})" in log
 
 
 def test_a_branch_left_without_a_pull_request_is_rebuilt(tmp_path):
     """Review finding 3: a run that pushed and then failed to open its pull
     request left a branch that every later run took for a proposal."""
-    code, outputs, log = _dedupe(tmp_path, "6.3.0", branch="a" * 40, prs="0")
+    code, outputs, log = _dedupe(tmp_path, "6.3.0", refs=_branch())
     assert code == 0
     assert outputs["skip"] == "false"
     assert outputs["orphan"] == "a" * 40
     assert "rebuilding it" in log
+
+
+def test_a_fork_pull_request_of_the_same_name_does_not_hide_an_orphan(
+    tmp_path,
+):
+    """Review N1: gh matches the branch name alone, so any fork's pull
+    request named like the bot's branch hid the orphan forever."""
+    code, outputs, log = _dedupe(
+        tmp_path,
+        "6.3.0",
+        refs=_branch(),
+        prs=[_pr(7, "CLOSED", owner="someone"), _pr(8, owner="someone")],
+    )
+    assert code == 0
+    assert outputs["skip"] == "false"
+    assert outputs["orphan"] == "a" * 40
+
+
+def test_a_lookalike_branch_is_not_the_bot_branch(tmp_path):
+    """Review N2: ls-remote matched refs/heads/zz/adopt/policyengine-6.3.0,
+    so its sha became the lease and every run failed."""
+    lookalike = [("b" * 40, "refs/heads/zz/adopt/policyengine-6.3.0")]
+    code, outputs, _ = _dedupe(tmp_path, "6.3.0", refs=lookalike)
+    assert code == 0
+    assert outputs == {"current": "6.2.6", "skip": "false", "orphan": ""}
+    (tmp_path / "both").mkdir()
+    code, outputs, _ = _dedupe(
+        tmp_path / "both", "6.3.0", refs=lookalike + _branch()
+    )
+    assert outputs["orphan"] == "a" * 40
+
+
+def test_a_ref_listed_twice_stops_the_run(tmp_path):
+    code, outputs, _ = _dedupe(
+        tmp_path, "6.3.0", refs=_branch() + _branch(sha="c" * 40)
+    )
+    assert code != 0
+    assert "skip" not in outputs
+
+
+def test_each_version_has_its_own_queue():
+    """Review N3: one concurrency group for every version let a third
+    dispatch cancel a different release's queued run."""
+    group = yaml.safe_load(WORKFLOW.read_text())["concurrency"]["group"]
+    assert "client_payload.version" in group and "inputs.version" in group
+
+
+def test_no_token_is_left_where_the_released_package_runs():
+    """Review N4: checkout kept the token in .git/config while uv sync and
+    the check imported the newly released package."""
+    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["open-upgrade-pr"][
+        "steps"
+    ]
+    checkout = next(
+        s for s in steps if s.get("uses", "").startswith("actions/checkout")
+    )
+    assert checkout["with"]["persist-credentials"] is False
+    assert "token" not in checkout["with"]
+    for step in steps:
+        runs_released_code = "uv " in step.get("run", "")
+        if runs_released_code:
+            assert "GH_TOKEN" not in step.get("env", {}), step.get("name")
+
+
+@pytest.mark.parametrize(
+    "version", ["6.03.0", "06.3.0", "6.3.00", "\uff16.3.0", "6.3.0\n"]
+)
+def test_versions_have_no_leading_zeros_or_other_digits(tmp_path, version):
+    """Review N5: 6.03.0 passed the pattern and named a branch, and Python's
+    \\d and $ accepted other digits and a trailing newline."""
+    code, output, _ = _release_step(tmp_path, version)
+    assert code != 0 and output == ""
+    assert "not a plain release version" in check(version=version)[0]
 
 
 def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
@@ -564,7 +659,13 @@ def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
     bin_dir.mkdir()
     runner.mkdir()
     log, body = tmp_path / "git.log", tmp_path / "body.md"
-    _stub(bin_dir, "git", f'echo "git $*" >> "{log}"\n')
+    _stub(
+        bin_dir,
+        "git",
+        f'echo "git $*" >> "{log}"\n'
+        'if [ "$1" = push ]; then '
+        f'echo "auth ${{GIT_CONFIG_KEY_0:-none}}" >> "{log}"; fi\n',
+    )
     _stub(
         bin_dir,
         "gh",
@@ -592,13 +693,18 @@ def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
             # What the dispatch's release_url could carry; never used.
             "PAYLOAD_RELEASE_URL": "\n\n[Verify release](https://bad)\n<!--",
             "RUNNER_TEMP": str(runner),
+            "GH_TOKEN": "token",
         },
         capture_output=True,
         text=True,
     )
-    pushes = [
-        line for line in log.read_text().splitlines() if " push " in line
-    ]
+    lines = log.read_text().splitlines()
+    pushes = [line for line in lines if " push " in line]
+    # The token reaches git push in its environment, never its config.
+    assert all("extraheader" not in line for line in lines if "config" in line)
+    assert lines.count("auth http.https://github.com/.extraheader") == len(
+        pushes
+    )
     return result.returncode, pushes, body.read_text() if body.exists() else ""
 
 
