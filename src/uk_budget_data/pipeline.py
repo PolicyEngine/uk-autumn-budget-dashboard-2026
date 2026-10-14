@@ -26,6 +26,7 @@ from uk_budget_data.calculators import (
     WinnersLosersCalculator,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
+from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 console = Console()
@@ -181,15 +182,15 @@ class ReformProcessor:
             )
             all_household_scatter.extend(household_scatter)
 
-            # Constituency impacts (if data available)
-            try:
+            # The legacy constituency calculators take direct means with no
+            # disclosure control, so they run only on request, and their
+            # rows go to a private directory (see DataPipeline._save_all).
+            if self.config.legacy_geography_dir is not None:
                 constituency, demographic = self._calculate_constituency(
                     baseline, reformed, reform_id, year
                 )
                 all_constituency.extend(constituency)
                 all_demographic.extend(demographic)
-            except FileNotFoundError:
-                pass  # Skip if constituency data not available
 
         return ReformResult(
             reform_id=reform_id,
@@ -270,8 +271,11 @@ class DataPipeline:
         Returns:
             Dict mapping output name to DataFrame.
         """
-        if not skip_input_check:
-            check_input_data(self.config)
+        if self.config.legacy_geography_dir is not None:
+            # Refuse an unsafe directory before any simulation runs.
+            private_directory(self.config.legacy_geography_dir)
+            if not skip_input_check:
+                check_input_data(self.config)
 
         results = []
 
@@ -329,8 +333,6 @@ class DataPipeline:
             "metrics": "metrics.csv",
             "income_curve": "income_curve.csv",
             "household_scatter": "household_scatter_full.csv",
-            "constituency": "constituency.csv",
-            "demographic_constituency": "demographic_constituency.csv",
             "obr_comparison": "obr_comparison.csv",
         }
 
@@ -339,6 +341,17 @@ class DataPipeline:
                 save_csv(data[key], output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
+
+        # Constituency rows from the legacy calculators carry no disclosure
+        # control. They are kept for comparison, privately, never published.
+        if self.config.legacy_geography_dir is not None:
+            directory = private_directory(self.config.legacy_geography_dir)
+            for key in ("constituency", "demographic_constituency"):
+                if key in data and len(data[key]) > 0:
+                    save_private_csv(
+                        data[key], directory / f"legacy_{key}.csv"
+                    )
+            console.print(f"[green]Saved legacy rows to {directory}/[/green]")
 
 
 def aggregate_results(

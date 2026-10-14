@@ -5,12 +5,17 @@ Constituency Data Validation Script
 Validates the UK Autumn Budget Dashboard constituency impact data against
 official statistics from DWP, End Child Poverty, and Commons Library.
 
+The constituency figures it reads and the report it writes have no
+disclosure control, so both live in the private directory named by
+UK_BUDGET_DISCLOSURE_AUDIT_DIR, never in this repository. Write the inputs
+first with `uk-budget-data generate --legacy-geography`.
+
 Usage:
     uv run python scripts/validate_constituency_data.py
 
 Output:
     - Prints validation results to console
-    - Saves detailed report to scripts/constituency_validation_report.txt
+    - Saves the report to $UK_BUDGET_DISCLOSURE_AUDIT_DIR/legacy/
 """
 
 import csv
@@ -22,10 +27,12 @@ from datetime import datetime
 import urllib.request
 import os
 
+from uk_budget_data.private_outputs import private_directory
+
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "public" / "data"
-OUTPUT_FILE = PROJECT_ROOT / "scripts" / "constituency_validation_report.txt"
+REPORT_NAME = "constituency_validation_report.txt"
 TEMP_DIR = Path("/tmp")
 
 # URLs for external data
@@ -175,7 +182,7 @@ def load_project_data(data_dir):
     """Load project constituency data."""
     project_data = {}
 
-    with open(data_dir / "constituency.csv", 'r') as f:
+    with open(data_dir / "legacy_constituency.csv", 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row['reform_id'] == 'two_child_limit' and row['year'] == '2026':
@@ -192,7 +199,7 @@ def load_demographic_data(data_dir):
     """Load demographic constituency data."""
     demo_data = {}
 
-    with open(data_dir / "demographic_constituency.csv", 'r') as f:
+    with open(data_dir / "legacy_demographic_constituency.csv", 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row['reform_id'] == 'two_child_limit' and row['year'] == '2026':
@@ -543,6 +550,7 @@ def generate_summary(report, correlations, top_overlap):
 
 def main():
     """Main validation function."""
+    private_dir = private_directory(subdirectory="legacy")
     report = ValidationReport()
 
     report.add_header("CONSTITUENCY DATA VALIDATION REPORT")
@@ -563,10 +571,10 @@ def main():
     dwp_data = parse_dwp_ods(dwp_path)
     report.add(f"  - DWP Low Income Families data: {len(dwp_data)} constituencies")
 
-    project_data = load_project_data(DATA_DIR)
+    project_data = load_project_data(private_dir)
     report.add(f"  - Project constituency data: {len(project_data)} constituencies")
 
-    demo_data = load_demographic_data(DATA_DIR)
+    demo_data = load_demographic_data(private_dir)
     report.add(f"  - Project demographic data: {len(demo_data)} constituencies")
 
     obr_data = load_obr_comparison(DATA_DIR)
@@ -607,7 +615,7 @@ def main():
     report.add("   https://www.resolutionfoundation.org/publications/catastophic-caps/")
 
     # Save report
-    report.save(OUTPUT_FILE)
+    report.save(private_dir / REPORT_NAME)
 
     return 0 if correlations['corr_2cl_rel'] > 0.5 else 1
 

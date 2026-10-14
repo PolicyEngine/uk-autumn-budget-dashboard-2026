@@ -116,6 +116,22 @@ uk-budget-data --reforms two_child_limit fuel_duty_freeze
 uk-budget-data --years 2026 2027
 ```
 
+### Disclosure control
+
+The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/data` is a publication. A check runs on every pull request:
+
+```bash
+uv run python scripts/check_public_data.py
+```
+
+Each file under `public/data` must be a table written by `policyengine.disclosure`, or be listed in `data_inputs/public_data_review.csv` after a person reviewed it. The check prints file paths and rule names, never values.
+
+Results by area go through the disclosure layer only. The legacy constituency calculators take direct means with no disclosure control. They run only with `--legacy-geography`, and write to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, which must be outside any git repository:
+
+```bash
+UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026 uk-budget-data generate --legacy-geography
+```
+
 ### Custom baseline scenarios
 
 Some reforms compare against a custom baseline rather than current law. For example, the fuel duty freeze compares the announced policy (freeze extension) against what would happen if the 5p cut ended.
