@@ -140,35 +140,26 @@ def treasury_comparison(artifact: dict, inputs: Path) -> dict:
 
     The ``reconciliation.json`` beside an artifact is a record for people
     and can be edited, so charts never read it. This recomputes the result
-    from the artifact's own (checked) budgetary rows and the inputs.
+    from the artifact's own (checked) budgetary rows and the inputs, the way
+    the publication gate does (``reconcile_receipted``): the captured
+    receipt states the measure, outputs, years and supported years, so the
+    chart's comparison is the gate's.
     """
     from uk_budget_data.publication.reconcile import (
-        load_exceptions,
-        load_expected,
-        load_mapping,
-        load_policy,
-        load_sources,
-        reconcile,
+        budgetary_from_rows,
+        reconcile_receipted,
     )
 
-    entry = artifact["entry"]
     key = artifact["receipt"]["dashboard"]["key"]
-    budgetary = {
-        row["year"]: row["value"]
-        for row in artifact["tables"]["budgetary_impact"]
-        if row["reform_id"] == key
-    }
-    inputs = Path(inputs)
-    return reconcile(
+    budgetary = budgetary_from_rows(
+        artifact["tables"]["budgetary_impact"], key, "budgetary_impact"
+    )
+    return reconcile_receipted(
+        artifact["receipt"],
         budgetary,
+        Path(inputs),
         measure_id=key,
-        outputs_sha256=entry.outputs_sha256,
-        sources=load_sources(inputs / "sources"),
-        mapping=load_mapping(inputs / "mapping.csv"),
-        exceptions=load_exceptions(inputs / "exceptions.yaml"),
-        policy=load_policy(inputs / "policy.yaml"),
-        expected=load_expected(inputs / "expected_effects.csv"),
-        supported_years=set(supported_years(artifact)),
+        outputs_sha256=artifact["entry"].outputs_sha256,
     )
 
 
