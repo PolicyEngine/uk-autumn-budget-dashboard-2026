@@ -223,7 +223,7 @@ This is separate from the deploy's smoke test (#21), which checks only that a ne
 
 The exact setup is in "Production setup" above.
 - **Dashboard rollback.** Vercel Instant Rollback to the recorded previous production deployment, then `git revert` through a pull request. Then promote the fixed deployment with `vercel promote`: after a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted ([Vercel's Instant Rollback page](https://vercel.com/docs/instant-rollback), read 12 October).
-- **Household API.** Each deploy runs as a revision tagged `candidate` with no traffic. It takes traffic only after its smoke test passes on its own URL. Rollback moves traffic back to the revision the build log names, then re-runs the household checks on the live route.
+- **Household API.** Each deploy runs as a revision with no traffic, under a tag only that build uses. It takes traffic only after its smoke test passes on its own URL. A rollback is a Cloud Build pipeline too (#28). It reruns the same smoke test on the revision to restore before moving traffic, under the same one-at-a-time lock as deploys, and the workflow then checks the live route.
 
 ## Runbook
 

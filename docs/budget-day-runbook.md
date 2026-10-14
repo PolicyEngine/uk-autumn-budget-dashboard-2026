@@ -74,10 +74,12 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 | Key | What it means | Use it? |
 |---|---|---|
 | `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
-| `"2027-04-06": 0.21` | That one day only. Formulas read an annual parameter at 1 January, so the year's value does not move and the measure scores £0. policyengine-uk 2.126.12 prints a `ReformPeriodWarning` saying so. | **Never.** |
+| `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: nothing on `main`, which applies a change only where the key is the year itself (`personal_impact.create_simulation`); in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where the household calculator showed no change. |
 
-**#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). Run on the bundle now on `main` (13 October), those keys change fuel duty on those days only: at 1 January of every year it stays at current law, so that baseline has no effect. The same values keyed by bare year, as `main`'s `fuel_duty_freeze` keys them, change every year. This needs changing in #3 when it merges `main`.
+**#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle now on `main` (policyengine-uk 2.126.12; probed 14 October), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
+
+An earlier version of this runbook said these keys have no effect at all. That was wrong: the effect is small, not zero. Either way, the baseline is not the one the measure intends. The same values keyed by bare year, as `main`'s `fuel_duty_freeze` keys them, change every year. This needs changing in #3 when it merges `main`.
 
 The templates' `rate_change` and `threshold_change` build bare-year keys and refuse the other two, and a test checks that every registered measure uses only bare-year keys (#23). That test will fail on #3's lone-date keys once both are on `main`: **your call** whether it stays. A measure that still scores £0 is refused at staging by the responsiveness gate, but it is better caught when it is written.
 
@@ -244,9 +246,14 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
   2. `git revert` the bad merge through a pull request, and wait for its deployment to build.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
-- **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). It refuses a revision of another service, one that is not ready, or a rollback while a deploy is running, moves all traffic, prints how to undo it, and checks the live `/api/version` against the revision's commit.
+- **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). The rollback runs as its own Cloud Build pipeline, and only one deploy or rollback runs at a time, however it was started. The pipeline:
+  - accepts only a ready revision that the deploy pipeline built (it carries `commit-sha` and `gcb-build-id` labels) from a commit on `main`;
+  - reruns the deploy's smoke test on that revision before any traffic moves;
+  - moves all traffic only if nothing else changed it in the meantime, and logs how to undo the rollback.
 
-  **Fallback only**, from a laptop with a working gcloud login: run the command the deploy's log printed ("Roll back with: …"). It restores the exact allocation the deploy replaced, for example:
+  The workflow then checks that all traffic is on that revision and that `/api/version` names its commit. If the revision to restore fails the smoke test (for example, a household route slower than 300 s), nothing moves. You then decide whether to use the fallback anyway.
+
+  **Fallback only**, from a laptop with a working gcloud login: run the command the deploy's log printed ("Roll back with: …"). It restores the exact allocation the deploy replaced, but skips every check above, for example:
 
   ```sh
   gcloud run services update-traffic uk-budget-api-2026 \
