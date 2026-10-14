@@ -12,6 +12,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 | **Reconciler, then scorer** (María) | Coverage ledger, Treasury entry, reconciliation, exception review, `publish approve`, household fixtures | Push measure code |
 | **Deploy and rollback** (Vahid, W5 on standby) | The merge that publishes; Vercel and Cloud Run rollback | |
 | **Briefing** (to be agreed) | Export from an approved manifest revision; the article | Use any number not in the manifest |
+| **Media first cut** (to be agreed) | Sends ITV the first-cut figures and puts them in the webinar slides (see "First cut" below) | Send any figure that is not approved in that manifest revision |
 
 ## Before the day: the deployed-route rehearsal, by Friday 23 October
 
@@ -43,6 +44,19 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Frontend build, tests and lint;
   - Publication gate.
 - [ ] **Household fixtures.** María's specimen households, with independently computed answers, are in `data_inputs/household_fixtures/` (#15).
+- [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3:
+
+  | Where | What it says | Shown today? | Who fixes it |
+  |---|---|---|---|
+  | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures. Served at `uk-autumn-budget-2026.vercel.app/combined_reforms/…`; nothing links to them | **Yes** | W5: removed in a pull request of its own. The briefing export (#22) writes this year's from an approved manifest |
+  | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
+  | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
+  | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
+  | `policyConfig.js` in #3, and the flat `public/data/*.csv` | A policy named "Autumn Budget 2025 (combined)" (id `autumn_budget_2025_combined`), with last year's rows | In #3, only through an old shared URL | #3 keeps it for old links: **your call** whether a 2026 page should still answer them |
+  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imports them, on `main`, in #3 or in the drills | Left alone. Delete them, or fix them before wiring them back |
+  | `scripts/generate_combined_charts.py` | Chart titles "Combined Autumn Budget 2025" | Not a page | #22 |
+
+  The page title and heading already say "UK Autumn Budget 2026".
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
 ## How a measure must be written
@@ -57,11 +71,13 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 | Key | What it means | Use it? |
 |---|---|---|
-| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028, on policyengine-uk 2.125.1 and on 2.126.12 | **Yes.** List every year the change applies, through 2030. |
-| `"2027-04-06": 0.21` | That one day only. It scores £0. | **Never.** |
-| `"2027-04-06.2100-12-31": 0.21` | From 6 April 2027 on, but only on policyengine-uk 2.126.12 or later. On the installed 2.125.1 it scores £0 (W4's certification evidence). | Not until the bundle moves to 2.126.12; the upgrade PR will say so. |
+| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
+| `"2027-04-06": 0.21` | That one day only. Formulas read an annual parameter at 1 January, so the year's value does not move and the measure scores £0. policyengine-uk 2.126.12 prints a `ReformPeriodWarning` saying so. | **Never.** |
+| `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: nothing on `main`, which applies a change only where the key is the year itself (`personal_impact.create_simulation`); in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where the household calculator showed no change. |
 
-The templates' `rate_change` and `threshold_change` build bare-year keys and refuse the other two. A measure that still scores £0 is refused at staging by the responsiveness gate, but it is better caught when it is written.
+**#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). Run on the bundle now on `main` (13 October), those keys change fuel duty on those days only: at 1 January of every year it stays at current law, so that baseline has no effect. The same values keyed by bare year, as `main`'s `fuel_duty_freeze` keys them, change every year. This needs changing in #3 when it merges `main`.
+
+The templates' `rate_change` and `threshold_change` build bare-year keys and refuse the other two, and a test checks that every registered measure uses only bare-year keys (#23). That test will fail on #3's lone-date keys once both are on `main`: **your call** whether it stays. A measure that still scores £0 is refused at staging by the responsiveness gate, but it is better caught when it is written.
 
 Three things are refused:
 - closures, lambdas, nested functions and `functools.partial`;
@@ -134,17 +150,18 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 
 - **Totals check.** The importer checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
-- **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer.
+- **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
 
 ## G3: rebase and reconcile (13:40 to 14:10)
 
 - **If the forecast is rebased** on the Budget's OBR tables: update `data_inputs/publication_basis.json` (`forecast.status: updated`, with source and vintage), regenerate every measure, and stage with `--adopt-basis`. Every entry on the old basis becomes stale.
-- **Reconcile** each measure: `uv run uk-budget-data publish reconcile <artifact>`. A year passes within 10% or £50m of the static costing, whichever is larger. *The numbers are still to be agreed.*
+- **Reconcile** each measure: `uv run uk-budget-data publish reconcile <artifact>`. A year passes within 10% or £50m of the static costing, whichever is larger. *The numbers are still to be agreed.* Every year the artifact reports must have one model output; a missing year fails and no exception can accept it (#17).
 - **A failed year** is fixed, or María adds an exception to `data_inputs/treasury/exceptions.yaml`:
   - one of the closed explanation classes;
   - a quantified explanation;
   - her name;
-  - the artifact's `outputs_sha256`.
+  - the artifact's `outputs_sha256`;
+  - the failed row's `comparator.sha256` from `reconciliation.json`, as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
   Then reconcile again.
 - **Approve:**
@@ -178,6 +195,27 @@ uv run uk-budget-data publish check
     --fixtures data_inputs/household_fixtures --manifest public/data/manifest.json
   ```
 
+## First cut for media and the webinar (proposed: 15:45)
+
+**Proposed, not agreed.** Max is asking Vahid and María to confirm the time, and who sends ITV the figures.
+
+- **Why 15:45.** ITV's evening segment needs our analysis by 16:00 UK time on 28 October (18:00 at a stretch), and the webinar starts at 16:30.
+- **What goes.** Whatever is approved in the manifest at 15:45: each measure approved at G3, and the combined run if it was approved at G4. Use one manifest revision, and record it in the clock.
+- **What is held.** A measure that has not been approved by the cut is held for the 07:00 briefing. It is not given to media as provisional, and it is left out of the webinar slides. This is the rule from the call with Nuffield on 13 October: publish only what the team is fully confident in, and drop anything not nailed down. The export commands already enforce it, because they refuse any entry that is not approved (#22).
+- **No totals by addition.** If the combined run is not approved by the cut, the first cut carries per-measure figures only.
+- **How.** Export from that revision, to a directory of your choosing:
+
+  ```sh
+  uv run python scripts/generate_blog_charts.py --manifest public/data/manifest.json \
+    --keys <approved ids> --out-dir <dir>
+  uv run python scripts/generate_combined_charts.py --manifest public/data/manifest.json \
+    --key combined--<ids> --out-dir <dir>
+  ```
+
+  The ITV figures and the webinar slides come from that export and nothing else.
+- **The webinar** has no guest panelist, so its deck needs only our own approved results. Marketing materials go to Nuffield by Wednesday 21 October; they are not built from this runbook.
+- **Your call: the dashboard's "Provisional" label.** G2 publishes statement figures on the dashboard labelled provisional. Keep that for the dashboard, or show only approved figures there too. Either way, media and the webinar get approved figures only.
+
 ## G5: corrections (whenever one arrives)
 
 1. **Fix the measure and commit.**
@@ -196,7 +234,7 @@ An approval or an exception carries over only where the outputs are byte-identic
 
 ## Briefing (overnight, by 07:00)
 
-Exports are built only from approved entries of one manifest revision. Each chart is stamped with the model, the data and the manifest revision (briefing PR, in progress). Use no figure that is not in that revision.
+Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (briefing PR, in progress). Use no figure that is not in that revision.
 
 ## Rollback
 
@@ -224,5 +262,6 @@ Exports are built only from approved entries of one manifest revision. Each char
 | Documents | | | | |
 | G3 approved | | | | |
 | G4 published | | | | |
+| First cut (proposed 15:45) | | | | Sent to ITV by; in the webinar slides |
 | G5 corrections | | | | |
 | Briefing exported | | | | |

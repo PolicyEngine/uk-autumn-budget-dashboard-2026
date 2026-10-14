@@ -23,10 +23,10 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 |---|---|---|
 | CI fails rather than skips, and runs on every PR base | #12 | **Merged** 12 October (3ae8edd) |
 | Certified bundle 6.2.6 (UK 2.125.1, data 1.58.0); the student loan freeze, which crashed on it, fixed | #13 | **Merged** 13 October (c8e1788) |
-| Certified bundle 6.3.3 (UK 2.126.12, data 1.58.0): a scenario's parameter changes now come before its modifier, and interval keys are read | #25 | Landing on gates. **Afterwards #3 needs `main` merged in**, so its numbers come from 2.126.12 |
+| Certified bundle 6.3.3 (UK 2.126.12, data 1.58.0): a scenario's parameter changes now come before its modifier | #25 | **Merged** 13 October (93d0609). **#3 needs `main` merged in**, so its numbers come from 2.126.12 |
 | Household route checker and `/api/version` | #15 | **Merged** 13 October (8401528) |
 | Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | **Merged** 13 October (18601b0). The service exists (below) |
-| Treasury Table 4.1 import with a printed-totals check | #16 | Landing on gates |
+| Treasury Table 4.1 import with a printed-totals check | #16 | **Merged** 13 October (ec29ebd). Two narrower layout gaps from its last review close in a follow-up PR |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
 | A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |
 | Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in. The household scatter as today (sampled, same columns) and binned | #19 | Landing on gates |
@@ -55,7 +55,7 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
   - adds up standalone effects;
   - reads affected population, poverty and Gini from the first selected measure for 2026.
 
-  #20 fixes all three once it is wired in. The metrics bar also labels the poverty change "relative AHC", but the national calculator uses policyengine-uk's `in_poverty_bhc`, which in 2.125.1 is absolute poverty before housing costs.
+  #20 fixes all three once it is wired in. The metrics bar also labels the poverty change "relative AHC", but the national calculator uses policyengine-uk's `in_poverty_bhc`, which in 2.126.12 is absolute poverty before housing costs.
 - **Years past the dataset's projection.** policyengine-uk projects datasets only to 2030. Years beyond the dataset's projected years are marked **unsupported** and shown as unavailable, not as final figures.
 
 ## Production setup (as created)
@@ -243,5 +243,5 @@ The runbook records the actual household URL and the production publishing trigg
 
 ## Follow-ups after Budget day
 
-- **Retire the combiner's single-modifier composition.** `publication.combine` composes a combined run's parameter changes and modifiers into one modifier, because policyengine-uk 2.125.1 ran a scenario's modifier before its parameter changes. From 2.126.12 (#25) the engine applies them in the right order, so the combined scenario could carry them directly. The current composition is still correct and matches W4's composition semantics, so it stays until after Budget day (agreed with the coordinating session, 13 October).
+- **Read period keys in the household calculator as the engine does.** On `main`, `personal_impact.create_simulation` applies a parameter change only where the key is the year itself; #3's `annual_reform_parameters` keeps a key for the year its first four characters name. The national run on policyengine-uk 2.126.12 also reads `"start.stop"` intervals. Until the household calculator applies changes through the engine's own route, measures keep to bare-year keys (the runbook's rule, checked in CI by #23), and the templates refuse intervals.
 - **Delete the vendored receipt code** (`publication/_vendor_w4`) once the dashboard pins a policyengine release containing policyengine.py #571, #579 and #588.
