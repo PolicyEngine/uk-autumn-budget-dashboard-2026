@@ -26,6 +26,7 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 | Certified bundle 6.3.3 (UK 2.126.12, data 1.58.0): a scenario's parameter changes now come before its modifier | #25 | **Merged** 13 October (93d0609). **#3 needs `main` merged in**, so its numbers come from 2.126.12 |
 | Household route checker and `/api/version` | #15 | **Merged** 13 October (8401528) |
 | Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | **Merged** 13 October (18601b0). The service exists (below) |
+| Household API deploys and rollbacks from GitHub Actions (Workload Identity Federation), so Budget day needs no laptop login | #28 | Draft; needs the GCP grants in its description (Max, d1538) |
 | Treasury Table 4.1 import with a printed-totals check | #16 | **Merged** 13 October (ec29ebd). Two narrower layout gaps from its last review close in a follow-up PR |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
 | A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |

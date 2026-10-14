@@ -10,7 +10,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 |---|---|---|
 | **Integrator** (Vahid) | Every commit, generation, `publish stage`, the pull request that deploys | Approve his own reconciliation exceptions |
 | **Reconciler, then scorer** (María) | Coverage ledger, Treasury entry, reconciliation, exception review, `publish approve`, household fixtures | Push measure code |
-| **Deploy and rollback** (Vahid, W5 on standby) | The merge that publishes; Vercel and Cloud Run rollback | |
+| **Deploy and rollback** (Vahid, W5 on standby) | The merge that publishes; Vercel and Cloud Run rollback (the Cloud Run deploy and rollback through the GitHub Actions workflow, #28) | Deploy from a laptop except as a fallback |
 | **Briefing** (to be agreed) | Export from an approved manifest revision; the article | Use any number not in the manifest |
 | **Media first cut** (to be agreed) | Sends ITV the first-cut figures and puts them in the webinar slides (see "First cut" below) | Send any figure that is not approved in that manifest revision |
 
@@ -23,7 +23,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
   - Serving revision and image: record after the last deploy before the day. On 12 October the first revision, `uk-budget-api-2026-00001-gow`, answered `/api/version` but not `/api/personal-impact` within 300 s, so the household route is not yet usable.
-  - Deploy (no trigger), as an exact archive of a commit already pushed to `main`:
+  - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation once the grants in #28 are made (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call, once #3 makes the household route fast enough for the smoke test).
+  - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October:
 
     ```sh
     commit=$(git rev-parse origin/main)
@@ -57,6 +58,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | `scripts/generate_combined_charts.py` | Chart titles "Combined Autumn Budget 2025" | Not a page | #22 |
 
   The page title and heading already say "UK Autumn Budget 2026".
+- [ ] **Deploy and roll back once through the workflow (#28)**, after the grants in d1538: deploy `main`'s head, roll back to the previous revision, deploy again. Record the revisions here.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
 ## How a measure must be written
@@ -242,7 +244,9 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
   2. `git revert` the bad merge through a pull request, and wait for its deployment to build.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
-- **Household API.** Run the command the deploy's log printed ("Roll back with: …"). It restores the exact allocation the deploy replaced, for example:
+- **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). It refuses a revision of another service, one that is not ready, or a rollback while a deploy is running, moves all traffic, prints how to undo it, and checks the live `/api/version` against the revision's commit.
+
+  **Fallback only**, from a laptop with a working gcloud login: run the command the deploy's log printed ("Roll back with: …"). It restores the exact allocation the deploy replaced, for example:
 
   ```sh
   gcloud run services update-traffic uk-budget-api-2026 \
