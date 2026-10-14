@@ -27,6 +27,7 @@ from uk_budget_data.publication.receipt import (
     is_publication_path,
     porcelain_paths,
 )
+from uk_budget_data.publication.reconcile import ReconciliationInputError
 from uk_budget_data.publication.tables import (
     MAX_EXACT_INTEGER,
     TableError,
@@ -542,7 +543,9 @@ def test_rows_for_years_the_receipt_does_not_report_are_refused(world):
         {2027: -1.0},
         tables=make_tables("alpha", {2027: -1.0, 2028: -9.0}),
     )
-    world.reconcile(reference)
+    # Reconciliation refuses them first (#17), and staging still does.
+    with pytest.raises(ReconciliationInputError, match="does not report"):
+        world.reconcile(reference)
     with pytest.raises(PublishError, match="does not report: \\[2028\\]"):
         stage(m.Manifest(), reference.path, **args(world))
 

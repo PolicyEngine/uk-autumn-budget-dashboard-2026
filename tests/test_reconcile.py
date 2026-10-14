@@ -19,6 +19,8 @@ from uk_budget_data.publication.reconcile import (
     ReconciliationInputError,
     SourceRow,
     allowance_bn,
+    budgetary_from_rows,
+    comparison_sha256,
     fiscal_year_label,
     load_exceptions,
     load_expected,
@@ -31,6 +33,7 @@ from uk_budget_data.publication.reconcile import (
 )
 from uk_budget_data.publication.responsiveness import (
     INERT,
+    MISSING,
     RESPONSIVE,
     UNDECLARED,
     WRONG_DIRECTION,
@@ -60,12 +63,30 @@ def run(budgetary, sources, **kwargs):
         exceptions=[],
         policy=POLICY,
         expected=[],
+        years=sorted(budgetary),
     )
     defaults.update(kwargs)
     return reconcile(budgetary, **defaults)
 
 
-def exception(year, residual, digest=DIGEST, **extra):
+# Stands in for a comparison digest where none is compared.
+NO_COMPARISON = "c" * 64
+
+
+def exception(
+    year, residual, digest=DIGEST, sources=None, mapping=None, **extra
+):
+    """A reviewed exception. Given the sources, it names the comparison
+    they make, as a reviewer copies it from ``reconciliation.json``."""
+    comparator = None
+    if sources is not None:
+        comparator = comparison_sha256(
+            "m",
+            year,
+            sources,
+            mapping or [link()],
+            extra.pop("policy", POLICY),
+        )
     fields = dict(
         measure_id="m",
         fiscal_year=fiscal_year_label(year),
@@ -75,6 +96,7 @@ def exception(year, residual, digest=DIGEST, **extra):
         reviewer="Reviewer",
         accepted_at="2026-10-28T15:00:00Z",
         outputs_sha256=digest,
+        comparator_sha256=comparator or NO_COMPARISON,
     )
     fields.update(extra)
     return ExceptionEntry(**fields)
@@ -163,7 +185,10 @@ def test_post_behavioural_is_reported_alongside_and_never_gated():
 
 def test_mapped_rows_are_scaled_and_summed():
     sources = [source(2027, 1.0, row_id="1"), source(2027, 0.5, row_id="2")]
-    mapping = [link(row_id="1"), link(row_id="2", scale=2.0)]
+    mapping = [
+        link(row_id="1"),
+        link(row_id="2", scale=2.0, reason="Two years in one", reviewer="R"),
+    ]
     result = run({2027: 2.0}, sources, mapping=mapping)
     assert result["rows"][0]["comparator"]["value_bn"] == pytest.approx(2.0)
     assert result["rows"][0]["status"] == PASS
@@ -171,20 +196,27 @@ def test_mapped_rows_are_scaled_and_summed():
 
 def test_exception_accepts_only_the_exact_outputs():
     budgetary, sources = {2027: 1.5}, [source(2027, 1.0)]
-    accepted = run(budgetary, sources, exceptions=[exception(2027, 0.5)])
+    accepted = run(
+        budgetary, sources, exceptions=[exception(2027, 0.5, sources=sources)]
+    )
     assert accepted["rows"][0]["status"] == ACCEPTED
     assert accepted["summary"]["status"] == ACCEPTED
     assert accepted["rows"][0]["exception"]["reviewer"] == "Reviewer"
 
     other_outputs = run(
-        budgetary, sources, exceptions=[exception(2027, 0.5, OTHER_DIGEST)]
+        budgetary,
+        sources,
+        exceptions=[exception(2027, 0.5, OTHER_DIGEST, sources=sources)],
     )
     assert other_outputs["rows"][0]["status"] == FAILED
 
 
 def test_exception_with_the_wrong_residual_is_rejected():
+    sources = [source(2027, 1.0)]
     result = run(
-        {2027: 1.5}, [source(2027, 1.0)], exceptions=[exception(2027, 0.3)]
+        {2027: 1.5},
+        sources,
+        exceptions=[exception(2027, 0.3, sources=sources)],
     )
     assert result["rows"][0]["status"] == FAILED
     assert "does not match" in result["rows"][0]["exception_rejected"]
@@ -208,8 +240,11 @@ def test_exact_zero_against_a_real_costing_is_inert():
 
 
 def test_an_exception_cannot_rescue_an_inert_measure():
+    sources = [source(2027, -3.0)]
     result = run(
-        {2027: 0.0}, [source(2027, -3.0)], exceptions=[exception(2027, 3.0)]
+        {2027: 0.0},
+        sources,
+        exceptions=[exception(2027, 3.0, sources=sources)],
     )
     assert result["summary"]["status"] == ACCEPTED
     assert result["responsiveness"]["status"] == INERT
@@ -304,11 +339,14 @@ def test_an_exception_never_applies_to_other_outputs(
     pe, treasury, artifact, accepted_for
 ):
     assume(not within_allowance(pe, treasury, POLICY))
+    sources = [source(2027, treasury)]
     result = run(
         {2027: pe},
-        [source(2027, treasury)],
+        sources,
         outputs_sha256=artifact,
-        exceptions=[exception(2027, pe - treasury, accepted_for)],
+        exceptions=[
+            exception(2027, pe - treasury, accepted_for, sources=sources)
+        ],
     )
     expected = ACCEPTED if artifact == accepted_for else FAILED
     assert result["rows"][0]["status"] == expected
@@ -376,16 +414,21 @@ def write_inputs(tmp_path, static_2028="-2.0"):
     return inputs
 
 
-def write_artifact(tmp_path, values):
+def write_artifact(tmp_path, values, years=None, rows=None):
     artifact = tmp_path / "artifact"
     artifact.mkdir()
     lines = ["reform_id,reform_name,year,value"]
-    lines += [f"rate_change,Rate change,{y},{v}" for y, v in values.items()]
+    lines += rows or [
+        f"rate_change,Rate change,{y},{v}" for y, v in values.items()
+    ]
     (artifact / "budgetary_impact.csv").write_text("\n".join(lines) + "\n")
     (artifact / "receipt.json").write_text(
         json.dumps(
             {
-                "execution_receipt": {"outputs_sha256": DIGEST},
+                "execution_receipt": {
+                    "outputs_sha256": DIGEST,
+                    "years": sorted(values) if years is None else years,
+                },
                 "dashboard": {
                     "measure_ids": ["rate_change"],
                     "dataset_years": [2027, 2028],
@@ -588,11 +631,19 @@ EXCEPTION = """- measure_id: m
   reviewer: Reviewer
   accepted_at: 2026-10-28T15:00:00Z
   outputs_sha256: abc
+  comparator_sha256: def
 """
 
 
 @pytest.mark.parametrize(
-    "field", ["explanation", "reviewer", "accepted_at", "explanation_class"]
+    "field",
+    [
+        "explanation",
+        "reviewer",
+        "accepted_at",
+        "explanation_class",
+        "comparator_sha256",
+    ],
 )
 @pytest.mark.parametrize("blank", ["", " ''", " null", " []", " 3"])
 def test_an_exception_with_a_blank_review_field_is_refused(
@@ -677,3 +728,423 @@ def test_an_exact_zero_is_inert_even_with_no_floor(direction):
         zero_tolerance_bn=0.0,
     )
     assert result["status"] == INERT
+
+
+# --- confirmation review of #17 -------------------------------------------
+
+
+def _declared_both_years():
+    return [ExpectedEffect("m", "positive", 2027, 2028, reviewer="R")]
+
+
+def test_a_year_the_artifact_reports_without_a_model_output_fails():
+    """Review finding 1: both gates looked only at the years with a model
+    output, so a missing year passed unchecked."""
+    result = run(
+        {2027: 1.0},
+        [source(2027, 1.0), source(2028, 3.0)],
+        years=[2027, 2028],
+        supported_years={2027, 2028},
+        expected=_declared_both_years(),
+    )
+    statuses = {row["year"]: row["status"] for row in result["rows"]}
+    assert statuses == {2027: PASS, 2028: FAILED}
+    assert "No model output" in result["rows"][1]["reason"]
+    assert result["summary"]["status"] == FAILED
+    assert result["responsiveness"]["status"] == MISSING
+
+
+def test_no_exception_accepts_a_year_with_no_model_output():
+    sources = [source(2027, 1.0), source(2028, 3.0)]
+    result = run(
+        {2027: 1.0},
+        sources,
+        years=[2027, 2028],
+        exceptions=[exception(2028, -3.0, sources=sources)],
+    )
+    assert result["rows"][1]["status"] == FAILED
+
+
+def test_a_missing_year_the_dataset_does_not_support_is_unsupported():
+    result = run(
+        {2030: 1.0},
+        [source(2030, 1.0), source(2031, 1.0)],
+        years=[2030, 2031],
+        supported_years={2030},
+    )
+    statuses = {row["year"]: row["status"] for row in result["rows"]}
+    assert statuses == {2030: PASS, 2031: UNSUPPORTED}
+    assert result["responsiveness"]["status"] == RESPONSIVE
+
+
+def test_a_model_output_for_a_year_the_artifact_does_not_report_is_refused():
+    with pytest.raises(ReconciliationInputError, match="does not report"):
+        run({2027: 1.0, 2028: 1.0}, [source(2027, 1.0)], years=[2027])
+
+
+def test_the_cli_fails_a_year_the_receipt_reports_with_no_output(tmp_path):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05}, years=[2027, 2028])
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 1
+
+
+def _without_receipt_years(artifact):
+    receipt = json.loads((artifact / "receipt.json").read_text())
+    del receipt["execution_receipt"]["years"]
+    (artifact / "receipt.json").write_text(json.dumps(receipt))
+
+
+def test_the_cli_needs_the_artifact_years(tmp_path):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    _without_receipt_years(artifact)
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+    assert (
+        main(
+            [
+                str(artifact),
+                "--inputs",
+                str(inputs),
+                "--no-write",
+                "--years",
+                "2027",
+                "2028",
+            ]
+        )
+        == 0
+    )
+
+
+@pytest.mark.parametrize("first, second", [("100", "1"), ("1", "100")])
+def test_two_model_rows_for_one_year_are_refused_in_either_order(
+    tmp_path, first, second
+):
+    """Review finding 2: the later row silently replaced the earlier one,
+    so the verdict depended on the order of the rows."""
+    rows = [
+        f"rate_change,Rate change,2027,{first}",
+        f"rate_change,Rate change,2027,{second}",
+    ]
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: 1}, rows=rows)
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+
+
+@given(
+    years=st.lists(st.integers(2026, 2031), min_size=1, max_size=8),
+    data=st.data(),
+)
+def test_model_outputs_are_one_per_year_whatever_the_order(years, data):
+    """Property: a set of rows with distinct years reads as exactly those
+    values, in any order; any repeated year is refused, in any order."""
+    values = data.draw(
+        st.lists(amounts, min_size=len(years), max_size=len(years))
+    )
+    rows = [
+        {"reform_id": "m", "year": year, "value": value}
+        for year, value in zip(years, values)
+    ]
+    rows += [{"reform_id": "other", "year": 2026, "value": 9.0}]
+    order = data.draw(st.permutations(rows))
+    if len(set(years)) == len(years):
+        assert budgetary_from_rows(order, "m", "rows") == dict(
+            zip(years, values)
+        )
+    else:
+        with pytest.raises(ReconciliationInputError, match="two"):
+            budgetary_from_rows(order, "m", "rows")
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+def test_a_non_finite_model_output_is_refused(tmp_path, value):
+    """Review finding 3: NaN passed the minimum-size check and took a sign,
+    and a not-comparable mapping skipped the numerical check altogether."""
+    inputs = write_inputs(tmp_path)
+    (inputs / "mapping.csv").write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer\n"
+        "rate_change,S,7,,,not_comparable,Outside comparator coverage,R\n"
+    )
+    artifact = write_artifact(tmp_path, {2027: value})
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+    number = float(value)
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run(
+            {2027: number},
+            [],
+            mapping=[
+                link(status=NOT_COMPARABLE, reason="Outside", reviewer="R")
+            ],
+            expected=[ExpectedEffect("m", "negative", 2027, reviewer="R")],
+        )
+    with pytest.raises(ValueError, match="finite"):
+        check_responsiveness(
+            {2027: number},
+            measure_id="m",
+            declarations=[ExpectedEffect("m", "positive", 2027)],
+            comparators_bn={},
+            min_response_bn=POLICY.min_response_bn,
+            min_response_share=POLICY.min_response_share,
+            zero_tolerance_bn=POLICY.zero_tolerance_bn,
+        )
+
+
+def _accepted_then_changed(sources, mapping, changed_sources, changed_mapping):
+    """An exception approved against one comparison, then reconciled
+    against another with the same aggregate."""
+    entry = exception(2027, 0.5, sources=sources, mapping=mapping)
+    before = run({2027: 1.5}, sources, mapping=mapping, exceptions=[entry])
+    after = run(
+        {2027: 1.5},
+        changed_sources,
+        mapping=changed_mapping,
+        exceptions=[entry],
+    )
+    return before, after
+
+
+def test_an_exception_lapses_when_the_figures_behind_it_change():
+    """Review finding 4: acceptance bound the residual but not the Treasury
+    figures, so two figures changing with the same sum kept it accepted."""
+    mapping = [link(row_id="1"), link(row_id="2")]
+    before, after = _accepted_then_changed(
+        [source(2027, 2.0, row_id="1"), source(2027, -1.0, row_id="2")],
+        mapping,
+        [source(2027, 200.0, row_id="1"), source(2027, -199.0, row_id="2")],
+        mapping,
+    )
+    assert before["rows"][0]["status"] == ACCEPTED
+    assert after["rows"][0]["comparator"]["value_bn"] == pytest.approx(1.0)
+    assert after["rows"][0]["status"] == FAILED
+    assert "has changed" in after["rows"][0]["exception_rejected"]
+
+
+def test_an_exception_lapses_when_its_mapping_changes():
+    sources = [source(2027, 1.0, row_id="1"), source(2027, 1.0, row_id="2")]
+    before, after = _accepted_then_changed(
+        sources, [link(row_id="1")], sources, [link(row_id="2")]
+    )
+    assert before["rows"][0]["status"] == ACCEPTED
+    assert after["rows"][0]["status"] == FAILED
+
+
+def test_an_exception_lapses_when_the_comparator_basis_changes():
+    sources = [
+        source(2027, 1.0),
+        source(2027, 1.0, basis="post_behavioural"),
+    ]
+    entry = exception(2027, 0.5, sources=sources)
+    static = run({2027: 1.5}, sources, exceptions=[entry])
+    other = run(
+        {2027: 1.5},
+        sources,
+        exceptions=[entry],
+        policy=Policy(comparator_basis="post_behavioural"),
+    )
+    assert static["rows"][0]["status"] == ACCEPTED
+    assert other["rows"][0]["comparator"]["value_bn"] == pytest.approx(1.0)
+    assert other["rows"][0]["status"] == FAILED
+
+
+@given(
+    pe=amounts,
+    treasury=amounts,
+    same_outputs=st.booleans(),
+    same_comparison=st.booleans(),
+)
+def test_an_exception_applies_only_to_its_outputs_and_comparison(
+    pe, treasury, same_outputs, same_comparison
+):
+    """Property: a failed year is accepted only when the exception names
+    these outputs and this comparison, with the computed residual."""
+    assume(not within_allowance(pe, treasury, POLICY))
+    sources = [source(2027, treasury)]
+    entry = exception(
+        2027,
+        pe - treasury,
+        DIGEST if same_outputs else OTHER_DIGEST,
+        sources=sources if same_comparison else None,
+    )
+    result = run({2027: pe}, sources, exceptions=[entry])
+    expected = ACCEPTED if same_outputs and same_comparison else FAILED
+    assert result["rows"][0]["status"] == expected
+    assert result["rows"][0]["comparator"]["sha256"] == comparison_sha256(
+        "m", 2027, sources, [link()], POLICY
+    )
+
+
+@pytest.mark.parametrize("text", ["false\n", "0\n", "[]\n", "", "# none\n"])
+def test_a_policy_file_must_hold_a_mapping(tmp_path, text):
+    """Review finding 5: a policy file that read as false, 0 or a list was
+    taken for the defaults."""
+    path = tmp_path / "policy.yaml"
+    path.write_text(text)
+    with pytest.raises(ReconciliationInputError, match="mapping"):
+        load_policy(path)
+
+
+def test_a_comparator_that_overflows_is_refused():
+    """Review finding 6: a finite scale times a finite figure overflowed to
+    an infinite comparator and allowance, which passed."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run(
+            {2027: 1.0},
+            [source(2027, 10.0)],
+            mapping=[link(scale=1e308, reason="Overflow", reviewer="R")],
+            policy=Policy(min_response_share=0),
+        )
+
+
+def test_a_mapping_scale_must_be_a_finite_number():
+    with pytest.raises(ReconciliationInputError, match="scale"):
+        link(scale=float("inf"))
+    with pytest.raises(ReconciliationInputError, match="year_offset"):
+        link(year_offset=1.5)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["explanation", "reviewer", "accepted_at", "comparator_sha256"],
+)
+@pytest.mark.parametrize("value", [None, "", "  ", 3])
+def test_an_exception_built_directly_needs_every_review_field(field, value):
+    """Review finding 7: the constructor checked str(value), so None became
+    the text "None"."""
+    with pytest.raises(ReconciliationInputError, match=field):
+        exception(2027, 0.5, **{field: value})
+
+
+# --- second review of #17 -------------------------------------------------
+
+
+@pytest.mark.parametrize("scale", [0.0, -1.0, -0.5])
+def test_a_mapping_scale_must_be_above_zero(scale):
+    """Review N1: a scale of zero dropped a Treasury figure, and a negative
+    one flipped its sign, with no reviewer; a £5bn costing then passed
+    against a £40m model figure."""
+    with pytest.raises(ReconciliationInputError, match="above zero"):
+        link(scale=scale, reason="R", reviewer="R")
+
+
+def test_a_scaled_mapping_needs_a_reason_and_reviewer():
+    with pytest.raises(
+        ReconciliationInputError, match="reason and a reviewer"
+    ):
+        link(scale=0.5)
+    assert (
+        link(scale=0.5, reason="Scotland's share", reviewer="R").scale == 0.5
+    )
+    assert link(scale=1.0).scale == 1.0
+
+
+def test_the_cli_refuses_a_zero_scale(tmp_path):
+    inputs = write_inputs(tmp_path)
+    (inputs / "mapping.csv").write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer\n"
+        "rate_change,S,7,0,,,,\n"
+    )
+    artifact = write_artifact(tmp_path, {2027: -0.04, 2028: -0.04})
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--years", "2027"],
+        ["--years", "2027", "2028", "2029"],
+        ["--supported-years", "2027"],
+        ["--outputs-sha256", OTHER_DIGEST],
+        ["--measure-id", "another_measure"],
+    ],
+)
+def test_a_flag_that_contradicts_the_receipt_is_refused(tmp_path, flags):
+    """Review N2: --years 2027 dropped 2028 from both gates although the
+    receipt reports it, which brought back the missing-year gap."""
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05}, years=[2027, 2028])
+    assert (
+        main([str(artifact), "--inputs", str(inputs), "--no-write", *flags])
+        == 2
+    )
+
+
+def test_a_flag_that_repeats_the_receipt_is_accepted(tmp_path):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    flags = [
+        "--years",
+        "2028",
+        "2027",
+        "--supported-years",
+        "2027",
+        "2028",
+        "--outputs-sha256",
+        DIGEST,
+        "--measure-id",
+        "rate_change",
+    ]
+    assert (
+        main([str(artifact), "--inputs", str(inputs), "--no-write", *flags])
+        == 0
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_years", [[2027, "2028"], [2027, True], "2027", {"2027": 1}]
+)
+def test_the_receipt_years_must_be_whole_numbers(tmp_path, dataset_years):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    receipt = json.loads((artifact / "receipt.json").read_text())
+    receipt["dashboard"]["dataset_years"] = dataset_years
+    (artifact / "receipt.json").write_text(json.dumps(receipt))
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+
+
+HUGE = 10**400
+
+
+def test_an_integer_too_large_for_a_float_is_refused_cleanly(tmp_path):
+    """Review N3: float() of a huge int raises OverflowError, which is not a
+    ValueError, so it escaped as a traceback instead of a refusal."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run({2027: HUGE}, [source(2027, 1.0)])
+    with pytest.raises(ValueError, match="finite"):
+        check_responsiveness(
+            {2027: HUGE},
+            measure_id="m",
+            declarations=[],
+            comparators_bn={},
+            min_response_bn=POLICY.min_response_bn,
+            min_response_share=POLICY.min_response_share,
+            zero_tolerance_bn=POLICY.zero_tolerance_bn,
+        )
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(f"relative_tolerance: {HUGE}\n")
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        load_policy(policy)
+    exceptions = tmp_path / "exceptions.yaml"
+    exceptions.write_text(
+        EXCEPTION.replace("residual_bn: -0.5", f"residual_bn: {HUGE}")
+    )
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        load_exceptions(exceptions)
+
+
+def test_two_exceptions_for_the_same_outputs_are_refused(tmp_path):
+    """Review N4: with two, which one the record named depended on their
+    order in the file."""
+    path = tmp_path / "exceptions.yaml"
+    path.write_text(EXCEPTION + EXCEPTION.replace("Reviewer", "Someone else"))
+    with pytest.raises(ReconciliationInputError, match="two exceptions"):
+        load_exceptions(path)
+    sources = [source(2027, 1.0)]
+    entry = exception(2027, 0.5, sources=sources)
+    with pytest.raises(ReconciliationInputError, match="two exceptions"):
+        run({2027: 1.5}, sources, exceptions=[entry, entry])
+    other_outputs = exception(2027, 0.5, OTHER_DIGEST, sources=sources)
+    assert (
+        run({2027: 1.5}, sources, exceptions=[entry, other_outputs])["rows"][
+            0
+        ]["status"]
+        == ACCEPTED
+    )
