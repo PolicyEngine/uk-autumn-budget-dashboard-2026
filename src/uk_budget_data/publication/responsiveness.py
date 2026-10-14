@@ -48,6 +48,13 @@ class ExpectedEffect:
     note: str = ""
 
     def __post_init__(self):
+        # The declaration sets the sign a measure must have, over the
+        # Treasury's own, so someone must have reviewed it.
+        if not isinstance(self.reviewer, str) or not self.reviewer.strip():
+            raise ValueError(
+                f"{self.measure_id}: an expected effect needs its reviewer, "
+                f"not {self.reviewer!r}"
+            )
         if self.direction not in (POSITIVE, NEGATIVE):
             raise ValueError(
                 f"{self.measure_id}: direction must be positive or negative, "
@@ -60,6 +67,29 @@ class ExpectedEffect:
         return year >= self.from_year and (
             self.to_year is None or year <= self.to_year
         )
+
+
+def overlaps(a: ExpectedEffect, b: ExpectedEffect) -> bool:
+    """Whether two declarations cover a year in common."""
+    a_end = math.inf if a.to_year is None else a.to_year
+    b_end = math.inf if b.to_year is None else b.to_year
+    return a.from_year <= b_end and b.from_year <= a_end
+
+
+def one_declaration_a_year(declarations: list[ExpectedEffect]) -> None:
+    """Refuse two declarations for one measure and year: which one applied
+    would depend on their order."""
+    for index, first in enumerate(declarations):
+        for second in declarations[index + 1 :]:
+            if first.measure_id == second.measure_id and overlaps(
+                first, second
+            ):
+                raise ValueError(
+                    f"{first.measure_id} has two expected effects for some "
+                    f"years ({first.direction} from {first.from_year}, "
+                    f"{second.direction} from {second.from_year}); give each "
+                    "year one expectation"
+                )
 
 
 def _sign(value: float) -> str:
@@ -142,13 +172,15 @@ def check_responsiveness(
         ``responsive``.
 
     Raises:
-        ValueError: if an impact is not a finite number.
+        ValueError: if an impact is not a finite number, or the measure has
+            two declarations for one year.
     """
     impacts = {
         year: finite_impact(value, f"{measure_id}'s impact in {year}")
         for year, value in budgetary.items()
     }
     own = [d for d in declarations if d.measure_id == measure_id]
+    one_declaration_a_year(own)
     rows = []
     for year in sorted(set(impacts) | set(years or ())):
         if supported_years is not None and year not in supported_years:
