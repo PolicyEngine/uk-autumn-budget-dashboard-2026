@@ -24,7 +24,8 @@ from policyengine_uk.utils.scenario import Scenario
 from uk_budget_data.personal_impact import create_simulation
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-BARE_YEAR = re.compile(r"[1-9]\d{3}")
+# [0-9], not \d: \d also matches other scripts' digits (review r7).
+BARE_YEAR = re.compile(r"[1-9][0-9]{3}")
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 YEARS = (2027, 2028)
 EARNER = {
@@ -75,6 +76,7 @@ def test_other_keys_names_every_key_that_is_not_a_bare_year():
                 "2027": 1,
                 "2029-04-06": 1,
                 "2030-04-06.2100-12-31": 1,
+                "202\u0667": 1,
             }
         },
         baseline_parameter_changes={ALLOWANCE: {"year:2027:2": 1}},
@@ -82,8 +84,17 @@ def test_other_keys_names_every_key_that_is_not_a_bare_year():
     assert other_keys(reform) == [
         ("reform", ALLOWANCE, "2029-04-06"),
         ("reform", ALLOWANCE, "2030-04-06.2100-12-31"),
+        ("reform", ALLOWANCE, "202\u0667"),
         ("baseline", ALLOWANCE, "year:2027:2"),
     ]
+
+
+def test_another_scripts_digits_are_not_a_bare_year(current_law):
+    """Review r7: \\d matched "202\\u0667" (an Arabic-Indic seven). The
+    national run reads it as 2027; the household calculator does not."""
+    changes = {ALLOWANCE: {"202\u0667": 20_000}}
+    assert _result(_national(changes), 2027) == (20_000, 6_000)
+    assert _result(_household(changes, 2027), 2027) == current_law[2027]
 
 
 def _result(sim, year):
@@ -116,8 +127,10 @@ def test_both_routes_read_a_bare_year_as_that_year(current_law):
     changes = {ALLOWANCE: {"2027": 20_000}}
     national = _national(changes)
     assert _result(national, 2027) == _result(_household(changes, 2027), 2027)
-    assert _result(national, 2027)[0] == 20_000
-    assert _result(national, 2027) != current_law[2027]
+    # £50,000 less a £20,000 allowance, all at the 20% basic rate: the
+    # tax itself must move, not only the allowance (review r7).
+    assert _result(national, 2027) == (20_000, 6_000)
+    assert current_law[2027][1] != 6_000
     assert _result(national, 2028) == current_law[2028]
     assert _result(_household(changes, 2028), 2028) == current_law[2028]
 

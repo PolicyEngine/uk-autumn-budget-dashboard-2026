@@ -82,8 +82,10 @@ def _annual_decimal_values(values: Mapping) -> dict[str, Decimal]:
         raise ValueError("Supply at least one explicit annual value")
     result = {}
     for year, value in values.items():
+        # [0-9], not \d: \d also matches other scripts' digits, which the
+        # national run reads as a year and the household calculator does not.
         if isinstance(year, bool) or not re.fullmatch(
-            r"[1-9]\d{3}", str(year)
+            r"[1-9][0-9]{3}", str(year)
         ):
             raise ValueError(
                 "Use four-digit annual keys; a lone ISO date changes one day"

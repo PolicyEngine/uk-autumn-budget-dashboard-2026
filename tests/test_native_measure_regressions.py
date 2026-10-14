@@ -1,6 +1,7 @@
 """Household regressions for the pinned native engine, without reforms."""
 
 import math
+from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
 from policyengine_uk import Simulation
@@ -112,11 +113,16 @@ def test_native_nics_follow_income_tax_thresholds_in_2031(income_source):
     primary, upper, lower_profits, upper_profits = thresholds.values()
     assert lower_profits == personal_allowance
     assert upper_profits == higher_rate_threshold
-    # Class 1 thresholds are weekly, to the penny.
-    assert primary == pytest.approx(personal_allowance / 52, abs=0.005)
-    assert upper == pytest.approx(higher_rate_threshold / 52, abs=0.005)
+    # Class 1 thresholds are the weekly equivalents rounded half up to the
+    # penny, as create_threshold_indexation.weekly_equivalent stores them
+    # (review r7: exact annual / 52 passed the old tolerance).
+    weekly_primary = weekly_to_the_penny(personal_allowance)
+    weekly_upper = weekly_to_the_penny(higher_rate_threshold)
+    assert primary == pytest.approx(weekly_primary, abs=1e-9)
+    assert upper == pytest.approx(weekly_upper, abs=1e-9)
     expected = (
-        (upper - primary) * 52 * 0.08 + (60_000 - upper * 52) * 0.02
+        (weekly_upper - weekly_primary) * 52 * 0.08
+        + (60_000 - weekly_upper * 52) * 0.02
         if employee
         else (upper_profits - lower_profits) * 0.06
         + (60_000 - upper_profits) * 0.02
@@ -124,6 +130,12 @@ def test_native_nics_follow_income_tax_thresholds_in_2031(income_source):
     actual = float(sim.calculate("national_insurance", 2031)[0])
     assert math.isfinite(actual)
     assert actual == pytest.approx(expected, abs=0.01)
+
+
+def weekly_to_the_penny(annual: float) -> float:
+    """An annual threshold over 52 weeks, rounded half up to the penny."""
+    weekly = Decimal(repr(float(annual))) / 52
+    return float(weekly.quantize(Decimal("0.01"), ROUND_HALF_UP))
 
 
 def pensioner_situation(year, *, claims_pension_credit):

@@ -55,10 +55,11 @@ def test_annual_builders_validate_paths_and_explicit_years(builder):
 @pytest.mark.parametrize(
     "key",
     [
-        "2026-04-06",  # one day: scores nothing
+        "2026-04-06",  # one day: at most a day-weighted sliver of the year
         "2026-04-06.2100-12-31",  # an interval: the household calculator ignores it
         "year:2026:5",
         "2026-04",
+        "202\u0667",  # other scripts' digits: read by the national run only
     ],
 )
 def test_only_bare_fiscal_years_are_accepted(builder, key):
