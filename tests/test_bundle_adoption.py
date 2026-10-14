@@ -33,7 +33,10 @@ MANIFEST = {
             "default_dataset": "enhanced_frs_2024_25",
             "data_package": {"version": "1.60.0"},
             "certified_data_artifact": {"sha256": "d" * 64},
-            "certification": {"compatibility_basis": "built_with_model"},
+            "certification": {
+                "compatibility_basis": "built_with_model",
+                "certified_for_model_version": "2.130.0",
+            },
         }
     },
 }
@@ -185,44 +188,17 @@ def test_cli_reports_every_problem(capsys):
         )
 
 
-WORKFLOW = Path(".github/workflows/adopt-policyengine-release.yml")
-
-
-def test_workflow_never_interpolates_the_dispatch_into_a_script():
-    """Dispatch values reach the shell only through environment variables."""
-    workflow = yaml.safe_load(WORKFLOW.read_text())
-    job = workflow["jobs"]["open-upgrade-pr"]
-    for step in job["steps"]:
-        script = step.get("run", "")
-        assert "github.event" not in script, step.get("name")
-        assert "inputs." not in script, step.get("name")
-
-
-def test_workflow_opens_a_draft_and_never_merges():
-    text = WORKFLOW.read_text()
-    assert "gh pr create --draft" in text
-    assert "gh pr merge" not in text
-    assert "--auto" not in text
-    assert "pull_request_target" not in text
-    workflow = yaml.safe_load(text)
-    # PyYAML reads the bare key `on` as the boolean True.
-    triggers = workflow.get("on", workflow.get(True))
-    assert set(triggers) == {"repository_dispatch", "workflow_dispatch"}
-    assert triggers["repository_dispatch"]["types"] == ["policyengine-release"]
-
-
 # --- the workflow's bundle export (review finding, 12 October) ------------
 
-WORKFLOW = (
-    Path(__file__).resolve().parent.parent
-    / ".github"
-    / "workflows"
-    / "adopt-policyengine-release.yml"
-)
+REPO = Path(__file__).resolve().parent.parent
+WORKFLOW = REPO / ".github" / "workflows" / "adopt-policyengine-release.yml"
+SCRIPTS = REPO / "scripts" / "adopt_release"
 
 
 def _export_filter() -> str:
-    match = re.search(r"jq -cse '([^']+)'", WORKFLOW.read_text())
+    match = re.search(
+        r"jq -cse '([^']+)'", (SCRIPTS / "identity.sh").read_text()
+    )
     assert match, "the workflow must parse the bundle with jq -cse"
     return match.group(1)
 
@@ -237,7 +213,7 @@ def _export(text: str):
     )
     if result.returncode != 0:
         return None
-    return f"BUNDLE_UK_JSON={result.stdout.strip()}\n"
+    return f"bundle={result.stdout.strip()}\n"
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
@@ -270,34 +246,29 @@ def test_one_object_is_exported_on_exactly_one_line(bundle):
     exported = _export(json.dumps(bundle, indent=2))
     assert exported is not None
     assert exported.count("\n") == 1
-    assert json.loads(exported.removeprefix("BUNDLE_UK_JSON=")) == bundle
+    assert json.loads(exported.removeprefix("bundle=")) == bundle
 
 
 # --- the workflow's version check (review round 3) ------------------------
 
 
 def _release_step(tmp_path, version: str, bundle: str = "{}"):
-    """Run the workflow's own release step; return its exit and outputs."""
-    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["open-upgrade-pr"][
-        "steps"
-    ]
-    script = next(s for s in steps if s.get("id") == "release")["run"]
-    output, env_file = tmp_path / "output", tmp_path / "env"
+    """Run identity.sh as the workflow does; return its exit, its outputs,
+    and its log."""
+    output = tmp_path / "output"
     output.write_text("")
-    env_file.write_text("")
     result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", script],
+        ["bash", str(SCRIPTS / "identity.sh")],
         env={
             "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
             "PAYLOAD_VERSION": version,
             "INPUT_BUNDLE_UK_JSON": bundle,
             "GITHUB_OUTPUT": str(output),
-            "GITHUB_ENV": str(env_file),
         },
         capture_output=True,
         text=True,
     )
-    return result.returncode, output.read_text(), env_file.read_text()
+    return result.returncode, output.read_text(), result.stdout
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
@@ -313,17 +284,27 @@ def _release_step(tmp_path, version: str, bundle: str = "{}"):
     ],
 )
 def test_a_version_with_more_than_one_line_writes_no_output(tmp_path, version):
-    code, output, env = _release_step(tmp_path, version)
+    code, output, _ = _release_step(tmp_path, version)
     assert code != 0
-    assert output == "" and env == ""
+    assert output == ""
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
+def test_a_bad_bundle_writes_no_output_at_all(tmp_path):
+    """Not even the version: nothing is written until everything passes."""
+    code, output, _ = _release_step(tmp_path, "6.3.0", bundle="[1]")
+    assert code != 0
+    assert output == ""
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="needs jq")
 def test_a_plain_version_writes_exactly_its_outputs(tmp_path):
-    code, output, env = _release_step(tmp_path, "6.3.0")
+    code, output, _ = _release_step(tmp_path, "6.3.0")
     assert code == 0
-    assert output == "version=6.3.0\nbranch=adopt/policyengine-6.3.0\n"
-    assert env == "BUNDLE_UK_JSON={}\nQUALIFICATION_JSON=null\n"
+    assert output == (
+        "version=6.3.0\nbranch=adopt/policyengine-6.3.0\n"
+        "bundle={}\nqualification=null\n"
+    )
 
 
 # --- confirmation review of #18 -------------------------------------------
@@ -378,6 +359,8 @@ QUALIFIED_MANIFEST = {
             "certification": {
                 "compatibility_basis": QUALIFIED_EXACT_PAIR,
                 "qualification_pair_id": PAIR,
+                "certified_for_model_version": "2.130.0",
+                "certified_for_core_version": "3.34.0",
             },
         }
     },
@@ -438,18 +421,226 @@ def test_an_ordinary_bundle_needs_no_qualification_but_refuses_a_failed_one():
     assert any("not promotable" in p for p in problems)
 
 
-# --- the workflow's dedupe and pull request steps (review findings 1, 3, 4)
+# --- review round 3 of #18: what the certificate covers -------------------
 
 
-def _step(name_or_id: str) -> str:
-    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["open-upgrade-pr"][
-        "steps"
-    ]
-    return next(
-        step["run"]
-        for step in steps
-        if step.get("id") == name_or_id or step.get("name") == name_or_id
+def with_certification(manifest: dict, **certification) -> dict:
+    uk = manifest["data_releases"]["uk"]
+    return {
+        **manifest,
+        "data_releases": {
+            "uk": {
+                **uk,
+                "certification": {**uk["certification"], **certification},
+            }
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "certification, problem",
+    [
+        ({"certified_for_model_version": "2.126.12"}, "covers model 2.126.12"),
+        ({"certified_for_model_version": None}, "covers model None"),
+        ({"certified_for_core_version": "3.33.0"}, "covers core 3.33.0"),
+    ],
+)
+def test_a_certificate_must_cover_the_packages_the_bundle_installs(
+    certification, problem
+):
+    """Review R2: a certificate for model 2.126.12 and core 3.33.0, in a
+    bundle that installs 2.130.0 and 3.34.0, passed: its digest recomputed
+    from the same inconsistent record."""
+    problems = check(manifest=with_certification(MANIFEST, **certification))
+    assert any(problem in p for p in problems), problems
+
+
+def test_the_reviewers_stale_certificate_is_refused():
+    manifest = with_certification(
+        QUALIFIED_MANIFEST,
+        certified_for_model_version="2.126.12",
+        certified_for_core_version="3.33.0",
     )
+    problems = check(
+        bundle=dispatch(compatibility_basis=QUALIFIED_EXACT_PAIR),
+        qualification=qualified(),
+        manifest=manifest,
+    )
+    assert any("covers model 2.126.12" in p for p in problems)
+    assert any("covers core 3.33.0" in p for p in problems)
+
+
+def test_a_certificate_naming_no_core_covers_the_bundles_own():
+    """policyengine.py's receipt reads a certificate with no core version
+    as covering the bundle's core (as 6.3.3's legacy certificate does), but
+    a qualified exact pair holds only for the core it names."""
+    assert check() == []
+    problems = check(
+        bundle=dispatch(compatibility_basis=QUALIFIED_EXACT_PAIR),
+        qualification=qualified(),
+        manifest=with_certification(
+            QUALIFIED_MANIFEST, certified_for_core_version=None
+        ),
+    )
+    assert any("covers core None" in p for p in problems)
+
+
+# --- the workflow's shape (review R1: released code and the write token) --
+
+
+def _workflow() -> dict:
+    return yaml.safe_load(WORKFLOW.read_text())
+
+
+def _steps(job: str) -> list[dict]:
+    return _workflow()["jobs"][job]["steps"]
+
+
+def _index(steps: list[dict], predicate) -> int:
+    return next(i for i, step in enumerate(steps) if predicate(step))
+
+
+def _runs(script: str):
+    return lambda step: f"scripts/adopt_release/{script}" in step.get(
+        "run", ""
+    )
+
+
+def test_workflow_never_interpolates_the_dispatch_into_a_script():
+    """Dispatch values reach the shell only through environment variables."""
+    for job in _workflow()["jobs"].values():
+        for step in job["steps"]:
+            script = step.get("run", "")
+            assert "${{" not in script, step.get("name")
+    for script in SCRIPTS.glob("*.sh"):
+        assert "${{" not in script.read_text(), script.name
+
+
+def test_workflow_opens_a_draft_and_never_merges():
+    text = WORKFLOW.read_text() + "".join(
+        script.read_text() for script in SCRIPTS.glob("*.sh")
+    )
+    assert "gh pr create --draft" in (SCRIPTS / "open_pr.sh").read_text()
+    assert "gh pr merge" not in text
+    assert "--auto" not in text
+    assert "pull_request_target" not in text
+    # PyYAML reads the bare key `on` as the boolean True.
+    triggers = _workflow().get("on", _workflow().get(True))
+    assert set(triggers) == {"repository_dispatch", "workflow_dispatch"}
+    assert triggers["repository_dispatch"]["types"] == ["policyengine-release"]
+
+
+def test_the_released_package_runs_only_where_nothing_can_write():
+    """Review R1: the checker imported the release in the job that later
+    pushed with a write token, so the release could plant a git hook or
+    core.fsmonitor and have the push run it with the token."""
+    workflow = _workflow()
+    assert workflow["permissions"] == {}
+    validate = workflow["jobs"]["validate"]
+    assert validate["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    text = yaml.safe_dump(validate)
+    assert "secrets." not in text
+    assert "create-github-app-token" not in text
+    install = _index(
+        validate["steps"], lambda s: "uv sync" in s.get("run", "")
+    )
+    check = _index(
+        validate["steps"], lambda s: "bundle_adoption" in s.get("run", "")
+    )
+    lock = _index(validate["steps"], _runs("lock.sh"))
+    # The files are hashed before the release is installed or run.
+    assert lock < install < check
+
+
+def test_the_job_that_writes_installs_and_runs_nothing():
+    propose = _workflow()["jobs"]["propose"]
+    assert propose["needs"] == "validate"
+    assert propose["if"] == "needs.validate.outputs.skip == 'false'"
+    for step in propose["steps"]:
+        script = step.get("run", "")
+        for runs_a_package in (
+            "uv sync",
+            "uv run",
+            "uv pip",
+            "pip ",
+            "python",
+        ):
+            assert runs_a_package not in script, step.get("name")
+    assert "--no-build" in (SCRIPTS / "lock.sh").read_text()
+    assert "uv sync" not in (SCRIPTS / "lock.sh").read_text()
+
+
+def test_the_write_token_is_minted_last_and_used_once():
+    steps = _steps("propose")
+    token = _index(
+        steps,
+        lambda s: s.get("uses", "").startswith(
+            "actions/create-github-app-token@"
+        ),
+    )
+    checks = [
+        _index(steps, _runs(script))
+        for script in ("identity.sh", "dedupe.sh", "lock.sh")
+    ]
+    assert all(index < token for index in checks)
+    after = steps[token + 1 :]
+    assert [s.get("run") for s in after] == [
+        "bash scripts/adopt_release/open_pr.sh"
+    ]
+    for step in steps[:token]:
+        assert "steps.app" not in yaml.safe_dump(step), step.get("name")
+
+
+def test_the_propose_job_rebuilds_exactly_what_validate_checked():
+    step = _steps("propose")[_index(_steps("propose"), _runs("lock.sh"))]
+    assert step["env"]["EXPECT_LOCK_SHA256"] == (
+        "${{ needs.validate.outputs.lock_sha256 }}"
+    )
+    assert step["env"]["EXPECT_PYPROJECT_SHA256"] == (
+        "${{ needs.validate.outputs.pyproject_sha256 }}"
+    )
+    outputs = _workflow()["jobs"]["validate"]["outputs"]
+    assert outputs["lock_sha256"] == "${{ steps.lock.outputs.lock_sha256 }}"
+
+
+def test_the_propose_job_checks_again_against_main_as_it_is_now():
+    """Review R4: a newer release could be adopted while validate ran, and
+    the older run still proposed a downgrade against the main it had read."""
+    steps = _steps("propose")
+    checkout = _index(
+        steps, lambda s: s.get("uses", "").startswith("actions/checkout@")
+    )
+    assert steps[checkout]["with"]["ref"] == "main"
+    assert checkout < _index(steps, _runs("identity.sh"))
+    assert _index(steps, _runs("identity.sh")) < _index(
+        steps, _runs("dedupe.sh")
+    )
+    env = _workflow()["jobs"]["propose"]["env"]
+    assert env["PAYLOAD_VERSION"] == "${{ needs.validate.outputs.version }}"
+
+
+@pytest.mark.parametrize("job", ["validate", "propose"])
+def test_no_checkout_keeps_a_token(job):
+    checkout = next(
+        s
+        for s in _steps(job)
+        if s.get("uses", "").startswith("actions/checkout@")
+    )
+    assert checkout["with"]["persist-credentials"] is False
+    assert "token" not in checkout["with"]
+
+
+def test_each_version_has_its_own_queue():
+    """Review N3: one concurrency group for every version let a third
+    dispatch cancel a different release's queued run."""
+    group = _workflow()["concurrency"]["group"]
+    assert "client_payload.version" in group and "inputs.version" in group
+
+
+# --- dedupe.sh (review findings 1, 3, N1, N2, R3) -------------------------
 
 
 def _stub(bin_dir: Path, name: str, script: str) -> None:
@@ -469,32 +660,46 @@ LOCK = (
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 
 
-def _pr(number, state="OPEN", owner="PolicyEngine", name=None):
+def _pr(number, state="open", repo=REPOSITORY, merged=False):
+    """One pull request as the REST API lists it."""
     return {
         "number": number,
         "state": state,
-        "headRepositoryOwner": {"login": owner},
-        "headRepository": {"name": name or REPOSITORY.split("/")[1]},
+        "merged_at": "2026-10-14T00:00:00Z" if merged else None,
+        "head": {"repo": {"full_name": repo} if repo else None},
     }
 
 
-def _dedupe(tmp_path, version, *, locked="6.2.6", refs=(), prs=()):
-    """Run the workflow's dedupe step with stub git and gh; return its exit,
-    outputs and log. ``refs`` are the (sha, ref) lines ls-remote lists;
-    ``prs`` the pull requests gh lists for the branch name."""
+def _dedupe(tmp_path, version, *, locked="6.2.6", refs=(), pages=((),)):
+    """Run dedupe.sh with stub git and gh; return its exit, outputs, log and
+    the commands it ran. ``refs`` are the (sha, ref) lines ls-remote lists;
+    ``pages`` the pages of pull requests the API returns."""
     work, bin_dir = tmp_path / "work", tmp_path / "bin"
     work.mkdir()
     bin_dir.mkdir()
     (work / "uv.lock").write_text(LOCK.format(version=locked))
+    calls = tmp_path / "calls"
     listing = "".join(f"{sha}\t{ref}\n" for sha, ref in refs)
     (tmp_path / "listing").write_text(listing)
-    _stub(bin_dir, "git", f'cat "{tmp_path / "listing"}"\n')
-    (tmp_path / "prs.json").write_text(json.dumps(list(prs)))
-    _stub(bin_dir, "gh", f'cat "{tmp_path / "prs.json"}"\n')
+    _stub(
+        bin_dir,
+        "git",
+        f'echo "git $* auth=${{GIT_CONFIG_COUNT:-none}}" >> "{calls}"\n'
+        f'cat "{tmp_path / "listing"}"\n',
+    )
+    # gh --paginate prints one JSON array per page, back to back.
+    (tmp_path / "pages").write_text(
+        "".join(json.dumps(list(page)) for page in pages)
+    )
+    _stub(
+        bin_dir,
+        "gh",
+        f'echo "gh $*" >> "{calls}"\ncat "{tmp_path / "pages"}"\n',
+    )
     output = tmp_path / "output"
     output.write_text("")
     result = subprocess.run(
-        ["bash", "-e", "-o", "pipefail", "-c", _step("dedupe")],
+        ["bash", str(SCRIPTS / "dedupe.sh")],
         cwd=work,
         env={
             "PATH": f"{bin_dir}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
@@ -510,7 +715,8 @@ def _dedupe(tmp_path, version, *, locked="6.2.6", refs=(), prs=()):
     outputs = dict(
         line.split("=", 1) for line in output.read_text().splitlines()
     )
-    return result.returncode, outputs, result.stdout + result.stderr
+    ran = calls.read_text().splitlines() if calls.exists() else []
+    return result.returncode, outputs, result.stdout + result.stderr, ran
 
 
 def _branch(version="6.3.0", sha="a" * 40):
@@ -531,7 +737,7 @@ def test_the_workflow_skips_a_release_that_is_not_newer(
 ):
     """Review finding 1, in the workflow itself: the step only skipped the
     pinned version, so an older one went on to a downgrade."""
-    code, outputs, log = _dedupe(tmp_path, version, locked=locked)
+    code, outputs, log, _ = _dedupe(tmp_path, version, locked=locked)
     assert code == 0
     assert outputs["skip"] == "true"
     assert "is not newer" in log
@@ -547,48 +753,92 @@ def test_the_workflow_skips_a_release_that_is_not_newer(
     ],
 )
 def test_the_workflow_proposes_a_newer_release(tmp_path, locked, version):
-    code, outputs, _ = _dedupe(tmp_path, version, locked=locked)
+    code, outputs, _, _ = _dedupe(tmp_path, version, locked=locked)
     assert code == 0
     assert outputs == {"current": locked, "skip": "false", "orphan": ""}
 
 
 def test_the_workflow_refuses_a_lock_without_a_plain_version(tmp_path):
-    code, outputs, _ = _dedupe(tmp_path, "6.3.0", locked="6.3.0rc1")
+    code, outputs, _, _ = _dedupe(tmp_path, "6.3.0", locked="6.3.0rc1")
     assert code != 0
     assert "skip" not in outputs
 
 
-@pytest.mark.parametrize("state", ["OPEN", "CLOSED", "MERGED"])
-def test_a_branch_with_a_pull_request_is_left_alone(tmp_path, state):
-    """A closed one counts too: closing the bot's draft rejects the release."""
-    code, outputs, log = _dedupe(
-        tmp_path, "6.3.0", refs=_branch(), prs=[_pr(42, state)]
+@pytest.mark.parametrize(
+    "pr, shown",
+    [
+        (_pr(42, "open"), "#42 (open)"),
+        (_pr(42, "closed"), "#42 (closed)"),
+        (_pr(42, "closed", merged=True), "#42 (merged)"),
+    ],
+)
+@pytest.mark.parametrize("branch_exists", [True, False])
+def test_a_release_ever_proposed_is_left_alone(
+    tmp_path, pr, shown, branch_exists
+):
+    """A closed one counts too: closing the bot's draft rejects the release.
+    Review R3: deleting the branch as well made the next run propose it
+    again, because pull requests were looked up only for an existing
+    branch."""
+    code, outputs, log, _ = _dedupe(
+        tmp_path,
+        "6.3.0",
+        refs=_branch() if branch_exists else (),
+        pages=[[pr]],
     )
     assert code == 0
     assert outputs["skip"] == "true"
-    assert f"#42 ({state.lower()})" in log
+    assert shown in log
+
+
+def test_every_page_of_pull_requests_is_read(tmp_path):
+    """Review R3: the bot's closed draft, behind 30 newer pull requests of
+    the same head name, fell outside gh pr list's default 30."""
+    others = [
+        _pr(n, repo="someone/uk-autumn-budget-dashboard-2026")
+        for n in range(100, 200)
+    ]
+    code, outputs, log, ran = _dedupe(
+        tmp_path,
+        "6.3.0",
+        refs=_branch(),
+        pages=[others, [_pr(42, "closed")]],
+    )
+    assert code == 0
+    assert outputs["skip"] == "true"
+    assert "#42 (closed)" in log
+    (query,) = [line for line in ran if line.startswith("gh ")]
+    assert "--paginate" in query
+    assert "state=all" in query
+    assert "head=PolicyEngine:adopt/policyengine-6.3.0" in query
 
 
 def test_a_branch_left_without_a_pull_request_is_rebuilt(tmp_path):
     """Review finding 3: a run that pushed and then failed to open its pull
     request left a branch that every later run took for a proposal."""
-    code, outputs, log = _dedupe(tmp_path, "6.3.0", refs=_branch())
+    code, outputs, log, _ = _dedupe(tmp_path, "6.3.0", refs=_branch())
     assert code == 0
     assert outputs["skip"] == "false"
     assert outputs["orphan"] == "a" * 40
     assert "rebuilding it" in log
 
 
-def test_a_fork_pull_request_of_the_same_name_does_not_hide_an_orphan(
-    tmp_path,
-):
-    """Review N1: gh matches the branch name alone, so any fork's pull
-    request named like the bot's branch hid the orphan forever."""
-    code, outputs, log = _dedupe(
+def test_another_repositorys_pull_request_does_not_hide_an_orphan(tmp_path):
+    """Review N1: a fork's pull request named like the bot's branch hid the
+    orphan forever. A deleted fork lists its head repository as null."""
+    code, outputs, _, _ = _dedupe(
         tmp_path,
         "6.3.0",
         refs=_branch(),
-        prs=[_pr(7, "CLOSED", owner="someone"), _pr(8, owner="someone")],
+        pages=[
+            [
+                _pr(
+                    7, "closed", repo="someone/uk-autumn-budget-dashboard-2026"
+                ),
+                _pr(8, repo="PolicyEngine/another-repository"),
+                _pr(9, "closed", repo=None),
+            ]
+        ],
     )
     assert code == 0
     assert outputs["skip"] == "false"
@@ -599,50 +849,35 @@ def test_a_lookalike_branch_is_not_the_bot_branch(tmp_path):
     """Review N2: ls-remote matched refs/heads/zz/adopt/policyengine-6.3.0,
     so its sha became the lease and every run failed."""
     lookalike = [("b" * 40, "refs/heads/zz/adopt/policyengine-6.3.0")]
-    code, outputs, _ = _dedupe(tmp_path, "6.3.0", refs=lookalike)
+    code, outputs, _, _ = _dedupe(tmp_path, "6.3.0", refs=lookalike)
     assert code == 0
     assert outputs == {"current": "6.2.6", "skip": "false", "orphan": ""}
     (tmp_path / "both").mkdir()
-    code, outputs, _ = _dedupe(
+    code, outputs, _, _ = _dedupe(
         tmp_path / "both", "6.3.0", refs=lookalike + _branch()
     )
     assert outputs["orphan"] == "a" * 40
 
 
 def test_a_ref_listed_twice_stops_the_run(tmp_path):
-    code, outputs, _ = _dedupe(
+    code, outputs, _, _ = _dedupe(
         tmp_path, "6.3.0", refs=_branch() + _branch(sha="c" * 40)
     )
     assert code != 0
     assert "skip" not in outputs
 
 
-def test_each_version_has_its_own_queue():
-    """Review N3: one concurrency group for every version let a third
-    dispatch cancel a different release's queued run."""
-    group = yaml.safe_load(WORKFLOW.read_text())["concurrency"]["group"]
-    assert "client_payload.version" in group and "inputs.version" in group
-
-
-def test_no_token_is_left_where_the_released_package_runs():
-    """Review N4: checkout kept the token in .git/config while uv sync and
-    the check imported the newly released package."""
-    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["open-upgrade-pr"][
-        "steps"
-    ]
-    checkout = next(
-        s for s in steps if s.get("uses", "").startswith("actions/checkout")
-    )
-    assert checkout["with"]["persist-credentials"] is False
-    assert "token" not in checkout["with"]
-    for step in steps:
-        runs_released_code = "uv " in step.get("run", "")
-        if runs_released_code:
-            assert "GH_TOKEN" not in step.get("env", {}), step.get("name")
+def test_the_public_branch_is_listed_without_a_token(tmp_path):
+    """Review round 3: the repository is public, so ls-remote needs no
+    token, and none reaches git in the dedupe step."""
+    _, _, _, ran = _dedupe(tmp_path, "6.3.0", refs=_branch())
+    (listing,) = [line for line in ran if line.startswith("git ")]
+    assert listing.endswith("auth=none")
+    assert "GIT_CONFIG" not in (SCRIPTS / "dedupe.sh").read_text()
 
 
 @pytest.mark.parametrize(
-    "version", ["6.03.0", "06.3.0", "6.3.00", "\uff16.3.0", "6.3.0\n"]
+    "version", ["6.03.0", "06.3.0", "6.3.00", "６.3.0", "6.3.0\n"]
 )
 def test_versions_have_no_leading_zeros_or_other_digits(tmp_path, version):
     """Review N5: 6.03.0 passed the pattern and named a branch, and Python's
@@ -652,9 +887,106 @@ def test_versions_have_no_leading_zeros_or_other_digits(tmp_path, version):
     assert "not a plain release version" in check(version=version)[0]
 
 
+# --- lock.sh (review R1: the propose job rebuilds what validate checked) --
+
+
+PYPROJECT = 'dependencies = [\n    "policyengine[uk]>=6.2.6",\n]\n'
+
+
+def _lock(tmp_path, version="6.3.0", resolves_to=None, **expect):
+    """Run lock.sh with a stub uv that writes the lock it resolves; return
+    its exit, outputs, log and uv's arguments."""
+    tmp_path.mkdir(exist_ok=True)
+    work, bin_dir = tmp_path / "work", tmp_path / "bin"
+    work.mkdir()
+    bin_dir.mkdir()
+    (work / "pyproject.toml").write_text(PYPROJECT)
+    (work / "uv.lock").write_text(LOCK.format(version="6.2.6"))
+    calls = tmp_path / "calls"
+    lock = LOCK.format(version=resolves_to or version)
+    (tmp_path / "resolved").write_text(lock)
+    _stub(
+        bin_dir,
+        "uv",
+        f'echo "uv $*" >> "{calls}"\ncp "{tmp_path / "resolved"}" uv.lock\n',
+    )
+    output = tmp_path / "output"
+    output.write_text("")
+    result = subprocess.run(
+        ["bash", str(SCRIPTS / "lock.sh")],
+        cwd=work,
+        env={
+            "PATH": f"{bin_dir}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+            "VERSION": version,
+            "GITHUB_OUTPUT": str(output),
+            **expect,
+        },
+        capture_output=True,
+        text=True,
+    )
+    outputs = dict(
+        line.split("=", 1) for line in output.read_text().splitlines()
+    )
+    return (
+        result.returncode,
+        outputs,
+        result.stdout + result.stderr,
+        calls.read_text().splitlines() if calls.exists() else [],
+        work,
+    )
+
+
+def test_the_release_is_pinned_without_building_anything(tmp_path):
+    code, outputs, _, uv, work = _lock(tmp_path)
+    assert code == 0
+    assert uv == ["uv lock --no-build --upgrade-package policyengine==6.3.0"]
+    assert '"policyengine[uk]>=6.3.0"' in (work / "pyproject.toml").read_text()
+    assert set(outputs) == {"lock_sha256", "pyproject_sha256"}
+    assert all(re.fullmatch(r"[0-9a-f]{64}", v) for v in outputs.values())
+
+
+def test_the_same_files_rebuilt_pass(tmp_path):
+    _, checked, _, _, _ = _lock(tmp_path / "validate")
+    code, _, _, _, _ = _lock(
+        tmp_path / "propose",
+        EXPECT_LOCK_SHA256=checked["lock_sha256"],
+        EXPECT_PYPROJECT_SHA256=checked["pyproject_sha256"],
+    )
+    assert code == 0
+
+
+@pytest.mark.parametrize("which", ["lock", "pyproject", "empty", "both empty"])
+def test_files_other_than_those_checked_stop_the_proposal(tmp_path, which):
+    _, checked, _, _, _ = _lock(tmp_path / "validate")
+    expect = {
+        "EXPECT_LOCK_SHA256": checked["lock_sha256"],
+        "EXPECT_PYPROJECT_SHA256": checked["pyproject_sha256"],
+    }
+    resolves_to = None
+    if which == "lock":
+        # Something resolved differently between the two jobs.
+        resolves_to = "6.3.1"
+    elif which == "pyproject":
+        expect["EXPECT_PYPROJECT_SHA256"] = "0" * 64
+    elif which == "empty":
+        # A missing output never matches.
+        expect["EXPECT_LOCK_SHA256"] = ""
+    else:
+        expect = {"EXPECT_LOCK_SHA256": "", "EXPECT_PYPROJECT_SHA256": ""}
+    code, outputs, log, _, _ = _lock(
+        tmp_path / "propose", resolves_to=resolves_to, **expect
+    )
+    assert code != 0
+    assert "not the files the validate job checked" in log
+    assert outputs == {}
+
+
+# --- open_pr.sh (review findings 3 and 4) ---------------------------------
+
+
 def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
-    """Run the pull request step with stub git and gh; return its exit, the
-    push commands and the body."""
+    """Run open_pr.sh with stub git and gh; return its exit, the push
+    commands and the body."""
     bin_dir, runner = tmp_path / "bin", tmp_path / "runner"
     bin_dir.mkdir()
     runner.mkdir()
@@ -675,14 +1007,7 @@ def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
         "done\n",
     )
     result = subprocess.run(
-        [
-            "bash",
-            "-e",
-            "-o",
-            "pipefail",
-            "-c",
-            _step("Open the draft pull request"),
-        ],
+        ["bash", str(SCRIPTS / "open_pr.sh")],
         env={
             "PATH": f"{bin_dir}:/usr/bin:/bin",
             "VERSION": "6.3.0",

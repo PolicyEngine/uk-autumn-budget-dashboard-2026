@@ -5,6 +5,14 @@ name: Adopt a policyengine release
 # wheel's bundle against the dispatch, and opens a DRAFT upgrade pull request.
 # It never merges: adopting a release means regenerating and re-gating every
 # published measure on the new execution identity first.
+#
+# Two jobs, so the released package never runs where a write token exists:
+# - validate installs and runs the release, with read access only and no
+#   secret;
+# - propose runs on a fresh runner, installs and runs nothing, rebuilds the
+#   exact pinned files validate checked (or stops), checks again against
+#   main as it is now, and only then mints the App token and opens the PR.
+# Each step's logic is in scripts/adopt_release/, from main's checkout.
 on:
   repository_dispatch:
     types: [policyengine-release]
@@ -21,9 +29,7 @@ on:
         required: false
         default: "null"
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 # One queue per version: a dispatch for one release never cancels another
 # release's queued run. Runs for the same version are serialised, and the
@@ -33,10 +39,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  open-upgrade-pr:
-    name: Open a draft upgrade PR
+  validate:
+    name: Install and check the release
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
     env:
       # Dispatch values reach the shell only through these variables, never
       # by interpolation into a script.
@@ -46,133 +55,30 @@ jobs:
       INPUT_VERSION: ${{ inputs.version }}
       INPUT_BUNDLE_UK_JSON: ${{ inputs.bundle_uk_json }}
       INPUT_QUALIFICATION_JSON: ${{ inputs.qualification_json }}
-      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      bundle: ${{ steps.release.outputs.bundle }}
+      qualification: ${{ steps.release.outputs.qualification }}
+      skip: ${{ steps.dedupe.outputs.skip }}
+      lock_sha256: ${{ steps.lock.outputs.lock_sha256 }}
+      pyproject_sha256: ${{ steps.lock.outputs.pyproject_sha256 }}
     steps:
-      - name: Read and validate the release identity
-        id: release
-        run: |
-          version="${PAYLOAD_VERSION:-$INPUT_VERSION}"
-          # Bash matches the whole string (grep would match any one line),
-          # so a version with a line break cannot add outputs below.
-          if ! [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::the version is not a plain release version"
-            exit 1
-          fi
-          bundle="$PAYLOAD_BUNDLE_UK_JSON"
-          if [ -z "$bundle" ] || [ "$bundle" = "null" ]; then
-            bundle="$INPUT_BUNDLE_UK_JSON"
-          fi
-          {
-            echo "version=$version"
-            echo "branch=adopt/policyengine-$version"
-          } >> "$GITHUB_OUTPUT"
-          # Parse the bundle before exporting it: only a JSON object goes
-          # through, compacted onto one line, so no input can add lines
-          # (and so variables) to the job environment.
-          if ! bundle=$(printf '%s' "$bundle" | jq -cse 'if length == 1 and (.[0] | type) == "object" then .[0] else error("expected one JSON object") end'); then
-            echo "bundle.uk must be exactly one JSON object" >&2
-            exit 1
-          fi
-          printf 'BUNDLE_UK_JSON=%s\n' "$bundle" >> "$GITHUB_ENV"
-          qualification="$PAYLOAD_QUALIFICATION_JSON"
-          if [ -z "$qualification" ] || [ "$qualification" = "null" ]; then
-            qualification="${INPUT_QUALIFICATION_JSON:-null}"
-          fi
-          # Not -e: null is a valid answer here, and error() still fails.
-          if ! qualification=$(printf '%s' "$qualification" | jq -cs 'if length == 1 and ((.[0] | type) == "object" or .[0] == null) then .[0] else error("expected one JSON object or null") end'); then
-            echo "qualification must be one JSON object, or null" >&2
-            exit 1
-          fi
-          printf 'QUALIFICATION_JSON=%s\n' "$qualification" >> "$GITHUB_ENV"
-
-      # An App token lets the upgrade PR trigger CI; a PR opened with the
-      # default token does not start pull_request workflows.
-      - name: Mint an App token
-        id: app
-        if: env.HAS_APP == 'true'
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
       - uses: actions/checkout@v6
         with:
           ref: main
-          # No token left in .git/config: the steps below install and import
-          # the newly released package. Steps that reach the remote pass the
-          # token to that one git command only.
           persist-credentials: false
 
-      # Proposes only a release newer than the one main pins. A branch left
-      # by a run that pushed but could not open its pull request is rebuilt
-      # (with a lease on exactly what was seen there), so a retry recovers.
-      - name: Stop if this release is not newer, or is already proposed
+      - name: Read and validate the release identity
+        id: release
+        run: bash scripts/adopt_release/identity.sh
+
+      - name: Stop if this release is not newer, or was already proposed
         id: dedupe
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ steps.release.outputs.branch }}
-        run: |
-          # The token for one git command, in its environment only.
-          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
-          echo "::add-mask::$auth"
-          remote_git() {
-            GIT_CONFIG_COUNT=1 \
-              GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
-              GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
-              git "$@"
-          }
-          # Whether plain version $1 is newer than plain version $2.
-          newer() {
-            local IFS=.
-            local -a a=($1) b=($2)
-            local i
-            for i in 0 1 2; do
-              if (( 10#${a[i]} > 10#${b[i]} )); then return 0; fi
-              if (( 10#${a[i]} < 10#${b[i]} )); then return 1; fi
-            done
-            return 1
-          }
-          current=$(grep -A1 '^name = "policyengine"$' uv.lock | sed -n 's/^version = "\(.*\)"$/\1/p')
-          if ! [[ "$current" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::uv.lock does not pin a plain policyengine version"
-            exit 1
-          fi
-          echo "current=$current" >> "$GITHUB_OUTPUT"
-          if ! newer "$VERSION" "$current"; then
-            echo "uv.lock pins policyengine $current; $VERSION is not newer, so nothing to do."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # Exactly this ref: ls-remote matches a pattern against the end of
-          # any ref, so refs/heads/zz/$BRANCH would match too.
-          ref="refs/heads/$BRANCH"
-          listing=$(remote_git ls-remote origin "$ref")
-          shas=$(printf '%s\n' "$listing" | awk -v ref="$ref" '$2 == ref {print $1}')
-          count=$(printf '%s' "$shas" | awk 'END {print NR}')
-          if [ "$count" -gt 1 ]; then
-            echo "::error::$ref is listed more than once"
-            exit 1
-          fi
-          orphan=""
-          if [ "$count" -eq 1 ]; then
-            # Only this repository's pull requests: gh matches the branch
-            # name alone, so a fork's branch of the same name would match.
-            proposals=$(gh pr list --head "$BRANCH" --state all --json number,state,headRepository,headRepositoryOwner \
-              | jq -r --arg repo "$GITHUB_REPOSITORY" '[.[] | select((.headRepositoryOwner.login + "/" + .headRepository.name) == $repo) | "#\(.number) (\(.state | ascii_downcase))"] | join(", ")')
-            if [ -n "$proposals" ]; then
-              # A closed one counts: closing the bot's draft rejects the release.
-              echo "Branch $BRANCH already proposed in $proposals; nothing to do."
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            orphan="$shas"
-            echo "::warning::$BRANCH exists with no pull request from this repository, left by an incomplete run; rebuilding it"
-          fi
-          {
-            echo "skip=false"
-            echo "orphan=$orphan"
-          } >> "$GITHUB_OUTPUT"
+        run: bash scripts/adopt_release/dedupe.sh
 
       - name: Install uv
         if: steps.dedupe.outputs.skip == 'false'
@@ -181,15 +87,20 @@ jobs:
           save-cache: false
           version: "latest"
 
-      - name: Upgrade the bundle through the lockfile
+      # Hashed before anything is installed: these are the files the
+      # propose job must rebuild exactly.
+      - name: Pin the release without running it
+        id: lock
         if: steps.dedupe.outputs.skip == 'false'
         env:
           VERSION: ${{ steps.release.outputs.version }}
+        run: bash scripts/adopt_release/lock.sh
+
+      # From here the released package runs.
+      - name: Install the release
+        if: steps.dedupe.outputs.skip == 'false'
         run: |
           uv python install 3.13
-          sed -i -E "s/\"policyengine\[uk\]>=[0-9.]+\"/\"policyengine[uk]>=$VERSION\"/" pyproject.toml
-          grep -q "\"policyengine\[uk\]>=$VERSION\"" pyproject.toml
-          uv lock --upgrade-package "policyengine==$VERSION"
           uv sync --locked --extra dev
 
       - name: Check the installed release against the dispatch
@@ -197,11 +108,74 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
           CURRENT: ${{ steps.dedupe.outputs.current }}
+          BUNDLE_UK_JSON: ${{ steps.release.outputs.bundle }}
+          QUALIFICATION_JSON: ${{ steps.release.outputs.qualification }}
         run: >-
           uv run python -m uk_budget_data.bundle_adoption
           --version "$VERSION" --current-version "$CURRENT"
           --bundle-uk-json "$BUNDLE_UK_JSON"
           --qualification-json "$QUALIFICATION_JSON"
+
+  propose:
+    name: Open a draft upgrade PR
+    needs: validate
+    if: needs.validate.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      # validate's outputs, checked again below as if they were the dispatch.
+      PAYLOAD_VERSION: ${{ needs.validate.outputs.version }}
+      PAYLOAD_BUNDLE_UK_JSON: ${{ needs.validate.outputs.bundle }}
+      PAYLOAD_QUALIFICATION_JSON: ${{ needs.validate.outputs.qualification }}
+      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Read and validate the release identity
+        id: release
+        run: bash scripts/adopt_release/identity.sh
+
+      # Main may have moved while validate ran: a newer release adopted, or
+      # this one proposed. Checked again against main as it is now.
+      - name: Stop if this release is not newer, or was already proposed
+        id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+        run: bash scripts/adopt_release/dedupe.sh
+
+      - name: Install uv
+        if: steps.dedupe.outputs.skip == 'false'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          save-cache: false
+          version: "latest"
+
+      - name: Rebuild exactly the files validate checked
+        if: steps.dedupe.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          EXPECT_LOCK_SHA256: ${{ needs.validate.outputs.lock_sha256 }}
+          EXPECT_PYPROJECT_SHA256: ${{ needs.validate.outputs.pyproject_sha256 }}
+        run: bash scripts/adopt_release/lock.sh
+
+      # Last, so no step before it can reach the token. An App token lets
+      # the upgrade PR trigger CI; a PR opened with the default token does
+      # not start pull_request workflows.
+      - name: Mint an App token
+        id: app
+        if: steps.dedupe.outputs.skip == 'false' && env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Open the draft pull request
         if: steps.dedupe.outputs.skip == 'false'
@@ -210,56 +184,6 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
           BRANCH: ${{ steps.release.outputs.branch }}
           ORPHAN: ${{ steps.dedupe.outputs.orphan }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
-          git add pyproject.toml uv.lock
-          git commit -m "Adopt policyengine $VERSION"
-          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
-          echo "::add-mask::$auth"
-          push() {
-            GIT_CONFIG_COUNT=1 \
-              GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
-              GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth" \
-              git push "$@"
-          }
-          if [ -n "$ORPHAN" ]; then
-            # Replace only the incomplete branch the dedupe step saw.
-            push --force-with-lease="refs/heads/$BRANCH:$ORPHAN" origin "$BRANCH"
-          else
-            push origin "$BRANCH"
-          fi
-          # The release page is built from the validated version, never taken
-          # from the dispatch. JSON evidence goes in a fenced block with every
-          # backtick escaped (still the same JSON), so it cannot end the fence.
-          release_url="https://github.com/PolicyEngine/policyengine.py/releases/tag/$VERSION"
-          {
-            echo "**Draft, opened automatically. Do not merge until every published measure is regenerated and re-gated on this release.**"
-            echo
-            echo "policyengine.py released \`$VERSION\` ($release_url). The installed wheel's bundle was checked against the release dispatch and matches:"
-            echo
-            echo '```json'
-            printf '%s\n' "$BUNDLE_UK_JSON" | sed 's/`/\\u0060/g'
-            echo '```'
-            echo
-            echo "Qualification reported by the dispatch, and checked:"
-            echo
-            echo '```json'
-            printf '%s\n' "$QUALIFICATION_JSON" | sed 's/`/\\u0060/g'
-            echo '```'
-            echo
-            echo "## Before merging"
-            echo
-            echo "- [ ] CI is green on this branch (run the CI workflow manually if it did not start)."
-            echo "- [ ] Every published measure and combined run is regenerated on this release and staged with \`publish stage --adopt-execution\`."
-            echo "- [ ] Reconciliation and responsiveness are re-run for each regenerated artifact."
-            echo "- [ ] Approvals are renewed where outputs changed (identical outputs keep theirs)."
-            echo "- [ ] The household API is redeployed on this release and the household checks pass on the deployed route."
-            echo "- [ ] \`publish check\` passes."
-            echo
-            echo "If this cannot finish before a publication deadline, stay on the current release. Mixing releases is refused by the publication gate."
-          } > "$RUNNER_TEMP/body.md"
-          gh pr create --draft --base main --head "$BRANCH" \
-            --title "Adopt policyengine $VERSION" \
-            --body-file "$RUNNER_TEMP/body.md"
+          BUNDLE_UK_JSON: ${{ steps.release.outputs.bundle }}
+          QUALIFICATION_JSON: ${{ steps.release.outputs.qualification }}
+        run: bash scripts/adopt_release/open_pr.sh

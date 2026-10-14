@@ -9,10 +9,12 @@ checks, here, that the installed wheel's own bundle manifest says the same.
 A mismatch means the dispatch and the published package disagree, so the
 upgrade is refused rather than adopted on the dispatch's word.
 
-Two more things are refused:
+Three more things are refused:
 
 - a release that is not newer than the one ``uv.lock`` pins (no downgrade
   is ever proposed);
+- a certificate that covers other model or core versions than the ones the
+  bundle installs (see ``coverage_problems``);
 - a release whose UK pair is qualified (``compatibility_basis`` is
   ``qualified_exact_pair``) without the dispatch's qualification saying the
   pair is promotable, for the pair the installed bundle names. Any
@@ -119,6 +121,37 @@ def qualification_problems(
     return problems
 
 
+def coverage_problems(manifest: dict) -> list[str]:
+    """Ways the bundle's certificate covers other packages than it installs.
+
+    The certificate names the model version it covers, and may name the
+    core. Where it names no core, policyengine.py's receipt takes it to
+    cover the bundle's own (``receipt._certificate_fields`` on W4's
+    branch), except for a qualified exact pair, which holds only for the
+    core it names (``manifest._runtime_core_is_certified``).
+    """
+    certification = manifest["data_releases"]["uk"].get("certification") or {}
+    declared = installed_identity(manifest)
+    problems = []
+    model = certification.get("certified_for_model_version")
+    if model != declared["model_version"]:
+        problems.append(
+            f"the certificate covers model {model}, but the bundle installs "
+            f"{declared['model_version']}"
+        )
+    core = certification.get("certified_for_core_version")
+    if core is None and (
+        certification.get("compatibility_basis") != QUALIFIED_EXACT_PAIR
+    ):
+        core = declared["core_version"]
+    if core != declared["core_version"]:
+        problems.append(
+            f"the certificate covers core {core}, but the bundle installs "
+            f"{declared['core_version']}"
+        )
+    return problems
+
+
 def receipt_certificate_sha256() -> Optional[Callable[[dict], str]]:
     """policyengine's certificate digest function, if this release has it."""
     try:
@@ -143,9 +176,10 @@ def check_release(
     An empty list means the installed wheel is the announced version, newer
     than ``current_version`` (the one ``uv.lock`` pinned), its packaged
     bundle matches every announced field, the installed model and core
-    packages are the ones the bundle names, the certificate digest
-    recomputed from the packaged record equals the announced one, and the
-    qualification backs the pair (see ``qualification_problems``).
+    packages are the ones the bundle names and its certificate covers (see
+    ``coverage_problems``), the certificate digest recomputed from the
+    packaged record equals the announced one, and the qualification backs
+    the pair (see ``qualification_problems``).
     """
     problems = []
     if not VERSION_PATTERN.fullmatch(version or ""):
@@ -197,6 +231,8 @@ def check_release(
                 f"installed {package} is {actual}, but the bundle names "
                 f"{declared[field]}"
             )
+
+    problems += coverage_problems(manifest)
 
     certificate_digest = certificate_digest or receipt_certificate_sha256()
     if certificate_digest is None:
