@@ -17,7 +17,10 @@ jobs:
   python-tests:
     name: Python tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The household-route tests take about 20 minutes on main's route
+    # (test_personal_impact.py, 13 October); #3 replaces that route. The
+    # publication tests add about 6 more, past the old 30.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
