@@ -185,7 +185,10 @@ def test_post_behavioural_is_reported_alongside_and_never_gated():
 
 def test_mapped_rows_are_scaled_and_summed():
     sources = [source(2027, 1.0, row_id="1"), source(2027, 0.5, row_id="2")]
-    mapping = [link(row_id="1"), link(row_id="2", scale=2.0)]
+    mapping = [
+        link(row_id="1"),
+        link(row_id="2", scale=2.0, reason="Two years in one", reviewer="R"),
+    ]
     result = run({2027: 2.0}, sources, mapping=mapping)
     assert result["rows"][0]["comparator"]["value_bn"] == pytest.approx(2.0)
     assert result["rows"][0]["status"] == PASS
@@ -785,9 +788,16 @@ def test_the_cli_fails_a_year_the_receipt_reports_with_no_output(tmp_path):
     assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 1
 
 
+def _without_receipt_years(artifact):
+    receipt = json.loads((artifact / "receipt.json").read_text())
+    del receipt["execution_receipt"]["years"]
+    (artifact / "receipt.json").write_text(json.dumps(receipt))
+
+
 def test_the_cli_needs_the_artifact_years(tmp_path):
     inputs = write_inputs(tmp_path)
-    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9}, years=[])
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    _without_receipt_years(artifact)
     assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
     assert (
         main(
@@ -979,7 +989,7 @@ def test_a_comparator_that_overflows_is_refused():
         run(
             {2027: 1.0},
             [source(2027, 10.0)],
-            mapping=[link(scale=1e308)],
+            mapping=[link(scale=1e308, reason="Overflow", reviewer="R")],
             policy=Policy(min_response_share=0),
         )
 
@@ -1001,3 +1011,140 @@ def test_an_exception_built_directly_needs_every_review_field(field, value):
     the text "None"."""
     with pytest.raises(ReconciliationInputError, match=field):
         exception(2027, 0.5, **{field: value})
+
+
+# --- second review of #17 -------------------------------------------------
+
+
+@pytest.mark.parametrize("scale", [0.0, -1.0, -0.5])
+def test_a_mapping_scale_must_be_above_zero(scale):
+    """Review N1: a scale of zero dropped a Treasury figure, and a negative
+    one flipped its sign, with no reviewer; a £5bn costing then passed
+    against a £40m model figure."""
+    with pytest.raises(ReconciliationInputError, match="above zero"):
+        link(scale=scale, reason="R", reviewer="R")
+
+
+def test_a_scaled_mapping_needs_a_reason_and_reviewer():
+    with pytest.raises(
+        ReconciliationInputError, match="reason and a reviewer"
+    ):
+        link(scale=0.5)
+    assert (
+        link(scale=0.5, reason="Scotland's share", reviewer="R").scale == 0.5
+    )
+    assert link(scale=1.0).scale == 1.0
+
+
+def test_the_cli_refuses_a_zero_scale(tmp_path):
+    inputs = write_inputs(tmp_path)
+    (inputs / "mapping.csv").write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer\n"
+        "rate_change,S,7,0,,,,\n"
+    )
+    artifact = write_artifact(tmp_path, {2027: -0.04, 2028: -0.04})
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--years", "2027"],
+        ["--years", "2027", "2028", "2029"],
+        ["--supported-years", "2027"],
+        ["--outputs-sha256", OTHER_DIGEST],
+        ["--measure-id", "another_measure"],
+    ],
+)
+def test_a_flag_that_contradicts_the_receipt_is_refused(tmp_path, flags):
+    """Review N2: --years 2027 dropped 2028 from both gates although the
+    receipt reports it, which brought back the missing-year gap."""
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05}, years=[2027, 2028])
+    assert (
+        main([str(artifact), "--inputs", str(inputs), "--no-write", *flags])
+        == 2
+    )
+
+
+def test_a_flag_that_repeats_the_receipt_is_accepted(tmp_path):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    flags = [
+        "--years",
+        "2028",
+        "2027",
+        "--supported-years",
+        "2027",
+        "2028",
+        "--outputs-sha256",
+        DIGEST,
+        "--measure-id",
+        "rate_change",
+    ]
+    assert (
+        main([str(artifact), "--inputs", str(inputs), "--no-write", *flags])
+        == 0
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_years", [[2027, "2028"], [2027, True], "2027", {"2027": 1}]
+)
+def test_the_receipt_years_must_be_whole_numbers(tmp_path, dataset_years):
+    inputs = write_inputs(tmp_path)
+    artifact = write_artifact(tmp_path, {2027: -1.05, 2028: -1.9})
+    receipt = json.loads((artifact / "receipt.json").read_text())
+    receipt["dashboard"]["dataset_years"] = dataset_years
+    (artifact / "receipt.json").write_text(json.dumps(receipt))
+    assert main([str(artifact), "--inputs", str(inputs), "--no-write"]) == 2
+
+
+HUGE = 10**400
+
+
+def test_an_integer_too_large_for_a_float_is_refused_cleanly(tmp_path):
+    """Review N3: float() of a huge int raises OverflowError, which is not a
+    ValueError, so it escaped as a traceback instead of a refusal."""
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        run({2027: HUGE}, [source(2027, 1.0)])
+    with pytest.raises(ValueError, match="finite"):
+        check_responsiveness(
+            {2027: HUGE},
+            measure_id="m",
+            declarations=[],
+            comparators_bn={},
+            min_response_bn=POLICY.min_response_bn,
+            min_response_share=POLICY.min_response_share,
+            zero_tolerance_bn=POLICY.zero_tolerance_bn,
+        )
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(f"relative_tolerance: {HUGE}\n")
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        load_policy(policy)
+    exceptions = tmp_path / "exceptions.yaml"
+    exceptions.write_text(
+        EXCEPTION.replace("residual_bn: -0.5", f"residual_bn: {HUGE}")
+    )
+    with pytest.raises(ReconciliationInputError, match="finite"):
+        load_exceptions(exceptions)
+
+
+def test_two_exceptions_for_the_same_outputs_are_refused(tmp_path):
+    """Review N4: with two, which one the record named depended on their
+    order in the file."""
+    path = tmp_path / "exceptions.yaml"
+    path.write_text(EXCEPTION + EXCEPTION.replace("Reviewer", "Someone else"))
+    with pytest.raises(ReconciliationInputError, match="two exceptions"):
+        load_exceptions(path)
+    sources = [source(2027, 1.0)]
+    entry = exception(2027, 0.5, sources=sources)
+    with pytest.raises(ReconciliationInputError, match="two exceptions"):
+        run({2027: 1.5}, sources, exceptions=[entry, entry])
+    other_outputs = exception(2027, 0.5, OTHER_DIGEST, sources=sources)
+    assert (
+        run({2027: 1.5}, sources, exceptions=[entry, other_outputs])["rows"][
+            0
+        ]["status"]
+        == ACCEPTED
+    )
