@@ -1,0 +1,233 @@
+.region-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.region-view h2 {
+  margin: 0 0 6px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.region-view .chart-description {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.region-export {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.region-export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.region-export-button:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.region-export-button:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+.region-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.region-showing {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f0fdfa;
+  border-left: 3px solid #319795;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.region-showing-label {
+  color: #4b5563;
+}
+
+.region-showing-name {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.geography-loading {
+  margin: 0;
+  padding: 24px 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+  text-align: center;
+  /* Shown only if loading takes more than 300ms, to avoid a flash. */
+  opacity: 0;
+  animation: geography-loading-in 0s linear 300ms forwards;
+}
+
+@keyframes geography-loading-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.region-table-scroll {
+  overflow-x: auto;
+}
+
+.region-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: #374151;
+}
+
+.region-table caption {
+  text-align: left;
+  color: #4b5563;
+  font-size: 0.8125rem;
+  margin-bottom: 8px;
+}
+
+.region-table th,
+.region-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.region-table thead th {
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.region-table th[scope="row"] {
+  font-weight: 500;
+}
+
+.region-cell-value {
+  font-weight: 600;
+}
+
+.region-cell-muted {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.region-tier-approximate {
+  color: #92400e;
+}
+
+.region-tier-withheld {
+  color: #6b7280;
+}
+
+/* Dot-and-interval plots: positions are percentages of the track. */
+.region-table .region-cell-plot {
+  width: 40%;
+  min-width: 160px;
+}
+
+.region-plot-track,
+.region-plot-axis {
+  position: relative;
+  height: 18px;
+}
+
+.region-plot-axis {
+  height: 14px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.region-plot-axis span {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.region-plot-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #f3f4f6;
+}
+
+.region-plot-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #9ca3af;
+}
+
+.region-plot-bar {
+  position: absolute;
+  top: 8px;
+  height: 2px;
+  background: #4b5563;
+  border-radius: 1px;
+}
+
+.region-plot-dot {
+  position: absolute;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  border: 1px solid #374151;
+  box-sizing: border-box;
+}
+
+.region-plot-approximate .region-plot-bar,
+.region-plot-approximate .region-plot-dot {
+  opacity: 0.45;
+}
+
+.region-note {
+  margin: 0;
+  color: #666;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .region-view {
+    padding: 12px;
+  }
+
+  .region-view .chart-header {
+    flex-direction: column;
+  }
+}

@@ -46,10 +46,25 @@ export const DIRECTION_LABELS = Object.freeze({
   no_change: "No change for any surveyed household in this area",
 });
 
+/** Directions for a table column headed "Direction". */
+export const DIRECTION_SHORT_LABELS = Object.freeze({
+  gain: "Gain",
+  loss: "Loss",
+  too_close_to_call: "Too close to call",
+  no_change: "No change",
+});
+
 export const SUPPORT_BAND_LABELS = Object.freeze({
   "<10": "Fewer than 10 survey households",
   "10–29": "10 to 29 survey households",
   "30+": "30 or more survey households",
+});
+
+/** Bands for a table column headed "Survey households". */
+export const SUPPORT_BAND_SHORT_LABELS = Object.freeze({
+  "<10": "Fewer than 10",
+  "10–29": "10 to 29",
+  "30+": "30 or more",
 });
 
 /**
