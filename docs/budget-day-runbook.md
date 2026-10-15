@@ -166,6 +166,21 @@ uv run uk-budget-data publish check
 
 ## Documents arrive (13:40)
 
+**Download the OBR's workbooks in a browser, by hand.**
+- **Who:** María, with Vahid as backup. *Proposed; yours to confirm.*
+- **When:** as soon as the documents publish, about 13:40 in the drill timetable.
+- **Why by hand:** obr.uk refuses scripted downloads, and not always the same way.
+  - W3 saw HTTP 403.
+  - uk-data #536 records a 200 answer that is an HTML page titled "No Access - Office for Budget Responsibility" instead of the workbook.
+  - On 15 October, from W5's machine, the March 2026 EFO receipts workbook downloaded by script, but the expenditure workbook got that "No Access" page.
+
+  A browser download works.
+- **What:** the EFO's detailed forecast tables, at least receipts and expenditure. W3 lists the full set.
+- **Where the files go:** to W3's Budget-day ingest in policyengine-uk-data, which records each file's SHA-256, vintage, units, geography and year coverage. Today the OBR loader's fallback reads committed workbooks from `storage/obr_efo/` (uk-data #536). W3 to confirm the path for the Budget-day files.
+- **Record:** each file's name and SHA-256 (`shasum -a 256 <file>`) in the coverage ledger as it lands, so the ingest's record can be checked against what was downloaded.
+
+**Treasury tables come from gov.uk by script.** On 15 October `assets.publishing.service.gov.uk` served a spreadsheet to both curl's and python-requests' user agents (HTTP 200, the right content type), so gov.uk does not refuse scripted downloads. The importer below reads a workbook from a local path and fetches nothing itself. If gov.uk does refuse on the day, download Table 4.1 in a browser the same way and pass its path.
+
 ```sh
 uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   --source-id AB2026-T4.1 --document "Autumn Budget 2026" \
