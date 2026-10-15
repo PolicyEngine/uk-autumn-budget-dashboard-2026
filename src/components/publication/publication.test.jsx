@@ -5,7 +5,6 @@ import FiscalSummary from "./FiscalSummary";
 import UnavailableNotice from "./UnavailableNotice";
 import { parseTable } from "../../utils/publication/csv";
 import { parseManifest } from "../../utils/publication/manifest";
-import { fiscalYearLabel } from "../../utils/publication/format";
 import { combinedStats, fiscalSeries } from "../../utils/publication/select";
 import {
   BEYOND_DATA,
@@ -93,7 +92,10 @@ describe("FiscalSummary", () => {
         measureNames={names}
       />,
     );
-    expect(screen.getByText(fiscalYearLabel(IN_DATA))).toBeInTheDocument();
+    // The fiscal year starting in April of IN_DATA, written out here rather
+    // than by the component's own formatter.
+    const label = `${IN_DATA}-${String(IN_DATA + 1).slice(-2)}`;
+    expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText("-£1.10bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.20bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.75bn")).toBeInTheDocument();
