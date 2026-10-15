@@ -199,7 +199,14 @@ def test_skips_itself():
 """
 
 
-def run_isolated(pytester, monkeypatch, body, token, required):
+@pytest.fixture(params=[(), ("-n", "2")], ids=["serial", "xdist"])
+def workers(request):
+    """Run each isolated session serially and on pytest-xdist workers, whose
+    main process sees the test reports but never the test items."""
+    return request.param
+
+
+def run_isolated(pytester, monkeypatch, body, token, required, workers):
     pytester.makeconftest(CONFTEST)
     pytester.makepyfile(body)
     for name, value in (
@@ -210,40 +217,48 @@ def run_isolated(pytester, monkeypatch, body, token, required):
             monkeypatch.delenv(name, raising=False)
         else:
             monkeypatch.setenv(name, value)
-    return pytester.runpytest_subprocess("-p", "no:cacheprovider")
+    return pytester.runpytest_subprocess("-p", "no:cacheprovider", *workers)
 
 
-def test_missing_token_skips_locally(pytester, monkeypatch):
-    result = run_isolated(pytester, monkeypatch, MARKED_TESTS, None, False)
+def test_missing_token_skips_locally(pytester, monkeypatch, workers):
+    result = run_isolated(
+        pytester, monkeypatch, MARKED_TESTS, None, False, workers
+    )
     result.assert_outcomes(passed=1, skipped=1)
     assert result.ret == 0
 
 
-def test_missing_token_fails_when_required(pytester, monkeypatch):
-    result = run_isolated(pytester, monkeypatch, MARKED_TESTS, None, True)
+def test_missing_token_fails_when_required(pytester, monkeypatch, workers):
+    result = run_isolated(
+        pytester, monkeypatch, MARKED_TESTS, None, True, workers
+    )
     # pytest.fail during setup is reported as an error; either fails CI.
     result.assert_outcomes(passed=1, errors=1)
     assert result.ret != 0
 
 
-def test_token_runs_marked_tests(pytester, monkeypatch):
-    result = run_isolated(pytester, monkeypatch, MARKED_TESTS, "hf_x", True)
+def test_token_runs_marked_tests(pytester, monkeypatch, workers):
+    result = run_isolated(
+        pytester, monkeypatch, MARKED_TESTS, "hf_x", True, workers
+    )
     result.assert_outcomes(passed=2)
     assert result.ret == 0
 
 
-def test_any_certified_skip_fails_session_when_required(pytester, monkeypatch):
+def test_any_certified_skip_fails_session_when_required(
+    pytester, monkeypatch, workers
+):
     result = run_isolated(
-        pytester, monkeypatch, SELF_SKIPPING_TEST, "hf_x", True
+        pytester, monkeypatch, SELF_SKIPPING_TEST, "hf_x", True, workers
     )
     result.assert_outcomes(skipped=1)
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     result.stdout.fnmatch_lines(["*certified-data tests skipped*"])
 
 
-def test_certified_skip_allowed_locally(pytester, monkeypatch):
+def test_certified_skip_allowed_locally(pytester, monkeypatch, workers):
     result = run_isolated(
-        pytester, monkeypatch, SELF_SKIPPING_TEST, "hf_x", False
+        pytester, monkeypatch, SELF_SKIPPING_TEST, "hf_x", False, workers
     )
     result.assert_outcomes(skipped=1)
     assert result.ret == 0
@@ -261,19 +276,29 @@ def test_never_collected():
 
 
 def test_a_module_skipped_while_collecting_fails_when_required(
-    pytester, monkeypatch
+    pytester, monkeypatch, workers
 ):
     result = run_isolated(
-        pytester, monkeypatch, MODULE_SKIPPED_WHILE_COLLECTING, "hf_x", True
+        pytester,
+        monkeypatch,
+        MODULE_SKIPPED_WHILE_COLLECTING,
+        "hf_x",
+        True,
+        workers,
     )
     assert result.ret == pytest.ExitCode.TESTS_FAILED
     result.stdout.fnmatch_lines(["*skipped while collecting*"])
 
 
 def test_a_module_skipped_while_collecting_is_allowed_locally(
-    pytester, monkeypatch
+    pytester, monkeypatch, workers
 ):
     result = run_isolated(
-        pytester, monkeypatch, MODULE_SKIPPED_WHILE_COLLECTING, "hf_x", False
+        pytester,
+        monkeypatch,
+        MODULE_SKIPPED_WHILE_COLLECTING,
+        "hf_x",
+        False,
+        workers,
     )
     assert result.ret in (0, pytest.ExitCode.NO_TESTS_COLLECTED)
