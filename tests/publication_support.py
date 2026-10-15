@@ -20,6 +20,7 @@ from policyengine_uk.utils.scenario import Scenario
 from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication.artifacts import write_artifact
+from uk_budget_data.publication.receipt import projection_end_year
 from uk_budget_data.publication.reconcile import reconcile_artifact
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
@@ -27,7 +28,10 @@ BASIS = {
     "forecast": {"status": "pre_budget", "source": "test", "vintage": "v1"},
     "calibration": {"status": "pre_budget", "source": "test", "vintage": "v1"},
 }
-DATASET_YEARS = list(range(2024, 2031))
+# The installed model's horizon: 2030 on policyengine-uk 2.126.12, 2032 from
+# 2.130.1. The gate requires dataset years to run to it.
+PROJECTION_END = projection_end_year()
+DATASET_YEARS = list(range(2024, PROJECTION_END + 1))
 YEARS = [2027, 2028]
 RATE_PATH = "gov.hmrc.income_tax.rates.uk[0].rate"
 SOURCE_HEADER = (
