@@ -11,7 +11,7 @@
 #     --region europe-west1 \
 #     --config cloudbuild.yaml --substitutions _GIT_SHA=<commit>
 #
-# Only one deploy of this service runs at a time: deploys must be submitted
+# Only a commit on main is deployed. Only one deploy of this service runs at a time: deploys must be submitted
 # to _REGION (gcloud builds submit --region europe-west1), a build anywhere
 # else stops before touching the service, and a build that finds another
 # deploy running in _REGION stops. The build checks that the uploaded source is exactly
@@ -85,6 +85,26 @@ steps:
           echo "The uploaded source is not commit ${_GIT_SHA}" >&2
           exit 1
         fi
+
+  # Only a commit on main is deployed, as the workflow and the rollback
+  # pipeline require: verify-source proves the upload is the named commit,
+  # not that the commit was reviewed. A history-only clone of the public
+  # repository answers it, and is removed again so it never reaches the
+  # image's build context (/workspace).
+  - id: on-main
+    name: 'gcr.io/cloud-builders/git'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        git clone --quiet --filter=blob:none --no-checkout --single-branch \
+          --branch main "https://github.com/${_REPOSITORY}.git" /workspace/history
+        if ! git -C /workspace/history merge-base --is-ancestor "${_GIT_SHA}" main; then
+          echo "${_GIT_SHA} is not on main; only a commit on main is deployed" >&2
+          exit 1
+        fi
+        rm -rf /workspace/history
 
   - id: build
     name: 'gcr.io/cloud-builders/docker'

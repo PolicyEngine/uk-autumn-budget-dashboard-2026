@@ -502,3 +502,58 @@ def test_manual_submissions_use_mains_config_not_the_archives():
     assert "--config cloudbuild.yaml" in header
     assert "<dir>/cloudbuild.yaml" not in header
     assert "checkout of main" in header
+
+
+def _run_on_main(tmp_path, on_main: bool):
+    """Run the deploy's on-main step with a fake git; return the result,
+    the workspace and git's calls."""
+    workspace, bin_dir = tmp_path / "workspace", tmp_path / "bin"
+    workspace.mkdir()
+    bin_dir.mkdir()
+    log = tmp_path / "git.log"
+    fake = bin_dir / "git"
+    fake.write_text(
+        "#!/bin/bash\n"
+        f'echo "$*" >> "{log}"\n'
+        'if [ "$1" = clone ]; then mkdir -p "${@: -1}"; fi\n'
+        'if [[ " $* " == *" merge-base "* ]]; then '
+        f"exit {0 if on_main else 1}; fi\n"
+    )
+    fake.chmod(0o755)
+    result = subprocess.run(
+        ["bash", "-c", step_script("on-main", workspace)],
+        cwd=tmp_path,
+        env={"PATH": f"{bin_dir}:/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+    )
+    return result, workspace, log.read_text().splitlines()
+
+
+@pytest.mark.parametrize("on_main", [True, False])
+def test_only_a_commit_on_main_is_deployed(tmp_path, on_main):
+    """Review round 3 of #28 (D): verify-source proved the upload was the
+    named commit, not that the commit was on main, so a manual submission
+    of a PR branch's commit deployed unreviewed code that a rollback would
+    then refuse."""
+    result, workspace, calls = _run_on_main(tmp_path, on_main)
+    assert (result.returncode == 0) is on_main
+    if not on_main:
+        assert "is not on main" in result.stderr
+    (ancestry,) = [c for c in calls if "merge-base" in c]
+    assert ancestry.endswith(f"--is-ancestor {'a' * 40} main")
+    assert any(
+        "--filter=blob:none" in c and "--branch main" in c for c in calls
+    )
+    # The clone never reaches the image's build context.
+    if on_main:
+        assert not (workspace / "history").exists()
+
+
+def test_the_main_check_runs_before_anything_is_built():
+    order = [s["id"] for s in CONFIG["steps"]]
+    assert (
+        order.index("verify-source")
+        < order.index("on-main")
+        < order.index("build")
+    )

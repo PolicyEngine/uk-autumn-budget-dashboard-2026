@@ -138,6 +138,13 @@ steps:
         ]
         if not pushed:
             problems.append(f"its build did not push the image it runs ({image})")
+        # The record is what the submitter could say about it; the steps
+        # that ran are part of it too. A deploy that skipped the source
+        # check or the smoke test is not one to restore.
+        ran = {s.get("id"): s.get("status") for s in build.get("steps") or []}
+        for step in ("verify-source", "smoke"):
+            if ran.get(step) != "SUCCESS":
+                problems.append(f"its build did not pass a {step} step")
         if problems:
             sys.exit(f"{name}: " + "; ".join(problems))
         EOF

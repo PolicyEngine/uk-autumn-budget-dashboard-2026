@@ -177,6 +177,12 @@ def deploy_build(**changes) -> dict:
         "status": "SUCCESS",
         "tags": ["uk-budget-api-2026-deploy"],
         "substitutions": {"_GIT_SHA": COMMIT},
+        "steps": [
+            {"id": "exclusive", "status": "SUCCESS"},
+            {"id": "verify-source", "status": "SUCCESS"},
+            {"id": "smoke", "status": "SUCCESS"},
+            {"id": "promote", "status": "SUCCESS"},
+        ],
         "results": {
             "images": [
                 {
@@ -377,6 +383,20 @@ def _pushed(name, digest):
             "did not push the image it runs",
         ),
         (deploy_build(results={}), "did not push the image it runs"),
+        (
+            deploy_build(
+                steps=[
+                    {"id": "verify-source", "status": "SUCCESS"},
+                    {"id": "smoke", "status": "FAILURE"},
+                ]
+            ),
+            "did not pass a smoke step",
+        ),
+        (
+            deploy_build(steps=[{"id": "smoke", "status": "SUCCESS"}]),
+            "did not pass a verify-source step",
+        ),
+        (deploy_build(steps=[]), "did not pass a verify-source step"),
     ],
 )
 def test_a_revision_its_build_record_does_not_back_is_refused(

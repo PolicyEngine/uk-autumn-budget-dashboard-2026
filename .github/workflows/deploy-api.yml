@@ -14,9 +14,10 @@ name: Deploy the household API
 # traffic moves only if it has not changed since the build began.
 #
 # Rollback: main's cloudbuild-rollback.yaml moves all traffic to a named
-# revision, but only one this pipeline built from a commit on main, after
-# the same smoke test from inside its own image, and only if traffic has not
-# changed since the rollback began.
+# revision, but only one whose own successful deploy build, of a commit on
+# main, pushed the image it runs, after main's current smoke test (the
+# image supplies only data), and only if traffic has not changed since the
+# rollback began.
 #
 # Either way, the workflow then checks the live /api/version; if a build
 # fails, it reports the traffic it finds rather than assuming none moved.
