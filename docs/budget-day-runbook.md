@@ -69,7 +69,20 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   The page title and heading already say "UK Autumn Budget 2026".
 - [ ] **Deploy and roll back once through the workflow (#28)**, after the grants in d1538: deploy `main`'s head, roll back to the previous revision, deploy again. Record the revisions here.
   - **15 October, deploy of `main` at 7c5e4fa** (run 38716544528, build fb42c4a6): every step up to the smoke test passed with the d1538 grants. The candidate `uk-budget-api-2026-00003-jic` (policyengine 6.4.1, policyengine-uk 2.130.1, core 3.33.0) took no traffic. The smoke test failed with `/api/personal-impact returned HTTP 504`: the full household request did not finish within Cloud Run's 300 s. Traffic was left as it was: `uk-budget-api-2026-00001-gow` at 100%. That is 12 October's revision (git f47099d, policyengine 6.2.6, policyengine-uk 2.125.1), and `/api/version` confirms it is live.
-  - **No revision can be rolled back to yet.** A rollback runs `main`'s smoke test against its target before moving traffic, and no deployed revision answers the household request within 300 s. Until one does, `00001-gow` stays live as it is. The rollback rehearsal waits for a deploy that passes, after #39 (one full request: 254 s locally on `main`, 194 s with it).
+  - **15 October, deploy of `main` at 1ce4984** (#39 and #42; run 38732006985): the candidate `uk-budget-api-2026-00004-fur` passed the smoke test and took all traffic, about 6.5 minutes from submit to live. Before: `uk-budget-api-2026-00001-gow` at 100%. `/api/version` reports 1ce4984 with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0.
+  - **The rollback target is `00004-fur`.** It is the only revision that passes `main`'s smoke test. A rollback runs that test against its target before moving traffic, and `00001-gow` (12 October's) doesn't answer within 300 s, so a rollback to it would be refused before traffic moves.
+  - **Next:** rehearse a rollback that succeeds. Deploy again (`00005`), roll back to `00004-fur`, then deploy again, recording each revision here.
+  - **How long one household answer takes on Cloud Run (`00004-fur`), 15 October:**
+
+    | Request | Time |
+    |---|---|
+    | £30,000 earner, first | 142.5 s |
+    | £30,000 earner, again | 148.0 s |
+    | £30,000 earner, children 17, 10 and 2 | 145.5 s |
+    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s |
+
+    The last household has two children who turn 25 within 2025-30, so it is built three times over. Any household entering a child aged 20 to 24 fails this way today. A Cloud Run vCPU runs this single-threaded calculation about 5 times slower than a developer laptop (about 30 s locally).
+  - **One answer at a time per instance.** The household route ran on the server's event loop, so while one household was calculated, nothing else on that instance answered (`/api/version` didn't, within 30 s). Cloud Run sends up to 80 requests to an instance at once, so a second visitor waits about 290 s and a third gets a 504. #45 moves the calculation off the event loop. How many calculations an instance takes at once (Cloud Run `--concurrency`, and the cost of more instances) is Max's call, through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
 ## How a measure must be written
