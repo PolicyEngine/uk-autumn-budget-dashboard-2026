@@ -1,21 +1,29 @@
 """Smoke-test a household API revision before it takes traffic.
 
-Cloud Build deploys each new revision with no traffic and a ``candidate``
-tag, runs this against the tagged URL from inside the image it just built,
-and moves traffic only if it passes. It checks that:
+Cloud Build deploys each new revision with no traffic under a tag only that
+build uses, runs this against the tagged URL, and moves traffic only if it
+passes. A rollback runs it again on the revision it restores. It checks
+that:
 
 - ``/api/health`` answers;
 - ``/api/version`` names the commit being deployed and the same package
-  versions as this image, so the tagged URL really serves this build;
-- ``/api/personal-impact`` answers a plain household with finite numbers.
+  versions as the revision's image, so the tagged URL really serves it;
+- ``/api/personal-impact`` answers a plain household with finite numbers
+  for every year and policy the image's calculator covers.
 
 It does not check that the answers are right; the household fixtures do
 that (``household_route``), once the team has written them.
 
+The pipelines run main's current copy of this checker, never the
+revision's own (an older image would bring an older, weaker checker), on a
+plain Python with no third-party package. What only the revision knows (its
+package versions and the years and policies it covers) is read from its
+image as data, into an expectations file (``print_expectations``).
+
 Usage::
 
     python -m uk_budget_data.deploy_smoke --base-url <tagged URL> \\
-        --expect-git-sha <commit>
+        --expect-git-sha <commit> [--expectations <file>]
 """
 
 import argparse
@@ -23,6 +31,8 @@ import json
 import math
 import sys
 import time
+import urllib.error
+import urllib.request
 from typing import Any, Optional
 
 from uk_budget_data.runtime_identity import runtime_identity
@@ -201,9 +211,17 @@ def _request(client, method: str, route: str, problems: list, **kwargs):
 
 
 def run_smoke(
-    client, expected_git_sha: str, expected: Optional[dict] = None
+    client,
+    expected_git_sha: str,
+    expected: Optional[dict] = None,
+    years: Optional[list[str]] = None,
+    policies: Optional[list[str]] = None,
 ) -> dict:
-    """Run every check. Returns ``{"pass": bool, "problems": [...]}``."""
+    """Run every check. Returns ``{"pass": bool, "problems": [...]}``.
+
+    ``expected`` is the image's identity and ``years``/``policies`` its
+    calculator's coverage; each defaults to this process's own.
+    """
     expected = expected or runtime_identity()
     problems: list[str] = []
 
@@ -219,25 +237,116 @@ def run_smoke(
         client, "POST", "/api/personal-impact", problems, json=SMOKE_HOUSEHOLD
     )
     if impact is not None:
-        problems += impact_problems(impact.json())
+        problems += impact_problems(impact.json(), years, policies)
 
     return {"pass": not problems, "problems": problems, "version": reported}
 
 
-def main(argv: Optional[list[str]] = None) -> int:
-    import httpx
+class _Response:
+    def __init__(self, status_code: int, body: bytes):
+        self.status_code = status_code
+        self._body = body
 
+    def json(self):
+        return json.loads(self._body)
+
+
+class StdlibClient:
+    """The few requests the checker makes, with the standard library only,
+    so it runs on any Python 3 without the image's packages."""
+
+    def __init__(self, base_url: str, timeout: float):
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+
+    def request(self, method: str, route: str, json_body=None, **kwargs):
+        body = kwargs.pop("json", json_body)
+        data = None if body is None else json.dumps(body).encode()
+        request = urllib.request.Request(
+            self.base_url + route,
+            data=data,
+            method=method,
+            headers={"Content-Type": "application/json"} if data else {},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as r:
+                return _Response(r.status, r.read())
+        except urllib.error.HTTPError as error:
+            return _Response(error.code, error.read())
+
+
+def print_expectations() -> dict:
+    """What a revision's image says it is: its identity and the years and
+    policies its calculator covers. The pipelines run the same thing inside
+    the image, written out (so an image older than this function answers
+    too); the checker reads the result as data."""
+    years, policies = expected_coverage()
+    return {
+        "identity": runtime_identity(),
+        "years": years,
+        "policies": policies,
+    }
+
+
+def read_expectations(path: str, expected_git_sha: str) -> dict:
+    """An expectations file, refused unless it names this commit and some
+    years and policies (an empty list would make the checks vacuous)."""
+    with open(path, encoding="utf-8") as handle:
+        data = json.load(handle)
+    problems = []
+    identity = data.get("identity") if isinstance(data, dict) else None
+    if not isinstance(identity, dict) or not isinstance(
+        identity.get("packages"), dict
+    ):
+        problems.append("names no identity and packages")
+    elif identity.get("git_sha") != expected_git_sha:
+        problems.append(
+            f"is for commit {identity.get('git_sha')!r}, not "
+            f"{expected_git_sha!r}"
+        )
+    for key in ("years", "policies"):
+        values = data.get(key) if isinstance(data, dict) else None
+        if (
+            not isinstance(values, list)
+            or not values
+            or not all(isinstance(v, str) and v for v in values)
+        ):
+            problems.append(f"names no {key}")
+    if problems:
+        raise ValueError(
+            f"the expectations file {path} " + "; ".join(problems)
+        )
+    return data
+
+
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--expect-git-sha", required=True)
+    parser.add_argument(
+        "--expectations",
+        help="the revision's expectations (print_expectations), read as data",
+    )
     parser.add_argument("--timeout", type=float, default=300.0)
     args = parser.parse_args(argv)
     if not args.expect_git_sha.strip():
         parser.error("--expect-git-sha must name the commit being deployed")
-    with httpx.Client(
-        base_url=args.base_url.rstrip("/"), timeout=args.timeout
-    ) as client:
-        result = run_smoke(client, args.expect_git_sha.strip())
+    sha = args.expect_git_sha.strip()
+    if args.expectations:
+        try:
+            data = read_expectations(args.expectations, sha)
+        except (OSError, ValueError) as error:
+            print(f"Refused: {error}", file=sys.stderr)
+            return 1
+        result = run_smoke(
+            StdlibClient(args.base_url, args.timeout),
+            sha,
+            data["identity"],
+            data["years"],
+            data["policies"],
+        )
+    else:
+        result = run_smoke(StdlibClient(args.base_url, args.timeout), sha)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["pass"] else 1
 

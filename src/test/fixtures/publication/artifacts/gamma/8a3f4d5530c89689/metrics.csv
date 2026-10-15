@@ -1,0 +1,3 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+gamma,Gamma,2030,10.5,0.005,0.05,0.5
+gamma,Gamma,2031,10.6,0.006,0.06,0.6

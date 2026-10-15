@@ -1,0 +1,186 @@
+{
+  "basis": {
+    "calibration": {
+      "source": "test",
+      "status": "pre_budget",
+      "vintage": "v1"
+    },
+    "forecast": {
+      "source": "test",
+      "status": "pre_budget",
+      "vintage": "v1"
+    }
+  },
+  "combined": {
+    "combined--alpha+beta": {
+      "approval": {
+        "artifact_sha256": "9856ecca0cc7dda3d0f6f1b81fc0f4b0ca5eede3879798817f93e7262112442e",
+        "at": "2026-10-14T10:31:08.089430+00:00",
+        "by": "Reviewer",
+        "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610"
+      },
+      "artifact": "artifacts/combined--alpha+beta/9856ecca0cc7dda3",
+      "artifact_sha256": "9856ecca0cc7dda3d0f6f1b81fc0f4b0ca5eede3879798817f93e7262112442e",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+      "measures": [
+        "alpha",
+        "beta"
+      ],
+      "member_outputs_sha256": {
+        "alpha": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
+        "beta": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b"
+      },
+      "name": "Combined--Alpha+Beta",
+      "outputs_sha256": "9cb3f7e780a368cb7b3a406c09dfb2b355228b941a6c4e7398369e7c729e8610",
+      "receipt_sha256": "36a8bd0960d593e59458264b7fa0545043775563414fb7cabb40231063f188ee",
+      "status": "approved",
+      "unsupported_years": [
+        2031
+      ],
+      "years": [
+        2030,
+        2031
+      ]
+    }
+  },
+  "execution": {
+    "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+    "identity": {
+      "certificate": {
+        "bundle_version": "6.3.3",
+        "certificate_sha256": "1abdf161d1c115b609747e08b91ab450891a84ee395828395477f3d20be92a50",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+        "certified_for_core_version": "3.33.0",
+        "certified_for_model_version": "2.126.12",
+        "compatibility_basis": "legacy_compatible_model_package",
+        "country_id": "uk"
+      },
+      "certification_status": "certified",
+      "core": {
+        "name": "policyengine-core",
+        "version": "3.33.0"
+      },
+      "country_id": "uk",
+      "data": {
+        "build_fingerprint": "sha256:c094d7006fdd81df220090284212f16bbffb15624643bc442c4bb3e1b1e5dac8",
+        "build_id": "policyengine-uk-data-1.58.0",
+        "build_model_version": "2.122.2",
+        "data_package": "policyengine-uk-data",
+        "dataset": "enhanced_frs_2024_25",
+        "dataset_revision": "1.58.0",
+        "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+        "dataset_uri": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.58.0",
+        "release_manifest_revision": "0aa3eee1cdae8f8125f4aff126a8f01957595dc3",
+        "release_version": "1.58.0"
+      },
+      "model": {
+        "name": "policyengine-uk",
+        "version": "2.126.12"
+      },
+      "schema_version": 1,
+      "wrapper": {
+        "name": "policyengine",
+        "version": "6.3.3"
+      }
+    }
+  },
+  "measures": {
+    "alpha": {
+      "approval": {
+        "artifact_sha256": "2653a4b17c6c578c6e29b02004b68f5b5bebe52747a3d2e6a451ab62f4204014",
+        "at": "2026-10-14T10:31:07.776443+00:00",
+        "by": "Reviewer",
+        "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40"
+      },
+      "artifact": "artifacts/alpha/2653a4b17c6c578c",
+      "artifact_sha256": "2653a4b17c6c578c6e29b02004b68f5b5bebe52747a3d2e6a451ab62f4204014",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+      "name": "Alpha",
+      "outputs_sha256": "7a59dc7d50c405cdf43ba99d2f22efe8f4b3dbb4a1bdbda88e6cade8b8e9cc40",
+      "receipt_sha256": "e7ce9c774dfd61dd2159dab39493f4999c327fc918daaaf8214b3383d48cbfed",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [
+        2031
+      ],
+      "years": [
+        2030,
+        2031
+      ]
+    },
+    "beta": {
+      "approval": {
+        "artifact_sha256": "e727429ae730b476a9e7d302713b6b7d21bd56f7e7b458691df7201d15c18197",
+        "at": "2026-10-14T10:31:07.872020+00:00",
+        "by": "Reviewer",
+        "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b"
+      },
+      "artifact": "artifacts/beta/e727429ae730b476",
+      "artifact_sha256": "e727429ae730b476a9e7d302713b6b7d21bd56f7e7b458691df7201d15c18197",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+      "name": "Beta",
+      "outputs_sha256": "abc9da039197dae8510a78047f34890380e112b1e4cb425c2f900c9a9928481b",
+      "receipt_sha256": "2287c68d42eeccc0f3e7201797e5297b010725e9aeaf5ea8422158ef2fa45bf7",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [
+        2031
+      ],
+      "years": [
+        2030,
+        2031
+      ]
+    },
+    "delta": {
+      "artifact": "artifacts/delta/c22ac040e86957bc",
+      "artifact_sha256": "c22ac040e86957bcc38e9a950dfedffe97aaf26fe008455d86f978393cdac579",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+      "name": "Delta",
+      "outputs_sha256": "6b4e169f5e20e4d16c3d278f4f4fec3428f6b86b7555fa3d3c68d37308a1fd84",
+      "receipt_sha256": "0bf55b50af3a2702c92f23d01ccc756e1929f4d5dc6d087de76ae907d6df91c8",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "staged",
+      "unsupported_years": [
+        2031
+      ],
+      "years": [
+        2030,
+        2031
+      ]
+    },
+    "gamma": {
+      "artifact": "artifacts/gamma/8a3f4d5530c89689",
+      "artifact_sha256": "8a3f4d5530c896893ce9f80390ea996fadd497f5808d9d830f7bc1cde9d0e614",
+      "execution_identity_sha256": "3f99356c57144a67c0604895fdb113b65f089f134f40bd304adbbd118daf5819",
+      "name": "Gamma",
+      "outputs_sha256": "fdeac4d5a85cd6d208e3841ff163d1e9fa35905c55e1abae364dabec41ad030c",
+      "receipt_sha256": "017bea837e35b814b85b889b76dc245ba696c9551eb24da6dc9d28fe5e40f96a",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [
+        2031
+      ],
+      "years": [
+        2030,
+        2031
+      ]
+    }
+  },
+  "revision": 1,
+  "schema": "uk-budget-dashboard/publication-manifest/v1",
+  "superseded": [],
+  "updated_at": "2026-10-14T10:31:08.089498+00:00"
+}
