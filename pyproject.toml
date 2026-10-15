@@ -52,10 +52,7 @@ where = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-# Under -n, xdist_group tests share a worker, and units go out in collection
-# order, which tests/conftest.py puts slow tests first in. Serial runs ignore
-# both options.
-addopts = "-v --tb=short --dist loadgroup --no-loadscope-reorder"
+addopts = "-v --tb=short"
 
 [tool.black]
 line-length = 79

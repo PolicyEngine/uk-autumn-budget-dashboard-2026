@@ -13,8 +13,9 @@ Skips are counted from test reports, which reach the main process under
 pytest-xdist too; hooks that take the test item run only on the workers.
 
 Tests marked ``slow`` take minutes each. The Python tests job runs the suite
-on four pytest-xdist workers, and these tests are collected first there so
-each one starts on its own worker (see ``pytest_collection_modifyitems``).
+on four pytest-xdist workers and these tests are collected first there, so
+its four slow units start on separate workers (see
+``pytest_collection_modifyitems``).
 """
 
 import os
@@ -43,20 +44,20 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        f"{SLOW}: takes minutes; collected first under pytest-xdist so each "
-        "slow test starts on its own worker",
+        f"{SLOW}: takes minutes; collected first under pytest-xdist",
     )
 
 
 def pytest_collection_modifyitems(config, items):
     """Under pytest-xdist, collect the slow tests first.
 
-    ``--dist loadgroup`` hands each worker one test (or ``xdist_group``) at
-    a time in collection order, and a worker busy with a slow test is given
-    nothing new until it finishes. With the slow tests first, each starts on
-    its own worker and the light tests share out behind them; collected in
-    file order, two slow tests can land on one worker and run back to back.
-    Serial runs keep file order.
+    CI runs ``-n 4 --dist loadgroup --no-loadscope-reorder``, which hands
+    out work units (a test, or the tests of one ``xdist_group``) in
+    collection order: one to each worker, then a second, then more to a
+    worker only as its own tests finish. With the slow tests first, the four
+    slow units start on separate workers and light tests queue behind them.
+    In file order, a worker that finished its light tests early could be
+    given two slow units back to back. Serial runs keep file order.
     """
     if is_xdist_worker(config):
         items.sort(key=lambda item: item.get_closest_marker(SLOW) is None)

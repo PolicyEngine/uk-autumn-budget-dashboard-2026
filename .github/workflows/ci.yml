@@ -34,10 +34,13 @@ jobs:
         run: uv sync --locked --extra dev
 
       # Four workers, one per vCPU on GitHub's public-repository runner.
-      # pyproject.toml's addopts set the scheduling: tests/conftest.py puts
-      # the tests marked slow first, so each starts on its own worker.
+      # loadgroup keeps each xdist_group on one worker, and without the
+      # reorder it hands out work in collection order, where tests/conftest.py
+      # puts the four slow units first, so each starts on its own worker.
       - name: Run tests that need no credentials
-        run: uv run pytest tests/ -m "not certified_data" -n 4 --durations=15
+        run: >-
+          uv run pytest tests/ -m "not certified_data"
+          -n 4 --dist loadgroup --no-loadscope-reorder --durations=15
 
   certified-data:
     name: Certified data
