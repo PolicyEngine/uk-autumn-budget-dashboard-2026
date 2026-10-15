@@ -1,0 +1,37 @@
+level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator
+region,E12000001,North East,alpha,2026,average_change,120.0,90.0,160.0,gain,reported,,30+,False,direct
+region,E12000001,North East,alpha,2026,relative_change,0.0045,0.0034,0.0056,gain,reported,,30+,False,direct
+region,E12000001,North East,alpha,2027,average_change,140.0,100.0,180.0,gain,reported,,30+,False,direct
+region,E12000001,North East,alpha,2027,relative_change,0.0049,0.0037,0.0062,gain,reported,,30+,False,direct
+region,E12000001,North East,beta,2026,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,beta,2026,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,beta,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,beta,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,synthetic_combined,2026,average_change,120.0,90.0,160.0,gain,reported,,30+,False,direct
+region,E12000001,North East,synthetic_combined,2026,relative_change,0.0045,0.0034,0.0056,gain,reported,,30+,False,direct
+region,E12000001,North East,synthetic_combined,2027,average_change,140.0,100.0,180.0,gain,reported,,30+,False,direct
+region,E12000001,North East,synthetic_combined,2027,relative_change,0.0049,0.0037,0.0062,gain,reported,,30+,False,direct
+region,E12000007,London,alpha,2026,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,alpha,2026,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,alpha,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,alpha,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,beta,2026,average_change,-30.0,-35.0,-25.0,loss,reported,,30+,False,direct
+region,E12000007,London,beta,2026,relative_change,-0.0011,-0.0013,-0.0009,loss,reported,,30+,False,direct
+region,E12000007,London,beta,2027,average_change,-33.0,-38.0,-27.0,loss,reported,,30+,False,direct
+region,E12000007,London,beta,2027,relative_change,-0.0012,-0.0014,-0.0009,loss,reported,,30+,False,direct
+region,E12000007,London,synthetic_combined,2026,average_change,100.0,60.0,130.0,gain,reported,,30+,False,direct
+region,E12000007,London,synthetic_combined,2026,relative_change,0.0034,0.0023,0.0046,gain,reported,,30+,False,direct
+region,E12000007,London,synthetic_combined,2027,average_change,100.0,70.0,150.0,gain,reported,,30+,False,direct
+region,E12000007,London,synthetic_combined,2027,relative_change,0.0037,0.0025,0.0051,gain,reported,,30+,False,direct
+region,W92000004,Wales,alpha,2026,average_change,120.0,90.0,160.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,alpha,2026,relative_change,0.0045,0.0033,0.0056,gain,reported,,30+,False,direct
+region,W92000004,Wales,alpha,2027,average_change,140.0,100.0,180.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,alpha,2027,relative_change,0.0049,0.0036,0.0062,gain,reported,,30+,False,direct
+region,W92000004,Wales,beta,2026,average_change,-7.0,-10.0,-4.0,loss,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,beta,2026,relative_change,-0.0002,-0.0004,-0.0001,loss,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,beta,2027,average_change,-8.0,-11.0,-4.0,loss,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,beta,2027,relative_change,-0.0003,-0.0004,-0.0001,loss,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,synthetic_combined,2026,average_change,120.0,80.0,160.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,synthetic_combined,2026,relative_change,0.0042,0.003,0.0054,gain,reported,,30+,False,direct
+region,W92000004,Wales,synthetic_combined,2027,average_change,130.0,90.0,170.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,synthetic_combined,2027,relative_change,0.0046,0.0033,0.0059,gain,reported,,30+,False,direct

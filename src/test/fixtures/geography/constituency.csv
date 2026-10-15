@@ -1,0 +1,25 @@
+level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator
+constituency,Z14000001,Synthetic seat one,synthetic_combined,2026,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000001,Synthetic seat one,synthetic_combined,2026,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000001,Synthetic seat one,synthetic_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000001,Synthetic seat one,synthetic_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000002,Synthetic seat two,synthetic_combined,2026,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000002,Synthetic seat two,synthetic_combined,2026,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000002,Synthetic seat two,synthetic_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000002,Synthetic seat two,synthetic_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000003,Synthetic seat three,synthetic_combined,2026,average_change,100.0,50.0,150.0,gain,reported,,30+,False,direct
+constituency,Z14000003,Synthetic seat three,synthetic_combined,2026,relative_change,0.0035,0.002,0.0052,gain,reported,,30+,False,direct
+constituency,Z14000003,Synthetic seat three,synthetic_combined,2027,average_change,110.0,60.0,160.0,gain,reported,,30+,False,direct
+constituency,Z14000003,Synthetic seat three,synthetic_combined,2027,relative_change,0.004,0.002,0.006,gain,reported,,30+,False,direct
+constituency,Z14000004,Synthetic seat four,synthetic_combined,2026,average_change,90.0,50.0,140.0,gain,reported,,30+,False,direct
+constituency,Z14000004,Synthetic seat four,synthetic_combined,2026,relative_change,0.0033,0.0019,0.0048,gain,reported,,30+,False,direct
+constituency,Z14000004,Synthetic seat four,synthetic_combined,2027,average_change,100.0,50.0,150.0,gain,reported,,30+,False,direct
+constituency,Z14000004,Synthetic seat four,synthetic_combined,2027,relative_change,0.0036,0.0021,0.0052,gain,reported,,30+,False,direct
+constituency,Z14000005,Synthetic seat five,synthetic_combined,2026,average_change,130.0,90.0,180.0,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000005,Synthetic seat five,synthetic_combined,2026,relative_change,0.0046,0.0032,0.0063,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000005,Synthetic seat five,synthetic_combined,2027,average_change,140.0,90.0,200.0,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000005,Synthetic seat five,synthetic_combined,2027,relative_change,0.0051,0.0035,0.0069,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000006,Synthetic seat six,synthetic_combined,2026,average_change,110.0,60.0,150.0,gain,reported,,30+,False,direct
+constituency,Z14000006,Synthetic seat six,synthetic_combined,2026,relative_change,0.0038,0.0023,0.0053,gain,reported,,30+,False,direct
+constituency,Z14000006,Synthetic seat six,synthetic_combined,2027,average_change,120.0,70.0,170.0,gain,reported,,30+,False,direct
+constituency,Z14000006,Synthetic seat six,synthetic_combined,2027,relative_change,0.0042,0.0025,0.0059,gain,reported,,30+,False,direct

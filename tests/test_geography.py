@@ -21,6 +21,7 @@ from policyengine.disclosure import (
 )
 from policyengine.disclosure.schema import PUBLIC_COLUMNS, WITHHELD
 
+from tests import geography_fixture
 from uk_budget_data import geography as g
 from uk_budget_data.private_outputs import AUDIT_DIR_ENV, PrivateOutputError
 
@@ -1313,3 +1314,31 @@ def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
     assert code == 0
     assert [p.name for p in out.iterdir()] == ["constituency.csv"]
     assert validate_public(out) == []
+
+
+# -- the front-end fixture --------------------------------------------------
+
+
+def test_the_front_end_fixture_is_what_the_recipe_writes(tmp_path):
+    written = geography_fixture.build(tmp_path)
+    for path in written.values():
+        committed = geography_fixture.FIXTURE_DIR / path.name
+        assert path.read_bytes() == committed.read_bytes(), (
+            f"{path.name} is stale: run "
+            "uv run python -m tests.geography_fixture"
+        )
+
+
+def test_the_front_end_fixture_shows_every_tier():
+    tables = {
+        name: pd.read_csv(geography_fixture.FIXTURE_DIR / name)
+        for name in ("regional.csv", "constituency.csv")
+    }
+    for table in tables.values():
+        assert set(table["tier"]) == {"reported", "approximate", "withheld"}
+    regional = tables["regional.csv"]
+    assert (regional["value"] == 0).any()
+    assert set(regional["reform"]) == {"synthetic_combined", "alpha", "beta"}
+    assert set(regional["year"]) == {2026, 2027}
+    seats = tables["constituency.csv"]
+    assert seats["area_code"].str.startswith("Z14").all()
