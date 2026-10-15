@@ -118,13 +118,19 @@ uk-budget-data --years 2026 2027
 
 ### Disclosure control
 
-The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/data` is a publication. A check runs on every pull request:
+The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/` is a publication. A check runs on every pull request:
 
 ```bash
 uv run python scripts/check_public_data.py
 ```
 
-Each file under `public/data` must be a table written by `policyengine.disclosure`, or be listed in `data_inputs/public_data_review.csv` after a person reviewed it. The check prints file paths and rule names, never values.
+Each file under `public/` must be a table written by `policyengine.disclosure`, or be listed in `data_inputs/public_data_review.csv` with the sha256 of the bytes a person reviewed; any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights. The check prints file paths and rule names, never values. The build runs a smaller check of the same list (`scripts/check-public-files.mjs`), so a deploy fails too.
+
+To review a changed file, record its new sha256 in the review list:
+
+```bash
+shasum -a 256 public/data/budgetary_impact.csv
+```
 
 Results by area go through the disclosure layer only. The legacy constituency calculators take direct means with no disclosure control. They run only with `--legacy-geography`, and write to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, which must be outside any git repository:
 

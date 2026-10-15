@@ -41,3 +41,13 @@ class TestSavePrivateCsv:
         path = save_private_csv(pd.DataFrame({"a": [1]}), tmp_path / "x.csv")
         assert mode(path) == 0o600
         assert pd.read_csv(path)["a"].tolist() == [1]
+
+
+class TestPrivateDirectoryLevels:
+    def test_every_level_becomes_owner_only(self, tmp_path):
+        base = tmp_path / "audit"
+        base.mkdir(mode=0o755)
+        base.chmod(0o755)
+        directory = private_directory(base, subdirectory="run/release")
+        for folder in (base, base / "run", directory):
+            assert mode(folder) == 0o700

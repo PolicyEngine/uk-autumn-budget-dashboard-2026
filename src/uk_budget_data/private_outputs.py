@@ -41,7 +41,8 @@ def private_directory(
                 "repository."
             )
         path = Path(value)
-    directory = Path(path).expanduser().resolve() / subdirectory
+    base = Path(path).expanduser().resolve()
+    directory = base / subdirectory
     for folder in (directory, *directory.parents):
         if (folder / ".git").exists():
             raise PrivateOutputError(
@@ -49,6 +50,15 @@ def private_directory(
                 "need a directory outside any repository."
             )
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # mkdir's mode reaches only the directories it creates, and the umask
+    # can widen it, so set owner-only access on every level from the base
+    # down, existing ones included.
+    folder = directory
+    while True:
+        os.chmod(folder, 0o700)
+        if folder == base:
+            break
+        folder = folder.parent
     return directory
 
 
