@@ -633,7 +633,7 @@ def artifact_sha256(document: dict) -> str:
     )
 
 
-def projection_end_year() -> Optional[int]:
+def projection_end_year(start_year: Optional[int] = None) -> Optional[int]:
     """The last year policyengine-uk projects a single-year dataset to.
 
     Read from the installed model, as ``extend_single_year_dataset`` (which
@@ -642,10 +642,14 @@ def projection_end_year() -> Optional[int]:
 
     - up to 2.126.12 the default ``end_year`` is the year itself;
     - from 2.130.1 the default is None, and it resolves to
-      ``PROJECTION_END_YEAR``, shortened by any finite end year in the CGT
-      projection's metadata (``CGT_INDEX_PATH``).
+      ``max(start_year, min(PROJECTION_END_YEAR, CGT end year))``: the
+      horizon, shortened by any finite end year in the CGT projection's
+      metadata (``CGT_INDEX_PATH``), never before the dataset's own year.
 
-    None if neither form is there.
+    ``start_year`` is the dataset's first year, for that last clamp. The
+    CGT metadata is read from the installed system's parameters: the
+    dashboard sets no CGT projection scenario of its own. None if neither
+    form is there.
     """
     import inspect
 
@@ -670,6 +674,8 @@ def projection_end_year() -> Optional[int]:
         cgt_end = (metadata.get("projection") or {}).get("end_year", end)
         if isinstance(cgt_end, int) and not isinstance(cgt_end, bool):
             end = min(end, cgt_end)
+    if start_year is not None:
+        end = max(start_year, end)
     return end
 
 
@@ -734,7 +740,7 @@ def dashboard_problems(document: dict) -> list[str]:
     supported = sorted(int(year) for year in supported)
     if supported != list(range(supported[0], supported[-1] + 1)):
         problems.append("its dataset years have gaps")
-    end = projection_end_year()
+    end = projection_end_year(start_year=supported[0])
     if end is None:
         problems.append("the installed model's projection end is unknown")
         return problems
