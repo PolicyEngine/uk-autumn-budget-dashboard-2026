@@ -1103,3 +1103,213 @@ def test_the_audit_refuses_a_directory_inside_a_repository(resolved, tmp_path):
         g.write_private_audit(
             geo, log, run_id="r1", release_name="x", root=tmp_path / "repo"
         )
+
+
+# -- command line ------------------------------------------------------------
+
+
+def test_geography_arguments():
+    from uk_budget_data.cli import parse_args
+
+    parsed = parse_args(["geography"])
+    assert parsed.command == "geography"
+    assert parsed.dataset is None and parsed.dataset_kind == "efrs"
+    assert parsed.levels == ["region", "constituency"]
+    assert parsed.seat_reforms is None and parsed.reforms is None
+    assert parsed.years == [2026, 2027, 2028, 2029, 2030]
+    assert parsed.out_dir == Path("public/data")
+    parsed = parse_args(
+        [
+            "geography",
+            "--dataset",
+            "local.h5",
+            "--dataset-kind",
+            "microcosm",
+            "--levels",
+            "constituency",
+            "--seat-reforms",
+            "a",
+            "b",
+            "--years",
+            "2027",
+            "--prior-regional",
+            "regional.csv",
+        ]
+    )
+    assert parsed.dataset == Path("local.h5")
+    assert parsed.levels == ["constituency"]
+    assert parsed.seat_reforms == ["a", "b"]
+    assert parsed.years == [2027]
+    assert parsed.prior_regional == Path("regional.csv")
+    with pytest.raises(SystemExit):
+        parse_args(["geography", "--levels", "national"])
+
+
+def no_simulation(*args, **kwargs):
+    raise AssertionError("a simulation was built")
+
+
+def test_without_a_private_directory_nothing_runs(monkeypatch):
+    from uk_budget_data import cli
+
+    monkeypatch.delenv(AUDIT_DIR_ENV, raising=False)
+    monkeypatch.setattr(g, "simulate_reform", no_simulation)
+    assert cli.main(["geography"]) == 1
+
+
+def test_a_local_dataset_needs_a_path(monkeypatch, tmp_path):
+    from uk_budget_data import cli
+
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
+    monkeypatch.setattr(g, "simulate_reform", no_simulation)
+    assert cli.main(["geography", "--dataset-kind", "microcosm"]) == 1
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--reforms", "no_such_reform"],
+        ["--reforms", "autumn_budget_2026_combined", "two_child_limit"],
+        ["--reforms", "two_child_limit", "--seat-reforms", "fuel_duty_freeze"],
+        ["--reforms", "two_child_limit", "--levels", "constituency"],
+        ["--seat-weights", "missing.h5"],
+    ],
+)
+def test_options_are_checked_before_any_simulation(
+    args, monkeypatch, tmp_path
+):
+    from uk_budget_data import cli
+
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
+    monkeypatch.setattr(g, "simulate_reform", no_simulation)
+    data = ["--data-dir", str(tmp_path), "--data-inputs-dir"]
+    assert (
+        cli.main(["geography", *args, *data, str(REPO / "data_inputs")]) == 1
+    )
+
+
+def synthetic_inputs(tmp_path):
+    """The real region table beside a lookup of made-up seats."""
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / "regions.csv").write_bytes(REGIONS_CSV.read_bytes())
+    regions = pd.read_csv(REGIONS_CSV, dtype=str)
+    seats = pd.DataFrame(
+        {
+            "code": [f"Z14{i:06d}" for i in range(1, 25)],
+            "name": [f"Seat {i}" for i in range(1, 25)],
+            "x": 0,
+            "y": 0,
+            "region": list(regions["constituencies_region"]) * 2,
+            "country": "",
+        }
+    )
+    seats.to_csv(inputs / "constituencies_2024.csv", index=False)
+    return inputs, list(regions["frs_region"]), list(regions["code"])
+
+
+def fake_world(frs_regions):
+    """24 synthetic households per region, a reform's change by id."""
+    n = 24 * len(frs_regions)
+    index = np.arange(n)
+    region = [frs_regions[i % len(frs_regions)] for i in index]
+    household = pd.DataFrame(
+        {
+            "household_id": index + 1,
+            "household_weight": 50.0 + index % 3,
+            "region": region,
+            "tenure_type": ["OWNED_OUTRIGHT"] * n,
+            "accommodation_type": ["HOUSE_DETACHED"] * n,
+            "source_household_id": index + 1,
+        }
+    )
+    person = pd.DataFrame(
+        {
+            "person_household_id": index + 1,
+            "age": 20 + index,
+            "gender": ["FEMALE"] * n,
+        }
+    )
+    changes = {
+        "alpha": np.where(index % 2 == 0, 100.0, 0.0),
+        "beta": np.where(index % 3 == 0, -50.0, 0.0),
+    }
+    changes["pkg"] = changes["alpha"] + changes["beta"]
+    return household, person, changes
+
+
+def run_cli(monkeypatch, tmp_path, kind="efrs"):
+    from uk_budget_data import cli
+    from uk_budget_data.models import Reform
+
+    inputs, frs_regions, codes = synthetic_inputs(tmp_path)
+    household, person, changes = fake_world(frs_regions)
+    n = len(household)
+    region_of = dict(zip(frs_regions, codes))
+    seat_of = {code: f"Z14{i + 1:06d}" for i, code in enumerate(codes)}
+    seat_regions = {f"Z14{i:06d}": codes[(i - 1) % 12] for i in range(1, 25)}
+    args = ["--reforms", "pkg", "alpha", "beta", "--years", "2026"]
+    if kind == "efrs":
+        matrix = np.zeros((24, n))
+        for column, frs in enumerate(household["region"]):
+            first = list(seat_regions).index(seat_of[region_of[frs]])
+            matrix[first, column] = 30.0
+            matrix[first + 12, column] = 20.0
+        weights = write_seat_weights(tmp_path / "weights.h5", matrix)
+        args += ["--seat-weights", str(weights)]
+    else:
+        household["region_code_oa"] = [
+            (
+                region_of[frs]
+                if region_of[frs][0] == "E"
+                else region_of[frs][0] + "99999999"
+            )
+            for frs in household["region"]
+        ]
+        household["constituency_code_oa"] = [
+            seat_of[region_of[frs]] for frs in household["region"]
+        ]
+        args += ["--dataset-kind", "microcosm", "--dataset", "local.h5"]
+
+    def simulate(reform, dataset, years):
+        baseline = {2026: np.full(n, BASE)}
+        reformed = {2026: BASE + changes[reform.id]}
+        return (
+            FakeSimulation(household, person, baseline),
+            FakeSimulation(household, person, reformed),
+        )
+
+    reforms = {r: Reform(id=r, name=r) for r in ("pkg", "alpha", "beta")}
+    monkeypatch.setattr(g, "simulate_reform", simulate)
+    monkeypatch.setattr(g, "get_reform", reforms.get)
+    monkeypatch.setattr(g, "PACKAGES", {"pkg": ("alpha", "beta")})
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
+    out = tmp_path / "out"
+    code = cli.main(
+        ["geography", *args, "--out-dir", str(out)]
+        + ["--data-inputs-dir", str(inputs)]
+    )
+    return code, out, tmp_path / "audit" / "geography"
+
+
+def test_the_command_writes_both_tables_from_the_efrs(monkeypatch, tmp_path):
+    code, out, audit = run_cli(monkeypatch, tmp_path)
+    assert code == 0
+    assert sorted(p.name for p in out.iterdir()) == [
+        "constituency.csv",
+        "regional.csv",
+    ]
+    assert validate_public(out) == []
+    assert set(pd.read_csv(out / "constituency.csv")["reform"]) == {"pkg"}
+    (run,) = audit.iterdir()
+    assert sorted(p.name for p in (run / "efrs").iterdir()) == [
+        "disclosure_audit.csv",
+        "summary.json",
+    ]
+
+
+def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
+    code, out, _ = run_cli(monkeypatch, tmp_path, kind="microcosm")
+    assert code == 0
+    assert [p.name for p in out.iterdir()] == ["constituency.csv"]
+    assert validate_public(out) == []
