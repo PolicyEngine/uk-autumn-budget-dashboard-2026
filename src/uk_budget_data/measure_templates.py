@@ -58,6 +58,62 @@ def _validate_parameter_path(path: str) -> None:
         raise ValueError(f"Parameter path must identify a leaf: {path}")
 
 
+# Universal Credit's health (LCWRA) element. In the years the engine's UC
+# rebalancing runs (policyengine_uk/scenarios/uc_reform.py,
+# add_universal_credit_reform: 2026 to 2029, while rebalancing is active),
+# it overwrites each claimant's element after the formula: pre-2026
+# claimants get rebalancing.protected_health_element (or the UC Act 2025
+# s. 4 floor where that is null), new claimants
+# rebalancing.new_claimant_health_element. Both are monthly amounts.
+UC_LCWRA_AMOUNT = "gov.dwp.universal_credit.elements.disabled.amount"
+UC_PROTECTED_HEALTH = (
+    "gov.dwp.universal_credit.rebalancing.protected_health_element"
+)
+UC_NEW_CLAIMANT_HEALTH = (
+    "gov.dwp.universal_credit.rebalancing.new_claimant_health_element"
+)
+UC_REBALANCING_ACTIVE = "gov.dwp.universal_credit.rebalancing.active"
+UC_REBALANCED_YEARS = range(2026, 2030)
+UC_HEALTH_ADVICE = (
+    "build a UC health measure with uc_health_element_change(), which sets "
+    f"{UC_PROTECTED_HEALTH} (pre-2026 claimants) and {UC_NEW_CLAIMANT_HEALTH} "
+    "(new claimants)"
+)
+
+
+def _refuse_uc_health_traps(path: str, years) -> None:
+    """Refuse the Universal Credit health changes that score nothing or
+    the wrong thing.
+
+    The LCWRA element's amount in the rebalanced years: the rebalancing
+    overwrites every claimant's element, so a change to it moves no award.
+    Outside them a change to it scores. From 2030 the installed engine's
+    rebalancing no longer runs, so every claimant, protected or not, gets
+    the element's amount (policyengine-uk issue #2282).
+    tests/test_uc_health_template.py pins both edges to the engine, so a
+    bundle that extends the rebalancing fails there until
+    UC_REBALANCED_YEARS follows it. Switching rebalancing off is not the
+    law before the Universal Credit Act 2025 either: the 2026 element
+    amount is already the new claimants' rate, so everyone would get it.
+    """
+    rebalanced = [str(y) for y in years if int(y) in UC_REBALANCED_YEARS]
+    if path == UC_LCWRA_AMOUNT and rebalanced:
+        raise ValueError(
+            f"{UC_LCWRA_AMOUNT} in {', '.join(rebalanced)} is not what UC "
+            "health awards pay: in "
+            f"{UC_REBALANCED_YEARS.start}-{UC_REBALANCED_YEARS.stop - 1} "
+            "the engine's UC rebalancing overwrites each claimant's "
+            "element, so a change to it scores nothing; " + UC_HEALTH_ADVICE
+        )
+    if path == UC_REBALANCING_ACTIVE:
+        raise ValueError(
+            f"{UC_REBALANCING_ACTIVE} switched off is not the law before the "
+            "Universal Credit Act 2025: the 2026 element amount is already "
+            "the new claimants' rate, so every claimant would get it; "
+            + UC_HEALTH_ADVICE
+        )
+
+
 def _finite_decimal(value, label: str) -> Decimal:
     if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
         raise ValueError(f"{label} must be a finite number")
@@ -118,7 +174,9 @@ def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
     too: the builders take one value a year (see the module docstring).
     """
     _validate_parameter_path(path)
-    return {path: _annual_values(values)}
+    annual = _annual_values(values)
+    _refuse_uc_health_traps(path, annual)
+    return {path: annual}
 
 
 def threshold_change(
@@ -126,7 +184,47 @@ def threshold_change(
 ) -> dict[str, dict[str, float]]:
     """Build explicit annual thresholds on an existing native parameter."""
     _validate_parameter_path(path)
-    return {path: _annual_values(values)}
+    annual = _annual_values(values)
+    _refuse_uc_health_traps(path, annual)
+    return {path: annual}
+
+
+def uc_health_element_change(
+    *, protected: Mapping | None = None, new_claimant: Mapping | None = None
+) -> dict[str, dict[str, float]]:
+    """Change Universal Credit's health (LCWRA) element as the model pays it.
+
+    In 2026 to 2029 the engine's UC rebalancing sets each claimant's
+    element itself, so a measure on the element's own amount scores
+    nothing. This builds the change on the amounts it uses instead:
+    ``protected`` for pre-2026 claimants
+    (rebalancing.protected_health_element) and ``new_claimant`` for those
+    who claim from April 2026 (rebalancing.new_claimant_health_element).
+    Values are monthly amounts, in pounds, by fiscal year, as the
+    parameters are. Only 2026 to 2029: in other years the rebalancing does
+    not run, and the values would score nothing. From 2030 every claimant
+    gets the element's own amount, so a 2030 measure is
+    ``rate_change(UC_LCWRA_AMOUNT, ...)``.
+    """
+    changes = {}
+    for path, values in (
+        (UC_PROTECTED_HEALTH, protected),
+        (UC_NEW_CLAIMANT_HEALTH, new_claimant),
+    ):
+        if values is None:
+            continue
+        annual = _annual_values(values)
+        outside = [y for y in annual if int(y) not in UC_REBALANCED_YEARS]
+        if outside:
+            raise ValueError(
+                f"{path} is used only in {UC_REBALANCED_YEARS.start}-"
+                f"{UC_REBALANCED_YEARS.stop - 1}, while the UC rebalancing "
+                f"runs; a value for {', '.join(outside)} would score nothing"
+            )
+        changes[path] = annual
+    if not changes:
+        raise ValueError("Supply protected or new_claimant amounts")
+    return changes
 
 
 def allowance_uprating(
@@ -180,6 +278,7 @@ def allowance_uprating(
                 * increment
             )
         values[year] = float(_finite_decimal(amount, f"Allowance for {year}"))
+    _refuse_uc_health_traps(path, values)
     return {path: values}
 
 
