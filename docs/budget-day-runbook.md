@@ -281,11 +281,11 @@ Two limitations of the data, measured by the UK hub on uk-data 1.58.1 (`enhanced
 
 W5 re-measured on the same file for 2025:
 - **Ages:** the oldest age is 80, nobody is above it, and 7,718 records are aged exactly 80, weighing 3.62 million people.
-- **Incomes:** 2 records have `total_income` of £1 million or more, both with self-employment income and no other income type, so £0 of employment income or dividends.
+- **Incomes:** fewer than 10 records have `total_income` of £1 million or more, all with self-employment income and no other income type, so no employment income or dividends.
 
 **Before it ships:** confirm the source of £35.5bn and £11.1bn. uk-data's SPI targets come from HMRC's Survey of Personal Incomes (Tables 3.6 and 3.7, 2023-24), projected to later years with PolicyEngine's uprating (`utils/incomes_projection.py`). If that is where these figures come from, "HMRC projects" should read "HMRC's Survey of Personal Incomes, projected to 2025".
 
-**Where they go:** the dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
+**Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
 ## Briefing (overnight, by 07:00)
 
