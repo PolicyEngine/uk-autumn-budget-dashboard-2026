@@ -1,0 +1,62 @@
+.geography-methodology {
+  margin-top: 24px;
+}
+
+.geography-methodology-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pe-gray-600, #4b5563);
+  background: var(--pe-surface, #ffffff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.geography-methodology-toggle:hover {
+  background: var(--pe-gray-50, #f9fafb);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.geography-methodology-toggle:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+.geography-methodology-content {
+  margin-top: 12px;
+  padding: 20px 24px;
+  background: var(--pe-surface, #ffffff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  color: var(--pe-gray-600, #4b5563);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.geography-methodology-content p {
+  margin: 0;
+}
+
+.geography-methodology-content ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.geography-methodology-content li {
+  margin-bottom: 8px;
+}
+
+.geography-methodology-content strong {
+  color: var(--pe-gray-800, #1f2937);
+}
+
+.geography-methodology-content a {
+  color: #319795;
+}

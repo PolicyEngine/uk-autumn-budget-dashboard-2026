@@ -8,8 +8,10 @@ import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
+import GeographyMethodology from "./components/GeographyMethodology";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
+import RegionView from "./components/RegionView";
 import YearSlider from "./components/YearSlider";
 
 // Autumn Budget 2026 policy provisions
@@ -576,8 +578,20 @@ function App() {
                       <ConstituencyMap
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
+                        policies={POLICIES}
                       />
                     </div>
+
+                    {/* Results by region, as the disclosure layer published
+                        them: one measure, or the whole package, never a sum. */}
+                    <div className="charts-grid charts-row-regions">
+                      <RegionView
+                        selectedPolicies={selectedPolicies}
+                        selectedYear={distributionalYear}
+                        policies={POLICIES}
+                      />
+                    </div>
+                    <GeographyMethodology />
 
                     {/* Row 3: Net Income Analysis Charts */}
                     <div className="charts-grid charts-row-3">

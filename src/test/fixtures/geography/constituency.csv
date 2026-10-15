@@ -1,25 +1,17 @@
 level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator
-constituency,Z14000001,Synthetic seat one,synthetic_combined,2026,average_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000001,Synthetic seat one,synthetic_combined,2026,relative_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000001,Synthetic seat one,synthetic_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000001,Synthetic seat one,synthetic_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000002,Synthetic seat two,synthetic_combined,2026,average_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000002,Synthetic seat two,synthetic_combined,2026,relative_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000002,Synthetic seat two,synthetic_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000002,Synthetic seat two,synthetic_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
-constituency,Z14000003,Synthetic seat three,synthetic_combined,2026,average_change,100.0,50.0,150.0,gain,reported,,30+,False,direct
-constituency,Z14000003,Synthetic seat three,synthetic_combined,2026,relative_change,0.0035,0.002,0.0052,gain,reported,,30+,False,direct
-constituency,Z14000003,Synthetic seat three,synthetic_combined,2027,average_change,110.0,60.0,160.0,gain,reported,,30+,False,direct
-constituency,Z14000003,Synthetic seat three,synthetic_combined,2027,relative_change,0.004,0.002,0.006,gain,reported,,30+,False,direct
-constituency,Z14000004,Synthetic seat four,synthetic_combined,2026,average_change,90.0,50.0,140.0,gain,reported,,30+,False,direct
-constituency,Z14000004,Synthetic seat four,synthetic_combined,2026,relative_change,0.0033,0.0019,0.0048,gain,reported,,30+,False,direct
-constituency,Z14000004,Synthetic seat four,synthetic_combined,2027,average_change,100.0,50.0,150.0,gain,reported,,30+,False,direct
-constituency,Z14000004,Synthetic seat four,synthetic_combined,2027,relative_change,0.0036,0.0021,0.0052,gain,reported,,30+,False,direct
-constituency,Z14000005,Synthetic seat five,synthetic_combined,2026,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
-constituency,Z14000005,Synthetic seat five,synthetic_combined,2026,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
-constituency,Z14000005,Synthetic seat five,synthetic_combined,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
-constituency,Z14000005,Synthetic seat five,synthetic_combined,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
-constituency,Z14000006,Synthetic seat six,synthetic_combined,2026,average_change,-14.0,-20.0,-8.0,loss,approximate,thin_support,10–29,False,direct
-constituency,Z14000006,Synthetic seat six,synthetic_combined,2026,relative_change,-0.0005,-0.0007,-0.0003,loss,approximate,thin_support,10–29,False,direct
-constituency,Z14000006,Synthetic seat six,synthetic_combined,2027,average_change,-15.0,-22.0,-9.0,loss,approximate,thin_support,10–29,False,direct
-constituency,Z14000006,Synthetic seat six,synthetic_combined,2027,relative_change,-0.0005,-0.0008,-0.0003,loss,approximate,thin_support,10–29,False,direct
+constituency,Z14000001,Northfield East,autumn_budget_2026_combined,2029,relative_change,0.0112,0.0061,0.0163,gain,reported,,30+,False,direct
+constituency,Z14000001,Northfield East,autumn_budget_2026_combined,2029,average_change,310.0,170.0,450.0,gain,reported,,30+,False,direct
+constituency,Z14000002,"Harbour, Mill and Quay",autumn_budget_2026_combined,2029,relative_change,0.0068,0.0012,0.0124,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000002,"Harbour, Mill and Quay",autumn_budget_2026_combined,2029,average_change,150.0,30.0,270.0,gain,approximate,thin_support,10–29,False,direct
+constituency,Z14000003,Westmoor,autumn_budget_2026_combined,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000003,Westmoor,autumn_budget_2026_combined,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+constituency,Z14000004,Dale Valley,autumn_budget_2026_combined,2029,relative_change,0.004,-0.009,0.017,too_close_to_call,reported,,30+,False,direct
+constituency,Z14000004,Dale Valley,autumn_budget_2026_combined,2029,average_change,90.0,-200.0,380.0,too_close_to_call,reported,,30+,False,direct
+constituency,Z14000005,Glen Ardoch,autumn_budget_2026_combined,2029,relative_change,-0.0135,-0.0171,-0.0099,loss,reported,,30+,False,direct
+constituency,Z14000005,Glen Ardoch,autumn_budget_2026_combined,2029,average_change,-480.0,-610.0,-350.0,loss,reported,,30+,False,direct
+constituency,Z14000007,Fenland Reach,autumn_budget_2026_combined,2029,relative_change,0,0,0,no_change,reported,,30+,False,direct
+constituency,Z14000007,Fenland Reach,autumn_budget_2026_combined,2029,average_change,0,0,0,no_change,reported,,30+,False,direct
+constituency,Z14000008,Marshgate,autumn_budget_2026_combined,2029,relative_change,0.0004,-0.0002,0.0011,too_close_to_call,reported,,30+,False,direct
+constituency,Z14000008,Marshgate,autumn_budget_2026_combined,2029,average_change,6.0,-4.0,16.0,too_close_to_call,reported,,30+,False,direct
+constituency,Z14000001,Northfield East,autumn_budget_2026_combined,2030,relative_change,0.0021,0.0003,0.0039,gain,reported,,30+,False,direct
+constituency,Z14000003,Westmoor,autumn_budget_2026_combined,2030,relative_change,,,,,withheld,disclosure_control,,False,direct

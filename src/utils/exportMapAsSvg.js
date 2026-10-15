@@ -1,5 +1,10 @@
 /**
- * Export D3 maps as SVG files with title, description, legend, and tooltip.
+ * Export the constituency map as a standalone SVG file, with a title, a
+ * description and, when a constituency is selected, its card.
+ *
+ * The map's own SVG carries everything else: the seats with their fills
+ * as attributes, the hatch pattern in <defs> and the legend. The export
+ * clones it as it is, so the file shows exactly what the page shows.
  */
 
 import {
@@ -14,17 +19,30 @@ import {
 } from "./svgHelpers";
 import { downloadSvg } from "./downloadFile";
 
+/** The class of the map's zoomable group, whose transform is reset. */
+export const MAP_ZOOM_LAYER_CLASS = "map-zoom-layer";
+
+// How long to wait for the logo before exporting without it.
+const LOGO_TIMEOUT_MS = 3000;
+
 /**
- * Convert an image URL to a base64 data URL.
+ * An image as a data URL, so the exported file needs nothing else. A data
+ * URL is used as it is.
  *
  * @param {string} url - URL or path to the image
- * @returns {Promise<string>} - Base64 data URL
+ * @returns {Promise<string>}
  */
 async function imageToBase64(url) {
+  if (url.startsWith("data:")) return url;
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("the logo did not load")),
+      LOGO_TIMEOUT_MS,
+    );
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      clearTimeout(timer);
       const canvas = document.createElement("canvas");
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
@@ -32,7 +50,10 @@ async function imageToBase64(url) {
       ctx.drawImage(img, 0, 0);
       resolve(canvas.toDataURL("image/png"));
     };
-    img.onerror = reject;
+    img.onerror = (error) => {
+      clearTimeout(timer);
+      reject(error);
+    };
     img.src = url;
   });
 }
@@ -44,25 +65,20 @@ const STYLES = {
   descriptionFontSize: 13,
   lineHeight: 1.5,
   titleDescGap: 8,
-  legendGradientWidth: 200,
-  legendGradientHeight: 12,
-  legendLabelFontSize: 12,
-  tooltipWidth: 180,
-  tooltipHeight: 110,
-  tooltipPadding: 12,
-  tooltipRadius: 8,
+  footerHeight: 40,
+  cardWidth: 250,
+  cardPadding: 12,
+  cardRadius: 8,
+  cardWrap: 40,
   colors: {
     title: "#374151",
     description: "#4b5563",
-    legendText: "#374151",
     background: "white",
-    tooltipBorder: "#e5e7eb",
-    tooltipLabel: "#6b7280",
-    positive: "#16a34a",
-    negative: "#dc2626",
-    gradientLoss: "#DC2626",
-    gradientNeutral: "#E5E7EB",
-    gradientGain: "#14B8A6",
+    cardBorder: "#e5e7eb",
+    cardText: "#4b5563",
+    gain: "#0F766E",
+    loss: "#B45309",
+    neutral: "#4B5563",
   },
 };
 
@@ -79,7 +95,7 @@ function wrapTextSimple(text, maxCharsPerLine = 100) {
   let currentLine = "";
 
   words.forEach((word) => {
-    if ((currentLine + " " + word).length > maxCharsPerLine) {
+    if (currentLine && (currentLine + " " + word).length > maxCharsPerLine) {
       lines.push(currentLine);
       currentLine = word;
     } else {
@@ -169,168 +185,104 @@ function createDescription(description, y) {
   return textElement;
 }
 
-/**
- * Create a gradient legend for the map.
- *
- * @param {SVGElement} svg - The SVG element to add the legend to
- * @param {number} centerX - Center X position for the legend
- * @param {number} y - Y position
- * @returns {string} - The gradient ID for reference
- */
-function createGradientLegend(svg, centerX, y) {
-  const {
-    legendGradientWidth,
-    legendGradientHeight,
-    legendLabelFontSize,
-    colors,
-  } = STYLES;
-  const legendX = centerX - legendGradientWidth / 2;
+const DIRECTION_COLOURS = {
+  gain: STYLES.colors.gain,
+  loss: STYLES.colors.loss,
+};
 
-  // Create gradient definition
-  const defs = createSvgElement("defs");
-  const gradient = createSvgElement("linearGradient", {
-    id: "exportLegendGradient",
-    x1: "0%",
-    x2: "100%",
-  });
-
-  const stops = [
-    { offset: "0%", color: colors.gradientLoss },
-    { offset: "50%", color: colors.gradientNeutral },
-    { offset: "100%", color: colors.gradientGain },
-  ];
-
-  stops.forEach(({ offset, color }) => {
-    const stop = createSvgElement("stop", { offset, "stop-color": color });
-    gradient.appendChild(stop);
-  });
-
-  defs.appendChild(gradient);
-  svg.appendChild(defs);
-
-  // Add gradient rect
-  const gradientRect = createSvgElement("rect", {
-    x: legendX,
-    y,
-    width: legendGradientWidth,
-    height: legendGradientHeight,
-    fill: "url(#exportLegendGradient)",
-    rx: "2",
-  });
-  svg.appendChild(gradientRect);
-
-  // Add legend labels
-  const labelY = y + legendGradientHeight + 15;
-  const labelStyle = `font-family: ${DEFAULT_FONT}; font-size: ${legendLabelFontSize}px; font-weight: 500; fill: ${colors.legendText};`;
-
-  const labels = [
-    { text: "Loss", x: legendX, anchor: "start" },
-    { text: "0%", x: legendX + legendGradientWidth / 2, anchor: "middle" },
-    { text: "Gain", x: legendX + legendGradientWidth, anchor: "end" },
-  ];
-
-  labels.forEach(({ text, x, anchor }) => {
-    const label = createSvgElement("text", { x, y: labelY });
-    label.setAttribute("style", labelStyle + ` text-anchor: ${anchor};`);
-    label.textContent = text;
-    svg.appendChild(label);
-  });
-
-  return "exportLegendGradient";
+/** How each kind of card line is set: size, weight, and the gap above. */
+function lineStyle(line) {
+  switch (line.kind) {
+    case "value":
+      return {
+        fontSize: 18,
+        fontWeight: "700",
+        fill: DIRECTION_COLOURS[line.direction] ?? STYLES.colors.neutral,
+        gap: 24,
+      };
+    case "interval":
+      return {
+        fontSize: line.emphasis ? 13 : 12,
+        fontWeight: line.emphasis ? "700" : "600",
+        fill: STYLES.colors.title,
+        gap: 18,
+      };
+    default:
+      return {
+        fontSize: 11,
+        fontWeight: "400",
+        fill: STYLES.colors.cardText,
+        gap: 15,
+      };
+  }
 }
 
 /**
- * Create a tooltip/info card for the selected constituency.
+ * Lay out the selected constituency's card: its title and lines, as the
+ * page's tooltip shows them (the same strings; nothing is reformatted).
  *
- * @param {SVGElement} svg - The SVG element to add the tooltip to
- * @param {Object} data - Tooltip data
- * @param {string} data.constituency_name - Constituency name
- * @param {number} data.average_gain - Average gain in pounds
- * @param {number} data.relative_change - Relative change as percentage
+ * @param {{title: string, lines: Array<{kind: string, text: string}>}} card
+ * @returns {Array<{text: string, y: number, style: Object}>} and height
+ */
+function layoutCard(card) {
+  const { cardPadding, cardWrap } = STYLES;
+  const placed = [];
+  let y = cardPadding + 14;
+  wrapTextSimple(card.title, cardWrap - 6).forEach((text, index) => {
+    if (index > 0) y += 17;
+    placed.push({
+      text,
+      y,
+      style: { fontSize: 14, fontWeight: "600", fill: STYLES.colors.title },
+    });
+  });
+  card.lines.forEach((line) => {
+    const style = lineStyle(line);
+    const wrap = line.kind === "value" ? cardWrap : cardWrap + 4;
+    wrapTextSimple(line.text, wrap).forEach((text, index) => {
+      y += index === 0 ? style.gap : style.fontSize + 3;
+      placed.push({ text, y, style });
+    });
+  });
+  return { placed, height: y + cardPadding };
+}
+
+/**
+ * Add the card for the selected constituency.
+ *
+ * @param {SVGElement} svg - The SVG element to add the card to
+ * @param {Object} card - `{title, lines}`, as for the page's tooltip
  * @param {number} x - X position
  * @param {number} y - Y position
  */
-function createTooltipCard(svg, data, x, y) {
-  const { tooltipWidth, tooltipHeight, tooltipPadding, tooltipRadius, colors } =
-    STYLES;
-
-  // Background with border
-  const bg = createSvgElement("rect", {
-    x,
-    y,
-    width: tooltipWidth,
-    height: tooltipHeight,
-    fill: colors.background,
-    stroke: colors.tooltipBorder,
-    "stroke-width": "1",
-    rx: tooltipRadius,
+function createTooltipCard(svg, card, x, y) {
+  const { cardWidth, cardPadding, cardRadius, colors } = STYLES;
+  const { placed, height } = layoutCard(card);
+  const group = createSvgGroup({ className: "map-export-card" });
+  group.appendChild(
+    createSvgElement("rect", {
+      x,
+      y,
+      width: cardWidth,
+      height,
+      fill: colors.background,
+      stroke: colors.cardBorder,
+      "stroke-width": "1",
+      rx: cardRadius,
+    }),
+  );
+  placed.forEach(({ text, y: offset, style }) => {
+    group.appendChild(
+      createSvgText(text, {
+        x: x + cardPadding,
+        y: y + offset,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        fill: style.fill,
+      }),
+    );
   });
-  svg.appendChild(bg);
-
-  // Constituency name (truncated if needed)
-  const name =
-    data.constituency_name.length > 22
-      ? data.constituency_name.substring(0, 20) + "..."
-      : data.constituency_name;
-
-  const nameText = createSvgText(name, {
-    x: x + tooltipPadding,
-    y: y + tooltipPadding + 14,
-    fontSize: 14,
-    fontWeight: "600",
-    fill: colors.title,
-  });
-  svg.appendChild(nameText);
-
-  // Average gain value
-  const gainColor = data.average_gain >= 0 ? colors.positive : colors.negative;
-  const absGain = Math.abs(data.average_gain).toLocaleString("en-GB", {
-    maximumFractionDigits: 0,
-  });
-  const gainValue = `${data.average_gain < 0 ? "-" : ""}£${absGain}`;
-
-  const gainText = createSvgText(gainValue, {
-    x: x + tooltipPadding,
-    y: y + tooltipPadding + 38,
-    fontSize: 18,
-    fontWeight: "700",
-    fill: gainColor,
-  });
-  svg.appendChild(gainText);
-
-  // Label for average gain
-  const gainLabel = createSvgText("Average household impact", {
-    x: x + tooltipPadding,
-    y: y + tooltipPadding + 52,
-    fontSize: 11,
-    fontWeight: "400",
-    fill: colors.tooltipLabel,
-  });
-  svg.appendChild(gainLabel);
-
-  // Relative change value
-  const relColor =
-    data.relative_change >= 0 ? colors.positive : colors.negative;
-  const relValue = `${data.relative_change >= 0 ? "+" : ""}${data.relative_change.toFixed(2)}%`;
-
-  const relText = createSvgText(relValue, {
-    x: x + tooltipPadding,
-    y: y + tooltipPadding + 72,
-    fontSize: 14,
-    fontWeight: "600",
-    fill: relColor,
-  });
-  svg.appendChild(relText);
-
-  // Label for relative change
-  const relLabel = createSvgText("Relative change", {
-    x: x + tooltipPadding,
-    y: y + tooltipPadding + 86,
-    fontSize: 11,
-    fontWeight: "400",
-    fill: colors.tooltipLabel,
-  });
-  svg.appendChild(relLabel);
+  svg.appendChild(group);
 }
 
 /**
@@ -345,7 +297,8 @@ function createTooltipCard(svg, data, x, y) {
  * @param {string} options.logo.href - URL/path to logo image
  * @param {number} options.logo.width - Logo width
  * @param {number} options.logo.height - Logo height
- * @param {Object} options.tooltipData - Selected constituency data for tooltip
+ * @param {{title: string, lines: Array}} [options.tooltip] - The selected
+ *   constituency's card, as the page's tooltip shows it
  * @returns {Promise<boolean>} - True if export was successful
  */
 export async function exportMapAsSvg(
@@ -353,7 +306,7 @@ export async function exportMapAsSvg(
   filename = "map",
   options = {},
 ) {
-  const { title, description, logo, tooltipData } = options;
+  const { title, description, logo, tooltip } = options;
 
   if (!svgElement) {
     console.error("exportMapAsSvg: No SVG element provided");
@@ -363,10 +316,11 @@ export async function exportMapAsSvg(
   // Clone the SVG
   const clonedSvg = svgElement.cloneNode(true);
 
-  // Reset zoom transform for clean export
-  const gElement = clonedSvg.querySelector("g");
-  if (gElement) {
-    gElement.removeAttribute("transform");
+  // Reset the zoom for a clean export. The legend and logo sit outside the
+  // zoomable group, so it is found by its class.
+  const zoomLayer = clonedSvg.querySelector(`g.${MAP_ZOOM_LAYER_CLASS}`);
+  if (zoomLayer) {
+    zoomLayer.removeAttribute("transform");
   }
 
   // Remove existing image elements with relative URLs (won't work in standalone SVG)
@@ -386,17 +340,24 @@ export async function exportMapAsSvg(
 
   // Calculate layout
   const headerHeight = calculateHeaderHeight(title, description);
-  const legendHeight = 50;
-  const totalHeight = headerHeight + height + legendHeight;
+  const totalHeight = headerHeight + height + STYLES.footerHeight;
 
   // Update SVG dimensions
   clonedSvg.setAttribute("width", width);
   clonedSvg.setAttribute("height", totalHeight);
   clonedSvg.setAttribute("viewBox", `0 0 ${width} ${totalHeight}`);
+  clonedSvg.removeAttribute("role");
+  clonedSvg.removeAttribute("aria-label");
   addSvgNamespaces(clonedSvg);
 
-  // Wrap existing content and translate down
-  const existingContent = Array.from(clonedSvg.childNodes);
+  // Keep the pattern definitions at the top level, where every renderer
+  // resolves them, and move the rest of the map down below the header.
+  const definitions = Array.from(clonedSvg.children).filter(
+    (child) => child.localName === "defs",
+  );
+  const existingContent = Array.from(clonedSvg.childNodes).filter(
+    (child) => !definitions.includes(child),
+  );
   const contentGroup = createSvgGroup({
     transform: `translate(0, ${headerHeight})`,
   });
@@ -430,11 +391,7 @@ export async function exportMapAsSvg(
     clonedSvg.insertBefore(descElement, contentGroup);
   }
 
-  // Add legend gradient at the bottom
-  const legendY = headerHeight + height + 15;
-  createGradientLegend(clonedSvg, width / 2, legendY);
-
-  // Embed logo on the right of the legend area
+  // Embed the logo at the bottom right, below the map
   if (logo?.href) {
     try {
       const base64Logo = await imageToBase64(logo.href);
@@ -442,7 +399,7 @@ export async function exportMapAsSvg(
         width: logo.width,
         height: logo.height,
         x: width - logo.width - 10,
-        y: legendY + (STYLES.legendGradientHeight - logo.height) / 2 + 5,
+        y: headerHeight + height + (STYLES.footerHeight - logo.height) / 2,
       });
       // Set both href and xlink:href for maximum browser compatibility
       logoImage.setAttribute("href", base64Logo);
@@ -457,11 +414,11 @@ export async function exportMapAsSvg(
     }
   }
 
-  // Add tooltip/hovercard if constituency is selected
-  if (tooltipData) {
-    const tooltipX = width - STYLES.tooltipWidth - 20;
-    const tooltipY = headerHeight + 20;
-    createTooltipCard(clonedSvg, tooltipData, tooltipX, tooltipY);
+  // Add the selected constituency's card
+  if (tooltip) {
+    const cardX = width - STYLES.cardWidth - 20;
+    const cardY = headerHeight + 20;
+    createTooltipCard(clonedSvg, tooltip, cardX, cardY);
   }
 
   // Serialize and download

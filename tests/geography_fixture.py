@@ -2,10 +2,10 @@
 
 Regenerate it from the repository root with:
 
-    uv run python -m tests.geography_fixture src/test/fixtures/geography
+    uv run python -m tests.geography_fixture src/test/fixtures/geography/layer
 
 The tables are written by the code that writes public/data/regional.csv and
-constituency.csv, from a deterministic synthetic recipe with no survey data:
+constituency.csv, and the front end parses them in a test, from a deterministic synthetic recipe with no survey data:
 three real regions, six made-up seats (Z14 codes, which no real seat has), a
 package and its two measures, in 2026 and 2027. The layer's bootstrap draws
 come from numpy, so a numpy upgrade may change the bytes; regenerate then.
@@ -20,7 +20,7 @@ from uk_budget_data import geography
 
 FIXTURE_DIR = (
     Path(__file__).resolve().parents[1] / "src" / "test" / "fixtures"
-) / "geography"
+) / "geography" / "layer"
 PACKAGE = "synthetic_combined"
 MEASURES = ("alpha", "beta")
 YEARS = (2026, 2027)
