@@ -35,16 +35,39 @@ function htmlPages(dir) {
   });
 }
 
+// Entities a page might put between "Budget" and a year: punctuation,
+// spaces of every width, and invisible joiners (which join, so they
+// decode to nothing).
 const NAMED_ENTITIES = {
   amp: "&",
   apos: "'",
   colon: ":",
+  comma: ",",
+  dash: "\u2010",
+  emsp: "\u2003",
+  emsp13: "\u2004",
+  emsp14: "\u2005",
+  ensp: "\u2002",
   gt: ">",
+  hairsp: "\u200a",
+  horbar: "\u2015",
+  hyphen: "\u2010",
   lt: "<",
-  mdash: "—",
-  nbsp: " ",
-  ndash: "–",
+  mdash: "\u2014",
+  mediumspace: "\u205f",
+  minus: "\u2212",
+  nbsp: "\u00a0",
+  ndash: "\u2013",
+  nobreak: "",
+  numsp: "\u2007",
+  period: ".",
+  puncsp: "\u2008",
   quot: '"',
+  shy: "",
+  thinsp: "\u2009",
+  thinspace: "\u2009",
+  zwj: "",
+  zwnj: "",
 };
 
 function decodeEntities(text) {
@@ -56,14 +79,54 @@ function decodeEntities(text) {
   });
 }
 
-// What a page shows or declares: its text with the markup between words
-// taken out, and its attribute values (titles, meta descriptions, labels),
-// with entities decoded.
+// Content a browser never shows, and citations: a <cite> names a source
+// (last year's Budget, say) on purpose, so mark a historical reference
+// with one.
+const HIDDEN = ["script", "style", "noscript", "template", "cite"];
+
+// Elements that start a new line when rendered. Any other tag sits inside
+// a line, so removing it must not split a word or a number in two.
+const BLOCK =
+  /^(address|article|aside|blockquote|br|button|caption|dd|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hr|label|legend|li|main|nav|ol|option|p|pre|section|summary|table|tbody|td|tfoot|th|thead|title|tr|ul)$/i;
+
+// Attributes whose values a reader or assistive technology is shown.
+// Links and sources (href, src) are not text.
+const DESCRIPTIVE = new Set([
+  "alt",
+  "aria-description",
+  "aria-label",
+  "content",
+  "label",
+  "placeholder",
+  "title",
+  "value",
+]);
+
+// What a page shows or declares: its text as rendered (inline markup
+// removed without a gap, block markup as a line break), and its
+// descriptive attribute values, with entities decoded.
 export function pageText(html) {
-  const attributes = [...html.matchAll(/=\s*(?:"([^"]*)"|'([^']*)')/g)].map(
-    (match) => match[1] ?? match[2],
+  let shown = html.replace(/<!--[\s\S]*?-->/g, "");
+  for (const tag of HIDDEN) {
+    shown = shown.replace(
+      new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?</${tag}\\s*>`, "gi"),
+      " ",
+    );
+  }
+  const attributes = [];
+  const text = shown.replace(
+    /<\/?([a-z][a-z0-9-]*)\b([^>]*)>/gi,
+    (tag, name, rest) => {
+      for (const match of rest.matchAll(
+        /([a-z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi,
+      )) {
+        if (DESCRIPTIVE.has(match[1].toLowerCase())) {
+          attributes.push(match[2] ?? match[3]);
+        }
+      }
+      return BLOCK.test(name) ? " " : "";
+    },
   );
-  const text = html.replace(/<[^>]*>/g, " ");
   return decodeEntities([text, ...attributes].join(" "));
 }
 
@@ -127,6 +190,45 @@ describe("static pages the site serves", () => {
         pageText("<p>Spending in 2025&ndash;26, before the Budget</p>"),
       ),
     ).toEqual([]);
+  });
+
+  it("joins what inline markup splits and decodes every space", () => {
+    // Review round 2 of #26: replacing every tag with a space split
+    // 20<span>25</span>, and &thinsp; was not decoded.
+    for (const html of [
+      "<h1>Autumn Budget 20<span>25</span></h1>",
+      "<h1>Autumn Budget&thinsp;2025</h1>",
+      "<h1>Autumn Budget&ensp;2025</h1>",
+      "<h1>Autumn Budget&#8239;2025</h1>",
+      "<h1>Autumn Budget <b>20</b><i>25</i></h1>",
+      "<h1>Autumn Budget 20&shy;25</h1>",
+    ]) {
+      expect(budgetYears(pageText(html)), html).toEqual(["2025"]);
+    }
+    // Block markup still separates: these are two numbers, not one.
+    expect(budgetYears(pageText("<p>Budget 20</p><p>25</p>"))).toEqual([]);
+  });
+
+  it("reads neither what is never shown nor where links point", () => {
+    // Review round 2 of #26: script contents and every attribute, links
+    // included, could fail a page whose visible heading names only 2026.
+    for (const html of [
+      '<h1>Autumn Budget 2026</h1><script type="application/json">{"source":"Autumn Budget 2025"}</script>',
+      "<h1>Autumn Budget 2026</h1><style>/* Autumn Budget 2025 */</style>",
+      '<h1>Autumn Budget 2026</h1><a href="/reports/autumn-budget-2025.pdf">OBR source</a>',
+      '<h1>Autumn Budget 2026</h1><img src="budget-2025.png" alt="Chart">',
+      "<h1>Autumn Budget 2026</h1><!-- Autumn Budget 2025 -->",
+      "<h1>Autumn Budget 2026</h1><p>Source: <cite>OBR, Autumn Budget 2025</cite></p>",
+    ]) {
+      expect(budgetYears(pageText(html)), html).toEqual(["2026"]);
+    }
+    // A historical reference not marked as a citation still counts.
+    expect(
+      budgetYears(pageText("<p>Source: OBR, Autumn Budget 2025</p>")),
+    ).toEqual(["2025"]);
+    expect(budgetYears(pageText("<h1>Autumn Budget 2026-27</h1>"))).toEqual([
+      "2026",
+    ]);
   });
 
   it("finds a stale page anywhere under a folder, by what it shows", () => {
