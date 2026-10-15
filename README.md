@@ -156,9 +156,17 @@ generate_all_data(config=config)
 # Run all tests
 pytest
 
+# Run on four worker processes, as CI does
+pytest -n 4 --dist loadgroup --no-loadscope-reorder
+
 # Run with coverage
 pytest --cov=uk_budget_data
 ```
+
+Mark any test that takes minutes with `@pytest.mark.slow`; under xdist
+such tests are collected first. With the command above, the four slow units
+(the two tests that share one £50,000 household count as one) start on
+separate workers. A fifth would have to share a worker and lengthen the run.
 
 ## Available reforms
 

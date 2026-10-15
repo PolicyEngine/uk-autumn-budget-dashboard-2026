@@ -170,6 +170,18 @@ class TestPersonalImpactCalculator:
         """Create a calculator instance."""
         return PersonalImpactCalculator()
 
+    @pytest.fixture(scope="class")
+    def single_earner_results(self):
+        """Results for a single £50,000 earner, calculated once.
+
+        A calculation builds about a hundred simulations and takes minutes,
+        so the tests that read this same household share one. Their
+        ``xdist_group`` keeps them on one pytest-xdist worker, where the
+        class-scoped result is kept between them.
+        """
+        household = HouseholdInput(employment_income=50000)
+        return PersonalImpactCalculator().calculate(household)
+
     def test_reforms_loaded(self, calculator):
         """Test that reforms are loaded correctly."""
         assert len(calculator.reforms) > 0
@@ -177,10 +189,11 @@ class TestPersonalImpactCalculator:
         for policy_id in POLICY_IDS:
             assert policy_id in calculator.reforms
 
-    def test_calculate_returns_structure(self, calculator):
+    @pytest.mark.slow
+    @pytest.mark.xdist_group("single_earner_results")
+    def test_calculate_returns_structure(self, single_earner_results):
         """Test that calculate returns expected structure."""
-        household = HouseholdInput(employment_income=50000)
-        results = calculator.calculate(household)
+        results = single_earner_results
 
         # Check top-level structure
         assert "household_input" in results
@@ -206,10 +219,11 @@ class TestPersonalImpactCalculator:
         assert "by_year" in results["totals"]
         assert "cumulative" in results["totals"]
 
-    def test_single_person_basic_impact(self, calculator):
+    @pytest.mark.slow
+    @pytest.mark.xdist_group("single_earner_results")
+    def test_single_person_basic_impact(self, single_earner_results):
         """Test basic impact calculation for single person."""
-        household = HouseholdInput(employment_income=50000)
-        results = calculator.calculate(household)
+        results = single_earner_results
 
         # Threshold freeze should have negative impact at £50k income
         threshold_policy = results["policies"].get(
@@ -219,6 +233,7 @@ class TestPersonalImpactCalculator:
             # From 2028 onwards (when CPI indexing would have kicked in)
             assert threshold_policy["years"][2028]["net_income_change"] < 0
 
+    @pytest.mark.slow
     def test_zero_income_no_impact(self, calculator):
         """Test that zero income household has minimal impact."""
         household = HouseholdInput(employment_income=0)
@@ -229,6 +244,7 @@ class TestPersonalImpactCalculator:
         # Allow for small floating point errors
         assert abs(total) < 100  # Less than £100 total impact
 
+    @pytest.mark.slow
     def test_income_echoed_back(self, calculator):
         """Test that input is echoed in results."""
         household = HouseholdInput(
