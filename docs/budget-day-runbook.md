@@ -68,6 +68,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
   The page title and heading already say "UK Autumn Budget 2026".
 - [ ] **Deploy and roll back once through the workflow (#28)**, after the grants in d1538: deploy `main`'s head, roll back to the previous revision, deploy again. Record the revisions here.
+  - **15 October, deploy of `main` at 7c5e4fa** (run 38716544528, build fb42c4a6): every step up to the smoke test passed with the d1538 grants. The candidate `uk-budget-api-2026-00003-jic` (policyengine 6.4.1, policyengine-uk 2.130.1, core 3.33.0) took no traffic. The smoke test failed with `/api/personal-impact returned HTTP 504`: the full household request did not finish within Cloud Run's 300 s. Traffic was left as it was: `uk-budget-api-2026-00001-gow` at 100%. That is 12 October's revision (git f47099d, policyengine 6.2.6, policyengine-uk 2.125.1), and `/api/version` confirms it is live.
+  - **No revision can be rolled back to yet.** A rollback runs `main`'s smoke test against its target before moving traffic, and no deployed revision answers the household request within 300 s. Until one does, `00001-gow` stays live as it is. The rollback rehearsal waits for a deploy that passes, after #39 (one full request: 254 s locally on `main`, 194 s with it).
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
 ## How a measure must be written
