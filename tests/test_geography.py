@@ -1239,13 +1239,16 @@ def fake_world(frs_regions):
     return household, person, changes
 
 
-def run_cli(monkeypatch, tmp_path, kind="efrs"):
+def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
 
     inputs, frs_regions, codes = synthetic_inputs(tmp_path)
     household, person, changes = fake_world(frs_regions)
     n = len(household)
+    if orphan:
+        # A copy that shares its key with no other household.
+        household["household_is_capital_gains_clone"] = np.arange(n) == 0
     region_of = dict(zip(frs_regions, codes))
     seat_of = {code: f"Z14{i + 1:06d}" for i, code in enumerate(codes)}
     seat_regions = {f"Z14{i:06d}": codes[(i - 1) % 12] for i in range(1, 25)}
@@ -1314,6 +1317,12 @@ def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
     assert code == 0
     assert [p.name for p in out.iterdir()] == ["constituency.csv"]
     assert validate_public(out) == []
+
+
+def test_data_the_key_cannot_link_stops_the_command(monkeypatch, tmp_path):
+    code, out, _ = run_cli(monkeypatch, tmp_path, orphan=True)
+    assert code == 1
+    assert not out.exists()
 
 
 # -- the front-end fixture --------------------------------------------------

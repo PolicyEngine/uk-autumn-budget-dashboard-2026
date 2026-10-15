@@ -1651,26 +1651,26 @@ def run_geography(parsed: argparse.Namespace) -> int:
         f"years {' '.join(map(str, plan.years))}"
     )
 
-    start = time.perf_counter()
-    collector = None
-    for reform in plan.reforms:
-        console.print(f"Simulating {reform.id}")
-        baseline, reformed = simulate_reform(reform, dataset, plan.years)
-        if collector is None:
-            collector = GeographyCollector.from_simulation(
-                baseline,
-                kind=parsed.dataset_kind,
-                regions=plan.regions,
-                seat_regions=plan.seat_regions,
-                seat_weights=plan.seat_weights,
-            )
-        for year in plan.years:
-            collector.collect(reform.id, year, baseline, reformed)
-        del baseline, reformed
-    simulate_s = time.perf_counter() - start
-
-    console.print("Estimating and checking")
     try:
+        start = time.perf_counter()
+        collector = None
+        for reform in plan.reforms:
+            console.print(f"Simulating {reform.id}")
+            baseline, reformed = simulate_reform(reform, dataset, plan.years)
+            if collector is None:
+                collector = GeographyCollector.from_simulation(
+                    baseline,
+                    kind=parsed.dataset_kind,
+                    regions=plan.regions,
+                    seat_regions=plan.seat_regions,
+                    seat_weights=plan.seat_weights,
+                )
+            for year in plan.years:
+                collector.collect(reform.id, year, baseline, reformed)
+            del baseline, reformed
+        simulate_s = time.perf_counter() - start
+
+        console.print("Estimating and checking")
         geo = build_release(
             collector,
             levels=plan.levels,
@@ -1687,7 +1687,13 @@ def run_geography(parsed: argparse.Namespace) -> int:
         written = write_public_tables(
             geo.release, parsed.out_dir, names, levels=geo.published_levels
         )
-    except (GeographyError, ValueError, PrivateOutputError) as error:
+    except (
+        GeographyError,
+        KeyError,
+        PrivateOutputError,
+        TypeError,
+        ValueError,
+    ) as error:
         console.print(f"[red]Error: {error}[/red]")
         return 1
     for path in written.values():
