@@ -72,10 +72,13 @@ def _seat_matrix(region: np.ndarray, position: np.ndarray, weight):
 def _changes(region, position, year: int) -> dict[str, np.ndarray]:
     """Each reform's change in household net income, a year."""
     step = 1.0 + 0.1 * (year - YEARS[0])
-    alpha = np.where(position % 3 == 0, 150.0 * (1 + position % 4), 0.0)
-    beta = np.zeros(len(region))
     london = region == "E12000007"
     wales = region == "W92000004"
+    # alpha does not apply in Wales, so Wales shows a zero.
+    alpha = np.where(
+        (position % 3 == 0) & ~wales, 150.0 * (1 + position % 4), 0.0
+    )
+    beta = np.zeros(len(region))
     beta[london & (position % 2 == 0)] = -60.0
     # A thin measure in Wales: fourteen households in its second seat.
     beta[wales & (position >= 80) & (position < 108) & (position % 2 == 0)] = (

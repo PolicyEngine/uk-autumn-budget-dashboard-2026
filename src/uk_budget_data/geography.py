@@ -861,6 +861,7 @@ class GeographyRelease:
         self.secondary: set[Cell] = set()
         self._tiers: dict[tuple, dict[str, str]] = {}
         self._sources: dict[tuple, dict[str, int]] = {}
+        self._loose: dict[tuple, bool] = {}
         self._assemble()
 
     # -- what is published, known and withheld
@@ -944,6 +945,33 @@ class GeographyRelease:
         if child_level == REGION:
             return list(codes)
         return [c for c in codes if self.seat_regions.get(c) == parent_area]
+
+    def parent(self, child_level: str, area: str) -> tuple[str, str]:
+        """The level and code of the area a child area nests in."""
+        if child_level == REGION:
+            return NATIONAL, NATIONAL_CODE
+        return REGION, self.seat_regions[area]
+
+    def has_loose(
+        self, child_level: str, parent_area: str, reform: str, year: int
+    ) -> bool:
+        """Whether a parent area holds weighted records in no child area.
+
+        The layer adds them to every remainder of a nesting given as
+        labels; a weight matrix has none.
+        """
+        key = (child_level, parent_area, reform, year)
+        if key not in self._loose:
+            child = self.estimates[(child_level, reform, year)].areas
+            parent_level = NATIONAL if child_level == REGION else REGION
+            parent = self.estimates[(parent_level, reform, year)].areas
+            self._loose[key] = child.one_area_per_record and bool(
+                (
+                    (parent.labels == parent_area)
+                    & (child.record_weights([], include_unassigned=True) > 0)
+                ).any()
+            )
+        return self._loose[key]
 
     # -- changing the release
 
@@ -1144,8 +1172,12 @@ class ResolutionError(GeographyError):
     reform, year, family and group.
     """
 
-    def __init__(self, message: str, findings: Iterable[Finding] = ()):
-        self.findings = [finding_label(f) for f in findings]
+    def __init__(
+        self, message: str, findings: Iterable[Union[Finding, str]] = ()
+    ):
+        self.findings = [
+            finding_label(f) if isinstance(f, Finding) else f for f in findings
+        ]
         detail = "; ".join(self.findings[:10])
         super().__init__(f"{message}: {detail}" if detail else message)
 
@@ -1239,21 +1271,144 @@ def _package_fix(geo: GeographyRelease, finding: Finding) -> Optional[Cell]:
     return _weakest(geo, components, contributors=False)
 
 
+def _demote(
+    geo: GeographyRelease,
+    level: str,
+    reforms: Iterable[str],
+    year: int,
+    label: Union[Finding, str],
+) -> frozenset[Run]:
+    """The published constituency runs a problem with no legal fix demotes.
+
+    ``reforms`` are the relation's: the reform of a nesting, or a package
+    and its measures.
+    """
+    if level != CONSTITUENCY:
+        raise ResolutionError("No legal fix", [label])
+    runs = frozenset(
+        (reform, year)
+        for reform in reforms
+        if geo.is_published((CONSTITUENCY, reform, year))
+    )
+    if not runs:
+        raise ResolutionError("No legal fix and nothing to demote", [label])
+    return runs
+
+
 def _demotion(geo: GeographyRelease, finding: Finding) -> frozenset[Run]:
     """The published constituency runs a finding with no legal fix demotes."""
-    if finding.level != CONSTITUENCY:
-        raise ResolutionError("No legal fix", [finding])
     reforms = {finding.reform}
     if finding.relation == "package":
         reforms |= set(geo.packages[finding.reform])
-    runs = frozenset(
-        (reform, finding.year)
-        for reform in reforms
-        if geo.is_published((CONSTITUENCY, reform, finding.year))
+    return _demote(geo, finding.level, reforms, finding.year, finding)
+
+
+def _public(geo: GeographyRelease, cell: Cell) -> bool:
+    """Whether a reader sees a cell: known from a prior, or not withheld (a
+    reference cell that passes counts as public elsewhere)."""
+    return cell in geo.known or geo.tier(cell) != WITHHELD
+
+
+def _alone_in_nesting(geo: GeographyRelease, cell: Cell) -> bool:
+    level, area, reform, year, family = cell
+    parent_level, parent_area = geo.parent(level, area)
+    parent_key = (parent_level, reform, year)
+    if parent_area not in geo.estimates[parent_key].areas.area_codes:
+        return False
+    parent = (parent_level, parent_area, reform, year, family)
+    if not _public(geo, parent) or geo.has_loose(
+        level, parent_area, reform, year
+    ):
+        return False
+    siblings = [
+        (level, other, reform, year, family)
+        for other in geo.children(level, parent_area, reform, year)
+        if other != area
+    ]
+    return all(_public(geo, s) or not geo.has_records(s) for s in siblings)
+
+
+def _alone_in_package(geo: GeographyRelease, cell: Cell, package: str) -> bool:
+    level, area, reform, year, family = cell
+    if not _public(geo, (level, area, package, year, family)):
+        return False
+    return all(
+        _public(geo, (level, area, other, year, family))
+        for other in geo.packages[package]
+        if other != reform
     )
-    if not runs:
-        raise ResolutionError("No legal fix and nothing to demote", [finding])
-    return runs
+
+
+def exposures(geo: GeographyRelease) -> list[tuple[str, Cell]]:
+    """Withheld published cells that subtraction recovers exactly.
+
+    The layer lets a withheld cell that meets the rules on its own stand
+    alone, since it is not sensitive itself. But a cell withheld beside
+    another (a measure beside a thin measure in a package, a region beside
+    its thin seats) protects it only while it cannot be recovered. A
+    withheld change cell is recovered when it is the only withheld cell of
+    its nesting group, whose parent and other children are public and which
+    holds no loose records; or the only withheld measure of a package whose
+    cell is public, the interaction taken as small, as the package's first
+    declaration takes it. Each is returned with ``nesting`` or the package.
+    """
+    found = []
+    for key in sorted(geo.estimates):
+        level, reform, year = key
+        if level == NATIONAL or not geo.is_published(key):
+            continue
+        for area in geo.estimates[key].areas.area_codes:
+            cell = (level, area, reform, year, FAMILY_CHANGE)
+            if _public(geo, cell):
+                continue
+            if _alone_in_nesting(geo, cell):
+                found.append(("nesting", cell))
+            for package, components in sorted(geo.packages.items()):
+                if reform in components and _alone_in_package(
+                    geo, cell, package
+                ):
+                    found.append((package, cell))
+    return found
+
+
+def exposure_label(kind: str, cell: Cell) -> str:
+    """An exposure as labels only."""
+    level, area, reform, year, family = cell
+    return f"exposed {kind} {level} {area} {reform} {year} {family}"
+
+
+def _exposure_fix(
+    geo: GeographyRelease, kind: str, cell: Cell
+) -> Union[Cell, frozenset]:
+    """Withhold a second cell of the group, so neither is recovered alone:
+    another child (or measure) with contributors, else with records, else
+    the parent (or the package). With none legal, demote or raise."""
+    level, area, reform, year, family = cell
+    if kind == "nesting":
+        parent_level, parent_area = geo.parent(level, area)
+        group = [
+            (level, other, reform, year, family)
+            for other in geo.children(level, parent_area, reform, year)
+            if other != area
+        ]
+        whole = (parent_level, parent_area, reform, year, family)
+        reforms = {reform}
+    else:
+        group = [
+            (level, area, other, year, family)
+            for other in geo.packages[kind]
+            if other != reform
+        ]
+        whole = (level, area, kind, year, family)
+        reforms = {kind, *geo.packages[kind]}
+    fix = _weakest(geo, group, contributors=True) or _weakest(
+        geo, group, contributors=False
+    )
+    if fix is None and geo.can_withhold(whole):
+        fix = whole
+    if fix is not None:
+        return fix
+    return _demote(geo, level, reforms, year, exposure_label(kind, cell))
 
 
 def _fix(geo: GeographyRelease, finding: Finding) -> Union[Cell, frozenset]:
@@ -1274,10 +1429,10 @@ def _fix(geo: GeographyRelease, finding: Finding) -> Union[Cell, frozenset]:
 def resolve(
     geo: GeographyRelease, *, max_rounds: int = MAX_ROUNDS
 ) -> ResolutionLog:
-    """Withhold cells until no blocking finding remains. Deterministic.
+    """Withhold cells until no blocking finding or exposure remains.
 
-    Each round checks, gathers one fix per blocking finding and applies
-    them together. A fix withholds a published cell that is not known from
+    Deterministic. Each round checks, gathers one fix per blocking finding
+    and applies them together. A fix withholds a published cell that is not known from
     a prior: the cell the layer suggests, or the legal one with the fewest
     sources, or else the parent (the package). A finding with no legal fix
     demotes its constituency run to a reference with every cell withheld,
@@ -1286,46 +1441,84 @@ def resolve(
     unchecked overlap) raise, as does a round that adds nothing or more
     than ``max_rounds`` rounds.
 
-    The layer checks each relation on its own. A cell withheld to protect
-    another in one relation (a measure withheld beside a thin measure in a
-    package) can still be recovered through a second one (national minus
-    the other regions), which this resolver does not look for either.
+    The layer checks each relation on its own, so a cell withheld to
+    protect another in one relation could be recovered through a second.
+    Once the layer finds nothing, each round also looks for withheld cells
+    that subtraction recovers exactly through one relation (``exposures``)
+    and withholds a second cell beside each, until there are none. That
+    builds the rectangles a table with public totals needs. Recovery
+    through several relations at once is not searched for.
 
     Raises:
-        ResolutionError: With the remaining findings as labels.
+        ResolutionError: With the remaining problems as labels.
     """
     log = ResolutionLog()
     start = time.perf_counter()
     while True:
         findings = geo.release.check()
         blocking = [finding for finding in findings if finding.blocking]
-        if not blocking:
+        exposed = [] if blocking else exposures(geo)
+        if not blocking and not exposed:
             log.withheld = sorted(geo.secondary)
             log.demotions = sorted(geo.demoted)
             log.notices = sorted({finding_label(f) for f in findings})
             geo.timings["resolve_s"] = time.perf_counter() - start
             return log
+        problems = blocking or [exposure_label(*e) for e in exposed]
         if log.rounds >= max_rounds:
             raise ResolutionError(
-                f"Unresolved after {max_rounds} rounds", blocking
+                f"Unresolved after {max_rounds} rounds", problems
             )
         log.rounds += 1
-        cells: set[Cell] = set()
-        demotions: set[Run] = set()
-        for finding in blocking:
-            fix = _fix(geo, finding)
-            if isinstance(fix, frozenset):
-                demotions |= fix
-            else:
-                cells.add(fix)
+        if blocking:
+            added, demotions = _apply_finding_fixes(geo, blocking)
+        else:
+            added, demotions = _apply_exposure_fixes(geo, exposed)
         if demotions:
             geo.demote(demotions)
             log.passes += 1
             continue
-        new = cells - geo.secondary
-        if not new:
-            raise ResolutionError("A round added nothing", blocking)
-        geo.withhold(new)
+        if not added:
+            raise ResolutionError("A round added nothing", problems)
+
+
+def _apply_finding_fixes(
+    geo: GeographyRelease, blocking: Sequence[Finding]
+) -> tuple[int, set[Run]]:
+    """One fix per blocking finding, applied together."""
+    fixes = [_fix(geo, finding) for finding in blocking]
+    demotions = set().union(
+        *(fix for fix in fixes if isinstance(fix, frozenset))
+    )
+    if demotions:
+        return 0, demotions
+    new = {fix for fix in fixes if not isinstance(fix, frozenset)}
+    new -= geo.secondary
+    geo.withhold(new)
+    return len(new), set()
+
+
+def _apply_exposure_fixes(
+    geo: GeographyRelease, exposed: Sequence[tuple[str, Cell]]
+) -> tuple[int, set[Run]]:
+    """Fix exposures one at a time, so a cell withheld for one can close
+    the next: each is checked again before it is fixed."""
+    added, demotions = 0, set()
+    for kind, cell in exposed:
+        alone = (
+            _alone_in_nesting(geo, cell)
+            if kind == "nesting"
+            else _alone_in_package(geo, cell, kind)
+        )
+        if not alone:
+            continue
+        fix = _exposure_fix(geo, kind, cell)
+        if isinstance(fix, frozenset):
+            demotions |= fix
+        else:
+            geo.withhold([fix])
+            added += 1
+    return added, demotions
 
 
 # -- public tables and the private audit -------------------------------------

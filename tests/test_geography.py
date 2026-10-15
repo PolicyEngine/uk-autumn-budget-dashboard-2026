@@ -805,8 +805,15 @@ def lonely_seat_world(levels=("region", "constituency"), prior=None):
 def test_with_no_seat_to_withhold_the_region_is_withheld():
     geo = lonely_seat_world()
     log = g.resolve(geo)
-    assert log.withheld == [cell("region", R1, "thin")]
+    assert log.withheld == [
+        # R1 alone would be the national total less R2, so R2 goes too,
+        # and then one of R2's seats, since its seats would add up to it.
+        cell("constituency", S3, "thin"),
+        cell("region", R1, "thin"),
+        cell("region", R2, "thin"),
+    ]
     assert tier_of(geo, "region", R1, "thin") == WITHHELD
+    assert g.exposures(geo) == []
 
 
 def test_with_no_legal_fix_the_seat_run_is_demoted(tmp_path):
@@ -880,6 +887,52 @@ def test_a_thin_measure_in_a_package_withholds_another_measure():
     assert tier_of(geo, "region", R1, PKG) != WITHHELD
 
 
+def test_withheld_cells_form_a_rectangle():
+    # beta in R1, withheld for the package, would be the national total
+    # less the other regions; alpha in R2, withheld for alpha's nesting,
+    # would be the package less beta there. Withholding beta in R2 closes
+    # the rectangle of alpha and beta in R1 and R2.
+    geo = thin_measure_world()
+    log = g.resolve(geo)
+    assert log.withheld == [
+        cell("region", R1, "beta"),
+        cell("region", R2, "alpha"),
+        cell("region", R2, "beta"),
+    ]
+    assert tier_of(geo, "region", R1, "alpha") == WITHHELD
+    assert g.exposures(geo) == []
+
+
+def test_a_lone_withheld_cell_is_found():
+    geo = thin_measure_world()
+    geo.withhold([cell("region", R1, "beta"), cell("region", R2, "alpha")])
+    assert g.exposures(geo) == [
+        (PKG, cell("region", R2, "alpha")),
+        ("nesting", cell("region", R1, "beta")),
+    ]
+
+
+def test_loose_records_keep_a_lone_region_hidden():
+    n = 330
+    regions_per_record = np.array([R1] * 150 + [R2] * 150 + [""] * 30)
+    labels = np.array(
+        [S1] * 75 + [S2] * 75 + [S3] * 75 + [S4] * 75 + [""] * 30
+    )
+    change = change_on(n, [0, 1, 2, *range(150, 250), *range(300, 330)])
+    collector = make_collector(
+        regions_per_record,
+        {"thin": change},
+        labels=labels,
+        national=True,
+    )
+    geo = g.build_release(collector, seat_reforms=["thin"], settings=FAST)
+    log = g.resolve(geo)
+    # Households in no region stay hidden beside R1, so R1 is withheld
+    # alone and nothing else needs to be.
+    assert tier_of(geo, "region", R1, "thin") == WITHHELD
+    assert cell("region", R2, "thin") not in log.withheld
+
+
 def test_a_package_dominated_beside_its_measures_is_withheld_by_seat():
     n = 300
     weight = np.full(n, 100.0)
@@ -907,6 +960,37 @@ def test_a_package_dominated_beside_its_measures_is_withheld_by_seat():
     log = g.resolve(geo)
     assert cell("constituency", S1, PKG) in log.withheld
     assert tier_of(geo, "constituency", S1, PKG) == WITHHELD
+
+
+def test_a_lone_seat_with_no_legal_partner_demotes_its_run():
+    n = 300
+    weight = np.full(n, 100.0)
+    weight[0] = 1.0
+    # R1 has a single seat, so the package's withheld cell there would be
+    # R1's package value, and R1 is a reference that cannot be withheld.
+    matrix = block_matrix([(0, 75), (150, 225), (225, 300)], n)
+    seat_regions = {S1: R1, S3: R2, S4: R2}
+    alpha = change_on(n, [*range(1, 41), *range(150, 200)], 10.0)
+    alpha[0] = 10_000.0
+    interaction = np.zeros(n)
+    interaction[0] = -10_000.0
+    collector = make_collector(
+        two_regions(n),
+        {PKG: alpha + interaction, "alpha": alpha, "beta": np.zeros(n)},
+        matrix=matrix,
+        seat_regions=seat_regions,
+        weight=weight,
+    )
+    geo = g.build_release(
+        collector,
+        levels=("constituency",),
+        seat_reforms=[PKG],
+        packages={PKG: ("alpha", "beta")},
+        settings=FAST,
+    )
+    log = g.resolve(geo)
+    assert log.demotions == [(PKG, 2026)]
+    assert published_frame(geo).empty
 
 
 def test_a_withheld_package_beside_public_measures_withholds_one():
