@@ -144,10 +144,16 @@ def get_calculator() -> PersonalImpactCalculator:
 
 
 @app.post("/api/personal-impact")
-async def calculate_personal_impact(data: APIHouseholdInput):
+def calculate_personal_impact(data: APIHouseholdInput):
     """Calculate personal impact for a household.
 
     Returns year-by-year impact breakdown per policy.
+
+    A plain ``def``: the calculation takes minutes of CPU, and FastAPI runs
+    a plain handler in its thread pool, so the server's event loop keeps
+    answering other requests (``/api/version``, ``/api/health``) meanwhile.
+    As ``async def`` it ran on the event loop and blocked every request to
+    the instance until it finished.
     """
     try:
         household_input = convert_api_input_to_household(data)
