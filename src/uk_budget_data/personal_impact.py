@@ -6,7 +6,14 @@ households over time (2025-2029).
 
 import copy
 import json
+import logging
+import multiprocessing
+import os
+import threading
+from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Optional
 
 from policyengine_uk import Simulation
@@ -206,8 +213,10 @@ class AsBuilt:
     in the simulation and in the baseline simulations it holds (which
     formulas can read), and branches created since are dropped (an
     existing branch keeps the values it has calculated). The calculator's
-    reads touch neither the baseline simulations nor branches today; those
-    parts are there for a metric that would.
+    reads leave nothing in the baseline simulations and no branch behind
+    today: the engine creates one branch during a read
+    (``uc_non_dep_pension_credit``) and deletes it before the read ends.
+    Those parts are there for a metric that would leave one.
     """
 
     def __init__(self, sim: Simulation):
@@ -390,10 +399,172 @@ def calculate_household_metrics(sim: Simulation, year: int) -> dict:
     }
 
 
+def simulate_years(situation: dict, years: list[int], scenario) -> dict:
+    """One simulation's metrics for each of ``years``: built once, and each
+    year read from it as built (``AsBuilt``). Runs in a worker process when
+    the calculator has more than one."""
+    sim = Simulation(situation=situation, scenario=scenario)
+    built = AsBuilt(sim)
+    metrics = {}
+    for year in years:
+        built.restore()
+        metrics[year] = calculate_household_metrics(sim, year)
+    return metrics
+
+
+# Where cgroup v2 states this process's CPU quota.
+CGROUP_CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
+
+
+def household_workers() -> int:
+    """How many worker processes a calculation uses.
+
+    ``HOUSEHOLD_WORKERS`` if set (the deploy sets it with the instance's
+    vCPUs), else the CPU quota of this process's cgroup (``cpu.max``), else
+    1. Not the CPUs the process may be scheduled on: a Cloud Run instance
+    can see more CPUs than its quota lets it use, and more workers than
+    that would only share them and use more memory. With 1, every
+    simulation is built in this process, one at a time.
+    """
+    configured = os.environ.get("HOUSEHOLD_WORKERS")
+    if configured:
+        try:
+            return max(1, int(configured))
+        except ValueError:
+            # A misconfigured server, not a bad request: fall back.
+            logging.getLogger(__name__).warning(
+                "HOUSEHOLD_WORKERS=%r is not a whole number; ignoring it",
+                configured,
+            )
+    try:
+        quota, period = CGROUP_CPU_MAX.read_text().split()[:2]
+    except (OSError, ValueError):
+        return 1
+    if quota == "max":
+        return 1
+    return max(1, int(int(quota) // int(period)))
+
+
+_pool: Optional[ProcessPoolExecutor] = None
+_pool_workers = 0
+_pool_lock = threading.Lock()
+
+# How long one household calculation's jobs may take before the calculation
+# is abandoned and its workers stopped (Cloud Run's request limit is 300 s),
+# so a hung worker can't hold every later calculation.
+CALCULATION_TIMEOUT_SECONDS = float(
+    os.environ.get("HOUSEHOLD_CALCULATION_TIMEOUT", "280")
+)
+
+
+def worker_pool(workers: int) -> ProcessPoolExecutor:
+    """A process pool shared by every calculation in this process.
+
+    Workers fork from a forkserver that has imported this module, so they
+    start without importing the engine again and share its pages. Each
+    worker builds one simulation and exits (``max_tasks_per_child=1``):
+    what a build leaves behind in the process (policyengine-core registers
+    every variable module per tax-benefit system) goes with it. The
+    forkserver starts with numexpr and OpenMP limited to one thread, so
+    each worker uses one CPU (there is one worker per vCPU) and the
+    forkserver has no idle library threads when it forks.
+    """
+    global _pool, _pool_workers
+    with _pool_lock:
+        if _pool is None or _pool_workers != workers:
+            if _pool is not None:
+                _pool.shutdown(wait=False, cancel_futures=True)
+            methods = multiprocessing.get_all_start_methods()
+            context = multiprocessing.get_context(
+                "forkserver" if "forkserver" in methods else "spawn"
+            )
+            if context.get_start_method() == "forkserver":
+                # Inherited by the forkserver when it starts; this process
+                # has already imported numexpr, so it is unaffected.
+                for name in (
+                    "NUMEXPR_NUM_THREADS",
+                    "NUMEXPR_MAX_THREADS",
+                    "OMP_NUM_THREADS",
+                ):
+                    os.environ.setdefault(name, "1")
+                context.set_forkserver_preload(
+                    ["uk_budget_data.personal_impact"]
+                )
+            _pool = ProcessPoolExecutor(
+                max_workers=workers, mp_context=context, max_tasks_per_child=1
+            )
+            _pool_workers = workers
+        return _pool
+
+
+def discard_pool(pool: ProcessPoolExecutor) -> None:
+    """Drop a pool that can no longer be trusted (a worker died or hung)
+    so the next calculation gets a new one, and stop its workers. A broken
+    pool would otherwise refuse every later calculation in this process."""
+    global _pool, _pool_workers
+    with _pool_lock:
+        if _pool is pool:
+            _pool, _pool_workers = None, 0
+    # The executor offers no way to stop a running worker.
+    for process in list(getattr(pool, "_processes", {}).values()):
+        process.terminate()
+    pool.shutdown(wait=False, cancel_futures=True)
+
+
+def run_jobs(workers: int, jobs: list) -> list:
+    """Each job's metrics, computed in worker processes.
+
+    If a job fails, the jobs not yet started are cancelled and its error is
+    raised. If a worker dies, the pool is discarded, so the next
+    calculation gets a new one; a pool found broken before any job ran
+    (its forkserver died between calculations) is replaced once.
+    """
+    for attempt in (1, 2):
+        pool = worker_pool(workers)
+        try:
+            futures = [
+                pool.submit(simulate_years, situation, years, scenario)
+                for years, situation, _, scenario in jobs
+            ]
+            break
+        except BrokenProcessPool:
+            discard_pool(pool)
+            if attempt == 2:
+                raise
+    done, pending = wait(
+        futures,
+        timeout=CALCULATION_TIMEOUT_SECONDS,
+        return_when=FIRST_EXCEPTION,
+    )
+    if pending:
+        for future in pending:
+            future.cancel()
+        failed = [f for f in done if f.exception() is not None]
+        if not failed:
+            discard_pool(pool)
+            raise TimeoutError(
+                "The household calculation took more than "
+                f"{CALCULATION_TIMEOUT_SECONDS:.0f} s"
+            )
+        error = failed[0].exception()
+        if isinstance(error, BrokenProcessPool):
+            discard_pool(pool)
+        raise error
+    try:
+        return [future.result() for future in futures]
+    except BrokenProcessPool:
+        discard_pool(pool)
+        raise
+
+
 class PersonalImpactCalculator:
     """Calculator for personal household impact from budget policies."""
 
-    def __init__(self, config: Optional[DataConfig] = None):
+    def __init__(
+        self,
+        config: Optional[DataConfig] = None,
+        workers: Optional[int] = None,
+    ):
         """Initialize the calculator by loading reforms.
 
         Args:
@@ -401,8 +572,12 @@ class PersonalImpactCalculator:
                 with, whose baseline a measure without its own is compared
                 against. The default is ``generate``'s, which sets no
                 global baseline.
+            workers: Worker processes per calculation; the default is
+                ``household_workers()``. With one, every simulation is
+                built in this process, one at a time.
         """
         self.config = config if config is not None else DataConfig()
+        self.workers = workers if workers is not None else household_workers()
         self.reforms = {
             reform.id: reform
             for reform in get_autumn_budget_2026_reforms()
@@ -468,17 +643,27 @@ class PersonalImpactCalculator:
             )
             for policy_id, reform in reforms
         }
+        # One job per situation and distinct scenario. With several
+        # workers they run in parallel, each simulation in a process of its
+        # own; with one, here, one at a time, so memory stays that of one
+        # simulation (with the baseline simulation the engine builds inside
+        # it).
+        jobs = [
+            (years, situation, key, scenario)
+            for years, situation in build_situations(household, YEARS)
+            for key, scenario in scenarios.items()
+        ]
+        if self.workers > 1 and len(jobs) > 1:
+            outputs = run_jobs(self.workers, jobs)
+        else:
+            outputs = [
+                simulate_years(situation, years, scenario)
+                for years, situation, _, scenario in jobs
+            ]
         metrics = {}
-        for years, situation in build_situations(household, YEARS):
-            # One simulation at a time, so memory stays that of one (with
-            # the baseline simulation the engine builds inside it).
-            for key, scenario in scenarios.items():
-                sim = Simulation(situation=situation, scenario=scenario)
-                built = AsBuilt(sim)
-                for year in years:
-                    built.restore()
-                    metrics[key, year] = calculate_household_metrics(sim, year)
-                del sim, built
+        for (years, _, key, _), output in zip(jobs, outputs):
+            for year in years:
+                metrics[key, year] = output[year]
 
         for year in YEARS:
             results["years"][year] = {

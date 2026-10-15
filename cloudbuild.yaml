@@ -150,8 +150,12 @@ steps:
             out = digits[r] + out
         print(out or "0")' "${BUILD_ID}")"
         echo "$$tag" > /workspace/candidate_tag
+        # HOUSEHOLD_WORKERS: the worker processes one household calculation
+        # uses. Keep it equal to --cpu: more would only share the vCPUs and
+        # use more memory.
         common="--image $$image --region ${_REGION} --platform managed \
           --no-invoker-iam-check --memory 2Gi --cpu 2 --timeout 300 \
+          --update-env-vars HOUSEHOLD_WORKERS=2 \
           --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
         # A failed lookup stops the build; only a confirmed absence creates.

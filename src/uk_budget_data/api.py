@@ -6,10 +6,13 @@ policies affect individual households over time.
 
 import json
 import os
+import time
+from pathlib import Path
+from typing import Optional
 
 import anyio
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
@@ -152,9 +155,53 @@ def get_calculator() -> PersonalImpactCalculator:
 # --concurrency.
 CALCULATIONS = anyio.CapacityLimiter(1)
 
+# Where a container's cgroup reports its peak memory: cgroup v2, then v1.
+MEMORY_PEAK_FILES = (
+    Path("/sys/fs/cgroup/memory.peak"),
+    Path("/sys/fs/cgroup/memory/memory.max_usage_in_bytes"),
+)
+
+
+def memory_peak_bytes() -> Optional[int]:
+    """The container's peak memory use so far (its lifetime high-water
+    mark, page cache included), from its cgroup, or None where no cgroup
+    reports it (outside a container)."""
+    for path in MEMORY_PEAK_FILES:
+        try:
+            return int(path.read_text().split()[0])
+        except (OSError, ValueError, IndexError):
+            continue
+    return None
+
+
+def server_timing(
+    calculating: float, queued: float, peak: Optional[int]
+) -> str:
+    """A Server-Timing header: the calculation's own time, the time the
+    request waited for the calculation before it, and, where the cgroup
+    reports it, the container's peak memory, so a deployed revision can be
+    measured from outside (``curl -i``)."""
+    parts = [
+        f"calculate;dur={calculating * 1000:.0f}",
+        f"queue;dur={queued * 1000:.0f}",
+    ]
+    if peak is not None:
+        parts.append(f'memory;desc="peak {peak / 2**20:.0f} MiB"')
+    return ", ".join(parts)
+
+
+def timed(calculate, household):
+    """The calculation's results and how long it took, timed in the worker
+    thread so a wait for the limiter isn't counted."""
+    started = time.perf_counter()
+    results = calculate(household)
+    return results, time.perf_counter() - started
+
 
 @app.post("/api/personal-impact")
-async def calculate_personal_impact(data: APIHouseholdInput):
+async def calculate_personal_impact(
+    data: APIHouseholdInput, response: Response
+):
     """Calculate personal impact for a household.
 
     Returns year-by-year impact breakdown per policy.
@@ -167,8 +214,14 @@ async def calculate_personal_impact(data: APIHouseholdInput):
     try:
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
-        results = await anyio.to_thread.run_sync(
-            calculator.calculate, household_input, limiter=CALCULATIONS
+        received = time.perf_counter()
+        results, calculating = await anyio.to_thread.run_sync(
+            timed, calculator.calculate, household_input, limiter=CALCULATIONS
+        )
+        response.headers["Server-Timing"] = server_timing(
+            calculating,
+            time.perf_counter() - received - calculating,
+            memory_peak_bytes(),
         )
         return convert_to_native(results)
     except ValueError as e:

@@ -15,6 +15,7 @@ import threading
 import time
 
 import httpx
+import pytest
 
 from uk_budget_data import api
 
@@ -96,3 +97,52 @@ def test_calculations_run_one_at_a_time_in_arrival_order(monkeypatch):
         calculator.runs, calculator.runs[1:]
     ):
         assert start >= previous_end
+
+
+def timing(response):
+    """The Server-Timing entries, as {name: dur in ms or desc}."""
+    entries = {}
+    for entry in response.headers["server-timing"].split(", "):
+        name, _, value = entry.partition(";")
+        entries[name] = (
+            float(value.split("=", 1)[1])
+            if value.startswith("dur=")
+            else value
+        )
+    return entries
+
+
+@pytest.mark.parametrize("peak", [3 * 2**30, None])
+def test_the_household_route_reports_its_time_and_memory(
+    peak, monkeypatch, tmp_path
+):
+    """Server-Timing carries the calculation's own time, its wait for the
+    one before, and, where the container's cgroup reports it, the peak
+    memory. The second of two requests sent together waits for the first."""
+    calculator = RecordingCalculator()
+    monkeypatch.setattr(api, "get_calculator", lambda: calculator)
+    path = tmp_path / "memory.peak"
+    if peak is not None:
+        path.write_text(f"{peak}\n")
+    monkeypatch.setattr(api, "MEMORY_PEAK_FILES", (path,))
+
+    async def run():
+        async with client() as session:
+            first = asyncio.create_task(post(session, 10_000))
+            await asyncio.sleep(0.02)
+            second = asyncio.create_task(post(session, 20_000))
+            return await first, await second
+
+    first, second = asyncio.run(run())
+    assert first.status_code == second.status_code == 200
+    held = HOLD_SECONDS * 1000
+    for response in (first, second):
+        entries = timing(response)
+        assert entries["calculate"] >= held * 0.9
+        if peak is None:
+            assert "memory" not in entries
+        else:
+            assert entries["memory"] == 'desc="peak 3072 MiB"'
+    # The second request queued behind the first's calculation.
+    assert timing(first)["queue"] < held / 2
+    assert timing(second)["queue"] >= held * 0.5
