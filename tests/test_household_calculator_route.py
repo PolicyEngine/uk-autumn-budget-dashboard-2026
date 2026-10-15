@@ -377,3 +377,160 @@ def test_no_change_builds_the_plain_simulation():
     plain = Simulation(situation=probe)
     built = personal_impact.create_simulation(probe, 2027)
     assert _net(built, 2027) == _net(plain, 2027)
+
+
+# Review round 10 of #23: the household calculator chose its own baseline
+# (current law unless the measure had one) and took a modifier's return as
+# the simulation. The national pipeline takes the baseline from
+# Reform.baseline_scenario_for(config), and the engine runs a modifier
+# itself, ignoring its return.
+ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
+PENSIONER = {
+    "people": {
+        "p": {"age": {2027: 75}, "private_pension_income": {2027: 30_000}}
+    },
+    "benunits": {"b": {"members": ["p"]}},
+    "households": {"h": {"members": ["p"]}},
+}
+
+
+def _allowance(amount, years=(2027,)):
+    return {ALLOWANCE: {str(year): amount for year in years}}
+
+
+def _does_nothing(sim):
+    """A baseline modifier with no effect, which returns nothing."""
+
+
+@pytest.mark.parametrize(
+    "own_baseline, configured, baseline_tax",
+    [
+        # No baseline of its own: the configured one. £30,000 of pension
+        # less a £20,000 allowance, at 20%.
+        ({}, _allowance(20_000), 2_000),
+        # Its own baseline wins over the configured one.
+        (
+            {"baseline_parameter_changes": _allowance(18_000)},
+            _allowance(20_000),
+            2_400,
+        ),
+        # An explicit empty baseline is its own: current law, not the
+        # configured one (£30,000 less £12,570, at 20%).
+        ({"baseline_parameter_changes": {}}, _allowance(20_000), 3_486),
+        # So is a baseline that is a modifier alone.
+        (
+            {"baseline_simulation_modifier": _does_nothing},
+            _allowance(20_000),
+            3_486,
+        ),
+        # Nothing configured, nothing of its own: current law.
+        ({}, None, 3_486),
+    ],
+    ids=[
+        "configured",
+        "own over configured",
+        "explicit empty",
+        "modifier only",
+        "current law",
+    ],
+)
+def test_a_household_baseline_is_the_national_runs(
+    own_baseline, configured, baseline_tax
+):
+    from uk_budget_data.models import DataConfig, Reform
+
+    reform = Reform(
+        id="probe",
+        name="Probe",
+        parameter_changes=_allowance(15_000),
+        **own_baseline,
+    )
+    config = DataConfig(baseline_parameter_changes=configured)
+    baseline, reformed = personal_impact.household_simulations(
+        PENSIONER, reform, config
+    )
+    national = Simulation(
+        situation=PENSIONER, scenario=reform.baseline_scenario_for(config)
+    )
+    assert float(baseline.calculate("income_tax", 2027)[0]) == baseline_tax
+    assert float(national.calculate("income_tax", 2027)[0]) == baseline_tax
+    # £30,000 less a £15,000 allowance, at 20%.
+    assert float(reformed.calculate("income_tax", 2027)[0]) == 3_000
+
+
+def test_the_calculator_compares_against_the_configured_baseline():
+    """Through the calculator itself: a measure with no baseline of its own
+    is compared with the configured baseline, which the calculator also
+    reports as the year's baseline."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    years = personal_impact.YEARS
+    calculator = personal_impact.PersonalImpactCalculator(
+        config=DataConfig(baseline_parameter_changes=_allowance(20_000, years))
+    )
+    # One measure, under an id the calculator shows.
+    measure_id = personal_impact.POLICY_IDS[0]
+    calculator.reforms = {
+        measure_id: Reform(
+            id=measure_id,
+            name="Probe",
+            parameter_changes=_allowance(15_000, years),
+        )
+    }
+    results = calculator.calculate(
+        personal_impact.HouseholdInput(employment_income=30_000)
+    )
+    # Income tax rises from £2,000 to £3,000; against current law (£3,486)
+    # it would have fallen.
+    assert results["policies"][measure_id]["years"][2027][
+        "net_income_change"
+    ] == pytest.approx(-1_000, abs=0.01)
+    assert results["years"][2027]["baseline"]["income_tax"] == (
+        pytest.approx(2_000, abs=0.01)
+    )
+
+
+def _set_earnings(sim, amount=40_000):
+    """Mutates the simulation and returns nothing."""
+    sim.set_input("employment_income", 2027, [amount])
+
+
+def _set_earnings_and_return(sim, amount=40_000):
+    _set_earnings(sim, amount)
+    return sim
+
+
+@pytest.mark.parametrize("modifier", [_set_earnings, _set_earnings_and_return])
+@pytest.mark.parametrize("side", ["reform", "baseline"])
+def test_a_modifier_runs_as_the_engine_runs_it(modifier, side):
+    """Whether or not the modifier returns the simulation, on either side,
+    the household gets what the national route gets: £40,000 less the
+    £12,570 allowance, at 20%."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    earner = {
+        "people": {
+            "p": {"age": {2027: 40}, "employment_income": {2027: 30_000}}
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"]}},
+    }
+    built = personal_impact.create_simulation(
+        earner, 2027, simulation_modifier=modifier
+    )
+    national = Simulation(
+        situation=earner, scenario=Scenario(simulation_modifier=modifier)
+    )
+    assert float(built.calculate("income_tax", 2027)[0]) == 5_486
+    assert float(national.calculate("income_tax", 2027)[0]) == 5_486
+    key = (
+        "simulation_modifier"
+        if side == "reform"
+        else ("baseline_simulation_modifier")
+    )
+    reform = Reform(id="probe", name="Probe", **{key: modifier})
+    baseline, reformed = personal_impact.household_simulations(
+        earner, reform, DataConfig()
+    )
+    moved = reformed if side == "reform" else baseline
+    assert float(moved.calculate("income_tax", 2027)[0]) == 5_486

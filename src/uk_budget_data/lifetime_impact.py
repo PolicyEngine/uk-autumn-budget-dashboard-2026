@@ -7,13 +7,14 @@ Based on IFS lifetime earnings research methodology.
 """
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, Optional
 
 import pandas as pd
 from policyengine_uk import Simulation
 from rich.console import Console
 from rich.table import Table
 
+from uk_budget_data.models import DataConfig
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 # Graduate starting income by percentile (age 22, 2025 prices)
@@ -251,9 +252,18 @@ def build_lifetime_situation(
 class LifetimeImpactCalculator:
     """Calculator for lifetime policy impacts."""
 
-    def __init__(self, verbose: bool = True):
-        """Initialise calculator."""
+    def __init__(
+        self, verbose: bool = True, config: Optional[DataConfig] = None
+    ):
+        """Initialise calculator.
+
+        Args:
+            verbose: Whether to log progress.
+            config: The configuration whose baseline a measure without its
+                own is compared against; the default sets none.
+        """
         self.verbose = verbose
+        self.config = config if config is not None else DataConfig()
         self.console = Console() if verbose else None
         self.reforms = {
             r.id: r
@@ -359,7 +369,10 @@ class LifetimeImpactCalculator:
             # For future years, extrapolate from 2029 patterns
             sim_year = min(year, 2029)
 
-            baseline_sim = Simulation(situation=situation)
+            baseline_sim = Simulation(
+                situation=situation,
+                scenario=self.config.get_baseline_scenario(),
+            )
             baseline_net = float(
                 baseline_sim.calculate("household_net_income", sim_year)[0]
             )
@@ -510,24 +523,11 @@ class LifetimeImpactCalculator:
         reform,
     ) -> float:
         """Calculate net income impact of a single reform."""
-        from uk_budget_data.personal_impact import create_simulation
+        from uk_budget_data.personal_impact import household_simulations
 
         try:
-            if reform.has_custom_baseline():
-                baseline_sim = create_simulation(
-                    situation,
-                    year,
-                    reform_param_changes=reform.baseline_parameter_changes,
-                    simulation_modifier=reform.baseline_simulation_modifier,
-                )
-            else:
-                baseline_sim = Simulation(situation=situation)
-
-            reform_sim = create_simulation(
-                situation,
-                year,
-                reform_param_changes=reform.parameter_changes,
-                simulation_modifier=reform.simulation_modifier,
+            baseline_sim, reform_sim = household_simulations(
+                situation, reform, self.config
             )
 
             baseline_net = float(

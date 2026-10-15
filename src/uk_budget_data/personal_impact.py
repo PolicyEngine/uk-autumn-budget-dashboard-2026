@@ -5,11 +5,12 @@ households over time (2025-2029).
 """
 
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Optional
 
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
 )
@@ -145,20 +146,43 @@ def create_simulation(
     # reached only what reads that one day: a monthly variable such as
     # fuel_duty saw 1/12 of a change, a duty kept on its statutory dates
     # (alcohol) saw none, and derived thresholds were not recomputed.
-    sim = Simulation(
+    # The modifier goes in the same Scenario, so the engine runs it where
+    # the national run does and ignores what it returns: taking its return
+    # as the simulation turned a modifier that returns nothing into None.
+    scenario = {}
+    if reform_param_changes:
+        scenario["parameter_changes"] = reform_param_changes
+    if simulation_modifier is not None:
+        scenario["simulation_modifier"] = simulation_modifier
+    return Simulation(
         situation=situation,
-        scenario=(
-            Scenario(parameter_changes=reform_param_changes)
-            if reform_param_changes
-            else None
-        ),
+        scenario=Scenario(**scenario) if scenario else None,
     )
 
-    # Apply simulation modifier if provided
-    if simulation_modifier:
-        sim = simulation_modifier(sim)
 
-    return sim
+def household_simulations(
+    situation: dict, reform: Reform, config: DataConfig
+) -> tuple[Simulation, Simulation]:
+    """The baseline and reformed simulations of a household under a
+    measure, built as the national pipeline builds its own: the baseline
+    from ``reform.baseline_scenario_for(config)`` (the measure's own
+    baseline, else the configured one, else current law) and the reform
+    from ``reform.to_scenario()``.
+
+    Args:
+        situation: PolicyEngine situation dictionary.
+        reform: The measure.
+        config: The configuration the national figures were generated with.
+
+    Returns:
+        ``(baseline, reformed)``.
+    """
+    return (
+        Simulation(
+            situation=situation, scenario=reform.baseline_scenario_for(config)
+        ),
+        Simulation(situation=situation, scenario=reform.to_scenario()),
+    )
 
 
 def calculate_household_metrics(sim: Simulation, year: int) -> dict:
@@ -210,8 +234,16 @@ def calculate_household_metrics(sim: Simulation, year: int) -> dict:
 class PersonalImpactCalculator:
     """Calculator for personal household impact from budget policies."""
 
-    def __init__(self):
-        """Initialize the calculator by loading reforms."""
+    def __init__(self, config: Optional[DataConfig] = None):
+        """Initialize the calculator by loading reforms.
+
+        Args:
+            config: The configuration the national figures were generated
+                with, whose baseline a measure without its own is compared
+                against. The default is ``generate``'s, which sets no
+                global baseline.
+        """
+        self.config = config if config is not None else DataConfig()
         self.reforms = {
             reform.id: reform
             for reform in get_autumn_budget_2026_reforms()
@@ -255,7 +287,10 @@ class PersonalImpactCalculator:
         baselines = {}
         for year in YEARS:
             situation = build_situation(household, year)
-            baseline_sim = create_simulation(situation, year)
+            baseline_sim = Simulation(
+                situation=situation,
+                scenario=self.config.get_baseline_scenario(),
+            )
             baselines[year] = calculate_household_metrics(baseline_sim, year)
             results["years"][year] = {
                 "baseline": baselines[year],
@@ -278,42 +313,9 @@ class PersonalImpactCalculator:
             for year in YEARS:
                 situation = build_situation(household, year)
 
-                # For policies with custom baselines, we need to compare
-                # the reform scenario vs the baseline scenario
-                if reform.has_custom_baseline():
-                    # Create baseline scenario (what would have happened
-                    # without the budget)
-                    baseline_scenario = reform.to_baseline_scenario()
-                    if baseline_scenario:
-                        baseline_sim = create_simulation(
-                            situation,
-                            year,
-                            reform_param_changes=(
-                                reform.baseline_parameter_changes
-                            ),
-                            simulation_modifier=(
-                                reform.baseline_simulation_modifier
-                            ),
-                        )
-                    else:
-                        baseline_sim = create_simulation(situation, year)
-
-                    # Create reform scenario (the budget policy)
-                    reform_sim = create_simulation(
-                        situation,
-                        year,
-                        reform_param_changes=reform.parameter_changes,
-                        simulation_modifier=reform.simulation_modifier,
-                    )
-                else:
-                    # Standard reform: compare against current law baseline
-                    baseline_sim = create_simulation(situation, year)
-                    reform_sim = create_simulation(
-                        situation,
-                        year,
-                        reform_param_changes=reform.parameter_changes,
-                        simulation_modifier=reform.simulation_modifier,
-                    )
+                baseline_sim, reform_sim = household_simulations(
+                    situation, reform, self.config
+                )
 
                 baseline_metrics = calculate_household_metrics(
                     baseline_sim, year
