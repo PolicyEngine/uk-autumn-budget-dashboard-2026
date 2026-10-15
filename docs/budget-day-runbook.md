@@ -71,7 +71,18 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - **15 October, deploy of `main` at 7c5e4fa** (run 38716544528, build fb42c4a6): every step up to the smoke test passed with the d1538 grants. The candidate `uk-budget-api-2026-00003-jic` (policyengine 6.4.1, policyengine-uk 2.130.1, core 3.33.0) took no traffic. The smoke test failed with `/api/personal-impact returned HTTP 504`: the full household request did not finish within Cloud Run's 300 s. Traffic was left as it was: `uk-budget-api-2026-00001-gow` at 100%. That is 12 October's revision (git f47099d, policyengine 6.2.6, policyengine-uk 2.125.1), and `/api/version` confirms it is live.
   - **15 October, deploy of `main` at 1ce4984** (#39 and #42; run 38732006985): the candidate `uk-budget-api-2026-00004-fur` passed the smoke test and took all traffic, about 6.5 minutes from submit to live. Before: `uk-budget-api-2026-00001-gow` at 100%. `/api/version` reports 1ce4984 with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0.
   - **The rollback target is `00004-fur`.** It is the only revision that passes `main`'s smoke test. A rollback runs that test against its target before moving traffic, and `00001-gow` (12 October's) doesn't answer within 300 s, so a rollback to it would be refused before traffic moves.
-  - **Next:** rehearse a rollback that succeeds. Deploy again (`00005`), roll back to `00004-fur`, then deploy again, recording each revision here.
+  - **15 October, rollback rehearsal, through the workflow each time:**
+
+    | Step | Run | What happened | Live afterwards |
+    |---|---|---|---|
+    | 1. Deploy `main` (1ce4984) | 38734841265 | `00006-qih` passed the smoke test and replaced `00004-fur` | `00006-qih`, 1ce4984 |
+    | 2. Roll back to `00004-fur` | 38735958536 | **Refused, no traffic moved.** Provenance and tagging passed. The smoke test on the rollback tag got `/api/personal-impact` HTTP 503 from the revision, which was scaled to zero. The same request to that tag a few minutes later answered HTTP 200 in 130 s, so the 503 came from the cold start | `00006-qih` |
+    | 2, again | 38736878049 | Rolled back to `00004-fur`, replacing `00006-qih`; `/api/version` named `00004-fur` (1ce4984) | `00004-fur`, 1ce4984 |
+    | 3. Deploy `main` (d488145) | 38737646035 | `00012-ruy` passed the smoke test and replaced `00004-fur` | `00012-ruy`, d488145 |
+
+    `/api/version` after step 3: d488145, with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0. The revision numbers jumped from 00006 to 00012; W5 didn't create 00007 to 00011.
+  - **Rollback targets now:** `00012-ruy` (live) and `00004-fur`, both of which pass `main`'s smoke test. A rollback to a revision that has scaled to zero can fail its smoke test on the cold start (step 2) and leave traffic where it was. If that happens, warm the revision with one request to its tag URL first, then retry.
+  - **Cold start:** 32.6 s to the first response from an idle revision (`/api/version`).
   - **How long one household answer takes on Cloud Run (`00004-fur`), 15 October:**
 
     | Request | Time |
