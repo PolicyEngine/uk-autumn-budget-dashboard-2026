@@ -26,7 +26,7 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 | Certified bundle 6.3.3 (UK 2.126.12, data 1.58.0): a scenario's parameter changes now come before its modifier | #25 | **Merged** 13 October (93d0609). **#3 needs `main` merged in**, so its numbers come from 2.126.12 |
 | Household route checker and `/api/version` | #15 | **Merged** 13 October (8401528) |
 | Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | **Merged** 13 October (18601b0). The service exists (below) |
-| Household API deploys and rollbacks from GitHub Actions (Workload Identity Federation), so Budget day needs no laptop login | #28 | Draft; needs the GCP grants in its description (Max, d1538) |
+| Household API deploys and rollbacks from GitHub Actions (Workload Identity Federation), so Budget day needs no laptop login | #28 | Merged. Grants made 15 Oct (d1538): a custom role `ukBudgetApiBuilds` (`cloudbuild.builds.create`, `.get`, `.list` and `storage.buckets.list`) in place of `cloudbuild.builds.editor`. The first three runs failed at "Submit the build" without `storage.buckets.list`: gcloud lists the project's buckets to check that the default staging bucket is its own. #28's description lists every grant. |
 | Treasury Table 4.1 import with a printed-totals check | #16 | **Merged** 13 October (ec29ebd). Two narrower layout gaps from its last review close in a follow-up PR |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
 | A draft upgrade PR on each qualified policyengine release, never merged automatically; merging an upgrade on the day stays Vahid and María's call (decision 8) | #18 | Landing on gates (opens draft PRs only) |
