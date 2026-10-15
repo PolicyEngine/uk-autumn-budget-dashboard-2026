@@ -37,7 +37,8 @@ FISCAL_YEAR = re.compile(r"^(\d{4})-(\d{2})$")
 # that cancel, pass the totals check.
 ROUNDING_PER_FIGURE_M = 2.5
 NEGLIGIBLE = "*"
-NIL = {"-", "–", "—", ""}
+# Nil as printed: a hyphen, en, em or figure dash, or a minus sign.
+NIL = {"-", "\u2013", "\u2014", "\u2012", "\u2212", ""}
 
 SOURCE_COLUMNS = [
     "source_id",
@@ -239,10 +240,19 @@ def _is_figure(cell) -> bool:
     return bool(re.fullmatch(r"-?[\d,]+(?:\.\d+)?", _text(cell)))
 
 
+# A footnote marker printed on the end of a figure: superscript figures,
+# asterisks and daggers.
+_FIGURE_MARKER = re.compile(
+    r"[\u00b9\u00b2\u00b3\u2070-\u2079*\u2020\u2021]+$"
+)
+
+
 def _figure_like(cell) -> bool:
     """Whether a cell could be a printed figure: a number, a nil or
-    negligible marker, or digits with no words (a figure in a form the
-    importer does not read, such as one printed with a Unicode minus)."""
+    negligible marker, anything a float can be read from (scientific
+    notation included), any of these with a footnote marker on the end, or
+    digits with no words (a figure in a form the importer does not read,
+    such as one printed with a Unicode minus)."""
     if _is_figure(cell):
         return True
     text = _text(cell)
@@ -250,7 +260,18 @@ def _figure_like(cell) -> bool:
         return False
     if text in NIL or text == NEGLIGIBLE:
         return True
-    return bool(re.search(r"\d", text)) and not re.search(r"[^\W\d_]", text)
+    core = _FIGURE_MARKER.sub("", text).strip()
+    if not core:
+        # A marker alone, such as a superscript beside a total's label.
+        return False
+    if core in NIL:
+        return True
+    try:
+        float(core.replace(",", "").replace("\u2212", "-"))
+        return True
+    except ValueError:
+        pass
+    return bool(re.search(r"\d", core)) and not re.search(r"[^\W\d_]", core)
 
 
 def _mentions_a_total(label: str) -> bool:
@@ -311,9 +332,17 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         # marker would otherwise be imported as a measure.
         # A blank row with no Head is a heading or footnote ("Totals may not
         # sum due to rounding") and carries no figure, so it is skipped below.
+        # A figure left of Head counts too: a subtotal whose only figures
+        # sit in a column the header did not name would otherwise look blank
+        # and be skipped as a heading.
+        carries_figures = (
+            not blank
+            or head in {"tax", "spend"}
+            or any(_figure_like(cell) for cell in cells[:head_column])
+        )
         if (
             total is None
-            and (not blank or head in {"tax", "spend"})
+            and carries_figures
             and any(_mentions_a_total(cell) for cell in label_cells)
         ):
             raise ScorecardError(
