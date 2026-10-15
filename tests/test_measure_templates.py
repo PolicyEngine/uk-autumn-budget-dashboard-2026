@@ -56,20 +56,18 @@ def test_annual_builders_validate_paths_and_explicit_years(builder):
     "key",
     [
         "2026-04-06",  # one day: at most a day-weighted sliver of the year
-        "2026-04-06.2100-12-31",  # an interval: the household calculator ignores it
+        "2026-04-06.2100-12-31",  # an interval: not one value a year
         "year:2026:5",
         "2026-04",
-        "202\u0667",  # other scripts' digits: read by the national run only
+        "202\u0667",  # other scripts' digits: not the year a reviewer reads
     ],
 )
 def test_only_bare_fiscal_years_are_accepted(builder, key):
     """A Budget measure keyed any other way can silently do nothing.
 
-    On policyengine-uk 2.126.12 a bare year names the whole UK fiscal year
-    and a lone date names one day. The national run reads an interval, but
-    the household calculator applies a change only where the key is the
-    year itself, so a bare year is the only key both read
-    (``tests/test_measure_keys.py``).
+    A bare year names the whole UK fiscal year and a lone date names one
+    day; the builders take one value a year, so an interval is not theirs
+    to build (``tests/test_measure_keys.py``).
     """
     with pytest.raises(ValueError, match="four-digit"):
         builder(FUEL_PATH, {key: 0.6})

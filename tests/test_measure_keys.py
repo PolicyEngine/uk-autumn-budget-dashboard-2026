@@ -1,18 +1,19 @@
 """Registered measures key their parameter changes by bare fiscal year.
 
-Two routes apply a measure's ``parameter_changes``, and they read period
-keys differently:
+The national run and the household calculator both hand a measure's
+``parameter_changes`` to policyengine-uk's ``Scenario`` (#32), so they read
+every key alike: a bare year as that fiscal year, ``"start.stop"`` as that
+interval, a lone date as that one day (``policyengine_uk.utils.
+dated_reforms``), and other scripts' digits as the year they spell (the
+differential below).
 
-- the national run hands them to policyengine-uk, which on 2.126.12 reads a
-  bare year as that fiscal year, ``"start.stop"`` as that interval and a
-  lone date as that one day (``policyengine_uk.utils.dated_reforms``);
-- the household calculator, ``personal_impact.create_simulation``, applies
-  a change only where the key is the year itself.
-
-A bare year is the only key both read as that year. Any other key moves
-the national figure and not the household calculator's, or moves neither.
-(``Reform`` already refuses a key that is not a string, and a value with
-no period.)
+A bare year in ASCII digits is still the one form a registered measure
+uses. A lone date changes one day, so it can leave the year it was meant
+for untouched; the templates build bare years only
+(``uk_budget_data.measure_templates``), so a registered measure reads like
+one built from them; and a key in other digits is not the year a reviewer
+reads. (``Reform`` already refuses a key that is not a string, and a value
+with no period.)
 """
 
 import re
@@ -58,10 +59,8 @@ def other_keys(reform) -> list[tuple]:
     "reform", get_autumn_budget_2026_reforms(), ids=lambda reform: reform.id
 )
 def test_a_registered_measure_keys_every_change_by_a_bare_year(reform):
-    """A key the household calculator does not read would leave it showing
-    no change for a measure the national run scores (see the module
-    docstring). List every year the change applies: ``{"2027": x,
-    "2028": x}``."""
+    """One form for every measure (see the module docstring). List every
+    year the change applies: ``{"2027": x, "2028": x}``."""
     assert other_keys(reform) == []
 
 
@@ -87,14 +86,6 @@ def test_other_keys_names_every_key_that_is_not_a_bare_year():
         ("reform", ALLOWANCE, "202\u0667"),
         ("baseline", ALLOWANCE, "year:2027:2"),
     ]
-
-
-def test_another_scripts_digits_are_not_a_bare_year(current_law):
-    """Review r7: \\d matched "202\\u0667" (an Arabic-Indic seven). The
-    national run reads it as 2027; the household calculator does not."""
-    changes = {ALLOWANCE: {"202\u0667": 20_000}}
-    assert _result(_national(changes), 2027) == (20_000, 6_000)
-    assert _result(_household(changes, 2027), 2027) == current_law[2027]
 
 
 def _result(sim, year):
@@ -135,22 +126,34 @@ def test_both_routes_read_a_bare_year_as_that_year(current_law):
     assert _result(_household(changes, 2028), 2028) == current_law[2028]
 
 
-@pytest.mark.parametrize(
-    "key, national_reads_it",
-    [("2027-04-06.2100-12-31", True), ("2027-04-06", False)],
-    ids=["interval", "lone date"],
-)
-def test_the_household_calculator_reads_no_other_key(
-    key, national_reads_it, current_law
-):
-    """Why the rule is a bare year and nothing else. The national route
-    reads an interval and the household calculator does not; a lone date
-    changes one day, which moves neither.
+# The allowance and income tax a bare 2027 gives in 2027 (above).
+CHANGED = (20_000, 6_000)
 
-    If this fails because the household calculator has come to read these
-    keys as the national route does, the rule above can be relaxed, and
-    the templates can accept what both read."""
+
+@pytest.mark.parametrize(
+    "key, changes_2027",
+    [
+        ("2027-04-06.2100-12-31", True),
+        # One day: the year is left as it was.
+        ("2027-04-06", False),
+        # Review r7: "202" and an Arabic-Indic seven, which \d matched.
+        ("202\u0667", True),
+    ],
+    ids=["interval", "lone date", "other digits"],
+)
+def test_both_routes_read_every_other_key_alike(
+    key, changes_2027, current_law
+):
+    """Differential: for a key the rule refuses, the household calculator
+    still gives the allowance and income tax the national route gives, in
+    2027 and 2028, so the rule is about legibility, not a key one route
+    misses. The national result is pinned too, so the two routes cannot
+    agree by both ignoring the key."""
     changes = {ALLOWANCE: {key: 20_000}}
-    assert _result(_household(changes, 2027), 2027) == current_law[2027]
-    moved = _result(_national(changes), 2027) != current_law[2027]
-    assert moved == national_reads_it
+    national = _national(changes)
+    for year in YEARS:
+        assert _result(_household(changes, year), year) == _result(
+            national, year
+        )
+    expected = CHANGED if changes_2027 else current_law[2027]
+    assert _result(national, 2027) == expected

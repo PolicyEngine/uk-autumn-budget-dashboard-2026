@@ -7,16 +7,16 @@ execution receipts cannot bind closure factories or partially applied helpers.
 There is no ``monthly_schedule`` helper: monthly policies must be expressed
 as fiscal-year values, with the team choosing the aggregation methodology.
 
-The household calculator applies a change on 1 January of each year only,
-so a parameter read on other dates moves less there than in the national
-figure: a monthly variable's (fuel duty's) by 1/12, and a calendar-
-preserved duty's not at all (these are refused). The parity test records
-each known gap (``tests/test_household_route_parity.py``).
-Parameter builders key every value by its bare fiscal year and refuse any
-other key. policyengine-uk 2.126.12 would read a ``"start.stop"`` interval
-in the national run, but the household calculator applies a change only
-where the key is the year itself, so a bare year is the only key both read
-(``tests/test_measure_keys.py``).
+The household calculator builds its simulations with the national run's
+``Scenario``, so a built change moves a household as it moves the national
+figure, whichever dates its formulas read the parameter on: monthly (fuel
+duty), while the simulation is built (the Universal Credit health
+element), or on statutory dates (the alcohol duties)
+(``tests/test_household_route_parity.py``).
+Parameter builders key every value by its bare fiscal year, in ASCII
+digits, and refuse any other key: a lone date changes one day, and the
+builders take one value a year, so a measure that needs an interval is
+written and reviewed as one (``tests/test_measure_keys.py``).
 
 Runtime helpers wrap a variable's formula, so they must be applied after
 the data is loaded (a modifier's default phase): they refuse a variable
@@ -44,15 +44,7 @@ from policyengine_uk.utils.scenario import _apply_reform_class
 
 
 def _validate_parameter_path(path: str) -> None:
-    """Require a leaf in the installed engine's native parameter tree, and
-    one the household calculator can apply.
-
-    A parameter with ``preserve_calendar_dates`` keeps its statutory dates
-    (alcohol duties, for example): its formulas read it on those dates. The
-    household calculator writes a change on 1 January only, so every
-    household would see no change while the national figure moves
-    (``tests/test_household_route_parity.py``).
-    """
+    """Require a leaf in the installed engine's native parameter tree."""
     from policyengine_core.parameters import Parameter
     from policyengine_uk.system import system
 
@@ -64,13 +56,6 @@ def _validate_parameter_path(path: str) -> None:
         raise ValueError(f"Unknown parameter path: {path}") from exc
     if not isinstance(parameter, Parameter):
         raise ValueError(f"Parameter path must identify a leaf: {path}")
-    if (parameter.metadata or {}).get("preserve_calendar_dates"):
-        raise ValueError(
-            f"{path} keeps its statutory dates, and the household calculator "
-            "applies a change on 1 January only, so households would see no "
-            "change. Score it national-only with a modifier until the "
-            "household calculator applies changes as the national run does."
-        )
 
 
 def _finite_decimal(value, label: str) -> Decimal:
@@ -130,7 +115,7 @@ def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
 
     ISO dates are deliberately refused: ``2029-04-01`` denotes one day,
     not a rate that continues until the next change. Intervals are refused
-    too (see the module docstring).
+    too: the builders take one value a year (see the module docstring).
     """
     _validate_parameter_path(path)
     return {path: _annual_values(values)}
