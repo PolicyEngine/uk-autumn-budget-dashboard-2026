@@ -6,7 +6,12 @@ import { parseTable } from "./csv";
 import { parseManifest } from "./manifest";
 import { bandLabel, scatterSeries, SCATTER_BINS } from "./scatter";
 import { REASONS } from "./select";
-import { fixtureJson, fixtureText } from "../../test/publicationFixture";
+import {
+  BEYOND_DATA,
+  fixtureJson,
+  fixtureText,
+  IN_DATA,
+} from "../../test/publicationFixture";
 
 const manifest = parseManifest(fixtureJson("manifest.json"));
 const tablesByKey = Object.fromEntries(
@@ -55,7 +60,7 @@ describe("scatterSeries", () => {
       manifest,
       tablesByKey,
       selectedIds: ["beta", "alpha"],
-      year: 2030,
+      year: IN_DATA,
     });
     expect(series.status).toBe("available");
     expect(series.key).toBe("combined--alpha+beta");
@@ -76,7 +81,7 @@ describe("scatterSeries", () => {
         manifest,
         tablesByKey,
         selectedIds: ["alpha", "gamma"],
-        year: 2030,
+        year: IN_DATA,
       }),
     ).toEqual({ status: "unavailable", reason: REASONS.noCombinedRun });
     expect(
@@ -84,7 +89,7 @@ describe("scatterSeries", () => {
         manifest,
         tablesByKey,
         selectedIds: ["alpha"],
-        year: 2031,
+        year: BEYOND_DATA,
       }),
     ).toEqual({ status: "unavailable", reason: REASONS.unsupportedYear });
     expect(
@@ -92,7 +97,7 @@ describe("scatterSeries", () => {
         manifest,
         tablesByKey,
         selectedIds: ["delta"],
-        year: 2030,
+        year: IN_DATA,
       }),
     ).toEqual({ status: "unavailable", reason: "Awaiting approval" });
   });

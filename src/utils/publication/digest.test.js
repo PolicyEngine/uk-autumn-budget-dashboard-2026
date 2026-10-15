@@ -11,7 +11,11 @@ import {
   verifyFile,
   verifyReceiptFiles,
 } from "./digest";
-import { fixtureBytes, fixtureJson } from "../../test/publicationFixture";
+import {
+  fixtureBytes,
+  fixtureJson,
+  IN_DATA,
+} from "../../test/publicationFixture";
 
 const manifest = fixtureJson("manifest.json");
 const entries = { ...manifest.measures, ...manifest.combined };
@@ -126,11 +130,12 @@ describe("binding a receipt to its manifest entry", () => {
 
   it.each([
     ["unsupported_years", [], "the receipt's unsupported years"],
-    ["years", [2030], "the receipt's years"],
+    ["years", [IN_DATA], "the receipt's years"],
   ])(
     "refuses an entry whose %s differ from its receipt",
     async (field, value, message) => {
-      // Review case: clearing unsupported_years would show 2031's row.
+      // Review case: clearing unsupported_years would show the row for the
+      // year beyond the data.
       const entry = structuredClone(entries.alpha);
       entry[field] = value;
       const receipt = fixtureJson(`${entry.artifact}/receipt.json`);

@@ -6,6 +6,7 @@ import {
   fixtureFetch,
   fixtureJson,
   fixtureText,
+  IN_DATA,
 } from "../../test/publicationFixture";
 
 const manifest = fixtureJson("manifest.json");
@@ -27,7 +28,7 @@ describe("loadPublication", () => {
     expect(result.tablesByKey.alpha.budgetary_impact[0]).toEqual({
       reform_id: "alpha",
       reform_name: "Alpha",
-      year: 2030,
+      year: IN_DATA,
       value: -1.1,
     });
     expect(result.selection).toEqual(["alpha", "beta"]);

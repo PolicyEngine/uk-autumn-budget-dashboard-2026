@@ -30,6 +30,21 @@ export function fixtureJson(relativePath) {
 export const BASE_PATH = "/uk/autumn-budget-2026";
 
 /**
+ * The fixture's two years, read from its manifest rather than written into
+ * the tests: one the dataset covers and the one after it, which it does not
+ * (the generator keys its values to the installed engine's projection end).
+ */
+const alphaEntry = fixtureJson("manifest.json").measures.alpha;
+const inData = alphaEntry.years.filter(
+  (year) => !alphaEntry.unsupported_years.includes(year),
+);
+if (inData.length !== 1 || alphaEntry.unsupported_years.length !== 1) {
+  throw new Error("the fixture needs one year in the data and one beyond it");
+}
+export const IN_DATA = inData[0];
+export const BEYOND_DATA = alphaEntry.unsupported_years[0];
+
+/**
  * A fetch stand-in that serves the fixture under `${BASE_PATH}/data/`.
  *
  * @param {{overrides?: Object<string, Uint8Array|string|number>,
