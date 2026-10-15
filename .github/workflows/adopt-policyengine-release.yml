@@ -12,6 +12,10 @@ name: Adopt a policyengine release
 # - propose runs on a fresh runner, installs and runs nothing, rebuilds the
 #   exact pinned files validate checked (or stops), checks again against
 #   main as it is now, and only then mints the App token and opens the PR.
+# No job reads or writes the Actions cache: a cache the release saved in
+# validate and propose restored would be a path from the release to the
+# token (review N6). cache-mode is enforced with scoped cache tokens, so a
+# step cannot grant itself access; setup-uv's own cache is off as well.
 # Each step's logic is in scripts/adopt_release/, from main's checkout.
 on:
   repository_dispatch:
@@ -30,6 +34,8 @@ on:
         default: "null"
 
 permissions: {}
+
+cache-mode: none
 
 # One queue per version: a dispatch for one release never cancels another
 # release's queued run. Runs for the same version are serialised, and the
@@ -60,6 +66,8 @@ jobs:
       bundle: ${{ steps.release.outputs.bundle }}
       qualification: ${{ steps.release.outputs.qualification }}
       skip: ${{ steps.dedupe.outputs.skip }}
+      # The uv that pinned the files: propose rebuilds them with the same.
+      uv_version: ${{ steps.uv.outputs.uv-version }}
       lock_sha256: ${{ steps.lock.outputs.lock_sha256 }}
       pyproject_sha256: ${{ steps.lock.outputs.pyproject_sha256 }}
     steps:
@@ -81,10 +89,11 @@ jobs:
         run: bash scripts/adopt_release/dedupe.sh
 
       - name: Install uv
+        id: uv
         if: steps.dedupe.outputs.skip == 'false'
         uses: astral-sh/setup-uv@v8.1.0
         with:
-          save-cache: false
+          enable-cache: false
           version: "latest"
 
       # Hashed before anything is installed: these are the files the
@@ -155,8 +164,8 @@ jobs:
         if: steps.dedupe.outputs.skip == 'false'
         uses: astral-sh/setup-uv@v8.1.0
         with:
-          save-cache: false
-          version: "latest"
+          enable-cache: false
+          version: ${{ needs.validate.outputs.uv_version }}
 
       - name: Rebuild exactly the files validate checked
         if: steps.dedupe.outputs.skip == 'false'

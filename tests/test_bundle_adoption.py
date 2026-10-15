@@ -622,6 +622,47 @@ def test_the_propose_job_checks_again_against_main_as_it_is_now():
     assert env["PAYLOAD_VERSION"] == "${{ needs.validate.outputs.version }}"
 
 
+def test_no_job_reads_or_writes_the_actions_cache():
+    """Review N6: setup-uv restored caches by default (save-cache: false
+    only stopped its own save), so a cache the release saved in validate
+    could replace open_pr.sh in propose. cache-mode is enforced with scoped
+    cache tokens; setup-uv's cache is off too."""
+    workflow = _workflow()
+    assert workflow["cache-mode"] == "none"
+    for name, job in workflow["jobs"].items():
+        assert job.get("cache-mode", "none") == "none", name
+        for step in job["steps"]:
+            if step.get("uses", "").startswith("astral-sh/setup-uv@"):
+                assert step["with"]["enable-cache"] is False, name
+                assert "restore-cache" not in step["with"]
+                assert "save-cache" not in step["with"]
+            assert "actions/cache" not in step.get("uses", ""), name
+
+
+def test_both_jobs_run_the_same_uv():
+    """A different uv could serialise the same resolution differently, and
+    propose would refuse a release for no reason."""
+    workflow = _workflow()
+    validate, propose = (
+        workflow["jobs"]["validate"],
+        workflow["jobs"]["propose"],
+    )
+    assert (
+        validate["outputs"]["uv_version"]
+        == "${{ steps.uv.outputs.uv-version }}"
+    )
+    (installs,) = [s for s in validate["steps"] if s.get("id") == "uv"]
+    assert installs["uses"].startswith("astral-sh/setup-uv@")
+    (rebuild_uv,) = [
+        s
+        for s in propose["steps"]
+        if s.get("uses", "").startswith("astral-sh/setup-uv@")
+    ]
+    assert rebuild_uv["with"]["version"] == (
+        "${{ needs.validate.outputs.uv_version }}"
+    )
+
+
 @pytest.mark.parametrize("job", ["validate", "propose"])
 def test_no_checkout_keeps_a_token(job):
     checkout = next(
@@ -984,9 +1025,13 @@ def test_files_other_than_those_checked_stop_the_proposal(tmp_path, which):
 # --- open_pr.sh (review findings 3 and 4) ---------------------------------
 
 
-def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
+CHECKED_MAIN = "1" * 40
+
+
+def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}', main_now=CHECKED_MAIN):
     """Run open_pr.sh with stub git and gh; return its exit, the push
-    commands and the body."""
+    commands and the body. The checkout is at CHECKED_MAIN; ``main_now`` is
+    what the remote's main is when the script runs."""
     bin_dir, runner = tmp_path / "bin", tmp_path / "runner"
     bin_dir.mkdir()
     runner.mkdir()
@@ -995,6 +1040,9 @@ def _open_pr(tmp_path, *, orphan="", bundle='{"a":1}'):
         bin_dir,
         "git",
         f'echo "git $*" >> "{log}"\n'
+        f'if [ "$1" = rev-parse ]; then echo {CHECKED_MAIN}; fi\n'
+        'if [ "$1" = ls-remote ]; then '
+        f'printf "%s\\trefs/heads/main\\n" {main_now}; fi\n'
         'if [ "$1" = push ]; then '
         f'echo "auth ${{GIT_CONFIG_KEY_0:-none}}" >> "{log}"; fi\n',
     )
@@ -1064,6 +1112,14 @@ def test_a_new_branch_is_pushed_plainly(tmp_path):
     code, pushes, _ = _open_pr(tmp_path)
     assert code == 0
     assert pushes == ["git push origin adopt/policyengine-6.3.0"]
+
+
+def test_nothing_is_proposed_if_main_moved_after_it_was_checked(tmp_path):
+    """Review R4 residual: main could adopt a newer release while propose
+    set up uv and relocked, and the older release was still proposed."""
+    code, pushes, body = _open_pr(tmp_path, main_now="2" * 40)
+    assert code != 0
+    assert pushes == [] and body == ""
 
 
 def test_an_orphan_branch_is_replaced_only_as_it_was_seen(tmp_path):

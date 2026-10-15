@@ -7,6 +7,15 @@
 # RUNNER_TEMP. The token reaches git only in the environment of each push.
 set -euo pipefail
 
+# Main may have moved since this job checked it out and found the release
+# newer than main's pin. Propose only against the main that was checked.
+checked=$(git rev-parse HEAD)
+now=$(git ls-remote origin refs/heads/main | awk '$2 == "refs/heads/main" {print $1}')
+if [ "$now" != "$checked" ]; then
+  echo "::error::main moved from $checked to ${now:-nothing} after this run checked it; dispatch the release again"
+  exit 1
+fi
+
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git switch -c "$BRANCH"

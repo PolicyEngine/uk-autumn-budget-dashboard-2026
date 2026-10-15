@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Pin policyengine $VERSION in pyproject.toml and uv.lock without building or
-# running any package: --no-build resolves from wheel metadata alone.
+# Pin policyengine $VERSION in pyproject.toml and uv.lock without building
+# any distribution: --no-build refuses to build a package from source, so
+# resolution reads wheel and static metadata only. This project's own
+# metadata is static, so uv reads it without running a build backend (a
+# dynamic field would need one; keep pyproject.toml's metadata static).
 #
 # Writes the two files' SHA-256s as outputs. Where EXPECT_LOCK_SHA256 and
 # EXPECT_PYPROJECT_SHA256 are set (the propose job sets them from the
