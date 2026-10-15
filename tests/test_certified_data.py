@@ -1,12 +1,13 @@
 """Tests for the certified-data credential check and fail-not-skip policy."""
 
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
 import pytest
 from huggingface_hub.errors import HfHubHTTPError
-from hypothesis import example, given
+from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
 from uk_budget_data.certified_data import (
@@ -159,39 +160,54 @@ tokens = st.text(
 )
 
 
-# Another token to compare with; any token other than the generated one.
-OTHER_TOKEN = "hf_another_token_to_compare"
+# Every way check_access ends: the API each meets, by name.
+OUTCOMES = {
+    "success": {"files": {"enhanced.h5": SHA_A, "weights.h5": SHA_B}},
+    "rejected token": {
+        "files": {"enhanced.h5": SHA_A, "weights.h5": SHA_B},
+        "reject_token": True,
+    },
+    "denied repository": {
+        "files": {"enhanced.h5": SHA_A, "weights.h5": SHA_B},
+        "deny_repo": True,
+    },
+    "missing file": {"files": {"enhanced.h5": SHA_A}},
+    "hash mismatch": {"files": {"enhanced.h5": SHA_A, "weights.h5": SHA_A}},
+}
 
 
-def outcome(token, reject, deny):
+def outcome(token, case):
     """The log lines, or the error, that ``check_access`` gives."""
-    api = FakeApi(
-        files={"enhanced.h5": SHA_A, "weights.h5": SHA_B},
-        reject_token=reject,
-        deny_repo=deny,
-    )
     try:
-        return "\n".join(check_access(token, artifacts(), api=api))
+        return "\n".join(
+            check_access(token, artifacts(), api=FakeApi(**OUTCOMES[case]))
+        )
     except CertifiedDataAccessError as error:
         return str(error)
 
 
-@given(token=tokens, reject=st.booleans(), deny=st.booleans())
+def masked(text, token):
+    """The text with the token's fingerprint blanked out by a character no
+    token holds, so a token cannot run on into or out of the blank."""
+    return text.replace(token_fingerprint(token), "\0")
+
+
+@given(token=tokens, other=tokens, case=st.sampled_from(sorted(OUTCOMES)))
 # A token that is part of the fixed wording ("token fingerprint"): it is in
-# the text, and so is it in every other token's.
-@example(token="fingerpr", reject=False, deny=False)
-def test_no_outcome_ever_contains_the_token(token, reject, deny):
+# every token's text, so it says nothing about the token.
+@example(token="fingerpr", other="hf_another_token", case="success")
+def test_no_outcome_ever_contains_the_token(token, other, case):
     """Whatever happens, logs and errors depend on the token only through
-    its fingerprint: put another token's fingerprint in its place and the
-    text is the other token's. So the token can appear only in wording
-    every token gets, never because it was the token."""
-    text = outcome(token, reject, deny)
-    other = outcome(OTHER_TOKEN, reject, deny)
-    fingerprint = token_fingerprint(token)
-    assert len(fingerprint) == 12
-    assert set(fingerprint) <= set("0123456789abcdef")
-    assert text.replace(fingerprint, token_fingerprint(OTHER_TOKEN)) == other
-    assert token not in text or token in other
+    its fingerprint, the first 12 hex digits of its SHA-256: blank the
+    fingerprint out and two tokens' texts are the same. So nothing in the
+    text comes from the token but its fingerprint."""
+    assume(other != token)
+    assert token_fingerprint(token) == (
+        hashlib.sha256(token.encode()).hexdigest()[:12]
+    )
+    assert masked(outcome(token, case), token) == masked(
+        outcome(other, case), other
+    )
 
 
 CONFTEST = Path(__file__).with_name("conftest.py").read_text()
