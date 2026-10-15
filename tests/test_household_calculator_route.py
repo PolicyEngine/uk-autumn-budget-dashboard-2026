@@ -42,6 +42,11 @@ HOUSEHOLDS = {
         savings_income=5_000,
         property_income=10_000,
     ),
+    # Dividends in the basic-rate band, which the dividend measure changes
+    # (the investor's all sit in the unchanged additional-rate band).
+    "dividends_30k": personal_impact.HouseholdInput(
+        employment_income=30_000, dividend_income=20_000
+    ),
 }
 
 
@@ -130,13 +135,179 @@ def _measure(changes):
         pytest.param(reform, id=reform.id)
         for reform in get_autumn_budget_2026_reforms()
         if reform.id in personal_impact.POLICY_IDS
+        # Its modifier shares a fixed Treasury cost over whoever is
+        # simulated, so it is checked one household at a time below.
+        and reform.id != "rail_fares_freeze"
     ],
 )
 def test_each_measure_the_calculator_shows_moves_households_alike(reform):
     """Differential: a household's impact from the household calculator
     equals the national route's, for every measure it shows (the fuel duty
-    freeze was 1/12 of it before)."""
-    assert same(household_route(reform, YEAR), national_route(reform, YEAR))
+    freeze was 1/12 of it before), and some probe household is affected,
+    so the comparison is not of two zeros."""
+    household = household_route(reform, YEAR)
+    assert same(household, national_route(reform, YEAR))
+    assert any(abs(change) > 1 for change in household)
+
+
+def test_the_rail_fares_freeze_moves_a_rail_user_alike():
+    reform = next(
+        r
+        for r in get_autumn_budget_2026_reforms()
+        if r.id == "rail_fares_freeze"
+    )
+    probe = {
+        "people": {
+            "p": {"age": {2027: 40}, "employment_income": {2027: 30_000}}
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {
+            "h": {
+                "members": ["p"],
+                "rail_usage": {2027: 2_000},
+                "household_weight": {2027: 1},
+            }
+        },
+    }
+    household = _impact(
+        lambda changes, modifier: personal_impact.create_simulation(
+            probe,
+            2027,
+            reform_param_changes=changes,
+            simulation_modifier=modifier,
+        ),
+        reform,
+        2027,
+    )
+    national = _impact(
+        lambda changes, modifier: _national(probe, changes, modifier),
+        reform,
+        2027,
+    )
+    assert same(household, national)
+    assert household[0] > 1
+
+
+def _national(probe, changes, modifier):
+    from uk_budget_data.models import Reform
+
+    scenario = Reform(
+        id="n",
+        name="N",
+        parameter_changes=changes,
+        simulation_modifier=modifier,
+    ).to_scenario()
+    return Simulation(situation=probe, scenario=scenario)
+
+
+def _impact(build, reform, year, variable="household_net_income"):
+    if reform.has_custom_baseline():
+        baseline = build(
+            reform.baseline_parameter_changes,
+            reform.baseline_simulation_modifier,
+        )
+    else:
+        baseline = build(None, None)
+    reformed = build(reform.parameter_changes, reform.simulation_modifier)
+    return [
+        r - b
+        for r, b in zip(
+            _net(reformed, year, variable), _net(baseline, year, variable)
+        )
+    ]
+
+
+# Review round 9 of #23: more parameters the 1 January write missed.
+LCWRA_CLAIMANT = {
+    "people": {
+        "p": {
+            "age": {2027: 40},
+            "employment_income": {2027: 0},
+            "uc_limited_capability_for_WRA": {2027: True},
+        }
+    },
+    "benunits": {
+        "b": {
+            "members": ["p"],
+            "uc_receives_new_claimant_health_element": {2027: True},
+        }
+    },
+    "households": {"h": {"members": ["p"]}},
+}
+PROTECTED_CLAIMANT = {
+    "people": {
+        "p": {
+            "age": {year: 40 + year - 2025 for year in range(2025, 2030)},
+            "employment_income": {year: 0 for year in range(2025, 2030)},
+            "uc_limited_capability_for_WRA": {
+                year: True for year in range(2025, 2030)
+            },
+        }
+    },
+    "benunits": {"b": {"members": ["p"]}},
+    "households": {"h": {"members": ["p"]}},
+}
+
+
+@pytest.mark.parametrize(
+    "probe, path, value, variable",
+    [
+        # Monthly: child_benefit_respective_amount reads each month.
+        (None, "gov.hmrc.child_benefit.amount.eldest", 50, "child_benefit"),
+        # Monthly: employee Class 1 NICs.
+        (
+            None,
+            "gov.hmrc.national_insurance.class_1.rates.employee.main",
+            0.10,
+            "national_insurance",
+        ),
+        # Read while the simulation is built (UC rebalancing stores the
+        # health element), before any later write.
+        (
+            LCWRA_CLAIMANT,
+            "gov.dwp.universal_credit.rebalancing.new_claimant_health_element",
+            500,
+            "uc_LCWRA_element",
+        ),
+        # The protected floor considers every standard allowance amount.
+        (
+            PROTECTED_CLAIMANT,
+            "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG",
+            0,
+            "uc_LCWRA_element",
+        ),
+    ],
+    ids=[
+        "child benefit",
+        "employee NICs",
+        "UC new-claimant health element",
+        "UC protected floor",
+    ],
+)
+def test_benefits_read_monthly_or_while_built_move_alike(
+    probe, path, value, variable
+):
+    measure = _measure({path: {"2027": value}})
+    probe = probe or situation(2027)
+    household = _impact(
+        lambda changes, modifier: personal_impact.create_simulation(
+            probe,
+            2027,
+            reform_param_changes=changes,
+            simulation_modifier=modifier,
+        ),
+        measure,
+        2027,
+        variable,
+    )
+    national = _impact(
+        lambda changes, modifier: _national(probe, changes, modifier),
+        measure,
+        2027,
+        variable,
+    )
+    assert same(household, national)
+    assert any(abs(change) > 1 for change in household)
 
 
 @pytest.mark.parametrize(
