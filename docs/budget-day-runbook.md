@@ -79,6 +79,16 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: nothing on `main`, which applies a change only where the key is the year itself (`personal_impact.create_simulation`); in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where the household calculator showed no change. |
 
+**The household calculator moves less than the national figure for some measures** (probed 15 October on the bundle on `main`). Both `main`'s calculator (`personal_impact.create_simulation`) and #3's (`calculate_personal_net_income`) write a change on 1 January only, while the national run applies it to the whole fiscal year before policyengine-uk derives its other parameters. One earner on £50,000, 2027:
+
+| Change | Household calculator | National |
+|---|---|---|
+| Fuel duty to 90p (monthly `fuel_duty` sees January only) | −£25.05 (#3) | −£300.62 |
+| Beer duty to £30 (a calendar-preserved duty) | £0.00 (#3) | −£37.10 |
+| Personal allowance to £20,000 (read on 1 January) | +£1,486.00 | +£1,486.00 |
+
+The registered `fuel_duty_freeze` shows exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…)` with the measure's bare-year keys, as the national run does, closes every gap found. It was checked against `tests/test_household_route_parity.py` (#23). **Your call**, for #3. The templates (#23) refuse calendar-preserved parameters meanwhile, and the parity test marks each known gap as a strict expected failure.
+
 **#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle now on `main` (policyengine-uk 2.126.12; probed 14 October), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
 
 An earlier version of this runbook said these keys have no effect at all. That was wrong: the effect is small, not zero. Either way, the baseline is not the one the measure intends. The same values keyed by bare year, as `main`'s `fuel_duty_freeze` keys them, change every year. This needs changing in #3 when it merges `main`.
