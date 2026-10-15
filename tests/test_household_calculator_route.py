@@ -594,21 +594,59 @@ def test_an_empty_scenario_is_dropped_and_any_change_kept():
         Scenario(parameter_changes={}, applied_before_data_load=True),
     ):
         assert effective(empty) is None
+    dated = Scenario.from_reform(
+        {ALLOWANCE: {"2027-04-06.2100-12-31": 20_000}}
+    )
+    # Dated reforms alone: from_reform also attaches a modifier.
+    dated_only = dated.model_copy(update={"simulation_modifier": None})
+    assert dated_only.dated_reforms and dated_only.simulation_modifier is None
+
+    class Later(Scenario):
+        """A scenario with a field a later engine might add."""
+
+        later: object = None
+
     changed = (
         Scenario(parameter_changes=_allowance(20_000)),
         Scenario(simulation_modifier=_does_nothing),
-        Scenario.from_reform({ALLOWANCE: {"2027-04-06.2100-12-31": 20_000}}),
+        dated,
+        dated_only,
+        # A field this code has not read keeps the scenario, empty or not.
+        Later(),
     )
-    assert changed[2].dated_reforms
     for scenario in changed:
         assert effective(scenario) is scenario
+
+
+@pytest.mark.parametrize("probe", ["pensioner", "family"])
+def test_an_empty_scenario_computes_what_none_does(probe):
+    """What lets effective() drop it: built with an empty scenario or with
+    none, a household's figures are the same."""
+    situation = (
+        PENSIONER
+        if probe == "pensioner"
+        else personal_impact.build_situation(
+            personal_impact.HouseholdInput(
+                employment_income=25_000, children_ages=[1, 4, 8]
+            ),
+            2027,
+        )
+    )
+    with_empty = Simulation(
+        situation=situation, scenario=Scenario(parameter_changes={})
+    )
+    with_none = Simulation(situation=situation)
+    for year in (2027, 2029):
+        assert personal_impact.calculate_household_metrics(
+            with_empty, year
+        ) == personal_impact.calculate_household_metrics(with_none, year)
 
 
 def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
     """Most registered measures keep current law on the reform side as
     parameter_changes={}: that side is built with no scenario, the other
-    with its own. The route differentials above check the results match
-    the national route, which builds with the empty scenario."""
+    with its own. That an empty scenario computes what none does is
+    checked above."""
     from uk_budget_data.models import DataConfig, Reform
 
     seen = []
@@ -632,3 +670,32 @@ def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
     # Current law on the reform side; the pre-Budget allowance on the other.
     assert float(reformed.calculate("income_tax", 2027)[0]) == 3_486
     assert float(baseline.calculate("income_tax", 2027)[0]) == 2_000
+
+
+def test_an_empty_baseline_is_built_without_a_scenario(monkeypatch):
+    """The baseline side drops an empty scenario too: an explicit empty
+    baseline (its own, so the configured one is not used) is current law."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    seen = []
+
+    class Recording(Simulation):
+        def __init__(self, *args, scenario=None, **kwargs):
+            seen.append(scenario)
+            super().__init__(*args, scenario=scenario, **kwargs)
+
+    monkeypatch.setattr(personal_impact, "Simulation", Recording)
+    reform = Reform(
+        id="probe",
+        name="Probe",
+        parameter_changes=_allowance(20_000),
+        baseline_parameter_changes={},
+    )
+    baseline, reformed = personal_impact.household_simulations(
+        PENSIONER,
+        reform,
+        DataConfig(baseline_parameter_changes=_allowance(15_000)),
+    )
+    assert seen[0] is None and seen[1] is not None
+    assert float(baseline.calculate("income_tax", 2027)[0]) == 3_486
+    assert float(reformed.calculate("income_tax", 2027)[0]) == 2_000
