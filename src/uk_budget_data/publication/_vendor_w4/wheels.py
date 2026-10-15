@@ -1,9 +1,9 @@
-# VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #588
-# (carrying #571 at d74ddc71 and #579) at 09cdc9b22914efc5b8c99624baf5d427da8fbacd,
+# VENDORED, do not edit. Source: PolicyEngine/policyengine.py main (the merge of PR #588)
+# (carrying #571, #579, #588 and #628) at ebca9f0ca7639210e0482b5725c83a88645990d2,
 # src/policyengine/provenance/wheels.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
-# when the dashboard pins the policyengine release that contains PRs #571,
-# #579 and #588; uk_budget_data.publication.receipt prefers the released module.
+# when the dashboard pins the policyengine release that contains this commit
+# (after #571, #579, #588 and #628); uk_budget_data.publication.receipt prefers the released module.
 """Check that an installed distribution is byte-identical to a wheel.
 
 A wheel's ``*.dist-info/RECORD`` lists its files and their SHA-256 hashes.

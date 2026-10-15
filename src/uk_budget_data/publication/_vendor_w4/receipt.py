@@ -1,9 +1,9 @@
-# VENDORED, do not edit. Source: PolicyEngine/policyengine.py PR #588
-# (carrying #571 at d74ddc71 and #579) at 09cdc9b22914efc5b8c99624baf5d427da8fbacd,
+# VENDORED, do not edit. Source: PolicyEngine/policyengine.py main (the merge of PR #588)
+# (carrying #571, #579, #588 and #628) at ebca9f0ca7639210e0482b5725c83a88645990d2,
 # src/policyengine/provenance/receipt.py. Only the imports of sibling
 # provenance modules are rewritten to this package. Delete this directory
-# when the dashboard pins the policyengine release that contains PRs #571,
-# #579 and #588; uk_budget_data.publication.receipt prefers the released module.
+# when the dashboard pins the policyengine release that contains this commit
+# (after #571, #579, #588 and #628); uk_budget_data.publication.receipt prefers the released module.
 """Execution receipts: exactly what produced a PolicyEngine result (schema v1).
 
 A receipt travels with a published number (a dashboard row, a briefing
@@ -2936,8 +2936,21 @@ def _distribution_metadata_directory(name: str) -> Path:
     )
 
 
+#: How far ``psutil.Process().create_time()`` can read before the true start.
+#: On Linux psutil adds the start offset in clock ticks to the boot time from
+#: /proc/stat, which is whole seconds, so the reported start can be about a
+#: second early (one second plus one clock tick); metadata an installer finished writing just before the
+#: process started would then look newer than the process.
+PROCESS_START_RESOLUTION_SECONDS = 2.0
+
+
 def _refuse_package_changed_after_process_start(name: str) -> None:
-    """Refuse metadata installed or changed during this process's lifetime."""
+    """Refuse metadata installed or changed during this process's lifetime.
+
+    Metadata written more than :data:`PROCESS_START_RESOLUTION_SECONDS` after
+    the reported process start is refused; within that margin the clock
+    cannot tell an install just before the start from one just after it.
+    """
 
     try:
         directory = _distribution_metadata_directory(name)
@@ -2957,7 +2970,7 @@ def _refuse_package_changed_after_process_start(name: str) -> None:
             f"Cannot locate or read the installed metadata for {name}; restart "
             "the process and run again after checking the installation."
         ) from exc
-    if installed_at > process_started_at:
+    if installed_at > process_started_at + PROCESS_START_RESOLUTION_SECONDS:
         raise ReceiptError(
             f"{name} was installed or changed after this process started, so the "
             "installed version may not be the code that ran; restart the "
