@@ -60,9 +60,19 @@ class ExpectedEffect:
                 f"{self.measure_id}: direction must be positive or negative, "
                 f"not {self.direction!r}"
             )
-        whole_year(self.from_year, f"{self.measure_id}: from_year")
+        # Stored as builtin ints, so a NumPy year compares and serialises
+        # like any other.
+        object.__setattr__(
+            self,
+            "from_year",
+            whole_year(self.from_year, f"{self.measure_id}: from_year"),
+        )
         if self.to_year is not None:
-            whole_year(self.to_year, f"{self.measure_id}: to_year")
+            object.__setattr__(
+                self,
+                "to_year",
+                whole_year(self.to_year, f"{self.measure_id}: to_year"),
+            )
         if self.to_year is not None and self.to_year < self.from_year:
             raise ValueError(f"{self.measure_id}: to_year before from_year")
 
@@ -73,10 +83,33 @@ class ExpectedEffect:
 
 
 def whole_year(value, label: str) -> int:
-    """A model year: a whole number, never a bool or a fraction."""
-    if isinstance(value, bool) or not isinstance(value, int):
+    """A model year as a builtin int: any integer type (a NumPy year
+    included), never a bool, a fraction or text."""
+    if isinstance(value, bool) or not isinstance(value, numbers.Integral):
         raise ValueError(f"{label} must be a whole year, not {value!r}")
-    return value
+    return int(value)
+
+
+def collected(values, label: str) -> list:
+    """The items of a collection, read once: a one-shot iterator is read
+    here and the list used throughout, so a check never consumes what the
+    gate then needs. Text and mappings are not collections of items."""
+    if isinstance(values, (str, bytes, Mapping)) or not hasattr(
+        values, "__iter__"
+    ):
+        raise ValueError(f"{label} must be a collection, not {values!r}")
+    return list(values)
+
+
+def validated(item, kind: type, label: str):
+    """``item`` if it is exactly ``kind`` and its state still passes that
+    type's checks. A subclass can skip the checks its base constructor
+    makes, and a frozen dataclass's fields can still be changed through its
+    ``__dict__``, so neither type nor construction alone is enough."""
+    if type(item) is not kind:
+        raise ValueError(f"{label} must be a {kind.__name__}, not {item!r}")
+    item.__post_init__()
+    return item
 
 
 def threshold(value, label: str, *, above_zero: bool = False) -> float:
@@ -199,6 +232,12 @@ def check_responsiveness(
     """
     # Everything is checked here, whoever calls: the file loaders refuse
     # these inputs, and so must this public entry point.
+    for name, mapping in (
+        ("budgetary", budgetary),
+        ("comparators_bn", comparators_bn),
+    ):
+        if not isinstance(mapping, Mapping):
+            raise ValueError(f"{name} must be a mapping, not {mapping!r}")
     impacts = {
         whole_year(year, f"{measure_id}'s model year"): finite_impact(
             value, f"{measure_id}'s impact in {year}"
@@ -218,18 +257,20 @@ def check_responsiveness(
     )
     min_response_share = threshold(min_response_share, "min_response_share")
     zero_tolerance_bn = threshold(zero_tolerance_bn, "zero_tolerance_bn")
-    years = [whole_year(year, "a reported year") for year in years or ()]
+    years = [
+        whole_year(year, "a reported year")
+        for year in collected(() if years is None else years, "years")
+    ]
     if supported_years is not None:
         supported_years = {
-            whole_year(year, "a supported year") for year in supported_years
+            whole_year(year, "a supported year")
+            for year in collected(supported_years, "supported_years")
         }
-    for declaration in declarations:
-        if not isinstance(declaration, ExpectedEffect):
-            raise ValueError(
-                f"an expected effect must be an ExpectedEffect, not "
-                f"{declaration!r}"
-            )
-    one_declaration_a_year(list(declarations))
+    declarations = [
+        validated(declaration, ExpectedEffect, "an expected effect")
+        for declaration in collected(declarations, "declarations")
+    ]
+    one_declaration_a_year(declarations)
     own = [d for d in declarations if d.measure_id == measure_id]
     rows = []
     for year in sorted(set(impacts) | set(years)):
