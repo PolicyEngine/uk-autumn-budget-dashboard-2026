@@ -85,19 +85,25 @@ def _refuse_uc_health_traps(path: str, years) -> None:
     """Refuse the Universal Credit health changes that score nothing or
     the wrong thing.
 
-    The LCWRA element's amount from 2026: in 2026 to 2029 the rebalancing
-    overwrites every claimant's element, so a change to it moves no award;
-    from 2030 the rebalancing no longer runs and every claimant gets the
-    formula's amount. Switching rebalancing off is not the law before the
-    Universal Credit Act 2025 either: the 2026 element amount is already
-    the new claimants' rate, so everyone would get it.
+    The LCWRA element's amount in the rebalanced years: the rebalancing
+    overwrites every claimant's element, so a change to it moves no award.
+    Outside them a change to it scores. From 2030 the installed engine's
+    rebalancing no longer runs, so every claimant, protected or not, gets
+    the element's amount (policyengine-uk issue #2282).
+    tests/test_uc_health_template.py pins both edges to the engine, so a
+    bundle that extends the rebalancing fails there until
+    UC_REBALANCED_YEARS follows it. Switching rebalancing off is not the
+    law before the Universal Credit Act 2025 either: the 2026 element
+    amount is already the new claimants' rate, so everyone would get it.
     """
-    if path == UC_LCWRA_AMOUNT and any(int(year) >= 2026 for year in years):
+    rebalanced = [str(y) for y in years if int(y) in UC_REBALANCED_YEARS]
+    if path == UC_LCWRA_AMOUNT and rebalanced:
         raise ValueError(
-            f"{UC_LCWRA_AMOUNT} from 2026 is not what UC health awards pay: "
-            "in 2026-29 the engine's UC rebalancing overwrites each "
-            "claimant's element, so a change to it scores nothing; "
-            + UC_HEALTH_ADVICE
+            f"{UC_LCWRA_AMOUNT} in {', '.join(rebalanced)} is not what UC "
+            "health awards pay: in "
+            f"{UC_REBALANCED_YEARS.start}-{UC_REBALANCED_YEARS.stop - 1} "
+            "the engine's UC rebalancing overwrites each claimant's "
+            "element, so a change to it scores nothing; " + UC_HEALTH_ADVICE
         )
     if path == UC_REBALANCING_ACTIVE:
         raise ValueError(
@@ -188,15 +194,17 @@ def uc_health_element_change(
 ) -> dict[str, dict[str, float]]:
     """Change Universal Credit's health (LCWRA) element as the model pays it.
 
-    From 2026 the engine's UC rebalancing sets each claimant's element
-    itself, so a measure on the element's own amount scores nothing. This
-    builds the change on the amounts it uses instead: ``protected`` for
-    pre-2026 claimants (rebalancing.protected_health_element) and
-    ``new_claimant`` for those who claim from April 2026
-    (rebalancing.new_claimant_health_element). Values are monthly amounts,
-    in pounds, by fiscal year, as the parameters are. Only 2026 to 2029:
-    in other years the rebalancing does not run, and the values would
-    score nothing.
+    In 2026 to 2029 the engine's UC rebalancing sets each claimant's
+    element itself, so a measure on the element's own amount scores
+    nothing. This builds the change on the amounts it uses instead:
+    ``protected`` for pre-2026 claimants
+    (rebalancing.protected_health_element) and ``new_claimant`` for those
+    who claim from April 2026 (rebalancing.new_claimant_health_element).
+    Values are monthly amounts, in pounds, by fiscal year, as the
+    parameters are. Only 2026 to 2029: in other years the rebalancing does
+    not run, and the values would score nothing. From 2030 every claimant
+    gets the element's own amount, so a 2030 measure is
+    ``rate_change(UC_LCWRA_AMOUNT, ...)``.
     """
     changes = {}
     for path, values in (
