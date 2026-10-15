@@ -1,0 +1,198 @@
+name: Adopt a policyengine release
+
+# policyengine.py dispatches `policyengine-release` when it releases a newly
+# qualified bundle. This workflow installs that release, checks the installed
+# wheel's bundle against the dispatch, and opens a DRAFT upgrade pull request.
+# It never merges: adopting a release means regenerating and re-gating every
+# published measure on the new execution identity first.
+#
+# Two jobs, so the released package never runs where a write token exists:
+# - validate installs and runs the release, with read access only and no
+#   secret;
+# - propose runs on a fresh runner, installs and runs nothing, rebuilds the
+#   exact pinned files validate checked (or stops), checks again against
+#   main as it is now, and only then mints the App token and opens the PR.
+# No job reads or writes the Actions cache: a cache the release saved in
+# validate and propose restored would be a path from the release to the
+# token (review N6). cache-mode is enforced with scoped cache tokens, so a
+# step cannot grant itself access; setup-uv's own cache is off as well.
+# Each step's logic is in scripts/adopt_release/, from main's checkout.
+on:
+  repository_dispatch:
+    types: [policyengine-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: policyengine version to adopt (for example 6.2.7)
+        required: true
+      bundle_uk_json:
+        description: The dispatch payload's bundle.uk object, as JSON
+        required: true
+      qualification_json:
+        description: The dispatch payload's qualification object, as JSON (null for none)
+        required: false
+        default: "null"
+
+permissions: {}
+
+cache-mode: none
+
+# One queue per version: a dispatch for one release never cancels another
+# release's queued run. Runs for the same version are serialised, and the
+# dedupe step and the push lease handle what one leaves for the next.
+concurrency:
+  group: adopt-policyengine-release-${{ github.event.client_payload.version || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Install and check the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      # Dispatch values reach the shell only through these variables, never
+      # by interpolation into a script.
+      PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
+      PAYLOAD_BUNDLE_UK_JSON: ${{ toJSON(github.event.client_payload.bundle.uk) }}
+      PAYLOAD_QUALIFICATION_JSON: ${{ toJSON(github.event.client_payload.qualification) }}
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_BUNDLE_UK_JSON: ${{ inputs.bundle_uk_json }}
+      INPUT_QUALIFICATION_JSON: ${{ inputs.qualification_json }}
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      bundle: ${{ steps.release.outputs.bundle }}
+      qualification: ${{ steps.release.outputs.qualification }}
+      skip: ${{ steps.dedupe.outputs.skip }}
+      # The uv that pinned the files: propose rebuilds them with the same.
+      uv_version: ${{ steps.uv.outputs.uv-version }}
+      lock_sha256: ${{ steps.lock.outputs.lock_sha256 }}
+      pyproject_sha256: ${{ steps.lock.outputs.pyproject_sha256 }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Read and validate the release identity
+        id: release
+        run: bash scripts/adopt_release/identity.sh
+
+      - name: Stop if this release is not newer, or was already proposed
+        id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+        run: bash scripts/adopt_release/dedupe.sh
+
+      - name: Install uv
+        id: uv
+        if: steps.dedupe.outputs.skip == 'false'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+          version: "latest"
+
+      # Hashed before anything is installed: these are the files the
+      # propose job must rebuild exactly.
+      - name: Pin the release without running it
+        id: lock
+        if: steps.dedupe.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: bash scripts/adopt_release/lock.sh
+
+      # From here the released package runs.
+      - name: Install the release
+        if: steps.dedupe.outputs.skip == 'false'
+        run: |
+          uv python install 3.13
+          uv sync --locked --extra dev
+
+      - name: Check the installed release against the dispatch
+        if: steps.dedupe.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          CURRENT: ${{ steps.dedupe.outputs.current }}
+          BUNDLE_UK_JSON: ${{ steps.release.outputs.bundle }}
+          QUALIFICATION_JSON: ${{ steps.release.outputs.qualification }}
+        run: >-
+          uv run python -m uk_budget_data.bundle_adoption
+          --version "$VERSION" --current-version "$CURRENT"
+          --bundle-uk-json "$BUNDLE_UK_JSON"
+          --qualification-json "$QUALIFICATION_JSON"
+
+  propose:
+    name: Open a draft upgrade PR
+    needs: validate
+    if: needs.validate.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      # validate's outputs, checked again below as if they were the dispatch.
+      PAYLOAD_VERSION: ${{ needs.validate.outputs.version }}
+      PAYLOAD_BUNDLE_UK_JSON: ${{ needs.validate.outputs.bundle }}
+      PAYLOAD_QUALIFICATION_JSON: ${{ needs.validate.outputs.qualification }}
+      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Read and validate the release identity
+        id: release
+        run: bash scripts/adopt_release/identity.sh
+
+      # Main may have moved while validate ran: a newer release adopted, or
+      # this one proposed. Checked again against main as it is now.
+      - name: Stop if this release is not newer, or was already proposed
+        id: dedupe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+        run: bash scripts/adopt_release/dedupe.sh
+
+      - name: Install uv
+        if: steps.dedupe.outputs.skip == 'false'
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+          version: ${{ needs.validate.outputs.uv_version }}
+
+      - name: Rebuild exactly the files validate checked
+        if: steps.dedupe.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          EXPECT_LOCK_SHA256: ${{ needs.validate.outputs.lock_sha256 }}
+          EXPECT_PYPROJECT_SHA256: ${{ needs.validate.outputs.pyproject_sha256 }}
+        run: bash scripts/adopt_release/lock.sh
+
+      # Last, so no step before it can reach the token. An App token lets
+      # the upgrade PR trigger CI; a PR opened with the default token does
+      # not start pull_request workflows.
+      - name: Mint an App token
+        id: app
+        if: steps.dedupe.outputs.skip == 'false' && env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Open the draft pull request
+        if: steps.dedupe.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+          ORPHAN: ${{ steps.dedupe.outputs.orphan }}
+          BUNDLE_UK_JSON: ${{ steps.release.outputs.bundle }}
+          QUALIFICATION_JSON: ${{ steps.release.outputs.qualification }}
+        run: bash scripts/adopt_release/open_pr.sh
