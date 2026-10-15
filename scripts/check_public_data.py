@@ -1,30 +1,33 @@
 #!/usr/bin/env python
-"""Check that every tracked file under public/data may be published.
+"""Check that every tracked file under public/ may be published.
 
-This repository is public, and the dashboard serves public/data, so every
-file there is a publication. The UK figures derive from UKDS-licensed survey
+This repository is public, and the dashboard serves public/, so every file
+there is a publication. The UK figures derive from UKDS-licensed survey
 microdata, and the licence binds every published number.
 
-A file under public/data passes when it is either:
+A file under public/ passes when it is either:
 
-- a disclosure-controlled table written by ``policyengine.disclosure``, which
-  ``validate_public`` checks file by file; or
-- listed in data_inputs/public_data_review.csv after a person reviewed it.
-  A reviewed CSV keeps the header it was reviewed with.
+- a disclosure-controlled table written by ``policyengine.disclosure``: a CSV
+  with the layer's public columns, which ``validate_public`` checks whether
+  or not it is also reviewed; or
+- listed in data_inputs/public_data_review.csv with the sha256 of the exact
+  bytes a person reviewed. Any change fails until it is reviewed again.
 
-Two guards cover every tracked file, wherever it sits:
+A review entry of kind ``pending`` names who decides and by when. Until its
+expiry date, at most 14 days after it was added, it is reported without
+failing; from then on it fails.
 
-- a file may not carry more than a few constituency, local-authority or
-  small-area codes, unless it is a validated table, reviewed reference
-  geography, or a reference input under data_inputs/;
-- a CSV under public/ may not carry record-level columns.
-
-A review entry of kind ``pending`` names who decides and why. It is reported
-on every run but does not fail, so a file that awaits someone's decision stays
-visible without blocking unrelated work.
+The record-level guard covers every public file, and no review entry turns
+it off: a public file may not carry household, benefit unit or person ids or
+weights. The area-code guard covers every tracked file: no file may carry
+more than a few constituency, local-authority or small-area codes, unless it
+is a validated table, reviewed reference geography, a pending file before
+its expiry, or a reference input under data_inputs/.
 
 The check needs no key, no microdata and no network, so it runs on every pull
 request, forks included. It prints file paths and rule names, never values.
+The build runs a smaller check against the same review list
+(scripts/check-public-files.mjs), so a deploy that skips CI still fails.
 
 Usage:
     python scripts/check_public_data.py [--root PATH]
@@ -32,11 +35,14 @@ Usage:
 
 import argparse
 import csv
+import hashlib
+import io
 import os
 import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -47,9 +53,17 @@ os.environ.setdefault("POLICYENGINE_SKIP_COUNTRY_IMPORTS", "1")
 from policyengine.disclosure import validate_public  # noqa: E402
 from policyengine.disclosure.schema import PUBLIC_COLUMNS  # noqa: E402
 
-PUBLIC_DATA = "public/data/"
+PUBLIC = "public/"
 REVIEW_FILE = "data_inputs/public_data_review.csv"
-REVIEW_COLUMNS = ("path", "kind", "header", "reviewer", "reviewed_on", "basis")
+REVIEW_COLUMNS = (
+    "path",
+    "kind",
+    "sha256",
+    "reviewer",
+    "reviewed_on",
+    "expires_on",
+    "basis",
+)
 PENDING = "pending"
 REFERENCE_GEOGRAPHY = "reference_geography"
 KINDS = (
@@ -59,6 +73,8 @@ KINDS = (
     "static_asset",
     PENDING,
 )
+MAX_PENDING_DAYS = 14
+SHA256 = re.compile(r"[0-9a-f]{64}")
 # Reference inputs, such as the constituency lookup, carry area codes by
 # design and are never served.
 AREA_CODES_ALLOWED_UNDER = ("data_inputs/",)
@@ -71,25 +87,19 @@ AREA_CODE = re.compile(
 )
 # A few codes appear in tests and examples; a table by area carries many.
 MAX_AREA_CODES = 20
-RECORD_LEVEL_COLUMNS = frozenset(
-    {
-        "household_id",
-        "household_weight",
-        "benunit_id",
-        "benunit_weight",
-        "person_id",
-        "person_weight",
-    }
-)
+# Identifiers and weights of single records, as CSV columns, JSON keys or
+# anything else.
+RECORD_LEVEL = re.compile(rb"\b(?:household|benunit|person)_(?:id|weight)\b")
 
 
 @dataclass(frozen=True)
 class ReviewEntry:
     path: str
     kind: str
-    header: str
+    sha256: str
     reviewer: str
-    reviewed_on: str
+    reviewed_on: date
+    expires_on: Optional[date]
     basis: str
 
 
@@ -110,6 +120,17 @@ def tracked_files(root: Path) -> list[str]:
     return sorted(name for name in output.decode().split("\0") if name)
 
 
+def sha256_of(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _parse_date(value: str) -> Optional[date]:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def read_review(root: Path) -> tuple[dict[str, ReviewEntry], list[str]]:
     """The review entries by path, and any problems with the file itself."""
     path = root / REVIEW_FILE
@@ -123,63 +144,78 @@ def read_review(root: Path) -> tuple[dict[str, ReviewEntry], list[str]]:
             return {}, [f"{REVIEW_FILE}: columns must be {REVIEW_COLUMNS}"]
         for number, row in enumerate(reader, start=2):
             where = f"{REVIEW_FILE}: row {number}"
-            entry = ReviewEntry(**{key: row[key] for key in REVIEW_COLUMNS})
-            if entry.kind not in KINDS:
+            reviewed_on = _parse_date(row["reviewed_on"])
+            expires_on = _parse_date(row["expires_on"])
+            if row["kind"] not in KINDS:
                 problems.append(f"{where}: unknown kind")
-                continue
-            if not entry.reviewer or not entry.basis:
+            elif not row["path"].startswith(PUBLIC):
+                problems.append(
+                    f"{where}: only files under public/ are reviewed"
+                )
+            elif not SHA256.fullmatch(row["sha256"]):
+                problems.append(f"{where}: the sha256 is missing or malformed")
+            elif not row["reviewer"] or not row["basis"]:
                 problems.append(f"{where}: a reviewer and a basis are needed")
-                continue
-            if entry.kind != PENDING and not entry.reviewed_on:
+            elif reviewed_on is None:
                 problems.append(f"{where}: the review date is missing")
-                continue
-            if entry.path in entries:
-                problems.append(f"{where}: {entry.path} is listed twice")
-                continue
-            entries[entry.path] = entry
+            elif row["kind"] == PENDING and (
+                expires_on is None
+                or not reviewed_on
+                <= expires_on
+                <= reviewed_on + timedelta(days=MAX_PENDING_DAYS)
+            ):
+                problems.append(
+                    f"{where}: a pending entry needs an expiry date within "
+                    f"{MAX_PENDING_DAYS} days of its review date"
+                )
+            elif row["kind"] != PENDING and row["expires_on"]:
+                problems.append(f"{where}: only a pending entry expires")
+            elif row["path"] in entries:
+                problems.append(f"{where}: {row['path']} is listed twice")
+            else:
+                entries[row["path"]] = ReviewEntry(
+                    path=row["path"],
+                    kind=row["kind"],
+                    sha256=row["sha256"],
+                    reviewer=row["reviewer"],
+                    reviewed_on=reviewed_on,
+                    expires_on=expires_on,
+                    basis=row["basis"],
+                )
     return entries, problems
 
 
-def csv_header(path: Path) -> Optional[list[str]]:
+def csv_header(data: bytes) -> Optional[list[str]]:
     """The header of a CSV file, or None if it has none."""
-    with path.open(newline="", encoding="utf-8-sig") as handle:
-        return next(csv.reader(handle), None)
+    text = data.decode("utf-8-sig", errors="replace")
+    return next(csv.reader(io.StringIO(text)), None)
 
 
-def is_binary(path: Path) -> bool:
-    with path.open("rb") as handle:
-        return b"\0" in handle.read(8192)
+def is_binary(data: bytes) -> bool:
+    return b"\0" in data[:8192]
 
 
-def check_public_data_file(
-    root: Path, name: str, entry: Optional[ReviewEntry], report: Report
-) -> bool:
-    """Check one file under public/data. Returns whether it is a validated
-    disclosure table."""
-    path = root / name
-    header = csv_header(path) if path.suffix == ".csv" else None
-    if entry is not None:
-        if header is not None and entry.header:
-            if ",".join(header) != entry.header:
-                report.problems.append(
-                    f"{name}: header differs from the reviewed one"
-                )
+def is_layer_table(name: str, data: bytes) -> bool:
+    """Whether a file is shaped as a table from the disclosure layer."""
+    if not name.endswith(".csv"):
         return False
-    if header is not None and set(PUBLIC_COLUMNS) <= set(header):
-        for problem in validate_public(path):
-            # The validator labels problems with the file's base name.
-            report.problems.append(
-                name + problem[len(path.name) :]
-                if problem.startswith(path.name)
-                else f"{name}: {problem}"
-            )
-        return True
-    report.problems.append(f"{name}: not a disclosure table and not reviewed")
-    return False
+    header = csv_header(data) or []
+    return set(PUBLIC_COLUMNS) <= set(header)
 
 
-def check(root: Path) -> Report:
+def validate_layer_table(path: Path, name: str, report: Report) -> None:
+    for problem in validate_public(path):
+        # The validator labels problems with the file's base name.
+        report.problems.append(
+            name + problem[len(path.name) :]
+            if problem.startswith(path.name)
+            else f"{name}: {problem}"
+        )
+
+
+def check(root: Path, today: Optional[date] = None) -> Report:
     """Run every check on the repository at ``root``."""
+    today = today or datetime.now(timezone.utc).date()
     report = Report()
     files = tracked_files(root)
     review, problems = read_review(root)
@@ -194,29 +230,43 @@ def check(root: Path) -> Report:
             continue
         if not path.is_file():
             continue
-        entry = review.get(name)
-        if entry is not None and entry.kind == PENDING:
-            report.pending.append(
-                f"{name}: pending ({entry.reviewer}): {entry.basis}"
-            )
-            continue
+        data = path.read_bytes()
+        binary = is_binary(data)
+        area_codes_allowed = name.startswith(AREA_CODES_ALLOWED_UNDER)
 
-        validated = False
-        if name.startswith(PUBLIC_DATA):
-            validated = check_public_data_file(root, name, entry, report)
+        if name.startswith(PUBLIC):
+            if not binary and RECORD_LEVEL.search(data):
+                report.problems.append(f"{name}: record-level identifiers")
+            layer = is_layer_table(name, data)
+            if layer:
+                validate_layer_table(path, name, report)
+                area_codes_allowed = True
+            entry = review.get(name)
+            if entry is None:
+                if not layer:
+                    report.problems.append(
+                        f"{name}: not a disclosure table and not reviewed"
+                    )
+            elif sha256_of(data) != entry.sha256:
+                report.problems.append(f"{name}: changed since its review")
+            elif entry.kind == PENDING:
+                if today > entry.expires_on:
+                    report.problems.append(
+                        f"{name}: pending past its expiry date "
+                        f"({entry.expires_on.isoformat()})"
+                    )
+                else:
+                    report.pending.append(
+                        f"{name}: pending until "
+                        f"{entry.expires_on.isoformat()} "
+                        f"({entry.reviewer}): {entry.basis}"
+                    )
+                    area_codes_allowed = True
+            elif entry.kind == REFERENCE_GEOGRAPHY:
+                area_codes_allowed = True
 
-        if name.startswith("public/") and path.suffix == ".csv":
-            header = csv_header(path) or []
-            if RECORD_LEVEL_COLUMNS & set(header):
-                report.problems.append(f"{name}: record-level columns")
-
-        allowed = (
-            validated
-            or (entry is not None and entry.kind == REFERENCE_GEOGRAPHY)
-            or name.startswith(AREA_CODES_ALLOWED_UNDER)
-        )
-        if not allowed and not is_binary(path):
-            codes = set(AREA_CODE.findall(path.read_bytes()))
+        if not area_codes_allowed and not binary:
+            codes = set(AREA_CODE.findall(data))
             if len(codes) > MAX_AREA_CODES:
                 report.problems.append(
                     f"{name}: carries more than {MAX_AREA_CODES} area codes"
