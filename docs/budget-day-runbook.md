@@ -76,12 +76,17 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | Step | Run | What happened | Live afterwards |
     |---|---|---|---|
     | 1. Deploy `main` (1ce4984) | 38734841265 | `00006-qih` passed the smoke test and replaced `00004-fur` | `00006-qih`, 1ce4984 |
-    | 2. Roll back to `00004-fur` | 38735958536 | **Refused, no traffic moved.** Provenance and tagging passed. The smoke test on the rollback tag got `/api/personal-impact` HTTP 503 from the revision, which was scaled to zero. The same request to that tag a few minutes later answered HTTP 200 in 130 s, so the 503 came from the cold start | `00006-qih` |
+    | 2. Roll back to `00004-fur` | 38735958536 | **Refused, no traffic moved.** Provenance and tagging passed. The smoke test's `/api/personal-impact` got HTTP 503 after 98.8 s: Cloud Run killed the instance for exceeding its memory ("Memory limit of 2048 MiB exceeded with 2050 MiB used", 12:40:03Z, from the coordinator's read of the logs). A retry minutes later answered HTTP 200 in 130 s | `00006-qih` |
     | 2, again | 38736878049 | Rolled back to `00004-fur`, replacing `00006-qih`; `/api/version` named `00004-fur` (1ce4984) | `00004-fur`, 1ce4984 |
     | 3. Deploy `main` (d488145) | 38737646035 | `00012-ruy` passed the smoke test and replaced `00004-fur` | `00012-ruy`, d488145 |
 
     `/api/version` after step 3: d488145, with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0. The revision numbers jumped from 00006 to 00012; W5 didn't create 00007 to 00011.
-  - **Rollback targets now:** `00012-ruy` (live) and `00004-fur`, both of which pass `main`'s smoke test. A rollback to a revision that has scaled to zero can fail its smoke test on the cold start (step 2) and leave traffic where it was. If that happens, warm the revision with one request to its tag URL first, then retry.
+  - **Rollback targets now:** `00012-ruy` (live) and `00004-fur`, both of which have passed `main`'s smoke test.
+  - **The household route can exceed 2 GiB.** Cloud Run killed two instances for exceeding the 2 GiB limit. Those are the only two such kills since 12 October, from the coordinator's read of the logs:
+    - `00004-fur` at 12:40:03Z (2050 MiB), which gave step 2's 503;
+    - `00003-jic` at 10:09:59Z (2054 MiB), during the first deploy's smoke test, so that 504 may have been memory as well as the 300 s limit.
+
+    One full request, or a later request on an instance that has already run some (policyengine-core keeps what each build registers), can pass 2 GiB. A smoke test or a rollback can therefore fail on memory, and retrying is not a fix. The memory setting is in the capacity decision going to Max.
   - **Cold start:** 32.6 s to the first response from an idle revision (`/api/version`).
   - **How long one household answer takes on Cloud Run (`00004-fur`), 15 October:**
 
