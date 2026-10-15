@@ -265,6 +265,8 @@ Exports are built only from approved entries of one manifest revision. A measure
 
   The workflow then checks that all traffic is on that revision and that `/api/version` names its commit. If the revision to restore fails the smoke test (for example, a household route slower than 300 s), nothing moves. You then decide whether to use the fallback anyway.
 
+  **One rare case:** a deploy pushes its image to the registry again after it promotes. If that final push fails, traffic has moved but the build ends FAILURE. The workflow reports the traffic it finds. That revision can't be a rollback target, because a rollback needs a successful deploy build.
+
   **Fallback only**, from a laptop with a working gcloud login: run the command the deploy's log printed ("Roll back with: …"). It restores the exact allocation the deploy replaced, but skips every check above, for example:
 
   ```sh
