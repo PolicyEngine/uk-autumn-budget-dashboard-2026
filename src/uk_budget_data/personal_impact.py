@@ -160,18 +160,21 @@ def build_situations(
 
 
 def _frozen(value):
-    """A field value as something hashable that compares by content; a
-    modifier (a function) compares by identity."""
+    """A field value as something hashable that compares by content, in
+    order: policyengine-uk reads parameter changes in order (where two paths
+    name one parameter, the later wins), so the same changes in another
+    order are kept apart. A modifier (a function) compares by identity."""
     if value is None or callable(value):
         return value
-    return json.dumps(value, sort_keys=True, default=repr)
+    return json.dumps(value, default=repr)
 
 
 def scenario_key(scenario: Optional[Scenario]):
-    """What a scenario does, as a key: two scenarios with the same key
-    simulate the same household identically. Every field of the model
-    counts, so a field a later engine adds keeps scenarios apart. A
-    scenario that changes nothing is current law."""
+    """What a scenario does, as a key: scenarios with the same key have the
+    same field values, in the same order, and the same modifier, so share a
+    simulation. Every field of the model counts, so a field a later engine
+    adds keeps scenarios apart. A scenario that changes nothing is current
+    law."""
     scenario = effective(scenario)
     if scenario is None:
         return None
@@ -179,6 +182,45 @@ def scenario_key(scenario: Optional[Scenario]):
         (name, _frozen(getattr(scenario, name)))
         for name in type(scenario).model_fields
     )
+
+
+class AsBuilt:
+    """A simulation's state as built, restored before each year is read.
+
+    A formula can read a value for another year once one is stored:
+    ``current_education`` returns last year's stage when it has one, and
+    otherwise derives it from age. Read in a simulation of its own, a year
+    never has one; read after the year before in a simulation covering
+    both, it would, and a child of 17 would keep their stage at 18 (with
+    Child Benefit and the Universal Credit child element). So every value
+    calculated since the simulation was built is deleted before each year,
+    in the simulation and in the baseline simulations it holds (which
+    formulas can read), and branches created since are dropped (an
+    existing branch keeps the values it has calculated).
+    """
+
+    def __init__(self, sim: Simulation):
+        self.states = []
+        seen = set()
+        while sim is not None and id(sim) not in seen:
+            seen.add(id(sim))
+            known = {
+                name: set(sim.get_holder(name).get_known_periods())
+                for name in sim.tax_benefit_system.variables
+            }
+            self.states.append((sim, known, set(sim.branches)))
+            sim = getattr(sim, "baseline", None)
+
+    def restore(self) -> None:
+        for sim, known, branches in self.states:
+            for name, periods in known.items():
+                holder = sim.get_holder(name)
+                for period in list(holder.get_known_periods()):
+                    if period not in periods:
+                        holder.delete_arrays(period)
+            for name in list(sim.branches):
+                if name not in branches:
+                    del sim.branches[name]
 
 
 def create_simulation(
@@ -417,12 +459,15 @@ class PersonalImpactCalculator:
         }
         metrics = {}
         for years, situation in build_situations(household, YEARS):
-            # One simulation at a time, so memory stays that of one.
+            # One simulation at a time, so memory stays that of one (with
+            # the baseline simulation the engine builds inside it).
             for key, scenario in scenarios.items():
                 sim = Simulation(situation=situation, scenario=scenario)
+                built = AsBuilt(sim)
                 for year in years:
+                    built.restore()
                     metrics[key, year] = calculate_household_metrics(sim, year)
-                del sim
+                del sim, built
 
         for year in YEARS:
             results["years"][year] = {

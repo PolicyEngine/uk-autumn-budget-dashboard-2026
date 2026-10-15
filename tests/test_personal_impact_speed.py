@@ -25,6 +25,7 @@ from uk_budget_data.personal_impact import (
 )
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
+RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
 
 households = st.builds(
     HouseholdInput,
@@ -104,6 +105,18 @@ def test_scenarios_that_do_the_same_share_a_key():
         Scenario(parameter_changes=changes, applied_before_data_load=True),
         Scenario.from_reform({ALLOWANCE: {"2027-04-06.2100-12-31": 20_000}}),
     ]
+    # policyengine-uk reads changes in order, so order counts.
+    in_order = Scenario(
+        parameter_changes={ALLOWANCE: {"2027": 1}, RATE: {"2027": 0.2}}
+    )
+    reversed_order = Scenario(
+        parameter_changes={RATE: {"2027": 0.2}, ALLOWANCE: {"2027": 1}}
+    )
+    assert scenario_key(in_order) != scenario_key(reversed_order)
+    # Mixed period-key types are keyed, not refused.
+    assert scenario_key(
+        Scenario(parameter_changes={ALLOWANCE: {2027: 1, "2028": 2}})
+    )
     keys = [scenario_key(scenario) for scenario in different]
     assert len(set(keys)) == len(keys)
 
@@ -130,7 +143,8 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
     monkeypatch.setattr(personal_impact, "POLICY_IDS", policy_ids)
     household = HouseholdInput(
         employment_income=25_000,
-        children_ages=[21, 6, 3, 1],
+        # 17 in 2025: 18 in 2026, which shares 2025's simulation.
+        children_ages=[21, 17, 3, 1],
         income_growth_rate=0.03,
     )
     calculator = personal_impact.PersonalImpactCalculator()
@@ -160,3 +174,25 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
         for policy_id in policy_ids
         for year in years
     )
+
+
+def test_a_year_read_after_another_is_the_year_on_its_own():
+    """A child's education stage is last year's when one is stored, and
+    otherwise follows age. A simulation covering 2025 and 2026, read for
+    2025 and then 2026, must give 2026 what a 2026 simulation gives: the
+    child is 18 in 2026 and leaves non-advanced education (#42 review)."""
+    household = HouseholdInput(
+        employment_income=30_000, children_ages=[17, 10, 2]
+    )
+    ((years, situation),) = build_situations(household, [2025, 2026])
+    sim = personal_impact.Simulation(situation=situation)
+    built = personal_impact.AsBuilt(sim)
+    merged = {}
+    for year in years:
+        built.restore()
+        merged[year] = calculate_household_metrics(sim, year)
+    for year in years:
+        alone = personal_impact.Simulation(
+            situation=build_situation(household, year)
+        )
+        assert merged[year] == calculate_household_metrics(alone, year)
