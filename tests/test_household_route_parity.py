@@ -18,6 +18,7 @@ import pytest
 
 from tests.test_household_calculator_route import (
     LCWRA_CLAIMANT,
+    PENSIONER,
     PROTECTED_CLAIMANT,
     _impact,
     _national,
@@ -25,8 +26,12 @@ from tests.test_household_calculator_route import (
     situation,
 )
 from uk_budget_data import personal_impact
-from uk_budget_data.measure_templates import rate_change, threshold_change
-from uk_budget_data.models import Reform
+from uk_budget_data.measure_templates import (
+    apply_age_conditioned_allowance,
+    rate_change,
+    threshold_change,
+)
+from uk_budget_data.models import DataConfig, Reform
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 BEER_DRINKER = {
@@ -163,3 +168,32 @@ def test_a_duty_kept_on_its_statutory_dates_is_built():
     figure and no household's)."""
     built = rate_change("gov.hmrc.alcohol_duty.rates.beer", {2027: 30})
     assert built == {"gov.hmrc.alcohol_duty.rates.beer": {"2027": 30.0}}
+
+
+def _age_allowance(sim, amount=20_000):
+    """A template helper called for its effect; nothing is returned."""
+    apply_age_conditioned_allowance(
+        sim,
+        allowance_by_year={2027: amount},
+        taper_threshold=100_000,
+        taper_rate=0,
+    )
+
+
+def test_a_template_modifier_that_returns_nothing_moves_households_alike():
+    """Review round 10 of #23: a modifier that calls a template helper and
+    returns nothing worked nationally and gave the household calculator
+    None. Both routes now run it as the engine does: £30,000 of pension
+    less a £20,000 allowance, at 20%."""
+    measure = Reform(
+        id="template", name="Template", simulation_modifier=_age_allowance
+    )
+    national = _national(PENSIONER, None, _age_allowance)
+    _, reformed = personal_impact.household_simulations(
+        PENSIONER, measure, DataConfig()
+    )
+    built = personal_impact.create_simulation(
+        PENSIONER, 2027, simulation_modifier=_age_allowance
+    )
+    for sim in (national, reformed, built):
+        assert float(sim.calculate("income_tax", 2027)[0]) == 2_000
