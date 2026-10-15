@@ -196,3 +196,26 @@ def test_a_year_read_after_another_is_the_year_on_its_own():
             situation=build_situation(household, year)
         )
         assert merged[year] == calculate_household_metrics(alone, year)
+
+
+def test_as_built_restores_the_baseline_simulations_and_drops_new_branches():
+    """The parts of AsBuilt today's reads do not reach: a value calculated
+    in a baseline simulation the engine built inside the simulation is
+    deleted, and a branch created after the build is dropped."""
+    household = HouseholdInput(employment_income=30_000)
+    ((years, situation),) = build_situations(household, [2025, 2026])
+    sim = personal_impact.Simulation(
+        situation=situation,
+        scenario=Scenario(parameter_changes={ALLOWANCE: {"2026": 20_000}}),
+    )
+    baseline = sim.baseline
+    assert baseline is not None and baseline is not sim
+    built = personal_impact.AsBuilt(sim)
+    assert built.states[1][0] is baseline
+    before = set(baseline.get_holder("income_tax").get_known_periods())
+    baseline.calculate("income_tax", 2026)
+    branch = sim.get_branch("probe")
+    assert "probe" in sim.branches and branch is not None
+    built.restore()
+    assert set(baseline.get_holder("income_tax").get_known_periods()) == before
+    assert "probe" not in sim.branches

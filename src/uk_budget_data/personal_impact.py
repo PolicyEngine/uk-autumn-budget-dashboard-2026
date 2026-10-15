@@ -136,6 +136,15 @@ def build_situations(
     situation's people are fixed, and a child leaves the household at 25,
     so years with different people are in different situations.
 
+    Every year's inputs stay visible while any year is read, which a
+    single-year situation never has. That is safe for today's inputs: the
+    formulas that read another year read nothing set here except
+    ``current_education``, restored before each read (``AsBuilt``), and
+    ``region``, the same every year. An input that varied by year in a way
+    a formula reads across years (a household that moves region) would
+    need its own situation: ``AsBuilt`` restores calculated values, not
+    inputs.
+
     Returns:
         ``(years, situation)`` pairs, in the order of ``years``.
     """
@@ -196,7 +205,9 @@ class AsBuilt:
     calculated since the simulation was built is deleted before each year,
     in the simulation and in the baseline simulations it holds (which
     formulas can read), and branches created since are dropped (an
-    existing branch keeps the values it has calculated).
+    existing branch keeps the values it has calculated). The calculator's
+    reads touch neither the baseline simulations nor branches today; those
+    parts are there for a metric that would.
     """
 
     def __init__(self, sim: Simulation):
