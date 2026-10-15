@@ -7,8 +7,10 @@ scripted service, as tests/test_cloudbuild.py does for cloudbuild.yaml.
 """
 
 import json
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,9 +22,10 @@ DEPLOY = yaml.safe_load((REPO / "cloudbuild.yaml").read_text())
 BUILD_ID = "0123abcd-4567-89ef-0123-456789abcdef"
 REVISION = "uk-budget-api-2026-00002-abc"
 COMMIT = "c" * 40
-DIGEST = (
-    "europe-west1-docker.pkg.dev/p/r/uk-budget-api-2026@sha256:" + "d" * 64
-)
+REPOSITORY = "europe-west1-docker.pkg.dev/p/r/uk-budget-api-2026"
+DIGEST = REPOSITORY + "@sha256:" + "d" * 64
+DEPLOY_BUILD = "fedcba98-7654-3210-fedc-ba9876543210"
+MAIN = "e" * 40
 
 pytestmark = pytest.mark.skipif(
     shutil.which("bash") is None, reason="needs bash"
@@ -64,6 +67,28 @@ if name == "git":
     elif "merge-base" in args:
         save()
         sys.exit(0 if args[-2] in state.get("on_main", []) else 1)
+    elif "archive" in args:
+        # main's copy of each named file, as git archive writes it.
+        import io, tarfile
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w") as tar:
+            for member in args[args.index("archive") + 2:]:
+                source = os.path.join(state["main_tree"], member)
+                data = open(source, "rb").read()
+                info = tarfile.TarInfo(member)
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+        save()
+        sys.stdout.buffer.write(buffer.getvalue())
+        sys.exit(0)
+    elif "rev-parse" in args:
+        print(state["main_sha"])
+elif args[:2] == ["builds", "describe"]:
+    build = state.get("builds", {}).get(args[2])
+    if build is None:
+        save()
+        sys.exit("ERROR: build not found")
+    print(json.dumps(build))
 elif args[:3] == ["builds", "list", "--ongoing"]:
     print("\n".join(state.get("ongoing", [])))
 elif args[:3] == ["run", "revisions", "describe"]:
@@ -109,8 +134,11 @@ def run(script: str, tmp_path: Path, state: dict):
         fake.chmod(0o755)
     state_file = tmp_path / "state.json"
     state_file.write_text(json.dumps(state))
+    # In the test's own folder, so nothing a step writes by a relative path
+    # can land in the repository.
     result = subprocess.run(
         ["bash", "-c", script],
+        cwd=tmp_path,
         env={
             "PATH": f"{bin_dir}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
             "FAKE_STATE": str(state_file),
@@ -125,7 +153,7 @@ def revision(**labels_and_status) -> dict:
     labels = {
         "serving.knative.dev/service": "uk-budget-api-2026",
         "commit-sha": COMMIT,
-        "gcb-build-id": "f" * 36,
+        "gcb-build-id": DEPLOY_BUILD,
     }
     ready = labels_and_status.pop("ready", "True")
     image = labels_and_status.pop("image", DIGEST)
@@ -142,13 +170,36 @@ def revision(**labels_and_status) -> dict:
     }
 
 
+def deploy_build(**changes) -> dict:
+    """The deploy build's own record, as gcloud builds describe gives it."""
+    build = {
+        "id": DEPLOY_BUILD,
+        "status": "SUCCESS",
+        "tags": ["uk-budget-api-2026-deploy"],
+        "substitutions": {"_GIT_SHA": COMMIT},
+        "results": {
+            "images": [
+                {
+                    "name": f"{REPOSITORY}:{COMMIT}",
+                    "digest": "sha256:" + "d" * 64,
+                }
+            ]
+        },
+    }
+    build.update(changes)
+    return build
+
+
 def service(**overrides) -> dict:
     return {
         "revisions": {REVISION: revision()},
+        "builds": {DEPLOY_BUILD: deploy_build()},
         "traffic": [
             {"revisionName": "uk-budget-api-2026-00003-xyz", "percent": 100}
         ],
         "on_main": [COMMIT],
+        "main_tree": str(REPO),
+        "main_sha": MAIN,
         **overrides,
     }
 
@@ -214,6 +265,11 @@ def test_a_revision_built_by_this_pipeline_is_accepted(tmp_path, workspace):
         (revision(**{"commit-sha": None}), "names no commit"),
         (revision(**{"commit-sha": "not-a-commit"}), "names no commit"),
         (revision(**{"gcb-build-id": None}), "names no build"),
+        (
+            revision(**{"gcb-build-id": "THIS-BUILD-DOES-NOT-EXIST"}),
+            "names no build",
+        ),
+        (revision(resolved=""), "no resolved image"),
         (revision(image=""), "no image digest"),
         (
             revision(image=DIGEST.split("@")[0] + ":latest"),
@@ -273,17 +329,171 @@ def test_the_revision_commit_must_be_on_main(tmp_path, workspace, on_main, ok):
     assert "--filter=blob:none" in clone and "--branch" in clone
 
 
-def test_the_revision_is_smoke_tested_from_its_own_image(workspace):
-    """The smoke step runs the image the revision runs against a tag only
-    this build gave it, expecting the revision's commit."""
-    script = step_script("smoke", workspace)
-    assert "docker run --rm" in script
-    assert f'"$(cat {workspace}/image_ref)"' in script
-    assert f'--base-url "$(cat {workspace}/tagged_url)"' in script
-    assert f'--expect-git-sha "$(cat {workspace}/commit)"' in script
-    deploy_smoke = next(s for s in DEPLOY["steps"] if s["id"] == "smoke")
-    assert "uk_budget_data.deploy_smoke" in deploy_smoke["args"][-1]
-    assert "uk_budget_data.deploy_smoke" in script
+def _checked(workspace):
+    (workspace / "commit").write_text(COMMIT)
+    (workspace / "image_ref").write_text(DIGEST)
+    (workspace / "build_id").write_text(DEPLOY_BUILD)
+
+
+def test_a_revision_its_successful_deploy_build_backs_is_accepted(
+    tmp_path, workspace
+):
+    _checked(workspace)
+    result, state = run(
+        step_script("provenance", workspace), tmp_path, service()
+    )
+    assert result.returncode == 0, result.stderr
+    assert state["calls"][0][:4] == [
+        "gcloud",
+        "builds",
+        "describe",
+        DEPLOY_BUILD,
+    ]
+
+
+def _pushed(name, digest):
+    return {"images": [{"name": name, "digest": "sha256:" + digest * 64}]}
+
+
+@pytest.mark.parametrize(
+    "build, message",
+    [
+        (deploy_build(status="FAILURE"), "ended FAILURE"),
+        (deploy_build(tags=["other"]), "not a deploy of this service"),
+        (
+            deploy_build(substitutions={"_REVISION": REVISION}),
+            "was of commit None",
+        ),
+        (
+            deploy_build(substitutions={"_GIT_SHA": "b" * 40}),
+            "was of commit 'bbbb",
+        ),
+        (
+            deploy_build(results=_pushed(f"{REPOSITORY}:{COMMIT}", "e")),
+            "did not push the image it runs",
+        ),
+        (
+            deploy_build(results=_pushed(f"elsewhere/other:{COMMIT}", "d")),
+            "did not push the image it runs",
+        ),
+        (deploy_build(results={}), "did not push the image it runs"),
+    ],
+)
+def test_a_revision_its_build_record_does_not_back_is_refused(
+    tmp_path, workspace, build, message
+):
+    """Review A: labels are only what a revision says about itself. The
+    build they name must be a successful deploy of this service, of that
+    commit, that pushed the image the revision runs."""
+    _checked(workspace)
+    result, _ = run(
+        step_script("provenance", workspace),
+        tmp_path,
+        service(builds={DEPLOY_BUILD: build}),
+    )
+    assert result.returncode != 0
+    assert message in result.stderr
+
+
+def test_a_revision_naming_an_unknown_build_is_refused(tmp_path, workspace):
+    _checked(workspace)
+    result, _ = run(
+        step_script("provenance", workspace), tmp_path, service(builds={})
+    )
+    assert result.returncode != 0
+
+
+def test_the_checker_is_mains_own_copy(tmp_path, workspace):
+    """Review A: the smoke checker came from the revision's own image, so an
+    older revision brought an older, weaker checker. It now comes from
+    main's tip: two standard-library modules under an empty package."""
+    (workspace / "commit").write_text(COMMIT)
+    result, state = run(step_script("on-main", workspace), tmp_path, service())
+    assert result.returncode == 0, result.stderr
+    package = workspace / "checker" / "src" / "uk_budget_data"
+    for module in ("deploy_smoke.py", "runtime_identity.py"):
+        assert (package / module).read_bytes() == (
+            REPO / "src" / "uk_budget_data" / module
+        ).read_bytes()
+    assert (package / "__init__.py").read_text() == ""
+    (archive,) = [c for c in state["calls"] if "archive" in c]
+    assert archive[archive.index("archive") + 1] == "main"
+    assert f"Smoke checker from main at {MAIN}" in result.stdout
+
+
+def test_the_images_expectations_are_only_data(workspace):
+    """The image supplies what it is (identity and coverage) and nothing
+    else; nothing of its own decides pass or fail."""
+    script = step_script("expectations", workspace)
+    assert f'docker run --rm "$(cat {workspace}/image_ref)"' in script
+    assert script.rstrip().endswith(f"> {workspace}/expectations.json")
+    assert "deploy_smoke" not in script
+
+
+def _expectations_snippet(workspace) -> str:
+    script = step_script("expectations", workspace)
+    return script.split("python -c '", 1)[1].rsplit("' >", 1)[0]
+
+
+def test_the_written_out_expectations_match_print_expectations(
+    workspace, monkeypatch
+):
+    """Differential: the snippet the image runs gives exactly what
+    deploy_smoke.print_expectations returns."""
+    from uk_budget_data import deploy_smoke
+
+    result = subprocess.run(
+        [sys.executable, "-c", _expectations_snippet(workspace)],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "GIT_SHA": COMMIT},
+    )
+    assert result.returncode == 0, result.stderr
+    monkeypatch.setenv("GIT_SHA", COMMIT)
+    assert json.loads(result.stdout) == deploy_smoke.print_expectations()
+
+
+def _smoke(tmp_path, workspace, impact=None):
+    """Run the rollback's real smoke step against a local API, with main's
+    checker extracted as on-main extracts it."""
+    from tests.smoke_server import serving
+    from tests.test_deploy_smoke import BUILD, POLICIES, YEARS, answer
+
+    identity = {**BUILD, "git_sha": COMMIT}
+    (workspace / "commit").write_text(COMMIT)
+    extracted, _ = run(step_script("on-main", workspace), tmp_path, service())
+    assert extracted.returncode == 0, extracted.stderr
+    (workspace / "expectations.json").write_text(
+        json.dumps(
+            {"identity": identity, "years": YEARS, "policies": POLICIES}
+        )
+    )
+    with serving(identity, impact or answer()) as (url, _):
+        (workspace / "tagged_url").write_text(url)
+        result, _ = run(
+            step_script("smoke", workspace), tmp_path / "smoke", {}
+        )
+    return result
+
+
+def test_the_smoke_step_passes_a_good_revision_on_plain_python(
+    tmp_path, workspace
+):
+    result = _smoke(tmp_path, workspace)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '"pass": true' in result.stdout
+
+
+def test_the_smoke_step_refuses_what_todays_checker_refuses(
+    tmp_path, workspace
+):
+    """Review A's reproducer: a nested error that an older checker passed."""
+    from tests.test_deploy_smoke import answer
+
+    body = answer()
+    body["policies"]["x"]["years"]["2026"]["error"] = "calculation failed"
+    result = _smoke(tmp_path, workspace, body)
+    assert result.returncode != 0
 
 
 def test_the_tag_is_this_builds_and_carries_no_traffic(tmp_path, workspace):

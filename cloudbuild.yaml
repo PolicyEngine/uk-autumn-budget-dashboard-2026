@@ -1,12 +1,15 @@
 # Build and deploy the household API, uk-budget-api-2026.
 #
 # A new revision takes no traffic until it passes a smoke test on its own
-# tagged URL. Submit an exact archive of a pushed commit:
+# tagged URL. Normally the "Deploy the household API" workflow runs this.
+# By hand, from an up-to-date checkout of main, submit an exact archive of
+# a commit on main with THIS checkout's config (never the archive's own: an
+# older commit's copy lacks today's safeguards, and the lock below):
 #
 #   git archive <commit> | tar -x -C <empty dir>
 #   gcloud builds submit <dir> --project policyengine-apps \
 #     --region europe-west1 \
-#     --config <dir>/cloudbuild.yaml --substitutions _GIT_SHA=<commit>
+#     --config cloudbuild.yaml --substitutions _GIT_SHA=<commit>
 #
 # Only one deploy of this service runs at a time: deploys must be submitted
 # to _REGION (gcloud builds submit --region europe-west1), a build anywhere
@@ -177,18 +180,54 @@ steps:
           "$$tag" > /workspace/candidate_url
         echo "Candidate $$revision at $$(cat /workspace/candidate_url)"
 
-  # Smoke-test the candidate from inside the image it runs.
-  - id: smoke
+  # Main's current smoke checker, from a history-only clone of the public
+  # repository: only its two modules, which need nothing beyond the
+  # standard library, under an empty package. The commit being deployed
+  # may be older than main, and its own checker with it.
+  - id: trusted-checker
+    name: 'gcr.io/cloud-builders/git'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        git clone --quiet --filter=blob:none --no-checkout --single-branch \
+          --branch main "https://github.com/${_REPOSITORY}.git" /workspace/history
+        mkdir -p /workspace/checker
+        git -C /workspace/history archive main \
+          src/uk_budget_data/deploy_smoke.py src/uk_budget_data/runtime_identity.py \
+          | tar -x -C /workspace/checker
+        : > /workspace/checker/src/uk_budget_data/__init__.py
+        echo "Smoke checker from main at $$(git -C /workspace/history rev-parse main)"
+
+  # What the candidate's image says it is, as data: its identity and the
+  # years and policies its calculator covers (deploy_smoke's
+  # print_expectations, written out). Nothing here decides pass or fail.
+  - id: expectations
     name: 'gcr.io/cloud-builders/docker'
     entrypoint: bash
     args:
       - '-c'
       - |
         set -euo pipefail
-        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync \
-          python -m uk_budget_data.deploy_smoke \
+        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import json
+        from uk_budget_data import personal_impact
+        from uk_budget_data.runtime_identity import runtime_identity
+        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS)}, sort_keys=True))' > /workspace/expectations.json
+
+  # Smoke-test the candidate with main's checker, on plain Python.
+  - id: smoke
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        cd /workspace/checker/src
+        python3 -s -m uk_budget_data.deploy_smoke \
           --base-url "$$(cat /workspace/candidate_url)" \
-          --expect-git-sha ${_GIT_SHA}
+          --expect-git-sha ${_GIT_SHA} \
+          --expectations /workspace/expectations.json
 
   # Promote only if traffic is still what it was when this build began, so
   # the allocation recorded for rollback is the one actually replaced.

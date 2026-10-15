@@ -440,3 +440,65 @@ def test_gcloud_would_upload_every_tracked_file():
         ["git", "ls-files"], cwd=REPO, text=True
     ).splitlines()
     assert [path for path in tracked if not chooser.IsIncluded(path)] == []
+
+
+# --- review round 2 of #28: main's checker in the deploy too --------------
+
+
+ROLLBACK = yaml.safe_load((REPO / "cloudbuild-rollback.yaml").read_text())
+
+
+def _script(config: dict, step_id: str) -> str:
+    return next(s for s in config["steps"] if s["id"] == step_id)["args"][-1]
+
+
+def test_the_deploy_smoke_tests_with_mains_checker_after_deploying():
+    """Review A: the deploy ran the candidate image's own checker, so a
+    deploy of an older commit brought that commit's weaker checker."""
+    order = [s["id"] for s in CONFIG["steps"]]
+    assert (
+        order.index("deploy-candidate")
+        < order.index("trusted-checker")
+        < order.index("expectations")
+        < order.index("smoke")
+        < order.index("promote")
+    )
+    checker = _script(CONFIG, "trusted-checker")
+    assert "--filter=blob:none" in checker and "--branch main" in checker
+    assert "archive main" in checker
+    smoke = next(s for s in CONFIG["steps"] if s["id"] == "smoke")
+    assert "docker" not in smoke["name"] and "docker" not in smoke["args"][-1]
+    assert "--expectations /workspace/expectations.json" in smoke["args"][-1]
+
+
+def test_deploy_and_rollback_judge_by_the_same_checker_and_data():
+    """Differential: both pipelines extract the same modules from main,
+    collect the same expectations and run the same checker command."""
+    deploy_checker = _script(CONFIG, "trusted-checker")
+    rollback_checker = _script(ROLLBACK, "on-main")
+    extract = deploy_checker[
+        deploy_checker.index("mkdir -p /workspace/checker") :
+    ]
+    assert extract in rollback_checker
+    assert _script(CONFIG, "expectations") == _script(ROLLBACK, "expectations")
+    deploy_smoke = (
+        _script(CONFIG, "smoke")
+        .replace('"$$(cat /workspace/candidate_url)"', "URL")
+        .replace("${_GIT_SHA}", "COMMIT")
+    )
+    rollback_smoke = (
+        _script(ROLLBACK, "smoke")
+        .replace('"$$(cat /workspace/tagged_url)"', "URL")
+        .replace('"$$(cat /workspace/commit)"', "COMMIT")
+    )
+    assert deploy_smoke == rollback_smoke
+
+
+def test_manual_submissions_use_mains_config_not_the_archives():
+    """Review B: the instructions submitted <dir>/cloudbuild.yaml, the
+    archived commit's own copy, which for an older commit lacks the lock
+    and the traffic check."""
+    header = (REPO / "cloudbuild.yaml").read_text().split("substitutions:")[0]
+    assert "--config cloudbuild.yaml" in header
+    assert "<dir>/cloudbuild.yaml" not in header
+    assert "checkout of main" in header

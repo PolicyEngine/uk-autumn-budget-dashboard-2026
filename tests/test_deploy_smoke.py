@@ -1,5 +1,6 @@
 """Tests for the pre-traffic smoke test of a household API revision."""
 
+import json
 import math
 
 import pytest
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
 
+from tests.smoke_server import serving
 from uk_budget_data import deploy_smoke
 from uk_budget_data.api import app as real_app
 from uk_budget_data.deploy_smoke import (
@@ -269,3 +271,86 @@ def test_a_null_error_field_is_not_a_failure():
         deploy_smoke.impact_problems(body, years=YEARS, policies=POLICIES)
         == []
     )
+
+
+# --- review round 2 of #28: main's checker, on plain Python ---------------
+
+
+def _expectations(tmp_path, **changes):
+    data = {"identity": BUILD, "years": YEARS, "policies": POLICIES}
+    data.update(changes)
+    path = tmp_path / "expectations.json"
+    path.write_text(json.dumps(data))
+    return str(path)
+
+
+def test_the_standard_library_client_checks_a_real_server(tmp_path):
+    with serving(BUILD, GOOD_ANSWER) as (url, server):
+        code = deploy_smoke.main(
+            [
+                "--base-url",
+                url,
+                "--expect-git-sha",
+                SHA,
+                "--expectations",
+                _expectations(tmp_path),
+            ]
+        )
+    assert code == 0
+    assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD]
+
+
+def test_the_checker_judges_with_its_own_logic_not_the_images(tmp_path):
+    """Review A: an older image's checker passed an answer with a nested
+    error that today's rejects. The expectations file carries data only, so
+    today's logic decides."""
+    body = answer()
+    body["policies"]["x"]["years"]["2026"]["error"] = "calculation failed"
+    with serving(BUILD, body) as (url, _):
+        code = deploy_smoke.main(
+            [
+                "--base-url",
+                url,
+                "--expect-git-sha",
+                SHA,
+                "--expectations",
+                _expectations(tmp_path),
+            ]
+        )
+    assert code == 1
+
+
+@pytest.mark.parametrize(
+    "changes, message",
+    [
+        ({"policies": []}, "names no policies"),
+        ({"years": []}, "names no years"),
+        ({"years": [2026]}, "names no years"),
+        ({"identity": {**BUILD, "git_sha": "b" * 40}}, "is for commit"),
+        ({"identity": None}, "names no identity"),
+    ],
+)
+def test_expectations_that_would_make_the_checks_vacuous_are_refused(
+    tmp_path, capsys, changes, message
+):
+    with serving(BUILD, GOOD_ANSWER) as (url, _):
+        code = deploy_smoke.main(
+            [
+                "--base-url",
+                url,
+                "--expect-git-sha",
+                SHA,
+                "--expectations",
+                _expectations(tmp_path, **changes),
+            ]
+        )
+    assert code == 1
+    assert message in capsys.readouterr().err
+
+
+def test_a_server_error_is_a_problem_not_a_crash(tmp_path):
+    with serving(BUILD, GOOD_ANSWER, health_status=503) as (url, _):
+        client = deploy_smoke.StdlibClient(url, 5)
+        result = deploy_smoke.run_smoke(client, SHA, BUILD, YEARS, POLICIES)
+    assert not result["pass"]
+    assert "/api/health returned HTTP 503" in result["problems"]
