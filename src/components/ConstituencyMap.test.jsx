@@ -323,6 +323,10 @@ describe("ConstituencyMap", () => {
     expect(
       await screen.findByText("Results by constituency are not yet published."),
     ).toBeInTheDocument();
+    // The package is published by region, so the notice points there.
+    expect(
+      await screen.findByRole("link", { name: "See the results by region." }),
+    ).toHaveAttribute("href", "#results-by-region");
   });
 
   it("exports the hatch, the legend and the selected seat's card", async () => {

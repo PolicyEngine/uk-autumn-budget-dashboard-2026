@@ -153,11 +153,10 @@ export default function ConstituencyMap({
     outcome,
     place: "by constituency",
   });
-  const regionalOnly =
-    view.kind === "notice" &&
-    view.missingReform &&
-    hasReform(regional.table, choice.reform);
-  if (regionalOnly) {
+  // Whether the region view has this measure, so a notice can point to it.
+  const regionalHasChoice =
+    Boolean(choice.reform) && hasReform(regional.table, choice.reform);
+  if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
     view = {
       ...view,
       reason: "Results for this measure are published by region only.",
@@ -289,13 +288,16 @@ export default function ConstituencyMap({
       .on("zoom", (event) => layer.attr("transform", event.transform));
     svg.call(zoom);
     mapRef.current = { svg, layer, path, zoom };
+    // A seat still selected from before the map was redrawn is centred
+    // again, where its tooltip sits.
+    if (selectedRef.current) zoomToSeat(selectedRef.current);
     return () => {
       svg.interrupt();
       layer.selectAll("path").interrupt();
       svg.on(".zoom", null);
       mapRef.current = null;
     };
-  }, [svgNode, features]);
+  }, [svgNode, features, zoomToSeat]);
 
   // Colour the seats, draw the legend and attach the handlers.
   useEffect(() => {
@@ -459,7 +461,7 @@ export default function ConstituencyMap({
       {view.kind === "notice" && (
         <UnavailableNotice reason={view.reason}>
           {view.detail && <p>{view.detail}</p>}
-          {regionalOnly && (
+          {regionalHasChoice && (
             <p>
               <a href={`#${REGION_VIEW_ID}`}>See the results by region.</a>
             </p>
