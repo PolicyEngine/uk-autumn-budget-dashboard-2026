@@ -1,0 +1,312 @@
+name: Deploy the household API
+
+# Deploys and rolls back uk-budget-api-2026 (Cloud Run, project
+# policyengine-apps, europe-west1) without anyone's laptop. GitHub's OIDC
+# token is exchanged for a short-lived credential through Workload Identity
+# Federation, for the service account named in the repository variables
+# GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOY_SERVICE_ACCOUNT. That account
+# only submits builds and reads the service: the Cloud Build pipelines move
+# traffic, under one lock, whichever way they were started.
+#
+# Deploy: main's cloudbuild.yaml builds an exact archive of a commit on main
+# (an older commit's own copy may lack today's safeguards). The new revision
+# takes no traffic until it passes the smoke test on its own tagged URL, and
+# traffic moves only if it has not changed since the build began.
+#
+# Rollback: main's cloudbuild-rollback.yaml moves all traffic to a named
+# revision, but only one whose own successful deploy build, of a commit on
+# main, pushed the image it runs, after main's current smoke test (the
+# image supplies only data), and only if traffic has not changed since the
+# rollback began.
+#
+# Either way, the workflow then checks the live /api/version; if a build
+# fails, it reports the traffic it finds rather than assuming none moved.
+#
+# Deploys on every push to main stay off until the repository variable
+# API_DEPLOY_ON_PUSH is "true". Until then, run this workflow by hand.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .gcloudignore
+      - cloudbuild.yaml
+      - pyproject.toml
+      - uv.lock
+      - "src/uk_budget_data/**"
+      - "data_inputs/**"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deploy a commit, or roll back to a revision
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      commit:
+        description: "deploy: the full commit on main to deploy (default: main's head)"
+        required: false
+        default: ""
+      revision:
+        description: "rollback: the revision to send all traffic to, e.g. uk-budget-api-2026-00002-abc"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# One deploy or rollback at a time from this workflow; the pipelines' own
+# lock also covers builds submitted any other way.
+concurrency:
+  group: uk-budget-api-2026-deploy
+  cancel-in-progress: false
+
+env:
+  PROJECT: policyengine-apps
+  REGION: europe-west1
+  SERVICE: uk-budget-api-2026
+
+jobs:
+  deploy:
+    name: Deploy a commit
+    if: >-
+      (github.event_name == 'push' && vars.API_DEPLOY_ON_PUSH == 'true')
+      || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      INPUT_COMMIT: ${{ inputs.commit }}
+      WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Choose the commit
+        id: commit
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Deploys run from main, not $GITHUB_REF"
+            exit 1
+          fi
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$DEPLOY_SERVICE_ACCOUNT" ]; then
+            echo "::error::Set the repository variables GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOY_SERVICE_ACCOUNT"
+            exit 1
+          fi
+          commit="${INPUT_COMMIT:-$GITHUB_SHA}"
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Name the full 40-character commit"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::$commit is not on main"
+            exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Record the traffic
+        id: before
+        run: |
+          traffic=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+            --region "$REGION" --format=json | python3 -c 'import json, sys
+          traffic = json.load(sys.stdin)["status"].get("traffic", [])
+          print(",".join("%s=%s" % (t["revisionName"], t["percent"])
+                         for t in traffic if t.get("percent")))')
+          echo "traffic=$traffic" >> "$GITHUB_OUTPUT"
+          echo "Serving before this deploy: $traffic"
+
+      # The source is an exact archive of the commit, which the pipeline
+      # checks byte for byte against the public commit. The pipeline is the
+      # workflow checkout's: main's, whatever commit it builds.
+      - name: Submit the build
+        id: build
+        env:
+          COMMIT: ${{ steps.commit.outputs.commit }}
+        run: |
+          dir=$(mktemp -d)
+          git archive "$COMMIT" | tar -x -C "$dir"
+          build=$(gcloud builds submit "$dir" --project "$PROJECT" \
+            --region "$REGION" --config "$GITHUB_WORKSPACE/cloudbuild.yaml" \
+            --substitutions "_GIT_SHA=$COMMIT" --async --format='value(id)')
+          if ! [[ "$build" =~ ^[0-9a-f-]{36}$ ]]; then
+            echo "::error::Cloud Build did not return a build id"
+            exit 1
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "Build $build: https://console.cloud.google.com/cloud-build/builds;region=$REGION/$build?project=$PROJECT"
+
+      # Waits on the build's status, so the deploy does not depend on
+      # permission to stream its logs. A build that fails or is cancelled
+      # may already have moved traffic, so on failure this reports the
+      # traffic it finds.
+      - name: Wait for the build
+        env:
+          BUILD: ${{ steps.build.outputs.build }}
+          BEFORE: ${{ steps.before.outputs.traffic }}
+          POLL_SECONDS: "20"
+        run: |
+          while :; do
+            status=$(gcloud builds describe "$BUILD" --project "$PROJECT" \
+              --region "$REGION" --format='value(status)')
+            case "$status" in
+              SUCCESS) break ;;
+              QUEUED|PENDING|WORKING) sleep "$POLL_SECONDS" ;;
+              *)
+                gcloud builds log "$BUILD" --project "$PROJECT" \
+                  --region "$REGION" || echo "(no access to the build log)"
+                now=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+                  --region "$REGION" --format=json 2>/dev/null | python3 -c 'import json, sys
+          traffic = json.load(sys.stdin)["status"].get("traffic", [])
+          print(",".join("%s=%s" % (t["revisionName"], t["percent"])
+                         for t in traffic if t.get("percent")))' 2>/dev/null) \
+                  || now="unknown (the service could not be read)"
+                echo "::error::Build $BUILD ended $status. Serving now: $now (before: $BEFORE)."
+                exit 1
+                ;;
+            esac
+          done
+          gcloud builds log "$BUILD" --project "$PROJECT" --region "$REGION" \
+            | tail -n 40 || echo "(no access to the build log)"
+
+      - name: Check the live service
+        env:
+          COMMIT: ${{ steps.commit.outputs.commit }}
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+            --region "$REGION" --format='value(status.url)')
+          live=$(curl -fsS --max-time 120 "$url/api/version" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["git_sha"])')
+          if [ "$live" != "$COMMIT" ]; then
+            echo "::error::$url serves $live, not $COMMIT"
+            exit 1
+          fi
+          echo "$url serves $COMMIT"
+
+  rollback:
+    name: Roll back to a revision
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REVISION: ${{ inputs.revision }}
+      WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check the request
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Rollbacks run from main, not $GITHUB_REF"
+            exit 1
+          fi
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$DEPLOY_SERVICE_ACCOUNT" ]; then
+            echo "::error::Set the repository variables GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOY_SERVICE_ACCOUNT"
+            exit 1
+          fi
+          if ! [[ "$REVISION" =~ ^uk-budget-api-2026-[0-9]{5}-[a-z0-9]{3}$ ]]; then
+            echo "::error::Name a revision of $SERVICE, e.g. $SERVICE-00002-abc"
+            exit 1
+          fi
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Record the traffic
+        id: before
+        run: |
+          traffic=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+            --region "$REGION" --format=json | python3 -c 'import json, sys
+          traffic = json.load(sys.stdin)["status"].get("traffic", [])
+          print(",".join("%s=%s" % (t["revisionName"], t["percent"])
+                         for t in traffic if t.get("percent")))')
+          echo "traffic=$traffic" >> "$GITHUB_OUTPUT"
+          echo "Serving before this rollback: $traffic"
+
+      # The rollback pipeline checks the revision, smoke-tests it and moves
+      # traffic; see cloudbuild-rollback.yaml.
+      - name: Submit the rollback
+        id: build
+        run: |
+          build=$(gcloud builds submit --no-source --project "$PROJECT" \
+            --region "$REGION" --config "$GITHUB_WORKSPACE/cloudbuild-rollback.yaml" \
+            --substitutions "_REVISION=$REVISION" --async --format='value(id)')
+          if ! [[ "$build" =~ ^[0-9a-f-]{36}$ ]]; then
+            echo "::error::Cloud Build did not return a build id"
+            exit 1
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "Build $build: https://console.cloud.google.com/cloud-build/builds;region=$REGION/$build?project=$PROJECT"
+
+      - name: Wait for the build
+        env:
+          BUILD: ${{ steps.build.outputs.build }}
+          BEFORE: ${{ steps.before.outputs.traffic }}
+          POLL_SECONDS: "20"
+        run: |
+          while :; do
+            status=$(gcloud builds describe "$BUILD" --project "$PROJECT" \
+              --region "$REGION" --format='value(status)')
+            case "$status" in
+              SUCCESS) break ;;
+              QUEUED|PENDING|WORKING) sleep "$POLL_SECONDS" ;;
+              *)
+                gcloud builds log "$BUILD" --project "$PROJECT" \
+                  --region "$REGION" || echo "(no access to the build log)"
+                now=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+                  --region "$REGION" --format=json 2>/dev/null | python3 -c 'import json, sys
+          traffic = json.load(sys.stdin)["status"].get("traffic", [])
+          print(",".join("%s=%s" % (t["revisionName"], t["percent"])
+                         for t in traffic if t.get("percent")))' 2>/dev/null) \
+                  || now="unknown (the service could not be read)"
+                echo "::error::Build $BUILD ended $status. Serving now: $now (before: $BEFORE)."
+                exit 1
+                ;;
+            esac
+          done
+          gcloud builds log "$BUILD" --project "$PROJECT" --region "$REGION" \
+            | tail -n 40 || echo "(no access to the build log)"
+
+      - name: Check the live service
+        run: |
+          state=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+            --region "$REGION" --format=json)
+          commit=$(gcloud run revisions describe "$REVISION" --project "$PROJECT" \
+            --region "$REGION" --format=json | python3 -c 'import json, sys
+          print(json.load(sys.stdin)["metadata"]["labels"]["commit-sha"])')
+          url=$(printf '%s' "$state" | python3 -c 'import json, sys
+          service = json.load(sys.stdin)
+          live = [(t["revisionName"], t["percent"])
+                  for t in service["status"].get("traffic", []) if t.get("percent")]
+          if live != [(sys.argv[1], 100)]:
+              sys.exit(f"traffic is {live}, not all on {sys.argv[1]}")
+          print(service["status"]["url"])' "$REVISION")
+          live=$(curl -fsS --max-time 120 "$url/api/version" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["git_sha"])')
+          if [ "$live" != "$commit" ]; then
+            echo "::error::$url serves $live, not $REVISION's $commit"
+            exit 1
+          fi
+          echo "$url serves $REVISION ($commit)"

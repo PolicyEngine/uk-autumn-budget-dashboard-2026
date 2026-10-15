@@ -1,0 +1,265 @@
+# Roll the household API, uk-budget-api-2026, back to an earlier revision.
+#
+# Moves all traffic to _REVISION, but only a revision a successful deploy
+# by this pipeline built from a commit on main (its own build record must
+# name that commit and the image the revision runs), and only after it
+# passes main's current smoke test against a tag only this build uses. The
+# checker is main's, run on plain Python, never the revision's own copy;
+# the revision's image supplies only data (its package versions and
+# coverage). Submit from a checkout of main, with this checkout's config:
+#
+#   gcloud builds submit --no-source --project policyengine-apps \
+#     --region europe-west1 --config cloudbuild-rollback.yaml \
+#     --substitutions _REVISION=uk-budget-api-2026-00002-abc
+#
+# It shares cloudbuild.yaml's lock: a rollback and a deploy never run at
+# once, whichever way either was started. Traffic moves only if it has not
+# changed since this build began, and the log ends with the allocation it
+# replaced and the command that restores it.
+
+substitutions:
+  _REVISION: ''
+  _REPOSITORY: PolicyEngine/uk-autumn-budget-dashboard-2026
+  _SERVICE: uk-budget-api-2026
+  _REGION: europe-west1
+
+# The same tag as a deploy, so deploys and rollbacks see each other.
+tags: ['uk-budget-api-2026-deploy']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # One deploy or rollback at a time, in _REGION only (as cloudbuild.yaml).
+  - id: exclusive
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        if [ "${LOCATION}" != "${_REGION}" ]; then
+          echo "Submit rollbacks with --region ${_REGION}; this build runs in ${LOCATION}" >&2
+          exit 1
+        fi
+        others=$$(gcloud builds list --ongoing --region ${_REGION} \
+          --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
+          --format='value(id)')
+        if [ -n "$$others" ]; then
+          echo "Another deploy or rollback is running ($$others); stopping" >&2
+          exit 1
+        fi
+
+  # The revision must be this service's, ready, and built by this deploy
+  # pipeline (its labels name the commit and the build) from a commit on
+  # main. It records the image, the commit and the traffic it replaces.
+  - id: check-revision
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        if ! echo "${_REVISION}" | grep -Eq '^${_SERVICE}-[0-9]{5}-[a-z0-9]{3}$$'; then
+          echo "_REVISION must name a revision of ${_SERVICE}" >&2
+          exit 1
+        fi
+        gcloud run revisions describe "${_REVISION}" --region ${_REGION} \
+          --format=json > /workspace/revision.json
+        python3 - "${_SERVICE}" "${_REVISION}" <<'EOF'
+        import json, re, sys
+        service, name = sys.argv[1], sys.argv[2]
+        revision = json.load(open("/workspace/revision.json"))
+        labels = revision["metadata"].get("labels", {})
+        if labels.get("serving.knative.dev/service") != service:
+            sys.exit(f"{name} is not a revision of {service}")
+        ready = [c for c in revision["status"].get("conditions", [])
+                 if c.get("type") == "Ready"]
+        if not ready or ready[0].get("status") != "True":
+            sys.exit(f"{name} is not ready")
+        commit = labels.get("commit-sha", "")
+        if not re.fullmatch(r"[0-9a-f]{40}", commit):
+            sys.exit(f"{name} names no commit: it was not built by this pipeline")
+        build = labels.get("gcb-build-id", "")
+        if not re.fullmatch(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", build):
+            sys.exit(f"{name} names no build: it was not built by this pipeline")
+        # The image as deployed: this pipeline deploys by digest.
+        containers = revision.get("spec", {}).get("containers") or [{}]
+        image = containers[0].get("image", "")
+        if "@sha256:" not in image:
+            sys.exit(f"{name} records no image digest")
+        resolved = revision["status"].get("imageDigest", "")
+        if not resolved or resolved.split("@")[-1] != image.split("@")[-1]:
+            sys.exit(f"{name} runs {resolved or 'no resolved image'}, not the {image} it names")
+        open("/workspace/commit", "w").write(commit)
+        open("/workspace/image_ref", "w").write(image)
+        open("/workspace/build_id", "w").write(build)
+        EOF
+        gcloud run services describe ${_SERVICE} --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        traffic = json.load(sys.stdin)["status"].get("traffic", [])
+        live = sorted((t["revisionName"], t["percent"]) for t in traffic
+                      if t.get("percent"))
+        print(json.dumps(live))' > /workspace/previous_traffic
+        echo "Rolling back to ${_REVISION} (commit $$(cat /workspace/commit)), replacing $$(cat /workspace/previous_traffic)"
+
+  # The revision's build: a deploy by this pipeline that succeeded (so it
+  # passed its smoke test and promoted), of the commit the revision's label
+  # names, which pushed the very image the revision runs. Labels alone are
+  # only what the revision says about itself.
+  - id: provenance
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        gcloud builds describe "$$(cat /workspace/build_id)" \
+          --region ${_REGION} --format=json > /workspace/build.json
+        python3 - "${_REVISION}" <<'EOF'
+        import json, sys
+        name = sys.argv[1]
+        build = json.load(open("/workspace/build.json"))
+        commit = open("/workspace/commit").read()
+        image = open("/workspace/image_ref").read()
+        repository, digest = image.split("@")
+        problems = []
+        if build.get("status") != "SUCCESS":
+            problems.append(f"its deploy build ended {build.get('status')}")
+        if "uk-budget-api-2026-deploy" not in (build.get("tags") or []):
+            problems.append("its build is not a deploy of this service")
+        built = (build.get("substitutions") or {}).get("_GIT_SHA")
+        if built != commit:
+            problems.append(f"its build was of commit {built!r}, not {commit}")
+        pushed = [
+            i for i in (build.get("results") or {}).get("images") or []
+            if i.get("digest") == digest
+            and i.get("name", "").rsplit(":", 1)[0] == repository
+        ]
+        if not pushed:
+            problems.append(f"its build did not push the image it runs ({image})")
+        # The record is what the submitter could say about it; the steps
+        # that ran are part of it too. A deploy that skipped the source
+        # check or the smoke test is not one to restore.
+        ran = {s.get("id"): s.get("status") for s in build.get("steps") or []}
+        for step in ("verify-source", "smoke"):
+            if ran.get(step) != "SUCCESS":
+                problems.append(f"its build did not pass a {step} step")
+        if problems:
+            sys.exit(f"{name}: " + "; ".join(problems))
+        EOF
+
+  # On main: a commit a PR branch built is not a rollback target. A
+  # history-only clone of the public repository (no blobs) answers it, and
+  # supplies main's current smoke checker: only its two modules, which need
+  # nothing beyond the standard library, under an empty package.
+  - id: on-main
+    name: 'gcr.io/cloud-builders/git'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        commit=$$(cat /workspace/commit)
+        git clone --quiet --filter=blob:none --no-checkout --single-branch \
+          --branch main "https://github.com/${_REPOSITORY}.git" /workspace/history
+        if ! git -C /workspace/history merge-base --is-ancestor "$$commit" main; then
+          echo "${_REVISION}'s commit $$commit is not on main" >&2
+          exit 1
+        fi
+        mkdir -p /workspace/checker
+        git -C /workspace/history archive main \
+          src/uk_budget_data/deploy_smoke.py src/uk_budget_data/runtime_identity.py \
+          | tar -x -C /workspace/checker
+        : > /workspace/checker/src/uk_budget_data/__init__.py
+        echo "Smoke checker from main at $$(git -C /workspace/history rev-parse main)"
+
+  # A tag only this build uses gives the revision its own URL, with no
+  # traffic, for the smoke test.
+  - id: tag
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        tag="rb$$(echo "${BUILD_ID}" | tr -d '-' | cut -c1-20)"
+        echo "$$tag" > /workspace/tag
+        gcloud run services update-traffic ${_SERVICE} --region ${_REGION} \
+          --update-tags "$$tag=${_REVISION}"
+        gcloud run services describe ${_SERVICE} --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        tag = sys.argv[1]
+        traffic = json.load(sys.stdin)["status"]["traffic"]
+        print(next(t["url"] for t in traffic if t.get("tag") == tag))' \
+          "$$tag" > /workspace/tagged_url
+
+  # What the revision's image says it is, as data: its identity and the
+  # years and policies its calculator covers (deploy_smoke's
+  # print_expectations, written out so an image older than that function
+  # can answer). Nothing here decides pass or fail.
+  - id: expectations
+    name: 'gcr.io/cloud-builders/docker'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import json
+        from uk_budget_data import personal_impact
+        from uk_budget_data.runtime_identity import runtime_identity
+        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS)}, sort_keys=True))' > /workspace/expectations.json
+
+  # Main's checker, on plain Python: the revision's own code decides
+  # nothing.
+  - id: smoke
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        cd /workspace/checker/src
+        python3 -s -m uk_budget_data.deploy_smoke \
+          --base-url "$$(cat /workspace/tagged_url)" \
+          --expect-git-sha "$$(cat /workspace/commit)" \
+          --expectations /workspace/expectations.json
+
+  # Move traffic only if no other deploy or rollback is running and
+  # traffic is still what this build recorded, then drop the tag.
+  - id: promote
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        others=$$(gcloud builds list --ongoing --region ${_REGION} \
+          --filter="tags='uk-budget-api-2026-deploy' AND id!='${BUILD_ID}'" \
+          --format='value(id)')
+        if [ -n "$$others" ]; then
+          echo "Another deploy or rollback is running ($$others); not moving traffic" >&2
+          exit 1
+        fi
+        now=$$(gcloud run services describe ${_SERVICE} --region ${_REGION} \
+          --format=json | python3 -c 'import json, sys
+        traffic = json.load(sys.stdin)["status"].get("traffic", [])
+        live = sorted((t["revisionName"], t["percent"]) for t in traffic
+                      if t.get("percent"))
+        print(json.dumps(live))')
+        before=$$(cat /workspace/previous_traffic)
+        if [ "$$now" != "$$before" ]; then
+          echo "Traffic changed during this rollback ($$before -> $$now); not moving traffic" >&2
+          exit 1
+        fi
+        gcloud run services update-traffic ${_SERVICE} --region ${_REGION} \
+          --to-revisions "${_REVISION}=100"
+        gcloud run services update-traffic ${_SERVICE} --region ${_REGION} \
+          --remove-tags "$$(cat /workspace/tag)" \
+          || echo "Traffic moved, but the tag $$(cat /workspace/tag) was not removed" >&2
+        restore=$$(python3 -c 'import json, sys
+        print(",".join(f"{r}={p}" for r, p in json.loads(sys.argv[1])))' "$$before")
+        echo "Rolled back to ${_REVISION} replacing $$before"
+        if [ -n "$$restore" ]; then
+          echo "Undo with: gcloud run services update-traffic ${_SERVICE} --project ${PROJECT_ID} --region ${_REGION} --to-revisions $$restore"
+        fi
