@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from policyengine_uk import Simulation
+from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
@@ -138,24 +139,20 @@ def create_simulation(
     Returns:
         Configured Simulation object.
     """
-    sim = Simulation(situation=situation)
-
-    # Apply parameter changes if provided
-    if reform_param_changes:
-        for param_path, values in reform_param_changes.items():
-            param = sim.tax_benefit_system.parameters
-            for part in param_path.split("."):
-                if "[" in part:
-                    # Handle indexed parameters like rates.uk[1]
-                    name, idx = part.rstrip("]").split("[")
-                    param = getattr(param, name)[int(idx)]
-                else:
-                    param = getattr(param, part)
-
-            # Apply value for the year
-            year_str = str(year)
-            if year_str in values:
-                param.update(period=f"{year}-01-01", value=values[year_str])
+    # The changes go in as the national run applies them, through
+    # policyengine-uk's Scenario: before fiscal-year conversion and the
+    # parameters derived from them. Writing a value on 1 January afterwards
+    # reached only what reads that one day: a monthly variable such as
+    # fuel_duty saw 1/12 of a change, a duty kept on its statutory dates
+    # (alcohol) saw none, and derived thresholds were not recomputed.
+    sim = Simulation(
+        situation=situation,
+        scenario=(
+            Scenario(parameter_changes=reform_param_changes)
+            if reform_param_changes
+            else None
+        ),
+    )
 
     # Apply simulation modifier if provided
     if simulation_modifier:
