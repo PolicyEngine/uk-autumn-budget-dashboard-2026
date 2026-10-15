@@ -1597,3 +1597,81 @@ def test_standalone_responsiveness_refuses_a_year_listed_twice():
             _respond(
                 budgetary={2027: 1.0}, comparators_bn=TwoSpellings(keys, 1.0)
             )
+
+
+# --- review round 7 of #17 (follow-up) -------------------------------------
+
+
+def test_an_instance_cannot_change_which_years_a_declaration_covers():
+    """Round 7 (N21): expected_direction called covers() through the
+    instance, so a shadowed method made two non-overlapping declarations
+    apply to one year, and the result depended on their order."""
+    a = ExpectedEffect("m", "negative", 2027, to_year=2027, reviewer="R")
+    b = ExpectedEffect("m", "positive", 2028, reviewer="R")
+    a.__dict__["covers"] = lambda year: True
+    for order in ([a, b], [b, a]):
+        result = _respond(
+            budgetary={2028: 5.0},
+            comparators_bn={2028: 5.0},
+            declarations=order,
+        )
+        assert result["status"] == RESPONSIVE
+
+
+def _comparator_and_status(result):
+    return (
+        [row["comparator"]["value_bn"] for row in result["rows"]],
+        result["responsiveness"]["status"],
+        result["summary"]["status"],
+    )
+
+
+def test_the_order_of_the_mapping_cannot_move_the_gate():
+    """Round 7 (N22): sequential float addition gave 0.02 one way and
+    0.020000000000000004 the other, which moved the responsiveness minimum
+    past an output exactly at it."""
+    sources = [
+        SourceRow("S", str(i), "2027-28", value, "static_costing")
+        for i, value in enumerate([0.002, 0.004, 0.006, 0.008])
+    ]
+    results = [
+        _comparator_and_status(
+            run(
+                {2027: 0.001},
+                sources,
+                mapping=[link(row_id=str(i)) for i in order],
+            )
+        )
+        for order in ([0, 1, 2, 3], [1, 2, 3, 0], [3, 2, 1, 0])
+    ]
+    assert results[0][0] == [0.02]
+    assert results[0] == results[1] == results[2]
+
+
+@given(
+    st.lists(
+        st.integers(min_value=-5_000, max_value=5_000), min_size=1, max_size=6
+    ),
+    st.randoms(use_true_random=False),
+)
+def test_reconciliation_does_not_depend_on_mapping_order(millions, rng):
+    """Property: for whole-million figures, any order of the mapping gives
+    the same comparators and the same statuses."""
+    sources = [
+        SourceRow("S", str(i), "2027-28", m / 1000, "static_costing")
+        for i, m in enumerate(millions)
+    ]
+    order = list(range(len(millions)))
+    shuffled = order[:]
+    rng.shuffle(shuffled)
+    first, second = (
+        _comparator_and_status(
+            run(
+                {2027: 0.001},
+                sources,
+                mapping=[link(row_id=str(i)) for i in o],
+            )
+        )
+        for o in (order, shuffled)
+    )
+    assert first == second

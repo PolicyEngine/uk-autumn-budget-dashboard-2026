@@ -336,7 +336,7 @@ def _comparator(
     none (not yet entered, or left blank), the comparator is incomplete and
     its value is None, so a partial sum can never pass.
     """
-    total = 0.0
+    contributions = []
     used = []
     missing = []
     excluded = []
@@ -373,7 +373,9 @@ def _comparator(
             continue
         row = matches[0]
         where = f"{link.source_id} row {link.row_id} in {label}"
-        total += _finite(link.scale * row.value_bn, f"{where}, scaled")
+        contributions.append(
+            _finite(link.scale * row.value_bn, f"{where}, scaled")
+        )
         used.append(
             {
                 "source_id": row.source_id,
@@ -386,7 +388,11 @@ def _comparator(
         )
     if missing or not used:
         return Comparator(None, used, missing, False)
-    total = _finite(total, f"the {basis} comparator for {measure_id}")
+    # fsum is exact up to the final rounding, so the order the mapping lists
+    # its rows cannot move the comparator (and the gate) by a rounding error.
+    total = _finite(
+        math.fsum(contributions), f"the {basis} comparator for {measure_id}"
+    )
     printed_zero = all(abs(row["value_bn"]) <= _EPSILON for row in used)
     return Comparator(
         total, used, [], printed_zero, _fingerprint(basis, used, excluded)

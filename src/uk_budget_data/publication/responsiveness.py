@@ -199,7 +199,8 @@ def expected_direction(
     an effect is expected.
     """
     for declaration in declarations:
-        if declaration.covers(year):
+        # The class's own method: an instance could shadow covers().
+        if ExpectedEffect.covers(declaration, year):
             return declaration.direction, "declared"
     if comparator_bn is not None and abs(comparator_bn) > zero_tolerance_bn:
         return _sign(comparator_bn), "treasury"
