@@ -540,6 +540,50 @@ def test_a_seat_outside_its_households_region_is_refused(regions):
         )
 
 
+def test_the_reform_processor_feeds_a_collector_each_year():
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.pipeline import ReformProcessor
+
+    class Stub:
+        def calculate(self, *args, **kwargs):
+            return []
+
+    class Recorder:
+        def __init__(self):
+            self.calls = []
+
+        def collect(self, *args):
+            self.calls.append(args)
+
+    recorder = Recorder()
+    processor = ReformProcessor(
+        Reform(id="m", name="M"),
+        DataConfig(years=[2026, 2027]),
+        geography_collector=recorder,
+    )
+    for name in (
+        "budgetary_calc",
+        "distributional_calc",
+        "winners_losers_calc",
+        "metrics_calc",
+        "income_curve_calc",
+        "household_scatter_calc",
+    ):
+        setattr(processor, name, Stub())
+    processor.distributional_calc = SimpleNamespace(
+        calculate=lambda *args: ([], None)
+    )
+    baseline, reformed = object(), object()
+    processor.process(baseline, reformed, None)
+    assert recorder.calls == [
+        ("m", 2026, baseline, reformed),
+        ("m", 2027, baseline, reformed),
+    ]
+    assert (
+        ReformProcessor(Reform(id="m", name="M")).geography_collector is None
+    )
+
+
 # -- the release -------------------------------------------------------------
 
 
