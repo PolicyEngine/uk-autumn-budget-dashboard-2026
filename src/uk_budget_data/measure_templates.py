@@ -6,6 +6,12 @@ execution receipts cannot bind closure factories or partially applied helpers.
 
 There is no ``monthly_schedule`` helper: monthly policies must be expressed
 as fiscal-year values, with the team choosing the aggregation methodology.
+
+The household calculator applies a change on 1 January of each year only,
+so a parameter read on other dates moves less there than in the national
+figure: a monthly variable's (fuel duty's) by 1/12, and a calendar-
+preserved duty's not at all (these are refused). The parity test records
+each known gap (``tests/test_household_route_parity.py``).
 Parameter builders key every value by its bare fiscal year and refuse any
 other key. policyengine-uk 2.126.12 would read a ``"start.stop"`` interval
 in the national run, but the household calculator applies a change only
@@ -38,7 +44,15 @@ from policyengine_uk.utils.scenario import _apply_reform_class
 
 
 def _validate_parameter_path(path: str) -> None:
-    """Require a leaf in the installed engine's native parameter tree."""
+    """Require a leaf in the installed engine's native parameter tree, and
+    one the household calculator can apply.
+
+    A parameter with ``preserve_calendar_dates`` keeps its statutory dates
+    (alcohol duties, for example): its formulas read it on those dates. The
+    household calculator writes a change on 1 January only, so every
+    household would see no change while the national figure moves
+    (``tests/test_household_route_parity.py``).
+    """
     from policyengine_core.parameters import Parameter
     from policyengine_uk.system import system
 
@@ -50,6 +64,13 @@ def _validate_parameter_path(path: str) -> None:
         raise ValueError(f"Unknown parameter path: {path}") from exc
     if not isinstance(parameter, Parameter):
         raise ValueError(f"Parameter path must identify a leaf: {path}")
+    if (parameter.metadata or {}).get("preserve_calendar_dates"):
+        raise ValueError(
+            f"{path} keeps its statutory dates, and the household calculator "
+            "applies a change on 1 January only, so households would see no "
+            "change. Score it national-only with a modifier until the "
+            "household calculator applies changes as the national run does."
+        )
 
 
 def _finite_decimal(value, label: str) -> Decimal:
