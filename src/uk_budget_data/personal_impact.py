@@ -6,9 +6,12 @@ households over time (2025-2029).
 
 import copy
 import json
+import logging
 import multiprocessing
 import os
-from concurrent.futures import ProcessPoolExecutor
+import threading
+from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
@@ -425,7 +428,14 @@ def household_workers() -> int:
     """
     configured = os.environ.get("HOUSEHOLD_WORKERS")
     if configured:
-        return max(1, int(configured))
+        try:
+            return max(1, int(configured))
+        except ValueError:
+            # A misconfigured server, not a bad request: fall back.
+            logging.getLogger(__name__).warning(
+                "HOUSEHOLD_WORKERS=%r is not a whole number; ignoring it",
+                configured,
+            )
     try:
         quota, period = CGROUP_CPU_MAX.read_text().split()[:2]
     except (OSError, ValueError):
@@ -437,6 +447,14 @@ def household_workers() -> int:
 
 _pool: Optional[ProcessPoolExecutor] = None
 _pool_workers = 0
+_pool_lock = threading.Lock()
+
+# How long one household calculation's jobs may take before the calculation
+# is abandoned and its workers stopped (Cloud Run's request limit is 300 s),
+# so a hung worker can't hold every later calculation.
+CALCULATION_TIMEOUT_SECONDS = float(
+    os.environ.get("HOUSEHOLD_CALCULATION_TIMEOUT", "280")
+)
 
 
 def worker_pool(workers: int) -> ProcessPoolExecutor:
@@ -447,24 +465,96 @@ def worker_pool(workers: int) -> ProcessPoolExecutor:
     worker builds one simulation and exits (``max_tasks_per_child=1``):
     what a build leaves behind in the process (policyengine-core registers
     every variable module per tax-benefit system) goes with it. The
-    forkserver is single-threaded, so forking is safe while the server's
-    thread pool runs other requests.
+    forkserver starts with numexpr and OpenMP limited to one thread, so
+    each worker uses one CPU (there is one worker per vCPU) and the
+    forkserver has no idle library threads when it forks.
     """
     global _pool, _pool_workers
-    if _pool is None or _pool_workers != workers:
-        if _pool is not None:
-            _pool.shutdown(wait=False)
-        methods = multiprocessing.get_all_start_methods()
-        context = multiprocessing.get_context(
-            "forkserver" if "forkserver" in methods else "spawn"
-        )
-        if context.get_start_method() == "forkserver":
-            context.set_forkserver_preload(["uk_budget_data.personal_impact"])
-        _pool = ProcessPoolExecutor(
-            max_workers=workers, mp_context=context, max_tasks_per_child=1
-        )
-        _pool_workers = workers
-    return _pool
+    with _pool_lock:
+        if _pool is None or _pool_workers != workers:
+            if _pool is not None:
+                _pool.shutdown(wait=False, cancel_futures=True)
+            methods = multiprocessing.get_all_start_methods()
+            context = multiprocessing.get_context(
+                "forkserver" if "forkserver" in methods else "spawn"
+            )
+            if context.get_start_method() == "forkserver":
+                # Inherited by the forkserver when it starts; this process
+                # has already imported numexpr, so it is unaffected.
+                for name in (
+                    "NUMEXPR_NUM_THREADS",
+                    "NUMEXPR_MAX_THREADS",
+                    "OMP_NUM_THREADS",
+                ):
+                    os.environ.setdefault(name, "1")
+                context.set_forkserver_preload(
+                    ["uk_budget_data.personal_impact"]
+                )
+            _pool = ProcessPoolExecutor(
+                max_workers=workers, mp_context=context, max_tasks_per_child=1
+            )
+            _pool_workers = workers
+        return _pool
+
+
+def discard_pool(pool: ProcessPoolExecutor) -> None:
+    """Drop a pool that can no longer be trusted (a worker died or hung)
+    so the next calculation gets a new one, and stop its workers. A broken
+    pool would otherwise refuse every later calculation in this process."""
+    global _pool, _pool_workers
+    with _pool_lock:
+        if _pool is pool:
+            _pool, _pool_workers = None, 0
+    # The executor offers no way to stop a running worker.
+    for process in list(getattr(pool, "_processes", {}).values()):
+        process.terminate()
+    pool.shutdown(wait=False, cancel_futures=True)
+
+
+def run_jobs(workers: int, jobs: list) -> list:
+    """Each job's metrics, computed in worker processes.
+
+    If a job fails, the jobs not yet started are cancelled and its error is
+    raised. If a worker dies, the pool is discarded, so the next
+    calculation gets a new one; a pool found broken before any job ran
+    (its forkserver died between calculations) is replaced once.
+    """
+    for attempt in (1, 2):
+        pool = worker_pool(workers)
+        try:
+            futures = [
+                pool.submit(simulate_years, situation, years, scenario)
+                for years, situation, _, scenario in jobs
+            ]
+            break
+        except BrokenProcessPool:
+            discard_pool(pool)
+            if attempt == 2:
+                raise
+    done, pending = wait(
+        futures,
+        timeout=CALCULATION_TIMEOUT_SECONDS,
+        return_when=FIRST_EXCEPTION,
+    )
+    if pending:
+        for future in pending:
+            future.cancel()
+        failed = [f for f in done if f.exception() is not None]
+        if not failed:
+            discard_pool(pool)
+            raise TimeoutError(
+                "The household calculation took more than "
+                f"{CALCULATION_TIMEOUT_SECONDS:.0f} s"
+            )
+        error = failed[0].exception()
+        if isinstance(error, BrokenProcessPool):
+            discard_pool(pool)
+        raise error
+    try:
+        return [future.result() for future in futures]
+    except BrokenProcessPool:
+        discard_pool(pool)
+        raise
 
 
 class PersonalImpactCalculator:
@@ -564,12 +654,7 @@ class PersonalImpactCalculator:
             for key, scenario in scenarios.items()
         ]
         if self.workers > 1 and len(jobs) > 1:
-            pool = worker_pool(self.workers)
-            futures = [
-                pool.submit(simulate_years, situation, years, scenario)
-                for years, situation, _, scenario in jobs
-            ]
-            outputs = [future.result() for future in futures]
+            outputs = run_jobs(self.workers, jobs)
         else:
             outputs = [
                 simulate_years(situation, years, scenario)
