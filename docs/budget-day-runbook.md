@@ -113,11 +113,14 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - pre-2026 claimants get `gov.dwp.universal_credit.rebalancing.protected_health_element` (or the UC Act 2025 s. 4 floor where that is null);
 - new claimants get `gov.dwp.universal_credit.rebalancing.new_claimant_health_element`.
 
-These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabled.amount` therefore scores £0: on policyengine-uk 2.130.1, £600 a month on it moved no claimant's element, while £600 on either rebalancing amount gave £7,200 a year.
+These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabled.amount` in those years therefore scores £0: on policyengine-uk 2.130.1, £600 a month on it moved no claimant's element in 2026 or 2029, while £600 on the claimant's rebalancing amount gave £7,200 a year. In 2025 and 2030 it is the other way round: only the element's own amount moves the element.
 - **Switching `rebalancing.active` off is not the law before the Universal Credit Act 2025 either:** the 2026 element amount is already the new claimants' rate, so every claimant would get it.
-- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), for 2026-29. The templates refuse the element's amount from 2026, and `rebalancing.active`.
+- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), for 2026-29. The templates refuse the element's amount in 2026-29, and `rebalancing.active` in any year.
+- **From 2030, change the element's own amount** with `rate_change(UC_LCWRA_AMOUNT, ...)`. The rebalancing has stopped, so every claimant, protected or not, gets that amount (next bullet).
 - **Found by the UK hub.** It is drafting an engine-side fix for a certified release before the 28th. If that changes how these parameters work, re-check this row.
-- **2030-31 UC will move up when policyengine-uk #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). #2282 extends it. Once a certified bundle with it is adopted, the dashboard's 2030-31 UC figures, and any measure's 2030-31 effect that runs through UC, rise. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
+- **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:
+  - the dashboard's 2030-31 UC figures rise, and so does any measure's 2030-31 effect that runs through UC. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
+  - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` is extended to match, so a 2030 measure on the element's amount can't quietly start scoring £0. Extend it in the bundle-adoption PR.
 
 **Dated changes: key every year by its bare fiscal year.**
 
