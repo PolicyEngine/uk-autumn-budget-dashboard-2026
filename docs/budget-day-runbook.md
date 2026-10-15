@@ -117,6 +117,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Switching `rebalancing.active` off is not the law before the Universal Credit Act 2025 either:** the 2026 element amount is already the new claimants' rate, so every claimant would get it.
 - **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), for 2026-29. The templates refuse the element's amount from 2026, and `rebalancing.active`.
 - **Found by the UK hub.** It is drafting an engine-side fix for a certified release before the 28th. If that changes how these parameters work, re-check this row.
+- **2030-31 UC will move up when policyengine-uk #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). #2282 extends it. Once a certified bundle with it is adopted, the dashboard's 2030-31 UC figures, and any measure's 2030-31 effect that runs through UC, rise. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
 
 **Dated changes: key every year by its bare fiscal year.**
 
