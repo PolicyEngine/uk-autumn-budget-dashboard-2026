@@ -1546,3 +1546,54 @@ def test_two_spellings_of_one_model_year_are_refused():
     budgetary = TwoSpellings([2027, np.int64(2027)], 5.0)
     with pytest.raises(ReconciliationInputError, match="two model outputs"):
         run(budgetary, [source(2027, 5.0)])
+
+
+# --- review round 6 of #17 -------------------------------------------------
+
+
+def test_an_instance_cannot_switch_off_its_own_checks():
+    """Review round 6 (N16): the recheck dispatched __post_init__ through
+    the instance, which could shadow it in its __dict__."""
+    row = link()
+    row.__dict__.update(scale=0, __post_init__=lambda: None)
+    with pytest.raises(ReconciliationInputError, match="above zero"):
+        run({2027: 0.004}, [source(2027, 5.0)], mapping=[row])
+
+
+def test_a_sequence_without_iter_is_still_a_collection():
+    """Review round 6 (N19): Python iterates a sequence by __getitem__
+    alone (a ctypes array, say); requiring __iter__ refused one that
+    worked before."""
+    import ctypes
+
+    effects = (ctypes.py_object * 1)(*NEGATIVE)
+    result = run({2027: 5.0}, [source(2027, 5.0)], expected=effects)
+    assert result["responsiveness"]["status"] == WRONG_DIRECTION
+    standalone = _respond(budgetary={2027: 5.0}, declarations=effects)
+    assert standalone["status"] == WRONG_DIRECTION
+
+    class ByIndex:
+        def __getitem__(self, index):
+            if index:
+                raise IndexError
+            return NEGATIVE[0]
+
+    assert (
+        _respond(budgetary={2027: 5.0}, declarations=ByIndex())["status"]
+        == WRONG_DIRECTION
+    )
+    with pytest.raises(ValueError, match="collection"):
+        _respond(declarations=object())
+
+
+def test_standalone_responsiveness_refuses_a_year_listed_twice():
+    """Review round 6 (N20): a mapping listing 2027 and a NumPy 2027 was
+    resolved by order (responsive one way, wrong_direction the other)."""
+    np = pytest.importorskip("numpy")
+    for keys in ([2027, np.int64(2027)], [np.int64(2027), 2027]):
+        with pytest.raises(ValueError, match="lists 2027 twice"):
+            _respond(budgetary=TwoSpellings(keys, 5.0))
+        with pytest.raises(ValueError, match="lists 2027 twice"):
+            _respond(
+                budgetary={2027: 1.0}, comparators_bn=TwoSpellings(keys, 1.0)
+            )

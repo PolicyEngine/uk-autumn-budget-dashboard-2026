@@ -94,11 +94,16 @@ def collected(values, label: str) -> list:
     """The items of a collection, read once: a one-shot iterator is read
     here and the list used throughout, so a check never consumes what the
     gate then needs. Text and mappings are not collections of items."""
-    if isinstance(values, (str, bytes, Mapping)) or not hasattr(
-        values, "__iter__"
-    ):
+    if isinstance(values, (str, bytes, Mapping)):
         raise ValueError(f"{label} must be a collection, not {values!r}")
-    return list(values)
+    # Anything list() can read, including a sequence that iterates by
+    # __getitem__ alone.
+    try:
+        return list(values)
+    except TypeError as error:
+        raise ValueError(
+            f"{label} must be a collection, not {values!r}"
+        ) from error
 
 
 def validated(item, kind: type, label: str):
@@ -108,8 +113,23 @@ def validated(item, kind: type, label: str):
     ``__dict__``, so neither type nor construction alone is enough."""
     if type(item) is not kind:
         raise ValueError(f"{label} must be a {kind.__name__}, not {item!r}")
-    item.__post_init__()
+    # The class's own checks: an instance can shadow __post_init__ in its
+    # __dict__.
+    kind.__post_init__(item)
     return item
+
+
+def by_whole_year(mapping: Mapping, label: str, value) -> dict:
+    """A mapping's values keyed by builtin-int year, each key read once: a
+    mapping that lists one year twice (2027 and a NumPy 2027) is refused,
+    not resolved by order."""
+    result = {}
+    for year, entry in mapping.items():
+        key = whole_year(year, f"{label} year")
+        if key in result:
+            raise ValueError(f"{label} lists {key} twice")
+        result[key] = value(key, entry)
+    return result
 
 
 def threshold(value, label: str, *, above_zero: bool = False) -> float:
@@ -238,20 +258,22 @@ def check_responsiveness(
     ):
         if not isinstance(mapping, Mapping):
             raise ValueError(f"{name} must be a mapping, not {mapping!r}")
-    impacts = {
-        whole_year(year, f"{measure_id}'s model year"): finite_impact(
+    impacts = by_whole_year(
+        budgetary,
+        f"{measure_id}'s model outputs",
+        lambda year, value: finite_impact(
             value, f"{measure_id}'s impact in {year}"
-        )
-        for year, value in budgetary.items()
-    }
-    comparators = {
-        whole_year(year, f"{measure_id}'s comparator year"): (
+        ),
+    )
+    comparators = by_whole_year(
+        comparators_bn,
+        f"{measure_id}'s comparators",
+        lambda year, value: (
             None
             if value is None
             else finite_impact(value, f"the Treasury's figure for {year}")
-        )
-        for year, value in comparators_bn.items()
-    }
+        ),
+    )
     min_response_bn = threshold(
         min_response_bn, "min_response_bn", above_zero=True
     )
