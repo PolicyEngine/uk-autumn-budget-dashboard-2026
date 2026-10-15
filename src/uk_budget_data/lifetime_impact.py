@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.models import DataConfig
+from uk_budget_data.personal_impact import effective
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 # Graduate starting income by percentile (age 22, 2025 prices)
@@ -371,7 +372,7 @@ class LifetimeImpactCalculator:
 
             baseline_sim = Simulation(
                 situation=situation,
-                scenario=self.config.get_baseline_scenario(),
+                scenario=effective(self.config.get_baseline_scenario()),
             )
             baseline_net = float(
                 baseline_sim.calculate("household_net_income", sim_year)[0]
