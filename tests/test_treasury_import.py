@@ -722,3 +722,98 @@ def test_a_figure_dash_is_read_as_nil():
     scorecard = parse_rows([HEADER, measure, total])
     assert scorecard.measures[0].values_m["2027-28"] == 0.0
     assert check_totals(scorecard)
+
+
+# --- follow-up to #27's review (four residuals) ---------------------------
+
+
+@pytest.mark.parametrize(
+    "cell, figure_like",
+    [
+        ("*†", True),
+        ("*¹", True),
+        ("**", True),
+        ("999 (a)", True),
+        ("999 [a]", True),
+        ("999 (a)¹", True),
+        ("††", False),
+        ("(a)", False),
+        ("12a", False),
+    ],
+)
+def test_footnoted_figures_still_count(cell, figure_like):
+    """Residuals 1 and 2: stripping '*†' removed the negligible figure with
+    its footnote, and a lettered footnote hid a number."""
+    from uk_budget_data.treasury_import import _figure_like
+
+    assert _figure_like(cell) is figure_like
+
+
+@pytest.mark.parametrize(
+    "figure", ["*†", "*¹", "**", "999 (a)", "999a", "999 [a]"]
+)
+def test_a_footnoted_total_above_the_header_is_refused(figure):
+    """Residuals 1 and 2, as the review ran them: a contradictory subtotal
+    above the header printed '*†' or '999 (a)' and was ignored. Above the
+    header a bare letter is a footnote too: no measure number sits there."""
+    above = (None, None, "Total tax policy decisions", None, *[figure] * 3)
+    with pytest.raises(ScorecardError, match="above the header"):
+        parse_rows([above, HEADER, TAX, GRAND_TOTAL])
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        (
+            None,
+            None,
+            None,
+            999,
+            "Total tax policy decisions",
+            None,
+            None,
+            None,
+        ),
+        (None, None, None, None, "Total policy decisions", None, None, None),
+    ],
+)
+def test_a_total_in_the_head_column_is_refused(row):
+    """Residual 3: a total label one column right, in Head, with blank
+    years was skipped as a blank row, so its figure was never checked."""
+    header = (None, None, None, None, "Head", "2026-27", "2027-28", "2028-29")
+    measure = (None, 1, "Tax measure", None, "Tax", 100, 100, 100)
+    total = (None, None, "Total policy decisions", None, None, 100, 100, 100)
+    with pytest.raises(ScorecardError, match="Head column"):
+        parse_rows([header, measure, row, total])
+
+
+def test_a_stale_declared_range_cannot_hide_a_year(tmp_path):
+    """Residual 4: the read-only reader trusted the sheet's declared used
+    range, so a stale <dimension> hid the last year's column."""
+    import zipfile
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Scorecard"
+    for row in [
+        (*HEADER, "2029-30"),
+        (*TAX, 100),
+        (*GRAND_TOTAL, 999),
+    ]:
+        sheet.append(list(row))
+    good = tmp_path / "good.xlsx"
+    workbook.save(good)
+    stale = tmp_path / "stale.xlsx"
+    with zipfile.ZipFile(good) as source, zipfile.ZipFile(stale, "w") as out:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                assert b'<dimension ref="A1:H3" />' in data
+                data = data.replace(
+                    b'<dimension ref="A1:H3" />', b'<dimension ref="A1:G3" />'
+                )
+            out.writestr(item, data)
+    scorecard = read_workbook(stale)
+    assert scorecard.fiscal_years[-1] == "2029-30"
+    with pytest.raises(TotalsMismatch, match="2029-30"):
+        check_totals(scorecard)

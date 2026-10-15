@@ -247,12 +247,33 @@ _FIGURE_MARKER = re.compile(
 )
 
 
-def _figure_like(cell) -> bool:
+# A lettered footnote on a figure: "999 (a)" or "999 [a]" anywhere. A bare
+# letter ("999a") is a footnote only where no measure number can be, above
+# the header: below it, "12a" is a measure's number.
+_BRACKETED_LETTER = re.compile(r"\s*(?:\([a-z]\)|\[[a-z]\])$", re.IGNORECASE)
+_BARE_LETTER = re.compile(r"(?<=\d)[a-z]$", re.IGNORECASE)
+
+
+def _strip_footnotes(text: str, bare_letters: bool) -> str:
+    """A figure's text with every footnote marker on its end removed, in
+    any order ("999 (a)\u00b9")."""
+    while True:
+        core = _FIGURE_MARKER.sub("", text).strip()
+        core = _BRACKETED_LETTER.sub("", core).strip()
+        if bare_letters:
+            core = _BARE_LETTER.sub("", core)
+        if core == text:
+            return core
+        text = core
+
+
+def _figure_like(cell, bare_letters: bool = False) -> bool:
     """Whether a cell could be a printed figure: a number, a nil or
     negligible marker, anything a float can be read from (scientific
-    notation included), any of these with a footnote marker on the end, or
-    digits with no words (a figure in a form the importer does not read,
-    such as one printed with a Unicode minus)."""
+    notation included), any of these with footnote markers on the end
+    (symbols, superscripts, bracketed letters, and bare letters where
+    ``bare_letters``), or digits with no words (a figure in a form the
+    importer does not read, such as one printed with a Unicode minus)."""
     if _is_figure(cell):
         return True
     text = _text(cell)
@@ -260,10 +281,12 @@ def _figure_like(cell) -> bool:
         return False
     if text in NIL or text == NEGLIGIBLE:
         return True
-    core = _FIGURE_MARKER.sub("", text).strip()
+    core = _strip_footnotes(text, bare_letters)
     if not core:
-        # A marker alone, such as a superscript beside a total's label.
-        return False
+        # Markers alone: a superscript beside a total's label is no
+        # figure, but a leading asterisk is the negligible figure itself,
+        # with its own footnote ("*\u2020").
+        return text.startswith(NEGLIGIBLE)
     if core in NIL:
         return True
     try:
@@ -300,7 +323,7 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         # nil or a negligible marker could be a printed total and is
         # refused.
         if any(_mentions_a_total(_text(cell)) for cell in row) and any(
-            _figure_like(cell) for cell in row
+            _figure_like(cell, bare_letters=True) for cell in row
         ):
             raise ScorecardError(
                 f"a total label above the header in {row!r}; check this row"
@@ -340,6 +363,12 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
             or head in {"tax", "spend"}
             or any(_figure_like(cell) for cell in cells[:head_column])
         )
+        # Total words in the Head column: a total placed one column right,
+        # which the blank-row skip below would otherwise drop unread.
+        if _mentions_a_total(head):
+            raise ScorecardError(
+                f"a total label in the Head column in {row!r}; check this row"
+            )
         if (
             total is None
             and carries_figures
@@ -468,6 +497,9 @@ def read_workbook(path: Path, sheet: Optional[str] = None) -> Scorecard:
             candidates[0] if len(candidates) == 1 else workbook.sheetnames[0]
         )
     worksheet = workbook[sheet]
+    # Read every cell, not the used range the file declares: an exporter
+    # that writes a stale range would otherwise hide a year's column.
+    worksheet.reset_dimensions()
     rows = [tuple(row) for row in worksheet.iter_rows(values_only=True)]
     return parse_rows(rows, sheet)
 
