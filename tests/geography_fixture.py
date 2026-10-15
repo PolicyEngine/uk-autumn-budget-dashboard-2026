@@ -19,8 +19,10 @@ import numpy as np
 from uk_budget_data import geography
 
 FIXTURE_DIR = (
-    Path(__file__).resolve().parents[1] / "src" / "test" / "fixtures"
-) / "geography" / "layer"
+    (Path(__file__).resolve().parents[1] / "src" / "test" / "fixtures")
+    / "geography"
+    / "layer"
+)
 PACKAGE = "synthetic_combined"
 MEASURES = ("alpha", "beta")
 YEARS = (2026, 2027)
