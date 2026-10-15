@@ -231,6 +231,7 @@ def test_identity_problems_needs_an_object():
     assert identity_problems(["not", "an", "object"], SHA, BUILD)
 
 
+@pytest.mark.slow
 def test_the_real_api_passes_its_own_smoke_test(monkeypatch):
     """Differential: the real API answers everything its calculator says."""
     monkeypatch.undo()  # the real years and policies, not the test ones
