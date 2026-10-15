@@ -187,10 +187,40 @@ def household_simulations(
     return (
         Simulation(
             situation=situation,
-            scenario=reform.baseline_scenario_for(config, uses_config),
+            scenario=effective(
+                reform.baseline_scenario_for(config, uses_config)
+            ),
         ),
-        Simulation(situation=situation, scenario=reform.to_scenario()),
+        Simulation(
+            situation=situation, scenario=effective(reform.to_scenario())
+        ),
     )
+
+
+# Scenario fields that change nothing on their own.
+_INERT_FIELDS = ("applied_before_data_load",)
+
+
+def effective(scenario: Optional[Scenario]) -> Optional[Scenario]:
+    """The scenario, or None when it changes nothing.
+
+    Given any scenario, policyengine-uk builds a second, scenario-free
+    simulation from the situation as the simulation's ``baseline``; given
+    none, it clones itself. A scenario with no parameter changes, dated
+    reforms or modifier applies nothing (an empty parameter rebuild returns
+    at once), so it would only add that build: most registered measures
+    keep current law on the reform side as ``parameter_changes={}``. Any
+    other field, including one a later engine adds, keeps the scenario.
+    """
+    if scenario is None:
+        return None
+    if any(
+        getattr(scenario, field) not in (None, {}, [])
+        for field in type(scenario).model_fields
+        if field not in _INERT_FIELDS
+    ):
+        return scenario
+    return None
 
 
 def calculate_household_metrics(sim: Simulation, year: int) -> dict:

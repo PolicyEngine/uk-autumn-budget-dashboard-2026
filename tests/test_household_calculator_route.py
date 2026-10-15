@@ -579,3 +579,56 @@ def test_a_combined_measure_keeps_its_members_baselines():
     assert float(national.calculate("income_tax", 2027)[0]) == 3_486
     # £30,000 less £18,000, at 25%.
     assert float(reformed.calculate("income_tax", 2027)[0]) == 3_000
+
+
+def test_an_empty_scenario_is_dropped_and_any_change_kept():
+    """policyengine-uk builds a second, scenario-free simulation as the
+    baseline of any simulation given a scenario. One that changes nothing
+    (no parameter changes, dated reforms or modifier) only adds that build,
+    so the household calculator builds without it."""
+    effective = personal_impact.effective
+    assert effective(None) is None
+    for empty in (
+        Scenario(),
+        Scenario(parameter_changes={}),
+        Scenario(parameter_changes={}, applied_before_data_load=True),
+    ):
+        assert effective(empty) is None
+    changed = (
+        Scenario(parameter_changes=_allowance(20_000)),
+        Scenario(simulation_modifier=_does_nothing),
+        Scenario.from_reform({ALLOWANCE: {"2027-04-06.2100-12-31": 20_000}}),
+    )
+    assert changed[2].dated_reforms
+    for scenario in changed:
+        assert effective(scenario) is scenario
+
+
+def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
+    """Most registered measures keep current law on the reform side as
+    parameter_changes={}: that side is built with no scenario, the other
+    with its own. The route differentials above check the results match
+    the national route, which builds with the empty scenario."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    seen = []
+
+    class Recording(Simulation):
+        def __init__(self, *args, scenario=None, **kwargs):
+            seen.append(scenario)
+            super().__init__(*args, scenario=scenario, **kwargs)
+
+    monkeypatch.setattr(personal_impact, "Simulation", Recording)
+    reform = Reform(
+        id="probe",
+        name="Probe",
+        parameter_changes={},
+        baseline_parameter_changes=_allowance(20_000),
+    )
+    baseline, reformed = personal_impact.household_simulations(
+        PENSIONER, reform, DataConfig()
+    )
+    assert seen[0] is not None and seen[1] is None
+    # Current law on the reform side; the pre-Budget allowance on the other.
+    assert float(reformed.calculate("income_tax", 2027)[0]) == 3_486
+    assert float(baseline.calculate("income_tax", 2027)[0]) == 2_000
