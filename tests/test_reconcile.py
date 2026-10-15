@@ -1,6 +1,7 @@
 """Tests for Treasury reconciliation and reform responsiveness."""
 
 import json
+from collections.abc import Mapping
 
 import pytest
 from hypothesis import assume, given
@@ -1365,3 +1366,183 @@ def test_the_minimum_response_is_finite():
             [source(2027, 5.0)],
             policy=Policy(min_response_share=1e308),
         )
+
+
+# --- review round 5 of #17 -------------------------------------------------
+
+
+NEGATIVE = [ExpectedEffect("m", "negative", 2027, reviewer="R")]
+
+
+@pytest.mark.parametrize(
+    "wrap",
+    [list, tuple, iter, lambda items: (item for item in items)],
+    ids=["list", "tuple", "iterator", "generator"],
+)
+def test_a_one_shot_iterable_of_declarations_is_read_once(wrap):
+    """Review N15: the type check consumed an iterator of declarations, so
+    a reviewed negative expectation vanished and a positive output passed
+    on the Treasury's direction."""
+    result = run({2027: 5.0}, [source(2027, 5.0)], expected=wrap(NEGATIVE))
+    assert result["responsiveness"]["status"] == WRONG_DIRECTION
+    row = result["responsiveness"]["rows"][0]
+    assert row["expectation_from"] != "treasury"
+    standalone = _respond(budgetary={2027: 5.0}, declarations=wrap(NEGATIVE))
+    assert standalone["status"] == WRONG_DIRECTION
+
+
+@pytest.mark.parametrize("wrap", [iter, lambda items: (i for i in items)])
+def test_every_input_gives_the_same_result_however_it_is_collected(wrap):
+    """Differential: any iterable of the same items reconciles exactly as
+    the list does."""
+    arguments = dict(
+        sources=[source(2027, 5.0), source(2028, 4.0)],
+        mapping=[link()],
+        exceptions=[],
+        expected=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
+    )
+    as_lists = run({2027: 5.0, 2028: 4.2}, **arguments)
+    wrapped = {name: wrap(items) for name, items in arguments.items()}
+    assert run({2027: 5.0, 2028: 4.2}, **wrapped) == as_lists
+
+
+def test_overlapping_declarations_in_an_iterator_are_refused():
+    other = iter(
+        [
+            ExpectedEffect("other", "positive", 2027, reviewer="R"),
+            ExpectedEffect("other", "negative", 2027, reviewer="R"),
+        ]
+    )
+    with pytest.raises(ReconciliationInputError, match="two expected"):
+        run({2027: 5.0}, [source(2027, 5.0)], expected=other)
+
+
+@pytest.mark.parametrize("bad", ["S,1", b"S", {"m": 1}, 5])
+def test_text_mappings_and_scalars_are_not_collections(bad):
+    with pytest.raises(ReconciliationInputError, match="collection"):
+        run({2027: 5.0}, [source(2027, 5.0)], mapping=bad)
+
+
+class UnvalidatedMapping(MappingRow):
+    def __post_init__(self):
+        pass
+
+
+class UnvalidatedEffect(ExpectedEffect):
+    def __post_init__(self):
+        pass
+
+
+def test_a_subclass_that_skips_the_checks_is_refused():
+    """Review N16: a MappingRow subclass with no checks carried a scale of
+    zero, which dropped a GBP 5bn costing without review, and an
+    ExpectedEffect subclass carried a fractional year and no reviewer."""
+    with pytest.raises(ReconciliationInputError, match="must be a MappingRow"):
+        run(
+            {2027: 0.004},
+            [source(2027, 5.0)],
+            mapping=[UnvalidatedMapping("m", "S", "1", scale=0)],
+        )
+    effect = UnvalidatedEffect("m", "positive", 2026.5, reviewer="")
+    with pytest.raises(ReconciliationInputError, match="ExpectedEffect"):
+        run({2027: 5.0}, [source(2027, 5.0)], expected=[effect])
+    with pytest.raises(ValueError, match="ExpectedEffect"):
+        _respond(declarations=[effect])
+
+
+def test_a_validated_object_changed_afterwards_is_checked_again():
+    """A frozen dataclass's fields can still be changed through __dict__;
+    the gate checks the state it is given, not the state it was built
+    with."""
+    row = link()
+    row.__dict__["scale"] = 0
+    with pytest.raises(ReconciliationInputError, match="above zero"):
+        run({2027: 5.0}, [source(2027, 5.0)], mapping=[row])
+
+
+def test_the_returned_policy_is_a_copy():
+    """Review N17: the result held the Policy's own __dict__, so editing
+    the result changed the caller's Policy, and the next call accepted a
+    negative floor that Policy() and load_policy refuse."""
+    policy = Policy()
+    result = run({2027: 5.0}, [source(2027, 5.0)], policy=policy)
+    result["policy"]["absolute_floor_bn"] = -1
+    assert policy.absolute_floor_bn == Policy().absolute_floor_bn
+    policy.__dict__["absolute_floor_bn"] = -1
+    with pytest.raises(ReconciliationInputError, match="absolute_floor_bn"):
+        run({2027: 5.0}, [source(2027, 5.0)], policy=policy)
+
+
+def _rows(year):
+    return [{"reform_id": "m", "year": year, "value": 5.0}]
+
+
+@pytest.mark.parametrize(
+    "year", [2027.5, 2027.0, True, "2027.5", "2027.0", " 2027", "02027", "x"]
+)
+def test_a_row_year_is_never_rounded_into_a_whole_one(year):
+    """Review N18: int() truncated 2027.5 to 2027 (and read True as 1), so
+    a fractional year passed as a real one."""
+    with pytest.raises(ReconciliationInputError, match="not a whole number"):
+        budgetary_from_rows(_rows(year), "m", "rows")
+
+
+def test_whole_row_years_of_any_integer_type_are_read():
+    np = pytest.importorskip("numpy")
+    for year in ("2027", 2027, np.int64(2027), np.int32(2027)):
+        budgetary = budgetary_from_rows(_rows(year), "m", "rows")
+        assert budgetary == {2027: 5.0}
+        assert type(next(iter(budgetary))) is int
+
+
+def test_numpy_years_reconcile_exactly_as_builtin_ones():
+    """Compatibility (round 5): NumPy integer years were refused; they are
+    whole years, so they are read and stored as builtin ints, with the same
+    result."""
+    np = pytest.importorskip("numpy")
+    effect = ExpectedEffect("m", "positive", np.int64(2027), reviewer="R")
+    assert type(effect.from_year) is int
+    builtin = run(
+        {2027: 5.0},
+        [source(2027, 5.0)],
+        expected=[ExpectedEffect("m", "positive", 2027, reviewer="R")],
+        years=[2027],
+    )
+    numpy = run(
+        {np.int64(2027): 5.0},
+        [source(2027, 5.0)],
+        expected=[effect],
+        years=np.array([2027]),
+    )
+    assert numpy == builtin
+    assert json.dumps(numpy) == json.dumps(builtin)
+    standalone = _respond(
+        budgetary={np.int64(2027): 1.0},
+        comparators_bn={np.int64(2027): 1.0},
+        years=np.array([2027]),
+        supported_years=np.array([2027]),
+    )
+    assert standalone["status"] == RESPONSIVE
+
+
+class TwoSpellings(Mapping):
+    """A mapping that lists one year twice (a dict would merge them)."""
+
+    def __init__(self, keys, value):
+        self._keys, self._value = keys, value
+
+    def __getitem__(self, key):
+        return self._value
+
+    def __iter__(self):
+        return iter(self._keys)
+
+    def __len__(self):
+        return len(self._keys)
+
+
+def test_two_spellings_of_one_model_year_are_refused():
+    np = pytest.importorskip("numpy")
+    budgetary = TwoSpellings([2027, np.int64(2027)], 5.0)
+    with pytest.raises(ReconciliationInputError, match="two model outputs"):
+        run(budgetary, [source(2027, 5.0)])
