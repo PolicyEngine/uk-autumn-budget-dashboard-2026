@@ -23,6 +23,12 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
   - Serving revision and image: record after the last deploy before the day. On 12 October the first revision, `uk-budget-api-2026-00001-gow`, answered `/api/version` but not `/api/personal-impact` within 300 s, so the household route is not yet usable.
+  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Timed locally on 15 October for a £50,000 earner, with the same result each time:
+    - 193.6 s on `main` before #37;
+    - 253.6 s after it;
+    - 194.5 s with #39.
+
+    Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. So every visitor waits minutes for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures (#33).
   - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation once the grants in #28 are made (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call, once #3 makes the household route fast enough for the smoke test).
   - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October. Run it from an up-to-date checkout of `main`, and submit **that checkout's** `cloudbuild.yaml`, never the archive's own. An older commit's copy lacks the one-deploy-at-a-time lock and the traffic check. To deploy an older commit, change `commit` and keep the config:
 
@@ -39,12 +45,13 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     **One deploy at a time:** deploys run only in `europe-west1` (a build submitted without `--region europe-west1` stops before touching the service), and a build that finds another deploy of the service running there stops. The build refuses source that is not exactly that commit. It tests the new revision under its own tag. It moves traffic only if the smoke test passes and nothing else changed traffic meanwhile. The log ends with the allocation it replaced and the command that restores it.
 
   `curl -s "$HOUSEHOLD_API/api/version"` must report the bundle's model and core versions (#15).
-- [ ] **Required checks on `main`:**
+- [ ] **Required checks on `main`.** Since 15 October the ruleset "Protect main" (id 25151682) requires a pull request (no approvals) and these checks:
   - Python tests;
   - Certified data;
   - Python lint;
-  - Frontend build, tests and lint;
-  - Publication gate.
+  - Frontend build, tests and lint.
+
+  Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Add Publication gate once it runs on every pull request; it didn't run on older heads.
 - [ ] **Household fixtures.** María's specimen households, with independently computed answers, are in `data_inputs/household_fixtures/` (#15).
 - [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3:
 
