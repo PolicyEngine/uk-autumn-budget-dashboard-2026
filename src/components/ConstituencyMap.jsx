@@ -42,7 +42,10 @@ const HEIGHT = 600;
 const SELECTED_STROKE = { stroke: "#1D4044", strokeWidth: 0.6 };
 const HOVER_STROKE = { stroke: "#666666", strokeWidth: 0.3 };
 
-const isColour = (fill) => typeof fill === "string" && fill.startsWith("#");
+// A colour d3 can blend: a hex value, or rgb() left by an interrupted
+// transition. Never a pattern's url().
+const isColour = (fill) =>
+  typeof fill === "string" && (fill.startsWith("#") || fill.startsWith("rgb("));
 
 /** A projection fitting British National Grid coordinates into the SVG. */
 function gridProjection(features) {
