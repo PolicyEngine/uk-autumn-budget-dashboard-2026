@@ -19,10 +19,11 @@
   line-height: 1.5;
 }
 
-.region-export {
+/* Beats .chart-header > div, which would stretch the buttons' box. */
+.region-view .region-export {
   display: flex;
   gap: 6px;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 .region-export-button {

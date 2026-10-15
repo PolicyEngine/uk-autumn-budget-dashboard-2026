@@ -42,6 +42,19 @@
   border-radius: 4px;
 }
 
+.map-policy-label {
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+.map-policy-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+/* Kept as they were: other components' .policy-label and .policy-name
+   share these global names. */
 .policy-label {
   font-size: 0.8125rem;
   color: #4b5563;
@@ -50,7 +63,13 @@
 .policy-name {
   font-size: 0.8125rem;
   font-weight: 600;
+  color: #319795;
+}
+
+.constituency-map-wrapper .publication-unavailable a {
   color: #0f766e;
+  font-weight: 500;
+  text-decoration: underline;
 }
 
 /* Top bar with search and the outcome toggle */
@@ -281,7 +300,8 @@
   line-height: 1.4;
 }
 
-.constituency-tooltip .tooltip-value {
+/* Kept as they were: LifecycleCalculator shares these global names. */
+.tooltip-value {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 4px 0;
@@ -291,6 +311,19 @@
 .tooltip-label {
   font-size: 0.75rem;
   color: #6b7280;
+  margin: 4px 0 0 0;
+}
+
+.tooltip-value-secondary {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 8px 0 4px 0;
+  line-height: 1;
+}
+
+.constituency-tooltip .tooltip-value {
+  margin: 4px 0;
+  line-height: 1;
 }
 
 .tooltip-interval {
@@ -354,6 +387,10 @@
 
   .map-search-section {
     max-width: 100%;
+  }
+
+  .map-top-bar .outcome-toggle {
+    align-self: flex-start;
   }
 
   .map-controls-container {

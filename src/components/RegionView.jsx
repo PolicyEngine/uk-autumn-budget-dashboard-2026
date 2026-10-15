@@ -35,12 +35,12 @@ const TITLE = "Results by region";
 
 /**
  * A shared horizontal scale for the dot-and-interval plots, as percentages
- * of the plot's width. It always reaches the large-change breaks either
- * side of zero, and widens to fit every published interval. Its positions
- * only place marks; the page labels only zero and the fixed breaks.
+ * of the plot's width. It always covers the little-change band either side
+ * of zero, and widens to fit every published interval. Its positions only
+ * place marks; the page labels only zero and the fixed category breaks.
  */
 function plotScale(rows, outcome) {
-  const limit = Number(CATEGORY_BREAKS[outcome].large);
+  const limit = Number(CATEGORY_BREAKS[outcome].small);
   let low = -limit;
   let high = limit;
   for (const row of rows) {
@@ -99,12 +99,19 @@ function IntervalPlot({ row, scale, outcome }) {
   );
 }
 
+/**
+ * Labels for zero and, either side, the furthest category break the scale
+ * reaches: the large-change break if the data reach it, else the small one.
+ */
 function PlotAxis({ scale, outcome }) {
-  const { large } = CATEGORY_BREAKS[outcome];
+  const { small, large } = CATEGORY_BREAKS[outcome];
+  const [from, to] = scale.domain();
+  const below = -Number(large) >= from ? large : small;
+  const above = Number(large) <= to ? large : small;
   const ticks = [
-    [formatFigure(outcome, `-${large}`), scale(-Number(large))],
+    [formatFigure(outcome, `-${below}`), scale(-Number(below))],
     ["0", scale(0)],
-    [formatFigure(outcome, large), scale(Number(large))],
+    [formatFigure(outcome, above), scale(Number(above))],
   ];
   return (
     <div className="region-plot-axis" aria-hidden="true">

@@ -8,7 +8,7 @@ import {
 } from "../hooks/useGeographyData";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { exportMapAsSvg, MAP_ZOOM_LAYER_CLASS } from "../utils/exportMapAsSvg";
-import { OUTCOME_DESCRIPTIONS } from "../utils/geography/format";
+import { OUTCOME_LABELS } from "../utils/geography/format";
 import { appendWithheldHatch, drawMapLegend } from "../utils/geography/legend";
 import { DIRECTION_TEXT_COLOURS } from "../utils/geography/palette";
 import { hasReform } from "../utils/geography/rows";
@@ -27,8 +27,14 @@ import "./ConstituencyMap.css";
 import "./ChartExport.css";
 
 const CHART_TITLE = "Constituency-level impacts";
-const CHART_DESCRIPTION =
-  "Each constituency is coloured by the size of its average change in household net income, when its 90% interval is narrow enough to tell. Lighter constituencies rest on few survey households; hatched ones are not published, to protect survey respondents' confidentiality.";
+
+/** The exported map's description: what it shows, and how to read it. */
+const exportDescription = (label, outcome) =>
+  `${label}. Each constituency is coloured by the size of its average ` +
+  `change in household net income, in ${OUTCOME_LABELS[outcome]}, when its ` +
+  "90% interval is narrow enough to tell. Lighter constituencies rest on " +
+  "few survey households; hatched ones are not published, to protect " +
+  "survey respondents' confidentiality.";
 
 // The map's drawing area, in SVG units.
 const WIDTH = 800;
@@ -388,7 +394,7 @@ export default function ConstituencyMap({
       `constituency-map-${reform}-${outcome}-${selectedYear}`,
       {
         title: `${CHART_TITLE}, ${yearLabel}`,
-        description: `${label}. ${OUTCOME_DESCRIPTIONS[outcome]}. ${CHART_DESCRIPTION}`,
+        description: exportDescription(label, outcome),
         logo: CHART_LOGO,
         tooltip,
       },
@@ -441,8 +447,8 @@ export default function ConstituencyMap({
 
       {label && (
         <div className="map-policy-indicator">
-          <span className="policy-label">Showing</span>
-          <span className="policy-name">{label}</span>
+          <span className="map-policy-label">Showing</span>
+          <span className="map-policy-name">{label}</span>
         </div>
       )}
 

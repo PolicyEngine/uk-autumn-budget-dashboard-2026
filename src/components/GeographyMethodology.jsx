@@ -53,9 +53,9 @@ function GeographyMethodology() {
       {open && (
         <div id={contentId} className="geography-methodology-content">
           <p>
-            The figures by region and by constituency come from a survey of
-            households, weighted to represent each area. Before a figure is
-            published, it passes these checks.
+            The figures by region and by constituency are estimated from a
+            survey of households. Before a figure is published, it passes these
+            checks.
           </p>
           <ul>
             <li>

@@ -107,6 +107,22 @@ describe("RegionView", () => {
     expect(within(rowFor("East Midlands")).getByText("+0.1%")).toBeInTheDocument();
   });
 
+  it("labels the plot only at zero and the fixed category breaks", async () => {
+    const axis = () =>
+      [...document.querySelectorAll(".region-plot-axis span")].map(
+        (label) => label.textContent,
+      );
+    const { unmount } = renderView();
+    await screen.findByRole("table");
+    // The package's intervals reach beyond the large-change breaks.
+    expect(axis()).toEqual(["-1%", "0", "+1%"]);
+    unmount();
+    renderView({ selectedPolicies: ["fuel_duty_freeze"] });
+    await screen.findByRole("table");
+    // This measure's stay near zero, so the small-change breaks are shown.
+    expect(axis()).toEqual(["-0.1%", "0", "+0.1%"]);
+  });
+
   it("never sums: several measures but not all shows no figures", async () => {
     const { container } = renderView({
       selectedPolicies: ["fuel_duty_freeze", "two_child_limit"],
