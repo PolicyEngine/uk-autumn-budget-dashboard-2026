@@ -10,15 +10,10 @@
  * - `no-data`: no row at all, drawn as such and never given a value.
  */
 
+import { CATEGORY_LABELS, classifyRow } from "./classify";
 import {
-  CATEGORY_LABELS,
-  classifyRow,
-} from "./classify";
-import {
-  DIRECTION_LABELS,
-  SUPPORT_BAND_LABELS,
-  TIER_DESCRIPTIONS,
   WITHHELD_NOTE,
+  describeRow,
   formatFigure,
   formatInterval,
 } from "./format";
@@ -140,20 +135,20 @@ export function describeSeat({ feature, state, regional, reform, year, outcome }
     return { title, lines };
   }
   const { row } = state;
-  const approximate = state.kind === "approximate";
+  const described = describeRow(row);
   return {
     title,
     lines: [
-      { kind: "value", text: formatFigure(row.outcome, row.value), direction: row.direction },
+      { kind: "value", text: described.value, direction: row.direction },
       { kind: "label", text: OUTCOME_LINE_LABELS[row.outcome] },
       {
         kind: "interval",
-        text: `90% interval: ${formatInterval(row.outcome, row.lo, row.hi)}`,
-        emphasis: approximate,
+        text: `90% interval: ${described.interval}`,
+        emphasis: state.kind === "approximate",
       },
-      { kind: "detail", text: DIRECTION_LABELS[row.direction] },
-      { kind: "detail", text: approximate ? TIER_DESCRIPTIONS.approximate : "Reported" },
-      { kind: "detail", text: SUPPORT_BAND_LABELS[row.supportBand] },
+      { kind: "detail", text: described.direction },
+      { kind: "detail", text: described.tierDescription },
+      { kind: "detail", text: described.supportBand },
       { kind: "detail", text: `Map category: ${CATEGORY_LABELS[state.category]}` },
     ],
   };
