@@ -18,6 +18,7 @@ import pytest
 
 from tests.test_household_calculator_route import (
     LCWRA_CLAIMANT,
+    PROTECTED_CLAIMANT,
     _impact,
     _national,
     same,
@@ -92,6 +93,16 @@ BEER_DRINKER = {
             "uc_LCWRA_element",
             LCWRA_CLAIMANT,
         ),
+        # Derived while built: the protected floor considers every standard
+        # allowance amount, not only the claimant's own (#23 review round 9).
+        (
+            threshold_change,
+            "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG",
+            0,
+            2027,
+            "uc_LCWRA_element",
+            PROTECTED_CLAIMANT,
+        ),
         # Kept on its statutory dates; the templates refused it before #32.
         (
             rate_change,
@@ -109,6 +120,7 @@ BEER_DRINKER = {
         "yearly allowance",
         "post-freeze NICs",
         "UC health element",
+        "UC protected floor",
         "beer duty on its statutory dates",
     ],
 )
