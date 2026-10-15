@@ -817,3 +817,78 @@ def test_a_stale_declared_range_cannot_hide_a_year(tmp_path):
     assert scorecard.fiscal_years[-1] == "2029-30"
     with pytest.raises(TotalsMismatch, match="2029-30"):
         check_totals(scorecard)
+
+
+# --- round 2 of #31's review ----------------------------------------------
+
+
+def test_cells_out_of_order_in_the_file_cannot_hide_a_year(tmp_path):
+    """Round 2: after reset_dimensions the read-only reader sized each row by
+    its last cell in the file, so an H cell written before G was dropped
+    and the contradictory 2029-30 total passed. The full reader places
+    every cell by its own reference."""
+    import re
+    import zipfile
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Scorecard"
+    for row in [(*HEADER, "2029-30"), (*TAX, 100), (*GRAND_TOTAL, 999)]:
+        sheet.append(list(row))
+    good = tmp_path / "good.xlsx"
+    workbook.save(good)
+    swapped = tmp_path / "swapped.xlsx"
+    with zipfile.ZipFile(good) as source, zipfile.ZipFile(swapped, "w") as out:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                data, count = re.subn(
+                    rb'(<c r="G[123]".*?</c>)(<c r="H[123]".*?</c>)',
+                    rb"\2\1",
+                    data,
+                )
+                assert count == 3
+            out.writestr(item, data)
+    scorecard = read_workbook(swapped)
+    assert scorecard.fiscal_years[-1] == "2029-30"
+    with pytest.raises(TotalsMismatch, match="2029-30"):
+        check_totals(scorecard)
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "Totals may not sum due to rounding",
+        "Totals may not sum due to rounding.",
+        "¹ Totals may not add up due to rounding",
+    ],
+)
+def test_a_rounding_note_in_the_head_column_is_read_as_a_note(note):
+    """Round 2: refusing total words in Head also refused the figure-free
+    rounding footnote a Treasury table prints under its totals."""
+    row = (None, None, None, note)
+    assert check_totals(parse_rows([HEADER, TAX, GRAND_TOTAL, row]))
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        (None, None, None, "Total policy decisions"),
+        (None, None, None, "Totals may not sum", 999, None, None),
+        (None, 999, None, "Totals may not sum due to rounding"),
+    ],
+)
+def test_a_total_or_a_figure_in_head_is_still_refused(row):
+    """A note is figure-free; a total label, or a note row carrying a
+    figure, is still refused."""
+    with pytest.raises(ScorecardError):
+        parse_rows([HEADER, TAX, row, GRAND_TOTAL])
+
+
+@pytest.mark.parametrize("figure", ["999a", "*a", "-a"])
+def test_a_lettered_figure_on_a_subtotal_row_is_refused(figure):
+    """Round 2 (advisory, pre-existing): on a row labelled as a total a
+    bare letter is a footnote, not a measure number, so its figure counts."""
+    subtotal = (None, figure, "Subtotal", None, None, None, None)
+    with pytest.raises(ScorecardError, match="unrecognised total"):
+        parse_rows([HEADER, TAX, subtotal, GRAND_TOTAL])

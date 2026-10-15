@@ -248,10 +248,13 @@ _FIGURE_MARKER = re.compile(
 
 
 # A lettered footnote on a figure: "999 (a)" or "999 [a]" anywhere. A bare
-# letter ("999a") is a footnote only where no measure number can be, above
-# the header: below it, "12a" is a measure's number.
+# letter ("999a", "*a") is a footnote only where no measure number can be:
+# above the header, or on a row labelled as a total. Elsewhere "12a" is a
+# measure's number.
 _BRACKETED_LETTER = re.compile(r"\s*(?:\([a-z]\)|\[[a-z]\])$", re.IGNORECASE)
-_BARE_LETTER = re.compile(r"(?<=\d)[a-z]$", re.IGNORECASE)
+_BARE_LETTER = re.compile(
+    r"(?<=[\d*\-\u2012\u2013\u2014\u2212])[a-z]$", re.IGNORECASE
+)
 
 
 def _strip_footnotes(text: str, bare_letters: bool) -> str:
@@ -295,6 +298,16 @@ def _figure_like(cell, bare_letters: bool = False) -> bool:
     except ValueError:
         pass
     return bool(re.search(r"\d", core)) and not re.search(r"[^\W\d_]", core)
+
+
+# The footnote a Treasury table prints under its totals, with no figure,
+# perhaps after its own footnote number. It may sit in any column, Head
+# included.
+_ROUNDING_NOTE = re.compile(
+    r"^(?:[\W\d_]|[\u00b9\u00b2\u00b3\u2070-\u2079])*"
+    r"totals?\s+(?:may|might|do|does)\s+not\s+(?:sum|add)\b",
+    re.IGNORECASE,
+)
 
 
 def _mentions_a_total(label: str) -> bool:
@@ -358,14 +371,20 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
         # A figure left of Head counts too: a subtotal whose only figures
         # sit in a column the header did not name would otherwise look blank
         # and be skipped as a heading.
+        labelled_total = any(_mentions_a_total(cell) for cell in label_cells)
         carries_figures = (
             not blank
             or head in {"tax", "spend"}
-            or any(_figure_like(cell) for cell in cells[:head_column])
+            or any(
+                _figure_like(cell, bare_letters=labelled_total)
+                for cell in cells[:head_column]
+            )
         )
         # Total words in the Head column: a total placed one column right,
         # which the blank-row skip below would otherwise drop unread.
-        if _mentions_a_total(head):
+        if _mentions_a_total(head) and not (
+            blank and _ROUNDING_NOTE.match(head) and not carries_figures
+        ):
             raise ScorecardError(
                 f"a total label in the Head column in {row!r}; check this row"
             )
@@ -486,7 +505,12 @@ def read_workbook(path: Path, sheet: Optional[str] = None) -> Scorecard:
     """Read Table 4.1 from a workbook (cached values, not formulas)."""
     from openpyxl import load_workbook
 
-    workbook = load_workbook(path, data_only=True, read_only=True)
+    # Not read-only: the full reader places every cell by its own reference.
+    # The read-only one trusts the sheet's declared range (a stale one hid a
+    # year) and sizes each row by its last cell in the file (cells out of
+    # order lost one). A Budget table is small, so the full reader costs
+    # nothing that matters.
+    workbook = load_workbook(path, data_only=True)
     if sheet is None:
         candidates = [
             ws.title
@@ -497,9 +521,6 @@ def read_workbook(path: Path, sheet: Optional[str] = None) -> Scorecard:
             candidates[0] if len(candidates) == 1 else workbook.sheetnames[0]
         )
     worksheet = workbook[sheet]
-    # Read every cell, not the used range the file declares: an exporter
-    # that writes a stale range would otherwise hide a year's column.
-    worksheet.reset_dimensions()
     rows = [tuple(row) for row in worksheet.iter_rows(values_only=True)]
     return parse_rows(rows, sheet)
 
