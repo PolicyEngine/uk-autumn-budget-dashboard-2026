@@ -183,6 +183,39 @@ def test_an_existing_service_gets_a_no_traffic_revision_under_its_own_tag(
     assert state["traffic"][0]["percent"] == 100
 
 
+def test_the_candidate_runs_as_the_services_own_account(tmp_path, workspace):
+    """The revision's identity is a role-less account of its own: a
+    revision deployed without one runs as the Compute Engine default
+    account, which holds roles/editor on the project."""
+    result, log, _ = run(
+        step_script("deploy-candidate", workspace), tmp_path, service()
+    )
+    assert result.returncode == 0, result.stderr
+    deploy = next(line for line in log if line.startswith("run deploy"))
+    assert (
+        "--service-account uk-budget-api-runtime@p.iam.gserviceaccount.com"
+        in deploy
+    )
+
+
+BUILDER = (
+    "projects/policyengine-apps/serviceAccounts/"
+    "uk-budget-api-builder@policyengine-apps.iam.gserviceaccount.com"
+)
+
+
+@pytest.mark.parametrize(
+    "name", ["cloudbuild.yaml", "cloudbuild-rollback.yaml"]
+)
+def test_deploys_and_rollbacks_run_as_the_dedicated_builder(name):
+    """Not the Compute Engine default account, so whatever is merged to
+    main runs with only the builder's grants. A build run as a chosen
+    account must log to Cloud Logging (or a bucket of its own)."""
+    config = yaml.safe_load((REPO / name).read_text())
+    assert config["serviceAccount"] == BUILDER
+    assert config["options"]["logging"] == "CLOUD_LOGGING_ONLY"
+
+
 def test_a_failed_lookup_stops_the_build_before_any_deploy(
     tmp_path, workspace
 ):
