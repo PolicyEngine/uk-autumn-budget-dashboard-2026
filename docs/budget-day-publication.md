@@ -29,7 +29,7 @@ The Treasury tolerance and floor in `data_inputs/treasury/policy.yaml` remain pr
 | Household API deploys and rollbacks from GitHub Actions (Workload Identity Federation), so Budget day needs no laptop login | #28 | Draft; needs the GCP grants in its description (Max, d1538) |
 | Treasury Table 4.1 import with a printed-totals check | #16 | **Merged** 13 October (ec29ebd). Two narrower layout gaps from its last review close in a follow-up PR |
 | Reconciliation and responsiveness gates | #17 | Landing on gates; thresholds are proposals |
-| A draft upgrade PR on each qualified policyengine release, never merged automatically | #18 | Landing on gates |
+| A draft upgrade PR on each qualified policyengine release, never merged automatically; merging an upgrade on the day stays Vahid and María's call (decision 8) | #18 | Landing on gates (opens draft PRs only) |
 | Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in. The household scatter as today (sampled, same columns) and binned | #19 | Landing on gates |
 | The page shows only published figures: unavailable instead of zero, combined statistics only from the combined run, no hardcoded 2026 | #20 | Modules, components and tests done; wiring into the page follows #3 |
 | Briefing exports from an approved manifest only; hardcoded figures removed | #22 | Landing on gates |
