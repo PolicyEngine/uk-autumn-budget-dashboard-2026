@@ -1066,6 +1066,9 @@ def reconcile_receipted(
 ) -> dict:
     """Reconcile already-read budgetary rows, described by their receipt.
 
+    The gate passes rows from the same capture it checked against the
+    receipt, so what is reconciled is exactly what was verified.
+
     The measure, output digest, years and supported years come from the
     receipt (``dashboard.measure_ids``, ``execution_receipt.outputs_sha256``,
     ``execution_receipt.years`` and ``dashboard.dataset_years``). An

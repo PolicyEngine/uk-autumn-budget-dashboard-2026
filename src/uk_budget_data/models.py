@@ -96,6 +96,26 @@ class Reform(BaseModel):
             or self.baseline_simulation_modifier is not None
         )
 
+    def baseline_scenario_for(
+        self, config: "DataConfig", uses_config: Optional[bool] = None
+    ) -> Optional[Scenario]:
+        """The baseline this measure is simulated against.
+
+        Its own baseline, else the configured one when it uses it, else
+        current law (None). Every simulation, calculator and identity takes
+        its baseline from here. A single measure uses the configured
+        baseline exactly when it has none of its own. A combined measure
+        passes ``uses_config``: whether any member does, since members that
+        all bring their own baselines (even empty ones) never fall back to
+        it, whatever their merged baseline turns out to be.
+        """
+        own = self.to_baseline_scenario()
+        if uses_config is None:
+            uses_config = not self.has_custom_baseline()
+        if own is None and uses_config:
+            return config.get_baseline_scenario()
+        return own
+
 
 class ReformResult(BaseModel):
     """Results from processing a single reform."""

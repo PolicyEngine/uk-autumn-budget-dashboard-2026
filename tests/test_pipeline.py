@@ -181,3 +181,58 @@ class TestResultAggregation:
 
         assert "budgetary_impact" in aggregated
         assert len(aggregated["budgetary_impact"]) == 2
+
+
+class _Spy:
+    """A calculator stand-in that records what it was given."""
+
+    def __init__(self, result):
+        self.calls = []
+        self.result = result
+
+    def calculate(self, *args, **kwargs):
+        self.calls.append(args)
+        return self.result
+
+
+def _processor_with_spies(reform, config):
+    from uk_budget_data.pipeline import ReformProcessor
+
+    processor = ReformProcessor(reform=reform, config=config)
+    processor.budgetary_calc = _Spy([])
+    processor.distributional_calc = _Spy(([], pd.DataFrame()))
+    processor.winners_losers_calc = _Spy([])
+    processor.metrics_calc = _Spy([])
+    processor.income_curve_calc = _Spy([])
+    processor.household_scatter_calc = _Spy([])
+    processor._calculate_constituency = lambda *args: ([], [])
+    return processor
+
+
+@pytest.mark.parametrize("own_baseline", [False, True])
+def test_income_curve_uses_the_same_baseline_as_the_population(own_baseline):
+    """Review finding: the curve got current law when the runs did not."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    rate = "gov.hmrc.income_tax.rates.uk[0].rate"
+    config = DataConfig(
+        years=[2027], baseline_parameter_changes={rate: {"2027": 0.19}}
+    )
+    reform = Reform(
+        id="m",
+        name="M",
+        parameter_changes={rate: {"2027": 0.21}},
+        baseline_parameter_changes=(
+            {rate: {"2027": 0.18}} if own_baseline else None
+        ),
+    )
+    processor = _processor_with_spies(reform, config)
+    processor.process(object(), object(), reform.baseline_scenario_for(config))
+    baseline_scenario = processor.income_curve_calc.calls[0][0]
+    expected = (
+        reform.to_baseline_scenario()
+        if own_baseline
+        else config.get_baseline_scenario()
+    )
+    assert baseline_scenario is not None
+    assert baseline_scenario.parameter_changes == expected.parameter_changes

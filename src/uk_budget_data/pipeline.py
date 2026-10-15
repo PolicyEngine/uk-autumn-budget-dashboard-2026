@@ -11,6 +11,7 @@ import h5py
 import pandas as pd
 import policyengine as pe
 from policyengine_uk import Microsimulation
+from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -115,12 +116,17 @@ class ReformProcessor:
         self,
         baseline: Microsimulation,
         reformed: Microsimulation,
+        baseline_scenario: Optional[Scenario],
     ) -> ReformResult:
         """Process the reform and return all metrics.
 
         Args:
             baseline: Baseline microsimulation.
             reformed: Reformed microsimulation.
+            baseline_scenario: The scenario ``baseline`` was built with
+                (None for current law). The income curve's households are
+                simulated against it, so they share the population's
+                baseline.
 
         Returns:
             ReformResult with all calculated metrics.
@@ -163,8 +169,7 @@ class ReformProcessor:
             )
             all_metrics.extend(metrics)
 
-            # Income curve - pass both baseline and reform scenarios
-            baseline_scenario = self.reform.to_baseline_scenario()
+            # Income curve: against the population's own baseline.
             income_curve = self.income_curve_calc.calculate(
                 baseline_scenario, scenario, reform_id, reform_name, year
             )
@@ -289,11 +294,7 @@ class DataPipeline:
                 )
 
                 # Create simulations
-                # Baseline priority: reform-specific > global config > default
-                baseline_scenario = (
-                    reform.to_baseline_scenario()
-                    or self.config.get_baseline_scenario()
-                )
+                baseline_scenario = reform.baseline_scenario_for(self.config)
                 reform_scenario = reform.to_scenario()
 
                 baseline = build_microsimulation(
@@ -303,7 +304,9 @@ class DataPipeline:
 
                 # Process reform
                 processor = ReformProcessor(reform, self.config)
-                result = processor.process(baseline, reformed)
+                result = processor.process(
+                    baseline, reformed, baseline_scenario
+                )
                 results.append(result)
 
                 progress.remove_task(task)
