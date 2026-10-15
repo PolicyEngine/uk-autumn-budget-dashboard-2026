@@ -167,10 +167,11 @@ def household_simulations(
     uses_config: Optional[bool] = None,
 ) -> tuple[Simulation, Simulation]:
     """The baseline and reformed simulations of a household under a
-    measure, built as the national pipeline builds its own: the baseline
+    measure, from the scenarios the national pipeline uses: the baseline
     from ``reform.baseline_scenario_for(config, uses_config)`` (the
     measure's own baseline, else the configured one, else current law) and
-    the reform from ``reform.to_scenario()``.
+    the reform from ``reform.to_scenario()``. A side whose scenario changes
+    nothing is built with none (``effective``), with the same results.
 
     Args:
         situation: PolicyEngine situation dictionary.
@@ -187,10 +188,49 @@ def household_simulations(
     return (
         Simulation(
             situation=situation,
-            scenario=reform.baseline_scenario_for(config, uses_config),
+            scenario=effective(
+                reform.baseline_scenario_for(config, uses_config)
+            ),
         ),
-        Simulation(situation=situation, scenario=reform.to_scenario()),
+        Simulation(
+            situation=situation, scenario=effective(reform.to_scenario())
+        ),
     )
+
+
+# Scenario fields that change nothing on their own.
+_INERT_FIELDS = ("applied_before_data_load",)
+# Every Scenario field this code has read. A scenario with any other field
+# is kept, whatever its value: what a new field does is unknown here.
+_KNOWN_FIELDS = frozenset(
+    _INERT_FIELDS
+    + ("parameter_changes", "dated_reforms", "simulation_modifier")
+)
+
+
+def effective(scenario: Optional[Scenario]) -> Optional[Scenario]:
+    """The scenario, or None when it changes nothing.
+
+    Given any scenario, policyengine-uk builds a second, scenario-free
+    simulation from the situation as the simulation's ``baseline``; given
+    none, it clones itself. A scenario with no parameter changes, dated
+    reforms or modifier applies nothing (an empty parameter rebuild returns
+    at once), so it would only add that build: most registered measures
+    keep current law on the reform side as ``parameter_changes={}``. A
+    scenario with a field not in ``_KNOWN_FIELDS`` (one a later engine
+    adds) is kept, whatever that field holds.
+    """
+    if scenario is None:
+        return None
+    if set(type(scenario).model_fields) - _KNOWN_FIELDS:
+        return scenario
+    if any(
+        getattr(scenario, field) not in (None, {}, [])
+        for field in type(scenario).model_fields
+        if field not in _INERT_FIELDS
+    ):
+        return scenario
+    return None
 
 
 def calculate_household_metrics(sim: Simulation, year: int) -> dict:
@@ -297,7 +337,7 @@ class PersonalImpactCalculator:
             situation = build_situation(household, year)
             baseline_sim = Simulation(
                 situation=situation,
-                scenario=self.config.get_baseline_scenario(),
+                scenario=effective(self.config.get_baseline_scenario()),
             )
             baselines[year] = calculate_household_metrics(baseline_sim, year)
             results["years"][year] = {
