@@ -75,6 +75,9 @@ def result_tables(
         "household_scatter_binned": bin_scatter(result.household_scatter),
         "constituency": result.constituency,
         "demographic_constituency": result.demographic_constituency,
+        "briefing_deciles": result.briefing_deciles,
+        "briefing_winners_losers": result.briefing_winners_losers,
+        "briefing_poverty": result.briefing_poverty,
     }
 
 

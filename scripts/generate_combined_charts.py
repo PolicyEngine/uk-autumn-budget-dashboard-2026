@@ -1,25 +1,16 @@
-"""Generate embeddable HTML charts for the combined Autumn Budget 2025 reforms blog post.
-
-This script generates standalone HTML files that exactly replicate the charts from the
-uk-combined-reforms-autumn-budget-2025.md blog post, suitable for iframing.
-
-Charts:
-1. Distributional impact (£/year by decile) - vertical bar with year slider
-2. Winners/losers (% population in each category by decile) - horizontal stacked bar
-3. Constituency map (average £/year by constituency) - D3.js choropleth
-4. Poverty impact - line chart with toggles for absolute/relative and BHC/AHC
-
-Data is hardcoded from the blog post analysis (from Vahid's gist calculations).
+"""Generate combined briefing HTML exclusively from approved artifact tables.
 
 Usage:
-    uv run python scripts/generate_combined_charts.py
-
-Output:
-    public/combined_reforms/*.html files for iframing
+    uv run python scripts/generate_combined_charts.py \
+        --manifest public/data/manifest.json --key combined--measure-a+measure-b \
+        --out-dir public/briefing/3/combined/
 """
 
-import json
+import argparse
 from pathlib import Path
+
+from uk_budget_data.publication import briefing_export as export
+from uk_budget_data.publication.publish import PublishError
 
 # PolicyEngine design system colors (from app-v2/designTokens/colors.ts and dashboard)
 COLORS = {
@@ -52,107 +43,20 @@ COLORS = {
 }
 
 # Font family from design system
-FONT_FAMILY = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-
-YEAR_LABELS = ["2026-27", "2027-28", "2028-29", "2029-30", "2030-31"]
-
-# ============================================================================
-# DATA FROM BLOG POST (extracted from plotly JSON) - rounded to 1 decimal
-# ============================================================================
-
-# Figure 1: Distributional impact data (£/year by decile)
-DISTRIBUTIONAL_DATA = {
-    "2026-27": [669.9, 1139.5, 440.1, 363.7, 211.8, 152.7, 140.5, 183.4, 164.7, 170.0],
-    "2027-28": [655.3, 1155.5, 441.8, 309.2, 146.1, 91.2, 54.5, 72.9, 56.0, 59.8],
-    "2028-29": [458.4, 1446.0, 338.4, 283.1, 39.2, -36.7, -156.0, -179.4, -290.9, -504.8],
-    "2029-30": [441.9, 1434.7, 176.4, 216.2, -180.8, -231.9, -416.1, -526.9, -1028.2, -1449.0],
-    "2030-31": [466.7, 1343.2, 235.8, 58.7, -202.0, -350.2, -576.2, -766.5, -1327.7, -1874.0],
-}
-
-# Figure 2: Winners/losers data (% by category for each decile + All) - rounded to 1 decimal
-# Order: ["All", " ", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
-WINNERS_LOSERS_DATA = {
-    "2026-27": {
-        "gain_more_5": [8.8, None, 4.2, 5.8, 4.9, 3.8, 5.7, 5.7, 11.2, 10.5, 23.0, 13.4],
-        "gain_less_5": [43.7, None, 42.6, 47.5, 53.6, 50.2, 49.1, 50.9, 38.9, 36.5, 33.5, 33.5],
-        "no_change": [47.6, None, 53.2, 46.7, 41.6, 46.0, 45.2, 43.5, 50.0, 53.1, 43.6, 53.2],
-        "lose_less_5": [0.0, None, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-        "lose_more_5": [0.0, None, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    },
-    "2027-28": {
-        "gain_more_5": [8.3, None, 3.7, 5.5, 4.7, 3.3, 5.0, 5.8, 10.0, 10.7, 22.1, 12.1],
-        "gain_less_5": [42.5, None, 41.3, 44.4, 51.0, 46.7, 47.8, 47.7, 41.0, 35.7, 34.0, 35.1],
-        "no_change": [45.5, None, 49.6, 41.3, 36.3, 43.6, 41.8, 44.9, 48.3, 53.3, 43.8, 52.8],
-        "lose_less_5": [3.7, None, 5.5, 8.8, 8.0, 6.5, 5.4, 1.6, 0.6, 0.4, 0.2, 0.0],
-        "lose_more_5": [0.0, None, 0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0],
-    },
-    "2028-29": {
-        "gain_more_5": [6.7, None, 1.8, 0.9, 2.8, 2.2, 3.2, 4.9, 8.5, 8.4, 24.3, 10.2],
-        "gain_less_5": [12.8, None, 2.8, 3.3, 9.2, 10.9, 12.3, 13.3, 16.9, 13.7, 22.1, 24.9],
-        "no_change": [8.7, None, 0.8, 0.4, 1.5, 2.9, 4.4, 5.6, 7.0, 11.4, 14.6, 40.7],
-        "lose_less_5": [69.8, None, 91.9, 90.8, 84.7, 81.9, 78.4, 75.3, 64.7, 65.0, 37.9, 23.4],
-        "lose_more_5": [2.0, None, 2.6, 4.6, 1.8, 2.1, 1.8, 0.9, 2.9, 1.5, 1.2, 0.7],
-    },
-    "2029-30": {
-        "gain_more_5": [4.7, None, 0.0, 0.0, 0.2, 0.2, 0.7, 1.4, 7.1, 7.0, 22.2, 8.9],
-        "gain_less_5": [6.4, None, 0.2, 0.2, 2.9, 2.7, 6.9, 3.2, 7.4, 5.8, 13.2, 22.4],
-        "no_change": [7.1, None, 0.3, 0.1, 0.9, 1.0, 3.8, 3.8, 5.8, 8.6, 12.1, 36.6],
-        "lose_less_5": [77.1, None, 93.4, 91.7, 90.6, 91.8, 84.0, 87.2, 74.1, 75.1, 49.0, 30.1],
-        "lose_more_5": [4.8, None, 6.1, 7.9, 5.5, 4.3, 4.7, 4.4, 5.6, 3.6, 3.6, 2.0],
-    },
-    "2030-31": {
-        "gain_more_5": [4.7, None, 0.0, 0.0, 0.1, 0.2, 0.5, 2.5, 5.4, 8.6, 20.9, 9.9],
-        "gain_less_5": [6.3, None, 0.2, 0.3, 3.0, 2.9, 6.4, 2.8, 6.8, 6.0, 13.3, 22.8],
-        "no_change": [6.8, None, 0.3, 0.1, 1.0, 1.0, 3.8, 4.2, 3.7, 8.3, 11.3, 36.4],
-        "lose_less_5": [76.7, None, 91.2, 90.9, 89.3, 91.3, 84.2, 85.1, 78.2, 73.4, 50.4, 29.0],
-        "lose_more_5": [5.5, None, 8.3, 8.7, 6.6, 4.6, 5.2, 5.3, 6.0, 3.7, 4.2, 2.0],
-    },
-}
-
-# Figure 4: Poverty impact data - 2x2 grid (absolute/relative × BHC/AHC) by demographic
-# Demographics: Overall, Child, Working-age, Pensioner
-# All values rounded to 1 decimal
-POVERTY_DATA = {
-    "absolute": {
-        "bhc": {
-            "Overall": {"2026-27": -0.7, "2027-28": -0.7, "2028-29": -0.7, "2029-30": -0.7, "2030-31": -0.8},
-            "Child": {"2026-27": -2.3, "2027-28": -2.3, "2028-29": -2.5, "2029-30": -2.5, "2030-31": -2.9},
-            "Working-age": {"2026-27": -0.3, "2027-28": -0.3, "2028-29": -0.4, "2029-30": -0.4, "2030-31": -0.4},
-            "Pensioner": {"2026-27": 0.0, "2027-28": 0.0, "2028-29": 0.1, "2029-30": 0.1, "2030-31": 0.1},
-        },
-        "ahc": {
-            "Overall": {"2026-27": -1.0, "2027-28": -1.1, "2028-29": -1.0, "2029-30": -0.9, "2030-31": -1.0},
-            "Child": {"2026-27": -3.5, "2027-28": -3.6, "2028-29": -3.5, "2029-30": -3.4, "2030-31": -3.8},
-            "Working-age": {"2026-27": -0.5, "2027-28": -0.5, "2028-29": -0.5, "2029-30": -0.4, "2030-31": -0.5},
-            "Pensioner": {"2026-27": 0.0, "2027-28": 0.0, "2028-29": 0.1, "2029-30": 0.1, "2030-31": 0.1},
-        },
-    },
-    "relative": {
-        "bhc": {
-            "Overall": {"2026-27": -0.5, "2027-28": -0.5, "2028-29": -0.5, "2029-30": -0.5, "2030-31": -0.6},
-            "Child": {"2026-27": -1.8, "2027-28": -1.8, "2028-29": -1.9, "2029-30": -1.9, "2030-31": -2.2},
-            "Working-age": {"2026-27": -0.2, "2027-28": -0.2, "2028-29": -0.3, "2029-30": -0.3, "2030-31": -0.3},
-            "Pensioner": {"2026-27": 0.0, "2027-28": 0.0, "2028-29": 0.1, "2029-30": 0.0, "2030-31": 0.1},
-        },
-        "ahc": {
-            "Overall": {"2026-27": -0.8, "2027-28": -0.8, "2028-29": -0.8, "2029-30": -0.7, "2030-31": -0.8},
-            "Child": {"2026-27": -2.8, "2027-28": -2.9, "2028-29": -2.8, "2029-30": -2.7, "2030-31": -3.0},
-            "Working-age": {"2026-27": -0.4, "2027-28": -0.4, "2028-29": -0.4, "2029-30": -0.3, "2030-31": -0.4},
-            "Pensioner": {"2026-27": 0.0, "2027-28": 0.0, "2028-29": 0.1, "2029-30": 0.1, "2030-31": 0.1},
-        },
-    },
-}
+FONT_FAMILY = (
+    "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+)
 
 
-def create_distributional_html(output_path: Path) -> None:
+def create_distributional_html(data: dict, years: list[str]) -> str:
     """Create Figure 1: Distributional impact chart (£/year by decile) with year slider."""
 
-    html_content = f'''<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Distributional Impact - Combined Autumn Budget 2025</title>
+    <title>Distributional Impact - Combined Autumn Budget</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -163,8 +67,8 @@ def create_distributional_html(output_path: Path) -> None:
 <body>
     <div id="chart"></div>
     <script>
-        const data = {json.dumps(DISTRIBUTIONAL_DATA)};
-        const years = {json.dumps(YEAR_LABELS)};
+        const data = {export.json_payload(data)};
+        const years = {export.json_payload(years)};
 
         const traces = years.map((year, i) => {{
             const values = data[year];
@@ -202,7 +106,6 @@ def create_distributional_html(output_path: Path) -> None:
                 tickprefix: '£',
                 showgrid: true,
                 gridcolor: '{COLORS["gray_200"]}',
-                range: [-2000, 2000],
                 zeroline: true,
                 zerolinecolor: '{COLORS["gray_700"]}',
                 zerolinewidth: 2
@@ -249,23 +152,22 @@ def create_distributional_html(output_path: Path) -> None:
         }});
     </script>
 </body>
-</html>'''
+</html>"""
 
-    output_path.write_text(html_content)
-    print(f"  + Saved: {output_path}")
+    return html_content
 
 
-def create_winners_losers_html(output_path: Path) -> None:
+def create_winners_losers_html(data: dict, years: list[str]) -> str:
     """Create Figure 2: Winners/losers horizontal stacked bar chart with year slider."""
 
     y_labels = ["All", " ", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 
-    html_content = f'''<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winners and Losers - Combined Autumn Budget 2025</title>
+    <title>Winners and Losers - Combined Autumn Budget</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -276,9 +178,9 @@ def create_winners_losers_html(output_path: Path) -> None:
 <body>
     <div id="chart"></div>
     <script>
-        const data = {json.dumps(WINNERS_LOSERS_DATA)};
-        const years = {json.dumps(YEAR_LABELS)};
-        const yLabels = {json.dumps(y_labels)};
+        const data = {export.json_payload(data)};
+        const years = {export.json_payload(years)};
+        const yLabels = {export.json_payload(y_labels)};
 
         const categories = [
             {{ key: 'gain_more_5', name: 'Gain more than 5%', color: '{COLORS["primary_700"]}', textColor: 'white' }},
@@ -288,7 +190,7 @@ def create_winners_losers_html(output_path: Path) -> None:
             {{ key: 'lose_more_5', name: 'Lose more than 5%', color: '{COLORS["gray_600"]}', textColor: 'white' }}
         ];
 
-        // Create initial traces for 2026-27
+        // Create initial traces for the first artifact year
         const initialYear = years[0];
         const traces = categories.map(cat => {{
             const values = data[initialYear][cat.key];
@@ -393,21 +295,20 @@ def create_winners_losers_html(output_path: Path) -> None:
         }});
     </script>
 </body>
-</html>'''
+</html>"""
 
-    output_path.write_text(html_content)
-    print(f"  + Saved: {output_path}")
+    return html_content
 
 
-def create_poverty_html(output_path: Path) -> None:
+def create_poverty_html(data: dict, years: list[str]) -> str:
     """Create Figure 4: Poverty impact chart with toggles for absolute/relative and BHC/AHC."""
 
-    html_content = f'''<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poverty Impact - Combined Autumn Budget 2025</title>
+    <title>Poverty Impact - Combined Autumn Budget</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -476,8 +377,8 @@ def create_poverty_html(output_path: Path) -> None:
     </div>
     <div id="chart"></div>
     <script>
-        const povertyData = {json.dumps(POVERTY_DATA)};
-        const years = {json.dumps(YEAR_LABELS)};
+        const povertyData = {export.json_payload(data)};
+        const years = {export.json_payload(years)};
         const demographics = ['Overall', 'Child', 'Working-age', 'Pensioner'];
         const colors = {{
             'Overall': '{COLORS["primary"]}',
@@ -518,7 +419,7 @@ def create_poverty_html(output_path: Path) -> None:
                     zeroline: true,
                     zerolinecolor: '{COLORS["gray_700"]}',
                     zerolinewidth: 2,
-                    range: [-4.5, 0.5]
+                    autorange: true
                 }},
                 height: 450,
                 margin: {{ l: 70, r: 50, b: 60, t: 20 }},
@@ -560,43 +461,24 @@ def create_poverty_html(output_path: Path) -> None:
         updateChart();
     </script>
 </body>
-</html>'''
+</html>"""
 
-    output_path.write_text(html_content)
-    print(f"  + Saved: {output_path}")
+    return html_content
 
 
-def create_constituency_map_html(output_path: Path) -> None:
-    """Create Figure 3: Constituency map with D3.js choropleth and year slider.
+def create_constituency_map_html(data_by_year: dict, years: list[str]) -> str:
+    """Create the map from the optional receipted constituency table."""
+    if not any(data_by_year.values()):
+        return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Constituency map</title></head>
+<body><p>Constituency map unavailable: the approved artifact has no constituency table.</p></body></html>"""
 
-    Reads constituency data from public/data/constituency.csv.
-    Uses GSScode property from GeoJSON for matching.
-    """
-    import pandas as pd
-
-    # Load constituency data
-    constituency_df = pd.read_csv("public/data/constituency.csv")
-    reform_data = constituency_df[constituency_df["reform_id"] == "autumn_budget_2025_combined"].copy()
-
-    # Prepare data by year (map constituency code to average gain) - round to 1 decimal
-    data_by_year = {}
-    for year_label in YEAR_LABELS:
-        year = int(year_label.split("-")[0])
-        year_data = reform_data[reform_data["year"] == year]
-        data_by_year[year_label] = {
-            row["constituency_code"]: {
-                "name": row["constituency_name"],
-                "value": round(row["average_gain"], 1),
-            }
-            for _, row in year_data.iterrows()
-        }
-
-    html_content = f'''<!DOCTYPE html>
+    html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Constituency Map - Combined Autumn Budget 2025</title>
+    <title>Constituency Map - Combined Autumn Budget</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -710,9 +592,9 @@ def create_constituency_map_html(output_path: Path) -> None:
     <div class="controls">
         <button class="play-btn" id="play-btn">&#9654;</button>
         <div>
-            <input type="range" class="year-slider" id="year-slider" min="0" max="4" value="0" step="1">
+            <input type="range" class="year-slider" id="year-slider" min="0" max="{len(years) - 1}" value="0" step="1">
             <div class="year-marks">
-                {"".join(f"<span>{y}</span>" for y in YEAR_LABELS)}
+                {"".join(f"<span>{y}</span>" for y in years)}
             </div>
         </div>
     </div>
@@ -731,8 +613,8 @@ def create_constituency_map_html(output_path: Path) -> None:
     <svg id="map"></svg>
     <div class="tooltip" id="tooltip"></div>
     <script>
-        const dataByYear = {json.dumps(data_by_year)};
-        const years = {json.dumps(YEAR_LABELS)};
+        const dataByYear = {export.json_payload(data_by_year)};
+        const years = {export.json_payload(years)};
         let currentYearIndex = 0;
 
         // Calculate global absMax across all years for consistent legend
@@ -745,7 +627,7 @@ def create_constituency_map_html(output_path: Path) -> None:
                 }}
             }});
         }});
-        globalAbsMax = Math.ceil(globalAbsMax / 50) * 50; // Round up to nearest 50
+        // The legend uses the largest receipted chart value.
         let isPlaying = false;
         let playInterval;
 
@@ -767,7 +649,7 @@ def create_constituency_map_html(output_path: Path) -> None:
         // Load GeoJSON - using GSScode property for matching
         // Note: GeoJSON uses British National Grid (EPSG:27700) coordinates, not WGS84
         // Use geoIdentity with fitSize since coordinates are already projected
-        d3.json("../data/uk_constituencies_2024.geojson").then(geojson => {{
+        d3.json("/data/uk_constituencies_2024.geojson").then(geojson => {{
             const projection = d3.geoIdentity()
                 .reflectY(true)  // BNG y-axis is inverted relative to SVG
                 .fitSize([width - 100, height - 150], geojson);
@@ -853,45 +735,151 @@ def create_constituency_map_html(output_path: Path) -> None:
                 svg.transition().call(zoom.transform, d3.zoomIdentity));
         }}).catch(error => {{
             console.error("Error loading GeoJSON:", error);
-            document.body.innerHTML = '<div style="padding: 20px; color: {COLORS["error"]};">Error loading map data. Please check the GeoJSON file path.</div>';
+            document.getElementById("map").outerHTML = '<div style="padding: 20px; color: {COLORS["error"]};">Error loading map data. Please check the GeoJSON file path.</div>';
         }});
     </script>
 </body>
-</html>'''
+</html>"""
 
-    output_path.write_text(html_content)
-    print(f"  + Saved: {output_path}")
+    return html_content
 
 
-def main():
-    """Generate all charts for combined reforms blog post."""
-    output_dir = Path("public/combined_reforms")
-    output_dir.mkdir(parents=True, exist_ok=True)
+def chart_data(artifact: dict) -> tuple[dict, dict, dict, dict]:
+    """Round only values present in the corresponding artifact tables."""
+    years = export.supported_years(artifact)
+    labels = export.year_labels(artifact, years)
+    tables = artifact["tables"]
+    distributional, winners_losers, poverty, constituencies = {}, {}, {}, {}
+    group_labels = {
+        "overall": "Overall",
+        "child": "Child",
+        "working_age": "Working-age",
+        "pensioner": "Pensioner",
+    }
+    categories = (
+        "gain_more_5",
+        "gain_less_5",
+        "no_change",
+        "lose_less_5",
+        "lose_more_5",
+    )
+    deciles = ["all", *[str(n) for n in range(10, 0, -1)]]
+    for year, label in zip(years, labels, strict=True):
+        decile_rows = {
+            row["decile"]: row
+            for row in tables["briefing_deciles"]
+            if row["year"] == year
+        }
+        distributional[label] = [
+            round(decile_rows[str(n)]["avg_change_gbp"], 1)
+            for n in range(1, 11)
+        ]
+        share_rows = {
+            (row["decile"], row["category"]): row
+            for row in tables["briefing_winners_losers"]
+            if row["year"] == year
+        }
+        winners_losers[label] = {
+            category: [
+                round(share_rows[(decile, category)]["share_pct"], 1)
+                for decile in deciles
+            ]
+            for category in categories
+        }
+        # A visual spacer between All and the deciles carries no number.
+        for shares in winners_losers[label].values():
+            shares.insert(1, None)
+        for row in tables["briefing_poverty"]:
+            if row["year"] == year:
+                poverty.setdefault(row["measure"], {}).setdefault(
+                    row["housing"], {}
+                ).setdefault(group_labels[row["group"]], {})[label] = round(
+                    row["change_pp"], 1
+                )
+        constituencies[label] = {
+            row["constituency_code"]: {
+                "name": row["constituency_name"],
+                "value": round(row["average_gain"], 1),
+            }
+            for row in tables.get("constituency", [])
+            if row["year"] == year
+        }
+    return distributional, winners_losers, poverty, constituencies
 
-    print("Generating charts for combined Autumn Budget 2025 reforms...")
-    print()
 
-    print("1. Distributional impact chart (£/year by decile)...")
-    create_distributional_html(output_dir / "distributional.html")
+def generate(
+    manifest: Path,
+    key: str,
+    out_dir: Path,
+    *,
+    inputs: Path = Path("data_inputs/treasury"),
+) -> dict:
+    """Preflight the combined artifact, prepare every chart, then write it."""
+    with export.gated(manifest, [key], inputs=inputs) as loaded:
+        artifact = loaded["entries"][key]
+        if not artifact["entry"].measures:
+            raise PublishError("export", [f"{key} is not a combined artifact"])
+        export.require_tables(
+            key,
+            artifact,
+            (
+                "briefing_deciles",
+                "briefing_winners_losers",
+                "briefing_poverty",
+            ),
+        )
+        distributional, winners_losers, poverty, constituencies = chart_data(
+            artifact
+        )
+        years = export.year_labels(artifact)
+        source = export.source_line(artifact, loaded["stamp"])
+        charts = {
+            "distributional.html": (
+                create_distributional_html(distributional, years),
+                distributional,
+            ),
+            "winners_losers.html": (
+                create_winners_losers_html(winners_losers, years),
+                winners_losers,
+            ),
+            "poverty_inequality.html": (
+                create_poverty_html(poverty, years),
+                poverty,
+            ),
+            "constituency_map.html": (
+                create_constituency_map_html(constituencies, years),
+                constituencies,
+            ),
+        }
+        outputs = {
+            name: export.stamp_html(content, source, loaded["stamp"], payload)
+            for name, (content, payload) in charts.items()
+        }
+        return export.write_export(out_dir, outputs, loaded)
 
-    print("2. Winners/losers stacked bar chart (% by category)...")
-    create_winners_losers_html(output_dir / "winners_losers.html")
 
-    print("3. Constituency map (D3.js choropleth)...")
-    create_constituency_map_html(output_dir / "constituency_map.html")
-
-    print("4. Poverty impact chart (trend lines with toggles)...")
-    create_poverty_html(output_dir / "poverty_inequality.html")
-
-    print()
-    print(f"All charts saved to {output_dir}/")
-    print()
-    print("Charts will be available at:")
-    print("  https://policyengine.github.io/uk-autumn-budget-dashboard/combined_reforms/distributional.html")
-    print("  https://policyengine.github.io/uk-autumn-budget-dashboard/combined_reforms/winners_losers.html")
-    print("  https://policyengine.github.io/uk-autumn-budget-dashboard/combined_reforms/constituency_map.html")
-    print("  https://policyengine.github.io/uk-autumn-budget-dashboard/combined_reforms/poverty_inequality.html")
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--key", required=True)
+    parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument(
+        "--inputs", type=Path, default=Path("data_inputs/treasury")
+    )
+    args = parser.parse_args(argv)
+    try:
+        receipt = generate(
+            args.manifest, args.key, args.out_dir, inputs=args.inputs
+        )
+    except (PublishError, ValueError, OSError) as error:
+        print(f"Briefing export refused: {error}")
+        return 1
+    print(
+        f"Exported {len(receipt['files'])} charts from publication manifest "
+        f"rev {receipt['manifest_revision']} to {args.out_dir}"
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

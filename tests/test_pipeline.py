@@ -205,6 +205,8 @@ def _processor_with_spies(reform, config):
     processor.metrics_calc = _Spy([])
     processor.income_curve_calc = _Spy([])
     processor.household_scatter_calc = _Spy([])
+    # The briefing tables (#22): a mapping of table name to rows.
+    processor.briefing_calc = _Spy({})
     processor._calculate_constituency = lambda *args: ([], [])
     return processor
 

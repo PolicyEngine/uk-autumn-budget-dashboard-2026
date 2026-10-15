@@ -47,6 +47,44 @@ TABLES: dict[str, TableSpec] = {
     spec.name: spec
     for spec in (
         TableSpec(
+            "briefing_deciles",
+            (
+                ("reform_id", STR),
+                ("year", INT),
+                ("decile", STR),
+                ("avg_change_gbp", FLOAT),
+            ),
+            ("reform_id", "year", "decile"),
+            required=False,
+        ),
+        TableSpec(
+            "briefing_winners_losers",
+            (
+                ("reform_id", STR),
+                ("year", INT),
+                ("decile", STR),
+                ("category", STR),
+                ("share_pct", FLOAT),
+            ),
+            ("reform_id", "year", "decile", "category"),
+            required=False,
+        ),
+        TableSpec(
+            "briefing_poverty",
+            (
+                ("reform_id", STR),
+                ("year", INT),
+                ("measure", STR),
+                ("housing", STR),
+                ("group", STR),
+                ("baseline_rate_pct", FLOAT),
+                ("reform_rate_pct", FLOAT),
+                ("change_pp", FLOAT),
+            ),
+            ("reform_id", "year", "measure", "housing", "group"),
+            required=False,
+        ),
+        TableSpec(
             "budgetary_impact",
             (
                 ("reform_id", STR),
@@ -260,7 +298,75 @@ def normalise(name: str, rows: Iterable[Mapping[str, Any]]) -> list[dict]:
                 f"{name}: duplicate key "
                 f"{tuple(current[c] for c in spec.key)}"
             )
+    _check_briefing(name, typed)
     return typed
+
+
+BRIEFING_DECILES = frozenset({*(str(n) for n in range(1, 11)), "all"})
+BRIEFING_CATEGORIES = frozenset(
+    {"gain_more_5", "gain_less_5", "no_change", "lose_less_5", "lose_more_5"}
+)
+BRIEFING_POVERTY_KEYS = frozenset(
+    (measure, housing, group)
+    for measure in ("absolute", "relative")
+    for housing in ("bhc", "ahc")
+    for group in ("overall", "child", "working_age", "pensioner")
+)
+BRIEFING_TABLES = frozenset(
+    {"briefing_deciles", "briefing_winners_losers", "briefing_poverty"}
+)
+
+
+def _check_briefing(name: str, rows: list[dict]) -> None:
+    """Check complete briefing dimensions and arithmetic before hashing."""
+    if name not in BRIEFING_TABLES:
+        return
+    groups = {}
+    for row in rows:
+        groups.setdefault((row["reform_id"], row["year"]), []).append(row)
+    for (key, year), matching in groups.items():
+        label = f"{name}: {key}, {year}"
+        if name == "briefing_poverty":
+            if {
+                (row["measure"], row["housing"], row["group"])
+                for row in matching
+            } != BRIEFING_POVERTY_KEYS:
+                raise TableError(f"{label}: incomplete measure/housing/group")
+            for row in matching:
+                if any(
+                    not 0 <= row[column] <= 100
+                    for column in ("baseline_rate_pct", "reform_rate_pct")
+                ):
+                    raise TableError(f"{label}: poverty rate outside [0, 100]")
+                if (
+                    abs(
+                        row["change_pp"]
+                        - (row["reform_rate_pct"] - row["baseline_rate_pct"])
+                    )
+                    > 1e-9
+                ):
+                    raise TableError(f"{label}: inconsistent poverty change")
+            continue
+        if {row["decile"] for row in matching} != BRIEFING_DECILES:
+            raise TableError(f"{label}: incomplete decile")
+        if name == "briefing_winners_losers":
+            for decile in BRIEFING_DECILES:
+                decile_rows = [
+                    row for row in matching if row["decile"] == decile
+                ]
+                if {
+                    row["category"] for row in decile_rows
+                } != BRIEFING_CATEGORIES:
+                    raise TableError(
+                        f"{label}: incomplete category in {decile}"
+                    )
+                shares = [row["share_pct"] for row in decile_rows]
+                if any(not 0 <= value <= 100 for value in shares):
+                    raise TableError(f"{label}: share outside [0, 100]")
+                if abs(math.fsum(shares) - 100) > 1e-9:
+                    raise TableError(
+                        f"{label}: shares in {decile} do not sum to 100"
+                    )
 
 
 def canonical_csv(name: str, rows: Iterable[Mapping[str, Any]]) -> bytes:
