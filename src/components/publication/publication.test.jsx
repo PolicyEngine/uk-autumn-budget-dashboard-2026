@@ -6,7 +6,12 @@ import UnavailableNotice from "./UnavailableNotice";
 import { parseTable } from "../../utils/publication/csv";
 import { parseManifest } from "../../utils/publication/manifest";
 import { combinedStats, fiscalSeries } from "../../utils/publication/select";
-import { fixtureJson, fixtureText } from "../../test/publicationFixture";
+import {
+  BEYOND_DATA,
+  fixtureJson,
+  fixtureText,
+  IN_DATA,
+} from "../../test/publicationFixture";
 
 const manifest = parseManifest(fixtureJson("manifest.json"));
 const tablesByKey = Object.fromEntries(
@@ -31,7 +36,7 @@ function renderStats(selectedIds, year) {
 
 describe("CombinedStats (UI regression)", () => {
   it("shows the combined run's statistics, not a member's", () => {
-    const { container } = renderStats(["alpha", "beta"], 2030);
+    const { container } = renderStats(["alpha", "beta"], IN_DATA);
     // -2.75 / 10 from the combined run's own metrics row.
     expect(screen.getByText("-0.28pp")).toBeInTheDocument();
     expect(container.textContent).not.toContain("-0.11pp");
@@ -40,13 +45,13 @@ describe("CombinedStats (UI regression)", () => {
   });
 
   it("is the same whatever order the measures were selected in", () => {
-    const first = renderStats(["alpha", "beta"], 2030).container.innerHTML;
-    const second = renderStats(["beta", "alpha"], 2030).container.innerHTML;
+    const first = renderStats(["alpha", "beta"], IN_DATA).container.innerHTML;
+    const second = renderStats(["beta", "alpha"], IN_DATA).container.innerHTML;
     expect(second).toBe(first);
   });
 
   it("says combined figures are unavailable for a selection with no combined run", () => {
-    const { container } = renderStats(["alpha", "gamma"], 2030);
+    const { container } = renderStats(["alpha", "gamma"], IN_DATA);
     expect(screen.getByRole("status")).toHaveTextContent(
       "Combined figures are unavailable for this selection.",
     );
@@ -57,13 +62,13 @@ describe("CombinedStats (UI regression)", () => {
   });
 
   it("says combined figures are unavailable beyond the dataset's years", () => {
-    const { container } = renderStats(["alpha", "beta"], 2031);
+    const { container } = renderStats(["alpha", "beta"], BEYOND_DATA);
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/pp/);
   });
 
   it("labels a provisional measure's statistics", () => {
-    renderStats(["gamma"], 2030);
+    renderStats(["gamma"], IN_DATA);
     expect(
       screen.getByText(
         "Provisional: statement figures, awaiting Treasury costing",
@@ -78,7 +83,7 @@ describe("FiscalSummary", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "beta"],
-      years: [2030, 2031],
+      years: [IN_DATA, BEYOND_DATA],
     });
     render(
       <FiscalSummary
@@ -87,12 +92,16 @@ describe("FiscalSummary", () => {
         measureNames={names}
       />,
     );
-    expect(screen.getByText("2030-31")).toBeInTheDocument();
+    // The fiscal year starting in April of IN_DATA, written out here rather
+    // than by the component's own formatter.
+    const label = `${IN_DATA}-${String(IN_DATA + 1).slice(-2)}`;
+    expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText("-£1.10bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.20bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.75bn")).toBeInTheDocument();
     expect(screen.getByText("£0.55bn")).toBeInTheDocument();
-    // 2031: every figure unavailable, with the reason, never £0.00bn.
+    // The year beyond the data: every figure unavailable, with the reason,
+    // never £0.00bn.
     expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();
     expect(
       screen.getAllByLabelText("Beyond the dataset's projected years").length,
@@ -104,7 +113,7 @@ describe("FiscalSummary", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "gamma"],
-      years: [2030],
+      years: [IN_DATA],
     });
     render(
       <FiscalSummary
@@ -125,7 +134,7 @@ describe("FiscalSummary", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "delta"],
-      years: [2030],
+      years: [IN_DATA],
     });
     render(
       <FiscalSummary

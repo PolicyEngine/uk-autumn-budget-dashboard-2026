@@ -12,21 +12,24 @@ dataset (see tests/publication_support.py), so it is test data only.
 """
 import json, shutil, sys
 from pathlib import Path
-from tests.publication_support import World
+from tests.publication_support import PROJECTION_END, World
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, stage
 
 out = Path(sys.argv[1])
+# A year the dataset covers and the year after it, which it does not, so
+# the browser code is tested on both sides of the projection horizon.
+IN, BEYOND = PROJECTION_END, PROJECTION_END + 1
 world = World()
 try:
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
     values = {
-        "alpha": {2030: -1.1, 2031: -1.3},
-        "beta": {2030: -2.2, 2031: -2.4},
-        "gamma": {2030: 0.5, 2031: 0.6},
-        "delta": {2030: 0.7, 2031: 0.8},
+        "alpha": {IN: -1.1, BEYOND: -1.3},
+        "beta": {IN: -2.2, BEYOND: -2.4},
+        "gamma": {IN: 0.5, BEYOND: 0.6},
+        "delta": {IN: 0.7, BEYOND: 0.8},
     }
     refs = {}
     for key in ("alpha", "beta", "delta"):
@@ -34,7 +37,7 @@ try:
         stage(manifest, refs[key].path, **args)
     for key in ("alpha", "beta"):
         approve(manifest, key, "Reviewer", **args)
-    world.expect("gamma", "positive", 2030)
+    world.expect("gamma", "positive", IN)
     refs["gamma"] = world.write("gamma", values["gamma"], rate=0.25)
     world.reconcile(refs["gamma"])
     stage(manifest, refs["gamma"].path, provisional=True, **args)
@@ -44,7 +47,7 @@ try:
         records.append({"id": member, "reform": receipt["reform"], "baseline": receipt["baseline"]})
     combined = world.write(
         "combined--alpha+beta",
-        {2030: -2.75, 2031: -3.0},
+        {IN: -2.75, BEYOND: -3.0},
         members=records,
         measure_ids=["alpha", "beta"],
         rate=0.3,
