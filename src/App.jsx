@@ -577,6 +577,7 @@ function App() {
                       <ConstituencyMap
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
+                        policies={POLICIES}
                       />
                     </div>
 

@@ -25,21 +25,21 @@
 
 .map-header .chart-description {
   margin: 0;
-  color: #6b7280;
+  color: #4b5563;
   font-size: 0.875rem;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-/* Policy indicator */
+/* Which measure the map shows */
 .map-policy-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  align-self: flex-start;
+  padding: 8px 12px;
   background: #f0fdfa;
   border-left: 3px solid #319795;
   border-radius: 4px;
-  margin-bottom: 16px;
 }
 
 .policy-label {
@@ -50,35 +50,15 @@
 .policy-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #319795;
+  color: #0f766e;
 }
 
-/* No data message */
-.constituency-no-data {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-  text-align: center;
-}
-
-.constituency-no-data p {
-  margin: 0 0 8px 0;
-  color: #4b5563;
-  font-size: 0.9375rem;
-}
-
-.constituency-hint {
-  font-size: 0.8125rem;
-  color: #9ca3af;
-}
-
-/* Top bar with search and legend */
+/* Top bar with search and the outcome toggle */
 .map-top-bar {
   display: flex;
   gap: 24px;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   flex-wrap: wrap;
 }
 
@@ -89,7 +69,8 @@
   max-width: 400px;
 }
 
-.map-search-section h3 {
+.map-search-label {
+  display: block;
   font-size: 1rem;
   font-weight: 600;
   color: #374151;
@@ -143,7 +124,8 @@
   border-bottom: none;
 }
 
-.search-result-item:hover {
+.search-result-item:hover,
+.search-result-item:focus-visible {
   background: #f9fafb;
 }
 
@@ -157,53 +139,6 @@
 .result-value {
   font-size: 0.75rem;
   color: #6b7280;
-}
-
-/* Horizontal legend */
-.map-legend-horizontal {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 30px;
-}
-
-.legend-horizontal-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
-}
-
-.legend-gradient-horizontal {
-  width: 180px;
-  height: 12px;
-  border-radius: 3px;
-  background: linear-gradient(to right, #D97706, #e5e7eb, #14b8a6);
-}
-
-.legend-labels-horizontal {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: #6b7280;
-  width: 180px;
-}
-
-.legend-labels-horizontal span {
-  flex: 1;
-  text-align: center;
-}
-
-.legend-labels-horizontal span:first-child {
-  text-align: left;
-}
-
-.legend-labels-horizontal span:last-child {
-  text-align: right;
-}
-
-.legend-zero {
-  color: #9ca3af;
 }
 
 /* Map content container */
@@ -236,67 +171,6 @@
   flex-direction: row;
   gap: 12px;
   z-index: 10;
-}
-
-/* View mode toggle */
-.view-mode-toggle {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  background: white;
-  padding: 2px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.view-mode-btn {
-  height: 24px;
-  padding: 0 10px;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #6b7280;
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  position: relative;
-}
-
-.view-mode-btn:hover {
-  background: #f3f4f6;
-  color: #319795;
-}
-
-.view-mode-btn.active {
-  background: #319795;
-  color: white;
-}
-
-.view-mode-btn::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: -32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2937;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  z-index: 1000;
-}
-
-.view-mode-btn:hover::after {
-  opacity: 1;
 }
 
 /* Zoom controls */
@@ -333,26 +207,27 @@
 .zoom-control-btn svg {
   width: 14px;
   height: 14px;
+  pointer-events: none;
 }
 
 .zoom-control-btn:active {
   transform: scale(0.95);
 }
 
-.zoom-control-btn svg {
-  pointer-events: none;
-}
-
-/* Tooltip */
+/* Tooltip: the selected seat is zoomed to the map's centre, so the card
+   sits just above the centre. */
 .constituency-tooltip {
   position: absolute;
+  left: 50%;
+  top: 50%;
   background: white;
   border: 2px solid #319795;
   border-radius: 8px;
   padding: 12px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
-  min-width: 200px;
+  min-width: 220px;
+  max-width: 300px;
   transform: translate(-50%, -100%);
   margin-top: -10px;
   z-index: 100;
@@ -379,6 +254,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
   cursor: pointer;
   font-size: 20px;
   color: #9ca3af;
@@ -398,7 +276,12 @@
   padding-right: 20px;
 }
 
-.tooltip-value {
+.constituency-tooltip p {
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
+.constituency-tooltip .tooltip-value {
   font-size: 1.5rem;
   font-weight: 700;
   margin: 4px 0;
@@ -408,53 +291,37 @@
 .tooltip-label {
   font-size: 0.75rem;
   color: #6b7280;
-  margin: 4px 0 0 0;
 }
 
-.tooltip-value-secondary {
-  font-size: 1.125rem;
+.tooltip-interval {
+  font-size: 0.875rem;
   font-weight: 600;
-  margin: 8px 0 4px 0;
-  line-height: 1;
-}
-
-/* Policy breakdown section */
-.tooltip-breakdown {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.tooltip-breakdown-header {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6b7280;
-  margin: 0 0 8px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.tooltip-breakdown-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  gap: 12px;
-}
-
-.tooltip-breakdown-name {
-  font-size: 0.8rem;
   color: #374151;
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.tooltip-breakdown-value {
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
+/* An approximate figure's interval is the thing to read. */
+.tooltip-interval-emphasis {
+  font-size: 1rem;
+  padding: 4px 8px;
+  background: #fff7e6;
+  border-radius: 4px;
+}
+
+.tooltip-detail {
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+.tooltip-note {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.tooltip-region {
+  font-size: 0.8125rem;
+  color: #4b5563;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Loading state */
@@ -463,27 +330,30 @@
   align-items: center;
   justify-content: center;
   height: 400px;
+  margin: 0;
   font-size: 1.25rem;
   color: #6b7280;
+  /* Shown only if loading takes more than 300ms, to avoid a flash. */
+  opacity: 0;
+  animation: constituency-loading-in 0s linear 300ms forwards;
+}
+
+@keyframes constituency-loading-in {
+  to {
+    opacity: 1;
+  }
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .map-top-bar {
     flex-direction: column;
+    align-items: stretch;
     gap: 16px;
   }
 
   .map-search-section {
     max-width: 100%;
-  }
-
-  .map-legend-horizontal {
-    width: 100%;
-  }
-
-  .legend-gradient-horizontal {
-    width: 100%;
   }
 
   .map-controls-container {
@@ -492,15 +362,8 @@
     gap: 8px;
   }
 
-  .view-mode-toggle,
   .zoom-controls {
     padding: 1px;
-  }
-
-  .view-mode-btn {
-    height: 22px;
-    padding: 0 8px;
-    font-size: 0.7rem;
   }
 
   .zoom-control-btn {
