@@ -819,7 +819,7 @@ def test_only_a_receipt_module_with_the_current_rules_is_adopted(
     from uk_budget_data.publication import receipt as adapter
 
     vendored, source = adapter.receipt_api()
-    assert source.startswith("vendored-w4-pr")
+    assert source == adapter.VENDORED_SOURCE
 
     class OldReceipt:
         model_fields = {"years": None}

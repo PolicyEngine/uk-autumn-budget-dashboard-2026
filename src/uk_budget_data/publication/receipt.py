@@ -33,7 +33,7 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-pr588@dab8f45"
+VENDORED_SOURCE = "vendored-w4-main@ebca9f0"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 

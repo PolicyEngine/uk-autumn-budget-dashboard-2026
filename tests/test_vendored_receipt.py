@@ -31,4 +31,4 @@ def test_vendored_modules_import_nothing_else_from_this_package():
 def test_the_adapter_uses_a_module_with_everything_it_needs():
     api, source = receipt_api()
     assert all(hasattr(api, name) for name in _REQUIRED_API)
-    assert source.startswith(("vendored-w4-pr", "policyengine=="))
+    assert source.startswith(("vendored-w4-", "policyengine=="))
