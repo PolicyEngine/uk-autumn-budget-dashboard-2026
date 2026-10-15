@@ -109,6 +109,15 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
+**A UC health (LCWRA) measure: change the rebalancing amounts, not the element's amount.** In 2026 to 2029 the engine's UC rebalancing overwrites every claimant's health element:
+- pre-2026 claimants get `gov.dwp.universal_credit.rebalancing.protected_health_element` (or the UC Act 2025 s. 4 floor where that is null);
+- new claimants get `gov.dwp.universal_credit.rebalancing.new_claimant_health_element`.
+
+These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabled.amount` therefore scores £0: on policyengine-uk 2.130.1, £600 a month on it moved no claimant's element, while £600 on either rebalancing amount gave £7,200 a year.
+- **Switching `rebalancing.active` off is not the law before the Universal Credit Act 2025 either:** the 2026 element amount is already the new claimants' rate, so every claimant would get it.
+- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), for 2026-29. The templates refuse the element's amount from 2026, and `rebalancing.active`.
+- **Found by the UK hub.** It is drafting an engine-side fix for a certified release before the 28th. If that changes how these parameters work, re-check this row.
+
 **Dated changes: key every year by its bare fiscal year.**
 
 | Key | What it means | Use it? |
