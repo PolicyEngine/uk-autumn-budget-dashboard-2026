@@ -27,7 +27,7 @@ describe("regions", () => {
 
   it("look up by code", () => {
     expect(isRegionCode("E12000007")).toBe(true);
-    expect(isRegionCode("E14000001")).toBe(false);
+    expect(isRegionCode("Z14000001")).toBe(false);
     expect(regionByCode("W92000004").name).toBe("Wales");
     expect(regionByCode("X")).toBeNull();
   });

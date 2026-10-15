@@ -243,7 +243,7 @@ describe("parseGeographyTable", () => {
     expect(rejection([{ ...REPORTED, level: "constituency" }])).toMatch(
       /level "constituency" is not "region"/,
     );
-    expect(rejection([{ ...REPORTED, area_code: "E14000001" }])).toMatch(
+    expect(rejection([{ ...REPORTED, area_code: "Z14000001" }])).toMatch(
       /not a UK region/,
     );
     expect(rejection([{ ...REPORTED, area_code: "North East" }])).toMatch(
