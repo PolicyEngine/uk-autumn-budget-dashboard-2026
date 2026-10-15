@@ -34,8 +34,10 @@ import csv
 import hashlib
 import json
 import math
+import numbers
+import re
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Collection, Iterable, Mapping, Optional
@@ -45,8 +47,11 @@ import yaml
 from uk_budget_data.publication.responsiveness import (
     ExpectedEffect,
     check_responsiveness,
+    collected,
     finite_impact,
     overlaps,
+    validated,
+    whole_year,
 )
 
 SCHEMA = "uk-budget-dashboard/reconciliation/v1"
@@ -187,11 +192,12 @@ class MappingRow:
                     f"{self.scale!r}",
                 )
         if isinstance(self.year_offset, bool) or not isinstance(
-            self.year_offset, int
+            self.year_offset, numbers.Integral
         ):
             raise ReconciliationInputError(
                 f"{self.measure_id}: year_offset must be a whole number"
             )
+        object.__setattr__(self, "year_offset", int(self.year_offset))
         if self.status not in ("", NOT_COMPARABLE):
             raise ReconciliationInputError(
                 f"{self.measure_id}: mapping status must be blank or "
@@ -418,21 +424,30 @@ def _one_exception_each(exceptions: list[ExceptionEntry]) -> None:
         seen.add(key)
 
 
-def _inputs_of_their_types(**collections) -> None:
-    """Each input is the validated type: anything else skipped the checks
-    its constructor makes."""
-    kinds = {
-        "sources": SourceRow,
-        "mapping": MappingRow,
-        "exceptions": ExceptionEntry,
-        "expected": ExpectedEffect,
-    }
-    for name, items in collections.items():
-        for item in items:
-            if not isinstance(item, kinds[name]):
-                raise ReconciliationInputError(
-                    f"{name} must hold {kinds[name].__name__}, not {item!r}"
-                )
+_INPUT_KINDS = {
+    "sources": SourceRow,
+    "mapping": MappingRow,
+    "exceptions": ExceptionEntry,
+    "expected": ExpectedEffect,
+}
+
+
+def _validated_inputs(**inputs) -> dict[str, list]:
+    """Each input collection read once into a list, every item exactly its
+    validated type with its state passing that type's checks again (see
+    ``responsiveness.validated``)."""
+    try:
+        return {
+            name: [
+                validated(item, _INPUT_KINDS[name], f"{name} item")
+                for item in collected(items, name)
+            ]
+            for name, items in inputs.items()
+        }
+    except ReconciliationInputError:
+        raise
+    except ValueError as error:
+        raise ReconciliationInputError(str(error)) from error
 
 
 def _one_source_each(sources: list[SourceRow]) -> None:
@@ -457,31 +472,36 @@ def _one_mapping_each(mapping: list[MappingRow]) -> None:
 
 
 def _whole_years(values, label: str) -> list[int]:
-    """A list of years: whole numbers, never bools or text."""
-    if isinstance(values, (str, bytes, dict)) or not isinstance(
-        values, (list, tuple, set, frozenset)
-    ):
-        raise ReconciliationInputError(
-            f"{label} must be a list of years, not {values!r}"
+    """A sorted list of years: whole numbers (any integer type, a NumPy
+    year included, as builtin ints), never bools or text."""
+    try:
+        return sorted(
+            {
+                whole_year(year, f"{label}: each year")
+                for year in collected(values, label)
+            }
         )
-    if any(
-        isinstance(year, bool) or not isinstance(year, int) for year in values
-    ):
-        raise ReconciliationInputError(
-            f"{label} must be whole numbers, not {values!r}"
-        )
-    return sorted(set(values))
+    except ValueError as error:
+        raise ReconciliationInputError(str(error)) from error
 
 
 def _checked_budgetary(
     budgetary: Mapping[int, float], years: Collection[int], measure_id: str
 ) -> dict[int, float]:
     """The model outputs as floats, each finite and within the years."""
+    if not isinstance(budgetary, Mapping):
+        raise ReconciliationInputError(
+            f"{measure_id}: the model outputs must be a mapping of years"
+        )
     checked = {}
     for year, value in budgetary.items():
-        if isinstance(year, bool) or not isinstance(year, int):
+        try:
+            year = whole_year(year, f"{measure_id}: model year")
+        except ValueError as error:
+            raise ReconciliationInputError(str(error)) from error
+        if year in checked:
             raise ReconciliationInputError(
-                f"{measure_id}: model year {year!r} is not a whole number"
+                f"{measure_id}: two model outputs for {year}"
             )
         checked[year] = _finite(value, f"{measure_id}'s impact in {year}")
     stray = sorted(set(checked) - set(years))
@@ -540,16 +560,20 @@ def reconcile(
         supported_years = set(
             _whole_years(supported_years, f"{measure_id}: supported years")
         )
-    if not isinstance(policy, Policy):
-        raise ReconciliationInputError(
-            f"policy must be a Policy, not {policy!r}"
-        )
-    _inputs_of_their_types(
+    try:
+        validated(policy, Policy, "policy")
+    except ReconciliationInputError:
+        raise
+    except ValueError as error:
+        raise ReconciliationInputError(str(error)) from error
+    inputs = _validated_inputs(
         sources=sources,
         mapping=mapping,
         exceptions=exceptions,
         expected=expected,
     )
+    sources, mapping = inputs["sources"], inputs["mapping"]
+    exceptions, expected = inputs["exceptions"], inputs["expected"]
     budgetary = _checked_budgetary(budgetary, years, measure_id)
     _one_source_each(sources)
     _one_exception_each(exceptions)
@@ -691,7 +715,8 @@ def reconcile(
         "schema": SCHEMA,
         "measure_id": measure_id,
         "outputs_sha256": outputs_sha256,
-        "policy": policy.__dict__,
+        # A copy: editing the result never changes the caller's Policy.
+        "policy": asdict(policy),
         "rows": rows,
         "responsiveness": responsiveness,
         "summary": {
@@ -919,9 +944,14 @@ def budgetary_from_rows(
     for row in rows:
         if row["reform_id"] != measure_id:
             continue
+        year = row["year"]
+        # A CSV year is ASCII digits; anything else must already be an
+        # integer. int() would truncate 2027.5 and accept True.
+        if isinstance(year, str) and re.fullmatch(r"[1-9][0-9]*", year):
+            year = int(year)
         try:
-            year = int(row["year"])
-        except (TypeError, ValueError) as error:
+            year = whole_year(year, f"{where}: year")
+        except ValueError as error:
             raise ReconciliationInputError(
                 f"{where}: year {row['year']!r} is not a whole number"
             ) from error
