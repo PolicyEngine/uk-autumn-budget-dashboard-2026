@@ -534,3 +534,48 @@ def test_a_modifier_runs_as_the_engine_runs_it(modifier, side):
     )
     moved = reformed if side == "reform" else baseline
     assert float(moved.calculate("income_tax", 2027)[0]) == 5_486
+
+
+def test_a_combined_measure_keeps_its_members_baselines():
+    """Review of #37: two members that each bring an explicit empty
+    baseline merge into an empty one, which on its own reads as none and
+    would take the configured baseline. Passed whether any member uses the
+    configured baseline, as publication passes it, the household baseline
+    is current law, as nationally."""
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.publication.combine import combine_measures
+
+    config = DataConfig(
+        years=[2027], baseline_parameter_changes=_allowance(20_000)
+    )
+    members = [
+        Reform(
+            id="a",
+            name="A",
+            baseline_parameter_changes={},
+            parameter_changes=_allowance(18_000),
+        ),
+        Reform(
+            id="b",
+            name="B",
+            baseline_parameter_changes={},
+            parameter_changes={
+                "gov.hmrc.income_tax.rates.uk[0].rate": {"2027": 0.25}
+            },
+        ),
+    ]
+    combined = combine_measures(members, config)
+    uses_config = any(not member.has_custom_baseline() for member in members)
+    assert uses_config is False
+    baseline, reformed = personal_impact.household_simulations(
+        PENSIONER, combined, config, uses_config
+    )
+    national = Simulation(
+        situation=PENSIONER,
+        scenario=combined.baseline_scenario_for(config, uses_config),
+    )
+    # Current law: £30,000 less £12,570, at 20%.
+    assert float(baseline.calculate("income_tax", 2027)[0]) == 3_486
+    assert float(national.calculate("income_tax", 2027)[0]) == 3_486
+    # £30,000 less £18,000, at 25%.
+    assert float(reformed.calculate("income_tax", 2027)[0]) == 3_000

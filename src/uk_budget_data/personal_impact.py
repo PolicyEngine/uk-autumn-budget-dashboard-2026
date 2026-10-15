@@ -161,25 +161,33 @@ def create_simulation(
 
 
 def household_simulations(
-    situation: dict, reform: Reform, config: DataConfig
+    situation: dict,
+    reform: Reform,
+    config: DataConfig,
+    uses_config: Optional[bool] = None,
 ) -> tuple[Simulation, Simulation]:
     """The baseline and reformed simulations of a household under a
     measure, built as the national pipeline builds its own: the baseline
-    from ``reform.baseline_scenario_for(config)`` (the measure's own
-    baseline, else the configured one, else current law) and the reform
-    from ``reform.to_scenario()``.
+    from ``reform.baseline_scenario_for(config, uses_config)`` (the
+    measure's own baseline, else the configured one, else current law) and
+    the reform from ``reform.to_scenario()``.
 
     Args:
         situation: PolicyEngine situation dictionary.
         reform: The measure.
         config: The configuration the national figures were generated with.
+        uses_config: For a combined measure, whether any member uses the
+            configured baseline, as publication passes it: members that
+            each bring an empty baseline merge into an empty one, which on
+            its own reads as none. Leave it None for a single measure.
 
     Returns:
         ``(baseline, reformed)``.
     """
     return (
         Simulation(
-            situation=situation, scenario=reform.baseline_scenario_for(config)
+            situation=situation,
+            scenario=reform.baseline_scenario_for(config, uses_config),
         ),
         Simulation(situation=situation, scenario=reform.to_scenario()),
     )
