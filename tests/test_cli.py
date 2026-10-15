@@ -99,3 +99,36 @@ class TestReformSelection:
         # Should only return the valid one
         assert len(reforms) == 1
         assert reforms[0].id == "two_child_limit"
+
+
+class TestLegacyGeographyFlag:
+    """--legacy-geography needs a private directory before anything runs."""
+
+    def test_without_a_private_directory_it_stops(self, monkeypatch):
+        from uk_budget_data import cli
+        from uk_budget_data.private_outputs import AUDIT_DIR_ENV
+
+        monkeypatch.delenv(AUDIT_DIR_ENV, raising=False)
+
+        def no_generation(**kwargs):
+            raise AssertionError("data generation started")
+
+        monkeypatch.setattr(cli, "generate_all_data", no_generation)
+        parsed = cli.parse_args(["generate", "--legacy-geography"])
+        assert cli.run_generate(parsed) == 1
+
+    def test_it_passes_the_private_directory_on(self, monkeypatch, tmp_path):
+        from uk_budget_data import cli
+        from uk_budget_data.private_outputs import AUDIT_DIR_ENV
+
+        monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
+        seen = {}
+
+        def capture(reforms, config, skip_input_check):
+            seen["dir"] = config.legacy_geography_dir
+            raise FileNotFoundError("stop here")
+
+        monkeypatch.setattr(cli, "generate_all_data", capture)
+        parsed = cli.parse_args(["generate", "--legacy-geography"])
+        assert cli.run_generate(parsed) == 1
+        assert seen["dir"] == (tmp_path / "legacy").resolve()

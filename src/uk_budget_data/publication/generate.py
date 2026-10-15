@@ -41,10 +41,7 @@ from uk_budget_data.publication.receipt import (
     measure_identities,
     scenario_identity,
 )
-from uk_budget_data.publication.tables import (
-    bin_scatter,
-    sample_household_scatter,
-)
+from uk_budget_data.publication.tables import bin_scatter
 
 
 @dataclass
@@ -60,8 +57,10 @@ def result_tables(
 ) -> dict[str, list[dict]]:
     """An artifact's tables from one processed reform.
 
-    ``years`` are the years the run reported; the household scatter keeps
-    only households present in every one of them.
+    Artifacts are published, so they carry no household-level rows and no
+    constituency tables without disclosure control: the household scatter
+    goes in binned only, and results by area come from the disclosure layer
+    (#24). ``years`` is kept for callers.
     """
     return {
         "budgetary_impact": result.budgetary_impact,
@@ -69,12 +68,7 @@ def result_tables(
         "winners_losers": result.winners_losers,
         "metrics": result.metrics,
         "income_curve": result.income_curve,
-        "household_scatter": sample_household_scatter(
-            result.household_scatter, years=years
-        ),
         "household_scatter_binned": bin_scatter(result.household_scatter),
-        "constituency": result.constituency,
-        "demographic_constituency": result.demographic_constituency,
     }
 
 

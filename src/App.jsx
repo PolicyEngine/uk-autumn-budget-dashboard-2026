@@ -8,7 +8,6 @@ import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
-import HouseholdChart from "./components/HouseholdChart";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import YearSlider from "./components/YearSlider";
@@ -213,20 +212,17 @@ function App() {
         distributionalRes,
         winnersLosersRes,
         metricsRes,
-        householdScatterRes,
       ] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`),
         fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/distributional_impact.csv`),
         fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/winners_losers.csv`),
         fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/metrics.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/household_scatter.csv`),
       ]);
 
       const budgetaryData = parseCSV(await budgetaryRes.text());
       const distributionalData = parseCSV(await distributionalRes.text());
       const winnersLosersData = parseCSV(await winnersLosersRes.text());
       const metricsData = parseCSV(await metricsRes.text());
-      const householdScatterData = parseCSV(await householdScatterRes.text());
 
       // Filter data for selected policies
       const filteredBudgetary = budgetaryData.filter((row) =>
@@ -239,10 +235,6 @@ function App() {
         selectedPolicies.includes(row.reform_id),
       );
       const filteredMetrics = metricsData.filter((row) =>
-        selectedPolicies.includes(row.reform_id),
-      );
-      // Keep raw household scatter data (filtering will be done by component)
-      const filteredHouseholdScatter = householdScatterData.filter((row) =>
         selectedPolicies.includes(row.reform_id),
       );
 
@@ -369,11 +361,8 @@ function App() {
         distributionalData:
           distributionalChartData.length > 0 ? distributionalChartData : null,
         waterfallData: waterfallData.length > 0 ? waterfallData : null,
-        householdScatterData:
-          filteredHouseholdScatter.length > 0 ? filteredHouseholdScatter : null,
         rawDistributional: filteredDistributional,
         rawWinnersLosers: filteredWinnersLosers,
-        rawHouseholdScatter: filteredHouseholdScatter,
       });
     } catch (error) {
       console.error("Error loading results:", error);
@@ -581,19 +570,13 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Row 2: Constituency Map and Scatter */}
+                    {/* Row 2: Constituency Map. The household scatter is
+                        withdrawn: it showed survey households one by one. */}
                     <div className="charts-grid charts-row-2">
                       <ConstituencyMap
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                       />
-                      {results.rawHouseholdScatter && (
-                        <HouseholdChart
-                          rawData={results.rawHouseholdScatter}
-                          selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
-                        />
-                      )}
                     </div>
 
                     {/* Row 3: Net Income Analysis Charts */}
