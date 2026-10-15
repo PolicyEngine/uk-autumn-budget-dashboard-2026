@@ -3,6 +3,8 @@ process gives, and the worker count follows the instance's CPUs."""
 
 import os
 import signal
+import subprocess
+import sys
 import threading
 import time
 from concurrent.futures.process import BrokenProcessPool
@@ -113,6 +115,24 @@ def small(monkeypatch):
     return HouseholdInput(employment_income=30_000, children_ages=[2, 5, 9])
 
 
+def jobs_submitted(monkeypatch):
+    """An event set once run_jobs has submitted every job and is waiting
+    for them, with the pool they went to and its worker processes then."""
+    event, seen = threading.Event(), {}
+    real_wait = personal_impact.wait
+
+    def waiting(futures, **kwargs):
+        pool = personal_impact._pool
+        seen.setdefault("pool", pool)
+        seen.setdefault("processes", list(pool._processes.values()))
+        seen.setdefault("timeout", kwargs.get("timeout"))
+        event.set()
+        return real_wait(futures, **kwargs)
+
+    monkeypatch.setattr(personal_impact, "wait", waiting)
+    return event, seen
+
+
 def test_each_job_runs_in_a_process_of_its_own():
     """Workers are child processes, and each runs one job and exits
     (max_tasks_per_child=1), so nothing a build leaves behind carries over."""
@@ -141,7 +161,7 @@ def test_a_worker_killed_mid_calculation_fails_only_that_calculation(
 ):
     household = small(monkeypatch)
     calculator = personal_impact.PersonalImpactCalculator(workers=2)
-    pool = personal_impact.worker_pool(2)
+    submitted, seen = jobs_submitted(monkeypatch)
     outcome = {}
 
     def calculate():
@@ -152,10 +172,11 @@ def test_a_worker_killed_mid_calculation_fails_only_that_calculation(
 
     thread = threading.Thread(target=calculate)
     thread.start()
-    deadline = time.monotonic() + 60
-    while not pool._processes and time.monotonic() < deadline:
-        time.sleep(0.01)
-    os.kill(next(iter(pool._processes)), signal.SIGKILL)
+    # Only once every job is submitted: a worker killed before that (an
+    # idle one left by an earlier calculation, say) breaks the pool while
+    # it is still being submitted to, and run_jobs rightly replaces it.
+    assert submitted.wait(120)
+    os.kill(seen["processes"][0].pid, signal.SIGKILL)
     thread.join(120)
     assert isinstance(outcome.get("error"), BrokenProcessPool)
     # The next calculation gets a new pool and succeeds.
@@ -165,10 +186,131 @@ def test_a_worker_killed_mid_calculation_fails_only_that_calculation(
 def test_a_calculation_past_its_deadline_is_abandoned(monkeypatch):
     household = small(monkeypatch)
     monkeypatch.setattr(personal_impact, "CALCULATION_TIMEOUT_SECONDS", 0.05)
-    pool = personal_impact.worker_pool(2)
+    # A pool of its own, so every worker is one of this calculation's.
+    personal_impact.shutdown_pool()
+    submitted, seen = jobs_submitted(monkeypatch)
     with pytest.raises(TimeoutError):
         personal_impact.PersonalImpactCalculator(workers=2).calculate(
             household
         )
-    # Its workers were stopped and the pool dropped.
+    # The pool was dropped and its workers stopped mid-job: a worker left
+    # to finish its one job would exit by itself, with 0.
+    assert personal_impact.worker_pool(2) is not seen["pool"]
+    assert seen["processes"]
+    for process in seen["processes"]:
+        process.join(60)
+        assert process.exitcode == -signal.SIGTERM
+
+
+def test_the_deadline_counts_from_before_submission(monkeypatch):
+    """A slow start (a cold forkserver, say) comes out of the calculation's
+    time, not on top of it."""
+    household = small(monkeypatch)
+    real_pool = personal_impact.worker_pool
+
+    def slow_pool(workers):
+        time.sleep(0.5)
+        return real_pool(workers)
+
+    monkeypatch.setattr(personal_impact, "worker_pool", slow_pool)
+    submitted, seen = jobs_submitted(monkeypatch)
+    personal_impact.PersonalImpactCalculator(workers=2).calculate(household)
+    assert seen["timeout"] <= (
+        personal_impact.CALCULATION_TIMEOUT_SECONDS - 0.5
+    )
+
+
+def test_a_pool_shut_down_before_submission_is_replaced(monkeypatch):
+    """Submitting to a shut-down pool raises RuntimeError, not
+    BrokenProcessPool; the calculation still gets a new pool."""
+    household = small(monkeypatch)
+    pool = personal_impact.worker_pool(2)
+    pool.shutdown(wait=True)
+    results = personal_impact.PersonalImpactCalculator(workers=2).calculate(
+        household
+    )
+    assert results["policies"]
     assert personal_impact.worker_pool(2) is not pool
+
+
+def test_a_pool_discarded_twice_is_harmless():
+    """A shut-down executor has no process table (_processes is None)."""
+    pool = personal_impact.worker_pool(2)
+    pool.submit(os.getpid).result()
+    personal_impact.discard_pool(pool)
+    personal_impact.discard_pool(pool)
+    assert personal_impact.worker_pool(2) is not pool
+
+
+def test_the_server_stops_its_workers_when_it_stops():
+    """uvicorn re-raises SIGTERM after its graceful shutdown, so the
+    interpreter dies by the signal and concurrent.futures' exit hook never
+    runs; the app's lifespan stops the workers before that. A worker left
+    alone would sleep on."""
+    from fastapi.testclient import TestClient
+
+    from uk_budget_data.api import app
+
+    pool = personal_impact.worker_pool(2)
+    busy = pool.submit(time.sleep, 60)
+    processes = list(pool._processes.values())
+    assert processes
+    with TestClient(app):
+        pass
+    for process in processes:
+        process.join(10)
+        assert process.exitcode == -signal.SIGTERM
+    assert busy.done()
+    assert personal_impact._pool is None
+
+
+# A server that starts a worker on a long job, prints its workers' and its
+# forkserver's PIDs, and is then killed outright, so no shutdown hook runs.
+SERVER_KILLED = """
+import os, signal, time
+import multiprocessing.forkserver as forkserver
+from uk_budget_data import personal_impact
+pool = personal_impact.worker_pool(2)
+pool.submit(time.sleep, 600)
+pids = list(pool._processes) + [forkserver._forkserver._forkserver_pid]
+print(" ".join(str(pid) for pid in pids), flush=True)
+os.kill(os.getpid(), signal.SIGKILL)
+"""
+
+
+def running(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+def test_nothing_outlives_a_server_killed_outright(tmp_path):
+    """Each worker watches the server and exits once it has gone; with no
+    worker left holding its lifeline, the forkserver exits too. The killed
+    server stays a zombie until subprocess.run reaps it, which a PID check
+    would mistake for alive."""
+    out, err = tmp_path / "pids.txt", tmp_path / "stderr.txt"
+    with out.open("w") as stdout, err.open("w") as stderr:
+        # Files, not pipes: an orphan holding a pipe would block the run.
+        result = subprocess.run(
+            [sys.executable, "-c", SERVER_KILLED],
+            stdout=stdout,
+            stderr=stderr,
+            timeout=600,
+        )
+    pids = [int(pid) for pid in out.read_text().split()]
+    try:
+        assert result.returncode == -signal.SIGKILL, err.read_text()
+        assert len(pids) >= 2
+        deadline = time.monotonic() + 60
+        left = pids
+        while left and time.monotonic() < deadline:
+            time.sleep(0.5)
+            left = [pid for pid in left if running(pid)]
+        assert not left
+    finally:
+        for pid in pids:
+            if running(pid):
+                os.kill(pid, signal.SIGKILL)

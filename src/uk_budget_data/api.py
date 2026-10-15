@@ -7,6 +7,7 @@ policies affect individual households over time.
 import json
 import os
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -24,13 +25,23 @@ from uk_budget_data.lifecycle_calculator import (
 from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
+    shutdown_pool,
 )
 from uk_budget_data.runtime_identity import runtime_identity
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    # Before uvicorn re-raises SIGTERM: see shutdown_pool.
+    shutdown_pool()
+
 
 app = FastAPI(
     title="UK Budget Personal Impact API",
     description="Calculate how Autumn Budget policies affect households",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
