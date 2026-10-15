@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from policyengine_uk.utils.scenario import Scenario
 
-from tests.publication_support import World, make_tables
+from tests.publication_support import PROJECTION_END, World, make_tables
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import (
@@ -191,7 +191,9 @@ def test_supported_years_cannot_be_masked(world):
     document["dashboard"]["dataset_years"] = [2027]
     document["dashboard"]["unsupported_years"] = [2028]
     problems = dashboard_problems(document)
-    assert any("projects to 2030" in problem for problem in problems)
+    assert any(
+        f"projects to {PROJECTION_END}" in problem for problem in problems
+    )
 
 
 def test_an_edited_receipt_no_longer_matches_its_directory(world):
@@ -449,11 +451,12 @@ def test_relabelling_a_combined_entry_with_other_members_is_caught(world):
 def test_a_measure_entry_cannot_restate_what_its_receipt_says(
     world, field, value, message
 ):
-    # 2031 is beyond the dataset's projection, so the receipt reports it
-    # unsupported: clearing that in the manifest would show its row.
+    # A year beyond the dataset's projection is reported unsupported:
+    # clearing that in the manifest would show its row.
+    beyond = PROJECTION_END + 1
     manifest = m.Manifest()
-    approved(world, manifest, "alpha", {**VALUES, 2031: -3.0})
-    assert manifest.measures["alpha"].unsupported_years == [2031]
+    approved(world, manifest, "alpha", {**VALUES, beyond: -3.0})
+    assert manifest.measures["alpha"].unsupported_years == [beyond]
     assert check(manifest, **args(world)) == []
     setattr(manifest.measures["alpha"], field, value)
     failures = check(manifest, **args(world))

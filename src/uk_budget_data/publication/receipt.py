@@ -636,24 +636,41 @@ def artifact_sha256(document: dict) -> str:
 def projection_end_year() -> Optional[int]:
     """The last year policyengine-uk projects a single-year dataset to.
 
-    Read from the installed model: every call to
-    ``extend_single_year_dataset`` in ``policyengine_uk/simulation.py``
-    uses its default ``end_year``. None if the function is not there.
+    Read from the installed model, as ``extend_single_year_dataset`` (which
+    ``policyengine_uk/simulation.py`` calls with its default end year)
+    resolves it:
+
+    - up to 2.126.12 the default ``end_year`` is the year itself;
+    - from 2.130.1 the default is None, and it resolves to
+      ``PROJECTION_END_YEAR``, shortened by any finite end year in the CGT
+      projection's metadata (``CGT_INDEX_PATH``).
+
+    None if neither form is there.
     """
     import inspect
 
     try:
-        from policyengine_uk.data.economic_assumptions import (
-            extend_single_year_dataset,
-        )
+        from policyengine_uk.data import economic_assumptions
     except ImportError:
         return None
-    default = (
-        inspect.signature(extend_single_year_dataset)
-        .parameters["end_year"]
-        .default
-    )
-    return default if isinstance(default, int) else None
+    extend = getattr(economic_assumptions, "extend_single_year_dataset", None)
+    if extend is None:
+        return None
+    default = inspect.signature(extend).parameters["end_year"].default
+    if isinstance(default, int) and not isinstance(default, bool):
+        return default
+    end = getattr(economic_assumptions, "PROJECTION_END_YEAR", None)
+    if isinstance(end, bool) or not isinstance(end, int):
+        return None
+    cgt_path = getattr(economic_assumptions, "CGT_INDEX_PATH", None)
+    if cgt_path:
+        from policyengine_uk.system import system
+
+        metadata = system.parameters.get_child(cgt_path).metadata or {}
+        cgt_end = (metadata.get("projection") or {}).get("end_year", end)
+        if isinstance(cgt_end, int) and not isinstance(cgt_end, bool):
+            end = min(end, cgt_end)
+    return end
 
 
 def _unsupported(receipt, years: list[int], supported) -> list[int]:
