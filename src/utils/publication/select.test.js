@@ -12,7 +12,12 @@ import {
   REASONS,
   uniqueIds,
 } from "./select";
-import { fixtureJson, fixtureText } from "../../test/publicationFixture";
+import {
+  BEYOND_DATA,
+  fixtureJson,
+  fixtureText,
+  IN_DATA,
+} from "../../test/publicationFixture";
 
 // ---------------------------------------------------------------------------
 // The fixture written by the Python publication code
@@ -56,12 +61,12 @@ describe("selection on the fixture", () => {
     expect(combinedEntryFor(manifest, ["delta"])).toBeNull();
   });
 
-  it("gives standalone, combined and interaction figures for 2030", () => {
+  it("gives standalone, combined and interaction figures for a year in the data", () => {
     const [row] = fiscalSeries({
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "beta"],
-      years: [2030],
+      years: [IN_DATA],
     });
     expect(row.standalone).toEqual({ alpha: -1.1, beta: -2.2 });
     expect(row.combined).toBe(-2.75);
@@ -69,12 +74,12 @@ describe("selection on the fixture", () => {
     expect(row.interaction).toBeCloseTo(0.55, 12);
   });
 
-  it("shows nothing for 2031, beyond the dataset's projected years", () => {
+  it("shows nothing for the year beyond the dataset's projected years", () => {
     const [row] = fiscalSeries({
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "beta"],
-      years: [2031],
+      years: [BEYOND_DATA],
     });
     expect(row.standalone).toEqual({ alpha: null, beta: null });
     expect(row.reasons.alpha).toBe(REASONS.unsupportedYear);
@@ -88,7 +93,7 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["delta"],
-      years: [2030],
+      years: [IN_DATA],
     });
     expect(row.standalone.delta).toBeNull();
     expect(row.reasons.delta).toBe("Awaiting approval");
@@ -100,7 +105,7 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["gamma"],
-      years: [2030],
+      years: [IN_DATA],
     });
     expect(row.combined).toBe(0.5);
     expect(row.provisional).toBe(true);
@@ -111,12 +116,12 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["beta", "alpha"],
-      year: 2030,
+      year: IN_DATA,
     });
     expect(stats).toEqual({
       status: "available",
       key: "combined--alpha+beta",
-      year: 2030,
+      year: IN_DATA,
       provisional: false,
       peopleAffected: 7.25,
       giniChange: -0.0275,
@@ -131,7 +136,7 @@ describe("selection on the fixture", () => {
         manifest,
         tablesByKey,
         selectedIds: ["alpha", "gamma"],
-        year: 2030,
+        year: IN_DATA,
       }),
     ).toEqual({
       status: "unavailable",
@@ -145,7 +150,7 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "beta"],
-      year: 2030,
+      year: IN_DATA,
       table: "distributional_impact",
     });
     expect(rows.map((r) => r.decile)).toEqual([
@@ -166,7 +171,7 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha"],
-      year: 2030,
+      year: IN_DATA,
       table: "winners_losers",
     });
     expect(winners.at(-1).decile).toBe("all");
@@ -175,7 +180,7 @@ describe("selection on the fixture", () => {
         manifest,
         tablesByKey,
         selectedIds: ["alpha"],
-        year: 2030,
+        year: IN_DATA,
         table: "metrics",
       }),
     ).toThrow();
@@ -186,7 +191,7 @@ describe("selection on the fixture", () => {
       manifest,
       tablesByKey,
       selectedIds: ["alpha", "gamma"],
-      years: [2030],
+      years: [IN_DATA],
     });
     expect(row.standalone.gamma).toBe(0.5);
     expect(row.provisionalIds).toEqual(["gamma"]);
@@ -200,7 +205,7 @@ describe("selection on the fixture", () => {
       manifest: changed,
       tablesByKey,
       selectedIds: ["alpha", "beta"],
-      year: 2030,
+      year: IN_DATA,
     });
     expect(stats.status).toBe("available");
     expect(stats.provisional).toBe(true);
