@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 // Everything under public/ is served as it is, whether or not a page links
@@ -35,105 +36,184 @@ function htmlPages(dir) {
   });
 }
 
-// Entities a page might put between "Budget" and a year: punctuation,
-// spaces of every width, and invisible joiners (which join, so they
-// decode to nothing).
-const NAMED_ENTITIES = {
-  amp: "&",
-  apos: "'",
-  colon: ":",
-  comma: ",",
-  dash: "\u2010",
-  emsp: "\u2003",
-  emsp13: "\u2004",
-  emsp14: "\u2005",
-  ensp: "\u2002",
-  gt: ">",
-  hairsp: "\u200a",
-  horbar: "\u2015",
-  hyphen: "\u2010",
-  lt: "<",
-  mdash: "\u2014",
-  mediumspace: "\u205f",
-  minus: "\u2212",
-  nbsp: "\u00a0",
-  ndash: "\u2013",
-  nobreak: "",
-  numsp: "\u2007",
-  period: ".",
-  puncsp: "\u2008",
-  quot: '"',
-  shy: "",
-  thinsp: "\u2009",
-  thinspace: "\u2009",
-  zwj: "",
-  zwnj: "",
-};
+// A page is read as a browser parses it (jsdom), so every HTML entity is
+// decoded and nesting is real; only what rendering would show is kept.
 
-function decodeEntities(text) {
-  return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (entity, body) => {
-    if (body[0] !== "#") return NAMED_ENTITIES[body.toLowerCase()] ?? entity;
-    const hex = body[1] === "x" || body[1] === "X";
-    const code = parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
-    return code <= 0x10ffff ? String.fromCodePoint(code) : entity;
-  });
-}
+// Elements whose content is never shown, and citations: a <cite> names a
+// source (last year's Budget, say) on purpose, so mark a historical
+// reference with one.
+const HIDDEN = new Set(["script", "style", "noscript", "template", "cite"]);
 
-// Content a browser never shows, and citations: a <cite> names a source
-// (last year's Budget, say) on purpose, so mark a historical reference
-// with one.
-const HIDDEN = ["script", "style", "noscript", "template", "cite"];
-
-// Elements that start a new line when rendered. Any other tag sits inside
-// a line, so removing it must not split a word or a number in two.
-const BLOCK =
-  /^(address|article|aside|blockquote|br|button|caption|dd|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hr|label|legend|li|main|nav|ol|option|p|pre|section|summary|table|tbody|td|tfoot|th|thead|title|tr|ul)$/i;
-
-// Attributes whose values a reader or assistive technology is shown.
-// Links and sources (href, src) are not text.
-const DESCRIPTIVE = new Set([
-  "alt",
-  "aria-description",
-  "aria-label",
-  "content",
-  "label",
-  "placeholder",
+// Elements a browser lays out as their own box by default (block, list
+// item, table parts). Any other element sits inside a line, so its text
+// joins its neighbours' without a gap: 20<span>25</span> reads 2025.
+const BLOCK = new Set([
+  "address",
+  "article",
+  "aside",
+  "blockquote",
+  "br",
+  "caption",
+  "dd",
+  "details",
+  "dialog",
+  "div",
+  "dl",
+  "dt",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "hr",
+  "legend",
+  "li",
+  "main",
+  "nav",
+  "ol",
+  "optgroup",
+  "option",
+  "p",
+  "pre",
+  "section",
+  "summary",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
   "title",
-  "value",
+  "tr",
+  "ul",
 ]);
 
-// What a page shows or declares: its text as rendered (inline markup
-// removed without a gap, block markup as a line break), and its
-// descriptive attribute values, with entities decoded.
-export function pageText(html) {
-  let shown = html.replace(/<!--[\s\S]*?-->/g, "");
-  for (const tag of HIDDEN) {
-    shown = shown.replace(
-      new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?</${tag}\\s*>`, "gi"),
-      " ",
-    );
-  }
-  const attributes = [];
-  const text = shown.replace(
-    /<\/?([a-z][a-z0-9-]*)\b([^>]*)>/gi,
-    (tag, name, rest) => {
-      for (const match of rest.matchAll(
-        /([a-z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi,
-      )) {
-        if (DESCRIPTIVE.has(match[1].toLowerCase())) {
-          attributes.push(match[2] ?? match[3]);
-        }
-      }
-      return BLOCK.test(name) ? " " : "";
-    },
+// Input types whose value is shown as text in the control.
+const SHOWN_VALUE = new Set([
+  "button",
+  "email",
+  "reset",
+  "search",
+  "submit",
+  "tel",
+  "text",
+  "url",
+]);
+
+// Metadata a page declares as its own words, not as a resource address.
+const DESCRIPTIVE_META = new Set([
+  "description",
+  "og:description",
+  "og:site_name",
+  "og:title",
+  "title",
+  "twitter:description",
+  "twitter:title",
+]);
+
+function hidden(element) {
+  return (
+    HIDDEN.has(element.localName) ||
+    element.hasAttribute("hidden") ||
+    element.getAttribute("aria-hidden") === "true" ||
+    (element.localName === "input" &&
+      (element.getAttribute("type") || "text").toLowerCase() === "hidden")
   );
-  return decodeEntities([text, ...attributes].join(" "));
+}
+
+// The attribute values a reader or assistive technology is shown.
+function shownAttributes(element) {
+  const values = [];
+  for (const name of ["title", "aria-label", "aria-description"]) {
+    if (element.hasAttribute(name)) values.push(element.getAttribute(name));
+  }
+  const tag = element.localName;
+  if (["img", "area"].includes(tag) && element.hasAttribute("alt")) {
+    values.push(element.getAttribute("alt"));
+  }
+  if (["option", "optgroup", "track"].includes(tag)) {
+    values.push(element.getAttribute("label") || "");
+  }
+  if (tag === "input" || tag === "textarea") {
+    values.push(element.getAttribute("placeholder") || "");
+    const type = (element.getAttribute("type") || "text").toLowerCase();
+    if (tag === "input" && SHOWN_VALUE.has(type)) {
+      values.push(element.getAttribute("value") || "");
+    }
+  }
+  if (tag === "meta") {
+    const key = (
+      element.getAttribute("name") ||
+      element.getAttribute("property") ||
+      ""
+    ).toLowerCase();
+    if (DESCRIPTIVE_META.has(key)) {
+      values.push(element.getAttribute("content") || "");
+    }
+  }
+  return values.filter(Boolean);
+}
+
+function walk(node, text, attributes) {
+  for (const child of node.childNodes) {
+    if (child.nodeType === 3) {
+      text.push(child.data);
+    } else if (child.nodeType === 1 && !hidden(child)) {
+      attributes.push(...shownAttributes(child));
+      const block = BLOCK.has(child.localName);
+      if (block) text.push(" ");
+      walk(child, text, attributes);
+      if (block) text.push(" ");
+    }
+  }
+}
+
+// Text as compared: compatibility forms folded (fullwidth digits, every
+// width of space), invisible characters (soft hyphens, zero-width
+// joiners, byte-order marks) removed, as they render as nothing.
+function normalised(text) {
+  return text
+    .normalize("NFKC")
+    .replace(/[\u00ad\u200b-\u200d\u2060\ufeff]/g, "");
+}
+
+// What a page shows: its rendered text, and its shown attribute values.
+export function pageText(html) {
+  const { document } = new JSDOM(html).window;
+  const text = [];
+  const attributes = [];
+  walk(document.documentElement, text, attributes);
+  return normalised([text.join(""), ...attributes].join(" "));
+}
+
+// Years a page's stylesheets write as generated content (::before and
+// ::after). A Budget year must be in the page's own text, where these
+// checks read it, so any year here is refused.
+export function generatedYears(html) {
+  const { document } = new JSDOM(html).window;
+  const years = [];
+  for (const style of document.querySelectorAll("style")) {
+    for (const match of style.textContent.matchAll(
+      /content\s*:\s*(["'])((?:(?!\1).)*)\1/g,
+    )) {
+      years.push(...(normalised(match[2]).match(/20[0-9]{2}/g) || []));
+    }
+  }
+  return years;
 }
 
 // The years a text names beside the word "Budget", either way round, with
-// spaces or punctuation between.
+// spaces, punctuation or a minus sign between.
 export function budgetYears(text) {
-  const between = String.raw`[\s\p{P}]*`;
+  const between = String.raw`[\s\p{P}\u2212]*`;
   const after = new RegExp(`budget${between}(20[0-9]{2})(?![0-9])`, "giu");
   const before = new RegExp(
     `(?<![0-9])(20[0-9]{2})${between}(?:autumn${between})?budget`,
@@ -148,12 +228,16 @@ export function budgetYears(text) {
 // with the years it names.
 export function staleBudgetPages(root) {
   return htmlPages(root)
-    .map((page) => [
-      path.relative(root, page),
-      budgetYears(pageText(readFileSync(page, "utf8"))).filter(
-        (year) => year !== BUDGET_YEAR,
-      ),
-    ])
+    .map((page) => {
+      const html = readFileSync(page, "utf8");
+      return [
+        path.relative(root, page),
+        [
+          ...budgetYears(pageText(html)).filter((year) => year !== BUDGET_YEAR),
+          ...generatedYears(html),
+        ],
+      ];
+    })
     .filter(([, years]) => years.length > 0);
 }
 
@@ -246,6 +330,54 @@ describe("static pages the site serves", () => {
     expect(staleBudgetPages(root)).toEqual([
       [path.join("charts", "old.html"), ["2025"]],
     ]);
+  });
+
+  it("reads a page as a browser parses it", () => {
+    // Review round 3 of #26: entities outside a hand-made table, inline
+    // elements treated as blocks, and nested templates.
+    for (const html of [
+      "<h1>Autumn Budget&emsp13;2025</h1>",
+      "<h1>Autumn Budget&ThickSpace;2025</h1>",
+      "<h1>Autumn Budget 20&#173;25</h1>",
+      "<h1>Autumn Budget&Tab;2025</h1>",
+      "<h1>Autumn Budget&minus;2025</h1>",
+      "<h1>Autumn Budget 20<label>25</label></h1>",
+      "<h1>Autumn Budget \uff12\uff10\uff12\uff15</h1>",
+    ]) {
+      expect(budgetYears(pageText(html)), html).toEqual(["2025"]);
+    }
+    for (const html of [
+      '<h1>Autumn Budget 2026</h1><input type="hidden" value="Autumn Budget 2025">',
+      '<h1>Autumn Budget 2026</h1><input type="hidden" title="Autumn Budget 2025">',
+      '<h1>Autumn Budget 2026</h1><meta property="og:image" content="/images/autumn-budget-2025.png">',
+      "<h1>Autumn Budget 2026</h1><template><template>Internal</template>Autumn Budget 2025</template>",
+      "<h1>Autumn Budget 2026</h1><p hidden>Autumn Budget 2025</p>",
+      '<h1>Autumn Budget 2026</h1><span aria-hidden="true">Autumn Budget 2025</span>',
+    ]) {
+      expect(budgetYears(pageText(html)), html).toEqual(["2026"]);
+    }
+    // Shown attribute values still count.
+    for (const html of [
+      '<input type="submit" value="Autumn Budget 2025">',
+      '<meta property="og:title" content="Autumn Budget 2025">',
+      '<img src="x.png" alt="Autumn Budget 2025">',
+    ]) {
+      expect(budgetYears(pageText(html)), html).toEqual(["2025"]);
+    }
+  });
+
+  it("refuses a year written by a stylesheet", () => {
+    // Review round 3 of #26: generated content (::before, ::after) shows
+    // text that is in no element, so a Budget year must not come from it.
+    const html =
+      '<style>h1::after { content: " 2025"; }</style><h1>Autumn Budget</h1>';
+    expect(generatedYears(html)).toEqual(["2025"]);
+    expect(generatedYears("<style>/* Autumn Budget 2025 */</style>")).toEqual(
+      [],
+    );
+    const root = mkdtempSync(path.join(tmpdir(), "static-pages-"));
+    writeFileSync(path.join(root, "styled.html"), html);
+    expect(staleBudgetPages(root)).toEqual([["styled.html", ["2025"]]]);
   });
 
   it("name no Budget but this year's", () => {
