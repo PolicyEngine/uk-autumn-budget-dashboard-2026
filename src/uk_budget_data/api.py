@@ -6,9 +6,12 @@ policies affect individual households over time.
 
 import json
 import os
+import time
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
@@ -143,8 +146,36 @@ def get_calculator() -> PersonalImpactCalculator:
     return _calculator
 
 
+# Where a container's cgroup reports its peak memory: cgroup v2, then v1.
+MEMORY_PEAK_FILES = (
+    Path("/sys/fs/cgroup/memory.peak"),
+    Path("/sys/fs/cgroup/memory/memory.max_usage_in_bytes"),
+)
+
+
+def memory_peak_bytes() -> Optional[int]:
+    """The container's peak memory use so far, from its cgroup, or None
+    where no cgroup reports it (outside a container)."""
+    for path in MEMORY_PEAK_FILES:
+        try:
+            return int(path.read_text().split()[0])
+        except (OSError, ValueError, IndexError):
+            continue
+    return None
+
+
+def server_timing(seconds: float, peak: Optional[int]) -> str:
+    """A Server-Timing header: how long the calculation took and, where the
+    cgroup reports it, the container's peak memory, so a deployed revision
+    can be measured from outside (``curl -i``)."""
+    parts = [f"calculate;dur={seconds * 1000:.0f}"]
+    if peak is not None:
+        parts.append(f'memory;desc="peak {peak / 2**20:.0f} MiB"')
+    return ", ".join(parts)
+
+
 @app.post("/api/personal-impact")
-def calculate_personal_impact(data: APIHouseholdInput):
+def calculate_personal_impact(data: APIHouseholdInput, response: Response):
     """Calculate personal impact for a household.
 
     Returns year-by-year impact breakdown per policy.
@@ -158,7 +189,11 @@ def calculate_personal_impact(data: APIHouseholdInput):
     try:
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
+        started = time.perf_counter()
         results = calculator.calculate(household_input)
+        response.headers["Server-Timing"] = server_timing(
+            time.perf_counter() - started, memory_peak_bytes()
+        )
         return convert_to_native(results)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

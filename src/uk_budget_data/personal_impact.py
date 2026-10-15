@@ -6,7 +6,11 @@ households over time (2025-2029).
 
 import copy
 import json
+import multiprocessing
+import os
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Optional
 
 from policyengine_uk import Simulation
@@ -136,6 +140,15 @@ def build_situations(
     situation's people are fixed, and a child leaves the household at 25,
     so years with different people are in different situations.
 
+    Every year's inputs stay visible while any year is read, which a
+    single-year situation never has. That is safe for today's inputs: the
+    formulas that read another year read nothing set here except
+    ``current_education``, restored before each read (``AsBuilt``), and
+    ``region``, the same every year. An input that varied by year in a way
+    a formula reads across years (a household that moves region) would
+    need its own situation: ``AsBuilt`` restores calculated values, not
+    inputs.
+
     Returns:
         ``(years, situation)`` pairs, in the order of ``years``.
     """
@@ -196,7 +209,11 @@ class AsBuilt:
     calculated since the simulation was built is deleted before each year,
     in the simulation and in the baseline simulations it holds (which
     formulas can read), and branches created since are dropped (an
-    existing branch keeps the values it has calculated).
+    existing branch keeps the values it has calculated). The calculator's
+    reads leave nothing in the baseline simulations and no branch behind
+    today: the engine creates one branch during a read
+    (``uc_non_dep_pension_credit``) and deletes it before the read ends.
+    Those parts are there for a metric that would leave one.
     """
 
     def __init__(self, sim: Simulation):
@@ -379,10 +396,85 @@ def calculate_household_metrics(sim: Simulation, year: int) -> dict:
     }
 
 
+def simulate_years(situation: dict, years: list[int], scenario) -> dict:
+    """One simulation's metrics for each of ``years``: built once, and each
+    year read from it as built (``AsBuilt``). Runs in a worker process when
+    the calculator has more than one."""
+    sim = Simulation(situation=situation, scenario=scenario)
+    built = AsBuilt(sim)
+    metrics = {}
+    for year in years:
+        built.restore()
+        metrics[year] = calculate_household_metrics(sim, year)
+    return metrics
+
+
+# Where cgroup v2 states this process's CPU quota.
+CGROUP_CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
+
+
+def household_workers() -> int:
+    """How many worker processes a calculation uses.
+
+    ``HOUSEHOLD_WORKERS`` if set (the deploy sets it with the instance's
+    vCPUs), else the CPU quota of this process's cgroup (``cpu.max``), else
+    1. Not the CPUs the process may be scheduled on: a Cloud Run instance
+    can see more CPUs than its quota lets it use, and more workers than
+    that would only share them and use more memory. With 1, every
+    simulation is built in this process, one at a time.
+    """
+    configured = os.environ.get("HOUSEHOLD_WORKERS")
+    if configured:
+        return max(1, int(configured))
+    try:
+        quota, period = CGROUP_CPU_MAX.read_text().split()[:2]
+    except (OSError, ValueError):
+        return 1
+    if quota == "max":
+        return 1
+    return max(1, int(int(quota) // int(period)))
+
+
+_pool: Optional[ProcessPoolExecutor] = None
+_pool_workers = 0
+
+
+def worker_pool(workers: int) -> ProcessPoolExecutor:
+    """A process pool shared by every calculation in this process.
+
+    Workers fork from a forkserver that has imported this module, so they
+    start without importing the engine again and share its pages. Each
+    worker builds one simulation and exits (``max_tasks_per_child=1``):
+    what a build leaves behind in the process (policyengine-core registers
+    every variable module per tax-benefit system) goes with it. The
+    forkserver is single-threaded, so forking is safe while the server's
+    thread pool runs other requests.
+    """
+    global _pool, _pool_workers
+    if _pool is None or _pool_workers != workers:
+        if _pool is not None:
+            _pool.shutdown(wait=False)
+        methods = multiprocessing.get_all_start_methods()
+        context = multiprocessing.get_context(
+            "forkserver" if "forkserver" in methods else "spawn"
+        )
+        if context.get_start_method() == "forkserver":
+            context.set_forkserver_preload(["uk_budget_data.personal_impact"])
+        _pool = ProcessPoolExecutor(
+            max_workers=workers, mp_context=context, max_tasks_per_child=1
+        )
+        _pool_workers = workers
+    return _pool
+
+
 class PersonalImpactCalculator:
     """Calculator for personal household impact from budget policies."""
 
-    def __init__(self, config: Optional[DataConfig] = None):
+    def __init__(
+        self,
+        config: Optional[DataConfig] = None,
+        workers: Optional[int] = None,
+    ):
         """Initialize the calculator by loading reforms.
 
         Args:
@@ -390,8 +482,12 @@ class PersonalImpactCalculator:
                 with, whose baseline a measure without its own is compared
                 against. The default is ``generate``'s, which sets no
                 global baseline.
+            workers: Worker processes per calculation; the default is
+                ``household_workers()``. With one, every simulation is
+                built in this process, one at a time.
         """
         self.config = config if config is not None else DataConfig()
+        self.workers = workers if workers is not None else household_workers()
         self.reforms = {
             reform.id: reform
             for reform in get_autumn_budget_2026_reforms()
@@ -457,17 +553,32 @@ class PersonalImpactCalculator:
             )
             for policy_id, reform in reforms
         }
+        # One job per situation and distinct scenario. With several
+        # workers they run in parallel, each simulation in a process of its
+        # own; with one, here, one at a time, so memory stays that of one
+        # simulation (with the baseline simulation the engine builds inside
+        # it).
+        jobs = [
+            (years, situation, key, scenario)
+            for years, situation in build_situations(household, YEARS)
+            for key, scenario in scenarios.items()
+        ]
+        if self.workers > 1 and len(jobs) > 1:
+            pool = worker_pool(self.workers)
+            futures = [
+                pool.submit(simulate_years, situation, years, scenario)
+                for years, situation, _, scenario in jobs
+            ]
+            outputs = [future.result() for future in futures]
+        else:
+            outputs = [
+                simulate_years(situation, years, scenario)
+                for years, situation, _, scenario in jobs
+            ]
         metrics = {}
-        for years, situation in build_situations(household, YEARS):
-            # One simulation at a time, so memory stays that of one (with
-            # the baseline simulation the engine builds inside it).
-            for key, scenario in scenarios.items():
-                sim = Simulation(situation=situation, scenario=scenario)
-                built = AsBuilt(sim)
-                for year in years:
-                    built.restore()
-                    metrics[key, year] = calculate_household_metrics(sim, year)
-                del sim, built
+        for (years, _, key, _), output in zip(jobs, outputs):
+            for year in years:
+                metrics[key, year] = output[year]
 
         for year in YEARS:
             results["years"][year] = {

@@ -183,6 +183,21 @@ def test_an_existing_service_gets_a_no_traffic_revision_under_its_own_tag(
     assert state["traffic"][0]["percent"] == 100
 
 
+def test_the_candidate_uses_one_worker_per_vcpu(tmp_path, workspace):
+    """A household calculation spreads over HOUSEHOLD_WORKERS processes;
+    more than the instance's vCPUs would only share them."""
+    result, log, _ = run(
+        step_script("deploy-candidate", workspace), tmp_path, service()
+    )
+    assert result.returncode == 0, result.stderr
+    deploy = next(
+        line for line in log if line.startswith("run deploy")
+    ).split()
+    cpu = deploy[deploy.index("--cpu") + 1]
+    env = deploy[deploy.index("--update-env-vars") + 1]
+    assert env == f"HOUSEHOLD_WORKERS={cpu}"
+
+
 def test_a_failed_lookup_stops_the_build_before_any_deploy(
     tmp_path, workspace
 ):
