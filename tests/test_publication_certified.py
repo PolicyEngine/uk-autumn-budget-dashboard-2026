@@ -15,12 +15,18 @@ from uk_budget_data.publication.receipt import (
     code_revision,
     dataset_years,
     load_basis,
+    projection_end_year,
     scenario_identity,
 )
 from uk_budget_data.publication.reconcile import reconcile_artifact
 from uk_budget_data.publication.validate import table_problems
 
 BASIC_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
+
+
+# The installed model's horizon: 2030 up to policyengine-uk 2.126.12, 2032
+# from 2.130.1. A year past it is unsupported.
+END = projection_end_year()
 
 
 @pytest.mark.certified_data
@@ -37,7 +43,7 @@ def test_the_certified_dataset_yields_a_certified_receipt():
         ReceiptInputs(
             key="current_law",
             measure_ids=["current_law"],
-            years=[2029, 2030, 2031],
+            years=[END - 1, END, END + 1],
             baseline_identity=current_law,
             reform_identity=current_law,
             file_digests={"budgetary_impact.csv": "0" * 64},
@@ -51,8 +57,8 @@ def test_the_certified_dataset_yields_a_certified_receipt():
     reasons = document["dashboard"]["reasons"]
     assert not [r for r in reasons if "uncommitted" not in r]
     years = dataset_years(sim)
-    assert 2030 in years and 2031 not in years
-    assert document["dashboard"]["unsupported_years"] == [2031]
+    assert END in years and END + 1 not in years
+    assert document["dashboard"]["unsupported_years"] == [END + 1]
 
 
 @pytest.mark.certified_data

@@ -14,6 +14,7 @@ from policyengine_uk.utils.scenario import Scenario
 from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import (
     DATASET_YEARS,
+    PROJECTION_END,
     RATE_PATH,
     YEARS,
     World,
@@ -403,11 +404,12 @@ def test_dirty_tree_is_not_publishable(world):
 
 
 def test_years_beyond_the_dataset_are_unsupported(world):
+    last, beyond = PROJECTION_END, PROJECTION_END + 1
     document = read_receipt(
-        world.write("alpha", {2030: -1.0, 2031: -1.0}).path
+        world.write("alpha", {last: -1.0, beyond: -1.0}).path
     )
     assert document["dashboard"]["dataset_years"] == DATASET_YEARS
-    assert document["dashboard"]["unsupported_years"] == [2031]
+    assert document["dashboard"]["unsupported_years"] == [beyond]
 
 
 def test_a_tampered_receipt_is_detected(world):
