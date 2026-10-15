@@ -1,9 +1,11 @@
 #!/usr/bin/env python
-"""Sample household scatter data for git storage.
+"""Sample household scatter data, privately.
 
-The full household_scatter_full.csv (~100MB) contains all ~46k households
-per reform/year. This script samples it to ~500 households using weighted
-sampling to create household_scatter.csv for git.
+The sample was once published as public/data/household_scatter.csv. One row
+per survey household is unit-record data, so it is no longer published: this
+script reads household_scatter_full.csv from, and writes the sample to,
+$UK_BUDGET_DISCLOSURE_AUDIT_DIR/household. The published scatter is binned
+(see uk_budget_data.publication.tables.bin_scatter).
 
 IMPORTANT: We sample the SAME households across all reforms so that when
 combining policies in the frontend, the dots represent consistent households
@@ -17,6 +19,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from uk_budget_data.private_outputs import private_directory
 
 SAMPLE_SIZE = 500  # Households (same across all reforms AND all years)
 SEED = 42  # For reproducibility
@@ -144,13 +148,14 @@ def sample_scatter_data(
 
 
 def main():
-    data_dir = Path("public/data")
+    # One row per survey household is unit-record data, so the input and the
+    # sample stay in the private directory, never under public/.
+    data_dir = private_directory(subdirectory="household")
     input_path = data_dir / "household_scatter_full.csv"
     output_path = data_dir / "household_scatter.csv"
 
     if not input_path.exists():
         print(f"Error: {input_path} not found")
-        print("Run 'uv run uk-budget-data' first to generate full data")
         return 1
 
     sample_scatter_data(input_path, output_path)

@@ -1,8 +1,6 @@
 """Command-line interface for UK Budget Data generation."""
 
 import argparse
-import subprocess
-import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -14,6 +12,11 @@ from uk_budget_data.lifetime_impact import (
 )
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import generate_all_data
+from uk_budget_data.private_outputs import (
+    AUDIT_DIR_ENV,
+    PrivateOutputError,
+    private_directory,
+)
 from uk_budget_data.publication.commands import (
     add_generate_arguments,
     add_publish_parser,
@@ -104,6 +107,16 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--skip-input-check",
         action="store_true",
         help="Skip checking for input files",
+    )
+
+    generate_parser.add_argument(
+        "--legacy-geography",
+        action="store_true",
+        help=(
+            "Also run the legacy constituency calculators, writing their "
+            f"rows to ${AUDIT_DIR_ENV}/legacy. They have no disclosure "
+            "control, so they are never written to --output-dir."
+        ),
     )
 
     add_generate_arguments(generate_parser)
@@ -252,6 +265,14 @@ def run_generate(parsed: argparse.Namespace) -> int:
         print_reforms_list()
         return 0
 
+    legacy_geography_dir = None
+    if parsed.legacy_geography:
+        try:
+            legacy_geography_dir = private_directory(subdirectory="legacy")
+        except PrivateOutputError as e:
+            console.print(f"[red]Error: {e}[/red]")
+            return 1
+
     # Build configuration
     config = DataConfig(
         output_dir=parsed.output_dir,
@@ -259,6 +280,7 @@ def run_generate(parsed: argparse.Namespace) -> int:
         data_inputs_dir=parsed.data_inputs_dir,
         dataset_path=parsed.dataset,
         years=parsed.years,
+        legacy_geography_dir=legacy_geography_dir,
     )
 
     # Get reforms
@@ -291,24 +313,8 @@ def run_generate(parsed: argparse.Namespace) -> int:
             skip_input_check=parsed.skip_input_check,
         )
         console.print("\n[bold green]Data generation complete![/bold green]")
-
-        # Run household scatter sampling script
-        sampling_script = Path("scripts/sample_household_scatter.py")
-        if sampling_script.exists():
-            console.print(
-                "\n[bold]Running household scatter sampling...[/bold]"
-            )
-            result = subprocess.run(
-                [sys.executable, str(sampling_script)],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                console.print("[green]Sampling complete![/green]")
-            else:
-                console.print(
-                    f"[yellow]Sampling warning: {result.stderr}[/yellow]"
-                )
+        # The household scatter is no longer sampled into public/data: one
+        # row per survey household is unit-record data.
 
         console.print("\n[bold green]Done![/bold green]")
         return 0

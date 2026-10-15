@@ -169,6 +169,14 @@ class DataConfig(BaseModel):
         default=150_000,
         description="Max baseline income for scatter plot",
     )
+    legacy_geography_dir: Optional[Path] = Field(
+        default=None,
+        description=(
+            "Private directory, outside any git repository, for the legacy "
+            "constituency calculators' rows. None skips them. They have no "
+            "disclosure control, so they are never written to output_dir."
+        ),
+    )
     baseline_parameter_changes: Optional[dict[str, dict[str, Any]]] = Field(
         default=None,
         description=(

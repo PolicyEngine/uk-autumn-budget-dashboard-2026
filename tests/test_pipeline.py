@@ -236,3 +236,107 @@ def test_income_curve_uses_the_same_baseline_as_the_population(own_baseline):
     )
     assert baseline_scenario is not None
     assert baseline_scenario.parameter_changes == expected.parameter_changes
+
+
+class _StubCalculator:
+    def __init__(self, result):
+        self.result = result
+
+    def calculate(self, *args, **kwargs):
+        return self.result
+
+
+def _stub_processor(config):
+    """A processor whose calculators return nothing, with the legacy
+    constituency step recorded instead of run."""
+    from uk_budget_data.models import Reform
+    from uk_budget_data.pipeline import ReformProcessor
+
+    processor = ReformProcessor(Reform(id="test", name="Test"), config)
+    processor.budgetary_calc = _StubCalculator([])
+    processor.distributional_calc = _StubCalculator(([], None))
+    processor.winners_losers_calc = _StubCalculator([])
+    processor.metrics_calc = _StubCalculator([])
+    processor.income_curve_calc = _StubCalculator([])
+    processor.household_scatter_calc = _StubCalculator([])
+    calls = []
+
+    def legacy(baseline, reformed, reform_id, year):
+        calls.append(year)
+        return [{"constituency_code": "X", "year": year}], []
+
+    processor._calculate_constituency = legacy
+    return processor, calls
+
+
+class TestLegacyGeography:
+    """The legacy constituency calculators have no disclosure control."""
+
+    def test_they_run_only_on_request(self, tmp_path):
+        from uk_budget_data.models import DataConfig
+
+        processor, calls = _stub_processor(DataConfig(years=[2026, 2027]))
+        result = processor.process(
+            baseline=None, reformed=None, baseline_scenario=None
+        )
+        assert calls == []
+        assert result.constituency == []
+
+        processor, calls = _stub_processor(
+            DataConfig(years=[2026, 2027], legacy_geography_dir=tmp_path)
+        )
+        result = processor.process(
+            baseline=None, reformed=None, baseline_scenario=None
+        )
+        assert calls == [2026, 2027]
+        assert len(result.constituency) == 2
+
+    def test_their_rows_never_reach_the_output_directory(self, tmp_path):
+        from uk_budget_data.models import DataConfig
+        from uk_budget_data.pipeline import DataPipeline
+
+        output_dir = tmp_path / "public"
+        data = {
+            "budgetary_impact": pd.DataFrame({"value": [1.0]}),
+            "constituency": pd.DataFrame({"constituency_code": ["X"]}),
+            "demographic_constituency": pd.DataFrame({"household_count": [1]}),
+        }
+
+        DataPipeline(config=DataConfig(output_dir=output_dir))._save_all(data)
+        assert sorted(p.name for p in output_dir.iterdir()) == [
+            "budgetary_impact.csv"
+        ]
+
+        private_dir = tmp_path / "private"
+        config = DataConfig(
+            output_dir=output_dir, legacy_geography_dir=private_dir
+        )
+        DataPipeline(config=config)._save_all(data)
+        assert sorted(p.name for p in output_dir.iterdir()) == [
+            "budgetary_impact.csv"
+        ]
+        assert sorted(p.name for p in private_dir.iterdir()) == [
+            "legacy_constituency.csv",
+            "legacy_demographic_constituency.csv",
+        ]
+        for path in private_dir.iterdir():
+            assert path.stat().st_mode & 0o077 == 0
+
+    def test_an_unsafe_directory_fails_before_any_simulation(
+        self, tmp_path, monkeypatch
+    ):
+        from uk_budget_data import pipeline
+        from uk_budget_data.models import DataConfig, Reform
+        from uk_budget_data.private_outputs import PrivateOutputError
+
+        def no_simulation(*args, **kwargs):
+            raise AssertionError("a simulation was built")
+
+        monkeypatch.setattr(pipeline, "build_microsimulation", no_simulation)
+        (tmp_path / ".git").mkdir()
+        config = DataConfig(legacy_geography_dir=tmp_path / "legacy")
+        runner = pipeline.DataPipeline(
+            reforms=[Reform(id="test", name="Test")], config=config
+        )
+        with pytest.raises(PrivateOutputError):
+            runner.run()
