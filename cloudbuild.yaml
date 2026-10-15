@@ -28,14 +28,24 @@ substitutions:
   _SERVICE: uk-budget-api-2026
   _REGION: europe-west1
   _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/uk-budget-api-2026
+  # The service's own identity: it holds no roles, since the API calls no
+  # Google service.
+  _RUNTIME_SERVICE_ACCOUNT: uk-budget-api-runtime@${PROJECT_ID}.iam.gserviceaccount.com
 
 # Marks this build as a deploy of the service, so concurrent deploys and
 # rollbacks (cloudbuild-rollback.yaml carries the same tag) see each other.
 tags: ['uk-budget-api-2026-deploy']
 
+# Builds run as a dedicated account holding only what these pipelines do,
+# not the Compute Engine default account (roles/editor on the project).
+# Whoever submits a build needs iam.serviceAccounts.actAs on it.
+serviceAccount: 'projects/policyengine-apps/serviceAccounts/uk-budget-api-builder@policyengine-apps.iam.gserviceaccount.com'
+
 options:
+  # A build run as a chosen account must log to Cloud Logging or a bucket
+  # of its own.
   logging: CLOUD_LOGGING_ONLY
-  # _IMAGE refers to PROJECT_ID. Shell variables below are written $$name
+  # _IMAGE and _RUNTIME_SERVICE_ACCOUNT refer to PROJECT_ID. Shell variables below are written $$name
   # so Cloud Build leaves them for bash.
   dynamicSubstitutions: true
 
@@ -152,6 +162,7 @@ steps:
         echo "$$tag" > /workspace/candidate_tag
         common="--image $$image --region ${_REGION} --platform managed \
           --no-invoker-iam-check --memory 2Gi --cpu 2 --timeout 300 \
+          --service-account ${_RUNTIME_SERVICE_ACCOUNT} \
           --tag $$tag \
           --labels commit-sha=${_GIT_SHA},gcb-build-id=${BUILD_ID}"
         # A failed lookup stops the build; only a confirmed absence creates.

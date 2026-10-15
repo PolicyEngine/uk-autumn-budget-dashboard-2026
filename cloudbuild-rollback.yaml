@@ -26,7 +26,14 @@ substitutions:
 # The same tag as a deploy, so deploys and rollbacks see each other.
 tags: ['uk-budget-api-2026-deploy']
 
+# Builds run as a dedicated account holding only what these pipelines do,
+# not the Compute Engine default account (roles/editor on the project).
+# Whoever submits a build needs iam.serviceAccounts.actAs on it.
+serviceAccount: 'projects/policyengine-apps/serviceAccounts/uk-budget-api-builder@policyengine-apps.iam.gserviceaccount.com'
+
 options:
+  # A build run as a chosen account must log to Cloud Logging or a bucket
+  # of its own.
   logging: CLOUD_LOGGING_ONLY
 
 steps:
