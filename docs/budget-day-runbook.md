@@ -272,6 +272,21 @@ An approval or an exception carries over only where the outputs are byte-identic
 - **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile, approve, redeploy the household API and re-run the household checks.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
+## Data limitations: say these wherever a measure depends on them
+
+Two limitations of the data, measured by the UK hub on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`). State them wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
+
+- **Ages:** "The Family Resources Survey records adult ages only up to 80, so the 3.6 million people aged 80 or over in our data (7,718 survey records) all appear as exactly 80, and results that depend on ages above 80 rely on that grouping."
+- **£1m+ incomes:** "Fewer than 10 survey records have a total income of £1 million or more, all from self-employment alone, so the data cannot represent the £35.5bn of employment income and £11.1bn of dividends HMRC projects for people on £1 million or more in 2025, and estimates for measures aimed at the highest incomes rest on very little data."
+
+W5 re-measured on the same file for 2025:
+- **Ages:** the oldest age is 80, nobody is above it, and 7,718 records are aged exactly 80, weighing 3.62 million people.
+- **Incomes:** 2 records have `total_income` of £1 million or more, both with self-employment income and no other income type, so £0 of employment income or dividends.
+
+**Before it ships:** confirm the source of £35.5bn and £11.1bn. uk-data's SPI targets come from HMRC's Survey of Personal Incomes (Tables 3.6 and 3.7, 2023-24), projected to later years with PolicyEngine's uprating (`utils/incomes_projection.py`). If that is where these figures come from, "HMRC projects" should read "HMRC's Survey of Personal Incomes, projected to 2025".
+
+**Where they go:** the dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
+
 ## Briefing (overnight, by 07:00)
 
 Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (briefing PR, in progress). Use no figure that is not in that revision.
