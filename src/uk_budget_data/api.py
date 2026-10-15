@@ -7,6 +7,7 @@ policies affect individual households over time.
 import json
 import os
 
+import anyio
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,16 +144,32 @@ def get_calculator() -> PersonalImpactCalculator:
     return _calculator
 
 
+# One household calculation at a time per instance, in arrival order. A
+# calculation takes minutes of CPU: several at once share it and all finish
+# together, later than any would alone (three at a time on Cloud Run's 300 s
+# limit all time out where two of three would have finished), and each
+# holds its own memory. How many visitors an instance takes is Cloud Run's
+# --concurrency.
+CALCULATIONS = anyio.CapacityLimiter(1)
+
+
 @app.post("/api/personal-impact")
 async def calculate_personal_impact(data: APIHouseholdInput):
     """Calculate personal impact for a household.
 
     Returns year-by-year impact breakdown per policy.
+
+    The calculation runs in a worker thread, one at a time
+    (``CALCULATIONS``), so the event loop keeps answering other requests
+    (``/api/version``, ``/api/health``) meanwhile. Run on the event loop
+    itself, it blocked every request to the instance until it finished.
     """
     try:
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
-        results = calculator.calculate(household_input)
+        results = await anyio.to_thread.run_sync(
+            calculator.calculate, household_input, limiter=CALCULATIONS
+        )
         return convert_to_native(results)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

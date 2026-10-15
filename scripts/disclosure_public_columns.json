@@ -1,0 +1,21 @@
+{
+  "required": [
+    "level",
+    "area_code",
+    "reform",
+    "year",
+    "outcome",
+    "value",
+    "lo",
+    "hi",
+    "direction",
+    "tier",
+    "reason",
+    "support_band",
+    "noise",
+    "estimator"
+  ],
+  "optional": [
+    "area_name"
+  ]
+}
