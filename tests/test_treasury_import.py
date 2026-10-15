@@ -654,3 +654,71 @@ def test_a_title_that_mentions_totals_is_not_a_total():
     title = ("Table 4.1: total policy decisions", None, "\u00a3 million")
     nil_total = (None, None, "Total policy decisions", None, 0, 0, 0)
     assert check_totals(parse_rows([title, HEADER, TAX, SPEND, nil_total]))
+
+
+# --- round 11 -------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "figure", [999, "999", "-", "\u2012", "*", "999\u00b9"]
+)
+def test_a_subtotal_with_figures_only_left_of_head_is_refused(figure):
+    """Round 11: an unfamiliar subtotal whose only figures sat in a column
+    the header did not name looked blank and was skipped as a heading."""
+    header = (None, None, None, None, "Head", "2026-27", "2027-28", "2028-29")
+    measure = (None, 1, "Tax measure", None, "Tax", 100, 100, 100)
+    subtotal = (
+        None,
+        None,
+        "Subtotal tax policy decisions",
+        figure,
+        None,
+        None,
+        None,
+        None,
+    )
+    total = (None, None, "Total policy decisions", None, None, 100, 100, 100)
+    with pytest.raises(ScorecardError, match="unrecognised total"):
+        parse_rows([header, measure, subtotal, total])
+
+
+@pytest.mark.parametrize(
+    "figure",
+    ["999\u00b9", "999*", "999\u2020", "1e3", "-1.5E2", "\u2012", "\u2212"],
+)
+def test_a_total_above_the_header_in_any_printed_form_is_refused(figure):
+    """Round 11: a footnoted number, scientific notation or a figure dash
+    above the header was not seen as a figure, so a contradictory subtotal
+    there was never checked."""
+    above = (None, None, "Total tax policy decisions", None, *[figure] * 3)
+    with pytest.raises(ScorecardError, match="above the header"):
+        parse_rows([above, HEADER, TAX, GRAND_TOTAL])
+
+
+@pytest.mark.parametrize(
+    "cell, figure_like",
+    [
+        ("999\u00b9", True),
+        ("1e3", True),
+        ("1,000", True),
+        ("\u2212100", True),
+        ("\u2012", True),
+        ("\u00b9", False),
+        ("\u2020", False),
+        ("Raise the rate to 22% from 2027", False),
+        ("1 Totals may not sum due to rounding.", False),
+        ("12a", False),
+    ],
+)
+def test_what_counts_as_a_printed_figure(cell, figure_like):
+    from uk_budget_data.treasury_import import _figure_like
+
+    assert _figure_like(cell) is figure_like
+
+
+def test_a_figure_dash_is_read_as_nil():
+    measure = (None, 1, "Tax measure", "Tax", 100, "\u2012", "\u2212")
+    total = (None, None, "Total policy decisions", None, 100, 0, 0)
+    scorecard = parse_rows([HEADER, measure, total])
+    assert scorecard.measures[0].values_m["2027-28"] == 0.0
+    assert check_totals(scorecard)
