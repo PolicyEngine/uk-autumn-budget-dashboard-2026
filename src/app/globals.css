@@ -587,6 +587,10 @@ code {
   margin-top: 24px;
 }
 
+.charts-row-2 > div:only-child {
+  grid-column: 1 / -1;
+}
+
 .charts-row-2 > div:nth-child(1) {
   animation-delay: 0.35s;
 }

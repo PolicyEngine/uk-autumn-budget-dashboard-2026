@@ -332,9 +332,11 @@ class DataPipeline:
             "winners_losers": "winners_losers.csv",
             "metrics": "metrics.csv",
             "income_curve": "income_curve.csv",
-            "household_scatter": "household_scatter_full.csv",
             "obr_comparison": "obr_comparison.csv",
         }
+        # Household rows are never written under output_dir: one row per
+        # survey household is unit-record data. The receipted artifacts
+        # carry the scatter binned instead.
 
         for key, filename in file_mapping.items():
             if key in data and len(data[key]) > 0:

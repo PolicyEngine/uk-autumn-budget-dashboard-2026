@@ -1,8 +1,6 @@
 """Command-line interface for UK Budget Data generation."""
 
 import argparse
-import subprocess
-import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -315,24 +313,8 @@ def run_generate(parsed: argparse.Namespace) -> int:
             skip_input_check=parsed.skip_input_check,
         )
         console.print("\n[bold green]Data generation complete![/bold green]")
-
-        # Run household scatter sampling script
-        sampling_script = Path("scripts/sample_household_scatter.py")
-        if sampling_script.exists():
-            console.print(
-                "\n[bold]Running household scatter sampling...[/bold]"
-            )
-            result = subprocess.run(
-                [sys.executable, str(sampling_script)],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                console.print("[green]Sampling complete![/green]")
-            else:
-                console.print(
-                    f"[yellow]Sampling warning: {result.stderr}[/yellow]"
-                )
+        # The household scatter is no longer sampled into public/data: one
+        # row per survey household is unit-record data.
 
         console.print("\n[bold green]Done![/bold green]")
         return 0
