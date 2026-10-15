@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import anyio
 import numpy as np
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,6 +147,14 @@ def get_calculator() -> PersonalImpactCalculator:
     return _calculator
 
 
+# One household calculation at a time per instance, in arrival order. A
+# calculation takes minutes of CPU: several at once share it and all finish
+# together, later than any would alone (three at a time on Cloud Run's 300 s
+# limit all time out where two of three would have finished), and each
+# holds its own memory. How many visitors an instance takes is Cloud Run's
+# --concurrency.
+CALCULATIONS = anyio.CapacityLimiter(1)
+
 # Where a container's cgroup reports its peak memory: cgroup v2, then v1.
 MEMORY_PEAK_FILES = (
     Path("/sys/fs/cgroup/memory.peak"),
@@ -154,8 +163,9 @@ MEMORY_PEAK_FILES = (
 
 
 def memory_peak_bytes() -> Optional[int]:
-    """The container's peak memory use so far, from its cgroup, or None
-    where no cgroup reports it (outside a container)."""
+    """The container's peak memory use so far (its lifetime high-water
+    mark, page cache included), from its cgroup, or None where no cgroup
+    reports it (outside a container)."""
     for path in MEMORY_PEAK_FILES:
         try:
             return int(path.read_text().split()[0])
@@ -164,35 +174,54 @@ def memory_peak_bytes() -> Optional[int]:
     return None
 
 
-def server_timing(seconds: float, peak: Optional[int]) -> str:
-    """A Server-Timing header: how long the calculation took and, where the
-    cgroup reports it, the container's peak memory, so a deployed revision
-    can be measured from outside (``curl -i``)."""
-    parts = [f"calculate;dur={seconds * 1000:.0f}"]
+def server_timing(
+    calculating: float, queued: float, peak: Optional[int]
+) -> str:
+    """A Server-Timing header: the calculation's own time, the time the
+    request waited for the calculation before it, and, where the cgroup
+    reports it, the container's peak memory, so a deployed revision can be
+    measured from outside (``curl -i``)."""
+    parts = [
+        f"calculate;dur={calculating * 1000:.0f}",
+        f"queue;dur={queued * 1000:.0f}",
+    ]
     if peak is not None:
         parts.append(f'memory;desc="peak {peak / 2**20:.0f} MiB"')
     return ", ".join(parts)
 
 
+def timed(calculate, household):
+    """The calculation's results and how long it took, timed in the worker
+    thread so a wait for the limiter isn't counted."""
+    started = time.perf_counter()
+    results = calculate(household)
+    return results, time.perf_counter() - started
+
+
 @app.post("/api/personal-impact")
-def calculate_personal_impact(data: APIHouseholdInput, response: Response):
+async def calculate_personal_impact(
+    data: APIHouseholdInput, response: Response
+):
     """Calculate personal impact for a household.
 
     Returns year-by-year impact breakdown per policy.
 
-    A plain ``def``: the calculation takes minutes of CPU, and FastAPI runs
-    a plain handler in its thread pool, so the server's event loop keeps
-    answering other requests (``/api/version``, ``/api/health``) meanwhile.
-    As ``async def`` it ran on the event loop and blocked every request to
-    the instance until it finished.
+    The calculation runs in a worker thread, one at a time
+    (``CALCULATIONS``), so the event loop keeps answering other requests
+    (``/api/version``, ``/api/health``) meanwhile. Run on the event loop
+    itself, it blocked every request to the instance until it finished.
     """
     try:
         household_input = convert_api_input_to_household(data)
         calculator = get_calculator()
-        started = time.perf_counter()
-        results = calculator.calculate(household_input)
+        received = time.perf_counter()
+        results, calculating = await anyio.to_thread.run_sync(
+            timed, calculator.calculate, household_input, limiter=CALCULATIONS
+        )
         response.headers["Server-Timing"] = server_timing(
-            time.perf_counter() - started, memory_peak_bytes()
+            calculating,
+            time.perf_counter() - received - calculating,
+            memory_peak_bytes(),
         )
         return convert_to_native(results)
     except ValueError as e:
