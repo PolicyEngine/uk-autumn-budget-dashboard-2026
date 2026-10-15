@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { scaleLinear } from "d3";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
@@ -195,6 +195,7 @@ function DownloadIcon() {
 function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] }) {
   const regional = useGeographyData("regional");
   const [outcome, setOutcome] = useState("relative_change");
+  const titleId = useId();
 
   const choice = chooseReform({
     selectedIds: selectedPolicies,
@@ -254,11 +255,11 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
       className="region-view"
       id={REGION_VIEW_ID}
       role="region"
-      aria-labelledby="region-view-title"
+      aria-labelledby={titleId}
     >
       <div className="chart-header">
         <div>
-          <h2 id="region-view-title">
+          <h2 id={titleId}>
             {TITLE}, {yearLabel}
           </h2>
           <p className="chart-description">
@@ -322,10 +323,9 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
                   <th scope="col">Region</th>
                   <th scope="col">Change</th>
                   <th scope="col">90% interval</th>
-                  <th scope="col" className="region-cell-plot">
-                    <span className="visually-hidden">
-                      Change and interval, drawn
-                    </span>
+                  {/* The plot repeats the text columns, so assistive
+                      technology skips it, header and cells alike. */}
+                  <th className="region-cell-plot" aria-hidden="true">
                     <PlotAxis scale={scale} outcome={outcome} />
                   </th>
                   <th scope="col">Direction</th>
