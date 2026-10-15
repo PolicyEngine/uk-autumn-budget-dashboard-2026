@@ -4,6 +4,8 @@ This module calculates how Autumn Budget 2026 policies affect individual
 households over time (2025-2029).
 """
 
+import copy
+import json
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -123,6 +125,115 @@ def build_situation(household: HouseholdInput, year: int) -> dict:
     }
 
 
+def build_situations(
+    household: HouseholdInput, years: list[int]
+) -> list[tuple[list[int], dict]]:
+    """The household's situations for ``years``, each holding every one of
+    its years' inputs, so a scenario is simulated once for all of them
+    rather than once a year.
+
+    Each year's inputs are exactly ``build_situation``'s for that year. A
+    situation's people are fixed, and a child leaves the household at 25,
+    so years with different people are in different situations.
+
+    Every year's inputs stay visible while any year is read, which a
+    single-year situation never has. That is safe for today's inputs: the
+    formulas that read another year read nothing set here except
+    ``current_education``, restored before each read (``AsBuilt``), and
+    ``region``, the same every year. An input that varied by year in a way
+    a formula reads across years (a household that moves region) would
+    need its own situation: ``AsBuilt`` restores calculated values, not
+    inputs.
+
+    Returns:
+        ``(years, situation)`` pairs, in the order of ``years``.
+    """
+    groups: dict[tuple, tuple[list[int], dict]] = {}
+    for year in years:
+        single = build_situation(household, year)
+        people = tuple(single["people"])
+        if people not in groups:
+            groups[people] = ([year], copy.deepcopy(single))
+            continue
+        group_years, merged = groups[people]
+        group_years.append(year)
+        for person, variables in single["people"].items():
+            for variable, values in variables.items():
+                merged["people"][person].setdefault(variable, {}).update(
+                    values
+                )
+        for variable, values in single["households"]["household"].items():
+            if variable != "members":
+                merged["households"]["household"][variable].update(values)
+    return list(groups.values())
+
+
+def _frozen(value):
+    """A field value as something hashable that compares by content, in
+    order: policyengine-uk reads parameter changes in order (where two paths
+    name one parameter, the later wins), so the same changes in another
+    order are kept apart. A modifier (a function) compares by identity."""
+    if value is None or callable(value):
+        return value
+    return json.dumps(value, default=repr)
+
+
+def scenario_key(scenario: Optional[Scenario]):
+    """What a scenario does, as a key: scenarios with the same key have the
+    same field values, in the same order, and the same modifier, so share a
+    simulation. Every field of the model counts, so a field a later engine
+    adds keeps scenarios apart. A scenario that changes nothing is current
+    law."""
+    scenario = effective(scenario)
+    if scenario is None:
+        return None
+    return tuple(
+        (name, _frozen(getattr(scenario, name)))
+        for name in type(scenario).model_fields
+    )
+
+
+class AsBuilt:
+    """A simulation's state as built, restored before each year is read.
+
+    A formula can read a value for another year once one is stored:
+    ``current_education`` returns last year's stage when it has one, and
+    otherwise derives it from age. Read in a simulation of its own, a year
+    never has one; read after the year before in a simulation covering
+    both, it would, and a child of 17 would keep their stage at 18 (with
+    Child Benefit and the Universal Credit child element). So every value
+    calculated since the simulation was built is deleted before each year,
+    in the simulation and in the baseline simulations it holds (which
+    formulas can read), and branches created since are dropped (an
+    existing branch keeps the values it has calculated). The calculator's
+    reads touch neither the baseline simulations nor branches today; those
+    parts are there for a metric that would.
+    """
+
+    def __init__(self, sim: Simulation):
+        self.states = []
+        seen = set()
+        while sim is not None and id(sim) not in seen:
+            seen.add(id(sim))
+            known = {
+                name: set(sim.get_holder(name).get_known_periods())
+                for name in sim.tax_benefit_system.variables
+            }
+            self.states.append((sim, known, set(sim.branches)))
+            sim = getattr(sim, "baseline", None)
+
+    def restore(self) -> None:
+        for sim, known, branches in self.states:
+            for name, periods in known.items():
+                holder = sim.get_holder(name)
+                for period in list(holder.get_known_periods()):
+                    if period not in periods:
+                        holder.delete_arrays(period)
+            for name in list(sim.branches):
+                if name not in branches:
+                    del sim.branches[name]
+
+
 def create_simulation(
     situation: dict,
     year: int,
@@ -167,10 +278,11 @@ def household_simulations(
     uses_config: Optional[bool] = None,
 ) -> tuple[Simulation, Simulation]:
     """The baseline and reformed simulations of a household under a
-    measure, built as the national pipeline builds its own: the baseline
+    measure, from the scenarios the national pipeline uses: the baseline
     from ``reform.baseline_scenario_for(config, uses_config)`` (the
     measure's own baseline, else the configured one, else current law) and
-    the reform from ``reform.to_scenario()``.
+    the reform from ``reform.to_scenario()``. A side whose scenario changes
+    nothing is built with none (``effective``), with the same results.
 
     Args:
         situation: PolicyEngine situation dictionary.
@@ -187,10 +299,49 @@ def household_simulations(
     return (
         Simulation(
             situation=situation,
-            scenario=reform.baseline_scenario_for(config, uses_config),
+            scenario=effective(
+                reform.baseline_scenario_for(config, uses_config)
+            ),
         ),
-        Simulation(situation=situation, scenario=reform.to_scenario()),
+        Simulation(
+            situation=situation, scenario=effective(reform.to_scenario())
+        ),
     )
+
+
+# Scenario fields that change nothing on their own.
+_INERT_FIELDS = ("applied_before_data_load",)
+# Every Scenario field this code has read. A scenario with any other field
+# is kept, whatever its value: what a new field does is unknown here.
+_KNOWN_FIELDS = frozenset(
+    _INERT_FIELDS
+    + ("parameter_changes", "dated_reforms", "simulation_modifier")
+)
+
+
+def effective(scenario: Optional[Scenario]) -> Optional[Scenario]:
+    """The scenario, or None when it changes nothing.
+
+    Given any scenario, policyengine-uk builds a second, scenario-free
+    simulation from the situation as the simulation's ``baseline``; given
+    none, it clones itself. A scenario with no parameter changes, dated
+    reforms or modifier applies nothing (an empty parameter rebuild returns
+    at once), so it would only add that build: most registered measures
+    keep current law on the reform side as ``parameter_changes={}``. A
+    scenario with a field not in ``_KNOWN_FIELDS`` (one a later engine
+    adds) is kept, whatever that field holds.
+    """
+    if scenario is None:
+        return None
+    if set(type(scenario).model_fields) - _KNOWN_FIELDS:
+        return scenario
+    if any(
+        getattr(scenario, field) not in (None, {}, [])
+        for field in type(scenario).model_fields
+        if field not in _INERT_FIELDS
+    ):
+        return scenario
+    return None
 
 
 def calculate_household_metrics(sim: Simulation, year: int) -> dict:
@@ -291,44 +442,63 @@ class PersonalImpactCalculator:
             },
         }
 
-        # Calculate baseline for each year
-        baselines = {}
-        for year in YEARS:
-            situation = build_situation(household, year)
-            baseline_sim = Simulation(
-                situation=situation,
-                scenario=self.config.get_baseline_scenario(),
+        # Every simulation the results need, keyed by what its scenario does:
+        # the configured baseline, and each measure's two sides. Most
+        # measures share a side (current law, for one), and a simulation
+        # answers every year, so each distinct scenario is built once per
+        # set of people, not once per measure and year: construction, not
+        # calculation, is what takes the time.
+        reforms = [
+            (policy_id, self.reforms[policy_id])
+            for policy_id in POLICY_IDS
+            if policy_id in self.reforms
+        ]
+        scenarios = {}
+
+        def needed(scenario):
+            key = scenario_key(scenario)
+            scenarios.setdefault(key, effective(scenario))
+            return key
+
+        configured = needed(self.config.get_baseline_scenario())
+        sides = {
+            policy_id: (
+                needed(reform.baseline_scenario_for(self.config)),
+                needed(reform.to_scenario()),
             )
-            baselines[year] = calculate_household_metrics(baseline_sim, year)
+            for policy_id, reform in reforms
+        }
+        metrics = {}
+        for years, situation in build_situations(household, YEARS):
+            # One simulation at a time, so memory stays that of one (with
+            # the baseline simulation the engine builds inside it).
+            for key, scenario in scenarios.items():
+                sim = Simulation(situation=situation, scenario=scenario)
+                built = AsBuilt(sim)
+                for year in years:
+                    built.restore()
+                    metrics[key, year] = calculate_household_metrics(sim, year)
+                del sim, built
+
+        for year in YEARS:
             results["years"][year] = {
-                "baseline": baselines[year],
+                "baseline": dict(metrics[configured, year]),
                 "policies": {},
             }
 
         # Calculate impact of each policy
-        for policy_id in POLICY_IDS:
-            reform = self.reforms.get(policy_id)
-            if not reform:
-                continue
-
+        for policy_id, reform in reforms:
             policy_results = {
                 "name": reform.name,
                 "description": reform.description,
                 "years": {},
                 "total_impact": 0,
             }
+            baseline_key, reform_key = sides[policy_id]
 
             for year in YEARS:
-                situation = build_situation(household, year)
-
-                baseline_sim, reform_sim = household_simulations(
-                    situation, reform, self.config
-                )
-
-                baseline_metrics = calculate_household_metrics(
-                    baseline_sim, year
-                )
-                reform_metrics = calculate_household_metrics(reform_sim, year)
+                baseline_metrics = dict(metrics[baseline_key, year])
+                reform_metrics = dict(metrics[reform_key, year])
 
                 # Calculate the impact (positive = household gains)
                 net_income_change = (
