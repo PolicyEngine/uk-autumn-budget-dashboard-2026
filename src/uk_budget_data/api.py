@@ -32,9 +32,11 @@ from uk_budget_data.runtime_identity import runtime_identity
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    yield
-    # Before uvicorn re-raises SIGTERM: see stop_workers.
-    stop_workers()
+    try:
+        yield
+    finally:
+        # Before uvicorn re-raises SIGTERM: see stop_workers.
+        stop_workers()
 
 
 app = FastAPI(

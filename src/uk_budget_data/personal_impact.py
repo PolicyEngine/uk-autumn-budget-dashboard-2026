@@ -447,6 +447,7 @@ def household_workers() -> int:
 
 _workers = set()
 _workers_lock = threading.Lock()
+_workers_generation = 0
 
 # How long one household calculation's jobs may take, from before the first
 # is started (a cold forkserver's start counts), before the calculation is
@@ -525,8 +526,12 @@ def stop_workers(wait_seconds: float = 5) -> None:
     Cloud Run allows 10 seconds after SIGTERM. Kill immediately, before
     uvicorn re-raises the signal, so no running job outlives the server.
     """
+    global _workers_generation
     deadline = time.monotonic() + wait_seconds
     with _workers_lock:
+        # An existing runner must not refill an empty slot after shutdown's
+        # snapshot. Later invocations may still start their own workers.
+        _workers_generation += 1
         processes = list(_workers)
         for process in processes:
             if process.is_alive():
@@ -567,9 +572,10 @@ def run_in_workers(
     deadline = time.monotonic() + timeout
     if workers < 1:
         raise ValueError("workers must be at least one")
-    context = _worker_context()
     with _workers_lock:
         lifeline = _server_lifeline()
+        generation = _workers_generation
+    context = _worker_context()
     active = {}
     results = [None] * len(calls)
     next_call = 0
@@ -597,6 +603,11 @@ def run_in_workers(
                     # Shutdown must see every process that has started.
                     with _workers_lock:
                         try:
+                            if generation != _workers_generation:
+                                raise WorkerDied(
+                                    f"Worker for call {next_call} cancelled "
+                                    "by server shutdown"
+                                )
                             remaining()
                             process.start()
                         finally:

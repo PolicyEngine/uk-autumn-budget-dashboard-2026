@@ -1,6 +1,7 @@
 """A calculation spread over worker processes gives exactly what one
 process gives, and the worker count follows the instance's CPUs."""
 
+import asyncio
 import json
 import multiprocessing.forkserver
 import multiprocessing.process
@@ -120,6 +121,15 @@ def record_pid(kind, pid):
             output.write(f"{kind} {pid}\n")
 
 
+def stop_owned_processes(processes):
+    """Emergency cleanup independent of the runner's tracking lock."""
+    for process in processes:
+        if process.is_alive():
+            process.kill()
+    for process in processes:
+        process.join(5)
+
+
 @pytest.fixture(autouse=True)
 def started_processes(monkeypatch):
     """Record owned workers and stop them even when a cleanup mutant fails.
@@ -129,6 +139,23 @@ def started_processes(monkeypatch):
     """
     processes = []
     real_start = multiprocessing.process.BaseProcess.start
+    forkserver = multiprocessing.forkserver._forkserver
+    resource_tracker = multiprocessing.resource_tracker._resource_tracker
+    real_forkserver_ensure = forkserver.ensure_running
+    real_tracker_ensure = multiprocessing.resource_tracker.ensure_running
+
+    def ensure_forkserver():
+        try:
+            return real_forkserver_ensure()
+        finally:
+            record_pid("forkserver", forkserver._forkserver_pid)
+            record_pid("resource_tracker", resource_tracker._pid)
+
+    def ensure_tracker():
+        try:
+            return real_tracker_ensure()
+        finally:
+            record_pid("resource_tracker", resource_tracker._pid)
 
     def start(process):
         real_start(process)
@@ -143,15 +170,21 @@ def started_processes(monkeypatch):
             multiprocessing.resource_tracker._resource_tracker._pid,
         )
 
+    # Process.start can wait for a cold forkserver's engine preload. Audit
+    # helpers as soon as launched so a startup timeout still owns their PIDs.
+    monkeypatch.setattr(forkserver, "ensure_running", ensure_forkserver)
+    monkeypatch.setattr(
+        multiprocessing.resource_tracker, "ensure_running", ensure_tracker
+    )
+    monkeypatch.setattr(resource_tracker, "ensure_running", ensure_tracker)
     monkeypatch.setattr(multiprocessing.process.BaseProcess, "start", start)
     try:
         yield processes
     finally:
+        # A cleanup mutant can block in join while holding _workers_lock.
+        # Reap our recorded children before asking the tracker to stop them.
+        stop_owned_processes(processes)
         personal_impact.stop_workers()
-        for process in processes:
-            if process.is_alive():
-                process.kill()
-            process.join(5)
 
 
 def wait_for_workers(count, timeout=30):
@@ -165,6 +198,8 @@ def wait_for_workers(count, timeout=30):
 
 
 def test_each_job_runs_in_a_process_of_its_own():
+    # Cold engine preload is setup, separate from the four calls below.
+    personal_impact.run_in_workers(1, [(os.getpid, ())], 180)
     pids = personal_impact.run_in_workers(2, [(os.getpid, ())] * 4, 60)
     assert os.getpid() not in pids
     assert len(set(pids)) == 4
@@ -172,17 +207,27 @@ def test_each_job_runs_in_a_process_of_its_own():
 
 
 def test_workers_import_this_worktree():
-    expected = (
-        Path(__file__).resolve().parents[1]
-        / "src"
-        / "uk_budget_data"
-        / "__init__.py"
+    package = Path(__file__).resolve().parents[1] / "src" / "uk_budget_data"
+    expected = (package / "__init__.py", package / "personal_impact.py")
+    assert (
+        Path(uk_budget_data.__file__).resolve(),
+        Path(personal_impact.__file__).resolve(),
+    ) == expected
+    [worker_paths] = personal_impact.run_in_workers(
+        1,
+        [
+            (
+                eval,
+                (
+                    "(__import__('uk_budget_data').__file__, "
+                    "__import__('uk_budget_data.personal_impact', "
+                    "fromlist=['personal_impact']).__file__)",
+                ),
+            )
+        ],
+        60,
     )
-    assert Path(uk_budget_data.__file__).resolve() == expected
-    [worker_path] = personal_impact.run_in_workers(
-        1, [(eval, ("__import__('uk_budget_data').__file__",))], 60
-    )
-    assert Path(worker_path).resolve() == expected
+    assert tuple(Path(path).resolve() for path in worker_paths) == expected
 
 
 def test_results_come_back_in_call_order():
@@ -218,39 +263,88 @@ def test_an_unpicklable_error_becomes_a_runtime_error():
 
 
 def test_a_worker_dying_mid_call_fails_only_that_run():
+    # Warm the forkserver before the deliberately short death deadline.
+    personal_impact.run_in_workers(1, [(os.getpid, ())], 180)
     # Short timeout: retaining the parent's writer must fail with TimeoutError
     # rather than leave this test waiting forever for the missing EOF.
-    with pytest.raises(personal_impact.WorkerDied, match="0"):
+    error = None
+    try:
         personal_impact.run_in_workers(1, [(os._exit, (1,))], 2)
+    except Exception as caught:
+        error = caught
+    assert isinstance(error, personal_impact.WorkerDied), repr(error)
+    assert "0" in str(error)
     assert personal_impact.live_workers() == []
     [pid] = personal_impact.run_in_workers(1, [(os.getpid, ())], 60)
     assert pid != os.getpid()
     assert personal_impact.live_workers() == []
 
 
-def test_a_calculation_past_its_deadline_is_abandoned():
+def test_an_oserror_reading_a_result_means_the_worker_died(monkeypatch):
+    context = personal_impact._worker_context()
+    real_pipe = context.Pipe
+
+    def fail_recv():
+        raise OSError("broken worker result pipe")
+
+    def pipe(*args, **kwargs):
+        reader, writer = real_pipe(*args, **kwargs)
+        monkeypatch.setattr(reader, "recv", fail_recv)
+        return reader, writer
+
+    monkeypatch.setattr(context, "Pipe", pipe)
+    monkeypatch.setattr(personal_impact, "_worker_context", lambda: context)
+    with pytest.raises(personal_impact.WorkerDied, match="0") as error:
+        personal_impact.run_in_workers(1, [(os.getpid, ())], 60)
+    assert isinstance(error.value.__cause__, OSError)
+    assert personal_impact.live_workers() == []
+
+
+def test_a_calculation_past_its_deadline_is_abandoned(started_processes):
+    # Startup is covered separately; this test needs two sleeping workers.
+    personal_impact.run_in_workers(1, [(os.getpid, ())], 180)
     seen = {}
+    seen_lock = threading.Lock()
     stop = threading.Event()
+    outcome = {}
 
     def watch():
         while not stop.wait(0.005):
             for process in personal_impact.live_workers():
-                seen[process.pid] = process
+                with seen_lock:
+                    seen[process.pid] = process
+
+    def run():
+        try:
+            personal_impact.run_in_workers(2, [(time.sleep, (60,))] * 2, 2)
+        except Exception as error:
+            outcome["error"] = error
 
     watcher = threading.Thread(target=watch, daemon=True)
+    runner = threading.Thread(target=run, daemon=True)
     watcher.start()
     started = time.monotonic()
+    runner.start()
     try:
-        with pytest.raises(TimeoutError):
-            personal_impact.run_in_workers(2, [(time.sleep, (60,))] * 2, 2)
+        runner.join(10)
+        finished = not runner.is_alive()
+        elapsed = time.monotonic() - started
+        with seen_lock:
+            exitcodes = {
+                pid: process.exitcode for pid, process in seen.items()
+            }
     finally:
         stop.set()
+        # Freeze the observations above before emergency cleanup can hide
+        # missing SIGKILLs. This also releases a mutant blocked in join.
+        stop_owned_processes(started_processes)
+        runner.join(5)
         watcher.join(5)
-    assert time.monotonic() - started < 30
-    assert len(seen) == 2
-    assert all(
-        process.exitcode == -signal.SIGKILL for process in seen.values()
-    )
+    assert finished, "Worker runner did not finish within its test deadline"
+    assert elapsed < 30
+    assert isinstance(outcome.get("error"), TimeoutError), repr(outcome)
+    assert len(exitcodes) == 2
+    assert all(code == -signal.SIGKILL for code in exitcodes.values())
     assert personal_impact.live_workers() == []
 
 
@@ -280,6 +374,7 @@ def test_run_jobs_maps_calls_and_passes_the_calculation_deadline(
 
 def test_the_deadline_counts_from_before_submission(monkeypatch):
     """A slow Process.start uses the same deadline as the jobs it starts."""
+    personal_impact.run_in_workers(1, [(os.getpid, ())], 60)
     real_start = multiprocessing.process.BaseProcess.start
 
     def slow_start(process):
@@ -324,10 +419,11 @@ def test_concurrent_runs_own_their_workers():
         thread.join(10)
 
 
-def test_the_server_stops_its_workers_when_it_stops():
+@pytest.mark.parametrize("body_raises", [False, True])
+def test_the_server_stops_its_workers_when_it_stops(body_raises):
     from fastapi.testclient import TestClient
 
-    from uk_budget_data.api import app
+    from uk_budget_data.api import app, lifespan
 
     outcome = {}
 
@@ -341,8 +437,17 @@ def test_the_server_stops_its_workers_when_it_stops():
     thread.start()
     try:
         [process] = wait_for_workers(1)
-        with TestClient(app):
-            pass
+        if body_raises:
+
+            async def failed_lifespan():
+                async with lifespan(app):
+                    raise ValueError("lifespan body failed")
+
+            with pytest.raises(ValueError, match="lifespan body failed"):
+                asyncio.run(failed_lifespan())
+        else:
+            with TestClient(app):
+                pass
         thread.join(5)
         assert process.exitcode == -signal.SIGKILL
         assert not thread.is_alive()
@@ -351,6 +456,69 @@ def test_the_server_stops_its_workers_when_it_stops():
     finally:
         personal_impact.stop_workers()
         thread.join(10)
+
+
+@pytest.mark.parametrize(
+    "pause_stage, expected_started",
+    [("context_setup", 0), ("second_process", 1)],
+)
+def test_shutdown_cancels_a_run_before_its_next_worker_starts(
+    monkeypatch, started_processes, pause_stage, expected_started
+):
+    context = personal_impact._worker_context()
+    real_process = context.Process
+    paused = threading.Event()
+    release = threading.Event()
+    constructed = 0
+    context_calls = 0
+    outcome = {}
+
+    def worker_context():
+        nonlocal context_calls
+        context_calls += 1
+        if pause_stage == "context_setup" and context_calls == 1:
+            paused.set()
+            assert release.wait(30), "Context setup was never released"
+        return context
+
+    def process(*args, **kwargs):
+        nonlocal constructed
+        constructed += 1
+        if pause_stage == "second_process" and constructed == 2:
+            paused.set()
+            assert release.wait(30), "Second worker was never released"
+        return real_process(*args, **kwargs)
+
+    def run():
+        try:
+            outcome["result"] = personal_impact.run_in_workers(
+                1, [(os.getpid, ())] * 2, 60
+            )
+        except Exception as error:
+            outcome["error"] = error
+
+    monkeypatch.setattr(context, "Process", process)
+    monkeypatch.setattr(personal_impact, "_worker_context", worker_context)
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    try:
+        assert paused.wait(30), f"Runner never paused during {pause_stage}"
+        personal_impact.stop_workers()
+        release.set()
+        thread.join(10)
+        assert not thread.is_alive()
+        assert isinstance(outcome.get("error"), personal_impact.WorkerDied)
+        assert f"call {expected_started}" in str(outcome["error"])
+        assert len(started_processes) == expected_started
+        assert personal_impact.live_workers() == []
+        [pid] = personal_impact.run_in_workers(1, [(os.getpid, ())], 60)
+        assert pid != os.getpid()
+        assert personal_impact.live_workers() == []
+    finally:
+        release.set()
+        stop_owned_processes(started_processes)
+        thread.join(10)
+        personal_impact.stop_workers()
 
 
 # A real script is importable as __mp_main__ in a forkserver child. The
@@ -388,6 +556,28 @@ if __name__ == "__main__":
     record("server", os.getpid(), pid_path)
     from uk_budget_data import personal_impact
 
+    forkserver = multiprocessing.forkserver._forkserver
+    resource_tracker = multiprocessing.resource_tracker._resource_tracker
+    real_forkserver_ensure = forkserver.ensure_running
+    real_tracker_ensure = multiprocessing.resource_tracker.ensure_running
+
+    def ensure_forkserver():
+        try:
+            return real_forkserver_ensure()
+        finally:
+            record("forkserver", forkserver._forkserver_pid, pid_path)
+            record("resource_tracker", resource_tracker._pid, pid_path)
+
+    def ensure_tracker():
+        try:
+            return real_tracker_ensure()
+        finally:
+            record("resource_tracker", resource_tracker._pid, pid_path)
+
+    forkserver.ensure_running = ensure_forkserver
+    multiprocessing.resource_tracker.ensure_running = ensure_tracker
+    resource_tracker.ensure_running = ensure_tracker
+
     def run():
         personal_impact.run_in_workers(
             1, [(sleeping_job, (started_path, pid_path))], 660
@@ -396,7 +586,7 @@ if __name__ == "__main__":
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
     recorded = set()
-    deadline = time.monotonic() + 90
+    deadline = time.monotonic() + 180
     while True:
         pids = [
             ("worker", process.pid)
@@ -470,7 +660,9 @@ def test_nothing_outlives_a_server_killed_outright(tmp_path, monkeypatch):
                 ],
                 stdout=stdout,
                 stderr=stderr,
-                timeout=120,
+                # Allow the cold server import and forkserver preload;
+                # orphan detection below still has its own short deadline.
+                timeout=300,
             )
         assert result.returncode == -signal.SIGKILL, err.read_text()
         records = recorded_pids()
