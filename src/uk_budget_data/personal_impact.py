@@ -9,8 +9,10 @@ import json
 import logging
 import multiprocessing
 import os
+import pickle
 import threading
 import time
+import traceback
 from dataclasses import dataclass, field
 from multiprocessing.connection import wait
 from pathlib import Path
@@ -514,6 +516,10 @@ class WorkerDied(RuntimeError):
     """A worker exited without returning its call's result."""
 
 
+class WorkerError(RuntimeError):
+    """A call failed in a worker; the message is its traceback there."""
+
+
 def live_workers() -> list:
     """A snapshot of the processes currently owned by worker runners."""
     with _workers_lock:
@@ -521,23 +527,28 @@ def live_workers() -> list:
 
 
 def stop_workers(wait_seconds: float = 5) -> None:
-    """Kill tracked workers at server shutdown and wait up to the deadline.
+    """Kill every tracked worker and wait up to ``wait_seconds`` for them.
 
-    Cloud Run allows 10 seconds after SIGTERM. Kill immediately, before
-    uvicorn re-raises the signal, so no running job outlives the server.
+    The API calls this from its lifespan shutdown, which uvicorn runs once
+    in-flight requests have finished, so normally there is nothing left to
+    kill. A worker of a run that is still starting is killed by that run as
+    soon as it sees the shutdown. Where the server is killed before its
+    shutdown runs (Cloud Run sends SIGKILL 10 s after SIGTERM), each
+    worker's lifeline stops it instead.
     """
     global _workers_generation
     deadline = time.monotonic() + wait_seconds
     with _workers_lock:
-        # An existing runner must not refill an empty slot after shutdown's
-        # snapshot. Later invocations may still start their own workers.
+        # A run that starts a process after this snapshot sees the new
+        # generation when it registers it, and kills it itself.
         _workers_generation += 1
         processes = list(_workers)
-        for process in processes:
-            if process.is_alive():
-                process.kill()
-        for process in processes:
-            process.join(max(0.0, deadline - time.monotonic()))
+    for process in processes:
+        if process.is_alive():
+            process.kill()
+    for process in processes:
+        process.join(max(0.0, deadline - time.monotonic()))
+    with _workers_lock:
         _workers.difference_update(processes)
 
 
@@ -548,14 +559,33 @@ def _run_call(writer, lifeline, function, args) -> None:
         try:
             writer.send(("ok", function(*args)))
         except BaseException as error:
+            text = "".join(traceback.format_exception(error))
             try:
-                writer.send(("error", error))
+                # Sent pre-pickled, and only if it rebuilds: an exception
+                # that pickles but cannot be unpickled (policyengine-core's
+                # VariableNotFoundError, say) would otherwise surface in the
+                # parent as an unrelated TypeError.
+                blob = pickle.dumps(error)
+                pickle.loads(blob)
             except Exception:
-                # Connection.send pickles before writing, so a pickle
-                # failure has not left a partial frame in the pipe.
-                writer.send(("error", RuntimeError(repr(error))))
+                blob = None
+            writer.send(("error", (blob, text)))
     finally:
         writer.close()
+
+
+def _raise_worker_error(blob, text):
+    """Re-raise a worker's exception, chained to its traceback there."""
+    remote = WorkerError(f"in the worker:\n{text}")
+    error = None
+    if blob is not None:
+        try:
+            error = pickle.loads(blob)
+        except Exception:
+            error = None
+    if error is None:
+        raise remote
+    raise error from remote
 
 
 def run_in_workers(
@@ -600,20 +630,31 @@ def run_in_workers(
                         args=(writer, lifeline, function, args),
                         daemon=True,
                     )
-                    # Shutdown must see every process that has started.
                     with _workers_lock:
-                        try:
-                            if generation != _workers_generation:
-                                raise WorkerDied(
-                                    f"Worker for call {next_call} cancelled "
-                                    "by server shutdown"
-                                )
-                            remaining()
-                            process.start()
-                        finally:
-                            writer.close()
+                        cancelled = generation != _workers_generation
+                    if cancelled:
+                        raise WorkerDied(
+                            f"Worker for call {next_call} cancelled by server "
+                            "shutdown"
+                        )
+                    remaining()
+                    # Started outside the lock: a cold forkserver can take
+                    # the engine's whole preload, and stop_workers must not
+                    # wait behind it.
+                    try:
+                        process.start()
+                    finally:
+                        writer.close()
+                    with _workers_lock:
                         _workers.add(process)
+                        cancelled = generation != _workers_generation
                     active[reader] = (next_call, process)
+                    if cancelled:
+                        # Shutdown's snapshot may have missed it.
+                        raise WorkerDied(
+                            f"Worker for call {next_call} cancelled by server "
+                            "shutdown"
+                        )
                 except BaseException:
                     reader.close()
                     writer.close()
@@ -632,28 +673,28 @@ def run_in_workers(
                         ) from error
                 finally:
                     reader.close()
+                    process.join(timeout=5)
+                    if process.is_alive():
+                        process.kill()
+                    process.join()
                     with _workers_lock:
-                        process.join(timeout=5)
-                        if process.is_alive():
-                            process.kill()
-                        process.join()
                         _workers.discard(process)
                     del active[reader]
                 if status == "error":
-                    raise value
+                    _raise_worker_error(*value)
                 remaining()
                 results[index] = value
         return results
     finally:
         # Kill all siblings before joining any: no job survives a failure.
+        for _, process in active.values():
+            if process.is_alive():
+                process.kill()
+        for reader, (_, process) in active.items():
+            process.join()
+            reader.close()
         with _workers_lock:
-            for _, process in active.values():
-                if process.is_alive():
-                    process.kill()
-            for reader, (_, process) in active.items():
-                process.join()
-                _workers.discard(process)
-                reader.close()
+            _workers.difference_update(p for _, p in active.values())
 
 
 def run_jobs(workers: int, jobs: list) -> list:

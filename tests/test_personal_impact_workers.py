@@ -245,8 +245,44 @@ def test_a_call_error_stops_its_other_workers(started_processes):
         personal_impact.run_in_workers(
             2, [(time.sleep, (60,)), (int, ("invalid",))], 10
         )
-    assert len(started_processes) == 2
-    assert all(process.exitcode is not None for process in started_processes)
+    # The failing call exits by itself; its sleeping sibling is killed.
+    assert sorted(p.exitcode for p in started_processes) == [
+        -signal.SIGKILL,
+        0,
+    ]
+    assert personal_impact.live_workers() == []
+
+
+def test_an_error_keeps_its_type_and_the_workers_traceback():
+    with pytest.raises(ValueError, match="invalid literal") as caught:
+        personal_impact.run_in_workers(1, [(int, ("invalid",))], 60)
+    cause = caught.value.__cause__
+    assert isinstance(cause, personal_impact.WorkerError)
+    assert "Traceback" in str(cause) and "invalid literal" in str(cause)
+
+
+class NeedsTwoArguments(Exception):
+    """Pickles, but cannot be rebuilt from its one stored argument, like
+    policyengine-core's VariableNotFoundError."""
+
+    def __init__(self, name, system):
+        super().__init__(f"{name} is not in {system}")
+
+
+def raise_needs_two_arguments():
+    raise NeedsTwoArguments("salary", "the system")
+
+
+def test_an_error_that_cannot_be_rebuilt_arrives_with_its_message():
+    """Review of #49 round 2: unpickled in the parent, it became an
+    unrelated TypeError."""
+    with pytest.raises(
+        personal_impact.WorkerError,
+        match="NeedsTwoArguments: salary is not in the system",
+    ):
+        personal_impact.run_in_workers(
+            1, [(raise_needs_two_arguments, ())], 60
+        )
     assert personal_impact.live_workers() == []
 
 
@@ -269,7 +305,7 @@ def test_a_worker_dying_mid_call_fails_only_that_run():
     # rather than leave this test waiting forever for the missing EOF.
     error = None
     try:
-        personal_impact.run_in_workers(1, [(os._exit, (1,))], 2)
+        personal_impact.run_in_workers(1, [(os._exit, (1,))], 30)
     except Exception as caught:
         error = caught
     assert isinstance(error, personal_impact.WorkerDied), repr(error)
@@ -316,7 +352,7 @@ def test_a_calculation_past_its_deadline_is_abandoned(started_processes):
 
     def run():
         try:
-            personal_impact.run_in_workers(2, [(time.sleep, (60,))] * 2, 2)
+            personal_impact.run_in_workers(2, [(time.sleep, (120,))] * 2, 10)
         except Exception as error:
             outcome["error"] = error
 
@@ -326,7 +362,7 @@ def test_a_calculation_past_its_deadline_is_abandoned(started_processes):
     started = time.monotonic()
     runner.start()
     try:
-        runner.join(10)
+        runner.join(40)
         finished = not runner.is_alive()
         elapsed = time.monotonic() - started
         with seen_lock:
@@ -341,7 +377,7 @@ def test_a_calculation_past_its_deadline_is_abandoned(started_processes):
         runner.join(5)
         watcher.join(5)
     assert finished, "Worker runner did not finish within its test deadline"
-    assert elapsed < 30
+    assert elapsed < 60
     assert isinstance(outcome.get("error"), TimeoutError), repr(outcome)
     assert len(exitcodes) == 2
     assert all(code == -signal.SIGKILL for code in exitcodes.values())
@@ -397,7 +433,7 @@ def test_concurrent_runs_own_their_workers():
     def run():
         try:
             outcome["result"] = personal_impact.run_in_workers(
-                1, [(time.sleep, (1,))], 10
+                1, [(time.sleep, (10,))], 60
             )
         except Exception as error:
             outcome["error"] = error
@@ -410,7 +446,7 @@ def test_concurrent_runs_own_their_workers():
             personal_impact.run_in_workers(1, [(int, ("invalid",))], 10)
         # Failing a separate run does not kill this run's process.
         assert process.exitcode != -signal.SIGKILL
-        thread.join(15)
+        thread.join(60)
         assert not thread.is_alive()
         assert outcome == {"result": [None]}
         assert personal_impact.live_workers() == []
