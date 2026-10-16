@@ -14,6 +14,7 @@ export const MANIFEST_FILE = contract.manifest_file;
 export const RECEIPT_FILE = contract.receipt_file;
 export const STATUSES = contract.statuses;
 export const DISPLAYABLE = contract.displayable;
+export const NOT_COMPUTABLE = "not_computable";
 
 export const PROVISIONAL_LABEL =
   "Provisional: statement figures, awaiting Treasury costing";
@@ -80,6 +81,30 @@ function entryProblems(key, entry, { combined }) {
     !isYearList(entry.unsupported_years)
   ) {
     problems.push(`${where}.unsupported_years is not a list of years`);
+  }
+  // A measure the certified data cannot cost names its data limits and is
+  // listed only as not computable, with its reason: never with a figure.
+  const limits = entry.data_limits;
+  if (
+    limits !== undefined &&
+    !(
+      Array.isArray(limits) &&
+      limits.every((limit) => typeof limit === "string" && limit !== "")
+    )
+  ) {
+    problems.push(`${where}.data_limits is not a list of limit keys`);
+  }
+  const limited = Array.isArray(limits) && limits.length > 0;
+  if (
+    entry.status === NOT_COMPUTABLE &&
+    !(limited && typeof entry.reason === "string" && entry.reason !== "")
+  ) {
+    problems.push(
+      `${where} is not computable but names no data limit or reason`,
+    );
+  }
+  if (limited && DISPLAYABLE.includes(entry.status)) {
+    problems.push(`${where} has data limits, so its figures cannot be shown`);
   }
   if (combined) {
     const members = entry.measures;
@@ -212,6 +237,10 @@ export function measureAvailability(manifest, key) {
     staged: "Awaiting approval",
     stale: withReason("Stale", entry.reason),
     withdrawn: withReason("Withdrawn", entry.reason),
+    [NOT_COMPUTABLE]: withReason(
+      "Not computable on current data",
+      entry.reason,
+    ),
   };
   return {
     available: false,

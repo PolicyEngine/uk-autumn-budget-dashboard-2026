@@ -209,6 +209,7 @@ class World:
         dataset_name: str = "enhanced_frs_2024_25",
         reform_identity=None,
         config_baseline=None,
+        data_limits=(),
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -252,6 +253,7 @@ class World:
             member_outputs=member_outputs,
             composition=composition,
             config_baseline_identity=config_baseline,
+            data_limits=list(data_limits),
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)

@@ -12,6 +12,11 @@ The gates, in order:
    pair whose certificate verifies, generated from a clean tree.
 4. **Responsiveness.** The measure moves, in the expected direction. An
    inert, wrong-direction or undeclared measure is never staged.
+4a. **Data limits.** A measure the certified data cannot cost
+   (``uk_budget_data.data_limits``, recorded in its receipt) is staged only
+   as ``not_computable``: listed with its reason, never with a figure, and
+   never approved. It skips responsiveness and reconciliation, which would
+   only measure the £0 the data give it. Every other check still applies.
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or
@@ -136,6 +141,12 @@ def binding_problems(
         problems.append("the entry's years are not the artifact's")
     if entry.unsupported_years != dashboard["unsupported_years"]:
         problems.append("the entry's unsupported years are not the artifact's")
+    if entry.data_limits != _limit_keys(dashboard):
+        problems.append("the entry's data limits are not the artifact's")
+    elif entry.status == m.NOT_COMPUTABLE and entry.reason != _limit_reason(
+        dashboard
+    ):
+        problems.append("the entry's reason is not the artifact's")
     if is_combined(key):
         if entry.measures != list(dashboard.get("measure_ids") or []):
             problems.append("the entry's members are not the artifact's")
@@ -148,6 +159,14 @@ def binding_problems(
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
     return problems
+
+
+def _limit_keys(dashboard: dict) -> list[str]:
+    return [item["key"] for item in dashboard.get("data_limits") or []]
+
+
+def _limit_reason(dashboard: dict) -> str:
+    return " ".join(item["reason"] for item in dashboard["data_limits"])
 
 
 def _identity_problems(document: dict, manifest: m.Manifest) -> list[str]:
@@ -266,7 +285,9 @@ def gate_problems(
 ) -> tuple[list[str], dict]:
     """Every reason an artifact may not hold ``level``, plus what was read.
 
-    ``level`` is ``staged``, ``provisional`` or ``approved``. ``entry`` is
+    ``level`` is ``staged``, ``provisional``, ``approved`` or
+    ``not_computable``; an artifact recording a data limit may hold only
+    the last, and one recording none may not hold it. ``entry`` is
     the manifest entry the artifact is meant to be, when there is one: the
     artifact must then be exactly the bytes it names. The second return
     value carries the receipt document and reconciliation summary.
@@ -299,6 +320,33 @@ def gate_problems(
         "tables": tables,
         "reconciliation": None,
     }
+
+    limited = bool(dashboard.get("data_limits"))
+    if limited and level != m.NOT_COMPUTABLE:
+        return (
+            problems
+            + [
+                f"not computable on current data, so it cannot be {level}: "
+                f"{_limit_reason(dashboard)}"
+            ],
+            info,
+        )
+    if level == m.NOT_COMPUTABLE:
+        if not limited:
+            problems.append(
+                "it records no data limit, so it is not 'not computable'"
+            )
+        if dashboard.get("publishable") is not True:
+            reasons = dashboard.get("reasons") or ["no reason recorded"]
+            problems += [f"not publishable: {r}" for r in reasons]
+        if is_combined(key):
+            problems += _members_problems(
+                document,
+                manifest,
+                data_root,
+                (m.STAGED, m.NOT_COMPUTABLE, *m.DISPLAYABLE),
+            )
+        return problems, info
 
     if level in (m.PROVISIONAL, m.APPROVED):
         if dashboard.get("publishable") is not True:
@@ -442,7 +490,12 @@ def stage(
     dashboard = document["dashboard"]
     key = dashboard["key"]
     digests = dashboard["digests"]
-    level = m.PROVISIONAL if provisional else m.STAGED
+    # A measure the data cannot cost is not computable whatever was asked
+    # for: its entry never carries a figure.
+    if dashboard.get("data_limits"):
+        level = m.NOT_COMPUTABLE
+    else:
+        level = m.PROVISIONAL if provisional else m.STAGED
 
     if is_combined(key) != bool(dashboard.get("members")):
         raise PublishError(
@@ -520,6 +573,10 @@ def stage(
         years=document["execution_receipt"]["years"],
         unsupported_years=dashboard["unsupported_years"],
         reconciliation=info.get("reconciliation"),
+        data_limits=_limit_keys(dashboard),
+        reason=(
+            _limit_reason(dashboard) if level == m.NOT_COMPUTABLE else None
+        ),
     )
     if is_combined(key):
         # The member outputs this combined run was generated against, from
@@ -530,7 +587,8 @@ def stage(
 
     carried = None
     if (
-        previous is not None
+        level != m.NOT_COMPUTABLE
+        and previous is not None
         and previous.approval is not None
         and previous.outputs_sha256 == entry.outputs_sha256
     ):
@@ -560,7 +618,18 @@ def stage(
             m.Superseded(key=key, superseded_at=m.now(), entry=previous)
         )
     if not is_combined(key):
-        _mark_dependants_stale(working, key, entry.outputs_sha256)
+        # A measure that becomes not computable stales every combined run
+        # using it, even with unchanged outputs: their figures included it.
+        # Restaging one that already was, unchanged, stales nothing.
+        becomes_limited = level == m.NOT_COMPUTABLE and not (
+            previous is not None
+            and previous.status == m.NOT_COMPUTABLE
+            and previous.outputs_sha256 == entry.outputs_sha256
+            and previous.data_limits == entry.data_limits
+        )
+        _mark_dependants_stale(
+            working, key, None if becomes_limited else entry.outputs_sha256
+        )
 
     _commit(manifest, working)
     return key
@@ -581,6 +650,14 @@ def approve(
         raise PublishError(key, ["it is not in the manifest"])
     if entry.status in (m.STALE, m.WITHDRAWN):
         raise PublishError(key, [f"it is {entry.status}: {entry.reason}"])
+    if entry.status == m.NOT_COMPUTABLE:
+        raise PublishError(
+            key,
+            [
+                "it is not computable on current data, so there is no "
+                f"figure to approve: {entry.reason}"
+            ],
+        )
     if not by.strip():
         raise PublishError(key, ["an approval needs a name"])
     problems, info = gate_problems(
@@ -639,14 +716,14 @@ def check(
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
 ) -> list[str]:
-    """Re-run every gate over every displayable entry.
+    """Re-run every gate over every entry the page lists.
 
     Returns one line per failure; an empty list means the manifest may be
     published as it stands.
     """
     failures = []
     for key, entry in sorted(manifest.entries().items()):
-        if entry.status not in m.DISPLAYABLE:
+        if entry.status not in m.LISTED:
             continue
         problems, _ = gate_problems(
             key,

@@ -27,7 +27,13 @@ const tablesByKey = Object.fromEntries(
     ],
   ),
 );
-const names = { alpha: "Alpha", beta: "Beta", gamma: "Gamma", delta: "Delta" };
+const names = {
+  alpha: "Alpha",
+  beta: "Beta",
+  gamma: "Gamma",
+  delta: "Delta",
+  epsilon: "Epsilon",
+};
 
 function renderStats(selectedIds, year) {
   const stats = combinedStats({ manifest, tablesByKey, selectedIds, year });
@@ -148,6 +154,30 @@ describe("FiscalSummary", () => {
       screen.getByLabelText("No combined run is published for this selection"),
     ).toHaveTextContent("—");
     expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();
+  });
+});
+
+describe("FiscalSummary with a measure the data cannot cost", () => {
+  it("shows a dash and the reason, never £0, though its tables hold zeros", () => {
+    const series = fiscalSeries({
+      manifest,
+      tablesByKey,
+      selectedIds: ["alpha", "epsilon"],
+      years: [IN_DATA],
+    });
+    render(
+      <FiscalSummary
+        series={series}
+        ids={["alpha", "epsilon"]}
+        measureNames={names}
+      />,
+    );
+    const reason = `Not computable on current data: ${manifest.measures.epsilon.reason}`;
+    expect(screen.getByLabelText(reason)).toHaveTextContent("—");
+    expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();
+    expect(
+      tablesByKey.epsilon.budgetary_impact.every((row) => row.value === 0),
+    ).toBe(true);
   });
 });
 

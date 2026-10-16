@@ -33,10 +33,24 @@ PROVISIONAL = "provisional"
 APPROVED = "approved"
 STALE = "stale"
 WITHDRAWN = "withdrawn"
-Status = Literal["staged", "provisional", "approved", "stale", "withdrawn"]
+# A measure the certified data cannot cost (uk_budget_data.data_limits):
+# listed with its reason, never with a figure.
+NOT_COMPUTABLE = "not_computable"
+Status = Literal[
+    "staged",
+    "provisional",
+    "approved",
+    "stale",
+    "withdrawn",
+    "not_computable",
+]
 
-# Statuses the page may show. Provisional entries are labelled.
+# Statuses whose figures the page may show. Provisional entries are
+# labelled.
 DISPLAYABLE = (APPROVED, PROVISIONAL)
+# Statuses the page lists: the displayable ones with their figures, and
+# not-computable ones with only their reason.
+LISTED = (*DISPLAYABLE, NOT_COMPUTABLE)
 
 
 class _Strict(BaseModel):
@@ -77,9 +91,32 @@ class Entry(_Strict):
     household_checks: Optional[dict] = None
     approval: Optional[Approval] = None
     reason: Optional[str] = None
+    # The data limits the artifact touches (their keys); its entry can only
+    # be not computable.
+    data_limits: list[str] = Field(default_factory=list)
     # Combined runs only.
     measures: Optional[list[str]] = None
     member_outputs_sha256: Optional[dict[str, str]] = None
+
+    @model_validator(mode="after")
+    def _a_data_limited_entry_has_no_figures(self):
+        if self.status == NOT_COMPUTABLE and not (
+            self.data_limits and self.reason and self.approval is None
+        ):
+            raise ValueError(
+                "a not-computable entry names its data limits and reason, "
+                "and has no approval"
+            )
+        if self.data_limits and self.status not in (
+            NOT_COMPUTABLE,
+            STALE,
+            WITHDRAWN,
+        ):
+            raise ValueError(
+                f"an entry with data limits cannot be {self.status}: its "
+                "figures cannot be shown"
+            )
+        return self
 
     @field_validator("artifact")
     @classmethod

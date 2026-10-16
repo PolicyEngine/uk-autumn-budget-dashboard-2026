@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { loadPublication } from "./load";
+import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
+import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
   fixtureFetch,
@@ -39,6 +40,86 @@ describe("loadPublication", () => {
     const result = await loadPublication(BASE_PATH, ["delta"], { fetchImpl });
     expect(result.tablesByKey).toEqual({});
     expect(fetchImpl.calls.some((url) => url.includes("/delta/"))).toBe(false);
+  });
+
+  it("never fetches a not-computable measure's files", async () => {
+    const fetchImpl = fixtureFetch();
+    const result = await loadPublication(BASE_PATH, ["epsilon"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey).toEqual({});
+    expect(fetchImpl.calls.some((url) => url.includes("/epsilon/"))).toBe(
+      false,
+    );
+  });
+
+  it("refuses a data-limited artifact relabelled to show figures", async () => {
+    // Review of #51: a manifest edited by hand to approve epsilon and drop
+    // its data limits. Its receipt still records them, so no figure loads.
+    const edited = structuredClone(manifest);
+    Object.assign(edited.measures.epsilon, {
+      status: "approved",
+      data_limits: [],
+    });
+    delete edited.measures.epsilon.reason;
+    const fetchImpl = fixtureFetch({
+      overrides: { "manifest.json": JSON.stringify(edited) },
+    });
+    const result = await loadPublication(BASE_PATH, ["epsilon"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey.epsilon).toBeUndefined();
+    expect(result.failures.epsilon).toMatch(/records data limits/);
+    expect(
+      fetchImpl.calls.some(
+        (url) => url.includes("/epsilon/") && url.endsWith(".csv"),
+      ),
+    ).toBe(false);
+  });
+
+  it("shows no combined figure when a member fails verification", async () => {
+    // Review of #51 round 2: a member whose receipt was refused (there, one
+    // recording a data limit) left its combined run's figure on the page.
+    const beta = manifest.measures.beta.artifact;
+    const fetchImpl = fixtureFetch({
+      overrides: {
+        [`${alpha}/receipt.json`]: fixtureText(`${beta}/receipt.json`),
+      },
+    });
+    const result = await loadPublication(BASE_PATH, ["alpha", "beta"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey.alpha).toBeUndefined();
+    expect(result.tablesByKey["combined--alpha+beta"]).toBeUndefined();
+    expect(result.failures["combined--alpha+beta"]).toMatch(
+      /member alpha did not verify/,
+    );
+    const series = fiscalSeries({
+      ...result,
+      selectedIds: ["alpha", "beta"],
+      years: [IN_DATA],
+    });
+    expect(series.every((point) => point.combined === null)).toBe(true);
+  });
+
+  it("keys its tables and failures with no prototype", async () => {
+    const result = await loadPublication(BASE_PATH, ["alpha", "beta"], {
+      fetchImpl: fixtureFetch(),
+    });
+    expect(Object.getPrototypeOf(result.tablesByKey)).toBeNull();
+    expect(Object.getPrototypeOf(result.failures)).toBeNull();
+    expect(result.tablesByKey.constructor).toBeUndefined();
+    expect(result.failures.toString).toBeUndefined();
+  });
+
+  it("never loads a not-computable entry's artifact, even when asked", async () => {
+    const fetchImpl = fixtureFetch();
+    await expect(
+      loadArtifact(BASE_PATH, "epsilon", manifest.measures.epsilon, {
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/not_computable: its figures are not shown/);
+    expect(fetchImpl.calls).toEqual([]);
   });
 
   it("reports no manifest when none is published", async () => {
@@ -125,5 +206,27 @@ describe("loadPublication", () => {
         signal: controller.signal,
       }),
     ).rejects.toThrow(/abort/i);
+  });
+});
+
+describe("unverifiedMembers", () => {
+  it("finds a member named like an object property that did not load", () => {
+    // Review of #51 round 5: `constructor in tablesByKey` held through the
+    // prototype, so a refused member named constructor kept its combined
+    // run's figure on the page.
+    const tablesByKey = { "combined--beta+constructor": {}, beta: {} };
+    expect(unverifiedMembers(["beta", "constructor"], tablesByKey)).toEqual([
+      "constructor",
+    ]);
+    const names = ["toString", "hasOwnProperty", "__proto__", "valueOf"];
+    expect(unverifiedMembers(names, {})).toEqual(names);
+    expect(unverifiedMembers(names, Object.create(null))).toEqual(names);
+  });
+
+  it("finds none when every member loaded", () => {
+    const tablesByKey = Object.create(null);
+    tablesByKey.constructor = {};
+    tablesByKey.beta = {};
+    expect(unverifiedMembers(["beta", "constructor"], tablesByKey)).toEqual([]);
   });
 });

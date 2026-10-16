@@ -13,6 +13,7 @@
  */
 
 import canonicalize from "canonicalize";
+import contract from "./contract.json";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -107,8 +108,9 @@ function sameSet(left, right) {
 /**
  * Every way a receipt is not the artifact a manifest entry names: its
  * digest, its key, its recorded digests, its years and unsupported years
- * (which decide what may be shown) and, for a combined run, its members
- * and their output snapshot. Empty when it is.
+ * (which decide what may be shown), for a combined run its members and
+ * their output snapshot, and any data limit it records (which means no
+ * figure may be shown). Empty when it is.
  */
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
@@ -149,6 +151,26 @@ export async function receiptProblems(receipt, key, entry) {
     }
   } else if (!sameSet(dashboard.measure_ids, [key])) {
     problems.push("the receipt names other measures");
+  }
+  // A measure the certified data cannot cost records its data limits in
+  // its receipt; its figures are never shown, whatever the manifest says.
+  // A receipt generated against another registry of limits (one added
+  // since, say) is refused until it is regenerated.
+  if (
+    dashboard.data_limits_registry_sha256 !==
+    contract.data_limits_registry_sha256
+  ) {
+    problems.push(
+      "the receipt was generated against another data-limit registry",
+    );
+  }
+  if (!Array.isArray(dashboard.data_limits)) {
+    problems.push("the receipt does not record its data limits");
+  } else if (dashboard.data_limits.length > 0) {
+    problems.push(
+      "the receipt records data limits: not computable on current data, " +
+        "so its figures cannot be shown",
+    );
   }
   return problems;
 }
