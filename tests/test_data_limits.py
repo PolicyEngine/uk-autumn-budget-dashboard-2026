@@ -9,6 +9,7 @@ a buyer's whole stock), so it must be published as not computable.
 import collections
 import contextlib
 import copy
+import enum
 import functools
 import inspect
 import operator
@@ -1895,6 +1896,162 @@ def test_locals_and_keyword_only_counts_are_compared():
 
     assert behaviour.of(one) != behaviour.of(other)
     assert behaviour.of(positional) != behaviour.of(keyword_only)
+
+
+# --- composed names, bound methods, more state (review of #51 round 10) -
+
+
+def levy_on_a_composed_name(compose):
+    def make(native):
+        def formula(household, period, parameters):
+            extra = household(compose(), period) * 0.01
+            return _call_formula(native, household, period, parameters) + extra
+
+        return formula
+
+    return make
+
+
+def by_fstring():
+    kind = "non_residential"
+    return f"{kind}_property_purchased"
+
+
+def by_join():
+    separator = "_"
+    return separator.join(["non", "residential", "property", "purchased"])
+
+
+@pytest.mark.parametrize("compose", [by_fstring, by_join])
+def test_a_composed_input_name_reads_anything(compose):
+    """Review of #51 round 10: an input name built at run time hid the
+    read; a measure's code that builds strings is read as able to name any
+    input, so every limit."""
+    reformed = simulation(
+        modifier=own_result_by(levy_on_a_composed_name(compose))
+    )
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+
+
+def bound_get_rate(key):
+    def make():
+        rates = {"a": 0.01, "b": 0.02}
+        get = rates.get
+        return lambda: get(key)
+
+    return make
+
+
+def str_subclass_rate(rate):
+    def make():
+        class Config(str):
+            pass
+
+        config = Config("rates")
+        config.rate = rate
+        return lambda: config.rate
+
+    return make
+
+
+def function_attribute_rate(rate):
+    def make():
+        def get_rate():
+            return get_rate.rate
+
+        get_rate.rate = rate
+        return get_rate
+
+    return make
+
+
+def enum_member_rate(rate):
+    def make():
+        class Band(enum.Enum):
+            STANDARD = 1
+
+            def __init__(self, value):
+                self.rate = rate
+
+        member = Band.STANDARD
+        return lambda: member.rate
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        bound_get_rate,
+        str_subclass_rate,
+        function_attribute_rate,
+        enum_member_rate,
+    ],
+)
+def test_bound_methods_and_attribute_state_are_compared(make):
+    """Review of #51 round 10: a bound dict.get, a str subclass's field, a
+    function's attribute and an enum member's field compared equal."""
+    if make is bound_get_rate:
+        baseline, reform = make("a"), make("b")
+    else:
+        baseline, reform = make(0.01), make(0.02)
+    touched = limits_touched(
+        simulation(modifier=non_residential_times(baseline)),
+        simulation(modifier=non_residential_times(reform)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def test_the_same_bound_method_on_both_sides_is_no_change():
+    """A bound dict.get is read through its mapping, so the same getter on
+    both sides is unchanged, where an unreadable one would mark a limit."""
+    assert (
+        limits_touched(
+            simulation(modifier=non_residential_times(bound_get_rate("a"))),
+            simulation(modifier=non_residential_times(bound_get_rate("a"))),
+        )
+        == []
+    )
+
+
+def forward(variable, entity, period, parameters):
+    return _call_formula(variable, entity, period, parameters)
+
+
+def by_named_dict_kwargs(native):
+    def formula(household, period, parameters):
+        kwargs = dict(entity=household, period=period, parameters=parameters)
+        return _call_formula(native, **kwargs) + 1000
+
+    return formula
+
+
+def by_a_forwarding_helper(native):
+    def formula(household, period, parameters):
+        return forward(native, household, period, parameters) + 1000
+
+    return formula
+
+
+def by_a_listed_star(native):
+    def formula(household, period, parameters):
+        args = [household, period, parameters]
+        return _call_formula(native, *args) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make", [by_named_dict_kwargs, by_a_forwarding_helper, by_a_listed_star]
+)
+def test_named_kwargs_forwarders_and_lists_are_computable(make):
+    """Review of #51 round 10: a named dict(...), a module helper that only
+    forwards to _call_formula, and a list of the arguments were limited."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():

@@ -26,6 +26,7 @@ in the bundle-adoption PR that brings them.
 import __future__
 
 import ast
+import dis
 import enum
 import functools
 import hashlib
@@ -467,14 +468,18 @@ class _Behaviour:
         """A hashable fingerprint of ``value``'s behaviour."""
         if isinstance(value, enum.Enum):
             kind = type(value)
+            fields = {
+                name: field
+                for name, field in vars(value).items()
+                if not name.startswith("_")
+            }
             return (
                 "member",
                 kind.__qualname__,
                 value.name,
                 self.of(value.value),
+                self.of(fields),
             )
-        if isinstance(value, (bool, str, bytes, complex)) or value is None:
-            return repr(value)
         if isinstance(value, numpy.generic):
             return self.of(value.item(), depth)
         scalars = (bool, int, float, str, bytes, complex)
@@ -487,6 +492,8 @@ class _Behaviour:
                 self.of(plain(value)),
                 self._fields(value, depth),
             )
+        if isinstance(value, (bool, str, bytes, complex)) or value is None:
+            return repr(value)
         if isinstance(value, (int, float)):
             if isinstance(value, int) and abs(value) >= 2**53:
                 return repr(value)
@@ -623,6 +630,7 @@ class _Behaviour:
                 self.of(value.__kwdefaults__),
                 closure,
                 looked_up,
+                self.of(_function_state(value)),
             )
         if isinstance(value, functools.partial):
             return (
@@ -633,6 +641,13 @@ class _Behaviour:
             )
         if isinstance(value, types.MethodType):
             return ("method", self.of(value.__func__), self.of(value.__self__))
+        if _bound_builtin(value):
+            return (
+                "bound",
+                type(value.__self__).__qualname__,
+                value.__name__,
+                self.of(value.__self__),
+            )
         if isinstance(value, (classmethod, staticmethod)):
             return (type(value).__name__, self.of(value.__func__))
         if isinstance(value, property):
@@ -719,6 +734,10 @@ class _Behaviour:
                 self._collect([*cells, _function_state(value)], names, held)
                 return names, held
             names |= _code_names(code)
+            if _composes_strings(value):
+                # A name built at run time can be any input's.
+                names.add(ANY_NAME)
+            self._collect(_function_state(value), names, held)
             self._collect(value.__defaults__, names, held)
             self._collect(value.__kwdefaults__, names, held)
             for cell in value.__closure__ or ():
@@ -757,6 +776,18 @@ class _Behaviour:
         if engine is not None:
             if engine[1]:
                 names.add(engine[1])
+        elif _bound_builtin(value):
+            self._collect(value.__self__, names, held, active)
+        elif isinstance(value, (str, bytes, complex, int, float)) and type(
+            value
+        ) not in (str, bytes, complex, int, float, bool):
+            # A subclass of a plain value: its text, its fields, its class.
+            if isinstance(value, str):
+                names.add(str(value))
+            if id(value) not in active:
+                active.add(id(value))
+                extra = [*_fields_of(value).values(), type(value)]
+                self._collect(extra, names, held, active)
         elif isinstance(value, str):
             names.add(value)
         elif isinstance(value, (list, tuple, set, frozenset, dict)):
@@ -1165,7 +1196,7 @@ class _ResultUses:
                     self.stores[name.id] -= 1
                     continue
                 if self.stores.get(name.id) == 1 and isinstance(
-                    item, (ast.Name, ast.Tuple, ast.Dict)
+                    item, (ast.Name, ast.Tuple, ast.List, ast.Dict, ast.Call)
                 ):
                     aliases[name.id] = item
         return aliases
@@ -1227,7 +1258,7 @@ class _ResultUses:
             if name == self.vararg and not self.positional:
                 return [ast.Name(id=f"*{i}") for i in range(3)]
             alias = self.aliases.get(name)
-            if not isinstance(alias, ast.Tuple):
+            if not isinstance(alias, (ast.Tuple, ast.List)):
                 return None
             self._expanded.append((name, value))
             return list(alias.elts)
@@ -1362,8 +1393,11 @@ class _ResultUses:
             ):
                 continue
             callee = self.value(self.base(call.func.id))
+            forwarded = _forwarder(callee, helper)
             if helper is not None and callee is helper:
                 signature, slot = _HELPER_SIGNATURE, "variable"
+            elif forwarded is not None:
+                signature, slot = forwarded, forwarded[0]
             elif isinstance(callee, types.FunctionType) and (
                 self.behaviour.of(callee) in self.formulas
             ):
@@ -1559,6 +1593,113 @@ def _function_state(function) -> dict:
         for name, item in sorted(vars(function).items())
         if name not in ("__module__", "__qualname__", "__name__", "__doc__")
     }
+
+
+def _bound_builtin(value) -> bool:
+    """A built-in method bound to an object (``rates.get``), not to a
+    module (``len``)."""
+    owner = getattr(value, "__self__", None)
+    return (
+        isinstance(value, types.BuiltinMethodType)
+        and owner is not None
+        and not isinstance(owner, types.ModuleType)
+    )
+
+
+_STRING_BUILDERS = frozenset({"join", "format", "format_map"})
+
+
+def _composes_strings(function) -> bool:
+    """Whether a measure's function builds strings at run time (an f-string,
+    ``str.join``, ``format``, ``+`` or ``%`` on text): a name built so can
+    be any input's. The model's own formulas are read as they are."""
+    code = function.__code__
+    if "/policyengine_uk/" in code.co_filename:
+        return False
+    node = _source_tree(function)
+    if node is None:
+        built = {
+            "FORMAT_VALUE",
+            "FORMAT_SIMPLE",
+            "FORMAT_WITH_SPEC",
+            "BUILD_STRING",
+            "CONVERT_VALUE",
+        }
+        return bool(_STRING_BUILDERS & _global_names(code)) or any(
+            instruction.opname in built
+            for inner in (code, *_nested_code(code))
+            for instruction in dis.get_instructions(inner)
+        )
+    for child in ast.walk(node):
+        if isinstance(child, ast.JoinedStr):
+            return True
+        if isinstance(child, ast.BinOp) and any(
+            isinstance(side, ast.Constant) and isinstance(side.value, str)
+            for side in (child.left, child.right)
+        ):
+            return True
+        if (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and (
+                child.func.attr in _STRING_BUILDERS
+                or (
+                    isinstance(child.func.value, ast.Constant)
+                    and isinstance(child.func.value.value, str)
+                )
+            )
+        ):
+            return True
+    return False
+
+
+def _nested_code(code):
+    for const in code.co_consts:
+        if hasattr(const, "co_code"):
+            yield const
+            yield from _nested_code(const)
+
+
+def _forwarder(function, helper):
+    """For a function that only passes its four parameters on to the
+    templates' helper, in order (``def call(v, e, p, x): return
+    _call_formula(v, e, p, x)``), its parameter names; else ``None``."""
+    if helper is None or not isinstance(function, types.FunctionType):
+        return None
+    code = function.__code__
+    if code.co_argcount != 4 or code.co_flags & (
+        inspect.CO_VARARGS | inspect.CO_VARKEYWORDS
+    ):
+        return None
+    node = _source_tree(function)
+    if node is None:
+        return None
+    body = [
+        statement
+        for statement in node.body
+        if not (
+            isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Constant)
+        )
+    ]
+    if len(body) != 1 or not isinstance(body[0], ast.Return):
+        return None
+    call = body[0].value
+    params = tuple(code.co_varnames[:4])
+    if not (
+        isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
+        and not call.keywords
+        and len(call.args) == 4
+        and all(
+            isinstance(arg, ast.Name) and arg.id == name
+            for arg, name in zip(call.args, params)
+        )
+        and _ResultUses(function, node, set(), None).value(call.func.id)
+        is helper
+    ):
+        return None
+    return params
 
 
 def _formula_helper():
