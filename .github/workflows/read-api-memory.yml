@@ -139,7 +139,7 @@ jobs:
           code=200
           for n in $(seq 1 "$MAX_PAGES"); do
             request=(-G "https://monitoring.googleapis.com/v3/projects/$PROJECT/timeSeries"
-              --data-urlencode "filter=metric.type=\"run.googleapis.com/container/memory/utilizations\" AND resource.labels.location=\"$REGION\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$INPUT_REVISION\""
+              --data-urlencode "filter=metric.type=\"run.googleapis.com/container/memory/utilizations\" AND project=\"$PROJECT\" AND resource.labels.location=\"$REGION\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$INPUT_REVISION\""
               --data-urlencode "interval.startTime=$INPUT_START"
               --data-urlencode "interval.endTime=$END"
               --data-urlencode "aggregation.alignmentPeriod=60s"

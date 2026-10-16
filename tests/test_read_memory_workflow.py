@@ -425,19 +425,37 @@ def test_utilisation_reports_the_peak_minute(tmp_path):
         "at 2026-10-16T07:39:00Z, over 2 minutes" in result.stdout
     )
     [request] = calls(state, "curl")
+    # A GET to the project's timeSeries, every parameter URL-encoded
+    # (review of #54: a wrong method, endpoint or encoding went unseen).
+    assert "-G" in request
+    assert (
+        "https://monitoring.googleapis.com/v3/projects/"
+        "policyengine-apps/timeSeries" in request
+    )
+    parameters = [
+        request[i + 1]
+        for i, arg in enumerate(request)
+        if arg == "--data-urlencode"
+    ]
+    assert not any(
+        arg.startswith(("filter=", "interval.", "aggregation."))
+        for i, arg in enumerate(request)
+        if request[i - 1] != "--data-urlencode"
+    )
     assert (
         'filter=metric.type="run.googleapis.com/container/memory/'
-        'utilizations" AND resource.labels.location="europe-west1" AND '
+        'utilizations" AND project="policyengine-apps" AND '
+        'resource.labels.location="europe-west1" AND '
         'resource.labels.service_name="uk-budget-api-2026" AND '
         f'resource.labels.revision_name="{REVISION}"'
-    ) in request
+    ) in parameters
     for part in (
         f"interval.startTime={START}",
         f"interval.endTime={END}",
         "aggregation.alignmentPeriod=60s",
         "aggregation.perSeriesAligner=ALIGN_PERCENTILE_99",
     ):
-        assert part in request
+        assert part in parameters
     assert "problem" not in outputs
 
 
