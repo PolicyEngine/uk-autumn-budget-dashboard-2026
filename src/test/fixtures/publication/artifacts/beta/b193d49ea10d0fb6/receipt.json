@@ -28,9 +28,9 @@
       2032
     ],
     "digests": {
-      "execution_identity_sha256": "41f3a1445451d1ebb310ae9c6a92df20875ad93854e6af5f994a8aeda09d1183",
+      "execution_identity_sha256": "723d46a44accd914b51d24503fc22627fdc8ec969847dbeb0b32d4a30bd78d9f",
       "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
-      "receipt_sha256": "c5180a2489f449e001ccf1ae65028fbe3096fa600e9bb78f211322f65e43f9f2"
+      "receipt_sha256": "b91175d9f118013e0a6dd40a9a31dcc3dd674b577da856b799aa2db958f91507"
     },
     "files": {
       "budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
@@ -40,7 +40,7 @@
       "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
       "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
     },
-    "generated_at": "2026-10-16T04:37:08.001369+00:00",
+    "generated_at": "2026-10-16T04:46:22.124773+00:00",
     "generator_argv": [
       "test"
     ],
@@ -53,7 +53,7 @@
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-main@ebca9f0",
+    "receipt_source": "policyengine==6.5.0",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -66,8 +66,8 @@
       "name": "beta baseline"
     },
     "certificate": {
-      "bundle_version": "6.4.1",
-      "certificate_sha256": "44af775b8bb60fe4b8166937d7f10139e62a470d498a5646ca8954cc562253cf",
+      "bundle_version": "6.5.0",
+      "certificate_sha256": "a2ab1d009b70fb2d91eaa1a5005dbb9d387d2661d2c1a8d730c47f8c26124bfd",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
@@ -131,7 +131,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.4.1"
+      "version": "6.5.0"
     },
     "years": [
       2032,

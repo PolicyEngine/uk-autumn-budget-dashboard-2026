@@ -28,9 +28,9 @@
       2032
     ],
     "digests": {
-      "execution_identity_sha256": "41f3a1445451d1ebb310ae9c6a92df20875ad93854e6af5f994a8aeda09d1183",
+      "execution_identity_sha256": "723d46a44accd914b51d24503fc22627fdc8ec969847dbeb0b32d4a30bd78d9f",
       "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
-      "receipt_sha256": "45875f54dfc6d615857bbd64126d11ee4189eab7867e2c11ae56adebfbb4fa33"
+      "receipt_sha256": "4401d215c1bd3e9e7109f98a64584a09274fcb7bdb2394af127c0e12462213bc"
     },
     "files": {
       "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
@@ -40,7 +40,7 @@
       "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
       "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
     },
-    "generated_at": "2026-10-16T04:37:08.035925+00:00",
+    "generated_at": "2026-10-16T04:46:22.171885+00:00",
     "generator_argv": [
       "test"
     ],
@@ -53,7 +53,7 @@
     "members": null,
     "publishable": true,
     "reasons": [],
-    "receipt_source": "vendored-w4-main@ebca9f0",
+    "receipt_source": "policyengine==6.5.0",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -66,8 +66,8 @@
       "name": "delta baseline"
     },
     "certificate": {
-      "bundle_version": "6.4.1",
-      "certificate_sha256": "44af775b8bb60fe4b8166937d7f10139e62a470d498a5646ca8954cc562253cf",
+      "bundle_version": "6.5.0",
+      "certificate_sha256": "a2ab1d009b70fb2d91eaa1a5005dbb9d387d2661d2c1a8d730c47f8c26124bfd",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
@@ -131,7 +131,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.4.1"
+      "version": "6.5.0"
     },
     "years": [
       2032,
