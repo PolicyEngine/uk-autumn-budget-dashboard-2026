@@ -23,7 +23,11 @@ from uk_budget_data.data_limits import (
     record,
     record_problems,
 )
-from uk_budget_data.measure_templates import DataLimitedWarning, rate_change
+from uk_budget_data.measure_templates import (
+    DataLimitedWarning,
+    rate_change,
+    threshold_change,
+)
 
 SURCHARGE = "gov.hmrc.stamp_duty.residential.purchase.additional"
 SURCHARGE_RATE = f"{SURCHARGE}.rate[1].rate"
@@ -358,6 +362,91 @@ def test_a_same_named_scale_subclass_shows():
         node = view.gov.hmrc.stamp_duty.residential.purchase.additional
         original = type(node.rate)
         node.rate.__class__ = type(original.__name__, (original,), {})
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_a_replaced_formula_reading_the_missing_input_shows():
+    """Review of #51 round 4: a structural measure that reads
+    additional-dwelling purchases directly, through a formula helper, was
+    invisible to a check of parameters alone."""
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def surcharge(household, period, parameters):
+        return household("additional_residential_property_purchased", period)
+
+    reformed = simulation()
+    _replace_formula(
+        reformed, "sdlt_on_non_residential_property_transactions", surcharge
+    )
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+    assert touched[0]["parameters"] == [
+        "formula:sdlt_on_non_residential_property_transactions"
+    ]
+
+
+def test_a_replaced_formula_unrelated_to_the_inputs_touches_nothing():
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def flat(person, period, parameters):
+        return person("employment_income", period) * 0
+
+    reformed = simulation()
+    _replace_formula(reformed, "income_tax", flat)
+    assert limits_touched(simulation(), reformed) == []
+
+
+def test_two_plain_systems_have_no_formula_differences():
+    """Formulas are compiled afresh for each system, so they are compared by
+    code, not identity."""
+    from uk_budget_data.data_limits import _formulas_touched
+
+    assert (
+        _formulas_touched(
+            simulation().tax_benefit_system, simulation().tax_benefit_system
+        )
+        == {}
+    )
+
+
+def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():
+    """Review of #51 round 4: 40000.0 against the stored 40000 was a false
+    positive."""
+    changes = threshold_change(f"{SURCHARGE}.min", {2027: 40000})
+    assert limits_touched(simulation(), simulation(changes)) == []
+
+
+def test_different_methods_set_on_cached_views_show():
+    """Review of #51 round 4: methods were compared by name alone."""
+    baseline, reformed = simulation(), simulation()
+    for sim, share in ((baseline, 0.1), (reformed, 0.2)):
+        for view in every_view(sim):
+            scale = (
+                view.gov.hmrc.stamp_duty.residential.purchase.additional.rate
+            )
+            scale.calc = (
+                lambda base, *args, share=share, **kwargs: base * share
+            )
+    touched = limits_touched(baseline, reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_a_view_reassigned_above_the_limit_shows():
+    """Formulas reach the limit through the root's cached view: a child
+    reassigned on an ancestor's view is what they read, though the limit's
+    own node still caches the original."""
+    reformed = simulation()
+    for view in every_view(reformed):
+        purchase = view.gov.hmrc.stamp_duty.residential.purchase
+        purchase.additional = view.gov.hmrc.stamp_duty.non_residential.purchase
     touched = limits_touched(simulation(), reformed)
     assert [item["key"] for item in touched] == [
         "additional_dwelling_purchases"

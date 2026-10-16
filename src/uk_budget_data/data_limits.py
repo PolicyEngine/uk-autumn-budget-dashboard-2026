@@ -8,7 +8,10 @@ computable on current data, with the reason, and never as a figure.
 Each limit names the parameters it covers, the input the data lack and why.
 A measure touches a limit when its reform and its baseline differ anywhere
 under one of those parameters, however the difference was made: parameter
-changes or a simulation modifier, on either side. On built simulations two
+changes or a simulation modifier, on either side; or when a variable's
+formula differs between them and either version reads the input the data
+lack (a structural measure, through a template's formula helper or
+``update_variable``). On built simulations two
 things are compared: what formulas read under those parameters at the start
 of each year (the system's cached views, which a modifier can change
 without touching the stored parameters), and the stored trees by position
@@ -25,6 +28,8 @@ import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterable, Mapping
+
+import numpy
 
 
 @dataclass(frozen=True)
@@ -150,6 +155,29 @@ def _changes(scenario) -> Mapping[str, object]:
 VIEW_YEARS = range(2015, 2041)
 
 
+def _equal(a, b) -> bool:
+    """Equality for what detection compares: numbers by value (40000 equals
+    40000.0; NaN equals NaN), sequences and mappings item by item, methods
+    by identity, anything else by ==."""
+    if callable(a) or callable(b):
+        return a is b
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_equal(a[k], b[k]) for k in a)
+    if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
+        return len(a) == len(b) and all(_equal(x, y) for x, y in zip(a, b))
+    numbers = (int, float, numpy.number)
+    if isinstance(a, numbers) and isinstance(b, numbers):
+        return bool(a == b) or bool(a != a and b != b)
+    if isinstance(a, numpy.ndarray) or isinstance(b, numpy.ndarray):
+        return numpy.array_equal(
+            numpy.asarray(a), numpy.asarray(b), equal_nan=True
+        )
+    try:
+        return bool(a == b)
+    except Exception:  # noqa: BLE001 - incomparable means different
+        return False
+
+
 def _flatten(view):
     """A view of the parameters at one instant, as plain data, read the way
     formulas read it: a scale by its class (module and name), any method
@@ -161,9 +189,11 @@ def _flatten(view):
         kind = type(view)
         return {
             "scale": f"{kind.__module__}.{kind.__qualname__}",
-            "own_methods": sorted(
-                name for name, value in vars(view).items() if callable(value)
-            ),
+            "own_methods": {
+                name: value
+                for name, value in vars(view).items()
+                if callable(value)
+            },
             **{
                 name: list(getattr(view, name))
                 for name in ("thresholds", "rates", "amounts")
@@ -210,21 +240,39 @@ def _caches_left_as_found(system):
                 del cache[key]
 
 
-def _views(system, prefix: str) -> str:
-    """What formulas read under ``prefix`` at the start of each year, read
-    the way they read it, by calling the system's parameter tree (so its
-    cached views, which a modifier can edit without touching the stored
-    tree, where there are any). Run inside :func:`_caches_left_as_found`."""
-    seen = {}
-    for year in VIEW_YEARS:
-        node = system.parameters(f"{year}-01-01")
-        try:
-            for part in prefix.split("."):
-                node = getattr(node, part)
-        except AttributeError:
-            node = None
-        seen[year] = _flatten(node)
-    return json.dumps(seen, sort_keys=True, default=repr)
+def _view_at(parameters, prefix: str, instant: str):
+    """What a formula reads under ``prefix`` at ``instant``. Formulas call
+    the tree's root, and a new view of a node is built from its children's
+    cached views, so the first cached view on the way down from the root
+    is what they read; with none, the view built at ``prefix`` itself."""
+    parts = prefix.split(".")
+    levels, node = [parameters], parameters
+    for part in parts:
+        children = getattr(node, "children", None)
+        if not isinstance(children, dict) or part not in children:
+            return None
+        node = children[part]
+        levels.append(node)
+    for depth, level in enumerate(levels):
+        cache = getattr(level, "_at_instant_cache", None)
+        view = cache.get(instant) if isinstance(cache, dict) else None
+        if view is not None:
+            try:
+                for part in parts[depth:]:
+                    view = getattr(view, part)
+            except AttributeError:
+                return None
+            return view
+    return node.get_at_instant(instant)
+
+
+def _views(system, prefix: str) -> list:
+    """What formulas read under ``prefix`` at the start of each year. Run
+    inside :func:`_caches_left_as_found`: building a view caches it."""
+    return [
+        _flatten(_view_at(system.parameters, prefix, f"{year}-01-01"))
+        for year in VIEW_YEARS
+    ]
 
 
 def _structure(parameters, prefix: str) -> dict:
@@ -252,62 +300,124 @@ def _structure(parameters, prefix: str) -> dict:
 
 def _same_effect(before, after) -> bool:
     """Whether two leaves from :func:`_structure` have the same value at
-    every breakpoint of either side (NaN equal to NaN)."""
+    every breakpoint of either side."""
     if before is None or after is None:
         return before is after
     instants = sorted(
         {v.instant_str for v in before.values_list}
         | {v.instant_str for v in after.values_list}
     )
-    return all(
-        json.dumps(before(instant), default=repr)
-        == json.dumps(after(instant), default=repr)
-        for instant in instants
+    return all(_equal(before(i), after(i)) for i in instants)
+
+
+def _fingerprint(code):
+    """A formula's code by content, not identity: the model compiles its
+    formulas afresh for each system, so the same formula is a different
+    object in each."""
+    return (
+        code.co_code,
+        code.co_names,
+        tuple(
+            _fingerprint(c) if hasattr(c, "co_code") else repr(c)
+            for c in code.co_consts
+        ),
     )
+
+
+def _formulas(variable) -> tuple:
+    if variable is None:
+        return ()
+    return tuple(
+        (
+            str(start),
+            _fingerprint(f.__code__) if hasattr(f, "__code__") else repr(f),
+        )
+        for start, f in sorted(
+            (getattr(variable, "formulas", None) or {}).items(),
+            key=lambda item: str(item[0]),
+        )
+    )
+
+
+def _code_names(code) -> set:
+    """The names and string constants a code object, and any code nested in
+    it, uses: how a formula names the variables it reads."""
+    found = set(code.co_names)
+    for const in code.co_consts:
+        if isinstance(const, str):
+            found.add(const)
+        elif hasattr(const, "co_consts"):
+            found |= _code_names(const)
+    return found
+
+
+def _formulas_touched(base_system, reform_system) -> dict:
+    """For each limit's key, the variables whose formulas differ between the
+    two systems (replaced, added or removed, by a modifier or a reform
+    class) where either side's own code names the limit's missing input:
+    their difference can depend on what the data lack."""
+    base, reform = base_system.variables, reform_system.variables
+    found: dict = {}
+    for name in sorted(base.keys() | reform.keys()):
+        before, after = base.get(name), reform.get(name)
+        if _formulas(before) == _formulas(after):
+            continue
+        names = set()
+        for variable in (before, after):
+            for formula in (
+                getattr(variable, "formulas", None) or {}
+            ).values():
+                if hasattr(formula, "__code__"):
+                    names |= _code_names(formula.__code__)
+        for limit in DATA_LIMITS:
+            if limit.missing_input in names:
+                found.setdefault(limit.key, []).append(f"formula:{name}")
+    return found
 
 
 def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     """The limits a measure touches, as recorded in its receipt.
 
-    Compares, under each limit's parameters in the two built simulations,
-    what formulas read at the start of each year (cached views included)
-    and the stored trees by position and effective value. So parameter
-    changes and simulation modifiers on either side are both seen, a
-    structural change (a reordered, replaced, re-typed or added parameter)
-    shows, and a redundant breakpoint or a label does not. Each record names
-    the limit, its reason and the paths that differ (a limit's own prefix
-    when only what formulas read differs).
+    A limit is touched when, in the two built simulations:
+
+    - the stored parameters under it differ, by position and effective
+      value (parameter changes or modifiers, on either side; a reordered,
+      replaced, re-typed or added parameter; not a redundant breakpoint, a
+      label or 40000 against 40000.0);
+    - or only what formulas read under it differs (a modifier that edited
+      cached views, or a parameter class that changes between breakpoints),
+      recorded as the limit's own prefix;
+    - or a variable's formula differs and either side's code names the
+      limit's missing input, recorded as ``formula:<variable>``.
     """
     base_system = sim_baseline.tax_benefit_system
     reform_system = sim_reform.tax_benefit_system
     base, reform = base_system.parameters, reform_system.parameters
+    formulas = _formulas_touched(base_system, reform_system)
     touched = []
-    for limit in DATA_LIMITS:
-        differing = []
-        for prefix in limit.parameters:
-            before, after = _structure(base, prefix), _structure(
-                reform, prefix
-            )
-            found = [
-                path
-                for path in before.keys() | after.keys()
-                if not _same_effect(before.get(path), after.get(path))
-            ]
-            # Only what formulas read differs: a modifier that edited the
-            # cached views, or a parameter class that changes between its
-            # breakpoints.
-            if not found:
-                with (
-                    _caches_left_as_found(base_system),
-                    _caches_left_as_found(reform_system),
+    with (
+        _caches_left_as_found(base_system),
+        _caches_left_as_found(reform_system),
+    ):
+        for limit in DATA_LIMITS:
+            differing = []
+            for prefix in limit.parameters:
+                before, after = _structure(base, prefix), _structure(
+                    reform, prefix
+                )
+                found = [
+                    path
+                    for path in before.keys() | after.keys()
+                    if not _same_effect(before.get(path), after.get(path))
+                ]
+                if not found and not _equal(
+                    _views(base_system, prefix), _views(reform_system, prefix)
                 ):
-                    if _views(base_system, prefix) != _views(
-                        reform_system, prefix
-                    ):
-                        found = [prefix]
-            differing += found
-        if differing:
-            touched.append(record(limit, differing))
+                    found = [prefix]
+                differing += found
+            differing += formulas.get(limit.key, [])
+            if differing:
+                touched.append(record(limit, differing))
     return touched
 
 
@@ -318,6 +428,15 @@ def record(limit: DataLimit, parameters: Iterable[str]) -> dict:
         "reason": limit.reason,
         "parameters": sorted(set(parameters)),
     }
+
+
+def _formula_path(path) -> bool:
+    """A recorded ``formula:<variable>`` path (see :func:`limits_touched`)."""
+    return (
+        isinstance(path, str)
+        and path.startswith("formula:")
+        and path[len("formula:") :].isidentifier()
+    )
 
 
 def record_problems(records) -> list[str]:
@@ -347,7 +466,10 @@ def record_problems(records) -> list[str]:
             not isinstance(paths, list)
             or not paths
             or paths != sorted(set(paths))
-            or any(limits_for_paths([path]) != [limit] for path in paths)
+            or any(
+                limits_for_paths([path]) != [limit] and not _formula_path(path)
+                for path in paths
+            )
         ):
             problems.append(
                 f"{limit.key}: its parameters must be a sorted, non-empty "
