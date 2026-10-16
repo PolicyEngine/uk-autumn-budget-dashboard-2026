@@ -516,7 +516,14 @@ def _copies_match(
 def _efrs_source_ids(
     household: pd.DataFrame, person: pd.DataFrame
 ) -> np.ndarray:
-    flags = [c for c in COPY_FLAGS if c in household.columns]
+    # Without its copy flags, every row would count as its own household.
+    missing = [flag for flag in COPY_FLAGS if flag not in household.columns]
+    if missing:
+        raise ValueError(
+            f"The enhanced FRS tables lack the copy flags {missing}, so its "
+            "copies cannot be told from the households they were made from."
+        )
+    flags = list(COPY_FLAGS)
     flagged = _flagged(household, flags)
     ids = _lineage_ids(household, flagged)
     route = "source_household_id"
@@ -1033,6 +1040,7 @@ class GeographyRelease:
         seat_parent_of: Optional[Mapping[str, str]],
         priors: Sequence[PriorPublic],
         prior_withheld: Iterable[Cell] = (),
+        seat_weight_years: Optional[Mapping[int, int]] = None,
         timings: Optional[dict[str, float]] = None,
     ) -> None:
         self.estimates = estimates
@@ -1047,6 +1055,8 @@ class GeographyRelease:
         )
         self.priors = tuple(priors)
         self.prior_withheld = frozenset(prior_withheld)
+        # The year whose seat weights served each year (see seat_areas).
+        self.seat_weight_years = dict(seat_weight_years or {})
         self.known: frozenset[tuple[str, str, str, int, str]] = frozenset(
             (level, area, reform, int(year), OUTCOME_FAMILY[outcome])
             for prior in self.priors
@@ -1378,6 +1388,7 @@ def build_release(
         ),
         priors=priors,
         prior_withheld=prior_withheld,
+        seat_weight_years=collector.seat_weight_years,
         timings=timings,
     )
 
@@ -1847,6 +1858,10 @@ def release_summary(
         "demotions": [list(run) for run in log.demotions],
         "notices": log.notices,
         "timings_s": {k: round(v, 3) for k, v in geo.timings.items()},
+        "seat_weights_from": {
+            str(year): base
+            for year, base in sorted(geo.seat_weight_years.items())
+        },
     }
 
 
@@ -1942,6 +1957,16 @@ def add_geography_parser(subparsers) -> None:
         "(default: ./public/data)",
     )
     parser.add_argument(
+        "--seat-lookup",
+        type=Path,
+        default=None,
+        help=(
+            "The constituency lookup the seat weights were built from "
+            "(default: constituencies_2024.csv beside them); its seats must "
+            "match the dashboard's, in order"
+        ),
+    )
+    parser.add_argument(
         "--prior-regional",
         type=Path,
         default=None,
@@ -1995,7 +2020,11 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         raise ValueError("--dataset-kind microcosm needs --dataset")
     if kind == MICROCOSM and parsed.seat_weights is not None:
         raise ValueError("--seat-weights is for the eFRS only")
-    if kind == MICROCOSM and not is_microcosm_export(parsed.dataset):
+    # Read from the file, never inferred from the kind: the ids check it too.
+    microcosm_export = kind == MICROCOSM and is_microcosm_export(
+        parsed.dataset
+    )
+    if kind == MICROCOSM and not microcosm_export:
         raise ValueError(
             "--dataset-kind microcosm needs a Microcosm export; a file "
             "built by policyengine-uk-data goes through --dataset-kind efrs"
@@ -2030,6 +2059,20 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         )
         if not seat_weights.is_file():
             raise ValueError(f"No seat weights at {seat_weights}")
+        # The matrix carries no codes: its rows follow the lookup it was
+        # built from, which the data release ships beside it.
+        lookup = parsed.seat_lookup or seat_weights.parent / SEATS_FILE
+        if not lookup.is_file():
+            raise ValueError(
+                f"No seat lookup at {lookup}: pass --seat-lookup with the "
+                "constituencies_2024.csv the seat weights were built from"
+            )
+        shipped = pd.read_csv(lookup, dtype=str, keep_default_na=False)
+        if list(shipped.get("code", [])) != list(seats["code"]):
+            raise ValueError(
+                f"The seat weights' lookup {lookup} does not list the seats "
+                f"of {inputs / SEATS_FILE} in the same order"
+            )
     prior = None
     if parsed.prior_regional is not None:
         prior = pd.read_csv(
@@ -2046,7 +2089,7 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_regions=seat_regions,
         seat_weights=seat_weights,
         prior_regional=prior,
-        microcosm_export=kind == MICROCOSM,
+        microcosm_export=microcosm_export,
     )
 
 

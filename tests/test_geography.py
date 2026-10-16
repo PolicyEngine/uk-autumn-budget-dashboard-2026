@@ -211,7 +211,7 @@ FLAGS = (
 )
 
 
-def stacked_efrs(lineage=False, donor_of=None, copy_age=8):
+def stacked_efrs(lineage=False, donor_of=None, copy_age=8, donor_flags=True):
     """Three FRS households stacked as policyengine-uk-data stacks them.
 
     stack_datasets shifts a copy's ids to one more than the largest id
@@ -220,6 +220,8 @@ def stacked_efrs(lineage=False, donor_of=None, copy_age=8):
     position, a CGT band donor copying that row (id + 12). With ``lineage``
     every row's source_household_id names its FRS household, as files built
     after policyengine-uk-data#597 do; otherwise it repeats household_id.
+    Without ``donor_flags`` the donor carries only its own flag, not the
+    flags of the row it copies.
     """
     frs = [(1, 1, 0, 0), (2, 2, 0, 0), (3, 3, 0, 0)]  # id, source, spi, cg
     rows = frs + [(1 + 4, 1, 1, 0)]
@@ -227,7 +229,7 @@ def stacked_efrs(lineage=False, donor_of=None, copy_age=8):
     donor = []
     if donor_of is not None:
         i, src, spi, cg = rows[donor_of]
-        donor = [(i + 12, src, spi, cg)]
+        donor = [(i + 12, src, spi * donor_flags, cg * donor_flags)]
     ids = [r[0] for r in rows] + [r[0] for r in donor]
     sources = [r[1] for r in rows] + [r[1] for r in donor]
     household = pd.DataFrame(
@@ -271,6 +273,23 @@ def test_efrs_ids_from_undoing_the_stacking_offsets(donor_of):
     lineage, _ = stacked_efrs(lineage=True, donor_of=donor_of)
     ids = g.survey_household_ids(household, person, "efrs")
     assert list(ids) == list(lineage["source_household_id"])
+
+
+@pytest.mark.parametrize("donor_of", [3, 7])
+def test_a_donor_is_unstacked_through_the_row_it_copies(donor_of):
+    household, person = stacked_efrs(donor_of=donor_of, donor_flags=False)
+    lineage, _ = stacked_efrs(lineage=True, donor_of=donor_of)
+    ids = g.survey_household_ids(household, person, "efrs")
+    assert list(ids) == list(lineage["source_household_id"])
+
+
+@pytest.mark.parametrize("dropped", [FLAGS, FLAGS[:1], FLAGS[1:2], FLAGS[2:]])
+def test_efrs_tables_without_their_copy_flags_are_refused(dropped):
+    # Review probe: with no flags, every row would be its own household.
+    household, person = stacked_efrs(donor_of=3)
+    household = household.drop(columns=list(dropped))
+    with pytest.raises(ValueError, match="lack the copy flags"):
+        g.survey_household_ids(household, person, "efrs")
 
 
 def test_efrs_ids_that_name_no_frs_household_are_refused():
@@ -493,7 +512,9 @@ def test_a_real_simulation_of_synthetic_households(regions, tmp_path):
             "council_tax": [1500.0, 1200.0, 1500.0, 1500.0],
             "rent": [12000.0, 0.0, 12000.0, 12000.0],
             # The third household is a clone of the first.
+            "household_is_spi_synthetic": [False] * 4,
             "household_is_capital_gains_clone": [False, False, True, False],
+            "household_is_cgt_band_donor": [False] * 4,
             "source_household_id": [3, 10, 3, 2**32 + 9],
             "region_code_oa": ["E12000007", "W99999999"] + ["E12000007"] * 2,
             "constituency_code_oa": [S1, S2, S1, S1],
@@ -585,7 +606,9 @@ def efrs_tables():
             "region": ["LONDON"] * 3,
             "tenure_type": ["RENT_PRIVATELY"] * 3,
             "accommodation_type": ["FLAT"] * 3,
+            "household_is_spi_synthetic": [False] * 3,
             "household_is_capital_gains_clone": [False, True, False],
+            "household_is_cgt_band_donor": [False] * 3,
         }
     )
     person = pd.DataFrame(
@@ -1393,6 +1416,7 @@ def test_geography_arguments():
     assert parsed.dataset is None and parsed.dataset_kind == "efrs"
     assert parsed.levels == ["region", "constituency"]
     assert parsed.seat_reforms is None and parsed.reforms is None
+    assert parsed.seat_lookup is None
     assert parsed.years == [2026, 2027, 2028, 2029, 2030]
     assert parsed.out_dir == Path("public/data")
     parsed = parse_args(
@@ -1499,6 +1523,7 @@ def fake_world(frs_regions):
             "accommodation_type": ["HOUSE_DETACHED"] * n,
             "source_household_id": index + 1,
         }
+        | {flag: [False] * n for flag in FLAGS}
     )
     person = pd.DataFrame(
         {
@@ -1515,7 +1540,15 @@ def fake_world(frs_regions):
     return household, person, changes
 
 
-def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False, extra=()):
+def run_cli(
+    monkeypatch,
+    tmp_path,
+    kind="efrs",
+    orphan=False,
+    extra=(),
+    marker=True,
+    lookup=True,
+):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
 
@@ -1536,6 +1569,11 @@ def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False, extra=()):
             matrix[first, column] = 30.0
             matrix[first + 12, column] = 20.0
         weights = write_seat_weights(tmp_path / "weights.h5", matrix)
+        if lookup:
+            # The data release ships the lookup beside the weights.
+            (tmp_path / g.SEATS_FILE).write_bytes(
+                (inputs / g.SEATS_FILE).read_bytes()
+            )
         args += ["--seat-weights", str(weights)]
     else:
         household["region_code_oa"] = [
@@ -1551,7 +1589,8 @@ def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False, extra=()):
         ]
         local = tmp_path / "local.h5"
         with h5py.File(local, "w") as handle:
-            handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+            if marker:
+                handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
         args += ["--dataset-kind", "microcosm", "--dataset", str(local)]
 
     def simulate(reform, dataset, years):
@@ -1589,6 +1628,8 @@ def test_the_command_writes_both_tables_from_the_efrs(monkeypatch, tmp_path):
         "disclosure_audit.csv",
         "summary.json",
     ]
+    summary = json.loads((run / "efrs" / "summary.json").read_text())
+    assert summary["seat_weights_from"] == {"2026": 2026}
 
 
 @pytest.mark.parametrize("allowed", [False, True])
@@ -1617,6 +1658,59 @@ def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
     assert code == 0
     assert [p.name for p in out.iterdir()] == ["constituency.csv"]
     assert validate_public(out) == []
+
+
+def test_a_local_file_without_the_export_marker_is_refused(
+    monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data import cli
+    from uk_budget_data.cli import parse_args
+
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
+    monkeypatch.setattr(g, "simulate_reform", no_simulation)
+    local = tmp_path / "local.h5"
+    with h5py.File(local, "w"):
+        pass
+    args = ["geography", "--dataset-kind", "microcosm", "--dataset"]
+    args += [str(local), "--levels", "constituency"]
+    args += ["--data-inputs-dir", str(REPO / "data_inputs")]
+    assert cli.main(args) == 1
+    assert "needs a Microcosm export" in capsys.readouterr().out
+    with h5py.File(local, "a") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+    assert g._plan(parse_args(args)).microcosm_export
+
+
+@pytest.mark.parametrize("lookup", ["missing", "reordered", "elsewhere"])
+def test_seat_weights_need_the_lookup_they_were_built_from(lookup, tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    weights_dir = tmp_path / "release"
+    weights_dir.mkdir()
+    extra = []
+    if lookup != "missing":
+        seats = pd.read_csv(SEATS_CSV, dtype=str, keep_default_na=False)
+        if lookup == "reordered":
+            seats = seats.iloc[[1, 0, *range(2, len(seats))]]
+        path = weights_dir / g.SEATS_FILE
+        if lookup == "elsewhere":
+            path = tmp_path / "lookup.csv"
+            extra = ["--seat-lookup", str(path)]
+        seats.to_csv(path, index=False)
+    write_seat_weights(weights_dir / g.SEAT_WEIGHTS_FILE, np.zeros((650, 1)))
+    parsed = parse_args(
+        ["geography", "--levels", "constituency", *extra]
+        + ["--data-dir", str(weights_dir)]
+        + ["--data-inputs-dir", str(REPO / "data_inputs")]
+    )
+    if lookup == "elsewhere":
+        assert (
+            g._plan(parsed).seat_weights == weights_dir / g.SEAT_WEIGHTS_FILE
+        )
+        return
+    message = "No seat lookup" if lookup == "missing" else "same order"
+    with pytest.raises(ValueError, match=message):
+        g._plan(parsed)
 
 
 def test_data_the_key_cannot_link_stops_the_command(monkeypatch, tmp_path):
