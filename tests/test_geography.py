@@ -857,6 +857,28 @@ def test_a_prior_drops_withheld_rows():
     assert not prior.noise
 
 
+def test_a_region_an_earlier_table_withheld_stays_withheld():
+    # Review finding: in a seat-only release the regions are references, and
+    # a reference that passes counts as public. A region the published
+    # table withheld must stay hidden, so the layer checks that the seats
+    # do not add up to it.
+    frame = prior_frame([("region", R1, "thin", 2026)])
+    frame.loc[0, "tier"] = WITHHELD
+    plain = thin_seat_world(levels=("constituency",))
+    hidden = thin_seat_world(levels=("constituency",), prior=frame)
+    region = cell("region", R1, "thin")
+    assert plain.tier(region) != WITHHELD
+    assert hidden.tier(region) == WITHHELD
+    assert g.regional_withheld(frame) == {region}
+
+
+def test_a_withheld_prior_cell_matching_no_estimate_is_refused():
+    frame = prior_frame([("region", R3, "thin", 2026)])
+    frame.loc[0, "tier"] = WITHHELD
+    with pytest.raises(ValueError, match="match no estimate"):
+        thin_seat_world(levels=("constituency",), prior=frame)
+
+
 def test_the_combined_reform_names_every_other_budget_measure():
     from uk_budget_data.reforms import (
         AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,

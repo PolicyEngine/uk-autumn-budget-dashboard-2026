@@ -934,6 +934,24 @@ def regional_prior(
     return PriorPublic.from_frame(name, shown, noise=noise == {"True"})
 
 
+def regional_withheld(frame: pd.DataFrame) -> set[Cell]:
+    """The cells an already published regional table withheld.
+
+    In a later release on the same areas they must stay withheld, even where
+    that release only uses them as references: a reference that passes
+    counts as public, and nothing would then check that the later release's
+    seats do not add up to a region the first table hid.
+    """
+    hidden = frame[frame["tier"].astype(str) == WITHHELD]
+    return {
+        (level, area, reform, int(year), OUTCOME_FAMILY[outcome])
+        for level, area, reform, year, outcome in hidden[
+            ["level", "area_code", "reform", "year", "outcome"]
+        ].itertuples(index=False, name=None)
+        if outcome in OUTCOME_FAMILY
+    }
+
+
 def _check_prior_matches(
     prior: PriorPublic,
     estimates: Mapping[tuple[str, str, int], Optional[AreaEstimates]],
@@ -977,6 +995,7 @@ class GeographyRelease:
         seat_regions: Mapping[str, str],
         seat_parent_of: Optional[Mapping[str, str]],
         priors: Sequence[PriorPublic],
+        prior_withheld: Iterable[Cell] = (),
         timings: Optional[dict[str, float]] = None,
     ) -> None:
         self.estimates = estimates
@@ -990,6 +1009,7 @@ class GeographyRelease:
             dict(seat_parent_of) if seat_parent_of is not None else None
         )
         self.priors = tuple(priors)
+        self.prior_withheld = frozenset(prior_withheld)
         self.known: frozenset[tuple[str, str, str, int, str]] = frozenset(
             (level, area, reform, int(year), OUTCOME_FAMILY[outcome])
             for prior in self.priors
@@ -1032,9 +1052,10 @@ class GeographyRelease:
         return level == CONSTITUENCY and not self.is_published(key)
 
     def prewithheld(self) -> set[Cell]:
-        """Shares everywhere (only change outcomes are published), and every
-        change cell of a reference no table publishes."""
-        cells: set[Cell] = set()
+        """Shares everywhere (only change outcomes are published), every
+        change cell of a reference no table publishes, and every cell an
+        earlier table withheld."""
+        cells: set[Cell] = set(self.prior_withheld)
         for key, estimate in self.estimates.items():
             level, reform, year = key
             families = SHARE_FAMILIES
@@ -1277,8 +1298,10 @@ def build_release(
             raise ValueError("seat_reforms must name collected reforms")
     settings = (settings or DisclosureSettings()).revalidated()
     priors = [national_prior(reforms, years)]
+    prior_withheld: set[Cell] = set()
     if prior_regional is not None:
         priors.append(regional_prior(prior_regional))
+        prior_withheld = regional_withheld(prior_regional)
     # Refuse a prior for runs this release does not make before estimating;
     # its areas are checked once the estimates exist.
     runs = {(level, r, y) for level in _LEVELS for r in reforms for y in years}
@@ -1292,6 +1315,18 @@ def build_release(
     timings = {"estimate_s": time.perf_counter() - start}
     for prior in priors:
         _check_prior_matches(prior, estimates)
+    unmatched = [
+        cell
+        for cell in prior_withheld
+        if (cell[0], cell[2], cell[3]) not in estimates
+        or cell[1]
+        not in estimates[(cell[0], cell[2], cell[3])].areas.area_codes
+    ]
+    if unmatched:
+        raise ValueError(
+            "The regional table withholds cells that match no estimate: "
+            f"{sorted(unmatched)[:5]}"
+        )
     return GeographyRelease(
         estimates=estimates,
         settings=settings,
@@ -1305,6 +1340,7 @@ def build_release(
             else None
         ),
         priors=priors,
+        prior_withheld=prior_withheld,
         timings=timings,
     )
 
