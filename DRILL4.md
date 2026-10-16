@@ -87,6 +87,8 @@ Each row needs evidence before Monday. A blank row blocks G0.
 
 | # | Check | Why |
 |---|---|---|
+| P0a | Port the drill banner to this branch: `NEXT_PUBLIC_MOCK=1` gives the MOCK banner, a robots `noindex, nofollow` meta tag and an `X-Robots-Tag` header. `main` has none of these. Confirm which Vercel projects build this branch: pushes deploy previews to both `uk-autumn-budget-2026` and `uk-autumn-budget-2026-drill`. Confirm both are behind Vercel Authentication **before any mock measure is registered** | Nothing mock may reach an unprotected or indexable URL |
+| P0b | A route from last Budget's registry to an empty one. `main`'s `reforms.py` still registers the November 2025 measures, and `main`'s CLI has only `generate` and `lifetime`, with no `reset` (the reset is on the drill 3 branch). Either port `reset` and the empty-state validator, or decide how PR #3 lands (#14 Q4). The same step is needed on 28 October | Without it, the Monday 10:00 window starts with an unplanned refactor |
 | P1 | Fresh `uv sync` on this branch; record `policyengine`, `policyengine-uk`, `policyengine-core` and the certified dataset SHA-256 | Q3 baseline |
 | P2 | Upgrade trial: does a newer policyengine-uk (2.134.2) install alongside 6.5.0? Record what the bundle gate says and what a baseline diff shows. Do not merge the trial | Q3; the freeze decision |
 | P3 | Dated reforms on `main`: a one-date and a two-date fuel duty change through `Scenario(parameter_changes=…)` on 2.130.1 (day-weighted since policyengine-uk #2305). Check the fiscal-year totals by hand | Fuel duty is the most probable household measure |
@@ -94,13 +96,13 @@ Each row needs evidence before Monday. A blank row blocks G0.
 | P5 | Git-installed policyengine-uk: can a branch install replace the 2.130.1 wheel without breaking `managed_microsimulation`, and what does the publication gate say? | Q1 fallback |
 | P6 | Hosted household API: `BUDGET_API_URL` set on the drill preview; one family case timed cold and warm | Drill 3 never verified it |
 | P7 | Gross tax-head output: can `generate` emit income tax, NICs, VAT and duty heads next to `gov_balance`? If not, record the restatement route | The basis failure in drills 2 and 3 |
-| P8 | One pre-built upstream variable: a draft policyengine-uk PR for the Warm Home Discount baseline (£150) with a contrib top-up parameter, opened for review only | Exercises the `pe-uk-variable` route; flagged in all three drills and never built |
+| P8 | One pre-built upstream variable (**needs Vahid's go before anything is opened upstream**): a draft policyengine-uk PR for the Warm Home Discount baseline (£150) with a contrib top-up parameter, opened for review only | Exercises the `pe-uk-variable` route; flagged in all three drills and never built |
 
 ## Gates
 
 | Gate | Condition (met = committed and posted with receipt) |
 |---|---|
-| **G0** | Start SHA; bundle versions and dataset SHA-256; certified or not; hosted API version and health; preflight P1–P8 results |
+| **G0** | Start SHA; bundle versions and dataset SHA-256; certified or not; hosted API version and health; preflight P0a–P8 results |
 | **G1** | Every statement line is coded or ledger, with a route and a reason |
 | **G2** | First numbers for `dashboard-param` lines through `publish stage`; one hand-checked household; the hosted API answers one specimen (time recorded) |
 | **G3** | Rebased on Annex A. Each national row has our figure, its basis (gross or net; cash or accrued; duty only or VAT-inclusive; fiscal or calendar), an explanation class for gaps over 10%, and a cause class |
@@ -172,7 +174,7 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 |---|---|---|
 | Roles and Monday times acknowledged | Vahid, María, key holder | **UNCONFIRMED** |
 | Integrator location (London or Munich) and the time basis | Vahid | **UNCONFIRMED** |
-| Preflight P1–P8 | integrator | **UNCONFIRMED** |
+| Preflight P0a–P8 | integrator | **UNCONFIRMED** |
 | Sealed packet: hashes committed, two generator runs agree, independent household recalculation agrees to ±1p | key holder | **UNCONFIRMED** |
 | Drill-only preview: MOCK banner, `noindex, nofollow`, hosted API healthy | Vahid, María | **UNCONFIRMED** |
 | Scoring rubric frozen (SHA recorded) | María, key holder | **UNCONFIRMED** |
