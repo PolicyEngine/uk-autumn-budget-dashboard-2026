@@ -25,7 +25,7 @@ from uk_budget_data.lifecycle_calculator import (
 from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
-    shutdown_pool,
+    stop_workers,
 )
 from uk_budget_data.runtime_identity import runtime_identity
 
@@ -33,8 +33,8 @@ from uk_budget_data.runtime_identity import runtime_identity
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
-    # Before uvicorn re-raises SIGTERM: see shutdown_pool.
-    shutdown_pool()
+    # Before uvicorn re-raises SIGTERM: see stop_workers.
+    stop_workers()
 
 
 app = FastAPI(

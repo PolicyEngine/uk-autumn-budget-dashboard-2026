@@ -11,9 +11,8 @@ import multiprocessing
 import os
 import threading
 import time
-from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor, wait
-from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
+from multiprocessing.connection import wait
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -446,12 +445,11 @@ def household_workers() -> int:
     return max(1, int(int(quota) // int(period)))
 
 
-_pool: Optional[ProcessPoolExecutor] = None
-_pool_workers = 0
-_pool_lock = threading.Lock()
+_workers = set()
+_workers_lock = threading.Lock()
 
 # How long one household calculation's jobs may take, from before the first
-# is submitted (a cold forkserver's start counts), before the calculation is
+# is started (a cold forkserver's start counts), before the calculation is
 # abandoned and its workers stopped (Cloud Run's request limit is 300 s), so
 # a hung worker can't hold every later calculation. Time a request spends
 # waiting for the API's one-at-a-time limiter is not counted.
@@ -460,89 +458,24 @@ CALCULATION_TIMEOUT_SECONDS = float(
 )
 
 
-def worker_pool(workers: int) -> ProcessPoolExecutor:
-    """A process pool shared by every calculation in this process.
-
-    Workers fork from a forkserver that has imported this module, so they
-    start without importing the engine again and share its pages. Each
-    worker builds one simulation and exits (``max_tasks_per_child=1``):
-    what a build leaves behind in the process (policyengine-core registers
-    every variable module per tax-benefit system) goes with it. The
-    forkserver starts with numexpr and OpenMP limited to one thread, so
-    each worker uses one CPU (there is one worker per vCPU) and the
-    forkserver has no idle library threads when it forks.
-    """
-    global _pool, _pool_workers
-    with _pool_lock:
-        if _pool is None or _pool_workers != workers:
-            if _pool is not None:
-                _stop_pool(_pool)
-            methods = multiprocessing.get_all_start_methods()
-            context = multiprocessing.get_context(
-                "forkserver" if "forkserver" in methods else "spawn"
-            )
-            if context.get_start_method() == "forkserver":
-                # Inherited by the forkserver when it starts; this process
-                # has already imported numexpr, so it is unaffected.
-                # Set, not defaulted: an inherited NUMEXPR_NUM_THREADS above
-                # 1 would exceed NUMEXPR_MAX_THREADS and numexpr complains.
-                for name in (
-                    "NUMEXPR_NUM_THREADS",
-                    "NUMEXPR_MAX_THREADS",
-                    "OMP_NUM_THREADS",
-                ):
-                    os.environ[name] = "1"
-                context.set_forkserver_preload(
-                    ["uk_budget_data.personal_impact"]
-                )
-            _pool = ProcessPoolExecutor(
-                max_workers=workers,
-                mp_context=context,
-                max_tasks_per_child=1,
-                initializer=_exit_with_server,
-                initargs=(_server_lifeline(),),
-            )
-            _pool_workers = workers
-        return _pool
-
-
-def discard_pool(pool: ProcessPoolExecutor) -> None:
-    """Drop a pool that can no longer be trusted (a worker died or hung)
-    so the next calculation gets a new one, and stop its workers. A broken
-    pool would otherwise refuse every later calculation in this process."""
-    global _pool, _pool_workers
-    with _pool_lock:
-        if _pool is pool:
-            _pool, _pool_workers = None, 0
-    _stop_pool(pool)
-
-
-def _stop_pool(pool: ProcessPoolExecutor, wait_seconds: float = 0) -> None:
-    """Shut a pool down and stop every one of its workers, never waiting
-    on the executor itself.
-
-    The executor offers no way to stop a running worker, and its own
-    shutdown can wait forever once one is stopped: an idle worker blocks
-    holding its job queue's read lock, a stopped worker never releases
-    it, and a worker the executor started to replace one that finished
-    then never reads the message telling it to exit. So shut down first
-    (no new workers after that), then stop everything in its process
-    table, which is the table the executor's own thread joins. With
-    ``wait_seconds``, wait that long for them to exit and kill the rest.
-    """
-    table = getattr(pool, "_processes", None)
-    pool.shutdown(wait=False, cancel_futures=True)
-    processes = list((table or {}).values())
-    for process in processes:
-        process.terminate()
-    if wait_seconds:
-        deadline = time.monotonic() + wait_seconds
-        for process in processes:
-            process.join(max(0.0, deadline - time.monotonic()))
-        for process in processes:
-            if process.is_alive():
-                process.kill()
-                process.join(1)
+def _worker_context():
+    """Fork from a preloaded engine, or spawn where forkserver is absent."""
+    methods = multiprocessing.get_all_start_methods()
+    context = multiprocessing.get_context(
+        "forkserver" if "forkserver" in methods else "spawn"
+    )
+    # Set before starting the forkserver (or a spawned worker). This
+    # process has already imported numexpr, so it is unaffected. Set,
+    # rather than default: inherited values above 1 exceed the maximum.
+    for name in (
+        "NUMEXPR_NUM_THREADS",
+        "NUMEXPR_MAX_THREADS",
+        "OMP_NUM_THREADS",
+    ):
+        os.environ[name] = "1"
+    if context.get_start_method() == "forkserver":
+        context.set_forkserver_preload(["uk_budget_data.personal_impact"])
+    return context
 
 
 _lifeline = None
@@ -576,71 +509,156 @@ def _exit_with_server(lifeline) -> None:
     threading.Thread(target=watch, daemon=True).start()
 
 
-def shutdown_pool(wait_seconds: float = 5) -> None:
-    """Stop the shared pool's workers when the server stops, waiting up to
-    ``wait_seconds`` for them and killing the rest (Cloud Run allows 10 s
-    after SIGTERM). uvicorn re-raises SIGTERM after its graceful shutdown,
-    so the interpreter dies by the signal and concurrent.futures' exit hook
-    never runs: without this, idle workers and the forkserver outlive the
-    server (harmless in a container, which goes with them; leaked on a
-    laptop or CI runner)."""
-    global _pool, _pool_workers
-    with _pool_lock:
-        pool, _pool, _pool_workers = _pool, None, 0
-    if pool is not None:
-        _stop_pool(pool, wait_seconds)
+class WorkerDied(RuntimeError):
+    """A worker exited without returning its call's result."""
+
+
+def live_workers() -> list:
+    """A snapshot of the processes currently owned by worker runners."""
+    with _workers_lock:
+        return list(_workers)
+
+
+def stop_workers(wait_seconds: float = 5) -> None:
+    """Kill tracked workers at server shutdown and wait up to the deadline.
+
+    Cloud Run allows 10 seconds after SIGTERM. Kill immediately, before
+    uvicorn re-raises the signal, so no running job outlives the server.
+    """
+    deadline = time.monotonic() + wait_seconds
+    with _workers_lock:
+        processes = list(_workers)
+        for process in processes:
+            if process.is_alive():
+                process.kill()
+        for process in processes:
+            process.join(max(0.0, deadline - time.monotonic()))
+        _workers.difference_update(processes)
+
+
+def _run_call(writer, lifeline, function, args) -> None:
+    """Run one call in a child, with its own result pipe and lifeline."""
+    _exit_with_server(lifeline)
+    try:
+        try:
+            writer.send(("ok", function(*args)))
+        except BaseException as error:
+            try:
+                writer.send(("error", error))
+            except Exception:
+                # Connection.send pickles before writing, so a pickle
+                # failure has not left a partial frame in the pipe.
+                writer.send(("error", RuntimeError(repr(error))))
+    finally:
+        writer.close()
+
+
+def run_in_workers(
+    workers: int, calls: list[tuple[Callable, tuple]], timeout: float
+) -> list:
+    """Run each picklable-by-reference call in its own process, in order.
+
+    At most ``workers`` processes run at once, and startup counts towards
+    ``timeout``. Each invocation owns its processes and pipes, so concurrent
+    invocations are safe; the API still runs one calculation at a time.
+    Every process is stopped and joined before this function returns or
+    raises, including when another call fails or the deadline expires.
+    """
+    deadline = time.monotonic() + timeout
+    if workers < 1:
+        raise ValueError("workers must be at least one")
+    context = _worker_context()
+    with _workers_lock:
+        lifeline = _server_lifeline()
+    active = {}
+    results = [None] * len(calls)
+    next_call = 0
+
+    def remaining():
+        seconds = deadline - time.monotonic()
+        if seconds <= 0:
+            raise TimeoutError(
+                f"The worker calls took more than {timeout:g} s"
+            )
+        return seconds
+
+    try:
+        while next_call < len(calls) or active:
+            while next_call < len(calls) and len(active) < workers:
+                remaining()
+                function, args = calls[next_call]
+                reader, writer = context.Pipe(duplex=False)
+                try:
+                    process = context.Process(
+                        target=_run_call,
+                        args=(writer, lifeline, function, args),
+                        daemon=True,
+                    )
+                    # Shutdown must see every process that has started.
+                    with _workers_lock:
+                        try:
+                            remaining()
+                            process.start()
+                        finally:
+                            writer.close()
+                        _workers.add(process)
+                    active[reader] = (next_call, process)
+                except BaseException:
+                    reader.close()
+                    writer.close()
+                    raise
+                next_call += 1
+            ready = wait(list(active), timeout=remaining())
+            remaining()
+            for reader in ready:
+                index, process = active[reader]
+                try:
+                    try:
+                        status, value = reader.recv()
+                    except (EOFError, OSError) as error:
+                        raise WorkerDied(
+                            f"Worker for call {index} died without a result"
+                        ) from error
+                finally:
+                    reader.close()
+                    with _workers_lock:
+                        process.join(timeout=5)
+                        if process.is_alive():
+                            process.kill()
+                        process.join()
+                        _workers.discard(process)
+                    del active[reader]
+                if status == "error":
+                    raise value
+                remaining()
+                results[index] = value
+        return results
+    finally:
+        # Kill all siblings before joining any: no job survives a failure.
+        with _workers_lock:
+            for _, process in active.values():
+                if process.is_alive():
+                    process.kill()
+            for reader, (_, process) in active.items():
+                process.join()
+                _workers.discard(process)
+                reader.close()
 
 
 def run_jobs(workers: int, jobs: list) -> list:
     """Each job's metrics, computed in worker processes.
 
-    If a job fails, the jobs not yet started are cancelled and its error is
-    raised. If a worker dies, the pool is discarded, so the next
-    calculation gets a new one; a pool found broken or shut down before any
-    job ran (its forkserver died between calculations) is replaced once.
-
-    One calculation at a time: the API's limiter guarantees it. Two at once
-    would share the pool, and one's discard would cancel the other's jobs.
+    Concurrent calls are safe because each owns its processes. The API's
+    limiter still runs one calculation at a time to bound CPU and memory.
     """
-    deadline = time.monotonic() + CALCULATION_TIMEOUT_SECONDS
-    for attempt in (1, 2):
-        pool = worker_pool(workers)
-        try:
-            futures = [
-                pool.submit(simulate_years, situation, years, scenario)
-                for years, situation, _, scenario in jobs
-            ]
-            break
-        except (BrokenProcessPool, RuntimeError):
-            # RuntimeError: the pool was shut down after worker_pool
-            # returned it.
-            discard_pool(pool)
-            if attempt == 2:
-                raise
-    done, pending = wait(
-        futures,
-        timeout=max(0.0, deadline - time.monotonic()),
-        return_when=FIRST_EXCEPTION,
+    return run_in_workers(
+        workers,
+        [
+            (simulate_years, (situation, years, scenario))
+            for years, situation, _, scenario in jobs
+        ],
+        CALCULATION_TIMEOUT_SECONDS,
     )
-    if pending:
-        for future in pending:
-            future.cancel()
-        failed = [f for f in done if f.exception() is not None]
-        if not failed:
-            discard_pool(pool)
-            raise TimeoutError(
-                "The household calculation took more than "
-                f"{CALCULATION_TIMEOUT_SECONDS:.0f} s"
-            )
-        error = failed[0].exception()
-        if isinstance(error, BrokenProcessPool):
-            discard_pool(pool)
-        raise error
-    try:
-        return [future.result() for future in futures]
-    except BrokenProcessPool:
-        discard_pool(pool)
-        raise
 
 
 class PersonalImpactCalculator:
