@@ -14,6 +14,7 @@ import functools
 import inspect
 import operator
 import re
+import sys
 import warnings
 
 import numpy as np
@@ -90,7 +91,6 @@ def test_the_formulas_the_registry_reasons_from_still_read_its_inputs():
     """Each limit covers the rates of the transaction-tax formulas that read
     its missing input (policyengine-uk 2.130.1). If a formula stops reading
     it, the registry's reasoning needs revisiting."""
-    import inspect
 
     from policyengine_uk.system import system
 
@@ -419,14 +419,12 @@ def test_a_replaced_formula_unrelated_to_the_inputs_touches_nothing():
 def test_two_plain_systems_have_no_formula_differences():
     """Formulas are compiled afresh for each system, so they are compared by
     code, not identity."""
-    from uk_budget_data.data_limits import _formulas_touched
-
-    assert (
-        _formulas_touched(
-            simulation().tax_benefit_system, simulation().tax_benefit_system
-        )
-        == {}
+    changes = data_limits._Changes(
+        simulation().tax_benefit_system,
+        simulation().tax_benefit_system,
+        data_limits._Behaviour(),
     )
+    assert changes.sides == {}
 
 
 # --- formulas by content (review of #51 round 5) ------------------------
@@ -1011,44 +1009,6 @@ def test_a_helper_called_with_the_formulas_own_arguments_still_counts():
     assert keys(touched) == ["additional_dwelling_purchases"]
 
 
-def test_uses_as_results_reads_only_the_unchanged_call():
-    behaviour = data_limits._Behaviour()
-
-    class Held:
-        formulas = {}
-        is_neutralized = False
-
-    held = Held()
-
-    def unchanged(household, period, parameters):
-        return _call_formula(held, household, period, parameters)
-
-    def other_period(household, period, parameters):
-        return _call_formula(held, household, period.last_year, parameters)
-
-    def also_read(household, period, parameters):
-        assert held.formulas is not None
-        return _call_formula(held, household, period, parameters)
-
-    def also_read_in_nested_code(household, period, parameters):
-        formulas = lambda: held.formulas  # noqa: E731
-        assert formulas() is not None
-        return _call_formula(held, household, period, parameters)
-
-    def rebound(household, period, parameters):
-        period = period.last_year
-        return _call_formula(held, household, period, parameters)
-
-    assert list(behaviour.uses_as_results(unchanged, set()).values()) == [held]
-    for function in (
-        other_period,
-        also_read,
-        also_read_in_nested_code,
-        rebound,
-    ):
-        assert behaviour.uses_as_results(function, set()) == {}, function
-
-
 @settings(max_examples=100, deadline=None)
 @given(
     st.lists(
@@ -1342,26 +1302,6 @@ def test_a_result_discarded_or_rebound_or_for_another_period_counts(make):
     ]
 
 
-def test_source_that_is_not_the_running_code_is_not_trusted(monkeypatch):
-    """Without source that compiles to the very instructions that run,
-    nothing is taken as used for its result alone."""
-
-    def formula(household, period, parameters):
-        return _call_formula(None, household, period, parameters)
-
-    assert data_limits._source_tree(formula) is not None
-    edited = (
-        ["def formula(household, period, parameters):\n"]
-        + ["    return household\n"],
-        1,
-    )
-    monkeypatch.setattr(inspect, "getsourcelines", lambda f: edited)
-    assert data_limits._source_tree(formula) is None
-    namespace = {}
-    exec("def formula(a, b, c):\n    return a\n", namespace)  # noqa: S102
-    assert data_limits._source_tree(namespace["formula"]) is None
-
-
 def test_parameter_names_and_sequence_kinds_are_compared():
     """Review of #51 round 7: ``(base, rate)`` against ``(rate, base)`` with
     the same instructions, and a list against a tuple, compared equal."""
@@ -1514,12 +1454,12 @@ def by_signature(function):
             non_residential_times(by_signature(keyword_capable)),
             ["non_residential_purchases"],
         ),
-        # State that can't be read is opaque: it compares unequal and
-        # counts as reading any input, so every limit.
+        # State that can't be read is opaque: it compares unequal, so the
+        # formula counts as changed and what it reads is watched.
         (
             non_residential_times(memory_rate(1)),
             non_residential_times(memory_rate(2)),
-            ["additional_dwelling_purchases", "non_residential_purchases"],
+            ["non_residential_purchases"],
         ),
     ],
     ids=[
@@ -1678,13 +1618,13 @@ def test_more_own_result_forms_are_computable(make):
     assert limits_touched(simulation(), reformed) == []
 
 
-def test_unreadable_state_is_unequal_and_reads_anything():
+def test_unreadable_state_is_unequal():
     behaviour = data_limits._Behaviour()
     one, same = memoryview(b"\x01"), memoryview(b"\x01")
     assert behaviour.of(one) != behaviour.of(same)
-    names, held = set(), []
-    behaviour._collect(one, names, held)
-    assert names == {data_limits.ANY_NAME}
+
+
+def test_an_unobservable_variable_reads_anything():
     assert all(
         data_limits._reads(limit, {data_limits.ANY_NAME})
         for limit in DATA_LIMITS
@@ -1933,18 +1873,14 @@ def by_a_loop_over_kinds():
     [
         (by_fstring, ["non_residential_purchases"]),
         (by_join, ["non_residential_purchases"]),
-        (
-            by_a_loop_over_kinds,
-            ["additional_dwelling_purchases", "non_residential_purchases"],
-        ),
+        (by_a_loop_over_kinds, ["non_residential_purchases"]),
     ],
-    ids=["fstring", "join", "unknown-name"],
+    ids=["fstring", "join", "built-in-a-loop"],
 )
 def test_a_composed_input_name_is_read(compose, expected):
     """Review of #51 round 10: an input name built at run time hid the
-    read. A name built from known parts is evaluated; one that can't be
-    known (built in a loop) is read as able to name any input, so every
-    limit."""
+    read. Reads are watched as the formula runs, so the name read is the
+    one it built, however it built it (round 13)."""
     reformed = simulation(
         modifier=own_result_by(levy_on_a_composed_name(compose))
     )
@@ -2494,3 +2430,461 @@ def test_the_flat_pipeline_warns_for_a_measure_the_data_cannot_cost(
     assert "Surcharge: The survey data" in out
     assert "Structural: The survey data" in out
     assert "Income: The survey data" not in out
+
+
+# --- reads watched as the formulas run (review of #51 round 12) ---------
+
+NAME_OF = "{}_property_purchased".format
+
+
+def adding_a_levy(read):
+    """The original non-residential SDLT plus 1% of what ``read`` reads."""
+
+    def make(native):
+        def formula(household, period, parameters):
+            extra = read(household, period) * 0.01
+            return _call_formula(native, household, period, parameters) + extra
+
+        return formula
+
+    return make
+
+
+def read_by_str(household, period):
+    return household(str("non_residential") + "_property_purchased", period)
+
+
+def read_by_a_global_format(household, period):
+    return household(NAME_OF("non_residential"), period)
+
+
+def read_by_a_shadowed_loop_name(household, period):
+    name = "main_residential_property_purchased"
+    for name in ["non_residential_property_purchased"]:  # noqa: B007
+        pass
+    return household(name, period)
+
+
+def read_by_a_local_import(household, period):
+    from tests.purchase_helpers import surcharge
+
+    return surcharge(household, period, 1)
+
+
+def read_through_a_holder(household, period):
+    kind = "non_residential"
+    holder = household.get_holder(f"{kind}_property_purchased")
+    values = holder.get_array(period)
+    return 0 if values is None else values
+
+
+@pytest.mark.parametrize(
+    "read",
+    [
+        read_by_str,
+        read_by_a_global_format,
+        read_by_a_shadowed_loop_name,
+        read_by_a_local_import,
+        read_through_a_holder,
+    ],
+)
+def test_a_read_however_named_or_reached_shows(read):
+    """Review of #51 round 12: ``str()``, a global bound ``format``, a loop
+    name shadowing an earlier one and a helper imported inside the formula
+    hid a purchase read (SDLT £39,500 to £49,500 with no limit). Reads are
+    watched now, so the input read is the one recorded."""
+    reformed = simulation(modifier=own_result_by(adding_a_levy(read)))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def read_an_annotated_label(household, period):
+    kind = "non_residential"
+    label: str = f"{kind}_property_purchased"  # noqa: F841
+    return household("main_residential_property_purchased", period)
+
+
+def read_by_keyword_format(household, period):
+    return household(
+        "{kind}_property_purchased".format(kind="main_residential"), period
+    )
+
+
+def read_by_format_map(household, period):
+    return household(
+        "{kind}_property_purchased".format_map({"kind": "main_residential"}),
+        period,
+    )
+
+
+def read_by_a_converted_fstring(household, period):
+    kind = "main_residential"
+    return household(f"{kind!s}_property_purchased", period)
+
+
+@pytest.mark.parametrize(
+    "read",
+    [
+        read_an_annotated_label,
+        read_by_keyword_format,
+        read_by_format_map,
+        read_by_a_converted_fstring,
+    ],
+)
+def test_a_name_built_for_a_costable_input_stays_computable(read):
+    """Review of #51 round 12: an annotated label, keyword ``format``,
+    ``format_map`` and an f-string's ``!s`` marked computable measures with
+    both limits. The input read is a main residence's, which the data hold."""
+    reformed = simulation(modifier=own_result_by(adding_a_levy(read)))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def chained_assignment(native):
+    def formula(household, period, parameters):
+        first = second = _call_formula(native, household, period, parameters)
+        return first + second * 0 + 1000
+
+    return formula
+
+
+def named_unpacking(native):
+    def formula(household, period, parameters):
+        given = {"entity": household, "period": period}
+        result = _call_formula(native, **given, parameters=parameters)
+        return result + 1000
+
+    return formula
+
+
+class _Wrapper:
+    def __init__(self, native):
+        self.native = native
+
+    def __call__(self, household, period, parameters):
+        return _call_formula(self.native, household, period, parameters)
+
+
+def callable_wrapper(native):
+    wrapper = _Wrapper(native)
+
+    def formula(household, period, parameters):
+        return wrapper(household, period, parameters) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make", [chained_assignment, named_unpacking, callable_wrapper]
+)
+def test_the_own_result_however_reached_stays_computable(make):
+    """Review of #51 round 12: a chained assignment, named argument
+    unpacking and a callable wrapper made an own-result addition not
+    computable. The call is recognised by its arguments as it starts."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def unused_by_multiplying(native):
+    def formula(household, period, parameters):
+        return _call_formula(native, household, period, parameters) * 0
+
+    return formula
+
+
+def another_variables_result(sim):
+    residential = sim.tax_benefit_system.get_variable(RESIDENTIAL)
+
+    def formula(household, period, parameters):
+        result = _call_formula(residential, household, period, parameters)
+        return result + 1000
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+def test_using_another_variables_result_does_not_wrap_this_one():
+    """Only a call of the other side's own formula wraps it. A replacement
+    built on residential SDLT's result (an unchanged variable's, whose
+    reads are its own) leaves the original non-residential formula's reads
+    as the change's: the difference is residential SDLT less the original."""
+    reformed = simulation(modifier=another_variables_result)
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def test_a_result_multiplied_away_is_not_used():
+    """Moving the purchases the original reads moves what it returns but not
+    what the replacement returns, so the original's reads are the change's:
+    a repeal through ``* 0`` is not computable on data with no purchases."""
+    reformed = simulation(modifier=own_result_by(unused_by_multiplying))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def a_branch_never_run(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        if period.start.year > 2100:
+            kind = "non_residential"
+            result = result + household(f"{kind}_property_purchased", period)
+        return result + 1000
+
+    return formula
+
+
+def test_a_name_built_in_code_that_never_runs_reads_nothing():
+    """What decides the figures is what ran: a name built in a branch the
+    years published never take is no read."""
+    reformed = simulation(modifier=own_result_by(a_branch_never_run))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def kind_rated(rate):
+    """A member of an enum class a modifier makes afresh each time: the
+    same name, value and qualified name, a different method."""
+
+    class Kind(enum.Enum):
+        NON_RESIDENTIAL = 1
+
+        def rate(self):
+            return rate
+
+    return Kind.NON_RESIDENTIAL
+
+
+def kind_scaled(scale):
+    """The same, with class state instead of a method."""
+
+    class Kind(enum.Enum):
+        NON_RESIDENTIAL = 1
+        scale = enum.nonmember(None)
+
+        def rate(self):
+            return 0.01 * type(self).scale
+
+    Kind.scale = scale
+    return Kind.NON_RESIDENTIAL
+
+
+def rate_from_member(member):
+    def make():
+        return member.rate
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "baseline, reform",
+    [
+        (kind_rated(0.01), kind_rated(0.02)),
+        (kind_scaled(1), kind_scaled(2)),
+    ],
+    ids=["method", "class-state"],
+)
+def test_an_enum_members_class_is_compared(baseline, reform):
+    """Review of #51 round 12: two members alike in name, value and class
+    name, whose classes' methods or state differ, compared equal (£1,000 to
+    £2,000 with no limit)."""
+    behaviour = data_limits._Behaviour()
+    assert type(baseline).__qualname__ == type(reform).__qualname__
+    assert behaviour.of(baseline) != behaviour.of(reform)
+    assert behaviour.of(kind_rated(0.01)) == behaviour.of(kind_rated(0.01))
+    touched = limits_touched(
+        simulation(modifier=non_residential_times(rate_from_member(baseline))),
+        simulation(modifier=non_residential_times(rate_from_member(reform))),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def test_a_library_enum_member_compares_by_name_and_value():
+    behaviour = data_limits._Behaviour()
+    assert behaviour.of(re.IGNORECASE) == behaviour.of(re.IGNORECASE)
+    assert behaviour.of(re.IGNORECASE) != behaviour.of(re.MULTILINE)
+
+
+# --- the watch itself ----------------------------------------------------
+
+
+def engine_methods():
+    from policyengine_core.populations.population import Population
+    from policyengine_core.simulations.simulation import Simulation
+
+    return Simulation.__dict__["calculate"], Population.__dict__["get_holder"]
+
+
+def test_the_watch_leaves_the_engine_as_it_found_it():
+    before = engine_methods()
+    tools = [sys.monitoring.get_tool(i) for i in range(6)]
+    reformed = simulation(modifier=own_result_by(read_levy_of(read_by_str)))
+    assert limits_touched(simulation(), reformed)
+    assert engine_methods() == before
+    assert [sys.monitoring.get_tool(i) for i in range(6)] == tools
+    with pytest.raises(RuntimeError):
+        with data_limits.observing(simulation(), reformed):
+            assert engine_methods() != before
+            raise RuntimeError
+    assert engine_methods() == before
+    assert [sys.monitoring.get_tool(i) for i in range(6)] == tools
+
+
+def read_levy_of(read):
+    return adding_a_levy(read)
+
+
+def test_watching_the_run_records_what_it_ran():
+    """The publication path keeps the watch over the run that makes the
+    figures: what that run calculates decides, and a variable it never
+    calculates reads nothing."""
+    make = own_result_by(adding_a_levy(read_by_str))
+    baseline, reformed = simulation(), simulation(modifier=make)
+    with data_limits.observing(baseline, reformed) as observed:
+        reformed.calculate(NON_RESIDENTIAL_SDLT, 2027)
+        baseline.calculate(NON_RESIDENTIAL_SDLT, 2027)
+    assert keys(limits_touched(baseline, reformed, observed)) == [
+        "non_residential_purchases"
+    ]
+    baseline, reformed = simulation(), simulation(modifier=make)
+    with data_limits.observing(baseline, reformed) as idle:
+        pass
+    assert limits_touched(baseline, reformed, idle) == []
+
+
+def test_an_observation_is_for_its_own_finished_watch():
+    baseline, reformed = simulation(), simulation()
+    with data_limits.observing(baseline, reformed) as observed:
+        with pytest.raises(ValueError, match="still watching"):
+            limits_touched(baseline, reformed, observed)
+    with pytest.raises(ValueError, match="other simulations"):
+        limits_touched(simulation(), reformed, observed)
+
+
+def test_a_value_calculated_before_the_watch_reads_anything():
+    """A cached value is used without its formula running, so what that
+    formula reads can't be watched: every limit."""
+    reformed = simulation(
+        modifier=own_result_by(adding_a_levy(read_an_annotated_label))
+    )
+    reformed.calculate(NON_RESIDENTIAL_SDLT, 2027)
+    with pytest.warns(
+        data_limits.UnwatchedFormulaWarning,
+        match="calculated before it was watched",
+    ):
+        touched = limits_touched(simulation(), reformed)
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+
+
+def test_an_input_set_before_the_watch_is_not_a_calculation():
+    """A value set as an input is used and no formula runs for it, so it
+    makes nothing unobservable. Set on both sides; on the reform alone,
+    2027's difference would be the original's, which reads purchases."""
+    baseline = simulation()
+    reformed = simulation(
+        modifier=own_result_by(adding_a_levy(read_an_annotated_label))
+    )
+    for sim in (baseline, reformed):
+        sim.set_input(NON_RESIDENTIAL_SDLT, 2027, [0.0])
+    assert limits_touched(baseline, reformed) == []
+    reformed = simulation(
+        modifier=own_result_by(adding_a_levy(read_an_annotated_label))
+    )
+    reformed.set_input(NON_RESIDENTIAL_SDLT, 2027, [0.0])
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def test_with_no_tool_id_free_every_changed_variable_reads_anything(
+    monkeypatch,
+):
+    before = engine_methods()
+    monkeypatch.setattr(data_limits, "_TOOL_IDS", ())
+    reformed = simulation(modifier=template_measures.property_modifier)
+    with pytest.warns(
+        data_limits.UnwatchedFormulaWarning, match="no sys.monitoring tool"
+    ):
+        touched = limits_touched(simulation(), reformed)
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+    assert engine_methods() == before
+
+
+def test_the_run_watched_and_the_variables_calculated_here_agree():
+    """Differential: watching a run that calculates each changed variable
+    in the Budget's years, and calculating them here, record the same."""
+    for make in (
+        adding_a_levy(read_by_str),
+        adding_a_levy(read_an_annotated_label),
+        unused_by_multiplying,
+        chained_assignment,
+    ):
+        here = limits_touched(
+            simulation(), simulation(modifier=own_result_by(make))
+        )
+        baseline = simulation()
+        reformed = simulation(modifier=own_result_by(make))
+        with data_limits.observing(baseline, reformed) as observed:
+            for year in data_limits.HOUSEHOLD_YEARS:
+                for sim in (baseline, reformed):
+                    sim.calculate(NON_RESIDENTIAL_SDLT, year)
+        assert limits_touched(baseline, reformed, observed) == here, make
+
+
+INPUTS = {
+    "non_residential_property_purchased": ["non_residential_purchases"],
+    "additional_residential_property_purchased": [
+        "additional_dwelling_purchases"
+    ],
+    "main_residential_property_purchased": [],
+    "council_tax": [],
+}
+
+
+def build_name(name, cuts, how):
+    """``name`` cut at ``cuts`` and put back together ``how``."""
+    bounds = [0, *sorted(set(cuts)), len(name)]
+    parts = [name[a:b] for a, b in zip(bounds, bounds[1:]) if a < b]
+    if how == "plus":
+        built = ""
+        for part in parts:
+            built = built + part
+        return built
+    if how == "join":
+        return "".join(parts)
+    if how == "percent":
+        return ("%s" * len(parts)) % tuple(parts)
+    if how == "format":
+        return ("{}" * len(parts)).format(*parts)
+    if how == "format_map":
+        keys_ = [f"k{i}" for i in range(len(parts))]
+        template = "".join("{" + key + "}" for key in keys_)
+        return template.format_map(dict(zip(keys_, parts)))
+    return "".join(f"{part!s}" for part in map(str, parts))
+
+
+@settings(max_examples=12, deadline=None)
+@given(
+    st.sampled_from(sorted(INPUTS)),
+    st.lists(st.integers(min_value=1, max_value=30), max_size=4),
+    st.sampled_from(
+        ["plus", "join", "percent", "format", "format_map", "fstring"]
+    ),
+)
+def test_the_limit_recorded_is_the_input_read_however_its_name_is_built(
+    name, cuts, how
+):
+    """Property: an own-result addition of a levy on one input records
+    exactly that input's limits, whatever way its name was put together."""
+
+    def read(household, period):
+        return household(build_name(name, cuts, how), period)
+
+    reformed = simulation(modifier=own_result_by(adding_a_levy(read)))
+    assert keys(limits_touched(simulation(), reformed)) == INPUTS[name]

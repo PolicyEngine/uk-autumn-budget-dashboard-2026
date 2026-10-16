@@ -306,22 +306,26 @@ class DataPipeline:
                     dataset_path, baseline_scenario
                 )
                 reformed = build_microsimulation(dataset_path, reform_scenario)
+
+                # Process reform, watching what code that differs between
+                # the two reads while it runs (data_limits.observing).
+                processor = ReformProcessor(reform, self.config)
+                with data_limits.observing(baseline, reformed) as observed:
+                    result = processor.process(
+                        baseline, reformed, baseline_scenario
+                    )
+                results.append(result)
                 # This flat path has no publication gate, so say loudly when
                 # the data cannot cost a measure: its rows are not costings.
-                for limit in data_limits.limits_touched(baseline, reformed):
+                for limit in data_limits.limits_touched(
+                    baseline, reformed, observed
+                ):
                     console.print(
                         f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
                         f"{reform.name}: {limit['reason']} Its rows in these "
                         "CSVs are not costings; publish it through the gated "
                         "path, which lists it as not computable."
                     )
-
-                # Process reform
-                processor = ReformProcessor(reform, self.config)
-                result = processor.process(
-                    baseline, reformed, baseline_scenario
-                )
-                results.append(result)
 
                 progress.remove_task(task)
                 console.print(f"[green]✓[/green] {reform.name}")

@@ -147,13 +147,17 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
-def _limits(baseline, reformed, baseline_scenario, reform_scenario):
+def _limits(
+    baseline, reformed, baseline_scenario, reform_scenario, observation=None
+):
     """The data limits a measure touches: from the two built parameter
     trees, which show what actually ran (modifiers included, a declared
-    change undone, a respelled path); from the scenarios' parameter changes
-    only for stand-in simulations with no tree (tests)."""
+    change undone, a respelled path), and from what the code that differs
+    read while the run made the figures (``observation``); from the
+    scenarios' parameter changes only for stand-in simulations with no tree
+    (tests)."""
     if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
-        return data_limits.limits_touched(baseline, reformed)
+        return data_limits.limits_touched(baseline, reformed, observation)
     return data_limits.limits_for_scenarios(baseline_scenario, reform_scenario)
 
 
@@ -250,11 +254,16 @@ def generate_artifacts(
         reform_scenario = _scenarios(key, reform.to_scenario)
         baseline = build(dataset_path, baseline_scenario)
         reformed = build(dataset_path, reform_scenario)
-        # A measure the data cannot cost is published as not computable.
+        # What the code that differs reads is watched while the run makes
+        # the figures; a measure the data cannot cost is then published as
+        # not computable.
+        with data_limits.observing(baseline, reformed) as observed:
+            result = process(
+                reform, config, baseline, reformed, baseline_scenario
+            )
         limits = _limits(
-            baseline, reformed, baseline_scenario, reform_scenario
+            baseline, reformed, baseline_scenario, reform_scenario, observed
         )
-        result = process(reform, config, baseline, reformed, baseline_scenario)
 
         def build_receipt(file_digests):
             inputs = ReceiptInputs(
