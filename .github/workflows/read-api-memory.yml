@@ -7,7 +7,8 @@ name: Read API memory
 #
 # Reads need: run.viewer (the limit) and logging.viewer (the lines), which
 # the deploy account holds; and monitoring.viewer (the utilisation), which
-# it may not. A read that is refused is reported by name and fails the run.
+# it may not. A read that is refused, or comes back incomplete, is reported
+# by name and fails the run.
 
 on:
   workflow_dispatch:
@@ -30,6 +31,9 @@ env:
   PROJECT: policyengine-apps
   REGION: europe-west1
   SERVICE: uk-budget-api-2026
+  # A read that returns this many lines may be cut short, and fails.
+  OOM_READ_LIMIT: "1000"
+  MAX_PAGES: "20"
 
 jobs:
   read:
@@ -93,26 +97,35 @@ jobs:
           echo "mib=$limit" >> "$GITHUB_OUTPUT"
           echo "Memory limit: $limit MiB"
 
-      # Cloud Run logs "Memory limit of N MiB exceeded with M MiB used"
-      # when it stops an instance for its memory.
+      # Cloud Run logs "Memory limit of N MiB exceeded with M MiB used" to
+      # its system log when it stops an instance for its memory. Only that
+      # log is read, and only the message's two numbers are printed: an
+      # application line could carry anything.
       - name: Out-of-memory lines
         id: oom
         env:
           END: ${{ steps.inputs.outputs.end }}
         run: |
           filter="resource.type=\"cloud_run_revision\"
+          logName=\"projects/$PROJECT/logs/run.googleapis.com%2Fvarlog%2Fsystem\"
+          resource.labels.location=\"$REGION\"
           resource.labels.service_name=\"$SERVICE\"
           resource.labels.revision_name=\"$INPUT_REVISION\"
-          timestamp>=\"$INPUT_START\" timestamp<=\"$END\"
+          timestamp>=\"$INPUT_START\"
+          timestamp<=\"$END\"
           textPayload:\"Memory limit of\""
-          if gcloud logging read "$filter" --project "$PROJECT" \
-              --format=json --limit=100 > oom.json 2> oom.err; then
-            python3 scripts/read_api_memory.py oom oom.json
-          else
+          if ! gcloud logging read "$filter" --project "$PROJECT" \
+              --format=json --limit="$OOM_READ_LIMIT" > oom.json 2> oom.err; then
             echo "::error::Cloud Logging refused the read (needs roles/logging.viewer): $(head -c 300 oom.err)"
-            echo "denied=logging.viewer" >> "$GITHUB_OUTPUT"
+            echo "problem=logging.viewer" >> "$GITHUB_OUTPUT"
+          elif ! python3 scripts/read_api_memory.py oom oom.json \
+              "$OOM_READ_LIMIT" 2> oom-summary.err; then
+            echo "::error::$(cat oom-summary.err)"
+            echo "problem=out-of-memory lines cut short" >> "$GITHUB_OUTPUT"
           fi
 
+      # Each minute's 99th percentile, every page of it: a peak read from
+      # part of the data is not the peak.
       - name: Memory utilisation
         id: utilisation
         env:
@@ -121,32 +134,53 @@ jobs:
         run: |
           token=$(gcloud auth print-access-token)
           echo "::add-mask::$token"
-          code=$(curl -sS -o series.json -w '%{http_code}' \
-            -H "Authorization: Bearer $token" -G \
-            "https://monitoring.googleapis.com/v3/projects/$PROJECT/timeSeries" \
-            --data-urlencode "filter=metric.type=\"run.googleapis.com/container/memory/utilizations\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$INPUT_REVISION\"" \
-            --data-urlencode "interval.startTime=$INPUT_START" \
-            --data-urlencode "interval.endTime=$END" \
-            --data-urlencode "aggregation.alignmentPeriod=60s" \
-            --data-urlencode "aggregation.perSeriesAligner=ALIGN_PERCENTILE_99")
-          if [ "$code" = "200" ]; then
-            python3 scripts/read_api_memory.py utilisation series.json "$LIMIT_MIB"
-          elif [ "$code" = "403" ]; then
+          page=""
+          pages=()
+          code=200
+          for n in $(seq 1 "$MAX_PAGES"); do
+            request=(-G "https://monitoring.googleapis.com/v3/projects/$PROJECT/timeSeries"
+              --data-urlencode "filter=metric.type=\"run.googleapis.com/container/memory/utilizations\" AND resource.labels.location=\"$REGION\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$INPUT_REVISION\""
+              --data-urlencode "interval.startTime=$INPUT_START"
+              --data-urlencode "interval.endTime=$END"
+              --data-urlencode "aggregation.alignmentPeriod=60s"
+              --data-urlencode "aggregation.perSeriesAligner=ALIGN_PERCENTILE_99")
+            if [ -n "$page" ]; then
+              request+=(--data-urlencode "pageToken=$page")
+            fi
+            code=$(curl -sS -o "series-$n.json" -w '%{http_code}' \
+              -H "Authorization: Bearer $token" "${request[@]}")
+            if [ "$code" != "200" ]; then
+              break
+            fi
+            pages+=("series-$n.json")
+            page=$(python3 scripts/read_api_memory.py next-page "series-$n.json")
+            if [ -z "$page" ]; then
+              break
+            fi
+          done
+          if [ "$code" = "403" ]; then
             echo "::error::Cloud Monitoring refused the read: the deploy account needs roles/monitoring.viewer (monitoring.timeSeries.list) on $PROJECT"
-            echo "denied=monitoring.viewer" >> "$GITHUB_OUTPUT"
-          else
+            echo "problem=monitoring.viewer" >> "$GITHUB_OUTPUT"
+          elif [ "$code" != "200" ]; then
             echo "::error::Cloud Monitoring answered HTTP $code"
-            echo "denied=monitoring (HTTP $code)" >> "$GITHUB_OUTPUT"
+            echo "problem=monitoring (HTTP $code)" >> "$GITHUB_OUTPUT"
+          elif [ -n "$page" ]; then
+            echo "::error::More than $MAX_PAGES pages of utilisation: narrow the window"
+            echo "problem=utilisation cut short" >> "$GITHUB_OUTPUT"
+          elif ! python3 scripts/read_api_memory.py utilisation "$LIMIT_MIB" \
+              "${pages[@]}" 2> utilisation.err; then
+            echo "::error::$(cat utilisation.err)"
+            echo "problem=utilisation incomplete" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Report
         env:
-          LOGGING: ${{ steps.oom.outputs.denied }}
-          MONITORING: ${{ steps.utilisation.outputs.denied }}
+          LOGGING: ${{ steps.oom.outputs.problem }}
+          MONITORING: ${{ steps.utilisation.outputs.problem }}
         run: |
-          refused=$(printf '%s\n' "$LOGGING" "$MONITORING" | sed '/^$/d' | paste -sd, -)
-          if [ -n "$refused" ]; then
-            echo "::error::Not every read was allowed: $refused"
+          problems=$(printf '%s\n' "$LOGGING" "$MONITORING" | sed '/^$/d' | paste -sd, -)
+          if [ -n "$problems" ]; then
+            echo "::error::Not every read was complete: $problems"
             exit 1
           fi
-          echo "Every read was allowed"
+          echo "Every read was allowed and complete"
