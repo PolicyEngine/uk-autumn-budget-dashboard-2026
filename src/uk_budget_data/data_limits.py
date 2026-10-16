@@ -20,7 +20,9 @@ A limit lifts when certified data carry the input:
 in the bundle-adoption PR that brings them.
 """
 
+import hashlib
 import json
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
@@ -74,6 +76,25 @@ DATA_LIMITS = (
         ),
     ),
 )
+
+
+# A digest of the registry, recorded in every receipt: an artifact
+# generated against another registry (a limit added since, say) is
+# refused until it is regenerated, by the gate and by the page.
+REGISTRY_SHA256 = hashlib.sha256(
+    json.dumps(
+        [
+            [
+                limit.key,
+                list(limit.parameters),
+                limit.missing_input,
+                limit.reason,
+            ]
+            for limit in DATA_LIMITS
+        ],
+        separators=(",", ":"),
+    ).encode()
+).hexdigest()
 
 
 def _under(path: str, prefix: str) -> bool:
@@ -130,13 +151,19 @@ VIEW_YEARS = range(2015, 2041)
 
 
 def _flatten(view):
-    """A view of the parameters at one instant, as plain data: a scale by its
-    kind and arrays, a node by its children, a leaf by its value."""
+    """A view of the parameters at one instant, as plain data, read the way
+    formulas read it: a scale by its class (module and name), any method
+    set on the instance, and its arrays; a node by its children, reached
+    by attribute as formulas reach them; a leaf by its value."""
     if view is None:
         return None
     if hasattr(view, "thresholds"):
+        kind = type(view)
         return {
-            "scale": type(view).__name__,
+            "scale": f"{kind.__module__}.{kind.__qualname__}",
+            "own_methods": sorted(
+                name for name, value in vars(view).items() if callable(value)
+            ),
             **{
                 name: list(getattr(view, name))
                 for name in ("thresholds", "rates", "amounts")
@@ -145,18 +172,52 @@ def _flatten(view):
         }
     children = getattr(view, "_children", None)
     if children is not None:
-        return {
-            key: _flatten(child) for key, child in sorted(children.items())
-        }
+        return {key: _flatten(getattr(view, key)) for key in sorted(children)}
     return view
 
 
+def _caches(system) -> list:
+    """Every at-instant cache formulas can read through: the system's own,
+    and each parameter node's (a new view reuses its children's)."""
+    found = []
+    own = getattr(system, "_parameters_at_instant_cache", None)
+    if isinstance(own, dict):
+        found.append(own)
+    stack = [system.parameters]
+    while stack:
+        node = stack.pop()
+        cache = getattr(node, "_at_instant_cache", None)
+        if isinstance(cache, dict):
+            found.append(cache)
+        stack.extend(getattr(node, "brackets", None) or [])
+        children = getattr(node, "children", None)
+        if isinstance(children, dict):
+            stack.extend(children.values())
+    return found
+
+
+@contextmanager
+def _caches_left_as_found(system):
+    """Remove whatever the block adds to the system's caches, so detection
+    never leaves a view that formulas later read."""
+    caches = _caches(system)
+    keys = [set(cache) for cache in caches]
+    try:
+        yield
+    finally:
+        for cache, before in zip(caches, keys):
+            for key in set(cache) - before:
+                del cache[key]
+
+
 def _views(system, prefix: str) -> str:
-    """What formulas read under ``prefix`` at the start of each year: the
-    system's views at those instants, cached ones included."""
+    """What formulas read under ``prefix`` at the start of each year, read
+    the way they read it, by calling the system's parameter tree (so its
+    cached views, which a modifier can edit without touching the stored
+    tree, where there are any). Run inside :func:`_caches_left_as_found`."""
     seen = {}
     for year in VIEW_YEARS:
-        node = system.get_parameters_at_instant(f"{year}-01-01")
+        node = system.parameters(f"{year}-01-01")
         try:
             for part in prefix.split("."):
                 node = getattr(node, part)
@@ -235,10 +296,15 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
             # Only what formulas read differs: a modifier that edited the
             # cached views, or a parameter class that changes between its
             # breakpoints.
-            if not found and _views(base_system, prefix) != _views(
-                reform_system, prefix
-            ):
-                found = [prefix]
+            if not found:
+                with (
+                    _caches_left_as_found(base_system),
+                    _caches_left_as_found(reform_system),
+                ):
+                    if _views(base_system, prefix) != _views(
+                        reform_system, prefix
+                    ):
+                        found = [prefix]
             differing += found
         if differing:
             touched.append(record(limit, differing))

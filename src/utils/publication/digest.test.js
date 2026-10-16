@@ -118,6 +118,15 @@ describe("binding a receipt to its manifest entry", () => {
     },
   );
 
+  it("refuses a receipt generated against another data-limit registry", async () => {
+    const entry = entries.alpha;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    receipt.dashboard.data_limits_registry_sha256 = "0".repeat(64);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt was generated against another data-limit registry",
+    );
+  });
+
   it("refuses a receipt that does not record its data limits", async () => {
     const entry = entries.alpha;
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);

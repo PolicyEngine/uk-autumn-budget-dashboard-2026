@@ -15,6 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
       2025,
@@ -39,7 +40,7 @@
       "metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
       "winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733"
     },
-    "generated_at": "2026-10-16T03:07:54.118706+00:00",
+    "generated_at": "2026-10-16T04:37:08.089228+00:00",
     "generator_argv": [
       "test"
     ],

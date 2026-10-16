@@ -13,6 +13,7 @@
  */
 
 import canonicalize from "canonicalize";
+import contract from "./contract.json";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -153,6 +154,16 @@ export async function receiptProblems(receipt, key, entry) {
   }
   // A measure the certified data cannot cost records its data limits in
   // its receipt; its figures are never shown, whatever the manifest says.
+  // A receipt generated against another registry of limits (one added
+  // since, say) is refused until it is regenerated.
+  if (
+    dashboard.data_limits_registry_sha256 !==
+    contract.data_limits_registry_sha256
+  ) {
+    problems.push(
+      "the receipt was generated against another data-limit registry",
+    );
+  }
   if (!Array.isArray(dashboard.data_limits)) {
     problems.push("the receipt does not record its data limits");
   } else if (dashboard.data_limits.length > 0) {

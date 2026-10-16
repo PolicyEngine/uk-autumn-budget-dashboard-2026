@@ -282,6 +282,18 @@ def test_a_receipt_without_recorded_limits_is_a_problem(world):
     assert "its data limits are not recorded" in dashboard_problems(document)
 
 
+def test_a_receipt_from_another_registry_is_a_problem(world):
+    """An artifact generated before a limit was added (or after one was
+    lifted) must be regenerated: its recorded limits may be wrong."""
+    reference = world.write("alpha", VALUES)
+    document = read_receipt(reference.path)
+    document["dashboard"]["data_limits_registry_sha256"] = "0" * 64
+    assert any(
+        "another data-limit registry" in p
+        for p in dashboard_problems(document)
+    )
+
+
 def test_a_receipt_with_an_edited_reason_is_a_problem(world):
     reference = world.write("alpha", ZERO, data_limits=[SURCHARGE])
     document = read_receipt(reference.path)

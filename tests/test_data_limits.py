@@ -271,6 +271,99 @@ def test_a_parameter_that_changes_between_its_breakpoints_shows():
     ]
 
 
+def test_detection_fills_no_cache_that_formulas_read():
+    """Review of #51 round 3: building views for 2015-2040 before any
+    calculation filled the caches formulas read. Detection now leaves them
+    as it found them, and the figures as they would have been."""
+    baseline = simulation()
+    reformed = simulation({SURCHARGE_RATE: {"2027": 0.07}})
+    systems = [baseline.tax_benefit_system, reformed.tax_benefit_system]
+    before = [
+        (
+            set(system._parameters_at_instant_cache),
+            set(system.parameters._at_instant_cache),
+            set(system.parameters.get_child(SURCHARGE)._at_instant_cache),
+        )
+        for system in systems
+    ]
+    assert limits_touched(baseline, reformed)
+    after = [
+        (
+            set(system._parameters_at_instant_cache),
+            set(system.parameters._at_instant_cache),
+            set(system.parameters.get_child(SURCHARGE)._at_instant_cache),
+        )
+        for system in systems
+    ]
+    assert after == before
+    fresh = simulation({SURCHARGE_RATE: {"2027": 0.07}})
+    assert reformed.calculate("household_net_income", 2027).tolist() == (
+        fresh.calculate("household_net_income", 2027).tolist()
+    )
+
+
+def every_view(sim):
+    return [
+        sim.tax_benefit_system.parameters(f"{year}-01-01")
+        for year in range(2015, 2041)
+    ]
+
+
+def test_a_reassigned_child_of_a_cached_view_shows():
+    """Review of #51 round 3: formulas reach children by attribute; the
+    check read the view's _children."""
+    reformed = simulation()
+    for view in every_view(reformed):
+        view.gov.hmrc.stamp_duty.residential.purchase.additional.min = 1e12
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_views_are_read_through_the_tree_formulas_call():
+    """Review of #51 round 3: formulas call tax_benefit_system.parameters
+    (its own cache); the check read the system's separate cache first."""
+    reformed = simulation()
+    system = reformed.tax_benefit_system
+    for year in range(2015, 2041):
+        system.get_parameters_at_instant(f"{year}-01-01")
+    system.parameters.get_child(SURCHARGE).clear_parent_cache()
+    for view in every_view(reformed):
+        view.gov.hmrc.stamp_duty.residential.purchase.additional.rate.rates[
+            1
+        ] = 0.07
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_a_scale_whose_calc_is_replaced_on_the_instance_shows():
+    """Review of #51 round 3: formulas call .calc, and an instance
+    attribute overrides the class's."""
+    reformed = simulation()
+    for view in every_view(reformed):
+        scale = view.gov.hmrc.stamp_duty.residential.purchase.additional.rate
+        scale.calc = lambda base, *args, **kwargs: base * 0.1
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_a_same_named_scale_subclass_shows():
+    reformed = simulation()
+    for view in every_view(reformed):
+        node = view.gov.hmrc.stamp_duty.residential.purchase.additional
+        original = type(node.rate)
+        node.rate.__class__ = type(original.__name__, (original,), {})
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
 def test_a_label_is_not_a_change():
     """Review of #51 round 2: a display label was a false positive."""
     reformed = simulation({INCOME_TAX: {"2027": 0.22}})

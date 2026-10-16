@@ -567,6 +567,7 @@ def build_receipt_document(
         # the years it leaves out are the unsupported ones.
         "unsupported_years": _unsupported(receipt, years, supported),
         "data_limits": list(inputs.data_limits),
+        "data_limits_registry_sha256": data_limits.REGISTRY_SHA256,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
         "publishable": not reasons,
@@ -707,10 +708,18 @@ def dashboard_problems(document: dict) -> list[str]:
       years beyond them;
     - the unsupported years are the execution receipt's own, when it
       records the years the dataset is projected to;
-    - the data limits are ones the registry defines, with its reasons.
+    - the data limits are ones the registry defines, with its reasons,
+      and the receipt was generated against this registry.
     """
     dashboard = document.get("dashboard") or {}
     problems = []
+    if dashboard.get("data_limits_registry_sha256") != (
+        data_limits.REGISTRY_SHA256
+    ):
+        problems.append(
+            "it was generated against another data-limit registry; "
+            "regenerate it"
+        )
     if "data_limits" not in dashboard:
         problems.append("its data limits are not recorded")
     else:
