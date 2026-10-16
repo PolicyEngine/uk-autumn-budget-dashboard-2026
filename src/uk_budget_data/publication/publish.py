@@ -620,10 +620,15 @@ def stage(
     if not is_combined(key):
         # A measure that becomes not computable stales every combined run
         # using it, even with unchanged outputs: their figures included it.
+        # Restaging one that already was, unchanged, stales nothing.
+        becomes_limited = level == m.NOT_COMPUTABLE and not (
+            previous is not None
+            and previous.status == m.NOT_COMPUTABLE
+            and previous.outputs_sha256 == entry.outputs_sha256
+            and previous.data_limits == entry.data_limits
+        )
         _mark_dependants_stale(
-            working,
-            key,
-            None if level == m.NOT_COMPUTABLE else entry.outputs_sha256,
+            working, key, None if becomes_limited else entry.outputs_sha256
         )
 
     _commit(manifest, working)

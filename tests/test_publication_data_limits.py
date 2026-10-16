@@ -401,6 +401,27 @@ def test_a_member_becoming_not_computable_stales_an_approved_combined_run(
     assert entry.status == m.STALE and entry.approval is None
 
 
+def test_restaging_an_unchanged_not_computable_member_keeps_its_combined_run(
+    world,
+):
+    """Review of #51 round 2: an identical restage staled the combined run."""
+    manifest = m.Manifest()
+    staged(world, manifest, "alpha", ZERO, [SURCHARGE])
+    world.costing("beta", VALUES)
+    staged(world, manifest, "beta", VALUES, [])
+    reference = combined(
+        world, manifest, ["alpha", "beta"], VALUES, [SURCHARGE]
+    )
+    stage(
+        manifest,
+        reference.path,
+        data_root=world.data_root,
+        inputs=world.inputs,
+    )
+    staged(world, manifest, "alpha", ZERO, [SURCHARGE])
+    assert manifest.combined["combined--alpha+beta"].status == m.NOT_COMPUTABLE
+
+
 # --- generation records the limits ------------------------------------------
 
 
