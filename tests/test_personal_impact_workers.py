@@ -471,28 +471,37 @@ def track(process):
         personal_impact._workers.add(process)
 
 
-def test_shutdown_waits_for_each_run_to_reap_its_worker():
+def test_shutdown_waits_for_each_run_to_reap_its_worker(monkeypatch):
     """Review of #49: shutdown kills and each run joins its own process, so
     shutdown returns only once the runs have untracked them. The lifespan
     test joins the server thread afterwards, which hid an early return."""
     process = OwnedProcess()
     track(process)
+    polled = threading.Event()
     untracked = threading.Event()
+    real_sleep = time.sleep
+
+    def sleep(seconds):
+        polled.set()
+        real_sleep(seconds)
 
     def run():
-        process.killed.wait()
-        time.sleep(0.3)  # the run joining its killed process
-        with personal_impact._workers_lock:
-            personal_impact._workers.discard(process)
-            untracked.set()
+        # The run reaps its killed process only once shutdown is polling
+        # for it, so an early return shows whatever the scheduling.
+        process.killed.wait(10)
+        if polled.wait(5):
+            with personal_impact._workers_lock:
+                personal_impact._workers.discard(process)
+                untracked.set()
 
+    monkeypatch.setattr(personal_impact.time, "sleep", sleep)
     owner = threading.Thread(target=run, daemon=True)
     owner.start()
     personal_impact.stop_workers(wait_seconds=10)
     assert process.killed.is_set()
     assert untracked.is_set()
     assert personal_impact.live_workers() == []
-    owner.join(5)
+    owner.join(10)
 
 
 def test_shutdown_untracks_a_worker_whose_run_never_returns():
