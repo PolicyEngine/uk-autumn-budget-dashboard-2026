@@ -182,8 +182,8 @@ MOCK DATA. Hashes only; no content. Paste the table into DRILL4.md's Packet sect
 | 13:40 | `MOCK-drill4-specimen-inputs.md` | `6741a5c882c86ceb0ab72160694dd3cfac08da3720661eb4d09163ced4750902` |
 | 14:20 | `MOCK-drill4-inject-1420.md` | `d6ba4868d4a914c43506f8381ddf50638d2a73367a8ef848cd04736a783cd633` |
 | 16:00 (sealed key) | `MOCK-drill4-answer-key-households.csv` | `a699c0908d7e34e8b97ed7b1233665dd8df3eaf8479a9612041e28d6e02065d3` |
-| 16:00 (sealed key) | `MOCK-drill4-answer-key-ledger.csv` | `0e5d533cb79e2e8db6e959eafc8a9755e6af53ec08e381efba3b862da810fbb2` |
-| 16:00 (sealed key) | `MOCK-drill4-answer-key-national.csv` | `696d60b82565aee590ab89de9f329f7d68a8e7ea6d6c07e8032123ce550b16ca` |
+| 16:00 (sealed key) | `MOCK-drill4-answer-key-ledger.csv` | `aa26852346d4af2b46066ae10f7332887d5b3c622bf654032cbca54995ca42be` |
+| 16:00 (sealed key) | `MOCK-drill4-answer-key-national.csv` | `91315aeea740b247f74d8e896d938ae12411b9862afaab9f452ffc22c859a05d` |
 
 `SHA256SUMS` lists all 12 files above.
 
