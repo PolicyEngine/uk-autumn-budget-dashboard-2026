@@ -334,3 +334,58 @@ def test_the_certified_data_still_lack_every_limits_input():
             f"the certified data now set {limit.missing_input}: lift "
             f"{limit.key}"
         )
+
+
+# --- the flat pipeline ------------------------------------------------------
+
+
+def test_the_flat_pipeline_warns_for_a_measure_the_data_cannot_cost(
+    monkeypatch, capsys
+):
+    """The flat CSV path has no publication gate; it says loudly that the
+    measure's rows are not costings, and stays quiet for the others."""
+    from uk_budget_data import pipeline
+    from uk_budget_data.models import DataConfig, Reform
+
+    class Processor:
+        def __init__(self, reform, config):
+            pass
+
+        def process(self, *args):
+            return None
+
+    monkeypatch.setattr(
+        pipeline,
+        "build_microsimulation",
+        lambda dataset, scenario=None: Simulation(
+            situation=household(), scenario=scenario
+        ),
+    )
+    monkeypatch.setattr(pipeline, "ReformProcessor", Processor)
+    monkeypatch.setattr(pipeline, "aggregate_results", lambda r, config: {})
+    monkeypatch.setattr(pipeline.DataPipeline, "_save_all", lambda s, d: None)
+    reforms = [
+        Reform(
+            id="surcharge",
+            name="Surcharge",
+            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
+        ),
+        Reform(
+            id="structural",
+            name="Structural",
+            simulation_modifier=raise_additional_dwelling_rates,
+        ),
+        Reform(
+            id="income",
+            name="Income",
+            parameter_changes={INCOME_TAX: {"2027": 0.22}},
+        ),
+    ]
+    pipeline.DataPipeline(reforms, DataConfig(years=[2027])).run(
+        skip_input_check=True
+    )
+    out = " ".join(capsys.readouterr().out.split())
+    assert out.count("NOT COMPUTABLE ON CURRENT DATA") == 2
+    assert "Surcharge: The survey data" in out
+    assert "Structural: The survey data" in out
+    assert "Income: The survey data" not in out

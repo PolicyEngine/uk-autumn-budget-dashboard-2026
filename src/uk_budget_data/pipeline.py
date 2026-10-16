@@ -15,6 +15,7 @@ from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from uk_budget_data import data_limits
 from uk_budget_data.calculators import (
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -305,6 +306,20 @@ class DataPipeline:
                     dataset_path, baseline_scenario
                 )
                 reformed = build_microsimulation(dataset_path, reform_scenario)
+                # This flat path has no publication gate, so say loudly when
+                # the data cannot cost a measure: its rows are not costings.
+                for limit in data_limits.merge(
+                    data_limits.limits_for_scenarios(
+                        baseline_scenario, reform_scenario
+                    ),
+                    data_limits.limits_touched(baseline, reformed),
+                ):
+                    console.print(
+                        f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                        f"{reform.name}: {limit['reason']} Its rows in these "
+                        "CSVs are not costings; publish it through the gated "
+                        "path, which lists it as not computable."
+                    )
 
                 # Process reform
                 processor = ReformProcessor(reform, self.config)
