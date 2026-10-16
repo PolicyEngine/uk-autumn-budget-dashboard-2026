@@ -7,6 +7,7 @@ a buyer's whole stock), so it must be published as not computable.
 """
 
 import collections
+import contextlib
 import copy
 import functools
 import inspect
@@ -1686,6 +1687,214 @@ def test_unreadable_state_is_unequal_and_reads_anything():
         data_limits._reads(limit, {data_limits.ANY_NAME})
         for limit in DATA_LIMITS
     )
+
+
+# --- library state, decorators, accumulation (review of #51 round 9) ---
+
+
+def queued_rate(rate):
+    def make():
+        rates = collections.deque([rate])
+        return lambda: rates[0]
+
+    return make
+
+
+def series_rate(rate):
+    def make():
+        import pandas as pd
+
+        rates = pd.Series([0.01, rate], index=[2026, 2027])
+        return lambda: rates[2027]
+
+    return make
+
+
+def structured_rate(swap_fields):
+    def make():
+        names = ["other", "rate"] if swap_fields else ["rate", "other"]
+        rates = np.array(
+            [(0.01, 0.02)], dtype=[(names[0], "f8"), (names[1], "f8")]
+        )
+        return lambda: rates["rate"][0]
+
+    return make
+
+
+def nested_rate(rate):
+    def make():
+        class Section:
+            pass
+
+        config = Section()
+        config.policy = Section()
+        config.policy.purchase = Section()
+        config.policy.purchase.sdlt = Section()
+        config.policy.purchase.sdlt.nonres = Section()
+        config.policy.purchase.sdlt.nonres.rate = rate
+        return lambda: config.policy.purchase.sdlt.nonres.rate
+
+    return make
+
+
+def scalar_subclass_rate(rate):
+    def make():
+        class Rate(float):
+            pass
+
+        value = Rate(0.5)
+        value.nonres_rate = rate
+        return lambda: value.nonres_rate
+
+    return make
+
+
+def context_manager_rate(rate):
+    def make():
+        @contextlib.contextmanager
+        def rated():
+            yield rate
+
+        def get_rate():
+            with rated() as found:
+                return found
+
+        return get_rate
+
+    return make
+
+
+def single_dispatch_rate(rate):
+    def make():
+        @functools.singledispatch
+        def get_rate(x):
+            return rate
+
+        return lambda: get_rate(0)
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        queued_rate,
+        series_rate,
+        structured_rate,
+        nested_rate,
+        scalar_subclass_rate,
+        context_manager_rate,
+        single_dispatch_rate,
+    ],
+)
+def test_library_state_and_decorated_helpers_are_compared(make):
+    """Review of #51 round 9: a deque's items, a pandas series, a structured
+    array's field names, nested configuration, a float subclass's field and
+    a stdlib decorator's wrapped function compared equal at 1% and 2%."""
+    if make is structured_rate:
+        baseline, reform = make(False), make(True)
+    else:
+        baseline, reform = make(0.01), make(0.02)
+    touched = limits_touched(
+        simulation(modifier=non_residential_times(baseline)),
+        simulation(modifier=non_residential_times(reform)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def income_tax_by_vectorize(sim):
+    def scalar(income):
+        return income * 0.01
+
+    pricer = np.vectorize(scalar)
+
+    def formula(person, period, parameters):
+        return pricer(person("employment_income", period))
+
+    _replace_formula(sim, "income_tax", formula)
+    return sim
+
+
+def test_a_vectorized_pricer_is_read_through_what_it_wraps():
+    """Review of #51 round 9: an np.vectorize income tax was opaque, and so
+    marked against every limit."""
+    reformed = simulation(modifier=income_tax_by_vectorize)
+    assert limits_touched(simulation(), reformed) == []
+
+
+def accumulated(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        result += 1000
+        return result
+
+    return formula
+
+
+def reassigned_from_itself(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        result = result + 1000
+        return result
+
+    return formula
+
+
+@pytest.mark.parametrize("make", [accumulated, reassigned_from_itself])
+def test_a_result_built_on_is_used(make):
+    """Review of #51 round 9: ``result += 1000`` was taken as overwriting
+    the result."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def tucked_in_a_tuple(native):
+    def formula(household, period, parameters):
+        kept = (_call_formula(native, household, period, parameters),)  # noqa
+        return household.filled_array(0.0)
+
+    return formula
+
+
+def period_captured_by_match(native):
+    def formula(household, period, parameters):
+        match period.last_year:
+            case period:
+                pass
+        return _call_formula(native, household, period, parameters)
+
+    return formula
+
+
+@pytest.mark.parametrize("make", [tucked_in_a_tuple, period_captured_by_match])
+def test_a_tucked_result_or_a_match_capture_counts(make):
+    """Review of #51 round 9: a result tucked into a tuple, or a period
+    rebound by a match capture, slipped past."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def test_locals_and_keyword_only_counts_are_compared():
+    behaviour = data_limits._Behaviour()
+
+    def one(a):
+        rate = 0.01
+        return locals().get("rate", 0) + a
+
+    def other(a):
+        else_ = 0.01
+        return locals().get("rate", 0) + a
+
+    def positional(a, b):
+        return a + b
+
+    def keyword_only(a, *, b):
+        return a + b
+
+    assert behaviour.of(one) != behaviour.of(other)
+    assert behaviour.of(positional) != behaviour.of(keyword_only)
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():

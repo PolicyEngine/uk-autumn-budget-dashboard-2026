@@ -30,6 +30,7 @@ import enum
 import functools
 import hashlib
 import inspect
+import itertools
 import json
 import linecache
 import operator
@@ -332,7 +333,7 @@ def _same_effect(before, after) -> bool:
 _MODEL_PACKAGES = ("policyengine_uk", "uk_budget_data")
 _STDLIB = sysconfig.get_paths()["stdlib"]
 # How deep plain objects held by a formula are read, field by field.
-_OBJECT_DEPTH = 4
+_OBJECT_DEPTH = 16
 
 
 def _library_path(path: str) -> bool:
@@ -396,24 +397,19 @@ def _cell_is_set(cell) -> bool:
     return True
 
 
-def _safe_repr(value):
-    try:
-        text = repr(value)
-    except Exception:  # noqa: BLE001 - no stable text, the type stands
-        return None
-    return None if " at 0x" in text or len(text) > 2000 else text
-
-
 def _fingerprint(code):
     """A code object by content: its instructions, the names it uses, its
-    parameters' names and kinds, and its constants (nested code by content
-    too)."""
+    locals' names, its parameters' kinds, and its constants (nested code by
+    content too)."""
     return (
         code.co_code,
         code.co_names,
-        # Parameter names and kinds: a keyword call binds by name.
-        code.co_varnames[: code.co_argcount + code.co_kwonlyargcount],
+        # Every local's name (a keyword call binds by name; locals() reads
+        # them), and the parameters' counts by kind.
+        code.co_varnames,
+        code.co_argcount,
         code.co_posonlyargcount,
+        code.co_kwonlyargcount,
         code.co_flags & (inspect.CO_VARARGS | inspect.CO_VARKEYWORDS),
         tuple(
             _fingerprint(c) if hasattr(c, "co_code") else repr(c)
@@ -481,6 +477,16 @@ class _Behaviour:
             return repr(value)
         if isinstance(value, numpy.generic):
             return self.of(value.item(), depth)
+        scalars = (bool, int, float, str, bytes, complex)
+        if isinstance(value, scalars) and type(value) not in scalars:
+            # A subclass of a plain value can carry fields beside it.
+            plain = next(k for k in scalars if isinstance(value, k))
+            return (
+                "scalar",
+                self.of(type(value)),
+                self.of(plain(value)),
+                self._fields(value, depth),
+            )
         if isinstance(value, (int, float)):
             if isinstance(value, int) and abs(value) >= 2**53:
                 return repr(value)
@@ -527,7 +533,9 @@ class _Behaviour:
             if value.dtype.hasobject:
                 items = tuple(self.of(item, depth) for item in value.ravel())
                 return ("array", value.shape, items)
-            return ("array", value.dtype.str, value.shape, value.tobytes())
+            # The dtype's full form: a structured dtype's fields and
+            # offsets, not just its byte width.
+            return ("array", repr(value.dtype), value.shape, value.tobytes())
         kind = type(value)
         extra = ()
         if kind not in (dict, list, tuple, set, frozenset):
@@ -576,7 +584,20 @@ class _Behaviour:
         if isinstance(value, types.FunctionType):
             code = value.__code__
             if _library_path(code.co_filename):
-                return ("library", value.__module__, value.__qualname__)
+                # Library code by name, but what it closes over and carries
+                # by content: a decorator's wrapper holds the user's function
+                # (contextmanager, singledispatch's registry).
+                return (
+                    "library",
+                    value.__module__,
+                    value.__qualname__,
+                    tuple(
+                        self.of(cell.cell_contents)
+                        for cell in value.__closure__ or ()
+                        if _cell_is_set(cell)
+                    ),
+                    self.of(_function_state(value)),
+                )
             closure = tuple(
                 (
                     name,
@@ -646,19 +667,22 @@ class _Behaviour:
             return ("object", name, self.of(rebuilt, depth + 1))
         wrapped = _wrapped_callable(value)
         if wrapped is not None:
-            return ("wrapped", kind.__qualname__, self.of(wrapped))
+            fields = tuple(
+                (name, self.of(field, depth + 1))
+                for name, field in sorted(_fields_of(value).items())
+            )
+            return ("wrapped", kind.__qualname__, self.of(wrapped), fields)
         if _library_class(kind):
             singleton = _library_singleton(value)
             if singleton is not None:
                 return ("library", *singleton)
-            text = None if callable(value) else _safe_repr(value)
-            if text is None:
-                # Its state can't be read: unequal to anything, and read
-                # as able to read any input (see _reads).
-                return ("opaque", id(value))
-            return ("object", f"{kind.__module__}.{kind.__qualname__}", text)
+            # Its state can't be read (no singleton, nothing it wraps or is
+            # rebuilt from; a text form is no proof): unequal to anything,
+            # and read as able to read any input (see _reads).
+            return ("opaque", id(value))
         if depth >= _OBJECT_DEPTH:
-            return ("deep", kind.__qualname__)
+            # Deeper than is read: unequal to anything rather than cut off.
+            return ("opaque", id(value))
         return ("object", self.of(kind), self._fields(value, depth))
 
     def _parameter_content(self, value):
@@ -687,6 +711,12 @@ class _Behaviour:
         elif isinstance(value, types.FunctionType):
             code = value.__code__
             if _library_path(code.co_filename):
+                cells = [
+                    cell.cell_contents
+                    for cell in value.__closure__ or ()
+                    if _cell_is_set(cell)
+                ]
+                self._collect([*cells, _function_state(value)], names, held)
                 return names, held
             names |= _code_names(code)
             self._collect(value.__defaults__, names, held)
@@ -877,6 +907,8 @@ def _wrapped(behaviour, variable, chain) -> bool:
 
 
 _MISSING = object()
+# How many items a rebuilt object may be filled with and still be read.
+_REBUILT_ITEMS = 100_000
 # How many containers and rebuilt objects one walk follows, at most.
 _COLLECT_DEPTH = 500
 
@@ -1094,6 +1126,11 @@ class _ResultUses:
                         bind((alias.asname or alias.name).split(".")[0])
                 elif isinstance(child, ast.ExceptHandler) and child.name:
                     bind(child.name)
+                elif isinstance(child, (ast.MatchAs, ast.MatchStar)):
+                    if child.name:
+                        bind(child.name)
+                elif isinstance(child, ast.MatchMapping) and child.rest:
+                    bind(child.rest)
                 visit(child)
 
         visit(self.node)
@@ -1256,10 +1293,14 @@ class _ResultUses:
         return name == own[index]
 
     def _result_used(self, call) -> bool:
-        """Whether the call's result is used: not a bare statement, and if
-        assigned, to one name bound once and read."""
+        """Whether the call's result is used: not a bare statement or tucked
+        in a container, and if assigned, to one name that is read, any later
+        assignment to it reading it too (``result += 1000``)."""
         parent = self.parents.get(id(call))
-        if isinstance(parent, ast.Expr):
+        if isinstance(
+            parent,
+            (ast.Expr, ast.Tuple, ast.List, ast.Set, ast.Dict, ast.Starred),
+        ):
             return False
         if isinstance(parent, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
             targets = (
@@ -1269,14 +1310,42 @@ class _ResultUses:
             )
             if len(targets) != 1 or not isinstance(targets[0], ast.Name):
                 return False
-            name = targets[0].id
-            return self.stores.get(name) == 1 and any(
-                isinstance(n, ast.Name)
-                and n.id == name
-                and isinstance(n.ctx, ast.Load)
-                for n in ast.walk(self.node)
-            )
+            name, target = targets[0].id, targets[0]
+            read = False
+            for node in self._own_scope():
+                if not isinstance(node, ast.Name) or node.id != name:
+                    continue
+                if isinstance(node.ctx, ast.Load):
+                    read = True
+                elif node is not target and not self._rebinds_from_itself(
+                    node
+                ):
+                    return False
+            return read
         return True
+
+    def _rebinds_from_itself(self, node) -> bool:
+        """Whether a later store to a name reads the name it replaces:
+        ``x += 1``, ``x = x + 1``."""
+        statement = self.parents.get(id(node))
+        if isinstance(node.ctx, ast.Del):
+            return False
+        if isinstance(statement, ast.AugAssign):
+            return statement.target is node
+        if isinstance(statement, ast.Assign) and statement.targets == [node]:
+            return any(
+                isinstance(n, ast.Name)
+                and n.id == node.id
+                and isinstance(n.ctx, ast.Load)
+                for n in ast.walk(statement.value)
+            )
+        return False
+
+    def _own_scope(self):
+        """The function's nodes outside any nested scope."""
+        for node in ast.walk(self.node):
+            if id(node) not in self.nested:
+                yield node
 
     def found(self) -> dict:
         own = self._own()
@@ -1397,22 +1466,31 @@ _NOT_REBUILT = (
 
 
 def _rebuilt_from(value):
-    """What rebuilds a standard-library object (its constructor's
-    arguments and state, as pickling gives them): an ``itemgetter``'s key, a
-    ``Decimal``'s digits. ``None`` for anything else."""
+    """What rebuilds a library object, as pickling gives it: its constructor's
+    arguments, its state, and any items it is filled with (a ``deque``'s,
+    an ``OrderedDict``'s). ``None`` for anything else, or for anything too
+    big to read whole."""
     kind = type(value)
     if isinstance(value, _NOT_REBUILT) or value is None:
         return None
-    top = (kind.__module__ or "").split(".")[0].lstrip("_")
-    if top not in sys.stdlib_module_names and top != "builtins":
+    if not _library_class(kind) or _engine(value) is not None:
         return None
     try:
         reduced = value.__reduce_ex__(4)
-    except Exception:  # noqa: BLE001 - not reducible: read as before
+    except Exception:  # noqa: BLE001 - not reducible: opaque
         return None
     if not isinstance(reduced, tuple) or len(reduced) < 2:
         return None
-    return tuple(reduced[1:3])
+    filled = []
+    for items in reduced[3:5]:
+        if items is None:
+            filled.append(None)
+            continue
+        listed = list(itertools.islice(items, _REBUILT_ITEMS + 1))
+        if len(listed) > _REBUILT_ITEMS:
+            return None
+        filled.append(listed)
+    return (*reduced[1:3], *filled)
 
 
 # The name an object whose state can't be read contributes: it could read
@@ -1426,8 +1504,11 @@ def _wrapped_callable(value):
         return None
     if not callable(value) or not _library_class(type(value)):
         return None
-    wrapped = getattr(value, "__wrapped__", None)
-    return wrapped if callable(wrapped) else None
+    for name in ("__wrapped__", "pyfunc"):
+        wrapped = getattr(value, name, None)
+        if callable(wrapped):
+            return wrapped
+    return None
 
 
 def _library_singleton(value):
@@ -1453,7 +1534,7 @@ def _library_singleton(value):
 
 def _opaque(value) -> bool:
     """A library object whose state can't be read: no singleton, nothing it
-    wraps or is rebuilt from, and no plain text form."""
+    wraps or is rebuilt from (a text form is no proof of state)."""
     kind = type(value)
     if isinstance(value, (type, types.ModuleType, types.FunctionType)):
         return False
@@ -1467,7 +1548,17 @@ def _opaque(value) -> bool:
         or _rebuilt_from(value)
     ):
         return False
-    return callable(value) or _safe_repr(value) is None
+    return True
+
+
+def _function_state(function) -> dict:
+    """A function's own attributes, as a decorator leaves them
+    (``__wrapped__``, singledispatch's ``registry``)."""
+    return {
+        name: item
+        for name, item in sorted(vars(function).items())
+        if name not in ("__module__", "__qualname__", "__name__", "__doc__")
+    }
 
 
 def _formula_helper():
