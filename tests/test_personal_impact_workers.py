@@ -455,6 +455,59 @@ def test_concurrent_runs_own_their_workers():
         thread.join(10)
 
 
+class OwnedProcess:
+    """Stands in for a run's process: stop_workers only kills it and reads
+    whether its run still tracks it."""
+
+    def __init__(self):
+        self.killed = threading.Event()
+
+    def kill(self):
+        self.killed.set()
+
+
+def track(process):
+    with personal_impact._workers_lock:
+        personal_impact._workers.add(process)
+
+
+def test_shutdown_waits_for_each_run_to_reap_its_worker():
+    """Review of #49: shutdown kills and each run joins its own process, so
+    shutdown returns only once the runs have untracked them. The lifespan
+    test joins the server thread afterwards, which hid an early return."""
+    process = OwnedProcess()
+    track(process)
+    untracked = threading.Event()
+
+    def run():
+        process.killed.wait()
+        time.sleep(0.3)  # the run joining its killed process
+        with personal_impact._workers_lock:
+            personal_impact._workers.discard(process)
+            untracked.set()
+
+    owner = threading.Thread(target=run, daemon=True)
+    owner.start()
+    personal_impact.stop_workers(wait_seconds=10)
+    assert process.killed.is_set()
+    assert untracked.is_set()
+    assert personal_impact.live_workers() == []
+    owner.join(5)
+
+
+def test_shutdown_untracks_a_worker_whose_run_never_returns():
+    """Review of #49: a run blocked past the deadline must not leave its
+    process tracked."""
+    process = OwnedProcess()
+    track(process)
+    start = time.monotonic()
+    personal_impact.stop_workers(wait_seconds=0.2)
+    elapsed = time.monotonic() - start
+    assert process.killed.is_set()
+    assert personal_impact.live_workers() == []
+    assert 0.2 <= elapsed < 5
+
+
 @pytest.mark.parametrize("body_raises", [False, True])
 def test_the_server_stops_its_workers_when_it_stops(body_raises):
     from fastapi.testclient import TestClient
