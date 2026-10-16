@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
@@ -363,8 +364,8 @@ def test_receipt_is_certified_and_consistent(world):
     assert document["execution_receipt"]["certification_status"] == "certified"
     assert document["dashboard"]["publishable"] is True
     assert receipt_module.document_problems(document) == []
-    assert document["dashboard"]["receipt_source"].startswith(
-        ("vendored-w4", "policyengine==")
+    assert document["dashboard"]["receipt_source"] == (
+        f"policyengine=={metadata.version('policyengine')}"
     )
 
 

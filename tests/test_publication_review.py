@@ -6,6 +6,7 @@ number, or a way a check passed vacuously, and shows it is now refused.
 
 import json
 import shutil
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
@@ -808,7 +809,7 @@ def test_an_honest_configured_parameter_baseline_is_shared(world):
 
 
 def test_only_a_receipt_module_with_the_current_rules_is_adopted(
-    monkeypatch,
+    world, monkeypatch
 ):
     """Review round 5: any module with the right names was adopted as the
     released one, including an older copy without supported_years or the
@@ -816,24 +817,66 @@ def test_only_a_receipt_module_with_the_current_rules_is_adopted(
     import sys
     import types
 
+    from tests.test_publication_flow import fake_process
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
     from uk_budget_data.publication import receipt as adapter
 
-    vendored, source = adapter.receipt_api()
-    assert source == adapter.VENDORED_SOURCE
+    released, source = adapter.receipt_api()
+    assert source == f"policyengine=={metadata.version('policyengine')}"
+    assert adapter._has_what_we_need(released)
 
     class OldReceipt:
         model_fields = {"years": None}
 
     older = types.ModuleType("policyengine.provenance.receipt")
-    for name in adapter._REQUIRED_API:
-        setattr(older, name, getattr(vendored, name))
+    for name in (*adapter._REQUIRED_API, "NONFINITE_KEY", "loaded_versions"):
+        setattr(older, name, getattr(released, name))
     older.ExecutionReceipt = OldReceipt
     package = types.ModuleType("policyengine.provenance")
     package.receipt = older
     monkeypatch.setitem(sys.modules, "policyengine.provenance", package)
     monkeypatch.setitem(sys.modules, "policyengine.provenance.receipt", older)
-    assert adapter.receipt_api()[0] is vendored
-    assert adapter._has_what_we_need(vendored)
+    assert not adapter._has_what_we_need(older)
+    with pytest.raises(RuntimeError) as failure:
+        adapter.receipt_api()
+    assert not isinstance(failure.value, adapter.ReceiptUnavailable)
+    assert source in str(failure.value)
+    assert "packaging defect" in str(failure.value).lower()
+
+    # A defective installation stops generation instead of becoming a
+    # measure refusal that allows the rest of publication to continue.
+    monkeypatch.setattr(
+        generate, "code_revision", lambda root: world.revision()
+    )
+    with pytest.raises(RuntimeError, match="packaging defect"):
+        generate.generate_artifacts(
+            [_measure("alpha", 0, False)],
+            DataConfig(years=[2027, 2028]),
+            artifacts_root=world.artifacts,
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process({"alpha": VALUES}),
+        )
+
+
+def test_a_missing_released_receipt_module_is_a_packaging_defect(monkeypatch):
+    import sys
+    import types
+
+    from uk_budget_data.publication import receipt as adapter
+
+    monkeypatch.setitem(
+        sys.modules, "policyengine.provenance", types.ModuleType("provenance")
+    )
+    monkeypatch.setitem(sys.modules, "policyengine.provenance.receipt", None)
+    with pytest.raises(RuntimeError) as failure:
+        adapter.receipt_api()
+    assert not isinstance(failure.value, adapter.ReceiptUnavailable)
+    assert f"policyengine=={metadata.version('policyengine')}" in str(
+        failure.value
+    )
+    assert "packaging defect" in str(failure.value).lower()
+    assert isinstance(failure.value.__cause__, ImportError)
 
 
 # --- round 6 (publication review) ------------------------------------------
@@ -879,10 +922,9 @@ def test_a_package_upgraded_after_loading_cannot_be_receipted(
 ):
     """policyengine.py#571 (round 9): a receipt names the installed
     versions, so a package upgraded after it was loaded would be named as
-    code that did not run. The dashboard records the versions when it is
-    imported, before policyengine is, and the receipt refuses a
-    mismatch."""
-    from uk_budget_data.publication._vendor_w4 import loaded
+    code that did not run. Importing the dashboard records the versions
+    before any simulation, and the receipt refuses a mismatch."""
+    from policyengine.provenance import loaded
 
     monkeypatch.setitem(loaded._LOADED, "policyengine-uk", "0.0.0")
     with pytest.raises(Exception, match="installed now"):
@@ -961,38 +1003,83 @@ def test_a_combined_set_of_own_baselines_ignores_the_configured_one(world):
     ]
 
 
-def test_versions_are_recorded_before_policyengine_is_imported():
-    """Review rounds 7 and 8: the package records the three versions when
-    it is imported, before anything imports policyengine_uk. A fresh
-    process spies on the version lookups the recorder makes."""
+@pytest.mark.parametrize("skip_country_imports", [False, True])
+def test_versions_are_recorded_before_the_model_and_dashboard_pipeline_load(
+    skip_country_imports,
+):
+    """The shared recorder runs while importing the dashboard, before the
+    UK model and dashboard pipeline load, and keeps its first versions.
+
+    Normally policyengine's UK wrapper records them as it is imported,
+    with core loaded. With POLICYENGINE_SKIP_COUNTRY_IMPORTS=1 it is not
+    imported, and the dashboard's own call records them first. The
+    environment is set explicitly: scripts/check_public_data.py sets that
+    variable when imported, and a test importing it leaks it to this
+    worker's subprocesses."""
+    import os
     import subprocess
     import sys
+    from textwrap import dedent
 
-    probe = (
-        "import sys\n"
-        "from importlib import metadata\n"
-        "real = metadata.version\n"
-        "seen = {}\n"
-        "def spy(name):\n"
-        "    seen.setdefault(name, 'policyengine_uk' in sys.modules)\n"
-        "    return real(name)\n"
-        "metadata.version = spy\n"
-        "import uk_budget_data\n"
-        "from uk_budget_data.publication._vendor_w4.loaded import "
-        "loaded_versions\n"
-        "names = ('policyengine', 'policyengine-uk', 'policyengine-core')\n"
-        "print(sorted(loaded_versions()) == sorted(names))\n"
-        "print([seen.get(name) for name in names])\n"
+    probe = dedent(
+        """\
+        import json
+        import sys
+        from importlib import metadata
+
+        real = metadata.version
+        seen = {}
+        tracked = (
+            'policyengine_uk', 'policyengine_core',
+            'uk_budget_data.models', 'uk_budget_data.pipeline',
+        )
+        def spy(name):
+            caller = sys._getframe(1).f_globals.get('__name__')
+            if caller == 'policyengine.provenance.loaded':
+                seen.setdefault(name, [m in sys.modules for m in tracked])
+            return real(name)
+        metadata.version = spy
+        import uk_budget_data
+        from policyengine.provenance.loaded import (
+            loaded_versions, record_loaded_versions,
+        )
+        names = ('policyengine', 'policyengine-uk', 'policyengine-core')
+        original = loaded_versions()
+        metadata.version = lambda name: 'changed-after-import'
+        record_loaded_versions(names)
+        print(json.dumps({
+            'seen': seen,
+            'recorded': original,
+            'installed': {name: real(name) for name in names},
+            'after': loaded_versions(),
+        }))
+        """
     )
-    output = subprocess.run(
-        [sys.executable, "-c", probe],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split("\n")
-    assert output[0] == "True"
-    # Each version was looked up while policyengine_uk was not yet loaded.
-    assert output[1] == "[False, False, False]"
+    env = {
+        name: value
+        for name, value in os.environ.items()
+        if name != "POLICYENGINE_SKIP_COUNTRY_IMPORTS"
+    }
+    if skip_country_imports:
+        env["POLICYENGINE_SKIP_COUNTRY_IMPORTS"] = "1"
+    output = json.loads(
+        subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env,
+        ).stdout.splitlines()[-1]
+    )
+    assert output["recorded"] == output["installed"]
+    assert output["after"] == output["recorded"]
+    # Before the UK model and before dashboard code that can build a
+    # simulation; the wrapper has imported core when it records.
+    core_loaded = not skip_country_imports
+    assert output["seen"] == {
+        name: [False, core_loaded, False, False]
+        for name in ("policyengine", "policyengine-uk", "policyengine-core")
+    }
 
 
 def test_a_receipt_module_without_the_version_recorder_is_not_adopted():
@@ -1001,12 +1088,12 @@ def test_a_receipt_module_without_the_version_recorder_is_not_adopted():
 
     from uk_budget_data.publication import receipt as adapter
 
-    vendored, _ = adapter.receipt_api()
+    released, _ = adapter.receipt_api()
     without = types.ModuleType("receipt_without_recorder")
     for name in (*adapter._REQUIRED_API, "NONFINITE_KEY"):
-        setattr(without, name, getattr(vendored, name))
+        setattr(without, name, getattr(released, name))
     assert not adapter._has_what_we_need(without)
-    without.loaded_versions = vendored.loaded_versions
+    without.loaded_versions = released.loaded_versions
     assert adapter._has_what_we_need(without)
 
 

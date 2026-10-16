@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "policyengine[uk]>=6.4.1",
+    "policyengine[uk]>=6.5.0",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "h5py>=3.0.0",
@@ -61,12 +61,10 @@ addopts = "-v --tb=short"
 [tool.black]
 line-length = 79
 target-version = ["py313"]
-extend-exclude = "src/uk_budget_data/publication/_vendor_w4"
 
 [tool.ruff]
 line-length = 79
 target-version = "py313"
-extend-exclude = ["src/uk_budget_data/publication/_vendor_w4"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
