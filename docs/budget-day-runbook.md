@@ -111,10 +111,17 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 **A measure on pension tax relief, the annual allowance, its taper or the MPAA is expected to fail the Treasury reconciliation. By default it is held for the 07:00 briefing pending review** (Vahid and María to confirm).
 - **Why:** the UK hub's rebuild of policyengine-uk #2240 replays the Spring Budget 2023 pension changes at about −£12.9bn over four years against the OBR's −£1.55bn, roughly 8 times over. The remaining causes are mostly data: the imputation of pension inputs, defined-benefit accrual, the taper's income measure and carry-forward. A pensions decomposition is queued; revisit this row when it reports.
+- **The limitation sentence** (final; from the UK hub, 16 Oct, for the dashboard methodology and wherever such a measure is listed):
+
+  > "The model overstates the pension annual allowance charge: for 2024-25 it finds 262,000 people with pension savings above their allowance, against 30,440 in HMRC's provisional self-assessment statistics for the same year, and £2.7 billion of annual allowance charge against HMRC's provisional estimate of £0.3 billion, so pension tax relief and annual allowance measures are not published on Budget day without review."
+
+  - **Sources, all tax year 2024-25:** HMRC private pension statistics (July 2026), Table 7, row "2024 to 2025 [provisional]": 30,440 individuals reporting contributions above their allowance through self assessment. Table 6, column "2024 to 2025 tax year [provisional]": £300m of annual allowance charges. The model's 262,304 people and £2.699bn are model year 2024 (tax year 2024-25), from uk-data 1.58.1 with policyengine-uk #2240's charge formulas: counts and aggregates only.
+  - **Cause:** the hub's research report (`~/reviews/uk-hub/jobs/research-sb2023-aa-gap/REPORT-full.md`) attributes it mostly to the imputation of employer pension contributions, tracked as uk-data#606, which lands after the Budget.
 - **What the gate does:** approval needs the reconciliation to pass or carry an accepted exception, and the briefing exports take approved entries only. So such a measure stays out of the briefing unless someone approves an exception. The default is to hold it, not to approve a named-reviewer exception on the day.
 - **Still open, for Vahid and María:**
   - whether it is shown on the page meanwhile: staging it as provisional does not need the reconciliation, and the page labels it provisional;
-  - who may approve an exception for it, if anyone.
+  - who may approve an exception for it, if anyone;
+  - where the limitation sentence appears on the page (the methodology section, the measure's own entry, or both).
 
 **A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
 - **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property.
