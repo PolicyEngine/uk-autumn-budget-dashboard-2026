@@ -112,7 +112,8 @@
     "provisional",
     "approved",
     "stale",
-    "withdrawn"
+    "withdrawn",
+    "not_computable"
   ],
   "tables": {
     "budgetary_impact": {

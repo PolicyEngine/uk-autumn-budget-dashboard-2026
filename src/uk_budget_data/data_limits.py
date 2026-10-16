@@ -42,12 +42,12 @@ DATA_LIMITS = (
         ),
         missing_input="additional_residential_property_purchased",
         reason=(
-            "Not computable on current data: the survey data record no "
-            "purchases of additional dwellings, only the property households "
-            "already own, so the higher rates cannot be costed. From "
-            "policyengine-uk's fix for issue #2238 they apply to nothing; "
-            "before it, to a buyer's whole stock of other property. The "
-            "purchase imputation (policyengine-uk-data #573) would lift this."
+            "The survey data record no purchases of additional dwellings, "
+            "only the property households already own, so the higher rates "
+            "cannot be costed. From policyengine-uk's fix for issue #2238 "
+            "they apply to nothing; before it, to a buyer's whole stock of "
+            "other property. The purchase imputation (policyengine-uk-data "
+            "#573) would lift this."
         ),
     ),
     DataLimit(
@@ -59,12 +59,11 @@ DATA_LIMITS = (
         ),
         missing_input="non_residential_property_purchased",
         reason=(
-            "Not computable on current data: the survey data record no "
-            "purchases of non-residential property, only the property "
-            "households already own, so the non-residential purchase rates "
-            "cannot be costed. From policyengine-uk's fix for issue #2238 "
-            "they apply to nothing; before it, to a buyer's whole stock of "
-            "non-residential property. The purchase imputation "
+            "The survey data record no purchases of non-residential property, "
+            "only the property households already own, so the non-residential "
+            "purchase rates cannot be costed. From policyengine-uk's fix for "
+            "issue #2238 they apply to nothing; before it, to a buyer's whole "
+            "stock of non-residential property. The purchase imputation "
             "(policyengine-uk-data #573) would lift this."
         ),
     ),

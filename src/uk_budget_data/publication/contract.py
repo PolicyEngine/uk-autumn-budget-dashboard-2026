@@ -83,6 +83,7 @@ def contract() -> dict:
             m.APPROVED,
             m.STALE,
             m.WITHDRAWN,
+            m.NOT_COMPUTABLE,
         ],
         "displayable": sorted(m.DISPLAYABLE),
         "digest_vectors": digest_vectors(),
