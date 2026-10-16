@@ -308,12 +308,7 @@ class DataPipeline:
                 reformed = build_microsimulation(dataset_path, reform_scenario)
                 # This flat path has no publication gate, so say loudly when
                 # the data cannot cost a measure: its rows are not costings.
-                for limit in data_limits.merge(
-                    data_limits.limits_for_scenarios(
-                        baseline_scenario, reform_scenario
-                    ),
-                    data_limits.limits_touched(baseline, reformed),
-                ):
+                for limit in data_limits.limits_touched(baseline, reformed):
                     console.print(
                         f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
                         f"{reform.name}: {limit['reason']} Its rows in these "

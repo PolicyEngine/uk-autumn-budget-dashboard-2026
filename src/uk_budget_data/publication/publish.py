@@ -143,6 +143,10 @@ def binding_problems(
         problems.append("the entry's unsupported years are not the artifact's")
     if entry.data_limits != _limit_keys(dashboard):
         problems.append("the entry's data limits are not the artifact's")
+    elif entry.status == m.NOT_COMPUTABLE and entry.reason != _limit_reason(
+        dashboard
+    ):
+        problems.append("the entry's reason is not the artifact's")
     if is_combined(key):
         if entry.measures != list(dashboard.get("measure_ids") or []):
             problems.append("the entry's members are not the artifact's")
@@ -614,7 +618,13 @@ def stage(
             m.Superseded(key=key, superseded_at=m.now(), entry=previous)
         )
     if not is_combined(key):
-        _mark_dependants_stale(working, key, entry.outputs_sha256)
+        # A measure that becomes not computable stales every combined run
+        # using it, even with unchanged outputs: their figures included it.
+        _mark_dependants_stale(
+            working,
+            key,
+            None if level == m.NOT_COMPUTABLE else entry.outputs_sha256,
+        )
 
     _commit(manifest, working)
     return key

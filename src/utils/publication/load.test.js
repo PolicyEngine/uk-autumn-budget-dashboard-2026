@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { loadPublication } from "./load";
+import { loadArtifact, loadPublication } from "./load";
 import {
   BASE_PATH,
   fixtureFetch,
@@ -50,6 +50,40 @@ describe("loadPublication", () => {
     expect(fetchImpl.calls.some((url) => url.includes("/epsilon/"))).toBe(
       false,
     );
+  });
+
+  it("refuses a data-limited artifact relabelled to show figures", async () => {
+    // Review of #51: a manifest edited by hand to approve epsilon and drop
+    // its data limits. Its receipt still records them, so no figure loads.
+    const edited = structuredClone(manifest);
+    Object.assign(edited.measures.epsilon, {
+      status: "approved",
+      data_limits: [],
+    });
+    delete edited.measures.epsilon.reason;
+    const fetchImpl = fixtureFetch({
+      overrides: { "manifest.json": JSON.stringify(edited) },
+    });
+    const result = await loadPublication(BASE_PATH, ["epsilon"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey.epsilon).toBeUndefined();
+    expect(result.failures.epsilon).toMatch(/records data limits/);
+    expect(
+      fetchImpl.calls.some(
+        (url) => url.includes("/epsilon/") && url.endsWith(".csv"),
+      ),
+    ).toBe(false);
+  });
+
+  it("never loads a not-computable entry's artifact, even when asked", async () => {
+    const fetchImpl = fixtureFetch();
+    await expect(
+      loadArtifact(BASE_PATH, "epsilon", manifest.measures.epsilon, {
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/not_computable: its figures are not shown/);
+    expect(fetchImpl.calls).toEqual([]);
   });
 
   it("reports no manifest when none is published", async () => {

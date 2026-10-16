@@ -147,15 +147,14 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
-def _limits_touched(baseline, reformed) -> list[dict]:
-    """The data limits the two built simulations show. Stand-in
-    simulations with no parameter tree (tests) show none; the scenarios'
-    own parameter changes are read regardless."""
-    if not all(
-        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
-    ):
-        return []
-    return data_limits.limits_touched(baseline, reformed)
+def _limits(baseline, reformed, baseline_scenario, reform_scenario):
+    """The data limits a measure touches: from the two built parameter
+    trees, which show what actually ran (modifiers included, a declared
+    change undone, a respelled path); from the scenarios' parameter changes
+    only for stand-in simulations with no tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return data_limits.limits_touched(baseline, reformed)
+    return data_limits.limits_for_scenarios(baseline_scenario, reform_scenario)
 
 
 def _scenarios(subject: str, build_them: Callable):
@@ -251,14 +250,9 @@ def generate_artifacts(
         reform_scenario = _scenarios(key, reform.to_scenario)
         baseline = build(dataset_path, baseline_scenario)
         reformed = build(dataset_path, reform_scenario)
-        # A measure the data cannot cost is published as not computable:
-        # read from the scenarios' changes and from the built parameter
-        # trees, so a simulation modifier is seen too.
-        limits = data_limits.merge(
-            data_limits.limits_for_scenarios(
-                baseline_scenario, reform_scenario
-            ),
-            _limits_touched(baseline, reformed),
+        # A measure the data cannot cost is published as not computable.
+        limits = _limits(
+            baseline, reformed, baseline_scenario, reform_scenario
         )
         result = process(reform, config, baseline, reformed, baseline_scenario)
 

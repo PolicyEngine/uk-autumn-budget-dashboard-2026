@@ -68,6 +68,9 @@ export async function loadArtifact(
   entry,
   { fetchImpl = fetch, signal, tables = DEFAULT_TABLES } = {},
 ) {
+  if (!isDisplayable(entry)) {
+    throw new Error(`${key} is ${entry?.status}: its figures are not shown`);
+  }
   const base = `${basePath}/data/${entry.artifact}`;
   const receipt = await (
     await fetchOk(fetchImpl, `${base}/${RECEIPT_FILE}`, { signal })

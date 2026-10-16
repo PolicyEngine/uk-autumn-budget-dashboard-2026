@@ -8,13 +8,17 @@ computable on current data, with the reason, and never as a figure.
 Each limit names the parameters it covers, the input the data lack and why.
 A measure touches a limit when its reform and its baseline differ anywhere
 under one of those parameters, however the difference was made: parameter
-changes or a simulation modifier, on either side.
+changes or a simulation modifier, on either side. On built simulations the
+two parameter trees are compared by position and by effective value, so a
+reordered, replaced, re-typed or added parameter shows, and a redundant
+breakpoint does not.
 
 A limit lifts when certified data carry the input:
 ``tests/test_certified_data.py`` fails once they do, so the limit is removed
 in the bundle-adoption PR that brings them.
 """
 
+import json
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
@@ -71,8 +75,11 @@ DATA_LIMITS = (
 
 
 def _under(path: str, prefix: str) -> bool:
-    """Whether a parameter path is ``prefix`` or lies below it."""
-    return path == prefix or path.startswith((prefix + ".", prefix + "["))
+    """Whether a parameter path is ``prefix`` or lies below it (a scale's
+    own settings are recorded as ``<scale>#scale``)."""
+    return path == prefix or path.startswith(
+        (prefix + ".", prefix + "[", prefix + "#")
+    )
 
 
 def limits_for_paths(paths: Iterable[str]) -> list[DataLimit]:
@@ -88,8 +95,10 @@ def limits_for_paths(paths: Iterable[str]) -> list[DataLimit]:
 
 def limits_for_scenarios(baseline_scenario, reform_scenario) -> list[dict]:
     """The limits a measure touches, read from its two scenarios' parameter
-    changes: the paths where they differ. A simulation modifier is
-    invisible here; :func:`limits_touched` sees it on built simulations."""
+    changes: the paths where they differ. Only for simulations with no
+    parameter tree to compare (stand-ins): a simulation modifier is
+    invisible here, and a declared change can be undone or respelled, so
+    :func:`limits_touched` decides wherever the trees exist."""
     base = _changes(baseline_scenario)
     reform = _changes(reform_scenario)
     differing = [
@@ -116,43 +125,57 @@ def _changes(scenario) -> Mapping[str, object]:
     )
 
 
-def merge(*record_lists: list[dict]) -> list[dict]:
-    """One record per limit, in registry order, with every parameter any
-    of the lists named."""
-    named: dict[str, set] = {}
-    for records in record_lists:
-        for item in records:
-            named.setdefault(item["key"], set()).update(item["parameters"])
-    return [
-        record(limit, named[limit.key])
-        for limit in DATA_LIMITS
-        if limit.key in named
-    ]
-
-
-def _leaves(parameters, prefix: str) -> dict[str, list]:
-    """Every leaf parameter at or under ``prefix``, with its values."""
+def _structure(parameters, prefix: str) -> dict:
+    """Everything at or under ``prefix``, keyed by its position in the tree
+    (child keys and bracket indices), not by the names the objects carry:
+    leaves map to themselves, and each scale's settings to their JSON."""
     try:
         node = parameters.get_child(prefix)
     except Exception:  # noqa: BLE001 - absent in this model version
         return {}
-    nodes = [node]
-    if hasattr(node, "get_descendants"):
-        nodes += list(node.get_descendants())
-    return {
-        leaf.name: [(v.instant_str, v.value) for v in leaf.values_list]
-        for leaf in nodes
-        if hasattr(leaf, "values_list")
-    }
+    found: dict = {}
+
+    def walk(node, path):
+        if hasattr(node, "brackets"):
+            found[f"{path}#scale"] = json.dumps(
+                getattr(node, "metadata", None), sort_keys=True, default=str
+            )
+            for index, bracket in enumerate(node.brackets):
+                walk(bracket, f"{path}[{index}]")
+        elif hasattr(node, "values_list"):
+            found[path] = node
+        elif hasattr(node, "children"):
+            for key in sorted(node.children):
+                walk(node.children[key], f"{path}.{key}")
+
+    walk(node, prefix)
+    return found
+
+
+def _same_effect(before, after) -> bool:
+    """Whether two entries from :func:`_structure` act alike: equal scale
+    settings, or a leaf with the same value at every breakpoint of
+    either side."""
+    if before is None or after is None:
+        return before is after
+    if isinstance(before, str) or isinstance(after, str):
+        return before == after
+    instants = sorted(
+        {v.instant_str for v in before.values_list}
+        | {v.instant_str for v in after.values_list}
+    )
+    return all(before(instant) == after(instant) for instant in instants)
 
 
 def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     """The limits a measure touches, as recorded in its receipt.
 
-    Compares every leaf under each limit's parameters in the two built
-    simulations, so parameter changes and simulation modifiers on either
-    side are both seen. Each record names the limit, its reason and the
-    leaves that differ.
+    Compares everything under each limit's parameters in the two built
+    simulations, by position and effective value, so parameter changes and
+    simulation modifiers on either side are both seen, a structural change
+    (a reordered, replaced, re-typed or added parameter) shows, and a
+    redundant breakpoint does not. Each record names the limit, its reason
+    and the paths that differ.
     """
     base = sim_baseline.tax_benefit_system.parameters
     reform = sim_reform.tax_benefit_system.parameters
@@ -160,12 +183,14 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     for limit in DATA_LIMITS:
         differing = []
         for prefix in limit.parameters:
-            before, after = _leaves(base, prefix), _leaves(reform, prefix)
-            differing += sorted(
-                name
-                for name in before.keys() | after.keys()
-                if before.get(name) != after.get(name)
+            before, after = _structure(base, prefix), _structure(
+                reform, prefix
             )
+            differing += [
+                path
+                for path in before.keys() | after.keys()
+                if not _same_effect(before.get(path), after.get(path))
+            ]
         if differing:
             touched.append(record(limit, differing))
     return touched
@@ -207,7 +232,7 @@ def record_problems(records) -> list[str]:
             not isinstance(paths, list)
             or not paths
             or paths != sorted(set(paths))
-            or limits_for_paths(paths) != [limit]
+            or any(limits_for_paths([path]) != [limit] for path in paths)
         ):
             problems.append(
                 f"{limit.key}: its parameters must be a sorted, non-empty "

@@ -198,6 +198,14 @@ def test_check_refuses_a_data_limited_artifact_relabelled_to_show_figures(
     assert any("cannot be provisional" in f for f in failures), failures
 
 
+def test_check_refuses_an_entry_whose_reason_is_not_its_artifacts(world):
+    manifest = m.Manifest()
+    staged(world, manifest, "alpha", ZERO, [SURCHARGE])
+    manifest.measures["alpha"].reason = "costed in the Red Book"
+    failures = check(manifest, data_root=world.data_root, inputs=world.inputs)
+    assert any("reason is not the artifact's" in f for f in failures)
+
+
 def test_check_refuses_an_entry_naming_other_limits_than_its_artifact(world):
     manifest = m.Manifest()
     staged(world, manifest, "alpha", ZERO, [SURCHARGE])
@@ -347,6 +355,52 @@ def test_a_combined_run_showing_figures_refuses_a_not_computable_member(
         )
 
 
+def test_a_member_becoming_not_computable_stales_an_approved_combined_run(
+    world,
+):
+    """Review of #51: with unchanged outputs, a combined approval survived
+    its member becoming not computable."""
+    manifest = m.Manifest()
+    for key in ("alpha", "beta"):
+        world.costing(key, VALUES)
+        world.expect(key, "negative", 2027)
+        reference = world.write(key, VALUES)
+        world.reconcile(reference)
+        stage(
+            manifest,
+            reference.path,
+            data_root=world.data_root,
+            inputs=world.inputs,
+        )
+        approve(
+            manifest,
+            key,
+            "Reviewer",
+            data_root=world.data_root,
+            inputs=world.inputs,
+        )
+    reference = combined(world, manifest, ["alpha", "beta"], VALUES, [])
+    stage(
+        manifest,
+        reference.path,
+        data_root=world.data_root,
+        inputs=world.inputs,
+    )
+    approve(
+        manifest,
+        "combined--alpha+beta",
+        "Reviewer",
+        data_root=world.data_root,
+        inputs=world.inputs,
+    )
+    outputs = manifest.measures["alpha"].outputs_sha256
+    # The same figures, now recorded as touching a data limit.
+    staged(world, manifest, "alpha", VALUES, [SURCHARGE])
+    assert manifest.measures["alpha"].outputs_sha256 == outputs
+    entry = manifest.combined["combined--alpha+beta"]
+    assert entry.status == m.STALE and entry.approval is None
+
+
 # --- generation records the limits ------------------------------------------
 
 
@@ -422,6 +476,22 @@ def test_generation_records_a_modifier_on_a_limited_rate(world):
         simulation_modifier=raise_additional_dwelling_rates,
     )
     assert generated_limits(world, reform, built(world)) == [SURCHARGE]
+
+
+def test_generation_records_nothing_for_a_change_to_the_current_value(world):
+    """Review of #51: the scenarios declare a change, but the built trees
+    show it changes nothing, and the trees decide."""
+    from policyengine_uk.system import system
+
+    rate = system.parameters.get_child(SURCHARGE_RATE)
+    current = rate("2027-06-01")
+    assert rate("2027-01-01") == current == rate("2028-12-31")
+    reform = Reform(
+        id="same",
+        name="Same",
+        parameter_changes={SURCHARGE_RATE: {"2027": current}},
+    )
+    assert generated_limits(world, reform, built(world)) == []
 
 
 def test_generation_records_nothing_for_an_unrelated_measure(world):

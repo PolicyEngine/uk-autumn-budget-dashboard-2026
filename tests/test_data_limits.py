@@ -6,6 +6,7 @@ neither column. A measure on those rates scores £0 (before #2241, it charges
 a buyer's whole stock), so it must be published as not computable.
 """
 
+import re
 import warnings
 
 import pytest
@@ -19,7 +20,6 @@ from uk_budget_data.data_limits import (
     limits_for_paths,
     limits_for_scenarios,
     limits_touched,
-    merge,
     record,
     record_problems,
 )
@@ -92,7 +92,9 @@ def test_the_formulas_the_registry_reasons_from_still_read_its_inputs():
         limit = BY_KEY[key]
         for name in variables:
             source = inspect.getsource(type(system.variables[name]))
-            assert limit.missing_input in source, name
+            # A call reading the input, not a mention in a comment.
+            pattern = r'household\(\s*"' + limit.missing_input + '"'
+            assert re.search(pattern, source), name
 
 
 @pytest.mark.parametrize(
@@ -203,22 +205,65 @@ def test_built_parameter_trees_show_a_baseline_side_change():
     assert [item["key"] for item in touched] == ["non_residential_purchases"]
 
 
+def limited_scale(sim):
+    return sim.tax_benefit_system.parameters.get_child(f"{SURCHARGE}.rate")
+
+
+def test_built_parameter_trees_show_swapped_brackets_that_keep_their_names():
+    """Review of #51: comparing leaves by the names they carry missed a
+    modifier that swaps two brackets' rate objects."""
+    reformed = simulation()
+    first, second = limited_scale(reformed).brackets[:2]
+    a, b = first.children["rate"], second.children["rate"]
+    first.children["rate"], second.children["rate"] = b, a
+    touched = limits_touched(simulation(), reformed)
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+    assert f"{SURCHARGE}.rate[0].rate" in touched[0]["parameters"]
+
+
+def test_built_parameter_trees_show_a_retyped_scale():
+    reformed = simulation()
+    limited_scale(reformed).metadata["type"] = "single_amount"
+    touched = limits_touched(simulation(), reformed)
+    assert touched[0]["parameters"] == [f"{SURCHARGE}.rate#scale"]
+
+
+def test_built_parameter_trees_show_an_added_parameter():
+    reformed = simulation()
+    node = reformed.tax_benefit_system.parameters.get_child(SURCHARGE)
+    node.add_child("added", node.children["min"].clone())
+    touched = limits_touched(simulation(), reformed)
+    assert touched[0]["parameters"] == [f"{SURCHARGE}.added"]
+
+
+def test_a_redundant_breakpoint_is_not_a_change():
+    """A breakpoint that repeats the value already in force changes
+    nothing: the trees are compared by effective value, not by their lists
+    of breakpoints (which here differ)."""
+    from policyengine_core.parameters import ParameterAtInstant
+
+    reformed = simulation()
+    minimum = reformed.tax_benefit_system.parameters.get_child(
+        f"{SURCHARGE}.min"
+    )
+    before = [(v.instant_str, v.value) for v in minimum.values_list]
+    minimum.values_list.insert(
+        0,
+        ParameterAtInstant(
+            minimum.name, "2050-01-01", data=minimum("2050-01-01")
+        ),
+    )
+    assert [(v.instant_str, v.value) for v in minimum.values_list] != before
+    assert limits_touched(simulation(), reformed) == []
+
+
 def test_built_parameter_trees_of_an_unrelated_measure_touch_nothing():
     assert (
         limits_touched(simulation(), simulation({INCOME_TAX: {"2027": 0.22}}))
         == []
     )
-
-
-def test_merge_unions_parameters_per_limit_in_registry_order():
-    surcharge = BY_KEY["additional_dwelling_purchases"]
-    other = BY_KEY["non_residential_purchases"]
-    merged = merge(
-        [record(other, ["b"])],
-        [record(surcharge, ["y"]), record(other, ["a"])],
-        [record(surcharge, ["x", "y"])],
-    )
-    assert merged == [record(surcharge, ["x", "y"]), record(other, ["a", "b"])]
 
 
 # --- recorded limits -------------------------------------------------------
@@ -246,6 +291,15 @@ def test_recorded_limits_from_the_registry_pass():
     "records, expected",
     [
         ("not a list", "must be a list"),
+        (
+            [
+                record(
+                    BY_KEY["additional_dwelling_purchases"],
+                    [SURCHARGE, INCOME_TAX],
+                )
+            ],
+            "paths under that limit",
+        ),
         ([{"key": "nope", "reason": "", "parameters": []}], "known limits"),
         (
             [
