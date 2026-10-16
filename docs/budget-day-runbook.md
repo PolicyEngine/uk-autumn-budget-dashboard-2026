@@ -109,6 +109,13 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
+**A measure on pension tax relief, the annual allowance, its taper or the MPAA is expected to fail the Treasury reconciliation. By default it is held for the 07:00 briefing pending review** (Vahid and María to confirm).
+- **Why:** the UK hub's rebuild of policyengine-uk #2240 replays the Spring Budget 2023 pension changes at about −£12.9bn over four years against the OBR's −£1.55bn, roughly 8 times over. The remaining causes are mostly data: the imputation of pension inputs, defined-benefit accrual, the taper's income measure and carry-forward. A pensions decomposition is queued; revisit this row when it reports.
+- **What the gate does:** approval needs the reconciliation to pass or carry an accepted exception, and the briefing exports take approved entries only. So such a measure stays out of the briefing unless someone approves an exception. The default is to hold it, not to approve a named-reviewer exception on the day.
+- **Still open, for Vahid and María:**
+  - whether it is shown on the page meanwhile: staging it as provisional does not need the reconciliation, and the page labels it provisional;
+  - who may approve an exception for it, if anyone.
+
 **A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
 - **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property.
 - **Which parameters:** `uk_budget_data.data_limits` lists them:
