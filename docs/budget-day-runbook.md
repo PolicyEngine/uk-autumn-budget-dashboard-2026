@@ -141,6 +141,19 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
 - **When it lifts:** once certified data impute the purchases (policyengine-uk-data #573, with #569; Max's decision d1354). `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
+- **Every measure published on the day comes from the templates** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector reads plain Python closely, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't read.
+  - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR.
+  - Templates are tested: every template measure must stay computable (`tests/test_data_limits.py`).
+- **When a computable measure is marked not computable.** These known false positives all fail safe: the measure is withheld, never shown with a wrong figure.
+  - **The forms:**
+    - a lambda, a callable object, or a nested closure that forwards to the original, or a helper that does more than pass its four parameters on to `_call_formula`;
+    - a result consumed through a container (`results[0]`);
+    - an annotation-only statement on the formula's arguments;
+    - library state the detector can't read (a `memoryview`), which marks every limit;
+    - a name built at run time that can't be worked out (in a loop, from data), which also marks every limit;
+    - nesting deeper than 16 levels.
+  - (`result += 1000` and `np.vectorize` were on this list until #51's round 9 fixed them.)
+  - **To clear one:** there is no override. Rewrite the measure in a form the detector reads: a template, or a direct `_call_formula(native, entity, period, parameters)` call to the original, used for its result. Then regenerate, and record the reason in the measure's PR.
 
 **A UC health (LCWRA) measure: change the rebalancing amounts, not the element's amount.** In 2026 to 2029 the engine's UC rebalancing overwrites every claimant's health element:
 - pre-2026 claimants get `gov.dwp.universal_credit.rebalancing.protected_health_element` (or the UC Act 2025 s. 4 floor where that is null);
