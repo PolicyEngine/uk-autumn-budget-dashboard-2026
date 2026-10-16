@@ -561,12 +561,10 @@ def _run_call(writer, lifeline, function, args) -> None:
         except BaseException as error:
             text = "".join(traceback.format_exception(error))
             try:
-                # Sent pre-pickled, and only if it rebuilds: an exception
-                # that pickles but cannot be unpickled (policyengine-core's
-                # VariableNotFoundError, say) would otherwise surface in the
-                # parent as an unrelated TypeError.
+                # Sent pre-pickled, so the parent can unpickle it on its own
+                # and fall back to the traceback text (see
+                # _raise_worker_error).
                 blob = pickle.dumps(error)
-                pickle.loads(blob)
             except Exception:
                 blob = None
             writer.send(("error", (blob, text)))
@@ -575,7 +573,10 @@ def _run_call(writer, lifeline, function, args) -> None:
 
 
 def _raise_worker_error(blob, text):
-    """Re-raise a worker's exception, chained to its traceback there."""
+    """Re-raise a worker's exception, chained to its traceback there. An
+    exception that pickles but cannot be rebuilt (policyengine-core's
+    VariableNotFoundError, say) would otherwise surface here as an
+    unrelated TypeError; it arrives as a WorkerError with its traceback."""
     remote = WorkerError(f"in the worker:\n{text}")
     error = None
     if blob is not None:
