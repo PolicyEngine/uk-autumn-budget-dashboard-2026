@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Fail the build if a file under public/ may not be published.
 //
-// Every file a deploy would serve must be either a table from the
-// disclosure layer (a CSV with its public columns) or listed in
+// Every file a deploy would serve must be listed in
 // data_inputs/public_data_review.csv with the sha256 of the bytes a person
-// reviewed; a pending entry passes only until its expiry date. No public
-// file may carry record-level identifiers.
+// reviewed, tables from the disclosure layer included; a pending entry
+// passes only until its expiry date. A file reviewed as a disclosure table
+// must carry the layer's public columns. No public file may carry
+// record-level identifiers.
 //
 // scripts/check_public_data.py runs the full check in CI, including the
 // layer's validate_public. This smaller check runs in the build, so a deploy
@@ -97,17 +98,23 @@ export function checkPublicFiles(root, today = new Date()) {
     if (text !== null && RECORD_LEVEL.test(text)) {
       problems.push(`${name}: record-level identifiers`);
     }
-    if (name.endsWith(".csv") && text !== null) {
-      const columns = parseCsv(text.replace(/^﻿/, ""))[0] ?? [];
+    const entry = review.get(name);
+    if (!entry) {
+      problems.push(`${name}: not reviewed`);
+      continue;
+    }
+    if (entry.kind === "disclosure_table") {
+      const columns =
+        text === null ? [] : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
       const layer =
         required.every((column) => columns.includes(column)) &&
         columns.every((column) => allowed.has(column));
-      if (layer) continue;
+      if (!layer) {
+        problems.push(`${name}: reviewed as a disclosure table, but it is not one`);
+        continue;
+      }
     }
-    const entry = review.get(name);
-    if (!entry) {
-      problems.push(`${name}: not a disclosure table and not reviewed`);
-    } else if (createHash("sha256").update(data).digest("hex") !== entry.sha256) {
+    if (createHash("sha256").update(data).digest("hex") !== entry.sha256) {
       problems.push(`${name}: changed since its review`);
     } else if (entry.kind === "pending" && day > entry.expires_on) {
       problems.push(`${name}: pending past its expiry date (${entry.expires_on})`);

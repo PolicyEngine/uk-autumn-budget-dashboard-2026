@@ -124,7 +124,7 @@ The figures derive from UKDS-licensed survey microdata, and this repository and 
 uv run python scripts/check_public_data.py
 ```
 
-Each file under `public/` must be a table written by `policyengine.disclosure`, or be listed in `data_inputs/public_data_review.csv` with the sha256 of the bytes a person reviewed; any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights. The check prints file paths and rule names, never values. The build runs a smaller check of the same list (`scripts/check-public-files.mjs`), so a deploy fails too.
+Each file under `public/` must be listed in `data_inputs/public_data_review.csv` with the sha256 of the bytes a person reviewed; any change fails until it is reviewed again. A table written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) is reviewed as kind `disclosure_table` and must also pass the layer's `validate_public`. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights. The check prints file paths and rule names, never values. The build runs a smaller check of the same list (`scripts/check-public-files.mjs`), so a deploy fails too.
 
 To review a changed file, record its new sha256 in the review list:
 
