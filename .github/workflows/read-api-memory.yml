@@ -1,0 +1,152 @@
+name: Read API memory
+
+# Read-only: a named household API revision's memory limit, its memory
+# utilisation (Cloud Monitoring) and its out-of-memory lines (Cloud
+# Logging), through the deploy workflow's identity, so measuring needs no
+# laptop login. It never deploys, builds or moves traffic.
+#
+# Reads need: run.viewer (the limit) and logging.viewer (the lines), which
+# the deploy account holds; and monitoring.viewer (the utilisation), which
+# it may not. A read that is refused is reported by name and fails the run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: "The revision, e.g. uk-budget-api-2026-00016-tes"
+        required: true
+      start:
+        description: "Window start, UTC, e.g. 2026-10-16T07:30:00Z"
+        required: true
+      end:
+        description: "Window end, UTC (default: now)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  PROJECT: policyengine-apps
+  REGION: europe-west1
+  SERVICE: uk-budget-api-2026
+
+jobs:
+  read:
+    name: Read a revision's memory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      INPUT_REVISION: ${{ inputs.revision }}
+      INPUT_START: ${{ inputs.start }}
+      INPUT_END: ${{ inputs.end }}
+      WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check the inputs
+        id: inputs
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Reads run from main, not $GITHUB_REF"
+            exit 1
+          fi
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$DEPLOY_SERVICE_ACCOUNT" ]; then
+            echo "::error::Set the repository variables GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_DEPLOY_SERVICE_ACCOUNT"
+            exit 1
+          fi
+          if ! end=$(python3 scripts/read_api_memory.py window "$SERVICE" \
+              "$INPUT_REVISION" "$INPUT_START" "$INPUT_END" 2> window.err); then
+            echo "::error::$(cat window.err)"
+            exit 1
+          fi
+          echo "end=$end" >> "$GITHUB_OUTPUT"
+          echo "Reading $INPUT_REVISION from $INPUT_START to $end"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Memory limit
+        id: limit
+        run: |
+          if ! gcloud run revisions describe "$INPUT_REVISION" \
+              --project "$PROJECT" --region "$REGION" --format=json \
+              > revision.json; then
+            echo "::error::Could not read $INPUT_REVISION (needs run.viewer, and a revision of $SERVICE)"
+            exit 1
+          fi
+          if ! limit=$(python3 scripts/read_api_memory.py limit revision.json \
+              2> limit.err); then
+            echo "::error::$(cat limit.err)"
+            exit 1
+          fi
+          echo "mib=$limit" >> "$GITHUB_OUTPUT"
+          echo "Memory limit: $limit MiB"
+
+      # Cloud Run logs "Memory limit of N MiB exceeded with M MiB used"
+      # when it stops an instance for its memory.
+      - name: Out-of-memory lines
+        id: oom
+        env:
+          END: ${{ steps.inputs.outputs.end }}
+        run: |
+          filter="resource.type=\"cloud_run_revision\"
+          resource.labels.service_name=\"$SERVICE\"
+          resource.labels.revision_name=\"$INPUT_REVISION\"
+          timestamp>=\"$INPUT_START\" timestamp<=\"$END\"
+          textPayload:\"Memory limit of\""
+          if gcloud logging read "$filter" --project "$PROJECT" \
+              --format=json --limit=100 > oom.json 2> oom.err; then
+            python3 scripts/read_api_memory.py oom oom.json
+          else
+            echo "::error::Cloud Logging refused the read (needs roles/logging.viewer): $(head -c 300 oom.err)"
+            echo "denied=logging.viewer" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Memory utilisation
+        id: utilisation
+        env:
+          END: ${{ steps.inputs.outputs.end }}
+          LIMIT_MIB: ${{ steps.limit.outputs.mib }}
+        run: |
+          token=$(gcloud auth print-access-token)
+          echo "::add-mask::$token"
+          code=$(curl -sS -o series.json -w '%{http_code}' \
+            -H "Authorization: Bearer $token" -G \
+            "https://monitoring.googleapis.com/v3/projects/$PROJECT/timeSeries" \
+            --data-urlencode "filter=metric.type=\"run.googleapis.com/container/memory/utilizations\" AND resource.labels.service_name=\"$SERVICE\" AND resource.labels.revision_name=\"$INPUT_REVISION\"" \
+            --data-urlencode "interval.startTime=$INPUT_START" \
+            --data-urlencode "interval.endTime=$END" \
+            --data-urlencode "aggregation.alignmentPeriod=60s" \
+            --data-urlencode "aggregation.perSeriesAligner=ALIGN_PERCENTILE_99")
+          if [ "$code" = "200" ]; then
+            python3 scripts/read_api_memory.py utilisation series.json "$LIMIT_MIB"
+          elif [ "$code" = "403" ]; then
+            echo "::error::Cloud Monitoring refused the read: the deploy account needs roles/monitoring.viewer (monitoring.timeSeries.list) on $PROJECT"
+            echo "denied=monitoring.viewer" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Cloud Monitoring answered HTTP $code"
+            echo "denied=monitoring (HTTP $code)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report
+        env:
+          LOGGING: ${{ steps.oom.outputs.denied }}
+          MONITORING: ${{ steps.utilisation.outputs.denied }}
+        run: |
+          refused=$(printf '%s\n' "$LOGGING" "$MONITORING" | sed '/^$/d' | paste -sd, -)
+          if [ -n "$refused" ]; then
+            echo "::error::Not every read was allowed: $refused"
+            exit 1
+          fi
+          echo "Every read was allowed"
