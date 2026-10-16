@@ -6,6 +6,7 @@ neither column. A measure on those rates scores £0 (before #2241, it charges
 a buyer's whole stock), so it must be published as not computable.
 """
 
+import collections
 import copy
 import functools
 import re
@@ -718,6 +719,343 @@ def test_equal_numbers_match_and_different_ones_do_not(number):
     assert behaviour.of(number) == behaviour.of(float(number))
     assert behaviour.of(number) != behaviour.of(number + 1)
     assert behaviour.of(float("nan")) == behaviour.of(float("nan"))
+
+
+# --- state and results (review of #51 round 6) -------------------------
+
+
+def pricing_by_class_rate(rate):
+    """A rate held as class data, read by the class's method."""
+
+    def modifier(sim):
+        class Pricer:
+            coefficient = rate
+
+            def __call__(self, household, period, parameters):
+                purchased = household(
+                    "additional_residential_property_purchased", period
+                )
+                return purchased * self.coefficient
+
+        pricer = Pricer()
+
+        def formula(household, period, parameters):
+            return pricer(household, period, parameters)
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def pricing_by_slotted_rate(rate):
+    """A rate held on an object with slots and no ``__dict__``."""
+
+    def modifier(sim):
+        class Rate:
+            __slots__ = ("coefficient",)
+
+            def __init__(self, coefficient):
+                self.coefficient = coefficient
+
+        config = Rate(rate)
+
+        def formula(household, period, parameters):
+            purchased = household(
+                "additional_residential_property_purchased", period
+            )
+            return purchased * config.coefficient
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def pricing_by_first_rate(rates):
+    """Charges a mapping's first rate: its order is behaviour."""
+
+    def modifier(sim):
+        bands = dict(rates)
+
+        def formula(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * next(iter(bands.values()))
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def pricing_by_default_rate(rate):
+    def modifier(sim):
+        rates = collections.defaultdict(lambda: rate)
+
+        def formula(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * rates["standard"]
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize(
+    "baseline, reform, key",
+    [
+        (
+            pricing_by_class_rate(0.01),
+            pricing_by_class_rate(0.02),
+            "additional_dwelling_purchases",
+        ),
+        (
+            pricing_by_slotted_rate(0.01),
+            pricing_by_slotted_rate(0.02),
+            "additional_dwelling_purchases",
+        ),
+        (
+            pricing_by_first_rate([("standard", 0.01), ("higher", 0.02)]),
+            pricing_by_first_rate([("higher", 0.02), ("standard", 0.01)]),
+            "non_residential_purchases",
+        ),
+        (
+            pricing_by_default_rate(0.01),
+            pricing_by_default_rate(0.02),
+            "non_residential_purchases",
+        ),
+    ],
+    ids=["class-data", "slots", "mapping-order", "defaultdict-factory"],
+)
+def test_state_a_formula_holds_is_compared(baseline, reform, key):
+    """Review of #51 round 6: a rate held as class data, on a slotted
+    object, as a mapping's order or as a defaultdict's factory compared
+    equal at 1% and 2%."""
+    touched = limits_touched(
+        simulation(modifier=baseline), simulation(modifier=reform)
+    )
+    assert keys(touched) == [key]
+
+
+def half_the_purchase(sim):
+    native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+
+    def formula(household, period, parameters):
+        def taxable(name, period):
+            return household(name, period) * 0.5
+
+        return _call_formula(native, taxable, period, parameters)
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+def rebinding_the_household(sim):
+    native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+
+    def formula(household, period, parameters):
+        actual = household
+        household = lambda name, period: actual(name, period) * 0.5  # noqa
+        return _call_formula(native, household, period, parameters)
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+def holding_without_calling(sim):
+    native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+
+    def formula(household, period, parameters):
+        assert native is not None
+        return household.filled_array(0.0)
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+def halving_its_result(sim):
+    native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+
+    def formula(household, period, parameters):
+        return 0.5 * _call_formula(native, household, period, parameters)
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+@pytest.mark.parametrize(
+    "reform, expected",
+    [
+        (half_the_purchase, ["non_residential_purchases"]),
+        (rebinding_the_household, ["non_residential_purchases"]),
+        (holding_without_calling, ["non_residential_purchases"]),
+        (halving_its_result, []),
+    ],
+    ids=[
+        "changed-purchase-base",
+        "rebound-entity",
+        "held-never-called",
+        "own-result-halved",
+    ],
+)
+def test_a_wrapper_is_left_out_only_where_it_uses_the_result(reform, expected):
+    """Review of #51 round 6: holding the original is not using its result.
+    A wrapper that prices a changed purchase base, or never calls the
+    original, reprices; one that halves the original's own result is
+    downstream of the pricing, as abolishing SDLT is."""
+    reformed = simulation(modifier=reform)
+    assert keys(limits_touched(simulation(), reformed)) == expected
+
+
+def stacked_bands(sim):
+    band_on_sdlt(1000)(sim)
+    band_on_sdlt(500)(sim)
+    return sim
+
+
+@pytest.mark.parametrize(
+    "baseline", [None, band_on_sdlt(300)], ids=["reform-only", "both-sides"]
+)
+def test_stacked_templates_stay_computable(baseline):
+    """Combined measures stack templates on one channel: the intermediate
+    variable is followed, and the original at the bottom is left out."""
+    assert (
+        limits_touched(
+            simulation(modifier=baseline), simulation(modifier=stacked_bands)
+        )
+        == []
+    )
+
+
+def calling_its_own_pricing(sim):
+    """Calls, for its own result, a variable the modifier made, whose
+    formula prices second homes."""
+    from policyengine_uk.model_api import Variable
+
+    native = sim.tax_benefit_system.get_variable(RESIDENTIAL)
+
+    def pricing(household, period, parameters):
+        purchased = household(
+            "additional_residential_property_purchased", period
+        )
+        return 0.02 * purchased
+
+    made = type(
+        RESIDENTIAL,
+        (Variable,),
+        {
+            "formula": pricing,
+            "entity": native.entity,
+            "definition_period": "year",
+            "value_type": float,
+            "label": "made by the modifier",
+        },
+    )(baseline_variable=native)
+
+    def formula(household, period, parameters):
+        return _call_formula(made, household, period, parameters)
+
+    _replace_formula(sim, RESIDENTIAL, formula)
+    return sim
+
+
+def no_residential_sdlt(sim):
+    def formula(household, period, parameters):
+        return household.filled_array(0.0)
+
+    _replace_formula(sim, RESIDENTIAL, formula)
+    return sim
+
+
+def test_a_variable_the_modifier_made_is_followed():
+    """Only an unchanged result is left out: a variable no system has and
+    the other side doesn't use is code like any other. (The baseline here
+    reads nothing, so only the made variable can name the input.)"""
+    touched = limits_touched(
+        simulation(modifier=no_residential_sdlt),
+        simulation(modifier=calling_its_own_pricing),
+    )
+    assert keys(touched) == ["additional_dwelling_purchases"]
+
+
+def pricing_helper_times(factor):
+    def modifier(sim):
+        def second_homes_charge(household, period, parameters):
+            return household(
+                "additional_residential_property_purchased", period
+            )
+
+        def formula(household, period, parameters):
+            return second_homes_charge(household, period, parameters) * factor
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def test_a_helper_called_with_the_formulas_own_arguments_still_counts():
+    """The direct-call form is left out only for a variable's formula: a
+    pricing helper both sides call alike is still pricing."""
+    touched = limits_touched(
+        simulation(modifier=pricing_helper_times(1)),
+        simulation(modifier=pricing_helper_times(2)),
+    )
+    assert keys(touched) == ["additional_dwelling_purchases"]
+
+
+def test_uses_as_results_reads_only_the_unchanged_call():
+    behaviour = data_limits._Behaviour()
+
+    class Held:
+        formulas = {}
+        is_neutralized = False
+
+    held = Held()
+
+    def unchanged(household, period, parameters):
+        return _call_formula(held, household, period, parameters)
+
+    def other_period(household, period, parameters):
+        return _call_formula(held, household, period.last_year, parameters)
+
+    def also_read(household, period, parameters):
+        assert held.formulas is not None
+        return _call_formula(held, household, period, parameters)
+
+    def also_read_in_nested_code(household, period, parameters):
+        formulas = lambda: held.formulas  # noqa: E731
+        assert formulas() is not None
+        return _call_formula(held, household, period, parameters)
+
+    def rebound(household, period, parameters):
+        period = period.last_year
+        return _call_formula(held, household, period, parameters)
+
+    assert list(behaviour.uses_as_results(unchanged, set()).values()) == [held]
+    for function in (
+        other_period,
+        also_read,
+        also_read_in_nested_code,
+        rebound,
+    ):
+        assert behaviour.uses_as_results(function, set()) == {}, function
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    st.lists(
+        st.tuples(st.text(max_size=3), st.integers()),
+        min_size=2,
+        max_size=5,
+        unique_by=lambda pair: pair[0],
+    )
+)
+def test_a_mapping_matches_only_in_the_same_order(pairs):
+    behaviour = data_limits._Behaviour()
+    assert behaviour.of(dict(pairs)) == behaviour.of(dict(pairs))
+    assert behaviour.of(dict(pairs)) != behaviour.of(dict(pairs[::-1]))
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():

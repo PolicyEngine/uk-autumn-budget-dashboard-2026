@@ -23,6 +23,7 @@ A limit lifts when certified data carry the input:
 in the bundle-adoption PR that brings them.
 """
 
+import dis
 import enum
 import functools
 import hashlib
@@ -440,10 +441,12 @@ class _Behaviour:
     each. A function is read as its code, its default arguments, the values
     it closes over and the globals its code looks up; a variable as its
     formulas, whether it is neutralised, what it adds and subtracts and its
-    default; a class as its own methods, its bases and any enum members;
-    a plain object as its fields. Numbers compare by value (40000 matches
-    40000.0). Installed library code is read by qualified name. Results are
-    memoised by object for one comparison, which keeps the objects alive.
+    default; a class as its own members (methods and data alike), its bases
+    and any enum members; a plain object as its class and its fields, slots
+    included; a mapping in its order; a container subclass with its type,
+    factory and fields. Numbers compare by value (40000 matches 40000.0).
+    Installed library code is read by qualified name. Results are memoised
+    by object for one comparison, which keeps the objects alive.
     """
 
     def __init__(self):
@@ -503,16 +506,35 @@ class _Behaviour:
                 items = tuple(self.of(item, depth) for item in value.ravel())
                 return ("array", value.shape, items)
             return ("array", value.dtype.str, value.shape, value.tobytes())
+        kind = type(value)
+        extra = ()
+        if kind not in (dict, list, tuple, set, frozenset):
+            # A subclass can carry behaviour (a defaultdict's factory).
+            extra = (
+                self.of(kind),
+                self.of(getattr(value, "default_factory", None)),
+                self._fields(value, depth),
+            )
         if isinstance(value, dict):
-            pairs = (
+            # In order: a formula can read a mapping's first entry.
+            pairs = tuple(
                 (self.of(k, depth), self.of(v, depth))
                 for k, v in value.items()
             )
-            return ("map", tuple(sorted(pairs, key=repr)))
+            return ("map", pairs, *extra)
         if isinstance(value, (set, frozenset)):
             items = (self.of(item, depth) for item in value)
-            return ("set", tuple(sorted(items, key=repr)))
-        return ("seq", tuple(self.of(item, depth) for item in value))
+            return ("set", tuple(sorted(items, key=repr)), *extra)
+        return ("seq", tuple(self.of(item, depth) for item in value), *extra)
+
+    def _fields(self, value, depth):
+        """A plain object's state: its ``__dict__`` and its slots."""
+        if _library_class(type(value)):
+            return ()
+        return tuple(
+            (name, self.of(field, depth + 1))
+            for name, field in sorted(_fields_of(value).items())
+        )
 
     def _component(self, value, depth):
         if _is_variable(value):
@@ -585,7 +607,7 @@ class _Behaviour:
             members = tuple(
                 (name, self.of(member))
                 for name, member in sorted(vars(value).items())
-                if _held_by_class(member)
+                if name not in _CLASS_BOOKKEEPING
             )
             enum_members = (
                 tuple((m.name, self.of(m.value)) for m in value)
@@ -594,25 +616,19 @@ class _Behaviour:
             )
             bases = tuple(self.of(base) for base in value.__bases__)
             return ("class", value.__qualname__, members, bases, enum_members)
-        if callable(value) and not hasattr(value, "__dict__"):
-            name = getattr(value, "__qualname__", None) or getattr(
-                value, "__name__", type(value).__qualname__
-            )
-            module = (
-                getattr(value, "__module__", None) or type(value).__module__
-            )
-            return ("library", module, str(name))
         kind = type(value)
-        if _library_class(kind) or not hasattr(value, "__dict__"):
+        if callable(value) and _library_class(kind):
+            name = getattr(value, "__qualname__", None) or getattr(
+                value, "__name__", kind.__qualname__
+            )
+            module = getattr(value, "__module__", None) or kind.__module__
+            return ("library", module, str(name))
+        if _library_class(kind):
             name = f"{kind.__module__}.{kind.__qualname__}"
             return ("object", name, _safe_repr(value))
         if depth >= _OBJECT_DEPTH:
             return ("deep", kind.__qualname__)
-        fields = tuple(
-            (name, self.of(field, depth + 1))
-            for name, field in sorted(vars(value).items())
-        )
-        return ("object", self.of(kind), fields)
+        return ("object", self.of(kind), self._fields(value, depth))
 
     def _parameter_content(self, value):
         """What a held parameter object gives: a view or scale as formulas
@@ -663,11 +679,15 @@ class _Behaviour:
         elif isinstance(value, type):
             if not _library_class(value):
                 members = [
-                    m for m in vars(value).values() if _held_by_class(m)
+                    member
+                    for name, member in vars(value).items()
+                    if name not in _CLASS_BOOKKEEPING
                 ]
                 self._collect((members, value.__bases__), names, held)
-        elif hasattr(value, "__dict__") and not _library_class(type(value)):
-            self._collect(list(vars(value).values()), names, held)
+        elif not _library_class(type(value)):
+            # Its class too: a method can read what the fields don't name.
+            fields = list(_fields_of(value).values())
+            self._collect([*fields, type(value)], names, held)
         return names, held
 
     def _collect(self, value, names, held, active=None):
@@ -685,68 +705,313 @@ class _Behaviour:
             items = value.items() if isinstance(value, dict) else value
             for item in items:
                 self._collect(item, names, held, active)
+            if type(value) not in (dict, list, tuple, set, frozenset):
+                extra = [getattr(value, "default_factory", None)]
+                if not _library_class(type(value)):
+                    extra += list(_fields_of(value).values())
+                self._collect(extra, names, held, active)
         elif _is_component(value):
             held.append(value)
 
-    def names(self, variable, skip) -> set:
-        """The names a variable's own code reads, following the code and
-        values its formulas hold, except held components whose fingerprint
-        is in ``skip``."""
-        names, held = self._parts(variable)
-        stack = []
-        for formula in held:
-            own, inner = self._parts(formula)
-            names |= own
-            stack.extend(inner)
-        seen = set()
-        while stack:
-            value = stack.pop()
-            if id(value) in seen or self.of(value) in skip:
-                continue
-            seen.add(id(value))
-            own, inner = self._parts(value)
-            names |= own
-            stack.extend(inner)
-        return names
+    def uses_as_results(self, function, formulas) -> dict:
+        """What ``function`` holds and only ever calls for the result it
+        gives on ``function``'s own arguments, by id.
 
-    def held_inside(self, variable) -> set:
-        """The fingerprints of everything a variable's formulas hold, at any
-        depth: none for a neutralised variable, which runs no formula."""
-        if variable is None or variable.is_neutralized:
+        That is ``_call_formula(held, entity, period, parameters)`` (the
+        templates' helper) with a held variable, or ``held(entity, period,
+        parameters)`` with a held formula (its fingerprint in
+        ``formulas``), where the three arguments are ``function``'s own
+        first three parameters and nothing rebinds them. Anything held
+        that is called otherwise, read some other way or reached from
+        nested code is not used for its result alone.
+        """
+        code = function.__code__
+        own = code.co_varnames[: code.co_argcount][:3]
+        if len(own) < 3:
+            return {}
+        tokens = _tokens(code)
+        nested = [t for inner in _nested(code) for t in _tokens(inner)]
+        if any(t == ("store", name) for t in tokens + nested for name in own):
+            return {}
+        resolve = _resolver(function)
+        helper = _formula_helper()
+        good = set()
+        for i in range(len(tokens)):
+            via_helper = tokens[i : i + 6]
+            if (
+                len(via_helper) == 6
+                and helper is not None
+                and via_helper[0][0] == "global"
+                and resolve(via_helper[0]) is helper
+                and _own_arguments(via_helper[2:5], own)
+                and via_helper[5] == ("call", 4)
+                and _is_variable(resolve(via_helper[1]))
+            ):
+                good.add(i + 1)
+            direct = tokens[i : i + 5]
+            if (
+                len(direct) == 5
+                and _own_arguments(direct[1:4], own)
+                and direct[4] == ("call", 3)
+                and isinstance(resolve(direct[0]), types.FunctionType)
+                and self.of(resolve(direct[0])) in formulas
+            ):
+                good.add(i)
+        loads: dict = {}
+        for i, token in enumerate(tokens):
+            if token[0] not in ("fast", "deref", "global") or token[1] in own:
+                continue
+            value = resolve(token)
+            if value is _MISSING or not _is_component(value):
+                continue
+            entry = loads.setdefault(id(value), [value, 0, 0, set()])
+            entry[1] += i in good
+            entry[2] += 1
+            entry[3].add(token[1])
+        inner_names = {name for kind, name in nested if kind != "call"}
+        return {
+            key: value
+            for key, (value, used, total, spelled) in loads.items()
+            if used == total and not spelled & inner_names
+        }
+
+    def chain(self, variable, formulas) -> set:
+        """The results ``variable`` is built from: its own fingerprint and,
+        following each formula's uses of what it holds for its result alone
+        (see :meth:`uses_as_results`), those variables' and formulas'."""
+        if variable is None:
             return set()
-        stack = []
-        for formula in (variable.formulas or {}).values():
-            stack.extend(self._parts(formula)[1])
-        found, seen = set(), set()
+        found = {self.of(variable)}
+        stack = [variable]
+        seen = set()
         while stack:
             value = stack.pop()
             if id(value) in seen:
                 continue
             seen.add(id(value))
-            found.add(self.of(value))
+            if _is_variable(value):
+                if not value.is_neutralized:
+                    stack.extend((value.formulas or {}).values())
+                continue
+            if not isinstance(value, types.FunctionType):
+                continue
+            for used in self.uses_as_results(value, formulas).values():
+                found.add(self.of(used))
+                stack.append(used)
+        return found
+
+    def names(self, variable, unchanged, formulas, installed) -> set:
+        """The names a variable's own code reads, following the code and
+        values its formulas hold. Left out: what a formula holds and uses
+        for its result alone (see :meth:`uses_as_results`) whose
+        fingerprint is in ``unchanged``, and the model's own formulas (in
+        ``installed``) as members of a class a formula names."""
+        names, held = self._parts(variable)
+        stack = list(held)
+        seen = set()
+        while stack:
+            value = stack.pop()
+            if id(value) in seen:
+                continue
+            seen.add(id(value))
+            own, inner = self._parts(value)
+            names |= own
+            if isinstance(value, types.FunctionType):
+                results = self.uses_as_results(value, formulas)
+                inner = [
+                    h
+                    for h in inner
+                    if not (id(h) in results and self.of(h) in unchanged)
+                ]
+            elif isinstance(value, type):
+                inner = [
+                    h
+                    for h in inner
+                    if not (
+                        isinstance(h, types.FunctionType)
+                        and self.of(h) in installed
+                    )
+                ]
+            stack.extend(inner)
+        return names
+
+    def variables_held(self, variable) -> list:
+        """Every variable a variable's formulas hold, at any depth."""
+        if variable is None:
+            return []
+        stack = list((variable.formulas or {}).values())
+        found, seen = [], set()
+        while stack:
+            value = stack.pop()
+            if id(value) in seen:
+                continue
+            seen.add(id(value))
+            if _is_variable(value):
+                found.append(value)
             stack.extend(self._parts(value)[1])
         return found
 
-    def wraps(self, outer, variable) -> bool:
-        """Whether ``outer``'s formulas hold ``variable`` unchanged, as a
-        template wrapping it does: the variable itself, or every formula of
-        one that is not neutralised and adds and subtracts nothing."""
-        if outer is None or variable is None:
-            return False
-        held = self.held_inside(outer)
-        if self.of(variable) in held:
-            return True
-        formulas = list((variable.formulas or {}).values())
-        plain = not (
-            variable.is_neutralized
-            or getattr(variable, "adds", None)
-            or getattr(variable, "subtracts", None)
-        )
-        return (
-            plain
-            and bool(formulas)
-            and all(self.of(f) in held for f in formulas)
-        )
+
+def _wrapped(behaviour, variable, chain) -> bool:
+    """Whether another side's ``chain`` (see :meth:`_Behaviour.chain`) uses
+    ``variable`` for its own result: the variable itself, or every formula
+    of one that is not neutralised and adds and subtracts nothing."""
+    if behaviour.of(variable) in chain:
+        return True
+    formulas = list((variable.formulas or {}).values())
+    plain = not (
+        variable.is_neutralized
+        or getattr(variable, "adds", None)
+        or getattr(variable, "subtracts", None)
+    )
+    return (
+        plain
+        and bool(formulas)
+        and all(behaviour.of(f) in chain for f in formulas)
+    )
+
+
+_MISSING = object()
+
+# Class members that are bookkeeping, not behaviour (the generated module
+# name differs between systems).
+_CLASS_BOOKKEEPING = frozenset(
+    {
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "__dict__",
+        "__weakref__",
+        "__annotations__",
+        "__annotate__",
+        "__firstlineno__",
+        "__static_attributes__",
+        "__orig_bases__",
+        "__parameters__",
+        "__slotnames__",
+        "__abstractmethods__",
+        "_abc_impl",
+    }
+)
+_SKIPPED_OPS = frozenset(
+    {
+        "CACHE",
+        "COPY_FREE_VARS",
+        "EXTENDED_ARG",
+        "MAKE_CELL",
+        "NOP",
+        "PRECALL",
+        "PUSH_NULL",
+        "RESUME",
+    }
+)
+_STORE_OPS = frozenset(
+    {
+        "STORE_FAST",
+        "STORE_DEREF",
+        "STORE_GLOBAL",
+        "STORE_NAME",
+        "DELETE_FAST",
+        "DELETE_DEREF",
+        "DELETE_GLOBAL",
+        "DELETE_NAME",
+    }
+)
+
+
+def _tokens(code) -> list:
+    """A code object's instructions as the loads, stores and calls
+    :meth:`_Behaviour.uses_as_results` reads: ``("fast" | "deref" |
+    "global", name)``, ``("store", name)``, ``("call", count)`` or
+    ``("other", opname)``."""
+    found = []
+    for instruction in dis.get_instructions(code):
+        op, value = instruction.opname, instruction.argval
+        names = value if isinstance(value, tuple) else (value,)
+        if op in _SKIPPED_OPS:
+            continue
+        if op == "STORE_FAST_LOAD_FAST":
+            found += [("store", names[0]), ("fast", names[1])]
+        elif op == "STORE_FAST_STORE_FAST":
+            found += [("store", name) for name in names]
+        elif op in _STORE_OPS:
+            found.append(("store", names[0]))
+        elif op.startswith("LOAD_FAST"):
+            found += [("fast", name) for name in names]
+        elif op in ("LOAD_DEREF", "LOAD_FROM_DICT_OR_DEREF"):
+            found.append(("deref", names[0]))
+        elif op in ("LOAD_GLOBAL", "LOAD_NAME"):
+            found.append(("global", names[0]))
+        elif op == "CALL":
+            found.append(("call", instruction.arg))
+        else:
+            found.append(("other", op))
+    return found
+
+
+def _nested(code):
+    for const in code.co_consts:
+        if hasattr(const, "co_code"):
+            yield const
+            yield from _nested(const)
+
+
+def _own_arguments(tokens, own) -> bool:
+    return all(
+        kind in ("fast", "deref") and name == expected
+        for (kind, name), expected in zip(tokens, own)
+    )
+
+
+def _resolver(function):
+    """What a load in ``function`` reads: a closed-over value, a global, or
+    a parameter's default."""
+    code = function.__code__
+    cells = dict(zip(code.co_freevars, function.__closure__ or ()))
+    params = code.co_varnames[: code.co_argcount]
+    defaults = function.__defaults__ or ()
+    fast = dict(zip(params[len(params) - len(defaults) :], defaults))
+    fast.update(function.__kwdefaults__ or {})
+
+    def resolve(token):
+        kind, name = token
+        if kind == "deref":
+            cell = cells.get(name)
+            if cell is None or not _cell_is_set(cell):
+                return _MISSING
+            return cell.cell_contents
+        if kind == "global":
+            return function.__globals__.get(name, _MISSING)
+        if kind == "fast":
+            return fast.get(name, _MISSING)
+        return _MISSING
+
+    return resolve
+
+
+def _formula_helper():
+    """The templates' helper for a variable's own result (imported here:
+    the templates import this module)."""
+    try:
+        from uk_budget_data.measure_templates import _call_formula
+    except ImportError:  # pragma: no cover - always present in this package
+        return None
+    return _call_formula
+
+
+def _fields_of(value) -> dict:
+    """An object's ``__dict__`` and slots."""
+    found = dict(getattr(value, "__dict__", None) or {})
+    for kind in type(value).__mro__:
+        slots = kind.__dict__.get("__slots__", ())
+        for name in [slots] if isinstance(slots, str) else slots:
+            if name in ("__dict__", "__weakref__") or name in found:
+                continue
+            try:
+                found[name] = getattr(value, name)
+            except AttributeError:
+                pass
+    return found
 
 
 def _engine(value):
@@ -776,14 +1041,6 @@ def _engine(value):
     return None
 
 
-def _held_by_class(member) -> bool:
-    """Class members that are behaviour: methods and other callables, and
-    descriptors; not data such as labels."""
-    return callable(member) or isinstance(
-        member, (classmethod, staticmethod, property)
-    )
-
-
 def _is_component(value) -> bool:
     """Something whose code or fields can read a variable or a parameter."""
     if isinstance(
@@ -800,7 +1057,9 @@ def _is_component(value) -> bool:
         return False
     if _engine(value) is not None:
         return False
-    return hasattr(value, "__dict__") and not _library_class(type(value))
+    # Any other object of a class from model or measure code, fields or
+    # none: its class's methods are code too.
+    return not _library_class(type(value))
 
 
 def _reads(limit: DataLimit, names: set) -> bool:
@@ -822,13 +1081,16 @@ def _formulas_touched(base_system, reform_system, behaviour=None) -> dict:
     neutralised, by a modifier or a reform class) where the code that
     differs reads what the limit covers (see :func:`_reads`).
 
-    The code that differs is each side's formulas and what they hold. Left
-    out of it: a side the other wraps unchanged (a template that adds to a
-    variable's own result), and, inside formulas, any variable or formula
-    that one of the systems has, or a variable both sides hold, unchanged
-    (its total, used as reading it by name would). What is done with such a total is downstream of the
-    pricing, partly computable as abolishing SDLT is; a change to a formula
-    that does the pricing counts wherever in it the change falls.
+    The code that differs is each side's formulas and what they hold. A
+    variable or formula a formula holds and uses only for the result it
+    gives on that formula's own arguments (see
+    :meth:`_Behaviour.uses_as_results`) is left out when it is unchanged: a
+    variable either system has, or part of both sides' chains of results.
+    A side the other's chain uses for its own result is left out too (a
+    template that adds to it). What is done with such a result is
+    downstream of the pricing, partly computable as abolishing SDLT is. A
+    held variable called with other arguments (a changed purchase base, say)
+    is followed like any code, as is a held original never called.
     """
     behaviour = behaviour or _Behaviour()
     base, reform = base_system.variables, reform_system.variables
@@ -839,7 +1101,7 @@ def _formulas_touched(base_system, reform_system, behaviour=None) -> dict:
     ]
     if not changed:
         return {}
-    totals = {
+    installed = {
         behaviour.of(item)
         for variables in (base, reform)
         for variable in variables.values()
@@ -848,16 +1110,22 @@ def _formulas_touched(base_system, reform_system, behaviour=None) -> dict:
     found: dict = {}
     for name in changed:
         before, after = base.get(name), reform.get(name)
-        common = {
-            held
-            for held in behaviour.held_inside(before)
-            & behaviour.held_inside(after)
-            if held[0] == "variable"
+        formulas = installed | {
+            behaviour.of(f)
+            for side in (before, after)
+            for held in behaviour.variables_held(side)
+            for f in (held.formulas or {}).values()
         }
+        chains = {
+            id(side): behaviour.chain(side, formulas)
+            for side in (before, after)
+        }
+        unchanged = installed | (chains[id(before)] & chains[id(after)])
         names = set()
         for side, other in ((before, after), (after, before)):
-            if side is not None and not behaviour.wraps(other, side):
-                names |= behaviour.names(side, totals | common)
+            if side is None or _wrapped(behaviour, side, chains[id(other)]):
+                continue
+            names |= behaviour.names(side, unchanged, formulas, installed)
         for limit in DATA_LIMITS:
             if _reads(limit, names):
                 found.setdefault(limit.key, []).append(f"formula:{name}")
