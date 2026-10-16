@@ -145,5 +145,17 @@ export async function loadPublication(basePath, selectedIds, options = {}) {
       }
     }),
   );
+  // A combined run's figures stand only with its members': if any member's
+  // artifact failed verification (its receipt records a data limit, say),
+  // the combined run is not shown either, whatever the manifest says.
+  if (combined && !combined.single && combined.key in tablesByKey) {
+    const failed = combined.entry.measures.filter((id) => !(id in tablesByKey));
+    if (failed.length > 0) {
+      delete tablesByKey[combined.key];
+      failures[combined.key] =
+        `its member ${failed.join(", ")} did not verify: ` +
+        failed.map((id) => failures[id] ?? "not loaded").join("; ");
+    }
+  }
   return { status: "ready", manifest, tablesByKey, failures, selection };
 }

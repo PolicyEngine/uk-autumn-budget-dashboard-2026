@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication } from "./load";
+import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
   fixtureFetch,
@@ -74,6 +75,31 @@ describe("loadPublication", () => {
         (url) => url.includes("/epsilon/") && url.endsWith(".csv"),
       ),
     ).toBe(false);
+  });
+
+  it("shows no combined figure when a member fails verification", async () => {
+    // Review of #51 round 2: a member whose receipt was refused (there, one
+    // recording a data limit) left its combined run's figure on the page.
+    const beta = manifest.measures.beta.artifact;
+    const fetchImpl = fixtureFetch({
+      overrides: {
+        [`${alpha}/receipt.json`]: fixtureText(`${beta}/receipt.json`),
+      },
+    });
+    const result = await loadPublication(BASE_PATH, ["alpha", "beta"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey.alpha).toBeUndefined();
+    expect(result.tablesByKey["combined--alpha+beta"]).toBeUndefined();
+    expect(result.failures["combined--alpha+beta"]).toMatch(
+      /member alpha did not verify/,
+    );
+    const series = fiscalSeries({
+      ...result,
+      selectedIds: ["alpha", "beta"],
+      years: [IN_DATA],
+    });
+    expect(series.every((point) => point.combined === null)).toBe(true);
   });
 
   it("never loads a not-computable entry's artifact, even when asked", async () => {

@@ -8,10 +8,12 @@ computable on current data, with the reason, and never as a figure.
 Each limit names the parameters it covers, the input the data lack and why.
 A measure touches a limit when its reform and its baseline differ anywhere
 under one of those parameters, however the difference was made: parameter
-changes or a simulation modifier, on either side. On built simulations the
-two parameter trees are compared by position and by effective value, so a
-reordered, replaced, re-typed or added parameter shows, and a redundant
-breakpoint does not.
+changes or a simulation modifier, on either side. On built simulations two
+things are compared: what formulas read under those parameters at the start
+of each year (the system's cached views, which a modifier can change
+without touching the stored parameters), and the stored trees by position
+and effective value, so a reordered, replaced, re-typed or added parameter
+shows, and a redundant breakpoint or a label does not.
 
 A limit lifts when certified data carry the input:
 ``tests/test_certified_data.py`` fails once they do, so the limit is removed
@@ -75,11 +77,8 @@ DATA_LIMITS = (
 
 
 def _under(path: str, prefix: str) -> bool:
-    """Whether a parameter path is ``prefix`` or lies below it (a scale's
-    own settings are recorded as ``<scale>#scale``)."""
-    return path == prefix or path.startswith(
-        (prefix + ".", prefix + "[", prefix + "#")
-    )
+    """Whether a parameter path is ``prefix`` or lies below it."""
+    return path == prefix or path.startswith((prefix + ".", prefix + "["))
 
 
 def limits_for_paths(paths: Iterable[str]) -> list[DataLimit]:
@@ -125,10 +124,51 @@ def _changes(scenario) -> Mapping[str, object]:
     )
 
 
+# The instants formulas read parameters at for yearly results: each year's
+# start. Wider than the model's years, so a change just outside them shows.
+VIEW_YEARS = range(2015, 2041)
+
+
+def _flatten(view):
+    """A view of the parameters at one instant, as plain data: a scale by its
+    kind and arrays, a node by its children, a leaf by its value."""
+    if view is None:
+        return None
+    if hasattr(view, "thresholds"):
+        return {
+            "scale": type(view).__name__,
+            **{
+                name: list(getattr(view, name))
+                for name in ("thresholds", "rates", "amounts")
+                if hasattr(view, name)
+            },
+        }
+    children = getattr(view, "_children", None)
+    if children is not None:
+        return {
+            key: _flatten(child) for key, child in sorted(children.items())
+        }
+    return view
+
+
+def _views(system, prefix: str) -> str:
+    """What formulas read under ``prefix`` at the start of each year: the
+    system's views at those instants, cached ones included."""
+    seen = {}
+    for year in VIEW_YEARS:
+        node = system.get_parameters_at_instant(f"{year}-01-01")
+        try:
+            for part in prefix.split("."):
+                node = getattr(node, part)
+        except AttributeError:
+            node = None
+        seen[year] = _flatten(node)
+    return json.dumps(seen, sort_keys=True, default=repr)
+
+
 def _structure(parameters, prefix: str) -> dict:
-    """Everything at or under ``prefix``, keyed by its position in the tree
-    (child keys and bracket indices), not by the names the objects carry:
-    leaves map to themselves, and each scale's settings to their JSON."""
+    """Every leaf at or under ``prefix``, keyed by its position in the tree
+    (child keys and bracket indices), not by the names the objects carry."""
     try:
         node = parameters.get_child(prefix)
     except Exception:  # noqa: BLE001 - absent in this model version
@@ -137,9 +177,6 @@ def _structure(parameters, prefix: str) -> dict:
 
     def walk(node, path):
         if hasattr(node, "brackets"):
-            found[f"{path}#scale"] = json.dumps(
-                getattr(node, "metadata", None), sort_keys=True, default=str
-            )
             for index, bracket in enumerate(node.brackets):
                 walk(bracket, f"{path}[{index}]")
         elif hasattr(node, "values_list"):
@@ -153,32 +190,36 @@ def _structure(parameters, prefix: str) -> dict:
 
 
 def _same_effect(before, after) -> bool:
-    """Whether two entries from :func:`_structure` act alike: equal scale
-    settings, or a leaf with the same value at every breakpoint of
-    either side."""
+    """Whether two leaves from :func:`_structure` have the same value at
+    every breakpoint of either side (NaN equal to NaN)."""
     if before is None or after is None:
         return before is after
-    if isinstance(before, str) or isinstance(after, str):
-        return before == after
     instants = sorted(
         {v.instant_str for v in before.values_list}
         | {v.instant_str for v in after.values_list}
     )
-    return all(before(instant) == after(instant) for instant in instants)
+    return all(
+        json.dumps(before(instant), default=repr)
+        == json.dumps(after(instant), default=repr)
+        for instant in instants
+    )
 
 
 def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     """The limits a measure touches, as recorded in its receipt.
 
-    Compares everything under each limit's parameters in the two built
-    simulations, by position and effective value, so parameter changes and
-    simulation modifiers on either side are both seen, a structural change
-    (a reordered, replaced, re-typed or added parameter) shows, and a
-    redundant breakpoint does not. Each record names the limit, its reason
-    and the paths that differ.
+    Compares, under each limit's parameters in the two built simulations,
+    what formulas read at the start of each year (cached views included)
+    and the stored trees by position and effective value. So parameter
+    changes and simulation modifiers on either side are both seen, a
+    structural change (a reordered, replaced, re-typed or added parameter)
+    shows, and a redundant breakpoint or a label does not. Each record names
+    the limit, its reason and the paths that differ (a limit's own prefix
+    when only what formulas read differs).
     """
-    base = sim_baseline.tax_benefit_system.parameters
-    reform = sim_reform.tax_benefit_system.parameters
+    base_system = sim_baseline.tax_benefit_system
+    reform_system = sim_reform.tax_benefit_system
+    base, reform = base_system.parameters, reform_system.parameters
     touched = []
     for limit in DATA_LIMITS:
         differing = []
@@ -186,11 +227,19 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
             before, after = _structure(base, prefix), _structure(
                 reform, prefix
             )
-            differing += [
+            found = [
                 path
                 for path in before.keys() | after.keys()
                 if not _same_effect(before.get(path), after.get(path))
             ]
+            # Only what formulas read differs: a modifier that edited the
+            # cached views, or a parameter class that changes between its
+            # breakpoints.
+            if not found and _views(base_system, prefix) != _views(
+                reform_system, prefix
+            ):
+                found = [prefix]
+            differing += found
         if differing:
             touched.append(record(limit, differing))
     return touched

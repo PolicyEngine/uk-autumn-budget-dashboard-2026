@@ -223,11 +223,65 @@ def test_built_parameter_trees_show_swapped_brackets_that_keep_their_names():
     assert f"{SURCHARGE}.rate[0].rate" in touched[0]["parameters"]
 
 
+def fresh_views(sim):
+    """Drop the system's cached views, as a modifier that runs before any
+    calculation leaves them, so they are rebuilt from the changed tree."""
+    sim.tax_benefit_system._parameters_at_instant_cache.clear()
+    return sim
+
+
 def test_built_parameter_trees_show_a_retyped_scale():
     reformed = simulation()
     limited_scale(reformed).metadata["type"] = "single_amount"
+    touched = limits_touched(simulation(), fresh_views(reformed))
+    assert touched[0]["parameters"] == [SURCHARGE]
+
+
+def test_a_change_to_the_cached_views_alone_shows():
+    """Review of #51 round 2: a modifier can change what formulas read by
+    editing the system's cached view, leaving the stored tree untouched."""
+    reformed = simulation()
+    view = reformed.tax_benefit_system.parameters("2027-01-01")
+    view.gov.hmrc.stamp_duty.residential.purchase.additional.rate.rates[1] = (
+        0.07
+    )
     touched = limits_touched(simulation(), reformed)
-    assert touched[0]["parameters"] == [f"{SURCHARGE}.rate#scale"]
+    assert touched == [
+        record(BY_KEY["additional_dwelling_purchases"], [SURCHARGE])
+    ]
+
+
+def test_a_parameter_that_changes_between_its_breakpoints_shows():
+    """Review of #51 round 2: a Parameter subclass whose value differs
+    between the stored breakpoints; formulas read it at each year's start."""
+    from policyengine_core.parameters import Parameter
+
+    class BetweenBreakpoints(Parameter):
+        def _get_at_instant(self, instant):
+            if "2027-01-01" <= str(instant) < "2028-01-01":
+                return 0.07
+            return super()._get_at_instant(instant)
+
+    reformed = simulation()
+    leaf = reformed.tax_benefit_system.parameters.get_child(SURCHARGE_RATE)
+    leaf.__class__ = BetweenBreakpoints
+    touched = limits_touched(simulation(), fresh_views(reformed))
+    assert [item["key"] for item in touched] == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def test_a_label_is_not_a_change():
+    """Review of #51 round 2: a display label was a false positive."""
+    reformed = simulation({INCOME_TAX: {"2027": 0.22}})
+    limited_scale(reformed).metadata["label"] = "A clearer label"
+    assert limits_touched(simulation(), fresh_views(reformed)) == []
+
+
+def test_the_same_nan_on_both_sides_is_not_a_change():
+    baseline = simulation({SURCHARGE_RATE: {"2027": float("nan")}})
+    reformed = simulation({SURCHARGE_RATE: {"2027": float("nan")}})
+    assert limits_touched(baseline, reformed) == []
 
 
 def test_built_parameter_trees_show_an_added_parameter():
