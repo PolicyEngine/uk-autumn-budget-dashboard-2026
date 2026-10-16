@@ -27,6 +27,7 @@ A limit lifts when certified data carry the input:
 in the bundle-adoption PR that brings them.
 """
 
+import dis
 import enum
 import functools
 import hashlib
@@ -346,6 +347,22 @@ _ENUM_BOOKKEEPING = frozenset(
 )
 
 
+# What every enum member holds for the enum machinery itself.
+_ENUM_MEMBER_BOOKKEEPING = frozenset(
+    {"_value_", "_name_", "__objclass__", "_sort_order_"}
+)
+
+
+def _member_fields(member) -> dict:
+    """An enum member's own state: every field set on it, private or not,
+    besides the enum machinery's."""
+    return {
+        name: field
+        for name, field in sorted(vars(member).items())
+        if name not in _ENUM_MEMBER_BOOKKEEPING
+    }
+
+
 def _enum_entry(kind, name, member) -> bool:
     """A member of an enum class, or its record of them."""
     return issubclass(kind, enum.Enum) and (
@@ -450,6 +467,22 @@ def _global_names(code) -> set:
     return found
 
 
+@functools.lru_cache(maxsize=None)
+def _loaded_globals(code) -> frozenset:
+    """The names a code object, and any code nested in it, loads as
+    globals or builtins: what it can reach by name, not every name it uses
+    (an attribute's name is not a global it reads)."""
+    found = {
+        instruction.argval
+        for instruction in dis.get_instructions(code)
+        if instruction.opname in ("LOAD_GLOBAL", "LOAD_NAME")
+    }
+    for const in code.co_consts:
+        if hasattr(const, "co_code"):
+            found |= _loaded_globals(const)
+    return frozenset(found)
+
+
 def _code_names(code) -> set:
     """The names and string constants a code object, and any code nested in
     it, uses: how a formula names the variables it reads."""
@@ -479,10 +512,14 @@ class _Behaviour:
     by object for one comparison, which keeps the objects alive.
     """
 
-    def __init__(self):
+    def __init__(self, main_systems=()):
         self._memo: dict = {}
         self._kept: list = []
         self._active: set = set()
+        # The systems being compared: a simulation or system a formula
+        # holds matches across them only when it is one of these (its own
+        # side's), never another with a policy of its own.
+        self._main = frozenset(id(system) for system in main_systems)
 
     # --- fingerprints
 
@@ -490,11 +527,7 @@ class _Behaviour:
         """A hashable fingerprint of ``value``'s behaviour."""
         if isinstance(value, enum.Enum):
             kind = type(value)
-            fields = {
-                name: field
-                for name, field in vars(value).items()
-                if not name.startswith("_")
-            }
+            fields = _member_fields(value)
             return (
                 "member",
                 kind.__qualname__,
@@ -694,6 +727,16 @@ class _Behaviour:
             )
         engine = _engine(value)
         if engine is not None:
+            if self._main and engine[0] in ("simulation", "system"):
+                system = (
+                    getattr(value, "tax_benefit_system", None)
+                    if engine[0] == "simulation"
+                    else value
+                )
+                if id(system) not in self._main:
+                    # A simulation or system with a policy of its own (a
+                    # branch with a cloned system): unequal to anything.
+                    return ("opaque", id(value))
             return ("engine", *engine, self._parameter_content(value))
         if isinstance(value, type):
             if _library_class(value):
@@ -705,7 +748,10 @@ class _Behaviour:
                 and not _enum_entry(value, name, member)
             )
             enum_members = (
-                tuple((m.name, self.of(m.value)) for m in value)
+                tuple(
+                    (m.name, self.of(m.value), self.of(_member_fields(m)))
+                    for m in value
+                )
                 if issubclass(value, enum.Enum)
                 else ()
             )
@@ -776,7 +822,7 @@ class _Behaviour:
             for cell in value.__closure__ or ():
                 if _cell_is_set(cell):
                     self._collect(cell.cell_contents, names, held)
-            for name in sorted(_global_names(code)):
+            for name in sorted(_loaded_globals(code)):
                 if name in value.__globals__:
                     self._collect(value.__globals__[name], names, held)
             for _, _, found in _module_reads(value):
@@ -1155,12 +1201,14 @@ class _Exempt:
     formula) without that being part of the difference: an unchanged
     variable's, the other side's, or one both sides hold. By code object:
     ``codes`` maps each object's id to the fingerprints of the exempt
-    functions that run it; a code object that a function outside the set,
-    or the side's own formula, also runs is left out. ``other_side`` holds
-    the other side's formulas' fingerprints: calling one of those for its
-    result wraps the other side."""
+    functions that run it, and ``functions`` to those functions (for their
+    defaults); a code object that a function outside the set, or the side's
+    own formula, also runs is left out. ``other_side`` holds the other
+    side's formulas' fingerprints: calling one of those for its result
+    wraps the other side."""
 
     codes: dict
+    functions: dict
     objects: tuple
     fingerprints: frozenset
     other_side: frozenset
@@ -1187,17 +1235,8 @@ class _Changes:
                 unchanged |= {behaviour.of(f) for f in formulas}
         self.exempt: dict = {}
         self._literal: dict = {}
-        # Each side's own formulas' code, watched to see them run.
-        self.own_codes: dict = {}
-        self._own_objects: dict = {}
         for name, pair in self.sides.items():
             self._exempt_for(name, pair, unchanged, installed)
-            for side in (0, 1):
-                found = {
-                    id(f.__code__): f.__code__ for f in _formulas(pair[side])
-                }
-                self.own_codes[(name, side)] = frozenset(found)
-                self._own_objects.update(found)
 
     def _exempt_for(self, name, pair, unchanged, installed):
         of = self.behaviour.of
@@ -1233,9 +1272,10 @@ class _Changes:
             for f in formulas + functions:
                 if of(f) in fingerprints:
                     found = codes.setdefault(
-                        id(f.__code__), [f.__code__, set()]
+                        id(f.__code__), [f.__code__, set(), {}]
                     )
                     found[1].add(of(f))
+                    found[2][id(f)] = f
             for f in functions:
                 if of(f) not in fingerprints:
                     codes.pop(id(f.__code__), None)
@@ -1243,6 +1283,9 @@ class _Changes:
                 codes.pop(id(f.__code__), None)
             self.exempt[(name, side)] = _Exempt(
                 codes={key: frozenset(v[1]) for key, v in codes.items()},
+                functions={
+                    key: tuple(v[2].values()) for key, v in codes.items()
+                },
                 objects=tuple(v[0] for v in codes.values()),
                 fingerprints=fingerprints,
                 other_side=other,
@@ -1260,9 +1303,8 @@ class _Changes:
         return self._literal[key]
 
     def codes(self) -> list:
-        """Every code object watched as it starts: what an exempt call may
-        run, and each side's own formulas, once each."""
-        found = dict(self._own_objects)
+        """Every code object an exempt call may run, once each."""
+        found = {}
         for exempt in self.exempt.values():
             for code in exempt.objects:
                 found[id(code)] = code
@@ -1277,7 +1319,10 @@ class _Unobservable(Exception):
 class _Entry:
     """A calculation in progress: the observation watching its simulation
     (or ``None``), the side, the variable, the frame it was asked for in,
-    the period, and whether the variable is one that changed."""
+    the period, and whether the variable is one that changed. A foreign
+    entry is a calculation in a simulation no watch knows (a branch with a
+    cloned system), asked for inside a changed variable's: it carries that
+    variable's entry, so everything it reads is that variable's."""
 
     observation: object
     side: object
@@ -1285,18 +1330,21 @@ class _Entry:
     frame: object
     period: object
     changed: bool
+    foreign: bool = False
 
 
 class _Thread(threading.local):
     def __init__(self):
         self.entries: list = []
-        # By frame id: whether a call of an exempt formula, started while a
-        # changed variable was being calculated, was for its own result.
+        # By frame id: a call of an exempt formula started while a changed
+        # variable was being calculated: _WRAPS if for its own result and
+        # one of the other side's formulas, _OWN if for its own result,
+        # 0 otherwise.
         self.own: dict = {}
-        # While a wrapping is checked (see Observation._uses_result):
-        # whether reads inside own-result calls are moved, and what those
-        # calls returned.
-        self.moving = False
+        # While a wrapping is checked (see Observation._uses_result): how
+        # far the limited inputs read inside wrapping calls are moved (0
+        # for not at all), and what those calls returned.
+        self.moving = 0
         self.returned = None
 
 
@@ -1310,12 +1358,39 @@ _TOOL_IDS = (3, 4)
 _EVENTS = sys.monitoring.events
 # The inputs the limits name, moved when a wrapping is checked.
 _MISSING_INPUTS = frozenset(limit.missing_input for limit in DATA_LIMITS)
+# How far they are moved, each in turn, until the wrapping formula's result
+# moves: a result used past a threshold moves once a move crosses it.
+_MOVES = (1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9)
+# Where the engine's parameter tree, scales and their tracing are read.
+_PARAMETER_DIRS = tuple(
+    f"/policyengine_core/{part}/"
+    for part in ("parameters", "taxscales", "tracers")
+)
+# Own-result calls, by what they call (see _Thread.own).
+_OWN, _WRAPS = 1, 2
+# Every parameter path a limit covers, and each node on the way to one with
+# the names it leads on by.
+_LIMITED_PREFIXES = tuple(p for limit in DATA_LIMITS for p in limit.parameters)
+_TOWARDS: dict = {}
+for _prefix in _LIMITED_PREFIXES:
+    _parts_of = _prefix.split(".")
+    for _depth in range(len(_parts_of)):
+        _TOWARDS.setdefault(".".join(_parts_of[:_depth]), set()).add(
+            _parts_of[_depth]
+        )
+del _prefix, _parts_of, _depth
 
 
 def _engine_parts():
     """The engine's simulation and population classes, the methods watched,
     and the code objects of its own calculation."""
     if not _ENGINE:
+        from policyengine_core.parameters.at_instant_like import (
+            AtInstantLike,
+        )
+        from policyengine_core.parameters.parameter_node_at_instant import (
+            ParameterNodeAtInstant,
+        )
         from policyengine_core.populations.population import Population
         from policyengine_core.simulations.simulation import Simulation
 
@@ -1325,6 +1400,17 @@ def _engine_parts():
             calculate=Simulation.__dict__["calculate"],
             get_holder=Population.__dict__["get_holder"],
             run_formula=Simulation.__dict__["_run_formula"].__code__,
+            at_instant_like=AtInstantLike,
+            get_at_instant=AtInstantLike.__dict__["get_at_instant"],
+            # Stored parameters, scales, brackets and nodes: their values
+            # read without an instant (values_list, brackets, children).
+            stored_getattribute=AtInstantLike.__dict__.get("__getattribute__"),
+            node_at_instant=ParameterNodeAtInstant,
+            # Inherited from object unless the class defines its own.
+            node_getattribute=ParameterNodeAtInstant.__dict__.get(
+                "__getattribute__"
+            ),
+            node_getitem=ParameterNodeAtInstant.__dict__["__getitem__"],
         )
         _ENGINE["computing"] = frozenset(
             id(code)
@@ -1335,6 +1421,14 @@ def _engine_parts():
             )
         )
         _ENGINE["runners"] = (_ENGINE["run_formula"], _run_alone.__code__)
+        from policyengine_core.parameters.parameter_node import ParameterNode
+
+        _ENGINE["view_building"] = frozenset(
+            {
+                id(ParameterNode.__dict__["_get_at_instant"].__code__),
+                id(ParameterNodeAtInstant.__dict__["__init__"].__code__),
+            }
+        )
     return _ENGINE
 
 
@@ -1359,59 +1453,181 @@ def _watcher(sim):
 
 def _observed_calculate(self, variable_name, *args, **kwargs):
     entries = _THREAD.entries
-    inside = False
-    if entries and entries[-1].changed:
-        inside = entries[-1].observation._read(
-            entries[-1], variable_name, sys._getframe(1)
-        )
+    inside = 0
+    top = entries[-1] if entries else None
+    if top is not None and top.changed:
+        inside = top.observation._read(top, variable_name, sys._getframe(1))
     observation, side = _watcher(self)
-    changed = (
-        observation is not None and variable_name in observation.changes.sides
-    )
-    period = observation._period(self, args, kwargs) if changed else None
-    if changed:
-        observation.requested.setdefault((variable_name, side), set()).add(
-            period
+    if observation is None and top is not None and top.changed:
+        # A simulation no watch knows, asked from inside a changed
+        # variable's calculation: what it calculates is that variable's.
+        entry = _Entry(
+            top.observation,
+            top.side,
+            top.name,
+            top.frame,
+            top.period,
+            True,
+            foreign=True,
         )
-    entries.append(
-        _Entry(
-            observation,
-            side,
-            variable_name,
-            sys._getframe(),
-            period,
-            changed,
+    else:
+        changed = (
+            observation is not None
+            and variable_name in observation.changes.sides
         )
-    )
+        period = observation._period(self, args, kwargs) if changed else None
+        if changed:
+            observation.requested.setdefault((variable_name, side), set()).add(
+                period
+            )
+        entry = _Entry(
+            observation, side, variable_name, sys._getframe(), period, changed
+        )
+    entries.append(entry)
     try:
         result = _ENGINE["calculate"](self, variable_name, *args, **kwargs)
     finally:
         entries.pop()
         if not entries:
             _THREAD.own.clear()
-    if inside and _THREAD.moving and variable_name in _MISSING_INPUTS:
-        return _moved(result)
+    if (
+        inside == _WRAPS
+        and _THREAD.moving
+        and variable_name in _MISSING_INPUTS
+    ):
+        return _moved(result, _THREAD.moving)
     return result
 
 
-def _moved(values):
-    """``values`` changed everywhere: a purchase raised by £1m, a flag
+def _moved(values, by):
+    """``values`` changed everywhere: a purchase raised by ``by``, a flag
     flipped. Anything else is left as it is."""
     array = numpy.asarray(values)
     if array.dtype == bool:
         return ~array
     if numpy.issubdtype(array.dtype, numpy.number):
-        return array + 1_000_000
+        return array + by
     return values
+
+
+class _MovedHolder:
+    """A holder whose arrays read moved (see :func:`_moved`), for a read
+    inside a wrapping call while a wrapping is checked."""
+
+    def __init__(self, holder, by):
+        self._holder, self._by = holder, by
+
+    def get_array(self, period, *args, **kwargs):
+        values = self._holder.get_array(period, *args, **kwargs)
+        if values is None:
+            values = self._holder.default_array()
+        return _moved(values, self._by)
+
+    def __getattr__(self, name):
+        return getattr(self._holder, name)
 
 
 def _observed_get_holder(self, variable_name):
     entries = _THREAD.entries
+    holder = _ENGINE["get_holder"](self, variable_name)
     if entries and entries[-1].changed:
         frame = sys._getframe(1)
         if not _engine_internal(frame, entries[-1].frame):
-            entries[-1].observation._read(entries[-1], variable_name, frame)
-    return _ENGINE["get_holder"](self, variable_name)
+            inside = entries[-1].observation._read(
+                entries[-1], variable_name, frame
+            )
+            if (
+                inside == _WRAPS
+                and _THREAD.moving
+                and variable_name in _MISSING_INPUTS
+            ):
+                return _MovedHolder(holder, _THREAD.moving)
+    return holder
+
+
+def _limited_path(path) -> bool:
+    return any(_under(path, prefix) for prefix in _LIMITED_PREFIXES)
+
+
+def _parameter_read(path, key, frame):
+    """Record, for the changed calculation in progress, a read of what the
+    parameter node at ``path`` leads to by ``key``, where a limit covers
+    it: the node itself, a limited child of a node on the way to one, or
+    (an array of keys) every limited path below the node. Not while the
+    engine builds a view of the tree: that reads every parameter, for
+    whatever formula asked for the view first."""
+    if not isinstance(path, str) or _building_view(frame):
+        return
+    if _limited_path(path):
+        targets = [path]
+    elif isinstance(key, str):
+        child = f"{path}.{key}" if path else key
+        if key not in _TOWARDS.get(path, ()) or not _limited_path(child):
+            return
+        targets = [child]
+    elif key is not None and path in _TOWARDS:
+        targets = [p for p in _LIMITED_PREFIXES if not path or _under(p, path)]
+    else:
+        return
+    entry = _THREAD.entries[-1]
+    for target in targets:
+        entry.observation._read(entry, target, frame)
+
+
+def _building_view(frame) -> bool:
+    """Whether a parameter is read by the engine building a view of the
+    tree at an instant (``ParameterNode._get_at_instant``, which every
+    node's view runs), not for code that asked for it."""
+    building = _ENGINE["view_building"]
+    while frame is not None:
+        code = frame.f_code
+        if id(code) in building:
+            return True
+        if not any(part in code.co_filename for part in _PARAMETER_DIRS):
+            return False
+        frame = frame.f_back
+    return False
+
+
+def _node_path(node):
+    for name in ("_name", "name"):
+        try:
+            return object.__getattribute__(node, name)
+        except AttributeError:
+            continue
+    return None
+
+
+def _observed_node_getattribute(self, name):
+    entries = _THREAD.entries
+    if entries and entries[-1].changed and name[:1] != "_":
+        _parameter_read(_node_path(self), name, sys._getframe(1))
+    original = _ENGINE["node_getattribute"] or object.__getattribute__
+    return original(self, name)
+
+
+def _observed_stored_getattribute(self, name):
+    entries = _THREAD.entries
+    if entries and entries[-1].changed and name[:1] != "_":
+        _parameter_read(_node_path(self), name, sys._getframe(1))
+    original = _ENGINE["stored_getattribute"] or object.__getattribute__
+    return original(self, name)
+
+
+def _observed_node_getitem(self, key):
+    entries = _THREAD.entries
+    if entries and entries[-1].changed:
+        _parameter_read(_node_path(self), key, sys._getframe(1))
+    return _ENGINE["node_getitem"](self, key)
+
+
+def _observed_get_at_instant(self, instant):
+    entries = _THREAD.entries
+    if entries and entries[-1].changed:
+        path = _node_path(self)
+        if isinstance(path, str) and _limited_path(path):
+            _parameter_read(path, None, sys._getframe(1))
+    return _ENGINE["get_at_instant"](self, instant)
 
 
 def _engine_internal(frame, boundary) -> bool:
@@ -1430,43 +1646,57 @@ def _engine_internal(frame, boundary) -> bool:
 
 def _on_start(code, offset):
     """``sys.monitoring`` PY_START for a watched code object, inside a
-    changed variable's calculation: the side's own formula starting (it
-    ran), or an exempt formula starting, and whether for its own result."""
+    changed variable's calculation: the engine starting the variable's
+    formula or sums (``_run_formula``: it ran, so what is written in it
+    counts), or an exempt formula starting, and whether for its own
+    result."""
     thread = _THREAD
     frame = sys._getframe(1)
-    key = id(frame)
     entries = thread.entries
+    if code is _ENGINE["run_formula"]:
+        if entries and entries[-1].changed and not entries[-1].foreign:
+            entry = entries[-1]
+            variable = frame.f_locals.get("variable")
+            if getattr(variable, "name", None) == entry.name:
+                entry.observation.ran.add(
+                    (entry.name, entry.side, entry.period)
+                )
+        return
+    key = id(frame)
     if not entries or not entries[-1].changed:
         thread.own.pop(key, None)
         return
     entry = entries[-1]
+    if entry.foreign:
+        # Everything a foreign calculation does is the variable's.
+        thread.own[key] = 0
+        return
     try:
-        changes = entry.observation.changes
-        key_ = (entry.name, entry.side)
-        if (
-            id(code) in changes.own_codes[key_]
-            and frame.f_back is not None
-            and frame.f_back.f_code in _ENGINE["runners"]
-        ):
-            entry.observation.ran.add((*key_, entry.period))
-        exempt = changes.exempt[key_]
+        exempt = entry.observation.changes.exempt[(entry.name, entry.side)]
         found = exempt.codes.get(id(code))
-        own = found is not None and _own_result(frame, code, entry)
+        own = 0
+        if found is not None and _own_result(
+            frame, code, entry, exempt.functions[id(code)]
+        ):
+            own = _WRAPS if found <= exempt.other_side else _OWN
         thread.own[key] = own
-        if own and found <= exempt.other_side:
+        if own == _WRAPS:
             entry.observation.wrapped.add(
                 (entry.name, 1 - entry.side, entry.period)
             )
     except Exception as error:  # noqa: BLE001 - never break a formula
-        thread.own[key] = False
+        thread.own[key] = 0
         entry.observation._failed(entry.name, error)
 
 
 def _on_return(code, offset, value):
     """``sys.monitoring`` PY_RETURN for an exempt formula's code: while a
-    wrapping is checked, what an own-result call returned."""
+    wrapping is checked, what a wrapping call returned."""
     thread = _THREAD
-    if thread.returned is not None and thread.own.get(id(sys._getframe(1))):
+    if (
+        thread.returned is not None
+        and thread.own.get(id(sys._getframe(1))) == _WRAPS
+    ):
         thread.returned.append(_copied(value))
 
 
@@ -1487,16 +1717,17 @@ def _same(a, b) -> bool:
             return False
 
 
-def _own_result(frame, code, entry) -> bool:
+def _own_result(frame, code, entry, functions=()) -> bool:
     """Whether ``frame``, a formula starting inside ``entry``'s
-    calculation, was called on exactly what the engine gave that
-    calculation's formula: the same population, period and parameters."""
-    if (
-        code.co_argcount not in (2, 3)
-        or code.co_kwonlyargcount
-        or code.co_flags & (inspect.CO_VARARGS | inspect.CO_VARKEYWORDS)
-    ):
+    calculation, was called as the engine calls a formula, on exactly what
+    it gave that calculation's: the same population, period and parameters
+    (the first two only for a formula of two parameters), every other
+    parameter at its default for one of ``functions`` (the functions
+    behind ``code``), and nothing in ``*args`` or ``**kwargs``."""
+    count = code.co_argcount
+    if count < 2:
         return False
+    given_count = 2 if count == 2 else 3
     runners = _ENGINE["runners"]
     caller = run = frame.f_back
     while (
@@ -1509,16 +1740,56 @@ def _own_result(frame, code, entry) -> bool:
         # No formula of the variable running, or this is that formula.
         return False
     given, called = run.f_locals, frame.f_locals
-    names = code.co_varnames[: code.co_argcount]
+    names = code.co_varnames
     period, want = called[names[1]], given["period"]
-    return (
+    if not (
         called[names[0]] is given["population"]
         and type(period) is type(want)
         and bool(period == want)
-        and (
-            code.co_argcount == 2 or called[names[2]] is given["parameters_at"]
-        )
+        and (given_count == 2 or called[names[2]] is given["parameters_at"])
+    ):
+        return False
+    rest = count + code.co_kwonlyargcount
+    if code.co_flags & inspect.CO_VARARGS:
+        if called[names[rest]] != ():
+            return False
+        rest += 1
+    if code.co_flags & inspect.CO_VARKEYWORDS and called[names[rest]]:
+        return False
+    extra = names[given_count:count]
+    keywords = names[count : count + code.co_kwonlyargcount]
+    if not extra and not keywords:
+        return True
+    return any(
+        _at_defaults(function, called, given_count, extra, keywords)
+        for function in functions
     )
+
+
+def _at_defaults(function, called, start, extra, keywords) -> bool:
+    """Whether a formula's parameters after the engine's, and its
+    keyword-only ones, hold ``function``'s defaults."""
+    defaults = function.__defaults__ or ()
+    first = function.__code__.co_argcount - len(defaults)
+    for index, name in enumerate(extra, start=start):
+        if index < first or not _same_value(
+            called[name], defaults[index - first]
+        ):
+            return False
+    keyword_defaults = function.__kwdefaults__ or {}
+    return all(
+        name in keyword_defaults
+        and _same_value(called[name], keyword_defaults[name])
+        for name in keywords
+    )
+
+
+def _same_value(a, b) -> bool:
+    """The very object, or an equal plain value of the same type."""
+    if a is b:
+        return True
+    plain = (bool, int, float, complex, str, bytes, type(None))
+    return type(a) is type(b) and isinstance(a, plain) and a == b
 
 
 def _start_watching(observation):
@@ -1539,7 +1810,14 @@ def _start_watching(observation):
             _ENGINE["tool"] = tool
             engine["simulation"].calculate = _observed_calculate
             engine["population"].get_holder = _observed_get_holder
-        for code in observation.changes.codes():
+            engine["at_instant_like"].get_at_instant = _observed_get_at_instant
+            engine["at_instant_like"].__getattribute__ = (
+                _observed_stored_getattribute
+            )
+            node = engine["node_at_instant"]
+            node.__getattribute__ = _observed_node_getattribute
+            node.__getitem__ = _observed_node_getitem
+        for code in [*observation.changes.codes(), engine["run_formula"]]:
             held = _MONITORED.setdefault(id(code), [code, 0])
             if held[1] == 0:
                 sys.monitoring.set_local_events(
@@ -1555,7 +1833,7 @@ def _stop_watching(observation):
             return
         _WATCHING.remove(observation)
         tool = _ENGINE["tool"]
-        for code in observation.changes.codes():
+        for code in [*observation.changes.codes(), _ENGINE["run_formula"]]:
             held = _MONITORED[id(code)]
             held[1] -= 1
             if held[1] == 0:
@@ -1565,6 +1843,19 @@ def _stop_watching(observation):
             engine = _ENGINE
             engine["simulation"].calculate = engine["calculate"]
             engine["population"].get_holder = engine["get_holder"]
+            engine["at_instant_like"].get_at_instant = engine["get_at_instant"]
+            if engine["stored_getattribute"] is None:
+                del engine["at_instant_like"].__getattribute__
+            else:
+                engine["at_instant_like"].__getattribute__ = engine[
+                    "stored_getattribute"
+                ]
+            node = engine["node_at_instant"]
+            if engine["node_getattribute"] is None:
+                del node.__getattribute__
+            else:
+                node.__getattribute__ = engine["node_getattribute"]
+            node.__getitem__ = engine["node_getitem"]
             for event in (_EVENTS.PY_START, _EVENTS.PY_RETURN):
                 sys.monitoring.register_callback(tool, event, None)
             sys.monitoring.free_tool_id(tool)
@@ -1574,20 +1865,26 @@ class Observation:
     """What the code that differs between two simulations' systems reads
     while they run (see :func:`observing`).
 
-    A read is any variable a calculation asks the engine for, or any holder
-    its code fetches. It is put down to a changed variable's side when it
-    is made while that variable is being calculated there (in that
-    simulation, or a branch sharing its system), unless it is made inside a
-    call of an exempt formula (:class:`_Exempt`) on the arguments the
-    engine gave the variable's own formula: that formula's result alone,
-    which the change only uses.
+    A read is any variable a calculation asks the engine for, any holder
+    its code fetches, or any parameter under a limit it reaches (a stored
+    parameter, scale, bracket or node, or a view of the tree at an
+    instant; not the engine building a view). It is put down to a changed
+    variable's side when it is made while that variable is being
+    calculated there (in that simulation, a branch sharing its system, or
+    a simulation no watch knows that the calculation asks), unless it is
+    made inside a call of an exempt formula (:class:`_Exempt`) on the
+    arguments the engine gave the variable's own formula, every other
+    parameter at its default: that formula's result alone, which the
+    change only uses.
 
     A side whose formula the other side calls that way is wrapped there,
     and its reads in that period are not the change's (a template adding
     to the original) when the result is used: moving the limited inputs
-    that call reads (``_moved``) moves what the call returns and what the
-    wrapping formula returns (see :meth:`_uses_result`). A result discarded,
-    or one no move reaches, does not wrap.
+    read inside those calls (``_moved``, by growing amounts) moves what the
+    calls return and what the wrapping formula returns (see
+    :meth:`_uses_result`). A result discarded, or one no move reaches,
+    does not wrap. What is written in a side's code counts wherever the
+    engine ran its formula or sums unwrapped.
 
     A variable is unobservable when a value the engine calculated for it is
     held when the watch begins (one set as an input is not: the formula
@@ -1597,11 +1894,11 @@ class Observation:
 
     def __init__(self, sim_baseline, sim_reform):
         self.sims = (sim_baseline, sim_reform)
-        self.changes = _Changes(
+        systems = (
             sim_baseline.tax_benefit_system,
             sim_reform.tax_benefit_system,
-            _Behaviour(),
         )
+        self.changes = _Changes(*systems, _Behaviour(main_systems=systems))
         self._sides = {
             id(sim.tax_benefit_system): side
             for side, sim in enumerate(self.sims)
@@ -1635,25 +1932,29 @@ class Observation:
             name, f"watching it failed: {type(error).__name__}"
         )
 
-    def _read(self, entry, name, frame) -> bool:
+    def _read(self, entry, name, frame) -> int:
         """Record ``name`` as read by ``entry``'s side, unless an exempt
-        formula called for its own result made the read; whether one did."""
+        formula called for its own result made the read. Returns 0 for a
+        read recorded, else what the calls it was made inside called
+        (``_WRAPS`` if one is a call of the other side's formula)."""
+        inside = 0
         try:
             own = _THREAD.own
             exempt = self.changes.exempt[(entry.name, entry.side)]
             runners = _ENGINE["runners"]
             while frame is not None and frame is not entry.frame:
-                if frame.f_code in runners:
+                if frame.f_code in runners and not entry.foreign:
                     break
-                if id(frame.f_code) in exempt.codes and own.get(id(frame)):
-                    return True
+                if id(frame.f_code) in exempt.codes:
+                    inside = max(inside, own.get(id(frame), 0))
                 frame = frame.f_back
-            self.reads.setdefault(
-                (entry.name, entry.side, entry.period), set()
-            ).add(str(name))
+            if not inside:
+                self.reads.setdefault(
+                    (entry.name, entry.side, entry.period), set()
+                ).add(str(name))
         except Exception as error:  # noqa: BLE001 - never break a formula
             self._failed(entry.name, error)
-        return False
+        return inside
 
     def _start(self):
         """Check the simulations can be watched, then watch them."""
@@ -1712,7 +2013,8 @@ class Observation:
         """Keep a wrapping only where the wrapped side's reads would touch
         a limit and the wrapping side uses the result (see
         :meth:`_uses_result`); a wrapping that touches nothing is kept, as
-        dropping it changes nothing."""
+        dropping it changes nothing. The parameter caches the checks fill
+        are emptied again."""
         doubtful = []
         for name, side, period in self.wrapped:
             if name in self.unobservable:
@@ -1721,48 +2023,66 @@ class Observation:
             names = names | self.changes.literal_names(name, side)
             if any(_reads(limit, names) for limit in DATA_LIMITS):
                 doubtful.append((name, side, period))
-        for name, side, period in doubtful:
-            if not self._uses_result(name, 1 - side, period):
-                self.wrapped.discard((name, side, period))
+        with (
+            _caches_left_as_found(self.changes.systems[0]),
+            _caches_left_as_found(self.changes.systems[1]),
+        ):
+            for name, side, period in doubtful:
+                if not self._uses_result(name, 1 - side, period):
+                    self.wrapped.discard((name, side, period))
 
     def _uses_result(self, name, side, period) -> bool:
         """Whether ``side``'s formula for ``name`` in ``period`` uses what
-        its own-result calls return: run on the simulation as it stands,
-        once as it is and once with the limited inputs those calls read
-        moved; used when the calls' results move and the formula's does."""
+        its calls of the other side's formula return. It is run on the
+        simulation as it stands, once as it is and then with the limited
+        inputs those calls read moved by each of ``_MOVES`` in turn: used
+        once a move moves what the calls return and what the formula
+        returns."""
         variable = self.changes.sides[name][side]
         formula = variable.get_formula(period) if period else None
         if formula is None:
             return False
         sim = self.sims[side]
-        outcomes = []
-        thread = _THREAD
-        for moving in (False, True):
-            thread.moving, thread.returned = moving, []
-            thread.entries.append(
-                _Entry(self, side, name, sys._getframe(), period, True)
-            )
-            try:
-                result = _run_alone(
-                    sim.get_variable_population(name),
-                    period,
-                    sim.tax_benefit_system.parameters,
-                    formula,
-                )
-                outcomes.append((_copied(result), thread.returned))
-            except Exception:  # noqa: BLE001 - can't tell: not used
+        still = None
+        for by in (0, *_MOVES):
+            outcome = self._run_moved(sim, side, name, period, formula, by)
+            if outcome is None:
                 return False
-            finally:
-                thread.entries.pop()
-                thread.moving, thread.returned = False, None
-                if not thread.entries:
-                    thread.own.clear()
-        (still, calls), (moved, moved_calls) = outcomes
-        if not calls or len(calls) != len(moved_calls):
-            return False
-        if all(_same(a, b) for a, b in zip(calls, moved_calls)):
-            return False
-        return not _same(still, moved)
+            if still is None:
+                still = outcome
+                if not still[1]:
+                    return False
+                continue
+            calls_moved = len(outcome[1]) == len(still[1]) and not all(
+                _same(a, b) for a, b in zip(still[1], outcome[1])
+            )
+            if calls_moved and not _same(still[0], outcome[0]):
+                return True
+        return False
+
+    def _run_moved(self, sim, side, name, period, formula, by):
+        """``formula``'s result, and what its wrapping calls returned, with
+        the limited inputs read inside those calls moved by ``by``."""
+        thread = _THREAD
+        thread.moving, thread.returned = by, []
+        thread.entries.append(
+            _Entry(self, side, name, sys._getframe(), period, True)
+        )
+        try:
+            result = _run_alone(
+                sim.get_variable_population(name),
+                period,
+                sim.tax_benefit_system.parameters,
+                formula,
+            )
+            return _copied(result), thread.returned
+        except Exception:  # noqa: BLE001 - can't tell: not used
+            return None
+        finally:
+            thread.entries.pop()
+            thread.moving, thread.returned = 0, None
+            if not thread.entries:
+                thread.own.clear()
 
     def names(self, name) -> set:
         """The names a changed variable's differing code read on each side,

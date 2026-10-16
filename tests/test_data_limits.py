@@ -15,6 +15,7 @@ import inspect
 import operator
 import re
 import sys
+import types
 import warnings
 
 import numpy as np
@@ -2888,3 +2889,400 @@ def test_the_limit_recorded_is_the_input_read_however_its_name_is_built(
 
     reformed = simulation(modifier=own_result_by(adding_a_levy(read)))
     assert keys(limits_touched(simulation(), reformed)) == INPUTS[name]
+
+
+# --- round 13's gaps in the watch (review of #51 round 13) -------------
+
+OTHER_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
+NON_RESIDENTIAL_BAND = f"{NON_RESIDENTIAL}[1].rate"
+
+
+def priced_by_a_summed_rate(kind, path):
+    """Non-residential purchases priced by a variable made of nothing but
+    ``adds`` or ``subtracts`` of one parameter, which the engine reads with
+    no formula running."""
+
+    def modifier(sim):
+        from policyengine_core.model_api import Variable
+
+        entity = sim.tax_benefit_system.get_variable(
+            NON_RESIDENTIAL_SDLT
+        ).entity
+
+        class purchase_rate(Variable):
+            label = "Purchase rate"
+            definition_period = "year"
+            value_type = float
+
+        purchase_rate.entity = entity
+        setattr(purchase_rate, kind, [path])
+
+        class sdlt_on_non_residential_property_transactions(Variable):
+            def formula(household, period, parameters):
+                purchased = household(
+                    "non_residential_property_purchased", period
+                )
+                return purchased * household("purchase_rate", period)
+
+        sim.tax_benefit_system.add_variable(purchase_rate)
+        sim.tax_benefit_system.update_variable(
+            sdlt_on_non_residential_property_transactions
+        )
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize("kind", ["adds", "subtracts"])
+def test_a_limited_rate_summed_with_no_formula_shows(kind):
+    """Review of #51 round 13: a variable of ``adds`` or ``subtracts`` alone
+    ran no formula, so the limited parameter it names was dropped (SDLT
+    £20,000 to £2,000 with no limit). The engine starting its sums counts
+    as running it, and the parameter read is watched."""
+    touched = limits_touched(
+        simulation(modifier=priced_by_a_summed_rate(kind, OTHER_RATE)),
+        simulation(
+            modifier=priced_by_a_summed_rate(kind, NON_RESIDENTIAL_BAND)
+        ),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+    assert touched[0]["parameters"] == ["formula:purchase_rate"]
+
+
+def rates_by_get_parameter(parameters, period):
+    from policyengine_core.parameters import get_parameter
+
+    kind = "non_residential"
+    return get_parameter(parameters, f"gov.hmrc.stamp_duty.{kind}.purchase")(
+        period
+    )
+
+
+def rates_by_get_child(parameters, period):
+    kind = "non_residential"
+    return parameters.get_child(f"gov.hmrc.stamp_duty.{kind}.purchase")(period)
+
+
+def rates_by_getattr(parameters, period):
+    kind = "non_residential"
+    return getattr(parameters(period).gov.hmrc.stamp_duty, kind).purchase
+
+
+def rates_by_item(parameters, period):
+    kind = "non_residential"
+    return parameters(period).gov.hmrc.stamp_duty[kind].purchase
+
+
+def rates_by_stored_values(parameters, period):
+    """The rates rebuilt from the stored parameter, read with no instant."""
+    from policyengine_core.taxscales import MarginalRateTaxScale
+
+    kind = "non_residential"
+    stored = parameters.get_child(f"gov.hmrc.stamp_duty.{kind}.purchase")
+
+    def latest(parameter):
+        return next(
+            item.value
+            for item in parameter.values_list
+            if item.value is not None
+        )
+
+    scale = MarginalRateTaxScale()
+    for bracket in stored.brackets:
+        scale.add_bracket(latest(bracket.threshold), latest(bracket.rate))
+    return scale
+
+
+def rates_by_a_literal_path(parameters, period):
+    return parameters(period).gov.hmrc.stamp_duty.non_residential.purchase
+
+
+def pricing_main_homes_by(rates):
+    def make(native):
+        def formula(household, period, parameters):
+            current = _call_formula(native, household, period, parameters)
+            main = household("main_residential_property_purchased", period)
+            return current + rates(parameters, period).calc(main)
+
+        return formula
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "rates",
+    [
+        rates_by_get_parameter,
+        rates_by_get_child,
+        rates_by_getattr,
+        rates_by_item,
+        rates_by_stored_values,
+        rates_by_a_literal_path,
+    ],
+)
+def test_a_limited_parameter_read_by_any_path_shows(rates):
+    """Review of #51 round 13: a parameter path built at run time escaped
+    the watch (SDLT £0 to £14,500 with no limit) while the literal path
+    showed. Reads of the parameter tree on the way to a limited path are
+    watched now, however the path is reached."""
+    reformed = simulation(modifier=own_result_by(pricing_main_homes_by(rates)))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def band_set_on_its_member(rate):
+    """An enum class a modifier makes, with its member's rate set after the
+    class is made, read through the class."""
+
+    class Band(enum.Enum):
+        STANDARD = 1
+
+    Band.STANDARD.rate = rate
+
+    def make():
+        return lambda: Band.STANDARD.rate
+
+    return make
+
+
+def test_a_members_state_read_through_its_class_is_compared():
+    """Review of #51 round 13: state set on a member after its class was
+    made, read through the class, compared equal (£1,000 to £2,000 with no
+    limit)."""
+    touched = limits_touched(
+        simulation(modifier=non_residential_times(band_set_on_its_member(1))),
+        simulation(modifier=non_residential_times(band_set_on_its_member(2))),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def priced_by_a_counterfactual_branch(rate, bonus, wrapped=False):
+    """Non-residential SDLT taken from a branch with a cloned system whose
+    own rate differs: what the branch calculates is the formula's. If
+    ``wrapped``, the branch's own formula adds to its original's result."""
+
+    def modifier(sim):
+        from policyengine_core.parameters import get_parameter
+
+        branch = sim.get_branch("counterfactual", clone_system=True)
+        get_parameter(
+            branch.tax_benefit_system.parameters, NON_RESIDENTIAL_BAND
+        ).update(period="2027", value=rate)
+        if wrapped:
+            own_result_by(adding_1000)(branch)
+        branch.drop_computed_arrays()
+
+        def formula(household, period, parameters):
+            return branch.calculate(NON_RESIDENTIAL_SDLT, period) + bonus
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize(
+    "bonus, wrapped",
+    [(0, False), (1, False), (0, True)],
+    ids=["same-code", "changed-code", "wrapped-in-the-branch"],
+)
+def test_a_branch_with_its_own_policy_shows(bonus, wrapped):
+    """Review of #51 round 13: a held branch with a cloned system compared
+    equal whatever its policy, and what it calculated was read by no one
+    (SDLT £15,500 to £17,500 with no limit). A held simulation matches only
+    when it is one of the two compared; a calculation in another,
+    inside a changed variable's, is that variable's."""
+    touched = limits_touched(
+        simulation(
+            modifier=priced_by_a_counterfactual_branch(0.03, 0, wrapped)
+        ),
+        simulation(
+            modifier=priced_by_a_counterfactual_branch(0.05, bonus, wrapped)
+        ),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def the_original_past_a_threshold(native):
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        return np.where(current > 100_000, current, 0) + 1000
+
+    return formula
+
+
+def test_an_own_result_used_past_a_threshold_stays_computable():
+    """Review of #51 round 13: one £1m move never took SDLT past the
+    threshold, so the result looked unused and the measure limited. The
+    moves grow until the formula's result moves."""
+    reformed = simulation(
+        modifier=own_result_by(the_original_past_a_threshold)
+    )
+    assert limits_touched(simulation(), reformed) == []
+
+
+def non_residential_at_a_rate(household, period, parameters, rate=0.05):
+    return household("non_residential_property_purchased", period) * rate
+
+
+def non_residential_at_a_keyword_rate(
+    household, period, parameters, *, rate=0.05
+):
+    return household("non_residential_property_purchased", period) * rate
+
+
+def non_residential_from_its_holder(household, period, parameters):
+    holder = household.get_holder("non_residential_property_purchased")
+    values = holder.get_array(period)
+    return (0 if values is None else values) * 0.05
+
+
+def priced_natively_by(formula, wrapped):
+    """A modifier installing ``formula`` for non-residential SDLT and, if
+    ``wrapped``, adding £1,000 to its own result."""
+
+    def modifier(sim):
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        if wrapped:
+            own_result_by(adding_1000)(sim)
+        return sim
+
+    return modifier
+
+
+def adding_1000(native):
+    def formula(household, period, parameters):
+        return _call_formula(native, household, period, parameters) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "formula",
+    [
+        non_residential_at_a_rate,
+        non_residential_at_a_keyword_rate,
+        non_residential_from_its_holder,
+    ],
+    ids=["optional-argument", "keyword-only-argument", "holder-read"],
+)
+def test_an_own_result_however_the_original_is_written_stays_computable(
+    formula,
+):
+    """Review of #51 round 13: an original with an optional or keyword-only
+    argument at its default wasn't taken as called for its own result, and
+    one reading its input through the holder wasn't moved by the check;
+    both made a £1,000 addition not computable."""
+    touched = limits_touched(
+        simulation(modifier=priced_natively_by(formula, False)),
+        simulation(modifier=priced_natively_by(formula, True)),
+    )
+    assert touched == []
+
+
+def discarding_the_original_beside_another(native):
+    def formula(household, period, parameters):
+        _call_formula(native, household, period, parameters)
+        residential = household.simulation.tax_benefit_system.get_variable(
+            RESIDENTIAL
+        )
+        return _call_formula(residential, household, period, parameters) + 1000
+
+    return formula
+
+
+def test_a_discarded_original_beside_another_result_does_not_wrap():
+    """Review of #51 round 13 (outside the line): the check moved the
+    inputs every own-result call read, so residential SDLT's result
+    moving confirmed a wrapping of the discarded original. Only inputs read
+    inside calls of the other side's formula move now."""
+    reformed = simulation(
+        modifier=own_result_by(discarding_the_original_beside_another)
+    )
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def reading_next_year_when_there_is_tax(native):
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        if np.any(current > 0):
+            # Only the check's moved purchases take this branch.
+            parameters(period.offset(1, "year"))
+        return current + 1000
+
+    return formula
+
+
+def test_checking_a_wrapping_leaves_parameter_caches_as_the_run_did():
+    """Review of #51 round 13 (P3): the wrapping check, run as the watch
+    ends, filled parameter caches the run had not (here, next year's,
+    which only the moved purchases read)."""
+    baseline = simulation()
+    reformed = simulation(
+        modifier=own_result_by(reading_next_year_when_there_is_tax)
+    )
+    systems = [baseline.tax_benefit_system, reformed.tax_benefit_system]
+    with data_limits.observing(baseline, reformed) as observed:
+        for sim in (baseline, reformed):
+            sim.calculate(NON_RESIDENTIAL_SDLT, 2027)
+        after_run = [
+            [set(cache) for cache in data_limits._caches(system)]
+            for system in systems
+        ]
+    assert observed.wrapped
+    assert [
+        [set(cache) for cache in data_limits._caches(system)]
+        for system in systems
+    ] == after_run
+    assert limits_touched(baseline, reformed, observed) == []
+
+
+def a_literal_read_in_a_branch_never_taken(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        if period.start.year > 2100:
+            purchased = household("non_residential_property_purchased", period)
+            result = result + purchased
+        return result + 1000
+
+    return formula
+
+
+def test_a_name_written_in_a_formula_that_ran_counts_unread():
+    """The names written in a side's code count wherever its formula ran
+    unwrapped, read or not: the net under the watch for a read the engine
+    doesn't route through its hooks. (A name built at run time in such a
+    branch reads nothing, above.)"""
+    reformed = simulation(
+        modifier=own_result_by(a_literal_read_in_a_branch_never_taken)
+    )
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+# A module global holding a limited path, named as an attribute elsewhere.
+limited_note = NON_RESIDENTIAL
+OPTIONS = types.SimpleNamespace(limited_note=0.0)
+
+
+def adding_an_option_named_like_a_global(native):
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        return current + 1000 + OPTIONS.limited_note
+
+    return formula
+
+
+def test_an_attribute_named_like_a_global_reads_no_global():
+    """Review of #51 round 14 (found in this round's own run): the names
+    written in code followed every name a formula uses into its module's
+    globals, attribute names included, so ``OPTIONS.limited_note`` read the
+    module's ``limited_note``. Only names loaded as globals are followed."""
+    reformed = simulation(
+        modifier=own_result_by(adding_an_option_named_like_a_global)
+    )
+    assert limits_touched(simulation(), reformed) == []
