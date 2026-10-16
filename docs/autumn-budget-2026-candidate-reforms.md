@@ -75,6 +75,16 @@ Engine status is for `policyengine-uk` 2.130.1 with enhanced FRS 1.58.1.
 
 Ranked by likelihood, not by modelability.
 
+**Dataset note (16 October):**
+
+- **The data column** was checked against the certified enhanced FRS (uk-data 1.58.x).
+- **Drill 4 runs on Microcosm instead:** the latest national release, `04a496f2`, published 15 October.
+- **Where Microcosm differs:**
+  - it carries `capital_gains_badr` and the residential-property gains split;
+  - it top-codes `main_residence_value` at about £2.8–3.0m;
+  - it has no additional-property purchase flag, so SDLT higher rates come to nil;
+  - like enhanced FRS, it has no alcohol or tobacco volumes.
+
 | Rank | Measure and parameters | Likelihood and reason | Key dated sources | Reported cost or yield | Route | Data needed; in the certified dataset? | Pre-28 Oct action |
 |---|---|---|---|---|---|---|---|
 | 1 | **Triple lock replaced from April 2030** (**announced**): State Pension rises by the highest of CPI, 2.5% or the rise needed to "return or maintain" its value relative to earnings; no base year stated | High: announced 29 Sep; the OBR scores 2030-31 | [DWP factsheet, 6 Oct](https://www.gov.uk/government/publications/state-pension-uprating-analysis-2026/triple-lock-reform-factsheet); [DWP uprating analysis, 6 Oct](https://www.gov.uk/government/publications/state-pension-uprating-analysis-2026/state-pension-uprating) | £15bn (2039-40), £50bn (2049-50) nominal; small inside the window | `dashboard-param` | `state_pension_reported` (surveyed). Result driven by the OBR earnings path (`yoy_growth`, labelled March 2026 EFO) | Test that `gov.dwp.state_pension.triple_lock.*` range keys via `Scenario(parameter_changes=...)` move rates on 2.130.1 (YAML notes warn of a silent zero). Fix the earnings benchmark assumption |
