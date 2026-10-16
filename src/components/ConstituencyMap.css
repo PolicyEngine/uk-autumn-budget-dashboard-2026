@@ -172,12 +172,14 @@
   justify-content: center;
 }
 
+/* The SVG fills the width; past 600px tall it shows more on either side
+   of the map, and the legend and logo keep to its corners. */
 .map-canvas svg {
   background: white;
   border-radius: 4px;
   width: 100%;
   height: auto;
-  max-width: 800px;
+  max-height: 600px;
   display: block;
 }
 
@@ -411,9 +413,5 @@
   .zoom-control-btn svg {
     width: 12px;
     height: 12px;
-  }
-
-  .map-canvas svg {
-    max-width: 100%;
   }
 }

@@ -18,6 +18,7 @@ import {
   DEFAULT_FONT,
 } from "./svgHelpers";
 import { downloadSvg } from "./downloadFile";
+import { LEGEND_INSET, MAP_LEGEND_CLASS } from "./geography/legend";
 
 /** The class of the map's zoomable group, whose transform is reset. */
 export const MAP_ZOOM_LAYER_CLASS = "map-zoom-layer";
@@ -321,6 +322,17 @@ export async function exportMapAsSvg(
   const zoomLayer = clonedSvg.querySelector(`g.${MAP_ZOOM_LAYER_CLASS}`);
   if (zoomLayer) {
     zoomLayer.removeAttribute("transform");
+  }
+
+  // On a wide screen the legend sits left of the drawing area, in the
+  // corner of what is shown. The file shows the drawing area alone, so the
+  // legend goes to its corner.
+  const legend = clonedSvg.querySelector(`g.${MAP_LEGEND_CLASS}`);
+  if (legend) {
+    legend.setAttribute(
+      "transform",
+      `translate(${LEGEND_INSET}, ${LEGEND_INSET})`,
+    );
   }
 
   // Remove existing image elements with relative URLs (won't work in standalone SVG)

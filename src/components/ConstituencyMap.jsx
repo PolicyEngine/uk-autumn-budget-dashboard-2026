@@ -9,7 +9,13 @@ import {
 import { CHART_LOGO } from "../utils/chartLogo";
 import { exportMapAsSvg, MAP_ZOOM_LAYER_CLASS } from "../utils/exportMapAsSvg";
 import { OUTCOME_LABELS } from "../utils/geography/format";
-import { appendStatusPatterns, drawMapLegend } from "../utils/geography/legend";
+import {
+  LEGEND_INSET,
+  MAP_LEGEND_CLASS,
+  appendStatusPatterns,
+  drawMapLegend,
+  placeMapLegend,
+} from "../utils/geography/legend";
 import { DIRECTION_TEXT_COLOURS } from "../utils/geography/palette";
 import { hasReform } from "../utils/geography/rows";
 import {
@@ -32,13 +38,42 @@ const CHART_TITLE = "Constituency-level impacts";
 const exportDescription = (label, outcome) =>
   `${label}. Each constituency is coloured by the size of its average ` +
   `change in household net income, in ${OUTCOME_LABELS[outcome]}, when its ` +
-  "90% interval is narrow enough to tell. Lighter constituencies rest on " +
+  "90% interval is narrow enough to tell. Dotted constituencies rest on " +
   "few survey households; hatched ones are not published, to protect " +
   "survey respondents' confidentiality.";
 
 // The map's drawing area, in SVG units.
 const WIDTH = 800;
 const HEIGHT = 600;
+const MAP_LOGO_CLASS = "map-logo";
+
+/**
+ * The part of the SVG on screen, in its units. The SVG fills the width of
+ * the page, so on a wide screen it shows more than the drawing area, on
+ * either side of the map.
+ */
+const DRAWING_AREA = { left: 0, top: 0, right: WIDTH, bottom: HEIGHT };
+
+function shownArea(width, height) {
+  if (!(width > 0 && height > 0)) return DRAWING_AREA;
+  const scale = Math.min(width / WIDTH, height / HEIGHT);
+  const left = (WIDTH - width / scale) / 2;
+  const top = (HEIGHT - height / scale) / 2;
+  return { left, top, right: WIDTH - left, bottom: HEIGHT - top };
+}
+
+/** Put the legend in the top-left corner of what is shown, the logo in the
+ * bottom-right one. */
+function placeInCorners(svg, area) {
+  placeMapLegend(svg.select(`g.${MAP_LEGEND_CLASS}`), {
+    x: area.left + LEGEND_INSET,
+    y: area.top + LEGEND_INSET,
+  });
+  svg
+    .select(`image.${MAP_LOGO_CLASS}`)
+    .attr("x", area.right - CHART_LOGO.width - CHART_LOGO.padding)
+    .attr("y", area.bottom - CHART_LOGO.height - CHART_LOGO.padding);
+}
 const SELECTED_STROKE = { stroke: "#1D4044", strokeWidth: 0.6 };
 const HOVER_STROKE = { stroke: "#666666", strokeWidth: 0.3 };
 
@@ -119,7 +154,7 @@ function TooltipLines({ lines }) {
 /**
  * Constituency results as the disclosure layer published them, for one
  * measure or the whole package, one outcome and one year. Seats are
- * coloured by category, lighter when approximate, hatched when withheld,
+ * coloured by category, dotted when approximate, hatched when withheld,
  * light grey when too uncertain to classify, and drawn as no data when
  * there is no row. Nothing is summed across measures.
  */
@@ -135,6 +170,8 @@ export default function ConstituencyMap({
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
+  const [area, setArea] = useState(DRAWING_AREA);
+  const areaRef = useRef(DRAWING_AREA);
   const mapRef = useRef(null);
   const selectedRef = useRef(null);
   const statesRef = useRef(null);
@@ -273,14 +310,14 @@ export default function ConstituencyMap({
       .attr("data-code", seatCode)
       .attr("d", path)
       .style("cursor", "pointer");
-    svg.append("g").attr("class", "map-legend");
+    svg.append("g").attr("class", MAP_LEGEND_CLASS);
     svg
       .append("image")
+      .attr("class", MAP_LOGO_CLASS)
       .attr("href", CHART_LOGO.href)
       .attr("width", CHART_LOGO.width)
-      .attr("height", CHART_LOGO.height)
-      .attr("x", WIDTH - CHART_LOGO.width - CHART_LOGO.padding)
-      .attr("y", HEIGHT - CHART_LOGO.height - CHART_LOGO.padding);
+      .attr("height", CHART_LOGO.height);
+    placeInCorners(svg, areaRef.current);
     const zoom = d3
       .zoom()
       .scaleExtent([1, 8])
@@ -301,6 +338,27 @@ export default function ConstituencyMap({
       mapRef.current = null;
     };
   }, [svgNode, features, zoomToSeat]);
+
+  // Follow the SVG's size, so the legend and logo stay in the corners.
+  useEffect(() => {
+    if (!svgNode || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const next = shownArea(entry.contentRect.width, entry.contentRect.height);
+      setArea((previous) =>
+        Math.abs(previous.left - next.left) < 0.5 &&
+        Math.abs(previous.top - next.top) < 0.5
+          ? previous
+          : next,
+      );
+    });
+    observer.observe(svgNode);
+    return () => observer.disconnect();
+  }, [svgNode]);
+
+  useEffect(() => {
+    areaRef.current = area;
+    if (mapRef.current) placeInCorners(mapRef.current.svg, area);
+  }, [area]);
 
   // Colour the seats, draw the legend and attach the handlers.
   useEffect(() => {
@@ -328,7 +386,7 @@ export default function ConstituencyMap({
       }
     });
     applyStrokes();
-    drawMapLegend(map.svg.select("g.map-legend"), { outcome });
+    drawMapLegend(map.svg.select(`g.${MAP_LEGEND_CLASS}`), { outcome });
     seats
       .on("click", (event, feature) => {
         event.stopPropagation();
@@ -417,7 +475,7 @@ export default function ConstituencyMap({
             <p className="chart-description">
               The average change in household net income in each constituency.
               Each one is coloured by the size of its change when its 90%
-              interval is narrow enough to tell. Lighter constituencies rest on
+              interval is narrow enough to tell. Dotted constituencies rest on
               few survey households; hatched ones are not published, to protect
               survey respondents' confidentiality. Select a constituency, or
               search for one, to see its figure and interval.

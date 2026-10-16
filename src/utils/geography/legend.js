@@ -32,6 +32,25 @@ const DOT_SIZE = 4;
 /** The legend's class, so exports and tests can find it. */
 export const MAP_LEGEND_CLASS = "map-legend";
 
+/** The legend's distance from the map's top-left corner, in SVG units. */
+export const LEGEND_INSET = 12;
+
+// Space between the legend's edge and its contents.
+const PADDING = 10;
+
+/**
+ * A line's length in SVG units. The browser measures it; where it cannot
+ * (the map is hidden, or there is no layout, as in tests), a generous
+ * estimate from the character count stands in, so the line still fits.
+ */
+function lineLength(node, content, size) {
+  const measured =
+    typeof node.getComputedTextLength === "function"
+      ? node.getComputedTextLength()
+      : 0;
+  return measured > 0 ? measured : content.length * size * 0.6;
+}
+
 /**
  * Add the withheld hatch, a vector pattern of diagonal lines, to `defs`
  * (a d3 selection).
@@ -137,31 +156,44 @@ function text(group, content, { x, y, size, weight = 400, fill = "#374151" }) {
     .text(content);
 }
 
+/** Put the legend's top-left corner at (x, y), in the map's SVG units. */
+export function placeMapLegend(group, { x = LEGEND_INSET, y = LEGEND_INSET } = {}) {
+  return group.attr("transform", `translate(${x}, ${y})`);
+}
+
 /**
  * Draw the legend into `group` (a d3 selection of a <g>), replacing what
- * was there.
+ * was there. The box is as wide as its longest line; placeMapLegend puts
+ * it on the map.
  */
-export function drawMapLegend(group, { outcome, x = 12, y = 12, width = 238 }) {
+export function drawMapLegend(group, { outcome }) {
   group.selectAll("*").remove();
-  group.attr("class", MAP_LEGEND_CLASS).attr("transform", `translate(${x}, ${y})`);
+  group.attr("class", MAP_LEGEND_CLASS);
   const { categories, tiers } = legendEntries(outcome);
   const background = group
     .append("rect")
-    .attr("width", width)
     .attr("rx", 6)
     .attr("fill", "#FFFFFF")
     .attr("fill-opacity", 0.92)
     .attr("stroke", "#E5E7EB");
-  const left = 10;
+  const left = PADDING;
+  let right = 0;
+  const write = (content, options) => {
+    const node = text(group, content, options);
+    right = Math.max(
+      right,
+      options.x + lineLength(node.node(), content, options.size),
+    );
+  };
   let top = 18;
-  text(group, "Change in household net income", {
+  write("Change in household net income", {
     x: left,
     y: top,
     size: 12,
     weight: 600,
   });
   top += 14;
-  text(group, `Size of the change, in ${OUTCOME_LABELS[outcome]}`, {
+  write(`Size of the change, in ${OUTCOME_LABELS[outcome]}`, {
     x: left,
     y: top,
     size: 10,
@@ -190,11 +222,11 @@ export function drawMapLegend(group, { outcome, x = 12, y = 12, width = 238 }) {
       .attr("fill", entry.halves ? "none" : entry.fill)
       .attr("stroke", entry.stroke ?? "#D1D5DB")
       .attr("stroke-width", 0.5);
-    text(group, entry.label, { x: left + 18, y: top, size: 11 });
+    write(entry.label, { x: left + 18, y: top, size: 11 });
   };
   categories.forEach(row);
   top += 22;
-  text(group, "Status, shown by texture", {
+  write("Status, shown by texture", {
     x: left,
     y: top,
     size: 11,
@@ -202,6 +234,8 @@ export function drawMapLegend(group, { outcome, x = 12, y = 12, width = 238 }) {
   });
   top -= 2;
   tiers.forEach(row);
-  background.attr("height", top + 10);
+  background
+    .attr("width", Math.ceil(right + PADDING))
+    .attr("height", top + PADDING);
   return group;
 }

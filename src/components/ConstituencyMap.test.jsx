@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -172,6 +173,85 @@ describe("ConstituencyMap", () => {
         "Large gain: £100 or more",
       ),
     );
+  });
+
+  it("keeps the legend and logo in the corners of what is shown", async () => {
+    const observed = new Map();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback) {
+          this.callback = callback;
+        }
+        observe(target) {
+          observed.set(target, this.callback);
+        }
+        disconnect() {}
+      },
+    );
+    const { container } = await renderMap();
+    const map = container.querySelector('svg[role="img"]');
+    const legend = map.querySelector(":scope > g.map-legend");
+    const logo = map.querySelector(":scope > image.map-logo");
+    expect(legend.getAttribute("transform")).toBe("translate(12, 12)");
+
+    // Twice as wide as it is tall: 200 units show on either side of the
+    // drawing area, so the legend moves left and the logo right.
+    act(() => observed.get(map)([{ contentRect: { width: 1200, height: 600 } }]));
+    expect(legend.getAttribute("transform")).toBe("translate(-188, 12)");
+    expect(logo.getAttribute("x")).toBe("912");
+    expect(logo.getAttribute("y")).toBe("575");
+
+    // The file shows the drawing area alone, with the legend in its corner.
+    fireEvent.click(screen.getByRole("button", { name: "Download map as SVG" }));
+    await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
+    const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
+    const root = new DOMParser().parseFromString(svgText, "image/svg+xml")
+      .documentElement;
+    expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
+      "translate(12, 12)",
+    );
+  });
+
+  it("describes approximate seats as dotted, as the legend draws them", async () => {
+    await renderMap();
+    expect(
+      screen.getByText(/Dotted constituencies rest on few survey households/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Lighter constituencies/)).toBeNull();
+  });
+
+  it("makes the legend as wide as its longest line", async () => {
+    // jsdom lays out no text, so each line is measured as 6 units a letter.
+    const prototype = window.SVGElement.prototype;
+    prototype.getComputedTextLength = function () {
+      return this.textContent.length * 6;
+    };
+    try {
+      const { container } = await renderMap();
+      const legend = container.querySelector("svg > g.map-legend");
+      const ends = [...legend.querySelectorAll("text")].map(
+        (line) => Number(line.getAttribute("x")) + line.textContent.length * 6,
+      );
+      const box = legend.querySelector(":scope > rect");
+      expect(Number(box.getAttribute("width"))).toBe(
+        Math.ceil(Math.max(...ends) + 10),
+      );
+    } finally {
+      delete prototype.getComputedTextLength;
+    }
+  });
+
+  it("fits the legend's lines when they cannot be measured", async () => {
+    const { container } = await renderMap();
+    const legend = container.querySelector("svg > g.map-legend");
+    const width = Number(legend.querySelector(":scope > rect").getAttribute("width"));
+    for (const line of legend.querySelectorAll("text")) {
+      // Half the font size a letter is already wider than most text.
+      const size = Number(line.getAttribute("font-size"));
+      const end = Number(line.getAttribute("x")) + line.textContent.length * size * 0.5;
+      expect(end).toBeLessThan(width);
+    }
   });
 
   it("shows a reported seat's rounded value, interval, direction, tier and band", async () => {
