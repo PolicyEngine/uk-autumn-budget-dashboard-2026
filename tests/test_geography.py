@@ -203,56 +203,103 @@ def test_every_seat_has_a_region(regions):
 # -- survey households -------------------------------------------------------
 
 
-def efrs_tables(copy_age=40, flag="household_is_capital_gains_clone"):
-    """Three households; the second is a flagged copy of the first."""
+FLAGS = (
+    "household_is_spi_synthetic",
+    "household_is_capital_gains_clone",
+    "household_is_cgt_band_donor",
+)
+
+
+def stacked_efrs(lineage=False, donor_of=None, copy_age=8):
+    """Three FRS households stacked as policyengine-uk-data stacks them.
+
+    stack_datasets shifts a copy's ids to one more than the largest id
+    present: an SPI copy of household 1 (id 1 + 4), then the capital-gains
+    doubling of all four rows (ids + 6), then, if ``donor_of`` is a row
+    position, a CGT band donor copying that row (id + 12). With ``lineage``
+    every row's source_household_id names its FRS household, as files built
+    after policyengine-uk-data#597 do; otherwise it repeats household_id.
+    """
+    frs = [(1, 1, 0, 0), (2, 2, 0, 0), (3, 3, 0, 0)]  # id, source, spi, cg
+    rows = frs + [(1 + 4, 1, 1, 0)]
+    rows = rows + [(i + 6, src, spi, 1) for i, src, spi, _ in rows]
+    donor = []
+    if donor_of is not None:
+        i, src, spi, cg = rows[donor_of]
+        donor = [(i + 12, src, spi, cg)]
+    ids = [r[0] for r in rows] + [r[0] for r in donor]
+    sources = [r[1] for r in rows] + [r[1] for r in donor]
     household = pd.DataFrame(
         {
-            "household_id": [1, 2, 3],
-            # The eFRS's own source id links nothing, so it must be ignored.
-            "source_household_id": [1, 2, 3],
-            "household_weight": [100.0, 50.0, 80.0],
-            "region": ["LONDON", "LONDON", "LONDON"],
-            "tenure_type": ["RENT_PRIVATELY"] * 3,
-            "accommodation_type": ["FLAT"] * 3,
-            flag: [False, True, False],
+            "household_id": ids,
+            "source_household_id": sources if lineage else ids,
+            "region": ["LONDON" if s != 3 else "WALES" for s in sources],
+            "tenure_type": ["RENT_PRIVATELY"] * len(ids),
+            "accommodation_type": ["FLAT"] * len(ids),
+            FLAGS[0]: [bool(r[2]) for r in rows] + [bool(r[2]) for r in donor],
+            FLAGS[1]: [bool(r[3]) for r in rows] + [bool(r[3]) for r in donor],
+            FLAGS[2]: [False] * len(rows) + [True] * len(donor),
         }
     )
+    ages = {1: (40, 8), 2: (40, 8), 3: (70,)}
+    person_rows = [
+        (hh, age if (hh != ids[3] or n == 0) else copy_age)
+        for hh, src in zip(ids, sources)
+        for n, age in enumerate(ages[src])
+    ]
     person = pd.DataFrame(
         {
-            "person_household_id": [1, 1, 2, 2, 3],
-            "age": [40, 8, copy_age, 8, 40],
-            "gender": ["FEMALE", "MALE", "FEMALE", "MALE", "MALE"],
+            "person_household_id": [hh for hh, _ in person_rows],
+            "age": [age for _, age in person_rows],
+            "gender": ["FEMALE"] * len(person_rows),
         }
     )
     return household, person
 
 
-def test_the_efrs_key_links_a_copy_to_its_original():
-    household, person = efrs_tables()
+def test_efrs_ids_from_lineage_built_after_the_fix():
+    household, person = stacked_efrs(lineage=True)
     ids = g.survey_household_ids(household, person, "efrs")
-    assert ids[0] == ids[1] != ids[2]
+    assert list(ids) == list(household["source_household_id"])
     assert ids.dtype == np.int64
 
 
-def test_the_efrs_key_refuses_a_copy_with_no_original():
-    household, person = efrs_tables(copy_age=41)
-    with pytest.raises(ValueError, match="share their key"):
+@pytest.mark.parametrize("donor_of", [None, 0, 3, 7])
+def test_efrs_ids_from_undoing_the_stacking_offsets(donor_of):
+    household, person = stacked_efrs(donor_of=donor_of)
+    lineage, _ = stacked_efrs(lineage=True, donor_of=donor_of)
+    ids = g.survey_household_ids(household, person, "efrs")
+    assert list(ids) == list(lineage["source_household_id"])
+
+
+def test_efrs_ids_that_name_no_frs_household_are_refused():
+    household, person = stacked_efrs()
+    household.loc[3, "household_id"] = 99
+    person.loc[person["person_household_id"] == 5, "person_household_id"] = 99
+    with pytest.raises(ValueError, match="does not name the FRS household"):
         g.survey_household_ids(household, person, "efrs")
 
 
-def test_member_order_does_not_change_the_key():
-    household, person = efrs_tables()
-    shuffled = person.iloc[[3, 0, 4, 2, 1]].reset_index(drop=True)
+def test_an_efrs_copy_that_does_not_match_its_original_is_refused():
+    household, person = stacked_efrs(copy_age=9)
+    with pytest.raises(ValueError, match="does not\nmatch|does not match"):
+        g.survey_household_ids(household, person, "efrs")
+
+
+def test_member_order_does_not_change_the_match():
+    household, person = stacked_efrs()
+    shuffled = person.sample(frac=1, random_state=0).reset_index(drop=True)
     assert (
         g.survey_household_ids(household, shuffled, "efrs")
         == g.survey_household_ids(household, person, "efrs")
     ).all()
 
 
-def microcosm_household(source_ids, **flags):
+def microcosm_household(source_ids, **columns):
     return pd.DataFrame(
-        {"household_id": [10, 11, 12], "source_household_id": source_ids}
-        | flags
+        {"household_id": range(10, 10 + len(source_ids))}
+        | {"source_household_id": source_ids}
+        | columns
     )
 
 
@@ -260,8 +307,34 @@ def test_microcosm_ids_that_link_copies_are_used():
     household = microcosm_household(
         [7, 7, 9], household_is_spi_synthetic=[False, True, False]
     )
-    ids = g.survey_household_ids(household, None, "microcosm")
+    ids = g.survey_household_ids(
+        household, None, "microcosm", microcosm_export=True
+    )
     assert list(ids) == [7, 7, 9]
+
+
+def test_a_sampled_microcosm_copy_need_not_have_its_original():
+    # A local file is a sample: the FRS host of a copy may be absent.
+    household = microcosm_household(
+        [7, 7, 9], household_is_spi_synthetic=[True, True, False]
+    )
+    ids = g.survey_household_ids(
+        household, None, "microcosm", microcosm_export=True
+    )
+    assert list(ids) == [7, 7, 9]
+
+
+def test_a_file_that_is_not_a_microcosm_export_is_refused():
+    # Review probe: two FRS households and an SPI copy of the first, each
+    # cloned twice, with source ids taken after stacking (before
+    # policyengine-uk-data#597). The copy's clones share an id no original
+    # carries, so the ids are not unique per row.
+    household = microcosm_household(
+        [1, 1, 2, 2, 3, 3],
+        household_is_spi_synthetic=[False] * 4 + [True] * 2,
+    )
+    with pytest.raises(ValueError, match="not a Microcosm export"):
+        g.survey_household_ids(household, None, "microcosm")
 
 
 @pytest.mark.parametrize(
@@ -277,18 +350,44 @@ def test_microcosm_ids_that_link_copies_are_used():
 def test_microcosm_ids_unique_per_row_with_copies_are_refused(flag):
     household = microcosm_household([7, 8, 9], **{flag: [0, 1, 0]})
     with pytest.raises(ValueError, match="does not link copies"):
-        g.survey_household_ids(household, None, "microcosm")
+        g.survey_household_ids(
+            household, None, "microcosm", microcosm_export=True
+        )
 
 
 def test_microcosm_ids_unique_per_row_without_copies_are_used():
     household = microcosm_household(
         [7, 8, 9], household_is_capital_gains_clone=[False] * 3
     )
-    assert list(g.survey_household_ids(household, None, "microcosm")) == [
-        7,
-        8,
-        9,
-    ]
+    ids = g.survey_household_ids(
+        household, None, "microcosm", microcosm_export=True
+    )
+    assert list(ids) == [7, 8, 9]
+
+
+@pytest.mark.parametrize(
+    "columns, message",
+    [
+        ({"source_household_key": ["a", "b", "b"]}, "one to one"),
+        ({"region": ["LONDON", "WALES", "LONDON"]}, "span more than one"),
+    ],
+)
+def test_inconsistent_microcosm_lineage_is_refused(columns, message):
+    household = microcosm_household([7, 7, 9], **columns)
+    with pytest.raises(ValueError, match=message):
+        g.survey_household_ids(
+            household, None, "microcosm", microcosm_export=True
+        )
+
+
+def test_a_microcosm_export_is_recognised(tmp_path):
+    exported, built = tmp_path / "microcosm.h5", tmp_path / "efrs.h5"
+    with h5py.File(exported, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+    with h5py.File(built, "w"):
+        pass
+    assert g.is_microcosm_export(exported)
+    assert not g.is_microcosm_export(built)
 
 
 def test_another_dataset_kind_is_refused():
@@ -433,6 +532,7 @@ def test_a_real_simulation_of_synthetic_households(regions, tmp_path):
         kind="microcosm",
         regions=regions,
         seat_regions={S1: "E12000007", S2: "W92000004"},
+        microcosm_export=True,
     )
     assert list(local.source_ids) == [3, 10, 3, 2**32 + 9]
     assert list(local.seat_labels) == [S1, S2, S1, S1]
@@ -454,6 +554,30 @@ def test_the_collector_refuses_bad_arrays():
         collector.add("a", 2026, baseline=ones, reformed=ones, weight=ones)
     with pytest.raises(ValueError, match="differs between reforms"):
         collector.add("b", 2026, baseline=ones, reformed=ones, weight=ones * 2)
+
+
+def efrs_tables():
+    """Three eFRS households, built after policyengine-uk-data#597: the
+    second is a capital-gains clone of the first and carries its id."""
+    household = pd.DataFrame(
+        {
+            "household_id": [1, 2, 3],
+            "source_household_id": [1, 1, 3],
+            "household_weight": [100.0, 50.0, 80.0],
+            "region": ["LONDON"] * 3,
+            "tenure_type": ["RENT_PRIVATELY"] * 3,
+            "accommodation_type": ["FLAT"] * 3,
+            "household_is_capital_gains_clone": [False, True, False],
+        }
+    )
+    person = pd.DataFrame(
+        {
+            "person_household_id": [1, 1, 2, 2, 3],
+            "age": [40, 8, 40, 8, 40],
+            "gender": ["FEMALE", "MALE", "FEMALE", "MALE", "MALE"],
+        }
+    )
+    return household, person
 
 
 def efrs_simulation(net_income=None):
@@ -523,6 +647,7 @@ def test_a_microcosm_collector_reads_seat_labels(regions):
         kind="microcosm",
         regions=regions,
         seat_regions=seat_regions,
+        microcosm_export=True,
     )
     assert not collector.national
     assert list(collector.region_codes) == ["W92000004"] * 2 + ["E12000001"]
@@ -538,6 +663,7 @@ def test_a_seat_outside_its_households_region_is_refused(regions):
             kind="microcosm",
             regions=regions,
             seat_regions=seat_regions,
+            microcosm_export=True,
         )
 
 
@@ -1357,7 +1483,10 @@ def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False):
         household["constituency_code_oa"] = [
             seat_of[region_of[frs]] for frs in household["region"]
         ]
-        args += ["--dataset-kind", "microcosm", "--dataset", "local.h5"]
+        local = tmp_path / "local.h5"
+        with h5py.File(local, "w") as handle:
+            handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+        args += ["--dataset-kind", "microcosm", "--dataset", str(local)]
 
     def simulate(reform, dataset, years):
         baseline = {2026: np.full(n, BASE)}

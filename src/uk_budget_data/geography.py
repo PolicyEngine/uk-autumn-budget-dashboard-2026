@@ -101,7 +101,8 @@ PACKAGES = {
 EFRS = "efrs"
 MICROCOSM = "microcosm"
 DATASET_KINDS = (EFRS, MICROCOSM)
-# Flags on the copies a dataset adds to its survey households.
+# Flags on the copies policyengine-uk-data stacks onto the FRS households to
+# build the enhanced FRS, in the order it stacks them.
 COPY_FLAGS = (
     "household_is_spi_synthetic",
     "household_is_capital_gains_clone",
@@ -110,6 +111,9 @@ COPY_FLAGS = (
 _COPY_FLAG_PATTERN = re.compile(r"^household_is_.*(clone|copy)")
 # What a copy shares with the household it was copied from.
 EFRS_KEY_COLUMNS = ("region", "tenure_type", "accommodation_type")
+# Written at the root of every H5 Microcosm exports; policyengine-uk-data
+# never writes it.
+MICROCOSM_EXPORT_ATTRIBUTE = "populace_household_weight_kind"
 
 REGION_CODES = (
     "E12000001",
@@ -331,7 +335,27 @@ def _flagged(household: pd.DataFrame, columns: Sequence[str]) -> np.ndarray:
     return flagged
 
 
-def _microcosm_source_ids(household: pd.DataFrame) -> np.ndarray:
+def is_microcosm_export(path: Union[str, Path]) -> bool:
+    """Whether an H5 file was exported by Microcosm."""
+    with h5py.File(path, "r") as handle:
+        return MICROCOSM_EXPORT_ATTRIBUTE in handle.attrs
+
+
+def _orphaned(ids: np.ndarray, flagged: np.ndarray) -> bool:
+    """Whether a row flagged as a copy carries an id no unflagged row does."""
+    return bool((~pd.Index(ids[flagged]).isin(ids[~flagged])).any())
+
+
+def _microcosm_source_ids(
+    household: pd.DataFrame, microcosm_export: bool
+) -> np.ndarray:
+    if not microcosm_export:
+        raise ValueError(
+            "The dataset is not a Microcosm export: its H5 has no "
+            f"{MICROCOSM_EXPORT_ATTRIBUTE} attribute. A file built by "
+            "policyengine-uk-data goes through --dataset-kind efrs, whose "
+            "lineage checks it must pass."
+        )
     if "source_household_id" not in household.columns:
         raise ValueError(
             "A Microcosm household table needs source_household_id"
@@ -346,6 +370,25 @@ def _microcosm_source_ids(household: pd.DataFrame) -> np.ndarray:
             f"({', '.join(flags)}) are set, so it does not link copies to "
             "the survey households they were made from."
         )
+    if "source_household_key" in household.columns:
+        pairs = household[
+            ["source_household_id", "source_household_key"]
+        ].drop_duplicates()
+        if not (
+            pairs["source_household_id"].is_unique
+            and pairs["source_household_key"].is_unique
+        ):
+            raise ValueError(
+                "source_household_id and source_household_key do not name "
+                "the same survey households one to one."
+            )
+    if "region" in household.columns:
+        region = pd.Series(np.asarray(household["region"], dtype=object))
+        spans = region.map(_label).groupby(ids.to_numpy()).nunique()
+        if (spans > 1).any():
+            raise ValueError(
+                "Some survey households span more than one region."
+            )
     return ids.to_numpy()
 
 
@@ -367,9 +410,9 @@ def _members(person: pd.DataFrame) -> pd.Series:
     return frame.groupby("household", sort=False)["member"].agg("|".join)
 
 
-def _efrs_source_ids(
-    household: pd.DataFrame, person: pd.DataFrame
-) -> np.ndarray:
+def _survey_key(household: pd.DataFrame, person: pd.DataFrame) -> np.ndarray:
+    """What a copy shares with its original: region, tenure, accommodation
+    and the sorted ages and genders of the members."""
     needed = ("household_id", *EFRS_KEY_COLUMNS)
     missing = [c for c in needed if c not in household.columns]
     missing += [
@@ -382,54 +425,152 @@ def _efrs_source_ids(
     household_ids = household["household_id"].to_numpy()
     if not pd.Index(person["person_household_id"]).isin(household_ids).all():
         raise ValueError("Some people belong to no household of the table")
-    members = (
+    key = (
         pd.Series(household_ids)
         .map(_members(person))
         .fillna("")
         .to_numpy(dtype=object)
     )
-    key = members
     for column in EFRS_KEY_COLUMNS:
         codes, uniques = pd.factorize(
             pd.Series(np.asarray(household[column], dtype=object))
         )
         labels = np.array([_label(u) for u in uniques] + [""], dtype=object)
         key = labels[codes] + "\x1f" + key
+    return key
+
+
+def _lineage_ids(
+    household: pd.DataFrame, flagged: np.ndarray
+) -> Optional[np.ndarray]:
+    """``source_household_id``, if it names the FRS household behind every
+    row: policyengine-uk-data#597's rule for a built file, that every copy
+    carries an id some unflagged row also carries. Files built before that
+    fix give a copy its own stacked id, and fail it."""
+    if "source_household_id" not in household.columns:
+        return None
+    ids = household["source_household_id"]
+    if ids.isna().any():
+        return None
+    ids = ids.to_numpy()
+    if flagged.any() and _orphaned(ids, flagged):
+        return None
+    return ids
+
+
+def _unstacked_ids(household: pd.DataFrame) -> Optional[np.ndarray]:
+    """FRS household ids recovered by undoing the enhanced FRS's stacking.
+
+    policyengine-uk-data's ``stack_datasets`` shifts a copy's ids to one
+    more than the largest id already present. It stacks the SPI copies onto
+    the FRS, then doubles the result for capital gains, then adds the CGT
+    band donors, each a copy of a row already there that keeps that row's
+    flags. Undoing the shifts in reverse gives each row's FRS household.
+    Returns None unless every row lands on an unflagged household.
+    """
+    if any(flag not in household.columns for flag in COPY_FLAGS):
+        return None
+    ids = household["household_id"].to_numpy().astype(np.int64)
+    spi, gains, donor = (_flagged(household, [f]) for f in COPY_FLAGS)
+    original = ~(spi | gains | donor)
+    if not original.any() or not pd.Index(ids).is_unique:
+        return None
+    spi_shift = ids[original].max() + 1
+    gains_shift = ids[~gains & ~donor].max() + 1
+    donor_shift = ids[~donor].max() + 1
+    source = ids.copy()
+    donors = np.flatnonzero(donor)
+    if len(donors):
+        position = pd.Series(np.arange(len(ids)), index=ids)
+        copied = position.reindex(ids[donors] - donor_shift).to_numpy()
+        if np.isnan(copied).any():
+            return None
+        copied = copied.astype(int)
+        if donor[copied].any():
+            return None
+        source[donors] = ids[copied]
+        spi, gains = spi.copy(), gains.copy()
+        spi[donors], gains[donors] = spi[copied], gains[copied]
+    source = np.where(gains, source - gains_shift, source)
+    source = np.where(spi, source - spi_shift, source)
+    if not np.isin(source, ids[original]).all():
+        return None
+    return source
+
+
+def _copies_match(
+    household: pd.DataFrame,
+    person: pd.DataFrame,
+    ids: np.ndarray,
+    flagged: np.ndarray,
+) -> bool:
+    """Whether every copy shares its key with the original its id names."""
+    key = _survey_key(household, person)
+    originals = pd.Series(key[~flagged]).groupby(ids[~flagged])
+    if (originals.nunique() > 1).any():
+        return False
+    expected = originals.first().reindex(ids[flagged]).to_numpy()
+    return bool((expected == key[flagged]).all())
+
+
+def _efrs_source_ids(
+    household: pd.DataFrame, person: pd.DataFrame
+) -> np.ndarray:
     flags = [c for c in COPY_FLAGS if c in household.columns]
     flagged = _flagged(household, flags)
-    if (~pd.Index(key[flagged]).isin(key[~flagged])).any():
+    ids = _lineage_ids(household, flagged)
+    route = "source_household_id"
+    if ids is None:
+        ids = _unstacked_ids(household)
+        route = "the stacking offsets"
+    if ids is None:
         raise ValueError(
-            f"Some rows flagged as copies ({', '.join(flags)}) share their "
-            "key with no unflagged row, so the key cannot link them to the "
-            "households they were copied from."
+            "The enhanced FRS's source_household_id does not name the FRS "
+            "household behind every copy (policyengine-uk-data#591), and "
+            "undoing its stacking offsets does not recover them either, so "
+            "its results by area cannot be counted by survey household."
         )
-    codes, _ = pd.factorize(pd.Series(key))
-    return codes.astype(np.int64)
+    if not _copies_match(household, person, ids, flagged):
+        raise ValueError(
+            f"The ids from {route} pair some copy with a household it does "
+            "not match on region, tenure, accommodation or members."
+        )
+    return ids.astype(np.int64)
 
 
 def survey_household_ids(
-    household: pd.DataFrame, person: pd.DataFrame, kind: str
+    household: pd.DataFrame,
+    person: Optional[pd.DataFrame],
+    kind: str,
+    *,
+    microcosm_export: bool = False,
 ) -> np.ndarray:
     """The survey household behind each row of the household table.
 
     The layer counts the households behind a number by these ids, so a copy
-    or clone must share its original's id.
+    or clone must carry its original's id, and two households never share
+    one: every rule depends on it, including the p% rule, which a merge of
+    two households can weaken.
 
-    - ``microcosm``: ``source_household_id``, refused when it is unique per
-      row while some row is flagged as a copy.
-    - ``efrs``: the enhanced FRS's ``source_household_id`` equals
-      ``household_id`` and links no copies, so it is not used. The id is a
-      key built from what a copy shares with its original: region, tenure,
-      accommodation and the sorted ages and genders of the members. Every
-      row flagged as a copy must share its key with an unflagged row.
-      Merging distinct households only undercounts support. Returns integer
-      codes.
+    - ``efrs``: ``source_household_id`` if every copy carries an id an
+      unflagged row also carries (policyengine-uk-data#597's rule for a
+      built file); otherwise the FRS ids recovered by undoing the stacking
+      offsets, if every row lands on an unflagged household. Either way,
+      every copy must match its original on region, tenure, accommodation
+      and the ages and genders of its members. Otherwise the dataset is
+      refused.
+    - ``microcosm``: ``source_household_id`` of a Microcosm export
+      (``microcosm_export``, from :func:`is_microcosm_export`), refused if
+      it is unique per row while copies are flagged, does not match
+      ``source_household_key`` one to one, or spans regions. A local file is
+      a sample, so a copy's original need not be in it; files that are not
+      Microcosm exports go through ``efrs`` instead.
 
     Raises:
-        ValueError: For another kind, or when the ids cannot link copies.
+        ValueError: For another kind, or when the ids cannot be trusted.
     """
     if kind == MICROCOSM:
-        return _microcosm_source_ids(household)
+        return _microcosm_source_ids(household, microcosm_export)
     if kind == EFRS:
         return _efrs_source_ids(household, person)
     raise ValueError(f"Unknown dataset kind {kind!r}")
@@ -634,6 +775,7 @@ class GeographyCollector:
         regions: pd.DataFrame,
         seat_regions: Mapping[str, str],
         seat_weights: Optional[Union[str, Path]] = None,
+        microcosm_export: bool = False,
     ) -> "GeographyCollector":
         """The dataset-level arrays of the dataset a simulation runs on.
 
@@ -643,7 +785,12 @@ class GeographyCollector:
         """
         tables = dataset_tables(simulation)
         household = tables.household
-        source_ids = survey_household_ids(household, tables.person, kind)
+        source_ids = survey_household_ids(
+            household,
+            tables.person,
+            kind,
+            microcosm_export=microcosm_export,
+        )
         if kind == EFRS:
             return cls(
                 source_ids=source_ids,
@@ -1756,6 +1903,7 @@ class _Plan:
     seat_regions: dict[str, str]
     seat_weights: Optional[Path]
     prior_regional: Optional[pd.DataFrame]
+    microcosm_export: bool = False
 
 
 def _plan(parsed: argparse.Namespace) -> _Plan:
@@ -1765,6 +1913,11 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         raise ValueError("--dataset-kind microcosm needs --dataset")
     if kind == MICROCOSM and parsed.seat_weights is not None:
         raise ValueError("--seat-weights is for the eFRS only")
+    if kind == MICROCOSM and not is_microcosm_export(parsed.dataset):
+        raise ValueError(
+            "--dataset-kind microcosm needs a Microcosm export; a file "
+            "built by policyengine-uk-data goes through --dataset-kind efrs"
+        )
     ids = parsed.reforms or [r.id for r in get_autumn_budget_2026_reforms()]
     unknown = [i for i in ids if get_reform(i) is None]
     if unknown:
@@ -1811,6 +1964,7 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_regions=seat_regions,
         seat_weights=seat_weights,
         prior_regional=prior,
+        microcosm_export=kind == MICROCOSM,
     )
 
 
@@ -1857,6 +2011,7 @@ def run_geography(parsed: argparse.Namespace) -> int:
                     regions=plan.regions,
                     seat_regions=plan.seat_regions,
                     seat_weights=plan.seat_weights,
+                    microcosm_export=plan.microcosm_export,
                 )
             for year in plan.years:
                 collector.collect(reform.id, year, baseline, reformed)
