@@ -6,10 +6,14 @@ neither column. A measure on those rates scores £0 (before #2241, it charges
 a buyer's whole stock), so it must be published as not computable.
 """
 
+import copy
+import functools
 import re
 import warnings
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
@@ -25,6 +29,9 @@ from uk_budget_data.data_limits import (
 )
 from uk_budget_data.measure_templates import (
     DataLimitedWarning,
+    _call_formula,
+    _replace_formula,
+    apply_property_band_surcharge,
     rate_change,
     threshold_change,
 )
@@ -413,6 +420,304 @@ def test_two_plain_systems_have_no_formula_differences():
         )
         == {}
     )
+
+
+# --- formulas by content (review of #51 round 5) ------------------------
+
+RESIDENTIAL = "sdlt_on_residential_property_transactions"
+NON_RESIDENTIAL_SDLT = "sdlt_on_non_residential_property_transactions"
+
+
+def keys(touched):
+    return [item["key"] for item in touched]
+
+
+def surcharge_closing_over(rate):
+    """A structural measure whose rate is a value its formula closes over."""
+
+    def modifier(sim):
+        def formula(household, period, parameters):
+            purchased = household(
+                "additional_residential_property_purchased", period
+            )
+            return purchased * rate
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def one_percent(household, period, parameters, rate=0.01):
+    return (
+        household("additional_residential_property_purchased", period) * rate
+    )
+
+
+def two_percent(household, period, parameters, rate=0.02):
+    return (
+        household("additional_residential_property_purchased", period) * rate
+    )
+
+
+def installing(formula, name=RESIDENTIAL):
+    def modifier(sim):
+        _replace_formula(sim, name, formula)
+        return sim
+
+    return modifier
+
+
+def test_a_rate_a_formula_closes_over_shows():
+    """Review of #51 round 5: the same code closing over 1% and 2% compared
+    equal, and SDLT doubled with no limit recorded."""
+    touched = limits_touched(
+        simulation(modifier=surcharge_closing_over(0.01)),
+        simulation(modifier=surcharge_closing_over(0.02)),
+    )
+    assert keys(touched) == ["additional_dwelling_purchases"]
+    assert touched[0]["parameters"] == [f"formula:{RESIDENTIAL}"]
+
+
+def test_the_same_closed_over_rate_on_both_sides_touches_nothing():
+    """Each side's formula is its own object; the same rate is no change."""
+    assert (
+        limits_touched(
+            simulation(modifier=surcharge_closing_over(0.01)),
+            simulation(modifier=surcharge_closing_over(0.01)),
+        )
+        == []
+    )
+
+
+def test_a_rate_held_as_a_default_argument_shows():
+    """Review of #51 round 5: one code, defaults of 1% and 2%."""
+    touched = limits_touched(
+        simulation(modifier=installing(one_percent)),
+        simulation(modifier=installing(two_percent)),
+    )
+    assert keys(touched) == ["additional_dwelling_purchases"]
+
+
+def neutralise_non_residential(sim):
+    sim.tax_benefit_system.neutralize_variable(NON_RESIDENTIAL_SDLT)
+    return sim
+
+
+def test_a_neutralised_limited_variable_shows():
+    """Review of #51 round 5: neutralising keeps a variable's formulas and
+    only sets is_neutralized, which was not compared."""
+    touched = limits_touched(
+        simulation(), simulation(modifier=neutralise_non_residential)
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+    assert touched[0]["parameters"] == [f"formula:{NON_RESIDENTIAL_SDLT}"]
+
+
+def band_on_sdlt(amount):
+    def modifier(sim):
+        return apply_property_band_surcharge(
+            sim,
+            channel=RESIDENTIAL,
+            geography="UK",
+            lower_bound=100_000,
+            upper_bound=1_000_000,
+            amount=amount,
+            start_year=2027,
+            end_year=2027,
+        )
+
+    return modifier
+
+
+@pytest.mark.parametrize(
+    "baseline, reform",
+    [
+        (None, band_on_sdlt(1000)),
+        (band_on_sdlt(500), band_on_sdlt(1000)),
+        (band_on_sdlt(1000), None),
+    ],
+    ids=["reform-only", "both-sides", "baseline-only"],
+)
+def test_a_template_adding_to_a_limited_formula_is_computable(
+    baseline, reform
+):
+    """Review of #51 round 5: a property band charged through SDLT adds an
+    amount from data the survey holds to SDLT's own result, wrapped
+    unchanged; it was marked not computable."""
+    assert (
+        limits_touched(
+            simulation(modifier=baseline), simulation(modifier=reform)
+        )
+        == []
+    )
+
+
+def wrapping_sdlt(extra):
+    """A template-shaped wrapper: SDLT's own result, plus ``extra``."""
+
+    def modifier(sim):
+        native = sim.tax_benefit_system.get_variable(RESIDENTIAL)
+
+        def formula(household, period, parameters):
+            current = _call_formula(native, household, period, parameters)
+            return current + extra(household, period, parameters)
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def from_second_homes(household, period, parameters):
+    return 0.01 * household(
+        "additional_residential_property_purchased", period
+    )
+
+
+def through_the_higher_rates(household, period, parameters):
+    rates = parameters(period).gov.hmrc.stamp_duty.residential.purchase
+    return rates.additional.rate.calc(
+        household("main_residence_value", period)
+    )
+
+
+def from_main_homes(household, period, parameters):
+    return 0.01 * household("main_residence_value", period)
+
+
+@pytest.mark.parametrize(
+    "extra, expected",
+    [
+        (from_second_homes, ["additional_dwelling_purchases"]),
+        (through_the_higher_rates, ["additional_dwelling_purchases"]),
+        (from_main_homes, []),
+    ],
+    ids=["missing-input", "limited-parameters", "computable"],
+)
+def test_what_a_wrapper_adds_decides(extra, expected):
+    """What a wrapper adds counts like any formula: reading the missing
+    input, or the limit's parameters by attribute, touches the limit."""
+    reformed = simulation(modifier=wrapping_sdlt(extra))
+    assert keys(limits_touched(simulation(), reformed)) == expected
+
+
+def second_homes(household, period):
+    return household("additional_residential_property_purchased", period)
+
+
+def once(household, period, parameters):
+    return second_homes(household, period) * 0.01
+
+
+def twice(household, period, parameters):
+    return second_homes(household, period) * 0.02
+
+
+def test_a_helper_both_sides_call_still_counts():
+    """A helper that reads the missing input is part of the pricing, though
+    both sides call it unchanged; only whole variables are left out."""
+    touched = limits_touched(
+        simulation(modifier=installing(once)),
+        simulation(modifier=installing(twice)),
+    )
+    assert keys(touched) == ["additional_dwelling_purchases"]
+
+
+def test_a_disguised_scale_subclass_shows():
+    """Review of #51 round 5: a subclass given the original's module and
+    name, overriding calc, compared as the original."""
+    reformed = simulation()
+    for view in every_view(reformed):
+        node = view.gov.hmrc.stamp_duty.residential.purchase.additional
+        original = type(node.rate)
+        node.rate.__class__ = type(
+            original.__name__,
+            (original,),
+            {
+                "__module__": original.__module__,
+                "__qualname__": original.__qualname__,
+                "calc": lambda self, base, *args, **kwargs: base * 0.1,
+            },
+        )
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "additional_dwelling_purchases"
+    ]
+
+
+def closing_over_its_simulation(sim):
+    def formula(person, period, parameters):
+        assert sim is not None
+        return person("employment_income", period) * 0
+
+    _replace_formula(sim, "income_tax", formula)
+    return sim
+
+
+def test_a_formula_closing_over_its_own_simulation_is_read_by_name():
+    """Each side's formula holds its own simulation; that is no change, and
+    its data are not fingerprinted."""
+    assert (
+        limits_touched(
+            simulation(modifier=closing_over_its_simulation),
+            simulation(modifier=closing_over_its_simulation),
+        )
+        == []
+    )
+
+
+def test_partial_formulas_compare_by_their_arguments():
+    behaviour = data_limits._Behaviour()
+    assert behaviour.of(functools.partial(one_percent, rate=0.01)) == (
+        behaviour.of(functools.partial(one_percent, rate=0.01))
+    )
+    assert behaviour.of(functools.partial(one_percent, rate=0.01)) != (
+        behaviour.of(functools.partial(one_percent, rate=0.02))
+    )
+
+
+VALUES = st.recursive(
+    st.none()
+    | st.booleans()
+    | st.integers(-(10**6), 10**6)
+    | st.floats(allow_nan=True)
+    | st.text(max_size=4),
+    lambda children: st.lists(children, max_size=3)
+    | st.dictionaries(st.text(max_size=3), children, max_size=3),
+    max_leaves=10,
+)
+
+
+def closing_over(value):
+    def formula(household, period, parameters):
+        return value
+
+    return formula
+
+
+@settings(max_examples=200, deadline=None)
+@given(VALUES)
+def test_a_value_matches_its_copy(value):
+    behaviour = data_limits._Behaviour()
+    assert behaviour.of(value) == behaviour.of(copy.deepcopy(value))
+
+
+@settings(max_examples=200, deadline=None)
+@given(VALUES, VALUES)
+def test_a_closure_matches_exactly_when_its_value_does(a, b):
+    behaviour = data_limits._Behaviour()
+    same = behaviour.of(a) == behaviour.of(b)
+    assert (
+        behaviour.of(closing_over(a)) == behaviour.of(closing_over(b))
+    ) == same
+
+
+@given(st.integers(-(2**52), 2**52))
+def test_equal_numbers_match_and_different_ones_do_not(number):
+    behaviour = data_limits._Behaviour()
+    assert behaviour.of(number) == behaviour.of(float(number))
+    assert behaviour.of(number) != behaviour.of(number + 1)
+    assert behaviour.of(float("nan")) == behaviour.of(float("nan"))
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():

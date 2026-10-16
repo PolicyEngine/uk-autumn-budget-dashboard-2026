@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { loadArtifact, loadPublication } from "./load";
+import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
 import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
@@ -102,6 +102,16 @@ describe("loadPublication", () => {
     expect(series.every((point) => point.combined === null)).toBe(true);
   });
 
+  it("keys its tables and failures with no prototype", async () => {
+    const result = await loadPublication(BASE_PATH, ["alpha", "beta"], {
+      fetchImpl: fixtureFetch(),
+    });
+    expect(Object.getPrototypeOf(result.tablesByKey)).toBeNull();
+    expect(Object.getPrototypeOf(result.failures)).toBeNull();
+    expect(result.tablesByKey.constructor).toBeUndefined();
+    expect(result.failures.toString).toBeUndefined();
+  });
+
   it("never loads a not-computable entry's artifact, even when asked", async () => {
     const fetchImpl = fixtureFetch();
     await expect(
@@ -196,5 +206,27 @@ describe("loadPublication", () => {
         signal: controller.signal,
       }),
     ).rejects.toThrow(/abort/i);
+  });
+});
+
+describe("unverifiedMembers", () => {
+  it("finds a member named like an object property that did not load", () => {
+    // Review of #51 round 5: `constructor in tablesByKey` held through the
+    // prototype, so a refused member named constructor kept its combined
+    // run's figure on the page.
+    const tablesByKey = { "combined--beta+constructor": {}, beta: {} };
+    expect(unverifiedMembers(["beta", "constructor"], tablesByKey)).toEqual([
+      "constructor",
+    ]);
+    const names = ["toString", "hasOwnProperty", "__proto__", "valueOf"];
+    expect(unverifiedMembers(names, {})).toEqual(names);
+    expect(unverifiedMembers(names, Object.create(null))).toEqual(names);
+  });
+
+  it("finds none when every member loaded", () => {
+    const tablesByKey = Object.create(null);
+    tablesByKey.constructor = {};
+    tablesByKey.beta = {};
+    expect(unverifiedMembers(["beta", "constructor"], tablesByKey)).toEqual([]);
   });
 });
