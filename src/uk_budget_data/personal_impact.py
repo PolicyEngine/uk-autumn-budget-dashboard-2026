@@ -544,10 +544,18 @@ def stop_workers(wait_seconds: float = 5) -> None:
         _workers_generation += 1
         processes = list(_workers)
     for process in processes:
-        if process.is_alive():
+        # Kill only: each run joins its own processes. A second joiner
+        # would race the forkserver's one-shot exit-status pipe and could
+        # read 255 for a process killed by SIGKILL (review of #49).
+        try:
             process.kill()
-    for process in processes:
-        process.join(max(0.0, deadline - time.monotonic()))
+        except (OSError, ValueError):
+            pass
+    while time.monotonic() < deadline:
+        with _workers_lock:
+            if _workers.isdisjoint(processes):
+                return
+        time.sleep(0.01)
     with _workers_lock:
         _workers.difference_update(processes)
 
