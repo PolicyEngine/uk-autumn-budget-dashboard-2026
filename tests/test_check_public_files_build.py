@@ -99,12 +99,14 @@ def test_the_build_check_refuses_what_ci_refuses(tree):
     header = ",".join(PUBLIC_COLUMNS)
     write(tree, "public/data/regional.csv", header + "\n")
     write(tree, "public/data/fake.csv", "reform_id,value\nx,1\n")
+    write(tree, "public/data/shaped.csv", header + "\n")
     review(
         tree,
         [
             ("public/data/national.csv", "national_table", ""),
             ("public/data/old.csv", "pending", "2020-01-10"),
             ("public/data/fake.csv", "disclosure_table", ""),
+            ("public/data/shaped.csv", "national_table", ""),
         ],
     )
     write(tree, "public/data/national.csv", "reform_id,value\nx,2\n")
@@ -115,6 +117,8 @@ def test_the_build_check_refuses_what_ci_refuses(tree):
         "public/data/new.csv: not reviewed",
         "public/data/old.csv: pending past its expiry date (2020-01-10)",
         "public/data/regional.csv: not reviewed",
+        "public/data/shaped.csv: reviewed as national_table, but it is a "
+        "disclosure table",
         "public/sample.json: record-level identifiers",
         "public/sample.json: not reviewed",
     ]

@@ -5,8 +5,8 @@
 // data_inputs/public_data_review.csv with the sha256 of the bytes a person
 // reviewed, tables from the disclosure layer included; a pending entry
 // passes only until its expiry date. A file reviewed as a disclosure table
-// must carry the layer's public columns. No public file may carry
-// record-level identifiers.
+// must carry the layer's public columns, and a CSV that carries them must be
+// reviewed as one. No public file may carry record-level identifiers.
 //
 // scripts/check_public_data.py runs the full check in CI, including the
 // layer's validate_public. This smaller check runs in the build, so a deploy
@@ -103,16 +103,19 @@ export function checkPublicFiles(root, today = new Date()) {
       problems.push(`${name}: not reviewed`);
       continue;
     }
+    const columns =
+      text === null || !name.endsWith(".csv")
+        ? []
+        : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
+    const layerShaped = required.every((column) => columns.includes(column));
     if (entry.kind === "disclosure_table") {
-      const columns =
-        text === null ? [] : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
-      const layer =
-        required.every((column) => columns.includes(column)) &&
-        columns.every((column) => allowed.has(column));
-      if (!layer) {
+      if (!layerShaped || !columns.every((column) => allowed.has(column))) {
         problems.push(`${name}: reviewed as a disclosure table, but it is not one`);
         continue;
       }
+    } else if (layerShaped) {
+      problems.push(`${name}: reviewed as ${entry.kind}, but it is a disclosure table`);
+      continue;
     }
     if (createHash("sha256").update(data).digest("hex") !== entry.sha256) {
       problems.push(`${name}: changed since its review`);
