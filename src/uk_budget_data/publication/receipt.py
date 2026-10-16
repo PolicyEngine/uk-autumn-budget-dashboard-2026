@@ -12,9 +12,8 @@ Every artifact carries ``receipt.json`` with two parts:
   basis, the years the dataset supports, and whether the artifact is
   publishable.
 
-The receipt code is policyengine's own. Until the release that carries it is
-pinned, a verbatim copy is vendored and used instead; this module never
-reimplements a digest.
+The receipt code comes from the installed policyengine release. Publication
+requires its current receipt rules; this module never reimplements a digest.
 """
 
 import json
@@ -33,7 +32,6 @@ from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
 SCHEMA = "uk-budget-dashboard/artifact-receipt/v1"
-VENDORED_SOURCE = "vendored-w4-main@ebca9f0"
 BASIS_PATH = Path("data_inputs/publication_basis.json")
 BASIS_STATUSES = ("pre_budget", "updated")
 
@@ -91,30 +89,23 @@ def _has_what_we_need(module) -> bool:
 
 
 def receipt_api() -> tuple[Any, str]:
-    """policyengine's receipt module and a label saying which copy it is.
+    """The released receipt API and its installed-version source label.
 
-    The released module is used when it has everything this package needs;
-    otherwise the vendored copy.
+    A release missing the required API is a packaging defect that stops
+    publication, rather than a measure that cannot be receipted.
     """
+    source = f"policyengine=={metadata.version('policyengine')}"
+    defect = (
+        f"{source} lacks the receipt API required for publication "
+        "(packaging defect)"
+    )
     try:
         from policyengine.provenance import receipt as released
-    except ImportError:
-        released = None
-    if released is not None and _has_what_we_need(released):
-        return released, f"policyengine=={metadata.version('policyengine')}"
-    from uk_budget_data.publication._vendor_w4 import receipt as vendored
-    from uk_budget_data.publication._vendor_w4.loaded import (
-        record_loaded_versions,
-    )
-
-    # uk_budget_data records the versions when it is imported, before
-    # anything imports policyengine. This call is only a fallback for a
-    # process that reaches the receipt code some other way; the first
-    # record is kept, so it never replaces the import-time one.
-    record_loaded_versions(
-        ("policyengine", "policyengine-uk", "policyengine-core")
-    )
-    return vendored, VENDORED_SOURCE
+    except ImportError as error:
+        raise RuntimeError(defect) from error
+    if not _has_what_we_need(released):
+        raise RuntimeError(defect)
+    return released, source
 
 
 @dataclass(frozen=True)

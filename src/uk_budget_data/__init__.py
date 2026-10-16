@@ -2,11 +2,13 @@
 
 # ruff: noqa: E402
 
-# Record the policyengine versions before anything imports them, so a
-# receipt can refuse a run whose packages were upgraded while this process
-# ran (policyengine.py#571). The installed policyengine predates its own
-# recorder; the vendored one keeps the first versions it sees.
-from uk_budget_data.publication._vendor_w4.loaded import (
+# Importing the released recorder initializes policyengine, including core
+# and the UK wrapper. The wrapper records model/core/wrapper versions before
+# loading policyengine_uk. Record all three here during uk_budget_data import,
+# before our models, pipeline or any simulation; the recorder keeps the first
+# versions already observed by policyengine. Receipts can then reject packages
+# upgraded while this process runs (policyengine.py#571).
+from policyengine.provenance.loaded import (
     record_loaded_versions as _record_loaded_versions,
 )
 
