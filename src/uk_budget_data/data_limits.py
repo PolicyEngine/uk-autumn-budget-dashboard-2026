@@ -413,6 +413,7 @@ def _fingerprint(code):
         code.co_names,
         # Parameter names and kinds: a keyword call binds by name.
         code.co_varnames[: code.co_argcount + code.co_kwonlyargcount],
+        code.co_posonlyargcount,
         code.co_flags & (inspect.CO_VARARGS | inspect.CO_VARKEYWORDS),
         tuple(
             _fingerprint(c) if hasattr(c, "co_code") else repr(c)
@@ -511,6 +512,17 @@ class _Behaviour:
             self._active.discard(key)
 
     def _container(self, value, depth):
+        if (
+            isinstance(value, numpy.ndarray)
+            and type(value) is not numpy.ndarray
+        ):
+            # A subclass can carry state beside its data.
+            plain = numpy.asarray(value).view(numpy.ndarray)
+            fields = tuple(
+                (name, self.of(field, depth + 1))
+                for name, field in sorted(_fields_of(value).items())
+            )
+            return ("array", self.of(type(value)), fields, self.of(plain))
         if isinstance(value, numpy.ndarray):
             if value.dtype.hasobject:
                 items = tuple(self.of(item, depth) for item in value.ravel())
@@ -632,15 +644,19 @@ class _Behaviour:
         if rebuilt is not None:
             name = f"{kind.__module__}.{kind.__qualname__}"
             return ("object", name, self.of(rebuilt, depth + 1))
-        if callable(value) and _library_class(kind):
-            name = getattr(value, "__qualname__", None) or getattr(
-                value, "__name__", kind.__qualname__
-            )
-            module = getattr(value, "__module__", None) or kind.__module__
-            return ("library", module, str(name))
+        wrapped = _wrapped_callable(value)
+        if wrapped is not None:
+            return ("wrapped", kind.__qualname__, self.of(wrapped))
         if _library_class(kind):
-            name = f"{kind.__module__}.{kind.__qualname__}"
-            return ("object", name, _safe_repr(value))
+            singleton = _library_singleton(value)
+            if singleton is not None:
+                return ("library", *singleton)
+            text = None if callable(value) else _safe_repr(value)
+            if text is None:
+                # Its state can't be read: unequal to anything, and read
+                # as able to read any input (see _reads).
+                return ("opaque", id(value))
+            return ("object", f"{kind.__module__}.{kind.__qualname__}", text)
         if depth >= _OBJECT_DEPTH:
             return ("deep", kind.__qualname__)
         return ("object", self.of(kind), self._fields(value, depth))
@@ -730,6 +746,17 @@ class _Behaviour:
             if id(value) not in active and len(active) < _COLLECT_DEPTH:
                 active.add(id(value))
                 self._collect(_rebuilt_from(value), names, held, active)
+        elif _wrapped_callable(value) is not None:
+            if id(value) not in active and len(active) < _COLLECT_DEPTH:
+                active.add(id(value))
+                self._collect(_wrapped_callable(value), names, held, active)
+        elif isinstance(value, numpy.ndarray):
+            if type(value) is not numpy.ndarray and id(value) not in active:
+                active.add(id(value))
+                extra = [*_fields_of(value).values(), type(value)]
+                self._collect(extra, names, held, active)
+        elif _opaque(value):
+            names.add(ANY_NAME)
         elif _is_component(value):
             held.append(value)
 
@@ -995,58 +1022,115 @@ class _ResultUses:
                     self.nested.add(id(child))
         self.stores = self._stores()
         self.aliases = self._aliases()
+        self._expanded: list = []
 
     def _stores(self) -> dict:
-        """How often each name is bound in the body, nested scopes too."""
+        """How often each name is bound in the function's own scope: a
+        nested function's parameters and locals, or a comprehension's
+        targets, are their own; a nested ``nonlocal`` or a comprehension's
+        ``:=`` binds here."""
         stores: dict = {}
 
         def bind(name):
             stores[name] = stores.get(name, 0) + 1
 
-        for child in ast.walk(self.node):
-            if child is self.node:
-                continue
-            if isinstance(child, ast.Name) and not isinstance(
-                child.ctx, ast.Load
-            ):
-                bind(child.id)
-            elif isinstance(
-                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-            ):
-                bind(child.name)
-            elif isinstance(child, (ast.Global, ast.Nonlocal)):
-                for name in child.names:
-                    bind(name)
-            elif isinstance(child, (ast.Import, ast.ImportFrom)):
-                for alias in child.names:
-                    bind((alias.asname or alias.name).split(".")[0])
-            elif isinstance(child, ast.ExceptHandler) and child.name:
-                bind(child.name)
-            elif isinstance(child, ast.arg) and id(child) in self.nested:
-                bind(child.arg)
+        def visit(node):
+            for child in ast.iter_child_nodes(node):
+                if isinstance(
+                    child,
+                    (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+                ):
+                    bind(child.name)
+                    for inner in ast.walk(child):
+                        if isinstance(inner, ast.Nonlocal):
+                            for name in inner.names:
+                                bind(name)
+                    for outer in [
+                        *child.decorator_list,
+                        *getattr(child, "bases", []),
+                    ]:
+                        visit(outer)
+                    arguments = getattr(child, "args", None)
+                    if arguments is not None:
+                        for default in [
+                            *arguments.defaults,
+                            *arguments.kw_defaults,
+                        ]:
+                            if default is not None:
+                                visit(default)
+                    continue
+                if isinstance(child, ast.Lambda):
+                    for default in [
+                        *child.args.defaults,
+                        *child.args.kw_defaults,
+                    ]:
+                        if default is not None:
+                            visit(default)
+                    continue
+                if isinstance(
+                    child,
+                    (
+                        ast.ListComp,
+                        ast.SetComp,
+                        ast.DictComp,
+                        ast.GeneratorExp,
+                    ),
+                ):
+                    for inner in ast.walk(child):
+                        if isinstance(inner, ast.NamedExpr) and isinstance(
+                            inner.target, ast.Name
+                        ):
+                            bind(inner.target.id)
+                    continue
+                if isinstance(child, ast.Name) and not isinstance(
+                    child.ctx, ast.Load
+                ):
+                    bind(child.id)
+                elif isinstance(child, (ast.Global, ast.Nonlocal)):
+                    for name in child.names:
+                        bind(name)
+                elif isinstance(child, (ast.Import, ast.ImportFrom)):
+                    for alias in child.names:
+                        bind((alias.asname or alias.name).split(".")[0])
+                elif isinstance(child, ast.ExceptHandler) and child.name:
+                    bind(child.name)
+                visit(child)
+
+        visit(self.node)
         return stores
 
     def _aliases(self) -> dict:
         """Names assigned once, at the top of the body, from a name, a tuple
         or a literal mapping: ``call = _call_formula``, ``args = (entity,
-        period, parameters)``. ``entity = entity`` rebinds nothing."""
+        period, parameters)``, or pairwise by unpacking (``a, b = x, y``).
+        ``entity = entity`` rebinds nothing."""
         aliases = {}
         for statement in self.node.body:
             if not (
                 isinstance(statement, ast.Assign)
                 and len(statement.targets) == 1
-                and isinstance(statement.targets[0], ast.Name)
             ):
                 continue
-            target, value = statement.targets[0].id, statement.value
-            if isinstance(value, ast.Name) and value.id == target:
-                self.stores[target] -= 1
-                aliases.setdefault("__identity__", set()).add(id(value))
-                continue
-            if self.stores.get(target) == 1 and isinstance(
-                value, (ast.Name, ast.Tuple, ast.Dict)
+            target, value = statement.targets[0], statement.value
+            if isinstance(target, ast.Name):
+                pairs = [(target, value)]
+            elif (
+                isinstance(target, ast.Tuple)
+                and isinstance(value, ast.Tuple)
+                and len(target.elts) == len(value.elts)
+                and all(isinstance(t, ast.Name) for t in target.elts)
             ):
-                aliases[target] = value
+                pairs = list(zip(target.elts, value.elts))
+            else:
+                continue
+            for name, item in pairs:
+                if isinstance(item, ast.Name) and item.id == name.id:
+                    self.stores[name.id] -= 1
+                    continue
+                if self.stores.get(name.id) == 1 and isinstance(
+                    item, (ast.Name, ast.Tuple, ast.Dict)
+                ):
+                    aliases[name.id] = item
         return aliases
 
     def base(self, name: str) -> str:
@@ -1106,14 +1190,19 @@ class _ResultUses:
             if name == self.vararg and not self.positional:
                 return [ast.Name(id=f"*{i}") for i in range(3)]
             alias = self.aliases.get(name)
-            return list(alias.elts) if isinstance(alias, ast.Tuple) else None
+            if not isinstance(alias, ast.Tuple):
+                return None
+            self._expanded.append((name, value))
+            return list(alias.elts)
         if isinstance(value, (ast.Tuple, ast.List)):
             return list(value.elts)
         return None
 
     def _double_star(self, value) -> dict | None:
         if isinstance(value, ast.Name):
-            value = self.aliases.get(self.base(value.id))
+            name = self.base(value.id)
+            self._expanded.append((name, value))
+            value = self.aliases.get(name)
         if isinstance(value, ast.Dict) and all(
             isinstance(k, ast.Constant) and isinstance(k.value, str)
             for k in value.keys
@@ -1166,18 +1255,41 @@ class _ResultUses:
         name = node.id if node.id.startswith("*") else self.base(node.id)
         return name == own[index]
 
+    def _result_used(self, call) -> bool:
+        """Whether the call's result is used: not a bare statement, and if
+        assigned, to one name bound once and read."""
+        parent = self.parents.get(id(call))
+        if isinstance(parent, ast.Expr):
+            return False
+        if isinstance(parent, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
+            targets = (
+                parent.targets
+                if isinstance(parent, ast.Assign)
+                else [parent.target]
+            )
+            if len(targets) != 1 or not isinstance(targets[0], ast.Name):
+                return False
+            name = targets[0].id
+            return self.stores.get(name) == 1 and any(
+                isinstance(n, ast.Name)
+                and n.id == name
+                and isinstance(n.ctx, ast.Load)
+                for n in ast.walk(self.node)
+            )
+        return True
+
     def found(self) -> dict:
         own = self._own()
         if not own:
             return {}
         helper = _formula_helper()
-        good, held = set(), {}
+        candidates = []
         for call in ast.walk(self.node):
             if (
                 not isinstance(call, ast.Call)
                 or id(call) in self.nested
                 or not isinstance(call.func, ast.Name)
-                or isinstance(self.parents.get(id(call)), ast.Expr)
+                or not self._result_used(call)
             ):
                 continue
             callee = self.value(self.base(call.func.id))
@@ -1192,7 +1304,9 @@ class _ResultUses:
                 signature, slot = tuple(names[:3]), None
             else:
                 continue
+            self._expanded = []
             bound = self._bind(call, signature)
+            expanded = self._expanded
             if bound is None:
                 continue
             arguments = [bound[name] for name in signature if name != slot]
@@ -1206,11 +1320,38 @@ class _ResultUses:
             value = self.value(self.base(target.id))
             if slot and not _is_variable(value):
                 continue
-            good.add(id(target))
-            held[id(value)] = value
+            candidates.append((target, value, expanded))
         alias_values = {
             id(v) for v in self.aliases.values() if isinstance(v, ast.Name)
         }
+        # A tuple or mapping expanded into a call is only its literal if
+        # nothing else touches it: no subscript store, no update(), no
+        # other use (review of #51 round 8).
+        while True:
+            uses = {id(node) for _, _, ex in candidates for _, node in ex}
+            spread = {name for _, _, ex in candidates for name, _ in ex}
+            touched = {
+                name
+                for name in spread
+                if any(
+                    isinstance(n, ast.Name)
+                    and self.base(n.id) == name
+                    and isinstance(n.ctx, ast.Load)
+                    and id(n) not in uses
+                    and id(n) not in alias_values
+                    for n in ast.walk(self.node)
+                )
+            }
+            kept = [
+                c
+                for c in candidates
+                if not any(name in touched for name, _ in c[2])
+            ]
+            if len(kept) == len(candidates):
+                break
+            candidates = kept
+        good = {id(target) for target, _, _ in candidates}
+        held = {id(value): value for _, value, _ in candidates}
         loads: dict = {}
         for name in ast.walk(self.node):
             if not (
@@ -1274,6 +1415,61 @@ def _rebuilt_from(value):
     return tuple(reduced[1:3])
 
 
+# The name an object whose state can't be read contributes: it could read
+# anything, so it reads what every limit covers.
+ANY_NAME = "*"
+
+
+def _wrapped_callable(value):
+    """What a library callable wraps (``functools.cache``, ``wraps``)."""
+    if isinstance(value, (types.FunctionType, type)):
+        return None
+    if not callable(value) or not _library_class(type(value)):
+        return None
+    wrapped = getattr(value, "__wrapped__", None)
+    return wrapped if callable(wrapped) else None
+
+
+def _library_singleton(value):
+    """``(module, name)`` for a library callable its module holds under its
+    own name (``numpy.where``, ``len``): the same object in every system."""
+    if not callable(value):
+        return None
+    name = getattr(value, "__name__", None)
+    if not isinstance(name, str):
+        return None
+    for module in (
+        getattr(value, "__module__", None),
+        type(value).__module__,
+        "builtins",
+    ):
+        top = (module or "").split(".")[0]
+        for holder in (module, top):
+            found = getattr(sys.modules.get(holder or ""), name, None)
+            if found is value:
+                return (holder, name)
+    return None
+
+
+def _opaque(value) -> bool:
+    """A library object whose state can't be read: no singleton, nothing it
+    wraps or is rebuilt from, and no plain text form."""
+    kind = type(value)
+    if isinstance(value, (type, types.ModuleType, types.FunctionType)):
+        return False
+    if _engine(value) is not None or isinstance(value, _NOT_REBUILT):
+        return False
+    if value is None or not _library_class(kind):
+        return False
+    if (
+        _library_singleton(value)
+        or _wrapped_callable(value)
+        or _rebuilt_from(value)
+    ):
+        return False
+    return callable(value) or _safe_repr(value) is None
+
+
 def _formula_helper():
     """The templates' helper for a variable's own result (imported here:
     the templates import this module)."""
@@ -1290,14 +1486,17 @@ def _fields_of(value) -> dict:
     for kind in type(value).__mro__:
         slots = kind.__dict__.get("__slots__", ())
         for name in [slots] if isinstance(slots, str) else slots:
-            if name in ("__dict__", "__weakref__") or name in found:
+            if name in ("__dict__", "__weakref__"):
                 continue
             stored = name
             if name.startswith("__") and not name.endswith("__"):
-                # Python stores a private slot under the class's name.
+                # Python stores a private slot under its class's name, so
+                # a base's and a subclass's are two fields.
                 stored = f"_{kind.__name__.lstrip('_')}{name}"
+            if stored in found:
+                continue
             try:
-                found[name] = getattr(value, stored)
+                found[stored] = getattr(value, stored)
             except AttributeError:
                 pass
     return found
@@ -1355,7 +1554,7 @@ def _reads(limit: DataLimit, names: set) -> bool:
     """Whether code using ``names`` reads what ``limit`` covers: its missing
     input, a parameter path under it, or every segment of one (formulas
     reach parameters by attribute)."""
-    if limit.missing_input in names:
+    if limit.missing_input in names or ANY_NAME in names:
         return True
     return any(
         set(prefix.split(".")) <= names

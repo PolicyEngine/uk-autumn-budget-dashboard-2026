@@ -14,6 +14,7 @@ import operator
 import re
 import warnings
 
+import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -1371,6 +1372,320 @@ def test_parameter_names_and_sequence_kinds_are_compared():
 
     assert behaviour.of(divide) != behaviour.of(divide_other_way)
     assert behaviour.of([1]) != behaviour.of((1,))
+
+
+# --- hidden state, mutated arguments, scopes (review of #51 round 8) ---
+
+
+def inherited_private_slot_rate(rate):
+    """A base class's private slot, beside a subclass's of the same name."""
+
+    def modifier(sim):
+        class Base:
+            __slots__ = ("__rate",)
+
+            def __init__(self, rate):
+                self.__rate = rate
+
+            def get_rate(self):
+                return self.__rate
+
+        class Derived(Base):
+            __slots__ = ("__rate",)
+
+            def __init__(self, rate):
+                super().__init__(rate)
+                self.__rate = 0.99
+
+        config = Derived(rate)
+
+        def formula(household, period, parameters):
+            purchased = household(
+                "additional_residential_property_purchased", period
+            )
+            return purchased * config.get_rate()
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def non_residential_times(make_rate):
+    """Non-residential purchases times a rate, read from what ``make_rate``
+    builds."""
+
+    def modifier(sim):
+        get_rate = make_rate()
+
+        def formula(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * get_rate()
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def cached_rate(rate):
+    def make():
+        @functools.cache
+        def get_rate():
+            return rate
+
+        return get_rate
+
+    return make
+
+
+def masked_rate(mask):
+    def make():
+        rates = np.ma.array([0.01], mask=[mask])
+        return lambda: rates.filled(0.02)[0]
+
+    return make
+
+
+def array_subclass_rate(scale):
+    def make():
+        class Rates(np.ndarray):
+            def get_rate(self):
+                return self.scale * self[0]
+
+        rates = np.array([0.01]).view(Rates)
+        rates.scale = scale
+        return rates.get_rate
+
+    return make
+
+
+def memory_rate(digit):
+    def make():
+        rates = memoryview(bytes([digit]))
+        return lambda: rates[0] / 100
+
+    return make
+
+
+def positional_only(a=0.01, /, **kw):
+    return a + kw.get("a", 0)
+
+
+def keyword_capable(a=0.01, **kw):
+    return a + kw.get("a", 0)
+
+
+def by_signature(function):
+    def make():
+        return lambda: function(a=0.01)
+
+    return make
+
+
+@pytest.mark.parametrize(
+    "baseline, reform, expected",
+    [
+        (
+            inherited_private_slot_rate(0.01),
+            inherited_private_slot_rate(0.02),
+            ["additional_dwelling_purchases"],
+        ),
+        (
+            non_residential_times(cached_rate(0.01)),
+            non_residential_times(cached_rate(0.02)),
+            ["non_residential_purchases"],
+        ),
+        (
+            non_residential_times(masked_rate(False)),
+            non_residential_times(masked_rate(True)),
+            ["non_residential_purchases"],
+        ),
+        (
+            non_residential_times(array_subclass_rate(1)),
+            non_residential_times(array_subclass_rate(2)),
+            ["non_residential_purchases"],
+        ),
+        (
+            non_residential_times(by_signature(positional_only)),
+            non_residential_times(by_signature(keyword_capable)),
+            ["non_residential_purchases"],
+        ),
+        # State that can't be read is opaque: it compares unequal and
+        # counts as reading any input, so every limit.
+        (
+            non_residential_times(memory_rate(1)),
+            non_residential_times(memory_rate(2)),
+            ["additional_dwelling_purchases", "non_residential_purchases"],
+        ),
+    ],
+    ids=[
+        "inherited-private-slot",
+        "functools-cache",
+        "masked-array",
+        "array-subclass",
+        "positional-only",
+        "memoryview-opaque",
+    ],
+)
+def test_hidden_state_is_compared_or_treated_as_opaque(
+    baseline, reform, expected
+):
+    """Review of #51 round 8: an inherited private slot, a cached getter's
+    closure, a masked or subclassed array's state and a positional-only
+    signature compared equal; a memoryview could not be read at all."""
+    touched = limits_touched(
+        simulation(modifier=baseline), simulation(modifier=reform)
+    )
+    assert keys(touched) == expected
+
+
+def kwargs_replaced(native):
+    def formula(household, period, parameters):
+        given = {
+            "entity": household,
+            "period": period,
+            "parameters": parameters,
+        }
+        given["entity"] = lambda name, period: household(name, period) * 0.5
+        return _call_formula(native, **given)
+
+    return formula
+
+
+def kwargs_updated(native):
+    def formula(household, period, parameters):
+        given = {
+            "entity": household,
+            "period": period,
+            "parameters": parameters,
+        }
+        given.update(entity=lambda name, period: household(name, period) * 0.5)
+        return _call_formula(native, **given)
+
+    return formula
+
+
+def kwargs_mutated_through_another_name(native):
+    def formula(household, period, parameters):
+        given = {
+            "entity": household,
+            "period": period,
+            "parameters": parameters,
+        }
+        other = given
+        other["entity"] = lambda name, period: household(name, period) * 0.5
+        return _call_formula(native, **given)
+
+    return formula
+
+
+def args_replaced(native):
+    def formula(household, period, parameters):
+        args = [household, period, parameters]
+        args[0] = lambda name, period: household(name, period) * 0.5
+        return _call_formula(native, *args)
+
+    return formula
+
+
+def result_assigned_unread(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)  # noqa
+        return household.filled_array(0.0)
+
+    return formula
+
+
+def result_overwritten(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        result = household.filled_array(0.0)
+        return result
+
+    return formula
+
+
+def result_deleted(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        del result
+        return household.filled_array(0.0)
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        kwargs_replaced,
+        kwargs_updated,
+        kwargs_mutated_through_another_name,
+        args_replaced,
+        result_assigned_unread,
+        result_overwritten,
+        result_deleted,
+    ],
+)
+def test_mutated_arguments_and_unread_results_count(make):
+    """Review of #51 round 8: a ``**`` mapping changed after it was built
+    (by subscript, update() or another name) reprices; so does a result
+    assigned and never read, overwritten or deleted."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def nested_helper_shadowing(native):
+    def formula(household, period, parameters):
+        def helper(household):
+            return household.filled_array(1000.0)
+
+        own = _call_formula(native, household, period, parameters)
+        return own + helper(household)
+
+    return formula
+
+
+def unpacked_aliases(native):
+    def formula(household, period, parameters):
+        entity, instant, policy = household, period, parameters
+        return _call_formula(native, entity, instant, policy) + 1000
+
+    return formula
+
+
+def result_assigned_and_read(native):
+    def formula(household, period, parameters):
+        result = _call_formula(native, household, period, parameters)
+        return result + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make",
+    [nested_helper_shadowing, unpacked_aliases, result_assigned_and_read],
+)
+def test_more_own_result_forms_are_computable(make):
+    """Review of #51 round 8: a nested helper's parameter named like the
+    formula's, or aliases by unpacking, were taken as rebinding."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def test_unreadable_state_is_unequal_and_reads_anything():
+    behaviour = data_limits._Behaviour()
+    one, same = memoryview(b"\x01"), memoryview(b"\x01")
+    assert behaviour.of(one) != behaviour.of(same)
+    names, held = set(), []
+    behaviour._collect(one, names, held)
+    assert names == {data_limits.ANY_NAME}
+    assert all(
+        data_limits._reads(limit, {data_limits.ANY_NAME})
+        for limit in DATA_LIMITS
+    )
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():
