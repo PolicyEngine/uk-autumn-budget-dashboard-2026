@@ -98,6 +98,13 @@ function GeographyMethodology() {
               figures do not add up exactly to the regional ones, and may come
               from a different dataset.
             </li>
+            <li>
+              <strong>Later years.</strong> Constituency figures from the
+              national dataset use its constituency weights, which are
+              estimated for 2025. Later years keep each household&apos;s 2025
+              split across constituencies, scaled to that year&apos;s household
+              weights.
+            </li>
           </ul>
           <p>
             <a href={METHOD_NOTE_URL} target="_blank" rel="noopener noreferrer">
