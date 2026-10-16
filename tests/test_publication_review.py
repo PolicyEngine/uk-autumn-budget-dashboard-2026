@@ -1003,9 +1003,20 @@ def test_a_combined_set_of_own_baselines_ignores_the_configured_one(world):
     ]
 
 
-def test_versions_are_recorded_before_the_model_and_dashboard_pipeline_load():
+@pytest.mark.parametrize("skip_country_imports", [False, True])
+def test_versions_are_recorded_before_the_model_and_dashboard_pipeline_load(
+    skip_country_imports,
+):
     """The shared recorder runs while importing the dashboard, before the
-    UK model and dashboard pipeline load, and keeps its first versions."""
+    UK model and dashboard pipeline load, and keeps its first versions.
+
+    Normally policyengine's UK wrapper records them as it is imported,
+    with core loaded. With POLICYENGINE_SKIP_COUNTRY_IMPORTS=1 it is not
+    imported, and the dashboard's own call records them first. The
+    environment is set explicitly: scripts/check_public_data.py sets that
+    variable when imported, and a test importing it leaks it to this
+    worker's subprocesses."""
+    import os
     import subprocess
     import sys
     from textwrap import dedent
@@ -1044,20 +1055,29 @@ def test_versions_are_recorded_before_the_model_and_dashboard_pipeline_load():
         }))
         """
     )
+    env = {
+        name: value
+        for name, value in os.environ.items()
+        if name != "POLICYENGINE_SKIP_COUNTRY_IMPORTS"
+    }
+    if skip_country_imports:
+        env["POLICYENGINE_SKIP_COUNTRY_IMPORTS"] = "1"
     output = json.loads(
         subprocess.run(
             [sys.executable, "-c", probe],
             capture_output=True,
             text=True,
             check=True,
+            env=env,
         ).stdout.splitlines()[-1]
     )
     assert output["recorded"] == output["installed"]
     assert output["after"] == output["recorded"]
-    # The wrapper imports core before recording; it records before loading
-    # the UK model, and before dashboard code can build a simulation.
+    # Before the UK model and before dashboard code that can build a
+    # simulation; the wrapper has imported core when it records.
+    core_loaded = not skip_country_imports
     assert output["seen"] == {
-        name: [False, True, False, False]
+        name: [False, core_loaded, False, False]
         for name in ("policyengine", "policyengine-uk", "policyengine-core")
     }
 
