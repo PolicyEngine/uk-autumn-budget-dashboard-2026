@@ -1,0 +1,327 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 1,
+    "Name": "Northfield East",
+    "CTR_REG": "North East",
+    "Country": "England",
+    "GSScode": "Z14000001"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       400000,
+       550000
+      ],
+      [
+       450000,
+       550000
+      ],
+      [
+       450000,
+       600000
+      ],
+      [
+       400000,
+       600000
+      ],
+      [
+       400000,
+       550000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 2,
+    "Name": "Harbour, Mill and Quay",
+    "CTR_REG": "Greater London",
+    "Country": "England",
+    "GSScode": "Z14000002"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       520000,
+       160000
+      ],
+      [
+       560000,
+       160000
+      ],
+      [
+       560000,
+       200000
+      ],
+      [
+       520000,
+       200000
+      ],
+      [
+       520000,
+       160000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 3,
+    "Name": "Westmoor",
+    "CTR_REG": "Greater London",
+    "Country": "England",
+    "GSScode": "Z14000003"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       480000,
+       160000
+      ],
+      [
+       520000,
+       160000
+      ],
+      [
+       520000,
+       200000
+      ],
+      [
+       480000,
+       200000
+      ],
+      [
+       480000,
+       160000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 4,
+    "Name": "Dale Valley",
+    "CTR_REG": "",
+    "Country": "Wales",
+    "GSScode": "Z14000004"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       280000,
+       220000
+      ],
+      [
+       330000,
+       220000
+      ],
+      [
+       330000,
+       270000
+      ],
+      [
+       280000,
+       270000
+      ],
+      [
+       280000,
+       220000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 5,
+    "Name": "Glen Ardoch",
+    "CTR_REG": "",
+    "Country": "Scotland",
+    "GSScode": "Z14000005"
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        250000,
+        750000
+       ],
+       [
+        320000,
+        750000
+       ],
+       [
+        320000,
+        820000
+       ],
+       [
+        250000,
+        820000
+       ],
+       [
+        250000,
+        750000
+       ]
+      ]
+     ],
+     [
+      [
+       [
+        330000,
+        760000
+       ],
+       [
+        350000,
+        760000
+       ],
+       [
+        350000,
+        780000
+       ],
+       [
+        330000,
+        780000
+       ],
+       [
+        330000,
+        760000
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 6,
+    "Name": "Lough Side",
+    "CTR_REG": "",
+    "Country": "Northern Ireland",
+    "GSScode": "Z14000006"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       50000,
+       500000
+      ],
+      [
+       110000,
+       500000
+      ],
+      [
+       110000,
+       560000
+      ],
+      [
+       50000,
+       560000
+      ],
+      [
+       50000,
+       500000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 7,
+    "Name": "Fenland Reach",
+    "CTR_REG": "East of England",
+    "Country": "England",
+    "GSScode": "Z14000007"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       540000,
+       280000
+      ],
+      [
+       590000,
+       280000
+      ],
+      [
+       590000,
+       330000
+      ],
+      [
+       540000,
+       330000
+      ],
+      [
+       540000,
+       280000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 8,
+    "Name": "Marshgate",
+    "CTR_REG": "East Midlands",
+    "Country": "England",
+    "GSScode": "Z14000008"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       450000,
+       320000
+      ],
+      [
+       500000,
+       320000
+      ],
+      [
+       500000,
+       370000
+      ],
+      [
+       450000,
+       370000
+      ],
+      [
+       450000,
+       320000
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -5,13 +5,12 @@ This repository is public, and the dashboard serves public/, so every file
 there is a publication. The UK figures derive from UKDS-licensed survey
 microdata, and the licence binds every published number.
 
-A file under public/ passes when it is either:
-
-- a disclosure-controlled table written by ``policyengine.disclosure``: a CSV
-  with the layer's public columns, which ``validate_public`` checks whether
-  or not it is also reviewed; or
-- listed in data_inputs/public_data_review.csv with the sha256 of the exact
-  bytes a person reviewed. Any change fails until it is reviewed again.
+Every file under public/ must be listed in data_inputs/public_data_review.csv
+with the sha256 of the exact bytes a person reviewed; any change fails until
+it is reviewed again. A table shaped as the disclosure layer's (a CSV with its
+public columns) must also pass ``validate_public``, and is reviewed as kind
+``disclosure_table``: neither check can tell a release the layer resolved from
+a file written any other way, so a person signs off the bytes too.
 
 A review entry of kind ``pending`` names who decides and by when. Until its
 expiry date, at most 14 days after it was added, it is reported without
@@ -66,7 +65,9 @@ REVIEW_COLUMNS = (
 )
 PENDING = "pending"
 REFERENCE_GEOGRAPHY = "reference_geography"
+DISCLOSURE_TABLE = "disclosure_table"
 KINDS = (
+    DISCLOSURE_TABLE,
     "national_table",
     "synthetic_household",
     REFERENCE_GEOGRAPHY,
@@ -243,10 +244,17 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                 area_codes_allowed = True
             entry = review.get(name)
             if entry is None:
-                if not layer:
-                    report.problems.append(
-                        f"{name}: not a disclosure table and not reviewed"
-                    )
+                report.problems.append(
+                    f"{name}: a disclosure table, not reviewed"
+                    if layer
+                    else f"{name}: not a disclosure table and not reviewed"
+                )
+            elif (entry.kind == DISCLOSURE_TABLE) != layer:
+                report.problems.append(
+                    f"{name}: reviewed as {entry.kind}, but "
+                    + ("it is" if layer else "it is not")
+                    + " a disclosure table"
+                )
             elif sha256_of(data) != entry.sha256:
                 report.problems.append(f"{name}: changed since its review")
             elif entry.kind == PENDING:

@@ -1,0 +1,200 @@
+/* A grid item is at least as wide as its content, so on a phone the table
+   would widen the whole page. At zero, the table scrolls inside the card. */
+.region-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  min-width: 0;
+}
+
+.region-view h2 {
+  margin: 0 0 6px 0;
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.region-view .chart-description {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Beats .chart-header > div, which would stretch the buttons' box. */
+.region-view .region-export {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.region-export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.region-export-button:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.region-export-button:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+.region-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.region-showing {
+  margin: 0;
+  padding: 8px 12px;
+  background: #f0fdfa;
+  border-left: 3px solid #319795;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.region-showing-label {
+  color: #4b5563;
+}
+
+.region-showing-name {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.geography-loading {
+  margin: 0;
+  padding: 24px 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+  text-align: center;
+  /* Shown only if loading takes more than 300ms, to avoid a flash. */
+  opacity: 0;
+  animation: geography-loading-in 0s linear 300ms forwards;
+}
+
+@keyframes geography-loading-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.region-table-scroll {
+  overflow-x: auto;
+}
+
+.region-table-scroll:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+/* Separate borders, so a row's line stays under its sticky first cell. */
+.region-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: #374151;
+}
+
+.region-table-caption {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.8125rem;
+}
+
+.region-table th,
+.region-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.region-table thead th {
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.region-table th[scope="row"] {
+  font-weight: 500;
+}
+
+/* The region names stay in view while the table scrolls sideways. */
+.region-table th[scope="row"],
+.region-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--pe-surface, #ffffff);
+}
+
+.region-cell-value {
+  font-weight: 600;
+}
+
+.region-cell-muted {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.region-tier-approximate {
+  color: #92400e;
+}
+
+.region-tier-withheld {
+  color: #6b7280;
+}
+
+.region-note {
+  margin: 0;
+  color: #666;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .region-view {
+    padding: 12px;
+  }
+
+  .region-view .chart-header {
+    flex-direction: column;
+  }
+
+  .region-table th,
+  .region-table td {
+    padding: 6px;
+  }
+
+  /* A line marks the edge of the region names, which the rest scrolls
+     under. */
+  .region-table th[scope="row"],
+  .region-table thead th:first-child {
+    box-shadow: inset -1px 0 0 #e5e7eb;
+  }
+}

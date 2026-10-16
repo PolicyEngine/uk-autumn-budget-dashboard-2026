@@ -687,6 +687,22 @@ def create_salary_sacrifice_cap_reform() -> Reform:
 # COMBINED AUTUMN BUDGET REFORM
 # =============================================================================
 
+AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
+# The measures the combined reform brings together, by id. The combined
+# reform is simulated whole, so this list does not change what it does; it
+# names its parts, so results by area can check it as a package of them.
+AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
+    "two_child_limit",
+    "salary_sacrifice_cap",
+    "fuel_duty_freeze",
+    "rail_fares_freeze",
+    "threshold_freeze_extension",
+    "freeze_student_loan_thresholds",
+    "dividend_tax_increase_2pp",
+    "savings_tax_increase_2pp",
+    "property_tax_increase_2pp",
+)
+
 
 def _create_combined_autumn_budget_reform() -> Reform:
     """Create a combined reform with all Autumn Budget 2026 provisions.
@@ -797,7 +813,7 @@ def _create_combined_autumn_budget_reform() -> Reform:
     combined_baseline_params.update(slr_baseline)
 
     return Reform(
-        id="autumn_budget_2026_combined",
+        id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 (combined)",
         description=(
             "All Autumn Budget 2026 provisions combined: two-child limit "

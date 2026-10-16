@@ -3,6 +3,8 @@
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const XMLNS_NS = "http://www.w3.org/2000/xmlns/";
+const XLINK_NS = "http://www.w3.org/1999/xlink";
 
 // Default font stack used throughout the application
 const DEFAULT_FONT = "system-ui, -apple-system, sans-serif";
@@ -130,11 +132,14 @@ export function createSvgTspan(content, { x, dy }) {
  * @param {SVGSVGElement} svg - The SVG element
  */
 export function addSvgNamespaces(svg) {
+  // As namespace declarations, not plain attributes: a serializer then
+  // writes each once, where a plain "xmlns" attribute can be written twice
+  // and leave the file unreadable as XML.
   if (!svg.hasAttribute("xmlns")) {
-    svg.setAttribute("xmlns", SVG_NS);
+    svg.setAttributeNS(XMLNS_NS, "xmlns", SVG_NS);
   }
   if (!svg.hasAttribute("xmlns:xlink")) {
-    svg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+    svg.setAttributeNS(XMLNS_NS, "xmlns:xlink", XLINK_NS);
   }
 }
 
