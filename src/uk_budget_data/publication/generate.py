@@ -20,6 +20,7 @@ from typing import Callable, Optional
 
 from pydantic import ValidationError
 
+from uk_budget_data import data_limits
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -146,6 +147,17 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
+def _limits_touched(baseline, reformed) -> list[dict]:
+    """The data limits the two built simulations show. Stand-in
+    simulations with no parameter tree (tests) show none; the scenarios'
+    own parameter changes are read regardless."""
+    if not all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
+    ):
+        return []
+    return data_limits.limits_touched(baseline, reformed)
+
+
 def _scenarios(subject: str, build_them: Callable):
     """Run a step that builds scenarios, refusing the run (not stopping the
     generation) when the configuration cannot build one. Only a Scenario or
@@ -239,6 +251,15 @@ def generate_artifacts(
         reform_scenario = _scenarios(key, reform.to_scenario)
         baseline = build(dataset_path, baseline_scenario)
         reformed = build(dataset_path, reform_scenario)
+        # A measure the data cannot cost is published as not computable:
+        # read from the scenarios' changes and from the built parameter
+        # trees, so a simulation modifier is seen too.
+        limits = data_limits.merge(
+            data_limits.limits_for_scenarios(
+                baseline_scenario, reform_scenario
+            ),
+            _limits_touched(baseline, reformed),
+        )
         result = process(reform, config, baseline, reformed, baseline_scenario)
 
         def build_receipt(file_digests):
@@ -257,6 +278,7 @@ def generate_artifacts(
                 members=members,
                 member_outputs=member_outputs,
                 composition=composition,
+                data_limits=limits,
             )
             if argv is not None:
                 inputs.generator_argv = argv

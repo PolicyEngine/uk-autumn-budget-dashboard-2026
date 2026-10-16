@@ -9,7 +9,8 @@ Every artifact carries ``receipt.json`` with two parts:
   artifact's outputs.
 - ``dashboard``: what only this repository knows: the measures, the files,
   the commit and whether the tree was clean, the forecast and calibration
-  basis, the years the dataset supports, and whether the artifact is
+  basis, the years the dataset supports, the data limits the measure
+  touches (``uk_budget_data.data_limits``), and whether the artifact is
   publishable.
 
 The receipt code is policyengine's own. Until the release that carries it is
@@ -29,6 +30,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
+from uk_budget_data import data_limits
 from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
@@ -487,6 +489,9 @@ class ReceiptInputs:
     member_outputs: Optional[dict[str, str]] = None
     # Combined runs: each side's phase (see combined_identities).
     composition: Optional[dict] = None
+    # The data limits the measure touches (data_limits.limits_touched on
+    # the two simulations), so it is published as not computable.
+    data_limits: list[dict] = field(default_factory=list)
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
 
 
@@ -561,6 +566,7 @@ def build_receipt_document(
         # projects the dataset to (policyengine.py#571's supported_years);
         # the years it leaves out are the unsupported ones.
         "unsupported_years": _unsupported(receipt, years, supported),
+        "data_limits": list(inputs.data_limits),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
         "publishable": not reasons,
@@ -700,10 +706,20 @@ def dashboard_problems(document: dict) -> list[str]:
       projection end, and the unsupported years are exactly the reported
       years beyond them;
     - the unsupported years are the execution receipt's own, when it
-      records the years the dataset is projected to.
+      records the years the dataset is projected to;
+    - the data limits are ones the registry defines, with its reasons.
     """
     dashboard = document.get("dashboard") or {}
     problems = []
+    if "data_limits" not in dashboard:
+        problems.append("its data limits are not recorded")
+    else:
+        problems += [
+            f"data limits: {problem}"
+            for problem in data_limits.record_problems(
+                dashboard["data_limits"]
+            )
+        ]
     if not isinstance(dashboard.get("tree_clean"), bool):
         problems.append("its tree state is not recorded")
     try:
