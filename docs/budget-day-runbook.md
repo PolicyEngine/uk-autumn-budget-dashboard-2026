@@ -109,6 +109,25 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
+**A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
+- **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property.
+- **Which parameters:** `uk_budget_data.data_limits` lists them:
+  - SDLT `gov.hmrc.stamp_duty.residential.purchase.additional` (the higher rates for additional dwellings) and `gov.hmrc.stamp_duty.non_residential.purchase`;
+  - the LBTT additional dwelling supplement and non-residential rates;
+  - the LTT higher residential and non-residential rates.
+
+  Main-home rates are computable.
+- **What happens:**
+  - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side;
+  - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for;
+  - every level that shows a figure refuses it, and so does approval;
+  - the page shows "Not computable on current data" and the reason, never a number;
+  - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
+  - building one with the templates warns (`DataLimitedWarning`).
+- **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
+- **When it lifts:** once certified data impute the purchases (policyengine-uk-data #573, with #569; Max's decision d1354). `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
+- **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
+
 **A UC health (LCWRA) measure: change the rebalancing amounts, not the element's amount.** In 2026 to 2029 the engine's UC rebalancing overwrites every claimant's health element:
 - pre-2026 claimants get `gov.dwp.universal_credit.rebalancing.protected_health_element` (or the UC Act 2025 s. 4 floor where that is null);
 - new claimants get `gov.dwp.universal_credit.rebalancing.new_claimant_health_element`.
