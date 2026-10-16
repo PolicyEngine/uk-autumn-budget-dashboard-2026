@@ -42,6 +42,21 @@ function renderView(props = {}) {
 const rowFor = (name) => screen.getByRole("rowheader", { name }).closest("tr");
 
 describe("RegionView", () => {
+  it("scrolls the table sideways in its own labelled region, from the keyboard too", async () => {
+    renderView();
+    const table = await screen.findByRole("table");
+    const scroller = screen.getByRole("region", {
+      name: "Table of results by region",
+    });
+    expect(scroller).toContainElement(table);
+    expect(scroller).toHaveAttribute("tabindex", "0");
+    // The caption wraps to the card rather than scrolling with the table,
+    // and still names it.
+    const caption = document.getElementById(table.getAttribute("aria-labelledby"));
+    expect(scroller).not.toContainElement(caption);
+    expect(table).toHaveAccessibleName(caption.textContent);
+  });
+
   it("shows every region with its value, interval, direction, band and tier", async () => {
     renderView();
     expect(await screen.findByRole("table")).toBeInTheDocument();

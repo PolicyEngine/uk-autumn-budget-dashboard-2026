@@ -1,8 +1,11 @@
+/* A grid item is at least as wide as its content, so on a phone the table
+   would widen the whole page. At zero, the table scrolls inside the card. */
 .region-view {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
+  min-width: 0;
 }
 
 .region-view h2 {
@@ -100,19 +103,25 @@
   overflow-x: auto;
 }
 
+.region-table-scroll:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+/* Separate borders, so a row's line stays under its sticky first cell. */
 .region-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
   color: #374151;
 }
 
-.region-table caption {
-  text-align: left;
+.region-table-caption {
+  margin: 0;
   color: #4b5563;
   font-size: 0.8125rem;
-  margin-bottom: 8px;
 }
 
 .region-table th,
@@ -133,6 +142,15 @@
 
 .region-table th[scope="row"] {
   font-weight: 500;
+}
+
+/* The region names stay in view while the table scrolls sideways. */
+.region-table th[scope="row"],
+.region-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--pe-surface, #ffffff);
 }
 
 .region-cell-value {
@@ -166,5 +184,17 @@
 
   .region-view .chart-header {
     flex-direction: column;
+  }
+
+  .region-table th,
+  .region-table td {
+    padding: 6px;
+  }
+
+  /* A line marks the edge of the region names, which the rest scrolls
+     under. */
+  .region-table th[scope="row"],
+  .region-table thead th:first-child {
+    box-shadow: inset -1px 0 0 #e5e7eb;
   }
 }

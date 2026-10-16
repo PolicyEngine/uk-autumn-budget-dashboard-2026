@@ -99,6 +99,7 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
   const regional = useGeographyData("regional");
   const [outcome, setOutcome] = useState("relative_change");
   const titleId = useId();
+  const captionId = useId();
 
   const choice = chooseReform({
     selectedIds: selectedPolicies,
@@ -215,11 +216,20 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
 
       {rows && (
         <>
-          <div className="region-table-scroll">
-            <table className="region-table">
-              <caption>
-                {OUTCOME_DESCRIPTIONS[outcome]}: {label}, {yearLabel}
-              </caption>
+          {/* The table's caption, outside the part that scrolls, so it
+              wraps to the card on a narrow screen. */}
+          <p id={captionId} className="region-table-caption">
+            {OUTCOME_DESCRIPTIONS[outcome]}: {label}, {yearLabel}
+          </p>
+          {/* On a narrow screen the table scrolls sideways inside the
+              card; the wrapper takes focus so a keyboard can scroll it. */}
+          <div
+            className="region-table-scroll"
+            role="region"
+            aria-label="Table of results by region"
+            tabIndex={0}
+          >
+            <table className="region-table" aria-labelledby={captionId}>
               <thead>
                 <tr>
                   <th scope="col">Region</th>
