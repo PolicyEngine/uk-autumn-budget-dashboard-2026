@@ -477,7 +477,11 @@ def test_every_page_is_read(tmp_path):
     assert "at 2026-10-16T07:44:00Z, over 3 minutes" in result.stdout
     requests = calls(state, "curl")
     assert len(requests) == 3
-    assert "pageToken=p1" in requests[1] and "pageToken=p2" in requests[2]
+    for request, token in zip(requests[1:], ("p1", "p2")):
+        # URL-encoded like every other parameter (review of #54 round 3).
+        at = request.index(f"pageToken={token}")
+        assert request[at - 1] == "--data-urlencode"
+    assert not any(a.startswith("pageToken=") for a in requests[0])
     assert "problem" not in outputs
 
 
