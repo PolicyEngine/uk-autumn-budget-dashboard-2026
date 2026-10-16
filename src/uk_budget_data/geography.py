@@ -663,11 +663,28 @@ class SeatMatrix:
     """Seat x household weights by year: the national dataset's seats.
 
     ``codes`` are in the matrix's row order; ``load`` reads one year.
+    ``years`` are the years the file holds, if it does not hold every year
+    asked for: a later year then takes the latest earlier year's weights,
+    rescaled to that year's household weights (see
+    ``GeographyCollector.seat_areas``). None means ``load`` serves any year.
     """
 
     codes: tuple[str, ...]
     parent_of: Mapping[str, str]
     load: Callable[[int], np.ndarray]
+    years: Optional[tuple[int, ...]] = None
+
+    def base_year(self, year: int) -> int:
+        """The year whose weights serve ``year``."""
+        if self.years is None or year in self.years:
+            return year
+        earlier = [y for y in self.years if y <= year]
+        if not earlier:
+            raise KeyError(
+                f"No seat weights for {year} or any earlier year; the file "
+                f"has {list(self.years)}"
+            )
+        return max(earlier)
 
     @classmethod
     def from_h5(
@@ -686,10 +703,13 @@ class SeatMatrix:
                     )
                 return np.asarray(handle[key][...], dtype=SEAT_MATRIX_DTYPE)
 
+        with h5py.File(path, "r") as handle:
+            years = tuple(sorted(int(key) for key in handle.keys()))
         return cls(
             codes=tuple(seat_regions),
             parent_of=dict(seat_regions),
             load=load,
+            years=years,
         )
 
 
@@ -747,6 +767,8 @@ class GeographyCollector:
             self.seat_labels = labels
         self._changes: dict[Run, tuple[np.ndarray, np.ndarray]] = {}
         self._weights: dict[int, np.ndarray] = {}
+        # The year whose seat weights served each year (see seat_areas).
+        self.seat_weight_years: dict[int, int] = {}
 
     def _check_seats_in_regions(self, labels: np.ndarray) -> None:
         unknown = sorted(set(labels) - set(self.seat_regions) - {""})
@@ -890,12 +912,27 @@ class GeographyCollector:
             return AreaWeights.from_labels(self.seat_labels, self.weight(year))
         if self.seat_matrix is None:
             raise ValueError("This dataset has no constituency geography")
-        matrix = self.seat_matrix.load(year)
+        base = self.seat_matrix.base_year(year)
+        matrix = self.seat_matrix.load(base)
         if matrix.shape != (len(self.seat_matrix.codes), self.n_records):
             raise ValueError(
-                f"The seat weights for {year} do not match the seats and "
+                f"The seat weights for {base} do not match the seats and "
                 "the dataset's households"
             )
+        if base != year:
+            # Keep each household's split across seats from the base year,
+            # scaled to its weight in this year, so the seats add up to the
+            # same households as the nation and the regions do.
+            totals = matrix.sum(axis=0)
+            weight = self.weight(year)
+            scale = np.divide(
+                weight,
+                totals,
+                out=np.zeros_like(weight, dtype=float),
+                where=totals > 0,
+            )
+            matrix = matrix * scale[None, :]
+        self.seat_weight_years[year] = base
         return AreaWeights.from_matrix(matrix, self.seat_matrix.codes)
 
 
@@ -2072,6 +2109,12 @@ def run_geography(parsed: argparse.Namespace) -> int:
             prior_regional=plan.prior_regional,
         )
         geo.timings["simulate_s"] = simulate_s
+        for year, base in sorted(collector.seat_weight_years.items()):
+            if base != year:
+                console.print(
+                    f"Seat weights for {year}: {base}'s, rescaled to "
+                    f"{year}'s household weights"
+                )
         log = resolve(geo)
         audit = write_private_audit(
             geo, log, run_id=run_id, release_name=release_name

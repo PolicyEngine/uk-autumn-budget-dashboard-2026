@@ -627,8 +627,34 @@ def test_an_efrs_collector_reads_regions_ids_and_seat_weights(
     assert list(collector.region_codes) == ["E12000007"] * 3
     assert collector.source_ids[0] == collector.source_ids[1]
     assert collector.seat_areas(2026).area_codes == (S1, S2)
-    with pytest.raises(KeyError, match="2027"):
-        collector.seat_areas(2027)
+    assert collector.seat_weight_years == {2026: 2026}
+
+
+def test_a_later_year_rescales_the_latest_seat_weights(regions, tmp_path):
+    # The bundle's seat weights hold one year; later years keep each
+    # household's split across seats, scaled to that year's weight.
+    seat_regions = {S1: "E12000007", S2: "E12000007"}
+    matrix = np.array([[60.0, 30.0, 0.0], [40.0, 20.0, 80.0]])
+    path = write_seat_weights(tmp_path / "weights.h5", matrix, years=(2025,))
+    collector = g.GeographyCollector.from_simulation(
+        efrs_simulation(),
+        kind="efrs",
+        regions=regions,
+        seat_regions=seat_regions,
+        seat_weights=path,
+    )
+    weight = np.array([150.0, 75.0, 40.0])
+    collector.add(
+        "a", 2027, baseline=np.zeros(3), reformed=np.zeros(3), weight=weight
+    )
+    areas = collector.seat_areas(2027)
+    assert collector.seat_weight_years == {2027: 2025}
+    assert np.allclose(areas.record_weights([S1, S2]), weight)
+    assert np.allclose(
+        areas.record_weights([S1]), [60.0 * 1.5, 30.0 * 1.5, 0.0]
+    )
+    with pytest.raises(KeyError, match="or any earlier year"):
+        collector.seat_areas(2024)
 
 
 def test_the_collector_reads_both_runs_of_a_year(regions):
