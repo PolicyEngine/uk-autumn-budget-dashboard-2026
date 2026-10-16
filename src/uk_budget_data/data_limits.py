@@ -23,13 +23,19 @@ A limit lifts when certified data carry the input:
 in the bundle-adoption PR that brings them.
 """
 
-import dis
+import __future__
+
+import ast
 import enum
 import functools
 import hashlib
+import inspect
 import json
+import linecache
+import operator
 import sys
 import sysconfig
+import textwrap
 import types
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -399,11 +405,15 @@ def _safe_repr(value):
 
 
 def _fingerprint(code):
-    """A code object by content: its instructions, the names it uses and
-    its constants (nested code by content too)."""
+    """A code object by content: its instructions, the names it uses, its
+    parameters' names and kinds, and its constants (nested code by content
+    too)."""
     return (
         code.co_code,
         code.co_names,
+        # Parameter names and kinds: a keyword call binds by name.
+        code.co_varnames[: code.co_argcount + code.co_kwonlyargcount],
+        code.co_flags & (inspect.CO_VARARGS | inspect.CO_VARKEYWORDS),
         tuple(
             _fingerprint(c) if hasattr(c, "co_code") else repr(c)
             for c in code.co_consts
@@ -525,7 +535,8 @@ class _Behaviour:
         if isinstance(value, (set, frozenset)):
             items = (self.of(item, depth) for item in value)
             return ("set", tuple(sorted(items, key=repr)), *extra)
-        return ("seq", tuple(self.of(item, depth) for item in value), *extra)
+        name = kind.__name__ if kind in (list, tuple) else "seq"
+        return (name, tuple(self.of(item, depth) for item in value), *extra)
 
     def _fields(self, value, depth):
         """A plain object's state: its ``__dict__`` and its slots."""
@@ -617,6 +628,10 @@ class _Behaviour:
             bases = tuple(self.of(base) for base in value.__bases__)
             return ("class", value.__qualname__, members, bases, enum_members)
         kind = type(value)
+        rebuilt = _rebuilt_from(value)
+        if rebuilt is not None:
+            name = f"{kind.__module__}.{kind.__qualname__}"
+            return ("object", name, self.of(rebuilt, depth + 1))
         if callable(value) and _library_class(kind):
             name = getattr(value, "__qualname__", None) or getattr(
                 value, "__name__", kind.__qualname__
@@ -708,8 +723,13 @@ class _Behaviour:
             if type(value) not in (dict, list, tuple, set, frozenset):
                 extra = [getattr(value, "default_factory", None)]
                 if not _library_class(type(value)):
-                    extra += list(_fields_of(value).values())
+                    # Its class too: a method can read what items don't.
+                    extra += [*_fields_of(value).values(), type(value)]
                 self._collect(extra, names, held, active)
+        elif _rebuilt_from(value) is not None:
+            if id(value) not in active and len(active) < _COLLECT_DEPTH:
+                active.add(id(value))
+                self._collect(_rebuilt_from(value), names, held, active)
         elif _is_component(value):
             held.append(value)
 
@@ -717,63 +737,21 @@ class _Behaviour:
         """What ``function`` holds and only ever calls for the result it
         gives on ``function``'s own arguments, by id.
 
-        That is ``_call_formula(held, entity, period, parameters)`` (the
-        templates' helper) with a held variable, or ``held(entity, period,
-        parameters)`` with a held formula (its fingerprint in
-        ``formulas``), where the three arguments are ``function``'s own
-        first three parameters and nothing rebinds them. Anything held
-        that is called otherwise, read some other way or reached from
-        nested code is not used for its result alone.
+        Read from ``function``'s source, when that is the code that runs
+        (see :func:`_source_tree`): a call of the templates' helper,
+        ``_call_formula``, with a held variable, or of a held formula (its
+        fingerprint in ``formulas``), whose entity, period and parameters
+        are ``function``'s own first three parameters, never rebound.
+        Positional, keyword, ``*`` and ``**`` arguments are bound as Python
+        binds them, through names assigned once. The result must be used,
+        not discarded. A held object read any other way, rebound, or read
+        from nested code is not used for its result alone; nor is anything,
+        without matching source.
         """
-        code = function.__code__
-        own = code.co_varnames[: code.co_argcount][:3]
-        if len(own) < 3:
+        node = _source_tree(function)
+        if node is None:
             return {}
-        tokens = _tokens(code)
-        nested = [t for inner in _nested(code) for t in _tokens(inner)]
-        if any(t == ("store", name) for t in tokens + nested for name in own):
-            return {}
-        resolve = _resolver(function)
-        helper = _formula_helper()
-        good = set()
-        for i in range(len(tokens)):
-            via_helper = tokens[i : i + 6]
-            if (
-                len(via_helper) == 6
-                and helper is not None
-                and via_helper[0][0] == "global"
-                and resolve(via_helper[0]) is helper
-                and _own_arguments(via_helper[2:5], own)
-                and via_helper[5] == ("call", 4)
-                and _is_variable(resolve(via_helper[1]))
-            ):
-                good.add(i + 1)
-            direct = tokens[i : i + 5]
-            if (
-                len(direct) == 5
-                and _own_arguments(direct[1:4], own)
-                and direct[4] == ("call", 3)
-                and isinstance(resolve(direct[0]), types.FunctionType)
-                and self.of(resolve(direct[0])) in formulas
-            ):
-                good.add(i)
-        loads: dict = {}
-        for i, token in enumerate(tokens):
-            if token[0] not in ("fast", "deref", "global") or token[1] in own:
-                continue
-            value = resolve(token)
-            if value is _MISSING or not _is_component(value):
-                continue
-            entry = loads.setdefault(id(value), [value, 0, 0, set()])
-            entry[1] += i in good
-            entry[2] += 1
-            entry[3].add(token[1])
-        inner_names = {name for kind, name in nested if kind != "call"}
-        return {
-            key: value
-            for key, (value, used, total, spelled) in loads.items()
-            if used == total and not spelled & inner_names
-        }
+        return _ResultUses(function, node, formulas, self).found()
 
     def chain(self, variable, formulas) -> set:
         """The results ``variable`` is built from: its own fingerprint and,
@@ -872,6 +850,8 @@ def _wrapped(behaviour, variable, chain) -> bool:
 
 
 _MISSING = object()
+# How many containers and rebuilt objects one walk follows, at most.
+_COLLECT_DEPTH = 500
 
 # Class members that are bookkeeping, not behaviour (the generated module
 # name differs between systems).
@@ -893,100 +873,405 @@ _CLASS_BOOKKEEPING = frozenset(
         "_abc_impl",
     }
 )
-_SKIPPED_OPS = frozenset(
-    {
-        "CACHE",
-        "COPY_FREE_VARS",
-        "EXTENDED_ARG",
-        "MAKE_CELL",
-        "NOP",
-        "PRECALL",
-        "PUSH_NULL",
-        "RESUME",
-    }
+_FUTURE_FLAGS = functools.reduce(
+    operator.or_,
+    (
+        getattr(__future__, name).compiler_flag
+        for name in __future__.all_feature_names
+    ),
 )
-_STORE_OPS = frozenset(
-    {
-        "STORE_FAST",
-        "STORE_DEREF",
-        "STORE_GLOBAL",
-        "STORE_NAME",
-        "DELETE_FAST",
-        "DELETE_DEREF",
-        "DELETE_GLOBAL",
-        "DELETE_NAME",
-    }
+_NESTED_SCOPES = (
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.Lambda,
+    ast.ClassDef,
+    ast.ListComp,
+    ast.SetComp,
+    ast.DictComp,
+    ast.GeneratorExp,
 )
+_HELPER_SIGNATURE = ("variable", "entity", "period", "parameters")
 
 
-def _tokens(code) -> list:
-    """A code object's instructions as the loads, stores and calls
-    :meth:`_Behaviour.uses_as_results` reads: ``("fast" | "deref" |
-    "global", name)``, ``("store", name)``, ``("call", count)`` or
-    ``("other", opname)``."""
-    found = []
-    for instruction in dis.get_instructions(code):
-        op, value = instruction.opname, instruction.argval
-        names = value if isinstance(value, tuple) else (value,)
-        if op in _SKIPPED_OPS:
-            continue
-        if op == "STORE_FAST_LOAD_FAST":
-            found += [("store", names[0]), ("fast", names[1])]
-        elif op == "STORE_FAST_STORE_FAST":
-            found += [("store", name) for name in names]
-        elif op in _STORE_OPS:
-            found.append(("store", names[0]))
-        elif op.startswith("LOAD_FAST"):
-            found += [("fast", name) for name in names]
-        elif op in ("LOAD_DEREF", "LOAD_FROM_DICT_OR_DEREF"):
-            found.append(("deref", names[0]))
-        elif op in ("LOAD_GLOBAL", "LOAD_NAME"):
-            found.append(("global", names[0]))
-        elif op == "CALL":
-            found.append(("call", instruction.arg))
-        else:
-            found.append(("other", op))
-    return found
-
-
-def _nested(code):
-    for const in code.co_consts:
-        if hasattr(const, "co_code"):
-            yield const
-            yield from _nested(const)
-
-
-def _own_arguments(tokens, own) -> bool:
-    return all(
-        kind in ("fast", "deref") and name == expected
-        for (kind, name), expected in zip(tokens, own)
+def _source_tree(function):
+    """The syntax tree of ``function``'s definition, when its source is the
+    code that runs: compiled again inside a function holding its free
+    variables, it must give the same instructions, names and constants.
+    ``None`` otherwise (no source, a lambda, a decorated function, source
+    edited since import)."""
+    code = getattr(function, "__code__", None)
+    if code is None:
+        return None
+    try:
+        lines, _ = inspect.getsourcelines(function)
+    except (OSError, TypeError):
+        return None
+    text = textwrap.dedent("".join(lines))
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return None
+    if len(tree.body) != 1:
+        return None
+    node = tree.body[0]
+    if (
+        not isinstance(node, ast.FunctionDef)
+        or node.decorator_list
+        or node.name != code.co_name
+    ):
+        return None
+    # The module's imports first: the compiler treats a name an import
+    # binds differently (a call of ``np.ones`` takes no method form).
+    holder = [*_module_imports(code.co_filename), "def __holder__():"]
+    holder += [f"    {name} = None" for name in code.co_freevars]
+    holder.append(textwrap.indent(text, "    ").rstrip("\n"))
+    holder.append(f"    return {node.name}")
+    try:
+        compiled = compile(
+            "\n".join(holder) + "\n",
+            code.co_filename,
+            "exec",
+            flags=code.co_flags & _FUTURE_FLAGS,
+            dont_inherit=True,
+        )
+    except SyntaxError:
+        return None
+    outer = next(c for c in compiled.co_consts if hasattr(c, "co_code"))
+    inner = next(
+        (
+            c
+            for c in outer.co_consts
+            if hasattr(c, "co_code") and c.co_name == node.name
+        ),
+        None,
     )
+    if inner is None or _fingerprint(inner) != _fingerprint(code):
+        return None
+    return node
 
 
-def _resolver(function):
-    """What a load in ``function`` reads: a closed-over value, a global, or
-    a parameter's default."""
-    code = function.__code__
-    cells = dict(zip(code.co_freevars, function.__closure__ or ()))
-    params = code.co_varnames[: code.co_argcount]
-    defaults = function.__defaults__ or ()
-    fast = dict(zip(params[len(params) - len(defaults) :], defaults))
-    fast.update(function.__kwdefaults__ or {})
+@functools.lru_cache(maxsize=256)
+def _module_imports(path: str) -> tuple:
+    """The top-level import statements of the module at ``path``, future
+    imports first."""
+    text = "".join(linecache.getlines(path))
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return ()
+    imports = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+    ]
+    future = [
+        node
+        for node in imports
+        if isinstance(node, ast.ImportFrom) and node.module == "__future__"
+    ]
+    rest = [node for node in imports if node not in future]
+    return tuple(ast.unparse(node) for node in future + rest)
 
-    def resolve(token):
-        kind, name = token
-        if kind == "deref":
-            cell = cells.get(name)
-            if cell is None or not _cell_is_set(cell):
-                return _MISSING
-            return cell.cell_contents
-        if kind == "global":
-            return function.__globals__.get(name, _MISSING)
-        if kind == "fast":
-            return fast.get(name, _MISSING)
-        return _MISSING
 
-    return resolve
+class _ResultUses:
+    """One function's calls that use a held variable's, or a held formula's,
+    own result (see :meth:`_Behaviour.uses_as_results`)."""
+
+    def __init__(self, function, node, formulas, behaviour):
+        self.function, self.node = function, node
+        self.formulas, self.behaviour = formulas, behaviour
+        self.code = function.__code__
+        args = node.args
+        self.positional = [a.arg for a in args.posonlyargs + args.args]
+        self.vararg = args.vararg.arg if args.vararg else None
+        self.parents, self.nested = {}, set()
+        for parent in ast.walk(node):
+            for child in ast.iter_child_nodes(parent):
+                self.parents[id(child)] = parent
+                inside = parent is not node and isinstance(
+                    parent, _NESTED_SCOPES
+                )
+                if inside or id(parent) in self.nested:
+                    self.nested.add(id(child))
+        self.stores = self._stores()
+        self.aliases = self._aliases()
+
+    def _stores(self) -> dict:
+        """How often each name is bound in the body, nested scopes too."""
+        stores: dict = {}
+
+        def bind(name):
+            stores[name] = stores.get(name, 0) + 1
+
+        for child in ast.walk(self.node):
+            if child is self.node:
+                continue
+            if isinstance(child, ast.Name) and not isinstance(
+                child.ctx, ast.Load
+            ):
+                bind(child.id)
+            elif isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                bind(child.name)
+            elif isinstance(child, (ast.Global, ast.Nonlocal)):
+                for name in child.names:
+                    bind(name)
+            elif isinstance(child, (ast.Import, ast.ImportFrom)):
+                for alias in child.names:
+                    bind((alias.asname or alias.name).split(".")[0])
+            elif isinstance(child, ast.ExceptHandler) and child.name:
+                bind(child.name)
+            elif isinstance(child, ast.arg) and id(child) in self.nested:
+                bind(child.arg)
+        return stores
+
+    def _aliases(self) -> dict:
+        """Names assigned once, at the top of the body, from a name, a tuple
+        or a literal mapping: ``call = _call_formula``, ``args = (entity,
+        period, parameters)``. ``entity = entity`` rebinds nothing."""
+        aliases = {}
+        for statement in self.node.body:
+            if not (
+                isinstance(statement, ast.Assign)
+                and len(statement.targets) == 1
+                and isinstance(statement.targets[0], ast.Name)
+            ):
+                continue
+            target, value = statement.targets[0].id, statement.value
+            if isinstance(value, ast.Name) and value.id == target:
+                self.stores[target] -= 1
+                aliases.setdefault("__identity__", set()).add(id(value))
+                continue
+            if self.stores.get(target) == 1 and isinstance(
+                value, (ast.Name, ast.Tuple, ast.Dict)
+            ):
+                aliases[target] = value
+        return aliases
+
+    def base(self, name: str) -> str:
+        """The name a chain of aliases leads back to."""
+        seen = set()
+        while name in self.aliases and isinstance(
+            self.aliases[name], ast.Name
+        ):
+            if name in seen:
+                break
+            seen.add(name)
+            name = self.aliases[name].id
+        return name
+
+    def value(self, name: str):
+        """What a name means here: a closed-over value, a parameter's
+        default, or a global (builtins too); ``_MISSING`` for a local."""
+        code, function = self.code, self.function
+        if self.stores.get(name):
+            # Rebound in the body (a default replaced, a nonlocal
+            # assigned): not what its default or cell held.
+            return _MISSING
+        if name in code.co_freevars:
+            cell = function.__closure__[code.co_freevars.index(name)]
+            return cell.cell_contents if _cell_is_set(cell) else _MISSING
+        defaults = function.__defaults__ or ()
+        with_defaults = self.positional[len(self.positional) - len(defaults) :]
+        if name in with_defaults:
+            return defaults[with_defaults.index(name)]
+        if name in (function.__kwdefaults__ or {}):
+            return function.__kwdefaults__[name]
+        if name in self.positional or name == self.vararg:
+            return _MISSING
+        if name in function.__globals__:
+            return function.__globals__[name]
+        builtins = function.__globals__.get("__builtins__", {})
+        if isinstance(builtins, types.ModuleType):
+            builtins = vars(builtins)
+        return builtins.get(name, _MISSING)
+
+    def _own(self) -> list:
+        """The formula's own entity, period and parameters, as markers."""
+        if len(self.positional) >= 3:
+            own = self.positional[:3]
+            if any(self.stores.get(name) for name in own):
+                return []
+            return own
+        if not self.positional and self.vararg:
+            if self.stores.get(self.vararg):
+                return []
+            return ["*0", "*1", "*2"]
+        return []
+
+    def _star(self, value) -> list | None:
+        if isinstance(value, ast.Name):
+            name = self.base(value.id)
+            if name == self.vararg and not self.positional:
+                return [ast.Name(id=f"*{i}") for i in range(3)]
+            alias = self.aliases.get(name)
+            return list(alias.elts) if isinstance(alias, ast.Tuple) else None
+        if isinstance(value, (ast.Tuple, ast.List)):
+            return list(value.elts)
+        return None
+
+    def _double_star(self, value) -> dict | None:
+        if isinstance(value, ast.Name):
+            value = self.aliases.get(self.base(value.id))
+        if isinstance(value, ast.Dict) and all(
+            isinstance(k, ast.Constant) and isinstance(k.value, str)
+            for k in value.keys
+        ):
+            return {k.value: v for k, v in zip(value.keys, value.values)}
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and self.value(self.base(value.func.id)) is dict
+            and not value.args
+            and all(kw.arg for kw in value.keywords)
+        ):
+            return {kw.arg: kw.value for kw in value.keywords}
+        return None
+
+    def _bind(self, call, signature) -> dict | None:
+        """The call's arguments bound to ``signature``'s four names, or
+        ``None`` if they don't bind exactly."""
+        positional = []
+        for arg in call.args:
+            if isinstance(arg, ast.Starred):
+                expanded = self._star(arg.value)
+                if expanded is None:
+                    return None
+                positional += expanded
+            else:
+                positional.append(arg)
+        keywords = {}
+        for keyword in call.keywords:
+            items = (
+                {keyword.arg: keyword.value}
+                if keyword.arg
+                else self._double_star(keyword.value)
+            )
+            if items is None or keywords.keys() & items.keys():
+                return None
+            keywords.update(items)
+        if len(positional) > len(signature):
+            return None
+        bound = dict(zip(signature, positional))
+        for name, value in keywords.items():
+            if name not in signature or name in bound:
+                return None
+            bound[name] = value
+        return bound if len(bound) == len(signature) else None
+
+    def _is_own(self, node, index, own) -> bool:
+        if not isinstance(node, ast.Name):
+            return False
+        name = node.id if node.id.startswith("*") else self.base(node.id)
+        return name == own[index]
+
+    def found(self) -> dict:
+        own = self._own()
+        if not own:
+            return {}
+        helper = _formula_helper()
+        good, held = set(), {}
+        for call in ast.walk(self.node):
+            if (
+                not isinstance(call, ast.Call)
+                or id(call) in self.nested
+                or not isinstance(call.func, ast.Name)
+                or isinstance(self.parents.get(id(call)), ast.Expr)
+            ):
+                continue
+            callee = self.value(self.base(call.func.id))
+            if helper is not None and callee is helper:
+                signature, slot = _HELPER_SIGNATURE, "variable"
+            elif isinstance(callee, types.FunctionType) and (
+                self.behaviour.of(callee) in self.formulas
+            ):
+                names = callee.__code__.co_varnames
+                if callee.__code__.co_argcount != 3:
+                    continue
+                signature, slot = tuple(names[:3]), None
+            else:
+                continue
+            bound = self._bind(call, signature)
+            if bound is None:
+                continue
+            arguments = [bound[name] for name in signature if name != slot]
+            if not all(
+                self._is_own(node, i, own) for i, node in enumerate(arguments)
+            ):
+                continue
+            target = bound[slot] if slot else call.func
+            if not isinstance(target, ast.Name):
+                continue
+            value = self.value(self.base(target.id))
+            if slot and not _is_variable(value):
+                continue
+            good.add(id(target))
+            held[id(value)] = value
+        alias_values = {
+            id(v) for v in self.aliases.values() if isinstance(v, ast.Name)
+        }
+        loads: dict = {}
+        for name in ast.walk(self.node):
+            if not (
+                isinstance(name, ast.Name) and isinstance(name.ctx, ast.Load)
+            ):
+                continue
+            if id(name) in alias_values:
+                continue
+            base = self.base(name.id)
+            value = self.value(base)
+            if id(value) not in held:
+                continue
+            entry = loads.setdefault(id(value), [0, 0])
+            entry[0] += id(name) in good and id(name) not in self.nested
+            entry[1] += 1
+        return {
+            key: value
+            for key, value in held.items()
+            if loads.get(key, [0, 1])[0] == loads.get(key, [0, 1])[1]
+        }
+
+
+# Read directly, never through pickling: values, containers, code.
+_NOT_REBUILT = (
+    bool,
+    int,
+    float,
+    complex,
+    str,
+    bytes,
+    bytearray,
+    list,
+    tuple,
+    dict,
+    set,
+    frozenset,
+    type,
+    types.ModuleType,
+    types.FunctionType,
+    types.BuiltinFunctionType,
+    enum.Enum,
+)
+
+
+def _rebuilt_from(value):
+    """What rebuilds a standard-library object (its constructor's
+    arguments and state, as pickling gives them): an ``itemgetter``'s key, a
+    ``Decimal``'s digits. ``None`` for anything else."""
+    kind = type(value)
+    if isinstance(value, _NOT_REBUILT) or value is None:
+        return None
+    top = (kind.__module__ or "").split(".")[0].lstrip("_")
+    if top not in sys.stdlib_module_names and top != "builtins":
+        return None
+    try:
+        reduced = value.__reduce_ex__(4)
+    except Exception:  # noqa: BLE001 - not reducible: read as before
+        return None
+    if not isinstance(reduced, tuple) or len(reduced) < 2:
+        return None
+    return tuple(reduced[1:3])
 
 
 def _formula_helper():
@@ -1007,8 +1292,12 @@ def _fields_of(value) -> dict:
         for name in [slots] if isinstance(slots, str) else slots:
             if name in ("__dict__", "__weakref__") or name in found:
                 continue
+            stored = name
+            if name.startswith("__") and not name.endswith("__"):
+                # Python stores a private slot under the class's name.
+                stored = f"_{kind.__name__.lstrip('_')}{name}"
             try:
-                found[name] = getattr(value, name)
+                found[name] = getattr(value, stored)
             except AttributeError:
                 pass
     return found
@@ -1090,7 +1379,8 @@ def _formulas_touched(base_system, reform_system, behaviour=None) -> dict:
     template that adds to it). What is done with such a result is
     downstream of the pricing, partly computable as abolishing SDLT is. A
     held variable called with other arguments (a changed purchase base, say)
-    is followed like any code, as is a held original never called.
+    is followed like any code, as is a held original never called, or
+    called and its result discarded.
     """
     behaviour = behaviour or _Behaviour()
     base, reform = base_system.variables, reform_system.variables

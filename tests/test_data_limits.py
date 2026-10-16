@@ -9,6 +9,8 @@ a buyer's whole stock), so it must be published as not computable.
 import collections
 import copy
 import functools
+import inspect
+import operator
 import re
 import warnings
 
@@ -1056,6 +1058,319 @@ def test_a_mapping_matches_only_in_the_same_order(pairs):
     behaviour = data_limits._Behaviour()
     assert behaviour.of(dict(pairs)) == behaviour.of(dict(pairs))
     assert behaviour.of(dict(pairs)) != behaviour.of(dict(pairs[::-1]))
+
+
+# --- call forms and stdlib state (review of #51 round 7) ---------------
+
+call_alias = _call_formula
+
+
+def private_slot_rate(rate):
+    """A rate on a private slot, which Python stores under a mangled name."""
+
+    def modifier(sim):
+        class Rate:
+            __slots__ = ("__rate",)
+
+            def __init__(self, rate):
+                self.__rate = rate
+
+            def get_rate(self):
+                return self.__rate
+
+        config = Rate(rate)
+
+        def formula(household, period, parameters):
+            purchased = household(
+                "additional_residential_property_purchased", period
+            )
+            return purchased * config.get_rate()
+
+        _replace_formula(sim, RESIDENTIAL, formula)
+        return sim
+
+    return modifier
+
+
+def picked_rate(index):
+    """A rate an ``operator.itemgetter`` picks."""
+
+    def modifier(sim):
+        pick = operator.itemgetter(index)
+        rates = (0.01, 0.02)
+
+        def formula(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * pick(rates)
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def priced_by_a_mapping_method(rate):
+    """A dict subclass whose method reads the missing input."""
+
+    def modifier(sim):
+        class Rates(dict):
+            def price(self, household, period):
+                purchased = household(
+                    "non_residential_property_purchased", period
+                )
+                return purchased * self["rate"]
+
+        rates = Rates(rate=rate)
+
+        def formula(household, period, parameters):
+            return rates.price(household, period)
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize(
+    "baseline, reform, key",
+    [
+        (
+            private_slot_rate(0.01),
+            private_slot_rate(0.02),
+            "additional_dwelling_purchases",
+        ),
+        (picked_rate(0), picked_rate(1), "non_residential_purchases"),
+        (
+            priced_by_a_mapping_method(0.01),
+            priced_by_a_mapping_method(0.02),
+            "non_residential_purchases",
+        ),
+    ],
+    ids=["private-slot", "itemgetter", "mapping-method"],
+)
+def test_more_state_a_formula_holds_is_compared(baseline, reform, key):
+    """Review of #51 round 7: a private slot, an itemgetter's key and a
+    mapping subclass's method compared equal, or went unread."""
+    touched = limits_touched(
+        simulation(modifier=baseline), simulation(modifier=reform)
+    )
+    assert keys(touched) == [key]
+
+
+def own_result_by(make):
+    def modifier(sim):
+        native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, make(native))
+        return sim
+
+    return modifier
+
+
+def by_keyword(native):
+    def formula(household, period, parameters):
+        result = _call_formula(
+            native, household, period, parameters=parameters
+        )
+        return result + 1000
+
+    return formula
+
+
+def by_keywords_only(native):
+    def formula(household, period, parameters):
+        result = _call_formula(
+            variable=native,
+            entity=household,
+            period=period,
+            parameters=parameters,
+        )
+        return result + 1000
+
+    return formula
+
+
+def by_star(native):
+    def formula(*args):
+        return _call_formula(native, *args) + 1000
+
+    return formula
+
+
+def by_star_of_a_tuple(native):
+    def formula(household, period, parameters):
+        args = (household, period, parameters)
+        return _call_formula(native, *args) + 1000
+
+    return formula
+
+
+def by_double_star(native):
+    def formula(household, period, parameters):
+        given = {"entity": household, "period": period}
+        return _call_formula(native, **given, parameters=parameters) + 1000
+
+    return formula
+
+
+def by_local_alias(native):
+    def formula(household, period, parameters):
+        call = _call_formula
+        return call(native, household, period, parameters) + 1000
+
+    return formula
+
+
+def by_module_alias(native):
+    def formula(household, period, parameters):
+        return call_alias(native, household, period, parameters) + 1000
+
+    return formula
+
+
+def by_entity_alias(native):
+    def formula(household, period, parameters):
+        entity = household
+        return _call_formula(native, entity, period, parameters) + 1000
+
+    return formula
+
+
+def by_identity(native):
+    def formula(household, period, parameters):
+        household = household  # noqa: PLW0127 - rebinds nothing
+        return _call_formula(native, household, period, parameters) + 1000
+
+    return formula
+
+
+def by_the_formula_with_keywords(native):
+    original = list(native.formulas.values())[-1]
+
+    def formula(household, period, parameters):
+        return original(household, period=period, parameters=parameters) + 1000
+
+    return formula
+
+
+def by_the_formula_with_star(native):
+    original = list(native.formulas.values())[-1]
+
+    def formula(*args):
+        return original(*args) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        by_keyword,
+        by_keywords_only,
+        by_star,
+        by_star_of_a_tuple,
+        by_double_star,
+        by_local_alias,
+        by_module_alias,
+        by_entity_alias,
+        by_identity,
+        by_the_formula_with_keywords,
+        by_the_formula_with_star,
+    ],
+)
+def test_the_own_result_in_any_call_form_is_computable(make):
+    """Review of #51 round 7: keyword, ``*``, ``**`` and alias calls of the
+    original's own result were marked limited."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def result_discarded(native):
+    def formula(household, period, parameters):
+        _call_formula(native, household, period, parameters)
+        return household.filled_array(0.0)
+
+    return formula
+
+
+def default_rebound(native):
+    from policyengine_uk.model_api import Variable
+
+    def nothing(household, period, parameters):
+        return household.filled_array(0.0)
+
+    zero = type(
+        NON_RESIDENTIAL_SDLT,
+        (Variable,),
+        {
+            "formula": nothing,
+            "entity": native.entity,
+            "definition_period": "year",
+            "value_type": float,
+            "label": "zero",
+        },
+    )(baseline_variable=native)
+
+    def formula(household, period, parameters, held=native):
+        # Not a plain alias: rebound only when the branch runs (always).
+        if period is not None:
+            held = zero
+        return _call_formula(held, household, period, parameters)
+
+    return formula
+
+
+def another_period(native):
+    def formula(household, period, parameters):
+        return _call_formula(native, household, period.last_year, parameters)
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make", [result_discarded, default_rebound, another_period]
+)
+def test_a_result_discarded_or_rebound_or_for_another_period_counts(make):
+    """Review of #51 round 7: a call whose result is discarded, or a held
+    default rebound before the call, was taken as using the result."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def test_source_that_is_not_the_running_code_is_not_trusted(monkeypatch):
+    """Without source that compiles to the very instructions that run,
+    nothing is taken as used for its result alone."""
+
+    def formula(household, period, parameters):
+        return _call_formula(None, household, period, parameters)
+
+    assert data_limits._source_tree(formula) is not None
+    edited = (
+        ["def formula(household, period, parameters):\n"]
+        + ["    return household\n"],
+        1,
+    )
+    monkeypatch.setattr(inspect, "getsourcelines", lambda f: edited)
+    assert data_limits._source_tree(formula) is None
+    namespace = {}
+    exec("def formula(a, b, c):\n    return a\n", namespace)  # noqa: S102
+    assert data_limits._source_tree(namespace["formula"]) is None
+
+
+def test_parameter_names_and_sequence_kinds_are_compared():
+    """Review of #51 round 7: ``(base, rate)`` against ``(rate, base)`` with
+    the same instructions, and a list against a tuple, compared equal."""
+    behaviour = data_limits._Behaviour()
+
+    def divide(base, rate):
+        return base / rate
+
+    def divide_other_way(rate, base):
+        return rate / base
+
+    assert behaviour.of(divide) != behaviour.of(divide_other_way)
+    assert behaviour.of([1]) != behaviour.of((1,))
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():
