@@ -41,6 +41,17 @@ describe("loadPublication", () => {
     expect(fetchImpl.calls.some((url) => url.includes("/delta/"))).toBe(false);
   });
 
+  it("never fetches a not-computable measure's files", async () => {
+    const fetchImpl = fixtureFetch();
+    const result = await loadPublication(BASE_PATH, ["epsilon"], {
+      fetchImpl,
+    });
+    expect(result.tablesByKey).toEqual({});
+    expect(fetchImpl.calls.some((url) => url.includes("/epsilon/"))).toBe(
+      false,
+    );
+  });
+
   it("reports no manifest when none is published", async () => {
     const fetchImpl = fixtureFetch({ overrides: { "manifest.json": 404 } });
     const result = await loadPublication(BASE_PATH, ["alpha"], { fetchImpl });

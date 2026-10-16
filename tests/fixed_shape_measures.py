@@ -18,3 +18,12 @@ def module_level_modifier(sim, rate=0.21):
 def broken_modifier(sim, message="this measure cannot run"):
     """A structural measure that fails whenever it is applied."""
     raise RuntimeError(message)
+
+
+def raise_additional_dwelling_rates(sim, year=2027, rate=0.07):
+    """A structural SDLT higher-rates change: a measure the certified data
+    cannot cost, made by a modifier rather than parameter changes."""
+    sim.tax_benefit_system.parameters.get_child(
+        "gov.hmrc.stamp_duty.residential.purchase.additional.rate"
+    ).brackets[1].rate.update(period=f"year:{year}:1", value=rate)
+    return sim
