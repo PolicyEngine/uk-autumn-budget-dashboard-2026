@@ -11,10 +11,11 @@ import { downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
-  APPROXIMATE_OPACITY,
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   WITHHELD_FILL,
+  approximateFill,
+  approximatePatternId,
 } from "../utils/geography/palette";
 import {
   geographyFetch,
@@ -95,14 +96,24 @@ describe("ConstituencyMap", () => {
     expect(withheld.style.fill).toBe("");
   });
 
-  it("colours seats by category, lighter when approximate", async () => {
+  it("colours seats by category, and dots an approximate seat's colour", async () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
     expect(fill("Z14000001")).toBe(CATEGORY_COLOURS.large_gain);
     expect(opacity("Z14000001")).toBe("1");
-    expect(fill("Z14000002")).toBe(CATEGORY_COLOURS.small_gain);
-    expect(opacity("Z14000002")).toBe(String(APPROXIMATE_OPACITY));
+    // Status is a texture over the category's own colour, not a lighter
+    // colour that could be read as a smaller change.
+    expect(fill("Z14000002")).toBe(approximateFill("small_gain"));
+    expect(opacity("Z14000002")).toBe("1");
+    const dots = container.querySelector(
+      `svg > defs > pattern#${approximatePatternId("small_gain")}`,
+    );
+    expect(dots.querySelector("rect").getAttribute("fill")).toBe(
+      CATEGORY_COLOURS.small_gain,
+    );
+    expect(dots.querySelector("circle")).not.toBeNull();
+    expect(dots.id).not.toMatch(/[\d:]/);
     expect(fill("Z14000004")).toBe(CATEGORY_COLOURS.too_uncertain);
     expect(fill("Z14000005")).toBe(CATEGORY_COLOURS.large_loss);
     expect(fill("Z14000007")).toBe(CATEGORY_COLOURS.little_change);
@@ -135,17 +146,25 @@ describe("ConstituencyMap", () => {
       "Small loss: 0.1% to 1%",
       "Large loss: 1% or more",
       "Too uncertain to classify",
-      "Reported",
-      "Approximate: few survey households",
-      "Not published: confidentiality",
-      "No data",
+      "Status, shown by texture",
+      "Reported: solid",
+      "Approximate: dotted, few survey households",
+      "Not published: hatched, confidentiality",
+      "No data: blank",
     ]) {
       expect(text).toContain(entry);
     }
     expect(legend.querySelector(`rect[fill="${WITHHELD_FILL}"]`)).not.toBeNull();
-    // No explanation of deliberate noise, and no red dot.
+    // Status swatches carry texture over a gain and a loss colour, so none
+    // reads as a size of change.
+    expect(
+      legend.querySelectorAll(`rect[fill="${approximateFill("large_gain")}"]`),
+    ).toHaveLength(1);
+    // No explanation of deliberate noise, and no red dot on any seat: the
+    // only circles are the dots inside the approximate textures.
     expect(text).not.toMatch(/noise/i);
-    expect(container.querySelector('svg[role="img"] circle')).toBeNull();
+    const circles = [...container.querySelectorAll('svg[role="img"] circle')];
+    expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
     await waitFor(() =>
@@ -228,7 +247,7 @@ describe("ConstituencyMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        CATEGORY_COLOURS.large_gain,
+        approximateFill("large_gain"),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
@@ -345,8 +364,14 @@ describe("ConstituencyMap", () => {
       root.querySelector('path[data-code="Z14000003"]').getAttribute("fill"),
     ).toBe("url(#withheld-hatch)");
     expect(root.querySelector("g.map-legend").textContent).toContain(
-      "Not published: confidentiality",
+      "Not published: hatched, confidentiality",
     );
+    // The exported file carries the dot textures its approximate seats use.
+    expect(
+      root.querySelector(
+        `:scope > defs > pattern#${approximatePatternId("small_gain")}`,
+      ),
+    ).not.toBeNull();
     expect(root.querySelector("g.map-zoom-layer").hasAttribute("transform")).toBe(
       false,
     );

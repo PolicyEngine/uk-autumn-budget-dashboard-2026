@@ -74,7 +74,6 @@ describe("RegionView", () => {
     const row = rowFor("Northern Ireland");
     expect(within(row).getAllByText("Not published")).toHaveLength(2);
     expect(row.textContent).not.toMatch(/\d/);
-    expect(row.querySelector(".region-plot-dot")).toBeNull();
   });
 
   it("switches to £ per household with the published digits", async () => {
@@ -107,20 +106,18 @@ describe("RegionView", () => {
     expect(within(rowFor("East Midlands")).getByText("+0.1%")).toBeInTheDocument();
   });
 
-  it("labels the plot only at zero and the fixed category breaks", async () => {
-    const axis = () =>
-      [...document.querySelectorAll(".region-plot-axis span")].map(
-        (label) => label.textContent,
-      );
-    const { unmount } = renderView();
+  it("has no plot column: the table shows each figure and interval as text", async () => {
+    renderView();
     await screen.findByRole("table");
-    // The package's intervals reach beyond the large-change breaks.
-    expect(axis()).toEqual(["-1%", "0", "+1%"]);
-    unmount();
-    renderView({ selectedPolicies: ["fuel_duty_freeze"] });
-    await screen.findByRole("table");
-    // This measure's stay near zero, so the small-change breaks are shown.
-    expect(axis()).toEqual(["-0.1%", "0", "+0.1%"]);
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers).toEqual([
+      "Region",
+      "Change",
+      "90% interval",
+      "Direction",
+      "Survey households",
+      "Status",
+    ]);
   });
 
   it("never sums: several measures but not all shows no figures", async () => {

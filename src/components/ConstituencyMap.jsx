@@ -9,7 +9,7 @@ import {
 import { CHART_LOGO } from "../utils/chartLogo";
 import { exportMapAsSvg, MAP_ZOOM_LAYER_CLASS } from "../utils/exportMapAsSvg";
 import { OUTCOME_LABELS } from "../utils/geography/format";
-import { appendWithheldHatch, drawMapLegend } from "../utils/geography/legend";
+import { appendStatusPatterns, drawMapLegend } from "../utils/geography/legend";
 import { DIRECTION_TEXT_COLOURS } from "../utils/geography/palette";
 import { hasReform } from "../utils/geography/rows";
 import {
@@ -256,13 +256,13 @@ export default function ConstituencyMap({
     applyStrokes();
   }, [applyStrokes]);
 
-  // Draw the seats, the hatch pattern, the legend's place and the logo
+  // Draw the seats, the status textures, the legend's place and the logo
   // once per set of boundaries. Colours are applied separately below.
   useEffect(() => {
     if (!svgNode || !features) return undefined;
     const svg = d3.select(svgNode);
     svg.selectAll("*").remove();
-    appendWithheldHatch(svg.append("defs"));
+    appendStatusPatterns(svg.append("defs"));
     const layer = svg.append("g").attr("class", MAP_ZOOM_LAYER_CLASS);
     const path = d3.geoPath().projection(gridProjection(features));
     layer

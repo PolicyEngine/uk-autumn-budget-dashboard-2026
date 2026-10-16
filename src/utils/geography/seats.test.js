@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parseGeographyTable } from "./parse";
 import {
-  APPROXIMATE_OPACITY,
-  CATEGORY_COLOURS,
   NO_DATA_FILL,
   WITHHELD_FILL,
+  approximateFill,
 } from "./palette";
 import { describeSeat, seatStates, seatStyle, seatSummary } from "./seats";
 import { geographyFixture } from "../../test/geographyFixture";
@@ -37,11 +36,12 @@ describe("seat states", () => {
     });
   });
 
-  it("draw withheld seats hatched, approximate ones lighter, missing ones as no data", () => {
+  it("draw withheld seats hatched, approximate ones dotted, missing ones as no data", () => {
     expect(seatStyle(states.get("Z14000003")).fill).toBe(WITHHELD_FILL);
+    // Status is a texture, never a change of colour.
     expect(seatStyle(states.get("Z14000002"))).toMatchObject({
-      fill: CATEGORY_COLOURS.small_gain,
-      fillOpacity: APPROXIMATE_OPACITY,
+      fill: approximateFill("small_gain"),
+      fillOpacity: 1,
     });
     expect(seatStyle(states.get("Z14000006")).fill).toBe(NO_DATA_FILL);
     expect(seatStyle(undefined).fill).toBe(NO_DATA_FILL);

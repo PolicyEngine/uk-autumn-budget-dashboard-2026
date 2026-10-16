@@ -4,8 +4,8 @@
  *
  * A seat's state comes only from its own published row:
  *
- * - `reported` or `approximate`: the row's category colour, lighter when
- *   approximate;
+ * - `reported` or `approximate`: the row's category colour, solid when
+ *   reported and under a dot texture when approximate;
  * - `withheld`: hatched, with no figure;
  * - `no-data`: no row at all, drawn as such and never given a value.
  */
@@ -18,11 +18,11 @@ import {
   formatInterval,
 } from "./format";
 import {
-  APPROXIMATE_OPACITY,
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
   WITHHELD_FILL,
+  approximateFill,
 } from "./palette";
 import { regionForBoundary } from "./regions";
 import { lookupRow } from "./rows";
@@ -62,8 +62,9 @@ export function seatStates(features, table, { reform, year, outcome }) {
 const PLAIN_STROKE = Object.freeze({ stroke: "#FFFFFF", strokeWidth: 0.05 });
 
 /**
- * How a seat is drawn. `fill` is an attribute value: a colour, or the
- * hatch pattern's url() for a withheld seat.
+ * How a seat is drawn. `fill` is an attribute value: a colour, a dotted
+ * pattern's url() for an approximate seat, or the hatch's for a withheld
+ * one.
  */
 export function seatStyle(state) {
   switch (state?.kind) {
@@ -71,8 +72,8 @@ export function seatStyle(state) {
       return { fill: CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
     case "approximate":
       return {
-        fill: CATEGORY_COLOURS[state.category],
-        fillOpacity: APPROXIMATE_OPACITY,
+        fill: approximateFill(state.category),
+        fillOpacity: 1,
         ...PLAIN_STROKE,
       };
     case "withheld":
