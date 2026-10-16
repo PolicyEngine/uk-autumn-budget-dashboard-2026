@@ -23,6 +23,7 @@ from hypothesis import strategies as st
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from tests import purchase_helpers, template_measures
 from tests.fixed_shape_measures import raise_additional_dwelling_rates
 from uk_budget_data import data_limits
 from uk_budget_data.data_limits import (
@@ -1922,18 +1923,32 @@ def by_join():
     return separator.join(["non", "residential", "property", "purchased"])
 
 
-@pytest.mark.parametrize("compose", [by_fstring, by_join])
-def test_a_composed_input_name_reads_anything(compose):
+def by_a_loop_over_kinds():
+    for kind in ["non_residential"]:
+        return f"{kind}_property_purchased"
+
+
+@pytest.mark.parametrize(
+    "compose, expected",
+    [
+        (by_fstring, ["non_residential_purchases"]),
+        (by_join, ["non_residential_purchases"]),
+        (
+            by_a_loop_over_kinds,
+            ["additional_dwelling_purchases", "non_residential_purchases"],
+        ),
+    ],
+    ids=["fstring", "join", "unknown-name"],
+)
+def test_a_composed_input_name_is_read(compose, expected):
     """Review of #51 round 10: an input name built at run time hid the
-    read; a measure's code that builds strings is read as able to name any
-    input, so every limit."""
+    read. A name built from known parts is evaluated; one that can't be
+    known (built in a loop) is read as able to name any input, so every
+    limit."""
     reformed = simulation(
         modifier=own_result_by(levy_on_a_composed_name(compose))
     )
-    assert keys(limits_touched(simulation(), reformed)) == [
-        "additional_dwelling_purchases",
-        "non_residential_purchases",
-    ]
+    assert keys(limits_touched(simulation(), reformed)) == expected
 
 
 def bound_get_rate(key):
@@ -2052,6 +2067,167 @@ def test_named_kwargs_forwarders_and_lists_are_computable(make):
     forwards to _call_formula, and a list of the arguments were limited."""
     reformed = simulation(modifier=own_result_by(make))
     assert limits_touched(simulation(), reformed) == []
+
+
+# --- names, helpers, templates (review of #51 round 11) ----------------
+
+
+def levy_by_named_concatenation(native):
+    def formula(household, period, parameters):
+        prefix = "non_residential"
+        suffix = "_property_purchased"
+        name = prefix + suffix
+        own = _call_formula(native, household, period, parameters)
+        return own + household(name, period) * 0.01
+
+    return formula
+
+
+def levy_by_named_percent(native):
+    def formula(household, period, parameters):
+        pattern = "%s_property_purchased"
+        kind = "non_residential"
+        name = pattern % kind
+        own = _call_formula(native, household, period, parameters)
+        return own + household(name, period) * 0.01
+
+    return formula
+
+
+def levy_by_a_format_callback(native):
+    def formula(household, period, parameters):
+        fmt = "{}_property_purchased".format
+        own = _call_formula(native, household, period, parameters)
+        return own + household(fmt("non_residential"), period) * 0.01
+
+    return formula
+
+
+def levy_by_an_imported_helper(native):
+    def formula(household, period, parameters):
+        own = _call_formula(native, household, period, parameters)
+        return own + purchase_helpers.surcharge(household, period, 0.01)
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        levy_by_named_concatenation,
+        levy_by_named_percent,
+        levy_by_a_format_callback,
+        levy_by_an_imported_helper,
+    ],
+)
+def test_names_built_from_named_parts_and_imported_helpers_are_read(make):
+    """Review of #51 round 11: a name built from named strings by + or %
+    or a bound format, and a levy in an imported helper module, recorded
+    no limit."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert keys(limits_touched(simulation(), reformed)) == [
+        "non_residential_purchases"
+    ]
+
+
+def by_list_unpacking(native):
+    def formula(household, period, parameters):
+        entity, instant, policy = [household, period, parameters]
+        return _call_formula(native, entity, instant, policy) + 1000
+
+    return formula
+
+
+def by_an_annotated_alias(native):
+    def formula(household, period, parameters):
+        entity: object = household
+        return _call_formula(native, entity, period, parameters) + 1000
+
+    return formula
+
+
+def by_a_chained_alias(native):
+    def formula(household, period, parameters):
+        entity = alias = household  # noqa: F841
+        return _call_formula(native, alias, period, parameters) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make", [by_list_unpacking, by_an_annotated_alias, by_a_chained_alias]
+)
+def test_list_annotated_and_chained_aliases_are_computable(make):
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def income_tax_with_a_message(sim):
+    def formula(person, period, parameters):
+        income = person("employment_income", period)
+        if (income < 0).any():
+            raise ValueError(f"negative income in {period}")
+        return income * 0.01
+
+    _replace_formula(sim, "income_tax", formula)
+    return sim
+
+
+def income_tax_by_a_composed_name(sim):
+    base = "employment"
+
+    def formula(person, period, parameters):
+        return person(f"{base}_income", period) * 0.01
+
+    _replace_formula(sim, "income_tax", formula)
+    return sim
+
+
+@pytest.mark.parametrize(
+    "modifier", [income_tax_with_a_message, income_tax_by_a_composed_name]
+)
+def test_messages_and_known_composed_names_stay_computable(modifier):
+    """Review of #51 round 11: an f-string in an error message, or a name
+    composed from known parts (employment_income), marked every limit."""
+    reformed = simulation(modifier=modifier)
+    assert limits_touched(simulation(), reformed) == []
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "vat_modifier",
+        "payment_modifier",
+        "allowance_modifier",
+        "property_modifier",
+    ],
+)
+def test_every_repository_template_measure_is_computable(name):
+    """The templates are the way Budget-day measures are written: none may
+    be marked not computable (review of #51 round 11: the VAT template
+    was, through a helper's error message)."""
+    reformed = simulation(modifier=getattr(template_measures, name))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def numpy_subclass_rate(rate):
+    def make():
+        class Config(np.float64):
+            pass
+
+        config = Config(0.0)
+        config.rate = rate
+        return lambda: config.rate
+
+    return make
+
+
+def test_a_numpy_scalar_subclass_is_read_with_its_fields():
+    touched = limits_touched(
+        simulation(modifier=non_residential_times(numpy_subclass_rate(0.01))),
+        simulation(modifier=non_residential_times(numpy_subclass_rate(0.02))),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
 
 
 def test_an_unchanged_threshold_set_as_a_float_is_not_a_change():

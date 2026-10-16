@@ -26,6 +26,7 @@ in the bundle-adoption PR that brings them.
 import __future__
 
 import ast
+import builtins
 import dis
 import enum
 import functools
@@ -39,6 +40,7 @@ import sys
 import sysconfig
 import textwrap
 import types
+import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterable, Mapping
@@ -481,6 +483,14 @@ class _Behaviour:
                 self.of(fields),
             )
         if isinstance(value, numpy.generic):
+            if (type(value).__module__ or "").split(".")[0] != "numpy":
+                # A measure's subclass of a NumPy scalar: its fields too.
+                return (
+                    "scalar",
+                    self.of(type(value)),
+                    self.of(value.item()),
+                    self._fields(value, depth),
+                )
             return self.of(value.item(), depth)
         scalars = (bool, int, float, str, bytes, complex)
         if isinstance(value, scalars) and type(value) not in scalars:
@@ -622,6 +632,9 @@ class _Behaviour:
                 (name, self.of(value.__globals__[name]))
                 for name in sorted(_global_names(code))
                 if name in value.__globals__
+            ) + tuple(
+                (f"{name}.{attribute}", self.of(found))
+                for name, attribute, found in _module_reads(value)
             )
             return (
                 "function",
@@ -734,9 +747,8 @@ class _Behaviour:
                 self._collect([*cells, _function_state(value)], names, held)
                 return names, held
             names |= _code_names(code)
-            if _composes_strings(value):
-                # A name built at run time can be any input's.
-                names.add(ANY_NAME)
+            # A name built at run time: evaluated, or any input's.
+            names |= _composed_names(value)
             self._collect(_function_state(value), names, held)
             self._collect(value.__defaults__, names, held)
             self._collect(value.__kwdefaults__, names, held)
@@ -746,6 +758,8 @@ class _Behaviour:
             for name in sorted(_global_names(code)):
                 if name in value.__globals__:
                     self._collect(value.__globals__[name], names, held)
+            for _, _, found in _module_reads(value):
+                self._collect(found, names, held)
         elif isinstance(value, functools.partial):
             self._collect(
                 (value.func, value.args, value.keywords), names, held
@@ -778,6 +792,14 @@ class _Behaviour:
                 names.add(engine[1])
         elif _bound_builtin(value):
             self._collect(value.__self__, names, held, active)
+        elif (
+            isinstance(value, numpy.generic)
+            and (type(value).__module__ or "").split(".")[0] != "numpy"
+        ):
+            if id(value) not in active:
+                active.add(id(value))
+                extra = [*_fields_of(value).values(), type(value)]
+                self._collect(extra, names, held, active)
         elif isinstance(value, (str, bytes, complex, int, float)) and type(
             value
         ) not in (str, bytes, complex, int, float, bool):
@@ -1168,29 +1190,33 @@ class _ResultUses:
         return stores
 
     def _aliases(self) -> dict:
-        """Names assigned once, at the top of the body, from a name, a tuple
-        or a literal mapping: ``call = _call_formula``, ``args = (entity,
-        period, parameters)``, or pairwise by unpacking (``a, b = x, y``).
-        ``entity = entity`` rebinds nothing."""
+        """Names assigned once, at the top of the body, from a name, a tuple,
+        a list or a mapping: ``call = _call_formula``, ``args = (entity,
+        period, parameters)``, pairwise by unpacking (``a, b = x, y`` or
+        from a list), annotated (``e: Entity = household``) or chained
+        (``a = b = household``). ``entity = entity`` rebinds nothing."""
         aliases = {}
         for statement in self.node.body:
-            if not (
-                isinstance(statement, ast.Assign)
-                and len(statement.targets) == 1
-            ):
-                continue
-            target, value = statement.targets[0], statement.value
-            if isinstance(target, ast.Name):
-                pairs = [(target, value)]
+            if isinstance(statement, ast.Assign):
+                targets, value = statement.targets, statement.value
             elif (
-                isinstance(target, ast.Tuple)
-                and isinstance(value, ast.Tuple)
-                and len(target.elts) == len(value.elts)
-                and all(isinstance(t, ast.Name) for t in target.elts)
+                isinstance(statement, ast.AnnAssign)
+                and statement.value is not None
             ):
-                pairs = list(zip(target.elts, value.elts))
+                targets, value = [statement.target], statement.value
             else:
                 continue
+            pairs = []
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    pairs.append((target, value))
+                elif (
+                    isinstance(target, (ast.Tuple, ast.List))
+                    and isinstance(value, (ast.Tuple, ast.List))
+                    and len(target.elts) == len(value.elts)
+                    and all(isinstance(t, ast.Name) for t in target.elts)
+                ):
+                    pairs += list(zip(target.elts, value.elts))
             for name, item in pairs:
                 if isinstance(item, ast.Name) and item.id == name.id:
                     self.stores[name.id] -= 1
@@ -1609,13 +1635,20 @@ def _bound_builtin(value) -> bool:
 _STRING_BUILDERS = frozenset({"join", "format", "format_map"})
 
 
-def _composes_strings(function) -> bool:
-    """Whether a measure's function builds strings at run time (an f-string,
-    ``str.join``, ``format``, ``+`` or ``%`` on text): a name built so can
-    be any input's. The model's own formulas are read as they are."""
+def _composed_names(function) -> set:
+    """The names a measure's function builds at run time and passes to a
+    call or returns (``household(f"{kind}_purchased", period)``, a name
+    joined, formatted or concatenated first): each one evaluated when its parts are
+    known (constants, closed-over or global strings, defaults), else
+    ``ANY_NAME``, since it could name any input. A string built for a
+    message (a ``raise``, ``print``, a warning or a log) names nothing. The
+    model's formulas and the templates are read as they are."""
     code = function.__code__
-    if "/policyengine_uk/" in code.co_filename:
-        return False
+    path = code.co_filename
+    if "/policyengine_uk/" in path or path.endswith(
+        "/uk_budget_data/measure_templates.py"
+    ):
+        return set()
     node = _source_tree(function)
     if node is None:
         built = {
@@ -1625,32 +1658,243 @@ def _composes_strings(function) -> bool:
             "BUILD_STRING",
             "CONVERT_VALUE",
         }
-        return bool(_STRING_BUILDERS & _global_names(code)) or any(
+        composes = bool(_STRING_BUILDERS & _global_names(code)) or any(
             instruction.opname in built
             for inner in (code, *_nested_code(code))
             for instruction in dis.get_instructions(inner)
         )
-    for child in ast.walk(node):
-        if isinstance(child, ast.JoinedStr):
-            return True
-        if isinstance(child, ast.BinOp) and any(
-            isinstance(side, ast.Constant) and isinstance(side.value, str)
-            for side in (child.left, child.right)
-        ):
-            return True
-        if (
-            isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Attribute)
-            and (
-                child.func.attr in _STRING_BUILDERS
-                or (
-                    isinstance(child.func.value, ast.Constant)
-                    and isinstance(child.func.value.value, str)
-                )
+        return {ANY_NAME} if composes else set()
+    return _ComposedNames(function, node).passed()
+
+
+class _ComposedNames:
+    """Strings a function builds at run time, and whether one is passed to
+    a call other than a message's."""
+
+    def __init__(self, function, node):
+        self.function, self.node = function, node
+        self.parents = {}
+        for parent in ast.walk(node):
+            for child in ast.iter_child_nodes(parent):
+                self.parents[id(child)] = parent
+        self.built: set = set()
+        self.builders: set = set()
+        self.assigned: dict = {}
+        for child in ast.walk(node):
+            targets, value = self._assignment(child)
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    self.assigned.setdefault(target.id, []).append(child)
+        changed = True
+        while changed:
+            changed = False
+            for child in ast.walk(node):
+                targets, value = self._assignment(child)
+                for target in targets:
+                    if not isinstance(target, ast.Name):
+                        continue
+                    if self.builds(value) and target.id not in self.built:
+                        self.built.add(target.id)
+                        changed = True
+                    if self._string_method(value) and (
+                        target.id not in self.builders
+                    ):
+                        self.builders.add(target.id)
+                        changed = True
+
+    @staticmethod
+    def _assignment(child):
+        if isinstance(child, ast.Assign):
+            return child.targets, child.value
+        if isinstance(child, (ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
+            return [child.target], child.value
+        return [], None
+
+    def _stringish(self, value) -> bool:
+        """Whether an expression is text: a literal, a name holding a known
+        string or one built here, or a string built in place."""
+        if isinstance(value, ast.Constant):
+            return isinstance(value.value, str)
+        if isinstance(value, ast.Name):
+            return value.id in self.built or isinstance(
+                self._known(value.id), str
             )
-        ):
+        return self.builds(value)
+
+    def _string_method(self, value) -> bool:
+        """A method of a string: ``"{}_x".format``."""
+        return isinstance(value, ast.Attribute) and self._stringish(
+            value.value
+        )
+
+    def builds(self, value) -> bool:
+        """Whether an expression builds a string at run time."""
+        if value is None:
+            return False
+        if isinstance(value, ast.JoinedStr):
             return True
-    return False
+        if isinstance(value, ast.BinOp) and isinstance(
+            value.op, (ast.Add, ast.Mod, ast.Mult)
+        ):
+            return self._stringish(value.left) or self._stringish(value.right)
+        if isinstance(value, ast.IfExp):
+            return self.builds(value.body) or self.builds(value.orelse)
+        if isinstance(value, ast.Call):
+            func = value.func
+            if isinstance(func, ast.Attribute) and (
+                func.attr in _STRING_BUILDERS or self._stringish(func.value)
+            ):
+                return True
+            if isinstance(func, ast.Name) and func.id in self.builders:
+                return True
+        return False
+
+    def _message(self, call) -> bool:
+        """A call that only makes or shows a message."""
+        parent = self.parents.get(id(call))
+        if isinstance(parent, ast.Raise):
+            return True
+        func = call.func
+        name = func.id if isinstance(func, ast.Name) else None
+        if name is not None:
+            value = self.function.__globals__.get(
+                name, getattr(builtins, name, None)
+            )
+            if value in (print, repr, str, warnings.warn):
+                return True
+            if isinstance(value, type) and issubclass(value, BaseException):
+                return True
+        if isinstance(func, ast.Attribute) and func.attr in _LOG_METHODS:
+            return True
+        return False
+
+    def _known(self, name):
+        """A name's string value, when it is known before the call: assigned
+        once here from a known string, or a closed-over, default or global
+        string."""
+        assignments = self.assigned.get(name, [])
+        if len(assignments) == 1 and isinstance(assignments[0], ast.Assign):
+            return self.evaluate(assignments[0].value)
+        if assignments:
+            return None
+        code, function = self.function.__code__, self.function
+        if name in code.co_freevars:
+            cell = function.__closure__[code.co_freevars.index(name)]
+            value = cell.cell_contents if _cell_is_set(cell) else None
+        elif name in code.co_varnames[: code.co_argcount]:
+            params = code.co_varnames[: code.co_argcount]
+            defaults = function.__defaults__ or ()
+            with_defaults = params[len(params) - len(defaults) :]
+            value = (
+                defaults[with_defaults.index(name)]
+                if name in with_defaults
+                else None
+            )
+        else:
+            value = function.__globals__.get(name)
+        return value if isinstance(value, (str, int, float)) else None
+
+    def evaluate(self, value):
+        """An expression's value when it is a string (or number) built from
+        known parts; ``None`` otherwise."""
+        try:
+            if isinstance(value, ast.Constant):
+                return (
+                    value.value
+                    if isinstance(value.value, (str, int, float))
+                    else None
+                )
+            if isinstance(value, ast.Name):
+                return self._known(value.id)
+            if isinstance(value, ast.JoinedStr):
+                parts = []
+                for part in value.values:
+                    if isinstance(part, ast.Constant):
+                        parts.append(str(part.value))
+                        continue
+                    if part.format_spec is not None or part.conversion != -1:
+                        return None
+                    found = self.evaluate(part.value)
+                    if found is None:
+                        return None
+                    parts.append(str(found))
+                return "".join(parts)
+            if isinstance(value, ast.BinOp):
+                left = self.evaluate(value.left)
+                right = (
+                    tuple(self.evaluate(e) for e in value.right.elts)
+                    if isinstance(value.op, ast.Mod)
+                    and isinstance(value.right, ast.Tuple)
+                    else self.evaluate(value.right)
+                )
+                if (
+                    left is None
+                    or right is None
+                    or (isinstance(right, tuple) and None in right)
+                ):
+                    return None
+                if isinstance(value.op, ast.Add):
+                    return left + right
+                if isinstance(value.op, ast.Mod):
+                    return left % right
+                if isinstance(value.op, ast.Mult):
+                    return left * right
+                return None
+            if isinstance(value, ast.Call) and not value.keywords:
+                func = value.func
+                receiver, method = None, None
+                if isinstance(func, ast.Attribute):
+                    receiver, method = self.evaluate(func.value), func.attr
+                elif isinstance(func, ast.Name) and func.id in self.builders:
+                    bound = self.assigned[func.id][0].value
+                    receiver, method = self.evaluate(bound.value), bound.attr
+                if not isinstance(receiver, str):
+                    return None
+                if method == "join" and len(value.args) == 1:
+                    items = value.args[0]
+                    if not isinstance(items, (ast.List, ast.Tuple)):
+                        return None
+                    found = [self.evaluate(e) for e in items.elts]
+                    if any(not isinstance(f, str) for f in found):
+                        return None
+                    return receiver.join(found)
+                if method == "format":
+                    found = [self.evaluate(a) for a in value.args]
+                    if None in found:
+                        return None
+                    return receiver.format(*found)
+            return None
+        except (TypeError, ValueError, IndexError, KeyError):
+            return None
+
+    def passed(self) -> set:
+        """The names built and passed to a call, or returned (a helper that
+        makes a name for its caller to read): evaluated, or ``ANY_NAME``."""
+        names = set()
+        for node in ast.walk(self.node):
+            if isinstance(node, ast.Call) and not self._message(node):
+                candidates = [*node.args, *(k.value for k in node.keywords)]
+            elif isinstance(node, ast.Return) and node.value is not None:
+                candidates = [node.value]
+            else:
+                continue
+            for argument in candidates:
+                if isinstance(argument, ast.Starred):
+                    argument = argument.value
+                if not (
+                    self.builds(argument)
+                    or isinstance(argument, ast.Name)
+                    and argument.id in self.built
+                ):
+                    continue
+                found = self.evaluate(argument)
+                names.add(found if isinstance(found, str) else ANY_NAME)
+        return names
+
+
+_LOG_METHODS = frozenset(
+    {"debug", "info", "warning", "error", "exception", "critical", "log"}
+)
 
 
 def _nested_code(code):
@@ -1700,6 +1944,26 @@ def _forwarder(function, helper):
     ):
         return None
     return params
+
+
+def _module_reads(function) -> list:
+    """What a measure's function reads from a helper module it imports
+    (``helpers.surcharge``): each name its code uses that the module has.
+    Library modules and the model's are read by name."""
+    found = []
+    code = function.__code__
+    names = _global_names(code)
+    for name in sorted(names):
+        module = function.__globals__.get(name)
+        if not isinstance(module, types.ModuleType):
+            continue
+        top = module.__name__.split(".")[0]
+        if top == "policyengine_uk" or _library_module(module.__name__):
+            continue
+        for attribute in sorted(names):
+            if attribute in vars(module):
+                found.append((name, attribute, vars(module)[attribute]))
+    return found
 
 
 def _formula_helper():
