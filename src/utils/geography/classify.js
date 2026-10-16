@@ -16,9 +16,9 @@ import { formatFigure } from "./format";
 /**
  * The category breaks, as published-style strings in each outcome's units:
  * little change is below `small` either way, a small change is from `small`
- * up to `large`, and a large change is `large` or more.
- *
- * To confirm with Vahid.
+ * up to `large`, and a large change is `large` or more. They are fixed in
+ * advance, never derived from the data, so the scale reveals nothing about
+ * the figures it colours.
  */
 export const CATEGORY_BREAKS = Object.freeze({
   relative_change: Object.freeze({ small: "0.001", large: "0.01" }),

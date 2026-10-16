@@ -1911,6 +1911,15 @@ def add_geography_parser(subparsers) -> None:
         help="An already published regional table, whose cells are known",
     )
     parser.add_argument(
+        "--allow-demotions",
+        action="store_true",
+        help=(
+            "Write the tables even when some constituency runs had to be "
+            "demoted to unpublished; without it such a run stops with an "
+            "error after the private audit"
+        ),
+    )
+    parser.add_argument(
         "--data-dir",
         type=Path,
         default=Path("./data"),
@@ -2067,6 +2076,19 @@ def run_geography(parsed: argparse.Namespace) -> int:
         audit = write_private_audit(
             geo, log, run_id=run_id, release_name=release_name
         )
+        for reform, year in log.demotions:
+            console.print(
+                f"[yellow]Demoted: constituency {reform} {year} is not "
+                "published (no legal fix)[/yellow]"
+            )
+        if log.demotions and not parsed.allow_demotions:
+            console.print(
+                f"[red]Error: {len(log.demotions)} constituency run(s) "
+                "demoted; no tables written. Pass --allow-demotions to "
+                "publish the rest.[/red]"
+            )
+            console.print(f"Private audit: {audit} (${AUDIT_DIR_ENV})")
+            return 1
         names = area_names(plan.regions, plan.seats)
         written = write_public_tables(
             geo.release, parsed.out_dir, names, levels=geo.published_levels

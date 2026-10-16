@@ -5,6 +5,7 @@ written here looks like a real seat table; region codes are the real ONS
 ones, read from the canonical region table.
 """
 
+import hashlib
 import json
 import stat
 from pathlib import Path
@@ -539,6 +540,23 @@ def test_a_real_simulation_of_synthetic_households(regions, tmp_path):
     efrs.collect("same", 2026, simulation, simulation)
     assert (efrs.change("same", 2026) == 0).all()
     assert len(efrs.weight(2026)) == 4
+
+
+# The eFRS seat weights have one row per seat in the order of
+# policyengine-uk-data's storage/constituencies_2024.csv, which the matrix
+# builder reads; the matrix carries no codes. This is the sha256 of that
+# file's code column, one code per line, when the dashboard's copy was last
+# checked against it. If either file is reordered, the rows no longer name
+# the right seats.
+SEAT_ORDER_SHA256 = (
+    "9fd6b0172cb5ca7c48b2c4c38ae1e29f6d01a1891d1d73c7b5e9976166e80bc6"
+)
+
+
+def test_the_seat_lookup_keeps_the_weight_matrix_row_order():
+    codes = g.load_seats(SEATS_CSV)["code"].tolist()
+    digest = hashlib.sha256("\n".join(codes).encode()).hexdigest()
+    assert digest == SEAT_ORDER_SHA256
 
 
 # -- the collector -----------------------------------------------------------
@@ -1471,7 +1489,7 @@ def fake_world(frs_regions):
     return household, person, changes
 
 
-def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False):
+def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False, extra=()):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
 
@@ -1525,7 +1543,7 @@ def run_cli(monkeypatch, tmp_path, kind="efrs", orphan=False):
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
     out = tmp_path / "out"
     code = cli.main(
-        ["geography", *args, "--out-dir", str(out)]
+        ["geography", *args, *extra, "--out-dir", str(out)]
         + ["--data-inputs-dir", str(inputs)]
     )
     return code, out, tmp_path / "audit" / "geography"
@@ -1545,6 +1563,27 @@ def test_the_command_writes_both_tables_from_the_efrs(monkeypatch, tmp_path):
         "disclosure_audit.csv",
         "summary.json",
     ]
+
+
+@pytest.mark.parametrize("allowed", [False, True])
+def test_a_demoted_run_stops_the_command_unless_allowed(
+    monkeypatch, tmp_path, capsys, allowed
+):
+    resolve = g.resolve
+
+    def demoting(geo, **kwargs):
+        log = resolve(geo, **kwargs)
+        log.demotions.append(("pkg", 2026))
+        return log
+
+    monkeypatch.setattr(g, "resolve", demoting)
+    extra = ["--allow-demotions"] if allowed else []
+    code, out, audit = run_cli(monkeypatch, tmp_path, extra=extra)
+    printed = capsys.readouterr().out
+    assert "Demoted: constituency pkg 2026" in printed
+    assert code == (0 if allowed else 1)
+    assert out.exists() == allowed
+    assert any(audit.rglob("summary.json"))
 
 
 def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
