@@ -1007,7 +1007,7 @@ wheels = [
 
 [[package]]
 name = "policyengine"
-version = "6.6.0"
+version = "6.7.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "h5py" },
@@ -1019,9 +1019,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/aa/eae06b58a948ba59311c145be181363e67e28d8ecbbd06aacc2e542c1fc7/policyengine-6.6.0.tar.gz", hash = "sha256:3651d7512e9f77e94da59ef379433762542f993931769de5b8f022712a6bcd17", size = 1376433, upload-time = "2026-10-16T19:15:45.723Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/0a/4a1f4346bb819d1150bdc9bc31b9110f58ba8397dc2217382aa80c8b062d/policyengine-6.7.3.tar.gz", hash = "sha256:f0d3c34765f519a7ec5cd16800e5b274634bfdde00038187f48fb55effc3313e", size = 1404872, upload-time = "2026-10-17T16:59:51.544Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/a3/0935d7f9e4bbe7bcd369390e4139dce67138f27420a2a05196ddacfc6624/policyengine-6.6.0-py3-none-any.whl", hash = "sha256:1a4aac69e216f98780b808c01e1cf511d891fbc171abb42a1e63c2a4f4e5b42a", size = 488730, upload-time = "2026-10-16T19:15:43.651Z" },
+    { url = "https://files.pythonhosted.org/packages/15/fe/8679ca16b67e6d9855d46833f597cc7ae40e91a09ad7e7a9f070ed2ee616/policyengine-6.7.3-py3-none-any.whl", hash = "sha256:658bcb79c70b03cb14eec9774003f0b1d603ae5e5708b42e49a6e927f86fe047", size = 494455, upload-time = "2026-10-17T16:59:49.492Z" },
 ]
 
 [package.optional-dependencies]
@@ -1688,7 +1688,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "openpyxl", specifier = ">=3.1.0" },
     { name = "pandas", specifier = ">=2.0.0" },
-    { name = "policyengine", extras = ["uk"], specifier = ">=6.6.0" },
+    { name = "policyengine", extras = ["uk"], specifier = ">=6.7.3" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
