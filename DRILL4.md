@@ -21,7 +21,7 @@ Each question has a measurement inside the drill and an answer due at the debrie
 |---|---|---|---|
 | Q1 | **Do Budget-day reform changes go in this dashboard repo, or in policyengine-uk?** | At G1, every coded line is given a **route**: `dashboard-param`, `dashboard-structural`, `pe-uk-param`, `pe-uk-variable`, `data`, `ledger` or `not-computable`. The clock table logs minutes-to-first-number and minutes-to-published for each route. At least one line needs a pe-uk variable that **was pre-built upstream between Friday and Monday**, and at least one needs a variable **nobody anticipated**, so the fallback path is timed | route table in the clock; debrief |
 | Q2 | **Do new reforms need data work, modelling work or parameter work?** | The key gives each line a **cause class** for any gap: `parameter`, `formula`, `data_missing_input`, `data_calibration`, `behavioural`, `basis` or `not_in_scope`. At least one line is blocked by a **missing input variable** in Microcosm, not by a missing formula | national sheet; debrief |
-| Q3 | **Are we on the latest engine, and should we move?** | G0 records the engine (policyengine 6.5.0 → policyengine-uk 2.130.1), the forced Microcosm file and what newer policyengine-uk releases exist (2.134.2 on PyPI, which 6.5.0 cannot pair with). The Friday preflight tests an upgrade and writes the **freeze decision** | G0; debrief |
+| Q3 | **Are we on the latest engine, and should we move?** | G0 records the engine (policyengine 6.6.0 → policyengine-uk 2.130.1; 6.6.0 bumped the bundle on 16 October without changing the model or data pair), the forced Microcosm file and what newer policyengine-uk releases exist (2.134.3 on PyPI, which 6.6.0 cannot pair with). The Friday preflight tests an upgrade and writes the **freeze decision** | G0; debrief |
 
 ### The working answer to Q1 (to be confirmed or overturned by the drill)
 
@@ -44,7 +44,7 @@ The drill has to test two points in this rule. First, whether a structural refor
 
 | Finding | Change in drill 4 |
 |---|---|
-| No drill ran on the Budget-day setup. All three drills scored national figures on Microcosm `aa31bdf6` (now superseded by the 15 October release) with drill-fork code | The drill branch is cut from **`main` at `e74f350`** (policyengine 6.5.0), with no stacking on drills 1–3. National figures use the **latest released Microcosm** (`04a496f2`, 15 October), forced by `scripts/drill4_generate.sh` |
+| No drill ran on the Budget-day setup. All three drills scored national figures on Microcosm `aa31bdf6` (now superseded by the 15 October release) with drill-fork code | The drill branch is cut from **`main`** and was brought up to `main` at `5324080` on 18 October (policyengine 6.6.0, the #48 seat path), with no stacking on drills 1–3. National figures use the **latest released Microcosm** (`04a496f2`, 15 October), forced by `scripts/drill4_generate.sh` |
 | The net-vs-gross basis failed in drills 2 and 3. The pipeline outputs net `gov_balance`; costings are gross tax heads on a cash basis | The pipeline must output gross tax-head series by G3, or each mismatch is scored as a basis miss |
 | Hosted Personal impact was never verified; `BUDGET_API_URL` was unset in drill 3; the household route took 25–114 s, with an HTTP 504 on `main` (#14) | A G2 condition: the hosted household API answers one released specimen, with the time recorded, and the household-route parity check (#33) passes |
 | G4/G5 scored zero because "logged" and "handed over" were different times | One definition: a gate is **met** when the complete sheet and its receipt are committed and posted |
@@ -91,7 +91,7 @@ Each row needs evidence before Monday. A blank row blocks G0.
 | P0b | A route from last Budget's registry to an empty one. `main`'s `reforms.py` still registers the November 2025 measures, and `main`'s CLI has only `generate` and `lifetime`, with no `reset` (the reset is on the drill 3 branch). Either port `reset` and the empty-state validator, or decide how PR #3 lands (#14 Q4). The same step is needed on 28 October | Without it, the Monday 10:00 window starts with an unplanned refactor |
 | P1 | Fresh `uv sync` on this branch; record `policyengine`, `policyengine-uk` and `policyengine-core` | Q3 baseline |
 | P1b | Download the Microcosm national file (see the dataset section) and run `scripts/drill4_generate.sh --list-reforms` with `DRILL4_DATASET` set. It must print `dataset OK`. Run one baseline-only generate and record the time | The drill is forced onto Microcosm |
-| P2 | Upgrade trial: does a newer policyengine-uk (2.134.2) install alongside 6.5.0? Record what the bundle gate says and what a baseline diff shows. Do not merge the trial | Q3; the freeze decision |
+| P2 | Upgrade trial: does a newer policyengine-uk (2.134.3) install alongside 6.6.0? Record what the bundle gate says and what a baseline diff shows. Do not merge the trial | Q3; the freeze decision |
 | P3 | Dated reforms on `main`: a one-date and a two-date fuel duty change through `Scenario(parameter_changes=…)` on 2.130.1 (day-weighted since policyengine-uk #2305). Check the fiscal-year totals by hand | Fuel duty is the most probable household measure |
 | P4 | Receipting a structural reform: register one throwaway `simulation_modifier` measure and run `publish stage`. Does it receipt or get refused? | Q1: whether `dashboard-structural` can publish at all |
 | P5 | Git-installed policyengine-uk: can a branch install replace the 2.130.1 wheel without breaking `managed_microsimulation`, and what does the publication gate say? | Q1 fallback |
@@ -102,22 +102,26 @@ Each row needs evidence before Monday. A blank row blocks G0.
 
 ## Dataset: Microcosm only
 
-Every national and household run in drill 4 uses the **latest released Microcosm national file**, not the bundle's enhanced FRS. Constituency results use Microcosm's local build, if it is ready (see P9).
+Every **population** run in drill 4 (national, distributional and regional figures) uses the **latest released Microcosm national file**, not the bundle's enhanced FRS. Household specimens use no population dataset: they run `Simulation(situation=…)` on the same engine and reform definitions, so a G2 household pass is not evidence that the Microcosm path works. Constituency results use Microcosm's local build, if it is ready (see P9).
 
 | Item | Value |
 |---|---|
 | File | `microcosm_uk_2024_25.h5` |
 | SHA-256 | `04a496f2b2c01019f5ac277c28e7fc989e12e6e3f050d062315c390ba8b79094` |
-| Release | `microcosm-uk-2024-25-national-20261014T214443Z-d12ff9b3` (HF `policyengine/populace-uk-private`, published 15 October) |
+| Release | `microcosm-uk-2024-25-national-20261014T214443Z-d12ff9b3` (HF dataset `policyengine/populace-uk-private`, published 15 October) |
+| HF path | `staged/uk-frs-calibration-attempt-20261014T214443Z-d12ff9b3/microcosm_uk_2024_25.h5`; its `sha256sums.txt` lists the same hash. Note the path is under `staged/`, not a release folder |
+| Local copy (G0) | `DRILL4_DATASET=~/drill4-data/staged/uk-frs-calibration-attempt-20261014T214443Z-d12ff9b3/microcosm_uk_2024_25.h5`, downloaded and hash-checked on 18 October |
 | Built under | policyengine-uk 2.123.0 / core 3.32.19 |
 | Drill engine | policyengine-uk 2.130.1 / core 3.33.0, so the pair is **uncertified**. Every national figure is labelled *unvalidated under this engine* |
 | Superseded | `aa31bdf6…`, the file drills 2 and 3 used. The guard refuses it |
 
 **How it is forced:**
 
-- **Generation.** Run all generation through `scripts/drill4_generate.sh`, never `uk-budget-data generate` directly. The script checks the file's SHA-256 against the pin above and refuses any other file, including the bundle's default enhanced FRS. It also refuses a `--dataset` passed by hand.
+- **Generation.** Run all generation through `scripts/drill4_generate.sh`, never `uk-budget-data generate` directly. The script checks the file's SHA-256 against the pin above and refuses any other file, including the bundle's default enhanced FRS. It also refuses a `--dataset` passed by hand, including the prefixes argparse would accept (`--datas`, `--datase`), and passes the checked file last so it is the value used.
 - **G0.** G0 logs the hash line the script prints.
-- **Publish gate.** `main`'s publish gate checks certification only at the provisional and approved levels, so Microcosm runs can be staged but not approved.
+- **Publish gate.** Microcosm runs **cannot be receipted, so they cannot be staged either**. Tested on 18 October: `generate --artifacts` on `04a496f2` under policyengine 6.6.0 refuses every measure with "The uk bundle cannot resolve dataset 'microcosm_uk_2024_25'". policyengine's receipt code accepts only datasets in the certified bundle. The run also exits 0 after refusing, so the clock must read the `REFUSED` line, not the exit code. G4 (a) therefore records this refusal per coded line, and the figures reach the page through G4 (b).
+
+**Dry run, 18 October (non-mock measure, `fuel_duty_freeze`, 2026):** the guard printed `dataset OK` for `04a496f2`; the plain `generate` ran in 36 s under policyengine 6.6.0 / UK 2.130.1 and wrote all six flat CSVs (−£0.96bn against the November 2025 OBR −£2.4bn; the gap is not investigated); `generate --artifacts` refused, as above. This is the G0 hash line and the P1b receipt.
 
 **The open question for 28 October:** if the real Budget also runs on Microcosm, the gate needs one of two things. Either a policyengine bundle that certifies Microcosm before the day, or an agreed, recorded exception.
 
@@ -138,7 +142,7 @@ Every national and household run in drill 4 uses the **latest released Microcosm
 | **G2** | First numbers for `dashboard-param` lines through `publish stage`; one hand-checked household; the hosted API answers one specimen (time recorded) |
 | **G3** | Rebased on Annex A. Each national row has our figure, its basis (gross or net; cash or accrued; duty only or VAT-inclusive; fiscal or calendar), an explanation class for gaps over 10%, and a cause class |
 | **G5** | After the 14:20 inject: the old run is preserved and marked superseded, and a complete new single-SHA run is posted |
-| **G4** | Every coded line is **staged** through `publish stage` and shown on the drill-only preview. Certification refusals at provisional or approved level are expected on Microcosm and are recorded with the gate's reason, not worked around. The page carries with the MOCK banner and noindex. Lines that cannot be computed are published as not computable, never as £0 (#51) |
+| **G4** | Two parts, both from the same run SHA. **(a) Gate:** every coded line is run through `generate --artifacts` and, if a receipt is written, `publish stage`. On Microcosm the receipt is refused at `generate` (see the dataset section); each refusal is recorded with its reason, not worked around. **(b) Page:** the figures shown on the drill-only preview come from the flat CSVs that the same `generate` run writes (`budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`), because `main`'s page reads those four files and has no manifest loader, and staged entries are never displayed (María, PR #52 C1). The page carries the MOCK banner and noindex. Lines that cannot be computed are published as not computable, never as £0 (#51). The missing manifest loader is logged as a finding for 28 October |
 
 ## Scoring at 16:00
 
@@ -147,7 +151,7 @@ Every national and household run in drill 4 uses the **latest released Microcosm
 | Households | `team_change` against the statutory key, to ±1p | 20% |
 | National | Basis matches the costing's basis; explanation class matches | 30% |
 | Ledger, route and cause | Each line classified correctly as coded or ledger; route matches the key's route; cause class matches | 25% |
-| Publication path | The coded lines publish through the gate; refusals are recorded with the reason | 10% |
+| Publication path | G4 (a): every coded line goes through the gate, and each refusal is recorded with its reason. G4 (b): the preview shows the same run's figures | 10% |
 | Process | Gates on time; one SHA per run; inject re-run logged; upstream findings filed by 16:00 | 15% |
 
 **Explanation classes** (closed list, as in drill 3): `behavioural`, `coverage_business`, `top_tail_data`, `timing_fiscal_calendar`, `incidence_basis`, `baseline_mismatch`, `data_forward_path`, `devolved`, `interaction`, `takeup_caseload`, `none_expected`.

@@ -14,9 +14,10 @@ if [[ -z "$dataset" || ! -f "$dataset" ]]; then
   echo "drill4: set DRILL4_DATASET to the Microcosm national file ($PINNED_RELEASE)" >&2
   exit 2
 fi
+# argparse accepts unique prefixes, so --datas and --datase also mean --dataset.
 for arg in "$@"; do
-  if [[ "$arg" == "--dataset" || "$arg" == --dataset=* ]]; then
-    echo "drill4: do not pass --dataset; the script sets it from DRILL4_DATASET" >&2
+  if [[ "$arg" == --datas* ]]; then
+    echo "drill4: do not pass --dataset (or a prefix of it); the script sets it from DRILL4_DATASET" >&2
     exit 2
   fi
 done
@@ -28,4 +29,5 @@ if [[ "$actual" != "$PINNED_SHA256" ]]; then
 fi
 
 echo "drill4: dataset OK: Microcosm $PINNED_RELEASE ($PINNED_SHA256); uncertified with this engine, label national figures unvalidated" >&2
-exec uv run uk-budget-data generate --dataset "$dataset" "$@"
+# The checked file goes last, so it is the value argparse keeps.
+exec uv run uk-budget-data generate "$@" --dataset "$dataset"

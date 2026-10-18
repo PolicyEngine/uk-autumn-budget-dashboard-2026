@@ -10,7 +10,7 @@ The Budget and the OBR forecast are on Wednesday 28 October 2026 ([Chancellor's 
 
 **Likelihood scale.** High, medium-high, medium, medium-low, low. Ranks within a level put **announced** and **committed** items first, then items with the strongest press sourcing.
 
-**Engine baseline.** The dashboard's `main` runs `policyengine` 6.5.0, which pins `policyengine-uk` 2.130.1 and certifies `enhanced_frs_2024_25` (uk-data 1.58.1, sha `056e80fd…`). PyPI has `policyengine-uk` 2.134.2, but 6.5.0 cannot pair with it. The Microcosm national release of 15 Oct (sha `04a496f2…`, built under UK 2.123.0) is not certified by any bundle. Engine statements below are for 2.130.1 unless they say otherwise. Dataset columns were checked on the cached uk-data 1.58.0 file (sha `5ba399ea…`, built with the same policyengine-uk version, 2.122.2, as 1.58.1); the 1.58.1 file is not cached locally.
+**Engine baseline.** The dashboard's `main` runs `policyengine` 6.6.0 (adopted 16 October; same pair as 6.5.0), which pins `policyengine-uk` 2.130.1 and certifies `enhanced_frs_2024_25` (uk-data 1.58.1, sha `056e80fd…`). PyPI has `policyengine-uk` 2.134.3, but 6.6.0 cannot pair with it. The Microcosm national release of 15 Oct (sha `04a496f2…`, built under UK 2.123.0) is not certified by any bundle. Engine statements below are for 2.130.1 unless they say otherwise. Dataset columns were checked on the cached uk-data 1.58.0 file (sha `5ba399ea…`, built with the same policyengine-uk version, 2.122.2, as 1.58.1); the 1.58.1 file is not cached locally.
 
 **Routes.** `main`'s publication gate refuses any model and data pair the bundle has not certified. Each measure gets exactly one primary route for Budget day:
 
