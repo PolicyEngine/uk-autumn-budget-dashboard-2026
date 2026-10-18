@@ -105,10 +105,41 @@ def repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_a_disclosure_table_passes(repo):
-    disclosure_table(repo / "public/data/regional.csv")
+def test_a_reviewed_disclosure_table_passes(repo):
+    name = "public/data/regional.csv"
+    disclosure_table(repo / name)
+    write_review(repo, [entry(repo, name, "disclosure_table")])
     track(repo)
     assert run(repo).problems == []
+
+
+def test_an_unreviewed_disclosure_table_fails(repo):
+    # Neither check can tell a resolved release from a file written any
+    # other way, so a person signs off the bytes.
+    disclosure_table(repo / "public/data/regional.csv")
+    track(repo)
+    assert run(repo).problems == [
+        "public/data/regional.csv: a disclosure table, not reviewed"
+    ]
+
+
+def test_a_review_must_say_whether_a_file_is_a_disclosure_table(repo):
+    disclosure_table(repo / "public/data/regional.csv")
+    write(repo, "public/data/national.csv", "reform_id,value\nx,1\n")
+    write_review(
+        repo,
+        [
+            entry(repo, "public/data/regional.csv"),
+            entry(repo, "public/data/national.csv", "disclosure_table"),
+        ],
+    )
+    track(repo)
+    assert run(repo).problems == [
+        "public/data/national.csv: reviewed as disclosure_table, but it is "
+        "not a disclosure table",
+        "public/data/regional.csv: reviewed as national_table, but it is a "
+        "disclosure table",
+    ]
 
 
 def test_a_disclosure_table_is_validated_even_when_reviewed(repo):
@@ -122,7 +153,7 @@ def test_a_disclosure_table_is_validated_even_when_reviewed(repo):
     fields[10] = "disclosure_control"
     lines[1] = ",".join(fields)
     path.write_text("\n".join(lines) + "\n")
-    write_review(repo, [entry(repo, name)])
+    write_review(repo, [entry(repo, name, "disclosure_table")])
     track(repo)
     problems = run(repo).problems
     assert problems

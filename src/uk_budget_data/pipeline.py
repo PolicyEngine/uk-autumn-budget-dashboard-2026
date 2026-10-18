@@ -86,15 +86,19 @@ class ReformProcessor:
         self,
         reform: Reform,
         config: Optional[DataConfig] = None,
+        geography_collector=None,
     ):
         """Initialize the processor.
 
         Args:
             reform: The reform to process.
             config: Data configuration (uses defaults if not provided).
+            geography_collector: A ``geography.GeographyCollector`` to feed
+                each year's runs, for results by area; None skips it.
         """
         self.reform = reform
         self.config = config or DataConfig()
+        self.geography_collector = geography_collector
 
         # Initialize calculators
         self.budgetary_calc = BudgetaryImpactCalculator(
@@ -181,6 +185,11 @@ class ReformProcessor:
                 baseline, reformed, reform_id, reform_name, year
             )
             all_household_scatter.extend(household_scatter)
+
+            if self.geography_collector is not None:
+                self.geography_collector.collect(
+                    reform_id, year, baseline, reformed
+                )
 
             # The legacy constituency calculators take direct means with no
             # disclosure control, so they run only on request, and their

@@ -1,0 +1,36 @@
+.outcome-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.outcome-toggle-button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.outcome-toggle-button:hover {
+  background: #f3f4f6;
+  color: #319795;
+}
+
+.outcome-toggle-button.active {
+  background: #319795;
+  color: #ffffff;
+}
+
+.outcome-toggle-button:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
