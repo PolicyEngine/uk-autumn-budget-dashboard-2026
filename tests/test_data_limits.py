@@ -3286,3 +3286,232 @@ def test_an_attribute_named_like_a_global_reads_no_global():
         modifier=own_result_by(adding_an_option_named_like_a_global)
     )
     assert limits_touched(simulation(), reformed) == []
+
+
+# --- round 14's gaps in the watch (review of #51 round 14) -------------
+
+
+def priced_by_a_branch_population(rate, bonus):
+    """Non-residential SDLT read through a held population of a branch with
+    a cloned system whose rate differs."""
+
+    def modifier(sim):
+        from policyengine_core.parameters import get_parameter
+
+        branch = sim.get_branch("counterfactual", clone_system=True)
+        get_parameter(
+            branch.tax_benefit_system.parameters, NON_RESIDENTIAL_BAND
+        ).update(period="2027", value=rate)
+        branch.drop_computed_arrays()
+        population = branch.get_variable_population(NON_RESIDENTIAL_SDLT)
+
+        def formula(household, period, parameters):
+            return population(NON_RESIDENTIAL_SDLT, period) + bonus
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize("bonus", [0, 1], ids=["same-code", "changed-code"])
+def test_a_held_population_with_its_own_policy_shows(bonus):
+    """Review of #51 round 14: a held population of a branch with a cloned
+    system compared equal whatever its simulation's policy (SDLT £15,500 to
+    £17,500 with no limit). A population matches only when its simulation
+    is one of the two compared."""
+    touched = limits_touched(
+        simulation(modifier=priced_by_a_branch_population(0.03, 0)),
+        simulation(modifier=priced_by_a_branch_population(0.05, bonus)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def rate_by_an_enum_alias(higher):
+    def modifier(sim):
+        class Band(enum.Enum):
+            STANDARD = 0.01
+            HIGHER = 0.02
+            SELECTED = HIGHER if higher else STANDARD
+
+        def formula(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * Band.SELECTED.value
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def test_an_enum_alias_is_compared():
+    """Review of #51 round 14: an alias choosing the higher rate compared
+    equal (£1,000 to £2,000 with no limit). A class is read with every name
+    it gives a member."""
+    touched = limits_touched(
+        simulation(modifier=rate_by_an_enum_alias(False)),
+        simulation(modifier=rate_by_an_enum_alias(True)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def purchase_tax_at(rate):
+    """A factory: each function it makes runs the same code object."""
+
+    def priced(household, period, parameters, rate=rate):
+        purchased = household("non_residential_property_purchased", period)
+        return purchased * rate
+
+    return priced
+
+
+def with_two_purchase_taxes(sim):
+    """Two unchanged variables whose formulas the factory made."""
+    from policyengine_core.model_api import Variable
+
+    entity = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT).entity
+    for name, rate in (
+        ("purchase_tax_low", 0.01),
+        ("purchase_tax_high", 0.02),
+    ):
+        variable = type(
+            name,
+            (Variable,),
+            {
+                "label": name,
+                "entity": entity,
+                "definition_period": "year",
+                "value_type": float,
+                "formula": purchase_tax_at(rate),
+            },
+        )
+        sim.tax_benefit_system.add_variable(variable)
+    return sim
+
+
+def low_tax_at_the_high_rate(sim, changed):
+    with_two_purchase_taxes(sim)
+    low = sim.tax_benefit_system.get_variable("purchase_tax_low")
+    priced = list(low.formulas.values())[-1]
+
+    def formula(household, period, parameters):
+        if changed:
+            return priced(household, period, parameters, rate=0.02)
+        return household.filled_array(0.0)
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+    return sim
+
+
+def test_a_changed_argument_matching_another_functions_default_shows():
+    """Review of #51 round 14: the low-rate tax called at 2% was taken for
+    the high-rate tax at its default, both made by one factory, and the
+    purchase read was dropped (£0 to £2,000 with no limit). Each exempt
+    function runs a code object of its own while watched."""
+    touched = limits_touched(
+        simulation(modifier=lambda sim: low_tax_at_the_high_rate(sim, False)),
+        simulation(modifier=lambda sim: low_tax_at_the_high_rate(sim, True)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def factory_priced(sim, wrapped):
+    with_two_purchase_taxes(sim)
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, purchase_tax_at(0.01))
+    if wrapped:
+        own_result_by(adding_1000)(sim)
+    return sim
+
+
+def test_an_own_result_through_shared_code_stays_computable():
+    """Review of #51 round 14: an original sharing its code with another
+    function wasn't taken as the other side's, so adding £1,000 to its own
+    result was marked not computable."""
+    touched = limits_touched(
+        simulation(modifier=lambda sim: factory_priced(sim, False)),
+        simulation(modifier=lambda sim: factory_priced(sim, True)),
+    )
+    assert touched == []
+
+
+def installed_factory_functions(*sims):
+    return [
+        formula
+        for sim in sims
+        for name in ("purchase_tax_low", "purchase_tax_high")
+        for formula in sim.tax_benefit_system.variables[name].formulas.values()
+    ]
+
+
+def test_while_watched_each_exempt_function_runs_its_own_code():
+    """Each exempt function runs a code object of its own while watched,
+    and each such object names that function alone."""
+    baseline = simulation(modifier=lambda sim: factory_priced(sim, False))
+    reformed = simulation(modifier=lambda sim: factory_priced(sim, True))
+    functions = installed_factory_functions(baseline, reformed)
+    assert len({id(f.__code__) for f in functions}) == 1
+    with data_limits.observing(baseline, reformed) as observed:
+        members = [
+            member
+            for exempt in observed.changes.exempt.values()
+            for member in exempt.members
+        ]
+        assert {id(f) for f in functions} <= {id(f) for f, _ in members}
+        for exempt in observed.changes.exempt.values():
+            codes = [id(f.__code__) for f, _ in exempt.members]
+            assert len(set(codes)) == len(codes)
+            for f, _ in exempt.members:
+                assert exempt.functions[id(f.__code__)] == (f,)
+
+
+def test_the_watch_gives_each_function_its_code_back():
+    baseline = simulation(modifier=lambda sim: factory_priced(sim, False))
+    reformed = simulation(modifier=lambda sim: factory_priced(sim, True))
+    functions = installed_factory_functions(baseline, reformed)
+    codes = [f.__code__ for f in functions]
+    assert limits_touched(baseline, reformed) == []
+    assert all(f.__code__ is code for f, code in zip(functions, codes))
+    with pytest.raises(RuntimeError):
+        with data_limits.observing(baseline, reformed):
+            raise RuntimeError
+    assert all(f.__code__ is code for f, code in zip(functions, codes))
+
+
+def the_original_within_a_band(native):
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        return np.where(
+            (current > 200_000) & (current < 400_000), current, 0
+        ) + (1000)
+
+    return formula
+
+
+def the_original_past_a_high_threshold(native):
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        return np.where(current > 100_000_000, current, 0) + 1000
+
+    return formula
+
+
+@pytest.mark.parametrize(
+    "make",
+    [the_original_within_a_band, the_original_past_a_high_threshold],
+    ids=["within-a-band", "past-a-high-threshold"],
+)
+def test_an_own_result_used_within_a_band_or_far_out_stays_computable(make):
+    """Review of #51 round 14: moves by powers of ten from £1k to £1bn
+    stepped over a £200k-£400k band of SDLT and never reached a £100m
+    threshold. The moves now step by quarter-decades from £100 to £1tn."""
+    reformed = simulation(modifier=own_result_by(make))
+    assert limits_touched(simulation(), reformed) == []
+
+
+def test_a_signed_zero_is_not_its_default():
+    """Review of #51 round 14 (outside the line): -0.0 passed where the
+    default is 0.0 was taken as the default."""
+    assert data_limits._same_value(0.0, 0.0)
+    assert not data_limits._same_value(-0.0, 0.0)
+    assert not data_limits._same_value(1, 1.0)
+    assert data_limits._same_value("a", "a")

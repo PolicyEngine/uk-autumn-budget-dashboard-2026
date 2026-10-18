@@ -40,7 +40,7 @@ import threading
 import types
 import warnings
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable, Mapping
 
 import numpy
@@ -347,6 +347,8 @@ _ENUM_BOOKKEEPING = frozenset(
 )
 
 
+# An engine object linked to no system (a parameter, an entity).
+_NO_SYSTEM = object()
 # What every enum member holds for the enum machinery itself.
 _ENUM_MEMBER_BOOKKEEPING = frozenset(
     {"_value_", "_name_", "__objclass__", "_sort_order_"}
@@ -727,12 +729,15 @@ class _Behaviour:
             )
         engine = _engine(value)
         if engine is not None:
-            if self._main and engine[0] in ("simulation", "system"):
-                system = (
-                    getattr(value, "tax_benefit_system", None)
-                    if engine[0] == "simulation"
-                    else value
-                )
+            system = _NO_SYSTEM
+            if engine[0] == "simulation":
+                system = getattr(value, "tax_benefit_system", None)
+            elif engine[0] == "system":
+                system = value
+            elif hasattr(value, "simulation"):
+                # A population: its simulation's system.
+                system = getattr(value.simulation, "tax_benefit_system", None)
+            if self._main and system is not _NO_SYSTEM:
                 if id(system) not in self._main:
                     # A simulation or system with a policy of its own (a
                     # branch with a cloned system): unequal to anything.
@@ -749,8 +754,15 @@ class _Behaviour:
             )
             enum_members = (
                 tuple(
-                    (m.name, self.of(m.value), self.of(_member_fields(m)))
-                    for m in value
+                    # Each name, aliases included, with the member it
+                    # names.
+                    (
+                        alias,
+                        m.name,
+                        self.of(m.value),
+                        self.of(_member_fields(m)),
+                    )
+                    for alias, m in value.__members__.items()
                 )
                 if issubclass(value, enum.Enum)
                 else ()
@@ -1194,24 +1206,25 @@ def _formulas(variable) -> list:
     return list((variable.formulas or {}).values()) if variable else []
 
 
-@dataclass(frozen=True)
+@dataclass
 class _Exempt:
     """For one side of a changed variable, the formulas its code may call
     for their own result (on the arguments the engine gives the variable's
     formula) without that being part of the difference: an unchanged
-    variable's, the other side's, or one both sides hold. By code object:
-    ``codes`` maps each object's id to the fingerprints of the exempt
-    functions that run it, and ``functions`` to those functions (for their
-    defaults); a code object that a function outside the set, or the side's
-    own formula, also runs is left out. ``other_side`` holds the other
-    side's formulas' fingerprints: calling one of those for its result
-    wraps the other side."""
+    variable's, the other side's, or one both sides hold, never the side's
+    own. ``members`` are those functions with their fingerprints. While a
+    watch runs each has a code object of its own (see
+    :meth:`_Changes.deshare`), so ``codes`` maps a code object's id to the
+    fingerprint of the one function that runs it (as a set) and
+    ``functions`` to that function (for its defaults). ``other_side`` holds
+    the other side's formulas' fingerprints: calling one of those for its
+    result wraps the other side."""
 
-    codes: dict
-    functions: dict
-    objects: tuple
+    members: tuple
     fingerprints: frozenset
     other_side: frozenset
+    codes: dict = field(default_factory=dict)
+    functions: dict = field(default_factory=dict)
 
 
 class _Changes:
@@ -1235,6 +1248,7 @@ class _Changes:
                 unchanged |= {behaviour.of(f) for f in formulas}
         self.exempt: dict = {}
         self._literal: dict = {}
+        self._swapped: list = []
         for name, pair in self.sides.items():
             self._exempt_for(name, pair, unchanged, installed)
 
@@ -1268,25 +1282,17 @@ class _Changes:
         for side in (0, 1):
             other = frozenset(of(f) for f in _formulas(pair[1 - side]))
             fingerprints = frozenset(unchanged | other | common)
-            codes: dict = {}
+            own = {id(f) for f in _formulas(pair[side])}
+            members: dict = {}
             for f in formulas + functions:
-                if of(f) in fingerprints:
-                    found = codes.setdefault(
-                        id(f.__code__), [f.__code__, set(), {}]
-                    )
-                    found[1].add(of(f))
-                    found[2][id(f)] = f
-            for f in functions:
-                if of(f) not in fingerprints:
-                    codes.pop(id(f.__code__), None)
-            for f in _formulas(pair[side]):
-                codes.pop(id(f.__code__), None)
+                if (
+                    isinstance(f, types.FunctionType)
+                    and id(f) not in own
+                    and of(f) in fingerprints
+                ):
+                    members[id(f)] = (f, of(f))
             self.exempt[(name, side)] = _Exempt(
-                codes={key: frozenset(v[1]) for key, v in codes.items()},
-                functions={
-                    key: tuple(v[2].values()) for key, v in codes.items()
-                },
-                objects=tuple(v[0] for v in codes.values()),
+                members=tuple(members.values()),
                 fingerprints=fingerprints,
                 other_side=other,
             )
@@ -1306,9 +1312,38 @@ class _Changes:
         """Every code object an exempt call may run, once each."""
         found = {}
         for exempt in self.exempt.values():
-            for code in exempt.objects:
-                found[id(code)] = code
+            for function, _ in exempt.members:
+                found[id(function.__code__)] = function.__code__
         return list(found.values())
+
+    def deshare(self):
+        """For a watch, give every exempt function a code object of its own
+        (an equal copy), so the code a frame runs names the one function
+        running it. A factory's functions share one, and a call of one of
+        them with another's defaults would otherwise pass for a call for
+        its own result. A function made from the same code while the watch
+        runs keeps the shared object, so it is never exempt."""
+        done: dict = {}
+        for exempt in self.exempt.values():
+            for function, _ in exempt.members:
+                if id(function) not in done:
+                    done[id(function)] = function
+                    self._swapped.append((function, function.__code__))
+                    function.__code__ = function.__code__.replace()
+        for exempt in self.exempt.values():
+            exempt.codes = {
+                id(f.__code__): frozenset({fp}) for f, fp in exempt.members
+            }
+            exempt.functions = {
+                id(f.__code__): (f,) for f, _ in exempt.members
+            }
+
+    def restore(self):
+        """Give every function its own code object back (see
+        :meth:`deshare`)."""
+        while self._swapped:
+            function, code = self._swapped.pop()
+            function.__code__ = code
 
 
 class _Unobservable(Exception):
@@ -1359,8 +1394,11 @@ _EVENTS = sys.monitoring.events
 # The inputs the limits name, moved when a wrapping is checked.
 _MISSING_INPUTS = frozenset(limit.missing_input for limit in DATA_LIMITS)
 # How far they are moved, each in turn, until the wrapping formula's result
-# moves: a result used past a threshold moves once a move crosses it.
-_MOVES = (1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9)
+# moves: quarter-decades from £100 to £1tn, so a result used past a
+# threshold, or within a band, moves once a move takes it there. (A band
+# narrower than a quarter-decade of the move can still be stepped over: the
+# use is then missed and the wrapped side's reads count, which fails safe.)
+_MOVES = tuple(10 ** (exponent / 4) for exponent in range(8, 49))
 # Where the engine's parameter tree, scales and their tracing are read.
 _PARAMETER_DIRS = tuple(
     f"/policyengine_core/{part}/"
@@ -1785,11 +1823,16 @@ def _at_defaults(function, called, start, extra, keywords) -> bool:
 
 
 def _same_value(a, b) -> bool:
-    """The very object, or an equal plain value of the same type."""
+    """The very object, or an equal plain value of the same type (a float
+    by its text, so -0.0 is not 0.0)."""
     if a is b:
         return True
-    plain = (bool, int, float, complex, str, bytes, type(None))
-    return type(a) is type(b) and isinstance(a, plain) and a == b
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, (float, complex)):
+        return repr(a) == repr(b)
+    plain = (bool, int, str, bytes, type(None))
+    return isinstance(a, plain) and a == b
 
 
 def _start_watching(observation):
@@ -1976,10 +2019,15 @@ class Observation:
                         self.unobservable.setdefault(
                             name, "calculated before it was watched"
                         )
+        self.changes.deshare()
         try:
             _start_watching(self)
         except _Unobservable as error:
+            self.changes.restore()
             self._all_unobservable(str(error))
+        except BaseException:
+            self.changes.restore()
+            raise
         else:
             self.watching = True
 
@@ -1992,9 +2040,12 @@ class Observation:
             if self.watching:
                 self._confirm_wrapping()
         finally:
-            _stop_watching(self)
-            self.watching = False
-            self.finished = True
+            try:
+                _stop_watching(self)
+            finally:
+                self.changes.restore()
+                self.watching = False
+                self.finished = True
 
     def run(self, years):
         """Calculate each changed variable in each year on both simulations,
