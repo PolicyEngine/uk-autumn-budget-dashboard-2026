@@ -738,7 +738,8 @@ MOCK4_WEEKS_PER_YEAR = 52
 
 # State Pension Top-up Allowance: withdrawn pound for pound above the full
 # new State Pension (weekly x 52) plus £1,000.
-MOCK4_SPTA_WITHDRAWAL_MARGIN = 1_000.0
+# 14:20 inject: the threshold is the full new State Pension plus £1,200.
+MOCK4_SPTA_WITHDRAWAL_MARGIN = 1_200.0
 MOCK4_ANNEX_A_NEW_STATE_PENSION_WEEKLY = {
     2026: 241.30,
     2027: 251.20,
@@ -1223,7 +1224,7 @@ MOCK4_FUEL_DUTY_BASELINE = [
 ]
 MOCK4_FUEL_DUTY_REFORM = [
     ("2026-03-23", 0.5295),
-    ("2027-02-23", 0.5495),
+    ("2027-03-09", 0.5495),  # 14:20 inject: 9 March 2027, not 23 February,
     ("2027-10-01", 0.5695),
     ("2028-04-01", 0.5866),
     ("2029-04-01", 0.6036),

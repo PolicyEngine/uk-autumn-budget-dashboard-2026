@@ -15,11 +15,11 @@ def _param(reform_id, path, year):
 
 
 def test_fuel_duty_day_weighted_by_hand():
-    # 323 days at 52.95p and 42 days at 54.95p in 2026-27;
+    # 337 days at 52.95p and 28 days at 54.95p (from 9 March 2027) in 2026-27;
     # 178 days at 54.95p, 183 at 56.95p and 5 at 58.66p (from 1 April 2028) in 2027-28.
     path = "gov.hmrc.fuel_duty.petrol_and_diesel"
     assert _param("mock4_fuel_duty", path, 2026) == pytest.approx(
-        0.531801, abs=1e-6
+        0.531034, abs=1e-6
     )
     assert _param("mock4_fuel_duty", path, 2027) == pytest.approx(
         0.560007, abs=1e-6

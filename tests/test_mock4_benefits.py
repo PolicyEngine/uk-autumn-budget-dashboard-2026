@@ -126,10 +126,10 @@ def test_spta_sp_only_above_pa(year):
 
 def test_spta_withdrawn_pound_for_pound():
     """2027: SP £13,000 + private pension £1,300, ANI £14,300.
-    Annex A full new SP = 251.20 x 52 = £13,062.40; threshold £14,062.40.
-    Allowance = 430 (rounded up to £10) - (14,300 - 14,062.40) = £192.40.
-    Tax: baseline 20% x 1,730 = £346; reform 20% x (1,730 - 192.40)
-    = £307.52."""
+    Annex A full new SP = 251.20 x 52 = £13,062.40; threshold (14:20 inject)
+    £14,262.40. Allowance = 430 (rounded up to £10) - (14,300 - 14,262.40)
+    = £392.40. Tax: baseline 20% x 1,730 = £346; reform 20% x (1,730 - 392.40)
+    = £267.52."""
     base, reform = _pair(
         _pensioner(2027, 13_000, 1_300), "mock4_state_pension_topup_allowance"
     )
@@ -137,7 +137,7 @@ def test_spta_withdrawn_pound_for_pound():
         346.0, abs=0.01
     )
     assert reform.calculate("income_tax", 2027)[0] == pytest.approx(
-        307.52, abs=0.02
+        267.52, abs=0.02
     )
 
 
