@@ -18,6 +18,8 @@ export const POLICY_COLORS = {
   "Warm Home Discount top-up (MOCK)": "#99F6E4", // Teal 200 (MOCK drill 4)
   "Child Benefit Early Years Addition": "#115E59", // Teal 800 (MOCK drill 4)
   "State Pension Top-up Allowance": "#CCFBF1", // Teal 100 (MOCK drill 4)
+  "MOCK: VAT cut on road fuel": "#0F766E", // Teal 700
+  "MOCK: Employer NI relief for under-23s": "#5EEAD4", // Teal 300 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   "Threshold freeze extension": "#78350F", // Amber 900 (darkest)
@@ -42,6 +44,8 @@ export const POLICY_COLORS_BY_KEY = {
   mock4_whd_topup: "#99F6E4", // Teal 200 (MOCK drill 4)
   mock4_cb_early_years_addition: "#115E59", // Teal 800 (MOCK drill 4)
   mock4_state_pension_topup_allowance: "#CCFBF1", // Teal 100 (MOCK drill 4)
+  mock4_fuel_vat_cut: "#0F766E", // Teal 700
+  mock4_employer_ni_under23: "#5EEAD4", // Teal 300 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   threshold_freeze_extension: "#78350F", // Amber 900 (darkest)

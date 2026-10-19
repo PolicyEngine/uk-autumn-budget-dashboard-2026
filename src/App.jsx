@@ -82,7 +82,8 @@ const POLICIES = [
     description: "Cap NI-free salary sacrifice pension contributions at £2,000",
     explanation:
       'Caps National Insurance-free salary sacrifice pension contributions at £2,000 per year from April 2029. Contributions above this threshold become subject to employee and employer NICs. PolicyEngine estimates this will raise £3.3bn in 2029-30, assuming employers spread costs and employees maintain pension contributions. The OBR estimates £4.9bn (static) or £4.7bn (post-behavioural). See our <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">research report</a> for details.',
-  }  {
+  },
+  {
     id: "mock4_whd_topup",
     name: "Warm Home Discount top-up (MOCK)",
     description:
@@ -154,6 +155,22 @@ const POLICIES = [
       "Income tax allowance covering State Pension above the personal allowance from April 2027",
     explanation:
       "MOCK basis: invented drill 4 measure. From April 2027, people receiving the State Pension get an income tax allowance equal to the amount by which their State Pension exceeds their personal allowance. It is withdrawn pound for pound where adjusted net income exceeds the full new State Pension (weekly rate × 52) plus £1,000. Pensioners whose State Pension is below the personal allowance gain nothing. Modelled as an addition to the income tax allowances deducted from income.",
+  },
+  {
+    id: "mock4_fuel_vat_cut",
+    name: "MOCK: VAT cut on road fuel",
+    description:
+      "Cut VAT on petrol and diesel from 20% to 15%, December 2026 to May 2027",
+    explanation:
+      "MOCK basis: VAT only (fuel duty unchanged), cash, fiscal years. VAT on road fuel falls from 20% to 15% from 1 December 2026 to 31 May 2027, with full pass-through to pump prices. The household saving is VAT-inclusive petrol and diesel spending divided by 1.20, times 5 percentage points, day-weighted: 121/365 of 2026-27 and 61/365 of 2027-28, nothing in later years. The saving is not scaled up for under-reported spending in the survey. Invented measure for a rehearsal; not government policy.",
+  },
+  {
+    id: "mock4_employer_ni_under23",
+    name: "MOCK: Employer NI relief for under-23s",
+    description:
+      "No employer NI on the first £25,000 for employees under 23, from April 2027",
+    explanation:
+      "MOCK basis: gross employer National Insurance, cash, fiscal years. From April 2027 employers pay no Class 1 secondary NI on earnings up to £25,000 a year for employees aged under 23; earnings above £25,000 pay the normal 15%. Earnings are held fixed, so the saving stays with employers and household net income does not change. Invented measure for a rehearsal; not government policy.",
   },
 ];
 

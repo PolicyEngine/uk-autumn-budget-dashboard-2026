@@ -829,6 +829,134 @@ def _create_mock4_state_pension_topup_allowance() -> Reform:
     )
 
 
+# --- MOCK drill 4 measures (invented; rehearsal only) -----------------------
+
+# Share of each fiscal year (model year Y = Y-Y+1) inside the 1 December 2026
+# to 31 May 2027 window: 1 Dec 2026-31 Mar 2027 is 121 days of 2026-27;
+# 1 Apr-31 May 2027 is 61 days of 2027-28. Zero in every other year.
+MOCK4_FUEL_VAT_DAY_WEIGHTS = {2026: 121 / 365, 2027: 61 / 365}
+MOCK4_FUEL_VAT_OLD_RATE = 0.20
+MOCK4_FUEL_VAT_NEW_RATE = 0.15
+
+
+def _mock4_fuel_vat_cut_modifier(sim: Simulation) -> Simulation:
+    """MOCK: VAT on road fuel 20% -> 15%, 1 Dec 2026 to 31 May 2027.
+
+    policyengine-uk 2.130.1 has no fuel-specific VAT rate: ``vat`` is
+    standard rate x full-rated share of ``consumption`` / microdata coverage.
+    So wrap ``vat`` and subtract the saving on road fuel, with full
+    pass-through: (petrol_spending + diesel_spending) / 1.20 x 0.05, times
+    the day weight of the fiscal year. ``petrol_spending`` and
+    ``diesel_spending`` are VAT-inclusive pump spend (litres = spend / pump
+    price). The saving is not grossed up by ``microdata_vat_coverage``.
+    ``vat_change`` (vat - baseline_vat) carries it into ``household_tax``
+    and so ``household_net_income``; ``vat`` itself is in ``gov_tax`` and so
+    ``gov_balance``. Basis: VAT only (fuel duty unchanged), cash, fiscal.
+    """
+    from uk_budget_data.measure_templates import (
+        _call_formula,
+        _replace_formula,
+    )
+
+    native = sim.tax_benefit_system.get_variable("vat")
+    rate_cut = MOCK4_FUEL_VAT_OLD_RATE - MOCK4_FUEL_VAT_NEW_RATE
+
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        weight = MOCK4_FUEL_VAT_DAY_WEIGHTS.get(period.start.year, 0.0)
+        if weight == 0:
+            return current
+        fuel = household("petrol_spending", period) + household(
+            "diesel_spending", period
+        )
+        saving = fuel / (1 + MOCK4_FUEL_VAT_OLD_RATE) * rate_cut * weight
+        return current - saving
+
+    _replace_formula(sim, "vat", formula)
+    return sim
+
+
+def _create_mock4_fuel_vat_cut() -> Reform:
+    """MOCK drill 4: temporary cut in VAT on road fuel."""
+    return Reform(
+        id="mock4_fuel_vat_cut",
+        name="MOCK: VAT cut on road fuel",
+        description=(
+            "MOCK. VAT on petrol and diesel falls from 20% to 15% from "
+            "1 December 2026 to 31 May 2027, fully passed through. Basis: "
+            "VAT only, cash, fiscal years, day-weighted (121/365 of 2026-27, "
+            "61/365 of 2027-28)."
+        ),
+        simulation_modifier=_mock4_fuel_vat_cut_modifier,
+    )
+
+
+MOCK4_EMPLOYER_NI_UNDER23_START_YEAR = 2027
+MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT = 23
+MOCK4_EMPLOYER_NI_UNDER23_EARNINGS_CAP = 25_000
+
+
+def _mock4_employer_ni_under23_modifier(sim: Simulation) -> Simulation:
+    """MOCK: no employer Class 1 NI on the first £25,000 for under-23s.
+
+    policyengine-uk 2.130.1 has only the single secondary threshold (no
+    age-based upper secondary threshold), so wrap ``ni_class_1_employer``
+    and, from 2027-28, take off employer rate x max(0, min(NI base, 25,000)
+    - secondary threshold) for anyone aged under 23. The NI base is the
+    native one (``ni_class_1_income``; employer pension contributions are
+    exempt by default, so salary sacrifice follows the native treatment).
+    No employer NI parameter changes, so ``employer_ni_fixed_employer_cost
+    _change`` passes nothing through to wages: household net income is
+    unchanged, and the national figure is gross employer NI in ``gov_tax``.
+    """
+    from uk_budget_data.measure_templates import (
+        _call_formula,
+        _replace_formula,
+    )
+
+    native = sim.tax_benefit_system.get_variable("ni_class_1_employer")
+
+    def formula(person, period, parameters):
+        current = _call_formula(native, person, period, parameters)
+        if period.start.year < MOCK4_EMPLOYER_NI_UNDER23_START_YEAR:
+            return current
+        class_1 = parameters(period).gov.hmrc.national_insurance.class_1
+        threshold = class_1.thresholds.secondary_threshold * 52
+        earnings = person("ni_class_1_income", period)
+        if not parameters(
+            period
+        ).gov.contrib.policyengine.employer_ni.exempt_employer_pension_contributions:
+            earnings = earnings + person(
+                "employer_pension_contributions", period
+            )
+        relieved_band = np.maximum(
+            0,
+            np.minimum(earnings, MOCK4_EMPLOYER_NI_UNDER23_EARNINGS_CAP)
+            - threshold,
+        )
+        under_23 = person("age", period) < MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT
+        relief = np.where(under_23, class_1.rates.employer * relieved_band, 0)
+        return np.maximum(current - relief, 0)
+
+    _replace_formula(sim, "ni_class_1_employer", formula)
+    return sim
+
+
+def _create_mock4_employer_ni_under23() -> Reform:
+    """MOCK drill 4: employer NI relief for employees under 23."""
+    return Reform(
+        id="mock4_employer_ni_under23",
+        name="MOCK: Employer NI relief for under-23s",
+        description=(
+            "MOCK. From April 2027 employers pay no Class 1 secondary NI on "
+            "earnings up to £25,000 a year for employees aged under 23. "
+            "Basis: gross employer NI, cash, fiscal years; wages fixed, so "
+            "household net income is unchanged."
+        ),
+        simulation_modifier=_mock4_employer_ni_under23_modifier,
+    )
+
+
 def create_salary_sacrifice_cap_reform() -> Reform:
     """Create a salary sacrifice cap reform.
 
@@ -1185,6 +1313,8 @@ def _get_mock4_reforms() -> list[Reform]:
         _create_mock4_whd_topup(),
         _create_mock4_cb_early_years_addition(),
         _create_mock4_state_pension_topup_allowance(),
+        _create_mock4_fuel_vat_cut(),
+        _create_mock4_employer_ni_under23(),
     ]
 
 
