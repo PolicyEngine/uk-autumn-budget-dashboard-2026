@@ -14,6 +14,20 @@ import PersonalImpactTab from "./components/PersonalImpactTab";
 import RegionView from "./components/RegionView";
 import YearSlider from "./components/YearSlider";
 
+// MOCK drill 4 lines that cannot be computed: listed, never shown as £0 (#51)
+const NOT_COMPUTABLE = [
+  {
+    id: "mock4_alcohol_duty",
+    name: "Alcohol duty RPI+2",
+    reason: "no alcohol volumes in Microcosm",
+  },
+  {
+    id: "mock4_sdlt_surcharge",
+    name: "SDLT surcharge 7pp",
+    reason: "no additional-dwelling purchases in Microcosm",
+  },
+];
+
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
   {
@@ -493,6 +507,12 @@ function App() {
             />
           )}
         </div>
+
+        {/* MOCK drill 4: measures we cannot compute are listed, never shown as £0 (#51) */}
+        <p className="not-computable-note" data-testid="not-computable">
+          Not computable on this data (MOCK drill 4):{" "}
+          {NOT_COMPUTABLE.map((m) => `${m.name} (${m.reason})`).join("; ")}.
+        </p>
 
         {/* Tab navigation */}
         <div className="tab-navigation">
