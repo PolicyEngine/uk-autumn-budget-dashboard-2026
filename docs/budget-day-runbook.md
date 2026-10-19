@@ -22,14 +22,9 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Last production deployment ID, the rollback target: record before every merge on the day.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
-  - Serving revision and image: record after the last deploy before the day. On 12 October the first revision, `uk-budget-api-2026-00001-gow`, answered `/api/version` but not `/api/personal-impact` within 300 s, so the household route is not yet usable.
-  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Timed locally on 15 October for a £50,000 earner, with the same result each time:
-    - 193.6 s on `main` before #37;
-    - 253.6 s after it;
-    - 194.5 s with #39.
-
-    Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. So every visitor waits minutes for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures (#33).
-  - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation once the grants in #28 are made (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call, once #3 makes the household route fast enough for the smoke test).
+  - Serving revision and image: record after the last deploy before the day. On 19 October it is `uk-budget-api-2026-00018-xuv` (git `5324080`; policyengine 6.6.0, policyengine-uk 2.130.1, core 3.33.0), deployed on 16 October.
+  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 177 s on `00018-xuv`. So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures (#33).
+  - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation once the grants in #28 are made (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call: `main`'s household route has passed the smoke test since 15 October).
   - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October. Run it from an up-to-date checkout of `main`, and submit **that checkout's** `cloudbuild.yaml`, never the archive's own. An older commit's copy lacks the one-deploy-at-a-time lock and the traffic check. To deploy an older commit, change `commit` and keep the config:
 
     ```sh
@@ -51,14 +46,14 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Python lint;
   - Frontend build, tests and lint.
 
-  Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Add Publication gate once it runs on every pull request; it didn't run on older heads.
+  Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Whether to require Publication gate too is your call (question 3 in `budget-day-publication.md`).
 - [ ] **Household fixtures.** María's specimen households, with independently computed answers, are in `data_inputs/household_fixtures/` (#15).
-- [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3:
+- [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3; the first two rows re-checked on 19 October against `main` (5324080):
 
   | Where | What it says | Shown today? | Who fixes it |
   |---|---|---|---|
-  | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures. Served at `uk-autumn-budget-2026.vercel.app/combined_reforms/…`; nothing links to them | **Yes** | W5: removed in a pull request of its own. The briefing export (#22) writes this year's from an approved manifest |
-  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv`, `household_scatter.csv` | Last year's results: all five last changed on 8 December 2025 and are byte-identical to `ec29ebd` | **Yes**: `main`'s main route (`App.jsx`) fetches them and charts them under the 2026 heading once a policy is selected. For example, `?policies=two_child_limit` shows −£2.95bn for 2026 and −£3.72bn for 2030 (#26 review, 15 October). Served at `uk-autumn-budget-2026.vercel.app`, which deploys `main` | #3 regenerates all five. Until it merges, the production URL shows last year's numbers; whether to hide them meanwhile is your call |
+  | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures | **No.** Removed by #26 (15 October), which also tests that no static page names another year's Budget | Done. The briefing export (#22) writes this year's from an approved manifest |
+  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | Last year's results: all four last changed on 8 December 2025 and are byte-identical to `ec29ebd`. (`household_scatter.csv` was withdrawn from every public path by #30, 15 October.) | **Yes**: `main`'s main route (`App.jsx`) fetches them and charts them under the 2026 heading once a policy is selected. For example, `?policies=two_child_limit` shows −£2.95bn for 2026 and −£3.72bn for 2030 (#26 review, 15 October). Served at `uk-autumn-budget-2026.vercel.app`, which deploys `main` | #3 regenerates them. Until it merges, the production URL shows last year's numbers; whether to hide them meanwhile is your call |
   | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
   | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
@@ -81,24 +76,32 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | 3. Deploy `main` (d488145) | 38737646035 | `00012-ruy` passed the smoke test and replaced `00004-fur` | `00012-ruy`, d488145 |
 
     `/api/version` after step 3: d488145, with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0. The revision numbers jumped from 00006 to 00012; W5 didn't create 00007 to 00011.
-  - **Rollback targets now:** `00012-ruy` (live) and `00004-fur`, both of which have passed `main`'s smoke test.
+  - **Deploys since, each through the workflow, each passing the smoke test before taking all traffic:**
+
+    | Deployed | Run | Revision | What changed |
+    |---|---|---|---|
+    | 15 October, `759c0a6` | 38765842833 | `00014-coj`, replacing `00012-ruy` | #46: each request spread over the instance's vCPUs |
+    | 16 October, `5482ca6` | 38867243746 | `00016-tes`, replacing `00014-coj` | #49: workers stopped for certain; policyengine 6.5.0 |
+    | 16 October, `5324080` | 38960332978 | `00018-xuv`, replacing `00016-tes` | policyengine 6.6.0 (#56) |
+
+  - **Live and rollback target, 19 October:** `00018-xuv` is live. The rollback target is `00016-tes`, the revision it replaced, which passed the smoke test when it was deployed.
   - **The household route can exceed 2 GiB.** Cloud Run killed two instances for exceeding the 2 GiB limit. Those are the only two such kills since 12 October, from the coordinator's read of the logs:
     - `00004-fur` at 12:40:03Z (2050 MiB), which gave step 2's 503;
     - `00003-jic` at 10:09:59Z (2054 MiB), during the first deploy's smoke test, so that 504 may have been memory as well as the 300 s limit.
 
-    One full request, or a later request on an instance that has already run some (policyengine-core keeps what each build registers), can pass 2 GiB. A smoke test or a rollback can therefore fail on memory, and retrying is not a fix. The memory setting is in the capacity decision going to Max.
+    One full request, or a later request on an instance that has already run some (policyengine-core keeps what each build registers), could pass 2 GiB then. A smoke test or a rollback can therefore fail on memory, and retrying is not a fix. The memory setting is in the capacity decision going to Max.
+  - **Memory since #49:** the `read-api-memory.yml` workflow (#54) read a peak of 0.62 of 2 GiB on `00016-tes` and 0.65 on `00018-xuv` (p99 per minute, over the timing runs below), with no out-of-memory kills.
   - **Cold start:** 32.6 s to the first response from an idle revision (`/api/version`).
-  - **How long one household answer takes on Cloud Run (`00004-fur`), 15 October:**
+  - **How long one household answer takes on Cloud Run, one request at a time:**
 
-    | Request | Time |
-    |---|---|
-    | £30,000 earner, first | 142.5 s |
-    | £30,000 earner, again | 148.0 s |
-    | £30,000 earner, children 17, 10 and 2 | 145.5 s |
-    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s |
+    | Request | `00004-fur`, 15 October | `00016-tes`, 16 October | `00018-xuv`, 16 October |
+    |---|---|---|---|
+    | £30,000 earner | 142.5 s | 85.0 s | 77.5 s |
+    | Couple on £40,000 and £20,000, children 3, 6, 9 and 12 | not timed | 94.4 s | 87.1 s |
+    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s |
 
-    The last household has two children who turn 25 within 2025-30, so it is built three times over. Any household entering a child aged 20 to 24 fails this way today. A Cloud Run vCPU runs this single-threaded calculation about 5 times slower than a developer laptop (about 30 s locally).
-  - **One answer at a time per instance.** The household route ran on the server's event loop, so while one household was calculated, nothing else on that instance answered (`/api/version` didn't, within 30 s). Cloud Run sends up to 80 requests to an instance at once, so a second visitor waits about 290 s and a third gets a 504. #45 moves the calculation off the event loop. How many calculations an instance takes at once (Cloud Run `--concurrency`, and the cost of more instances) is Max's call, through the coordinator.
+    The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes` and `00018-xuv`, after #46. The 16 October timings are sequential `curl` requests to the live URL; each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
+  - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
 ## How a measure must be written
@@ -237,7 +240,7 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 ## Construction (from G1)
 
 For each coded measure:
-1. **Write it** in `reforms.py` in one of the bindable forms above, and register it in `reforms.py` and `policyConfig.js`.
+1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module, not in `reforms.py` itself (question 6 in `budget-day-publication.md`). Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
 3. **Add one numerical test.**
 4. **Commit.** A receipt from a dirty tree is not publishable.
@@ -253,10 +256,10 @@ uv run uk-budget-data publish check
 ```
 
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
-- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable (frontend PR, in progress).
+- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
-- **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" (frontend PR, in progress).
+- **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
 
@@ -383,7 +386,7 @@ W5 re-measured on the same file for 2025:
 
 ## Briefing (overnight, by 07:00)
 
-Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (briefing PR, in progress). Use no figure that is not in that revision.
+Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (#22, a draft). Use no figure that is not in that revision.
 
 ## Rollback
 
