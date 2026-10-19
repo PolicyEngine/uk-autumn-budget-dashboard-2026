@@ -2397,9 +2397,13 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     manifest = publication_manifest.parse_manifest(
         parsed.manifest.read_bytes(), str(parsed.manifest)
     )
-    ids = approved_reforms(manifest, parsed.reforms)
+    # --package is approved below, as the combination of its measures, so
+    # naming it among --reforms too is not asking for a measure.
+    requested = parsed.reforms
+    if requested is not None and parsed.package is not None:
+        requested = [r for r in requested if r != parsed.package]
+    ids = approved_reforms(manifest, requested)
     if parsed.seat_reforms is not None:
-        # --package is approved below, as the combination of its measures.
         approved_reforms(
             manifest, [r for r in parsed.seat_reforms if r != parsed.package]
         )
@@ -2453,8 +2457,9 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             raise ValueError(
                 f"--package cannot join a registered package: {sorted(packages)}"
             )
-        if package in chosen:
-            raise ValueError(f"--package {package} is one of the reforms")
+        # Named among --reforms too, it is the package, not a measure.
+        reforms = [r for r in reforms if r.id != package]
+        chosen = [r.id for r in reforms]
         approved_package(manifest, package, chosen)
     published = [*chosen, package] if package is not None else chosen
     levels = list(dict.fromkeys(parsed.levels))
@@ -2598,28 +2603,32 @@ def reform_model_limits(reform: Reform, baseline, reformed, years) -> list:
 def build_package(name: str, measures: Sequence[Reform], years) -> Reform:
     """The measures as one reform named ``name``, simulated whole.
 
-    It is built the way ``generate --combined`` builds a combined run, and
+    A reform registered under ``name`` is the package, so the tables by area
+    show the same package as the national tables; otherwise it is built the
+    way ``generate --combined`` builds a combined run. Either way it is
     checked to change exactly what its measures change before anything is
     simulated.
 
     Raises:
-        ValueError: If the name is not a new package id or the measures
-            cannot be combined.
+        ValueError: If the name is not a package id or the package is not
+            exactly its measures.
     """
     if not name.endswith(PACKAGE_SUFFIX):
         raise ValueError(
             f"--package {name} must end in {PACKAGE_SUFFIX}, the suffix the "
             "page reads as the full package"
         )
-    if get_reform(name) is not None:
-        raise ValueError(f"--package {name} is already a registered reform")
     ordered = combine.member_order(list(measures))
     if len(ordered) < 2:
         raise ValueError("--package needs at least two measures")
     config = DataConfig(years=list(years))
-    combined = combine.combine_measures(ordered, config)
-    combine.check_consistency(combined, ordered, config, list(config.years))
-    return combined.model_copy(update={"id": name})
+    package = get_reform(name)
+    if package is None:
+        package = combine.combine_measures(ordered, config).model_copy(
+            update={"id": name}
+        )
+    combine.check_consistency(package, ordered, config, list(config.years))
+    return package
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
