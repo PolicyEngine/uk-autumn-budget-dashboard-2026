@@ -1,551 +1,859 @@
 reform_id,reform_name,year,decile,avg_change
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,1,268.93744
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,2,539.3153
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,3,208.45511
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,4,193.87874
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,5,143.61832
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,6,123.13516
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,7,125.940735
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,8,165.88518
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,9,163.74602
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,10,162.95673
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,all,205.65462
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,1,237.36847
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,2,514.9715
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,3,184.3994
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,4,147.23807
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,5,82.86686
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,6,57.350216
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,7,47.035194
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,8,67.56902
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,9,55.49513
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,10,58.18715
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,all,141.08656
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,1,162.29356
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,2,600.2293
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,3,105.15228
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,4,105.79548
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,5,-2.1468613
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,6,-49.266228
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,7,-119.60106
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,8,-148.87917
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,9,-286.354
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,10,-463.10776
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,all,-14.276821
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,1,135.88536
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,2,566.4622
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,3,-28.93639
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,4,28.082306
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,5,-157.98935
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,6,-214.67926
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,7,-337.92297
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,8,-452.6383
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,9,-875.00903
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,10,-1337.0358
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,all,-271.2362
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,1,140.40945
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,2,498.85452
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,3,-33.376183
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,4,-71.76602
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,5,-208.30371
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,6,-309.3322
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,7,-466.21497
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,8,-665.1551
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,9,-1157.5796
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,10,-1731.4412
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,all,-402.14178
-two_child_limit,2 child limit repeal,2026,1,194.74664
-two_child_limit,2 child limit repeal,2026,2,448.82892
-two_child_limit,2 child limit repeal,2026,3,138.84369
-two_child_limit,2 child limit repeal,2026,4,109.89222
-two_child_limit,2 child limit repeal,2026,5,40.90818
-two_child_limit,2 child limit repeal,2026,6,18.683453
-two_child_limit,2 child limit repeal,2026,7,3.3576653
-two_child_limit,2 child limit repeal,2026,8,0.0038931856
-two_child_limit,2 child limit repeal,2026,9,0.0
-two_child_limit,2 child limit repeal,2026,10,0.0
-two_child_limit,2 child limit repeal,2026,all,91.7917
-two_child_limit,2 child limit repeal,2027,1,198.87857
-two_child_limit,2 child limit repeal,2027,2,483.03967
-two_child_limit,2 child limit repeal,2027,3,155.06908
-two_child_limit,2 child limit repeal,2027,4,113.38391
-two_child_limit,2 child limit repeal,2027,5,41.741936
-two_child_limit,2 child limit repeal,2027,6,21.634916
-two_child_limit,2 child limit repeal,2027,7,3.4977274
-two_child_limit,2 child limit repeal,2027,8,0.004078464
-two_child_limit,2 child limit repeal,2027,9,0.0
-two_child_limit,2 child limit repeal,2027,10,0.0
-two_child_limit,2 child limit repeal,2027,all,97.49386
-two_child_limit,2 child limit repeal,2028,1,159.43167
-two_child_limit,2 child limit repeal,2028,2,590.7602
-two_child_limit,2 child limit repeal,2028,3,146.6593
-two_child_limit,2 child limit repeal,2028,4,141.86021
-two_child_limit,2 child limit repeal,2028,5,41.952133
-two_child_limit,2 child limit repeal,2028,6,24.128374
-two_child_limit,2 child limit repeal,2028,7,3.6610398
-two_child_limit,2 child limit repeal,2028,8,0.004530291
-two_child_limit,2 child limit repeal,2028,9,0.0
-two_child_limit,2 child limit repeal,2028,10,0.0
-two_child_limit,2 child limit repeal,2028,all,105.61478
-two_child_limit,2 child limit repeal,2029,1,161.59569
-two_child_limit,2 child limit repeal,2029,2,670.4964
-two_child_limit,2 child limit repeal,2029,3,151.17218
-two_child_limit,2 child limit repeal,2029,4,129.773
-two_child_limit,2 child limit repeal,2029,5,59.324905
-two_child_limit,2 child limit repeal,2029,6,26.38754
-two_child_limit,2 child limit repeal,2029,7,3.7627158
-two_child_limit,2 child limit repeal,2029,8,0.0050558713
-two_child_limit,2 child limit repeal,2029,9,0.0
-two_child_limit,2 child limit repeal,2029,10,0.0
-two_child_limit,2 child limit repeal,2029,all,109.49404
-two_child_limit,2 child limit repeal,2030,1,177.39703
-two_child_limit,2 child limit repeal,2030,2,641.6481
-two_child_limit,2 child limit repeal,2030,3,191.36292
-two_child_limit,2 child limit repeal,2030,4,133.90715
-two_child_limit,2 child limit repeal,2030,5,53.488583
-two_child_limit,2 child limit repeal,2030,6,28.420177
-two_child_limit,2 child limit repeal,2030,7,3.8433669
-two_child_limit,2 child limit repeal,2030,8,0.004631995
-two_child_limit,2 child limit repeal,2030,9,0.0
-two_child_limit,2 child limit repeal,2030,10,0.0
-two_child_limit,2 child limit repeal,2030,all,113.81775
-fuel_duty_freeze,Fuel duty freeze extension,2026,1,69.50974
-fuel_duty_freeze,Fuel duty freeze extension,2026,2,89.44946
-fuel_duty_freeze,Fuel duty freeze extension,2026,3,60.85616
-fuel_duty_freeze,Fuel duty freeze extension,2026,4,86.37509
-fuel_duty_freeze,Fuel duty freeze extension,2026,5,100.59264
-fuel_duty_freeze,Fuel duty freeze extension,2026,6,103.955086
-fuel_duty_freeze,Fuel duty freeze extension,2026,7,118.12552
-fuel_duty_freeze,Fuel duty freeze extension,2026,8,151.82277
-fuel_duty_freeze,Fuel duty freeze extension,2026,9,159.93225
-fuel_duty_freeze,Fuel duty freeze extension,2026,10,159.15756
-fuel_duty_freeze,Fuel duty freeze extension,2026,all,109.31675
-fuel_duty_freeze,Fuel duty freeze extension,2027,1,27.0334
-fuel_duty_freeze,Fuel duty freeze extension,2027,2,35.38238
-fuel_duty_freeze,Fuel duty freeze extension,2027,3,24.505228
-fuel_duty_freeze,Fuel duty freeze extension,2027,4,33.721333
-fuel_duty_freeze,Fuel duty freeze extension,2027,5,39.239323
-fuel_duty_freeze,Fuel duty freeze extension,2027,6,39.82874
-fuel_duty_freeze,Fuel duty freeze extension,2027,7,47.883156
-fuel_duty_freeze,Fuel duty freeze extension,2027,8,58.95358
-fuel_duty_freeze,Fuel duty freeze extension,2027,9,63.23583
-fuel_duty_freeze,Fuel duty freeze extension,2027,10,62.12425
-fuel_duty_freeze,Fuel duty freeze extension,2027,all,42.90127
-fuel_duty_freeze,Fuel duty freeze extension,2028,1,23.209358
-fuel_duty_freeze,Fuel duty freeze extension,2028,2,31.601347
-fuel_duty_freeze,Fuel duty freeze extension,2028,3,20.685474
-fuel_duty_freeze,Fuel duty freeze extension,2028,4,30.266117
-fuel_duty_freeze,Fuel duty freeze extension,2028,5,33.919987
-fuel_duty_freeze,Fuel duty freeze extension,2028,6,33.365726
-fuel_duty_freeze,Fuel duty freeze extension,2028,7,42.42532
-fuel_duty_freeze,Fuel duty freeze extension,2028,8,51.358868
-fuel_duty_freeze,Fuel duty freeze extension,2028,9,55.0693
-fuel_duty_freeze,Fuel duty freeze extension,2028,10,53.784763
-fuel_duty_freeze,Fuel duty freeze extension,2028,all,37.265377
-fuel_duty_freeze,Fuel duty freeze extension,2029,1,10.772111
-fuel_duty_freeze,Fuel duty freeze extension,2029,2,13.377812
-fuel_duty_freeze,Fuel duty freeze extension,2029,3,10.585265
-fuel_duty_freeze,Fuel duty freeze extension,2029,4,13.518886
-fuel_duty_freeze,Fuel duty freeze extension,2029,5,16.365965
-fuel_duty_freeze,Fuel duty freeze extension,2029,6,14.85873
-fuel_duty_freeze,Fuel duty freeze extension,2029,7,20.397938
-fuel_duty_freeze,Fuel duty freeze extension,2029,8,23.147278
-fuel_duty_freeze,Fuel duty freeze extension,2029,9,26.00318
-fuel_duty_freeze,Fuel duty freeze extension,2029,10,25.238512
-fuel_duty_freeze,Fuel duty freeze extension,2029,all,17.34242
-fuel_duty_freeze,Fuel duty freeze extension,2030,1,13.60434
-fuel_duty_freeze,Fuel duty freeze extension,2030,2,16.800901
-fuel_duty_freeze,Fuel duty freeze extension,2030,3,13.212104
-fuel_duty_freeze,Fuel duty freeze extension,2030,4,17.788195
-fuel_duty_freeze,Fuel duty freeze extension,2030,5,20.020157
-fuel_duty_freeze,Fuel duty freeze extension,2030,6,19.113941
-fuel_duty_freeze,Fuel duty freeze extension,2030,7,25.668186
-fuel_duty_freeze,Fuel duty freeze extension,2030,8,29.155043
-fuel_duty_freeze,Fuel duty freeze extension,2030,9,32.749977
-fuel_duty_freeze,Fuel duty freeze extension,2030,10,31.803503
-fuel_duty_freeze,Fuel duty freeze extension,2030,all,21.874882
-rail_fares_freeze,Rail fares freeze,2026,1,5.583689
-rail_fares_freeze,Rail fares freeze,2026,2,6.7104855
-rail_fares_freeze,Rail fares freeze,2026,3,3.3683977
-rail_fares_freeze,Rail fares freeze,2026,4,2.0047584
-rail_fares_freeze,Rail fares freeze,2026,5,1.9562881
-rail_fares_freeze,Rail fares freeze,2026,6,3.4351614
-rail_fares_freeze,Rail fares freeze,2026,7,1.5727282
-rail_fares_freeze,Rail fares freeze,2026,8,16.320972
-rail_fares_freeze,Rail fares freeze,2026,9,2.024185
-rail_fares_freeze,Rail fares freeze,2026,10,3.2317255
-rail_fares_freeze,Rail fares freeze,2026,all,4.514099
-rail_fares_freeze,Rail fares freeze,2027,1,5.898169
-rail_fares_freeze,Rail fares freeze,2027,2,7.393505
-rail_fares_freeze,Rail fares freeze,2027,3,3.2724836
-rail_fares_freeze,Rail fares freeze,2027,4,2.3885193
-rail_fares_freeze,Rail fares freeze,2027,5,1.9896365
-rail_fares_freeze,Rail fares freeze,2027,6,3.680032
-rail_fares_freeze,Rail fares freeze,2027,7,1.7217944
-rail_fares_freeze,Rail fares freeze,2027,8,17.267466
-rail_fares_freeze,Rail fares freeze,2027,9,2.274568
-rail_fares_freeze,Rail fares freeze,2027,10,3.428648
-rail_fares_freeze,Rail fares freeze,2027,all,4.8055115
-rail_fares_freeze,Rail fares freeze,2028,1,6.033377
-rail_fares_freeze,Rail fares freeze,2028,2,7.8030515
-rail_fares_freeze,Rail fares freeze,2028,3,2.8092215
-rail_fares_freeze,Rail fares freeze,2028,4,3.0601876
-rail_fares_freeze,Rail fares freeze,2028,5,2.0858533
-rail_fares_freeze,Rail fares freeze,2028,6,3.5872965
-rail_fares_freeze,Rail fares freeze,2028,7,1.7845852
-rail_fares_freeze,Rail fares freeze,2028,8,17.69653
-rail_fares_freeze,Rail fares freeze,2028,9,2.4460273
-rail_fares_freeze,Rail fares freeze,2028,10,3.5095482
-rail_fares_freeze,Rail fares freeze,2028,all,4.944145
-rail_fares_freeze,Rail fares freeze,2029,1,6.208268
-rail_fares_freeze,Rail fares freeze,2029,2,6.9213853
-rail_fares_freeze,Rail fares freeze,2029,3,3.6238167
-rail_fares_freeze,Rail fares freeze,2029,4,2.9456215
-rail_fares_freeze,Rail fares freeze,2029,5,2.1828897
-rail_fares_freeze,Rail fares freeze,2029,6,3.6206543
-rail_fares_freeze,Rail fares freeze,2029,7,1.4462285
-rail_fares_freeze,Rail fares freeze,2029,8,18.210264
-rail_fares_freeze,Rail fares freeze,2029,9,2.7649353
-rail_fares_freeze,Rail fares freeze,2029,10,3.6113403
-rail_fares_freeze,Rail fares freeze,2029,all,5.0748687
-rail_fares_freeze,Rail fares freeze,2030,1,5.6029243
-rail_fares_freeze,Rail fares freeze,2030,2,6.384785
-rail_fares_freeze,Rail fares freeze,2030,3,3.2102349
-rail_fares_freeze,Rail fares freeze,2030,4,2.6600084
-rail_fares_freeze,Rail fares freeze,2030,5,1.9454355
-rail_fares_freeze,Rail fares freeze,2030,6,3.3864431
-rail_fares_freeze,Rail fares freeze,2030,7,1.2663246
-rail_fares_freeze,Rail fares freeze,2030,8,16.592821
-rail_fares_freeze,Rail fares freeze,2030,9,2.418536
-rail_fares_freeze,Rail fares freeze,2030,10,3.2288883
-rail_fares_freeze,Rail fares freeze,2030,all,4.5944223
-threshold_freeze_extension,Threshold freeze extension,2026,1,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,2,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,3,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,4,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,5,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,6,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,7,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,8,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,9,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,10,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,all,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,1,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,2,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,3,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,4,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,5,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,6,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,7,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,8,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,9,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,10,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,all,0.0
-threshold_freeze_extension,Threshold freeze extension,2028,1,-13.478223
-threshold_freeze_extension,Threshold freeze extension,2028,2,-34.418617
-threshold_freeze_extension,Threshold freeze extension,2028,3,-51.024918
-threshold_freeze_extension,Threshold freeze extension,2028,4,-59.040123
-threshold_freeze_extension,Threshold freeze extension,2028,5,-70.70892
-threshold_freeze_extension,Threshold freeze extension,2028,6,-83.90341
-threshold_freeze_extension,Threshold freeze extension,2028,7,-115.23452
-threshold_freeze_extension,Threshold freeze extension,2028,8,-177.9454
-threshold_freeze_extension,Threshold freeze extension,2028,9,-241.84975
-threshold_freeze_extension,Threshold freeze extension,2028,10,-313.9253
-threshold_freeze_extension,Threshold freeze extension,2028,all,-115.27916
-threshold_freeze_extension,Threshold freeze extension,2029,1,-28.307775
-threshold_freeze_extension,Threshold freeze extension,2029,2,-82.25188
-threshold_freeze_extension,Threshold freeze extension,2029,3,-97.69686
-threshold_freeze_extension,Threshold freeze extension,2029,4,-120.94319
-threshold_freeze_extension,Threshold freeze extension,2029,5,-146.1022
-threshold_freeze_extension,Threshold freeze extension,2029,6,-174.41483
-threshold_freeze_extension,Threshold freeze extension,2029,7,-238.97546
-threshold_freeze_extension,Threshold freeze extension,2029,8,-371.48444
-threshold_freeze_extension,Threshold freeze extension,2029,9,-503.79852
-threshold_freeze_extension,Threshold freeze extension,2029,10,-642.3069
-threshold_freeze_extension,Threshold freeze extension,2029,all,-238.42787
-threshold_freeze_extension,Threshold freeze extension,2030,1,-42.875996
-threshold_freeze_extension,Threshold freeze extension,2030,2,-127.74611
-threshold_freeze_extension,Threshold freeze extension,2030,3,-145.7863
-threshold_freeze_extension,Threshold freeze extension,2030,4,-191.22545
-threshold_freeze_extension,Threshold freeze extension,2030,5,-228.17354
-threshold_freeze_extension,Threshold freeze extension,2030,6,-271.03943
-threshold_freeze_extension,Threshold freeze extension,2030,7,-369.27133
-threshold_freeze_extension,Threshold freeze extension,2030,8,-586.4222
-threshold_freeze_extension,Threshold freeze extension,2030,9,-781.2867
-threshold_freeze_extension,Threshold freeze extension,2030,10,-990.3374
-threshold_freeze_extension,Threshold freeze extension,2030,all,-370.17084
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,1,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,2,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,3,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,4,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,5,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,6,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,7,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,8,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,9,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,10,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,all,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,1,-0.29039937
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,2,-1.3812289
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,3,-2.7921956
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,4,-5.274853
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,5,-14.401052
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,6,-23.230827
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,7,-31.744698
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,8,-53.886955
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,9,-110.08726
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,10,-205.01617
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,all,-44.211914
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1,-0.32197767
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,2,-1.4611664
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,3,-2.8972843
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,4,-5.2941084
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,5,-14.725284
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,6,-23.759712
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,7,-33.69836
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,8,-50.12714
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,9,-120.186806
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,10,-209.05803
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,all,-45.472214
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1,-0.36259592
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,2,-1.3555657
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,3,-2.6770203
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,4,-5.9295473
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,5,-15.352949
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,6,-24.134024
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,7,-35.57154
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,8,-50.81804
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,9,-124.03309
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,10,-213.33995
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,all,-46.70387
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1,-0.33258632
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,2,-1.5083178
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,3,-2.5767815
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,4,-6.3745418
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,5,-16.15066
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,6,-25.187014
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,7,-36.665222
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,8,-52.7295
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,9,-125.74436
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,10,-219.33669
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,all,-48.01926
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,1,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,2,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,3,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,4,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,5,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,6,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,7,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,8,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,9,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,10,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,all,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,1,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,2,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,3,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,4,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,5,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,6,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,7,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,8,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,9,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,10,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,all,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,1,-0.029124463
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,2,-0.04832071
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,3,-0.008792261
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,4,-0.04140513
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,5,-0.66480786
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,6,-1.6540699
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,7,-4.4581275
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,8,-10.473135
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,9,-45.692753
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,10,-94.3651
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,all,-15.48668
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,1,-0.033875223
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,2,-0.054067895
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,3,-0.023909153
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,4,-0.04976367
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,5,-0.7220056
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,6,-1.7780088
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,7,-4.7529
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,8,-10.781839
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,9,-48.874893
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,10,-99.02463
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,all,-16.317719
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,1,-0.037336387
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,2,-0.06913097
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,3,-0.03653931
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,4,-0.057387948
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,5,-0.7653324
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,6,-2.0854318
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,7,-4.976503
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,8,-11.217143
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,9,-52.266777
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,10,-104.58895
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,all,-17.304815
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,1,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,2,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,3,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,4,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,5,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,6,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,7,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,8,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,9,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,10,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,all,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,1,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,2,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,3,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,4,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,5,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,6,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,7,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,8,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,9,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,10,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,all,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,1,-8.927108
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,2,-14.045656
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,3,-2.7986846
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,4,-7.6177354
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,5,-7.2861295
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,6,-10.306911
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,7,-34.882896
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,8,-15.976509
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,9,-36.74358
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,10,-97.56815
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,all,-23.257933
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,1,-9.234889
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,2,-13.236928
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,3,-3.0206115
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,4,-7.8049717
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,5,-7.530039
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,6,-12.9758215
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,7,-33.3943
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,8,-15.891833
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,9,-38.618317
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,10,-100.86515
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,all,-23.978508
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,1,-9.522171
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,2,-13.875292
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,3,-3.2097063
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,4,-4.4107027
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,5,-11.221851
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,6,-13.195296
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,7,-34.809883
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,8,-13.732704
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,9,-41.772198
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,10,-103.92491
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,all,-24.686012
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,1,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,2,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,3,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,4,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,5,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,6,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,7,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,8,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,9,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,10,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,all,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,1,-7.845552e-05
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,2,-0.25093627
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,3,-0.1774039
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,4,-0.72392684
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,5,-1.1793447
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,6,-6.262505
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,7,-7.03887
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,8,-9.335181
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,9,-9.569415
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,10,-7.3747964
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,all,-4.1282277
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,1,-0.00013255583
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,2,-0.47514987
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,3,-0.37887844
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,4,-1.9867963
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,5,-2.3705654
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,6,-11.905449
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,7,-13.738666
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,8,-18.265518
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,9,-18.64807
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,10,-14.178054
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,all,-8.108663
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,1,-0.00022948459
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,2,-0.7316714
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,3,-0.581973
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,4,-3.3586228
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,5,-3.6420343
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,6,-17.924288
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,7,-26.2393
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,8,-22.187056
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,9,-27.99935
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,10,-21.378258
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,all,-12.292563
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,1,-0.0002342872
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,2,-0.77575433
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,3,-0.5743789
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,4,-3.4763362
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,5,-3.9542713
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,6,-18.210829
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,7,-27.34806
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,8,-21.062971
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,9,-29.66407
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,10,-21.877089
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,all,-12.576419
-salary_sacrifice_cap,Salary sacrifice cap,2026,1,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,2,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,3,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,4,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,5,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,6,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,7,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,8,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,9,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,10,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,all,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,1,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,2,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,3,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,4,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,5,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,6,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,7,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,8,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,9,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,10,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,all,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,1,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,2,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,3,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,4,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,5,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,6,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,7,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,8,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,9,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,10,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,all,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2029,1,-5.939637
-salary_sacrifice_cap,Salary sacrifice cap,2029,2,-67.75414
-salary_sacrifice_cap,Salary sacrifice cap,2029,3,-24.090689
-salary_sacrifice_cap,Salary sacrifice cap,2029,4,-29.793629
-salary_sacrifice_cap,Salary sacrifice cap,2029,5,-38.360054
-salary_sacrifice_cap,Salary sacrifice cap,2029,6,-46.035233
-salary_sacrifice_cap,Salary sacrifice cap,2029,7,-59.44761
-salary_sacrifice_cap,Salary sacrifice cap,2029,8,-76.35923
-salary_sacrifice_cap,Salary sacrifice cap,2029,9,-265.98987
-salary_sacrifice_cap,Salary sacrifice cap,2029,10,-490.3569
-salary_sacrifice_cap,Salary sacrifice cap,2029,all,-108.48394
-salary_sacrifice_cap,Salary sacrifice cap,2030,1,-4.663694
-salary_sacrifice_cap,Salary sacrifice cap,2030,2,-9.775879
-salary_sacrifice_cap,Salary sacrifice cap,2030,3,-69.292336
-salary_sacrifice_cap,Salary sacrifice cap,2030,4,-30.899313
-salary_sacrifice_cap,Salary sacrifice cap,2030,5,-38.895264
-salary_sacrifice_cap,Salary sacrifice cap,2030,6,-47.405693
-salary_sacrifice_cap,Salary sacrifice cap,2030,7,-60.35464
-salary_sacrifice_cap,Salary sacrifice cap,2030,8,-77.025955
-salary_sacrifice_cap,Salary sacrifice cap,2030,9,-276.06888
-salary_sacrifice_cap,Salary sacrifice cap,2030,10,-531.89026
-salary_sacrifice_cap,Salary sacrifice cap,2030,all,-114.02442
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,1,3.931746176073637
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,2,4.504544564652962
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,3,4.8832510336266655
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,4,5.354017147803135
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,5,6.421377152847963
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,6,6.3103679859498225
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,7,6.563202697475646
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,8,8.29776846534779
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,9,8.477638729668664
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,10,7.9037670265859985
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,all,6.218350475667647
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,1,18.700585450045672
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,2,21.442560056492603
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,3,24.16007154800552
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,4,25.035245348507605
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,5,30.34244354246363
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,6,30.326199404263015
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,7,31.92843057072472
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,8,38.87553013752496
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,9,40.77918901833117
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,10,37.75728032307439
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,all,29.713090567218803
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,1,13.894238877635331
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,2,15.719010423565225
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,3,18.10632249814329
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,4,18.5989104104202
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,5,22.715856219007204
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,6,22.4313152334186
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,7,23.692612616846947
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,8,28.811706377108763
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,9,30.452274573136897
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,10,27.827237036603982
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,all,22.06135908817304
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,1,13.681668348063734
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,2,15.569409383399378
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,3,17.714370180586073
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,4,18.83803286872961
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,5,22.132449020504836
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,6,21.756628023111837
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,7,23.44251422615195
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,8,28.21444940431354
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,9,29.955255279002536
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,10,27.570128589823263
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,all,21.737673017883196
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,1,12.840417532808614
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,2,15.305087688064212
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,3,17.083070243880986
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,4,17.753198895749364
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,5,21.993392476364175
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,6,21.59812279302395
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,7,22.82718262208242
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,8,27.350575073314495
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,9,29.082851004883455
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,10,26.77514312171748
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,all,21.10005870960636
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,1,13.032472390519938
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,2,15.586044647649462
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,3,17.42724741094594
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,4,17.816962176311286
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,5,22.485322532215616
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,6,22.081720431297825
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,7,23.50015715776828
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,8,27.812514639665952
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,9,29.718819271582063
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,10,27.202179287751576
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,all,21.494322747609345
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,1,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,2,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,3,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,4,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,5,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,6,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,7,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,8,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,9,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,10,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,all,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,1,31.02226931598708
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,2,71.11355140819744
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,3,54.71392965084322
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,4,37.268657120782
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,5,24.306112748437908
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,6,18.55319988849109
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,7,12.52834332903595
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,8,6.946716418893679
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,9,1.2090085595223063
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,10,0.431489338574341
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,all,26.171008141096767
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,1,30.017958403469557
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,2,70.56607503234001
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,3,56.80725471228428
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,4,37.60540798385328
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,5,24.47787264124179
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,6,26.47919325000997
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,7,12.109409005546144
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,8,7.033245645468232
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,9,1.2658747290099668
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,10,0.3778035961451147
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,all,26.940353292877752
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,1,29.516795610851645
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,2,70.28323853586211
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,3,54.0397258857945
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,4,39.5316525478728
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,5,23.66066436745459
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,6,19.294946962420124
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,7,11.730894760311967
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,8,6.846128640207439
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,9,1.337617579723528
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,10,0.3749212952919722
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,all,25.943615370910234
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,1,28.666664360808603
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,2,75.8910960699499
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,3,53.68931706201048
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,4,34.6618528812103
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,5,27.5389273466792
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,6,14.602393843250098
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,7,9.71263240231305
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,8,7.840470186370699
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,9,1.7657537312538067
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,10,0.376512102118235
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,all,25.736805261972812
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,1,28.64257281358668
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,2,76.59214123370309
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,3,52.60859968920417
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,4,35.04808703038524
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,5,26.483781332737923
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,6,14.518259270430775
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,7,9.359662103268915
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,8,8.392012553166195
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,9,0.9817669608774912
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,10,0.3708468125189745
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,all,25.584599401276247
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,1,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,2,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,3,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,4,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,5,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,6,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,7,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,8,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,9,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,10,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,all,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,1,81.79986168219594
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,2,65.36103074938352
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,3,97.41495359184552
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,4,93.6098192668316
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,5,75.09155892474115
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,6,31.61158510566388
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,7,34.45941001480325
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,8,7.129242377960741
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,9,7.087073805692687
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,10,3.30228222595365
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,all,50.53212893266802
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,1,83.04910385599804
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,2,69.7339481565885
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,3,129.53587978919546
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,4,65.50615950242883
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,5,79.37566373131757
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,6,33.28928107290289
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,7,33.02279113932995
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,8,7.387327100771743
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,9,8.917391090490886
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,10,1.7153626122860677
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,all,51.92990848513711
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,1,85.0166414566388
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,2,73.44014227666523
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,3,132.0204731175524
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,4,69.81451142471602
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,5,78.93264472224277
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,6,36.55624589331323
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,7,33.706722856078656
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,8,5.558623325700099
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,9,8.931764727386765
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,10,1.580778178089656
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,all,53.31311882871739
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,1,88.71410824861783
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,2,84.05947476605778
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,3,124.31414050122832
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,4,103.07079577233434
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,5,55.62557506427723
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,6,34.76001124989382
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,7,34.63468245361233
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,8,5.649741797045689
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,9,8.755185133809537
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,10,1.4502670736112837
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,all,55.031085922814334
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,1,93.44456522544752
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,2,85.32800715828124
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,3,127.54990492083648
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,4,119.21321899431052
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,5,44.86420644697555
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,6,35.32346144912677
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,7,35.55677221109874
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,8,5.966102195533343
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,9,7.806491310421575
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,10,1.3223758077154328
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,all,56.764294105344746
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,2,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,6,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,8,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,10,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,all,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,2,1.630016899239897
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,6,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,8,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,10,0.1708144112657175
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,all,0.1818865804212254
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,2,1.6326460598346273
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,6,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,8,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,10,0.1714142261588985
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,all,0.1817198353376818
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,2,1.619607022062486
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,6,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,8,2.4919409397419474
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,10,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,all,0.4077416482592369
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,2,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,6,0.6815329479168598
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,8,2.4978881629317575
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,10,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,all,0.3075643414382075
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,1,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,2,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,3,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,4,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,5,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,6,0.688285898582136
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,7,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,8,2.5172407954339953
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,9,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,10,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,all,0.3112772309564107
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,1,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,2,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,3,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,4,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,5,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,6,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,7,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,8,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,9,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,10,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,all,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,1,-2.0343259037448043
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,2,-3.953296343536488
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,3,-1.9275152028763216
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,4,-2.006839468883225
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,5,-5.012166457308193
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,6,-4.310542413275436
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,7,-7.333588589531276
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,8,-8.98946236148115
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,9,-18.679848313806037
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,10,-48.35327411526055
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,all,-10.245464340056827
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,1,-2.02958587849849
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,2,-4.257701541250157
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,3,-1.758908926931214
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,4,-2.916122232115898
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,5,-4.376861694517328
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,6,-5.10942066254114
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,7,-6.476054798833471
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,8,-10.22788023063149
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,9,-18.95913531308886
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,10,-49.086819418308046
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,all,-10.51957477197757
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,1,-2.094175978584571
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,2,-3.3844337835249494
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,3,-2.82683321983648
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,4,-2.4780618808848796
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,5,-5.1284859983815565
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,6,-5.09274215647552
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,7,-6.959435815229735
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,8,-10.386437932282329
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,9,-19.588149143454523
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,10,-49.61360913200183
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,all,-10.78279398662484
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,1,-2.154214239741957
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,2,-3.578419692062824
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,3,-2.862752280559956
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,4,-2.646940716230821
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,5,-5.476582030750198
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,6,-4.725596655758095
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,7,-7.278153884479576
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,8,-11.124222034505308
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,9,-20.048596460121527
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,10,-50.69337535063583
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,all,-11.069579310443457
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,1,-2.176364122266349
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,2,-3.6437001274701712
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,3,-2.9277675022787863
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,4,-2.720916079855364
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,5,-5.588994189879847
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,6,-5.27161539346882
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,7,-7.079415070732267
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,8,-11.264208840564212
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,9,-20.29599760022583
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,10,-51.31318871609201
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,all,-11.22691208185826
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,1,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,2,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,3,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,4,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,5,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,6,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,7,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,8,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,9,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,10,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,all,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,1,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,2,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,3,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,4,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,5,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,6,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,7,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,8,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,9,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,10,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,all,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,1,-0.6099824000623925
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,2,-3.25627263243608
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,3,-3.879684756413188
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,4,-4.73805473934908
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,5,-17.940723627393265
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,6,-10.623365589365015
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,7,-9.186964055583076
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,8,-17.872784633894007
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,9,-8.187723474844509
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,10,-20.402224401671695
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,all,-9.534407009133895
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,1,-0.6309472760330108
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,2,-3.307048958153732
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,3,-4.0787436736371045
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,4,-4.752835602132847
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,5,-15.636361428854787
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,6,-14.761567384054498
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,7,-10.039962866869764
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,8,-17.617524493804655
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,9,-8.99267287886421
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,10,-19.791432958611352
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,all,-9.815357868330429
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,1,-0.6154584259696246
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,2,-3.3090775525501464
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,3,-4.447521476707139
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,4,-5.1489808345791435
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,5,-16.21262673631648
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,6,-16.0937214794441
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,7,-10.45531097221014
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,8,-15.852954687573906
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,9,-11.135011223563057
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,10,-18.97940238814775
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,all,-10.036840866509143
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,1,-0.6949646949637608
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,2,-3.5773979412835297
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,3,-4.934329260089081
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,4,-5.844718883738304
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,5,-16.8261513507524
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,6,-16.08614767734063
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,7,-11.151957199948766
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,8,-17.924006073140955
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,9,-9.492300994143852
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,10,-19.0481055894736
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,all,-10.368653333933535
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,1,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,2,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,3,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,4,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,5,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,6,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,7,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,8,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,9,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,10,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,all,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,1,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,2,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,3,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,4,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,5,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,6,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,7,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,8,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,9,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,10,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,all,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,1,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,2,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,3,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,4,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,5,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,6,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,7,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,8,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,9,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,10,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,all,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,1,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,2,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,3,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,4,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,5,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,6,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,7,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,8,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,9,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,10,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,all,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,1,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,2,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,3,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,4,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,5,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,6,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,7,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,8,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,9,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,10,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,all,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,1,-28.58500627642322
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,2,-61.16637452262063
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,3,-73.63380027981746
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4,-90.739329993384
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,5,-123.40710276057264
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,6,-148.68356012164955
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,7,-174.31543944417666
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,8,-222.9328784396453
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,9,-285.1256369140953
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,10,-297.89268204245326
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,all,-148.51099143957828
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,1,48.21552180306336
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,2,50.21835906843992
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,3,44.392008130253735
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,4,39.56056151205728
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,5,31.03725525157909
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,6,24.155721237858145
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,7,19.93623644081647
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,8,10.579149196249269
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,9,7.008627927715769
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,10,3.301221239227068
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,all,28.2699947628428
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,1,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,2,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,3,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,4,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,5,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,6,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,7,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,8,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,9,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,10,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,all,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,1,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,2,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,3,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,4,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,5,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,6,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,7,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,8,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,9,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,10,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,all,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,1,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,2,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,3,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,4,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,5,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,6,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,7,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,8,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,9,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,10,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,all,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,1,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,2,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,3,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,4,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,5,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,6,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,7,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,8,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,9,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,10,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,all,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,1,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,2,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,3,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,4,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,5,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,6,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,7,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,8,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,9,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,10,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,all,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,1,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,2,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,3,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,4,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,5,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,6,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,7,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,8,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,9,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,10,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,all,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,1,8.110126586712017
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,2,13.117472883721872
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,3,9.078626596276765
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,4,13.399491529745225
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,5,10.61813183003204
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,6,5.080278861046608
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,7,4.397729559734123
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,8,5.498345993835303
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,9,0.446732600401758
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,10,0.1295220211073239
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,all,7.0503692001753855
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,1,8.03182886108607
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,2,13.176753130794284
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,3,8.860814386508737
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,4,13.339929040070256
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,5,11.20133269040298
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,6,4.472533316808679
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,7,4.009115756424189
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,8,5.442628957658431
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,9,0.4004471759019445
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,10,0.0274913893106922
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,all,6.9589667839941525
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,1,8.092004853006433
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,2,12.776948756546677
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,3,9.156057728530296
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,4,13.891170095457662
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,5,10.411257632103482
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,6,4.386696644101733
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,7,2.8618701173631065
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,8,5.414368104990016
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,9,0.3416116855509158
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,10,0.0195548252537078
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,all,6.79936704488094
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,1,7.816534068816511
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,2,13.36184342360854
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,3,7.7246894406262845
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,4,14.202746611243132
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,5,10.960561613884863
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,6,4.2700875435101535
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,7,2.5915348975069508
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,8,5.373351827024484
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,9,0.3071946081120248
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,10,0.0078536764335667
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,all,6.720612089488974
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,1,7.8679661552771165
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,2,13.415267989599837
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,3,7.273986772195361
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,4,14.021015062260163
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,5,10.813549708220917
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,6,4.054825145894383
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,7,2.277676308510604
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,8,5.275242475433676
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,9,0.258341304867569
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,10,0.0078339070637459
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,all,6.594218767031214
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,1,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,2,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,3,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,4,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,5,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,6,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,7,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,8,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,9,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,10,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,all,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,1,5.642980439427135
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,2,14.156707304791048
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3,13.576877822111184
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,4,11.991759268127346
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,5,7.25055272011263
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,6,5.019760752948042
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,7,2.893439042860362
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,8,2.4255602148590416
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,9,0.7139241271271142
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,10,1.3495886154220875
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,all,6.562237354314748
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,1,8.360741135688004
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,2,20.335240238411895
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3,19.37758541890594
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4,16.207576089023497
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,5,10.407982311535646
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,6,6.537775160194043
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,7,4.497965022189633
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,8,3.3255908786395274
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,9,1.153061366632694
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,10,1.8602007577226995
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,all,9.286575822143227
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,1,11.786769896510895
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,2,27.67780965163206
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,3,26.38672517875915
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4,22.244124666922307
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,5,13.876486994385225
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,6,9.478362634944816
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,7,6.900852188213751
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,8,4.110400943352686
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,9,1.78787449642764
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,10,2.4071792371896925
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,all,12.758340411503196
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,1,15.897068814450364
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,2,35.72823716961433
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,3,33.563079415118196
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4,29.300011116444825
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5,18.150330366394485
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,6,12.195909382549504
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,7,9.603399975987235
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,8,5.457130182605256
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,9,2.4640313408436625
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,10,3.082533318505161
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,all,16.667254011280843
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,1,18.07981972404085
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,2,38.21789780553454
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,3,34.83210550078902
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,4,31.348218585321376
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5,18.6325149900652
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,6,12.514945949658456
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,7,10.4546837869154
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,8,5.518286627402393
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,9,2.6255852234424992
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,10,3.253808817309511
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,all,17.710307818156405
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,1,11.006277124238842
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,2,12.667204814768848
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,3,13.71956509684444
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,4,15.070522237259164
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,5,17.941447235405597
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,6,17.686026000374657
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,7,18.330641707407914
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,8,23.096624286147183
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,9,23.52915526348196
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,10,21.927504505468153
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,all,17.3686702795528
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,1,5.370938139291831
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,2,6.185986585282068
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,3,6.95945086807906
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,4,7.235207750257259
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,5,8.696209209387671
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,6,8.716911084950182
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,7,9.14215771319156
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,8,11.099943472089386
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,9,11.613577790396318
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,10,10.744195303285265
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,all,8.513333820825753
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,1,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,2,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,3,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,4,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,5,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,6,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,7,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,8,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,9,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,10,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,all,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,1,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,2,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,3,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,4,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,5,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,6,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,7,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,8,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,9,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,10,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,all,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,1,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,2,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,3,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,4,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,5,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,6,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,7,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,8,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,9,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,10,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,all,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,1,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,2,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,3,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,4,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,5,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,6,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,7,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,8,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,9,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,10,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,all,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,1,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,2,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,3,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,4,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,5,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,6,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,7,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,8,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,9,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,10,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,all,0.0
+mock4_combined,MOCK: drill 4 package,2026,1,63.15356237808928
+mock4_combined,MOCK: drill 4 package,2026,2,67.39000719569731
+mock4_combined,MOCK: drill 4 package,2026,3,62.994858582517566
+mock4_combined,MOCK: drill 4 package,2026,4,59.98533805404104
+mock4_combined,MOCK: drill 4 package,2026,5,55.39998992631758
+mock4_combined,MOCK: drill 4 package,2026,6,48.1524635498675
+mock4_combined,MOCK: drill 4 package,2026,7,44.83034516034169
+mock4_combined,MOCK: drill 4 package,2026,8,41.973173314893465
+mock4_combined,MOCK: drill 4 package,2026,9,39.01570817994687
+mock4_combined,MOCK: drill 4 package,2026,10,33.13257943102608
+mock4_combined,MOCK: drill 4 package,2026,all,51.8570849919082
+mock4_combined,MOCK: drill 4 package,2027,1,148.31566493358238
+mock4_combined,MOCK: drill 4 package,2027,2,189.0840277029911
+mock4_combined,MOCK: drill 4 package,2027,3,202.5487321238731
+mock4_combined,MOCK: drill 4 package,2027,4,186.5977158192699
+mock4_combined,MOCK: drill 4 package,2027,5,151.67294349451652
+mock4_combined,MOCK: drill 4 package,2027,6,95.05356959332896
+mock4_combined,MOCK: drill 4 package,2027,7,88.01564995542809
+mock4_combined,MOCK: drill 4 package,2027,8,63.014298172117414
+mock4_combined,MOCK: drill 4 package,2027,9,43.110545077013754
+mock4_combined,MOCK: drill 4 package,2027,10,5.821601035068537
+mock4_combined,MOCK: drill 4 package,2027,all,118.37883910752274
+mock4_combined,MOCK: drill 4 package,2028,1,140.15322886709356
+mock4_combined,MOCK: drill 4 package,2028,2,183.6825388016951
+mock4_combined,MOCK: drill 4 package,2028,3,225.5655930709952
+mock4_combined,MOCK: drill 4 package,2028,4,143.676744826958
+mock4_combined,MOCK: drill 4 package,2028,5,126.00604161214916
+mock4_combined,MOCK: drill 4 package,2028,6,77.53413417100397
+mock4_combined,MOCK: drill 4 package,2028,7,61.66892020931794
+mock4_combined,MOCK: drill 4 package,2028,8,23.94481257632875
+mock4_combined,MOCK: drill 4 package,2028,9,15.002434149077
+mock4_combined,MOCK: drill 4 package,2028,10,-37.354567221250456
+mock4_combined,MOCK: drill 4 package,2028,all,97.1385424069738
+mock4_combined,MOCK: drill 4 package,2029,1,144.85961298880176
+mock4_combined,MOCK: drill 4 package,2029,2,194.7035398579192
+mock4_combined,MOCK: drill 4 package,2029,3,232.6063460744887
+mock4_combined,MOCK: drill 4 package,2029,4,157.17719986427608
+mock4_combined,MOCK: drill 4 package,2029,5,128.40070350878224
+mock4_combined,MOCK: drill 4 package,2029,6,71.69472886905373
+mock4_combined,MOCK: drill 4 package,2029,7,61.64342613332657
+mock4_combined,MOCK: drill 4 package,2029,8,24.677290458407143
+mock4_combined,MOCK: drill 4 package,2029,9,13.71474356612097
+mock4_combined,MOCK: drill 4 package,2029,10,-37.451873635065525
+mock4_combined,MOCK: drill 4 package,2029,all,100.35679100589674
+mock4_combined,MOCK: drill 4 package,2030,1,150.6859549214038
+mock4_combined,MOCK: drill 4 package,2030,2,217.42294639371104
+mock4_combined,MOCK: drill 4 package,2030,3,229.11533628441688
+mock4_combined,MOCK: drill 4 package,2030,4,191.44822274773733
+mock4_combined,MOCK: drill 4 package,2030,5,112.75269499521217
+mock4_combined,MOCK: drill 4 package,2030,6,67.35909914973972
+mock4_combined,MOCK: drill 4 package,2030,7,61.63589188462369
+mock4_combined,MOCK: drill 4 package,2030,8,27.241677481078128
+mock4_combined,MOCK: drill 4 package,2030,9,11.13321078962575
+mock4_combined,MOCK: drill 4 package,2030,10,-37.9776444230912
+mock4_combined,MOCK: drill 4 package,2030,all,104.4535806217539
+mock4_combined,MOCK: drill 4 package,2031,1,133.2368067040733
+mock4_combined,MOCK: drill 4 package,2031,2,167.97004519871115
+mock4_combined,MOCK: drill 4 package,2031,3,164.70017590762248
+mock4_combined,MOCK: drill 4 package,2031,4,124.07538359695975
+mock4_combined,MOCK: drill 4 package,2031,5,-19.087601416935552
+mock4_combined,MOCK: drill 4 package,2031,6,-77.48668113347848
+mock4_combined,MOCK: drill 4 package,2031,7,-109.26659106773153
+mock4_combined,MOCK: drill 4 package,2031,8,-195.28789707332575
+mock4_combined,MOCK: drill 4 package,2031,9,-273.09633822659003
+mock4_combined,MOCK: drill 4 package,2031,10,-335.53402623350473
+mock4_combined,MOCK: drill 4 package,2031,all,-38.16285241750859

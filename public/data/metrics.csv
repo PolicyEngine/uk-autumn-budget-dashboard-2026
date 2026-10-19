@@ -1,51 +1,79 @@
 reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,52.44628902812736,-0.007623600450702038,-0.6921358,-5.7959037
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,54.50722772094073,-0.006544785484443496,-0.6902313,-5.795549
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,91.28717220592495,-0.007042974389013071,-0.7392769,-6.173261
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,92.88849724467393,-0.007782115242251106,-0.73141193,-6.112159
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,93.18424934709117,-0.0077818896879639325,-0.8122263,-6.678544
-two_child_limit,2 child limit repeal,2026,4.464448379974467,-0.005550256986995144,-0.7935982,-6.5756655
-two_child_limit,2 child limit repeal,2027,4.485303636736714,-0.005718327534869755,-0.7917309,-6.5822616
-two_child_limit,2 child limit repeal,2028,4.638994361693295,-0.0060147184497806655,-0.85575485,-7.063181
-two_child_limit,2 child limit repeal,2029,4.653803543538188,-0.0060857916018447165,-0.8100729,-6.6977673
-two_child_limit,2 child limit repeal,2030,4.750605404295874,-0.00612554596135651,-0.9967289,-8.056608
-fuel_duty_freeze,Fuel duty freeze extension,2026,49.566151180271675,-0.0020911764799306843,0.0,0.0
-fuel_duty_freeze,Fuel duty freeze extension,2027,49.13396263801171,-0.0008100462892955334,0.0,0.0
-fuel_duty_freeze,Fuel duty freeze extension,2028,48.96380590417601,-0.0006959879383113202,0.0,0.0
-fuel_duty_freeze,Fuel duty freeze extension,2029,47.85570477664991,-0.0003216278668703997,0.0,0.0
-fuel_duty_freeze,Fuel duty freeze extension,2030,48.50767645269294,-0.00039752269472425857,0.0,0.0
-rail_fares_freeze,Rail fares freeze,2026,3.761754667147192,-1.0564006663468802e-06,0.0,0.0
-rail_fares_freeze,Rail fares freeze,2027,3.790252991679479,-3.468760800221009e-06,0.0,0.0
-rail_fares_freeze,Rail fares freeze,2028,3.7863844532504967,-7.000670962305656e-06,0.0,0.0
-rail_fares_freeze,Rail fares freeze,2029,3.7853257945720946,-9.132471239460217e-06,0.0,0.0
-rail_fares_freeze,Rail fares freeze,2030,3.74761030618238,-1.127875312628424e-05,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2026,0.0,0.0,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,0.0,0.0,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2028,83.19172439193666,6.01326217349622e-07,0.026916504,0.23961899
-threshold_freeze_extension,Threshold freeze extension,2029,83.46826700089677,0.00010305618527793291,0.023423195,0.20799956
-threshold_freeze_extension,Threshold freeze extension,2030,83.80452529047085,0.00028227443460550366,0.08569145,0.7590604
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.0,0.0,0.0,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,10.846119114856476,-0.0006912855565624398,0.0,0.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,10.917777155029142,-0.0006855745686135533,0.0013418198,0.011918157
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,11.01511320345616,-0.0006825690919387695,3.8146973e-06,3.380447e-05
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,11.135730334997824,-0.0006740431673404312,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0,0.0,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.0,0.0,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,6.496661383281754,-0.00016351862386318835,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,6.647666332521436,-0.00016029173229865703,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,6.9582750310340895,-0.00016018168849557947,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0,0.0,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.0,0.0,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,6.81201240007069,-0.00012791168829926633,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,6.816889690480529,-0.00012394706731843757,1.9073486e-05,0.00016902258
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,6.807033632445488,-0.00012040415822097668,0.0,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,0.0,0.0,0.0,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,4.5660044591654785,-2.3974724356139036e-05,0.0,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,4.752360485448303,-4.268440596118546e-05,0.0,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,4.772189037347482,-5.939528127779104e-05,0.0,0.0
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,4.773611425230465,-5.60587177701121e-05,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2026,0.0,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,0.0,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,0.0,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2029,69.56095572118163,-0.0010937984651917072,0.0062408447,0.055334695
-salary_sacrifice_cap,Salary sacrifice cap,2030,69.71068362451474,-0.001169231555909525,0.023200989,0.20438449
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,44.52680280225036,-6.497754291621596e-05,0.0,0.0
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,76.51742331665247,-0.0003063928749639,0.0,0.0
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,75.03008240726727,-0.0002239883781094,0.0,0.0
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,74.62343557623954,-0.0002164954583197,0.0,0.0
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,74.38762058307822,-0.0002049470379852,0.0,0.0
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,74.35730456692073,-0.0002030879874716,0.0,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,0.0,0.0,0.0,0.0
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,14.276842249444572,-0.000747212851356,-0.12442684,-1.0606846
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,14.33136939394447,-0.0007608744961711,-0.059324265,-0.5032745
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,14.261786655007114,-0.0007297871923636,-0.059309006,-0.5004058
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,14.212459649272388,-0.0007361124759091,-0.10179806,-0.832683
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,14.1615050186441,-0.0007316949265003,-0.098342896,-0.8093796
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,0.0,0.0,0.0,0.0
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,3.9217543495505014,-0.0014454432377202,-0.22065258,-1.880967
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,3.9583540029116473,-0.0014683315792286,-0.21570778,-1.8299466
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,3.9929288515690544,-0.0014934559712442,-0.12418747,-1.0478026
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,4.105475444140301,-0.0015440492557245,-0.14490795,-1.1853113
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,4.27576305027183,-0.0015837760522376,-0.13886929,-1.142919
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,0.0,0.0,0.0,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,0.007298230251821,-7.940993828822479e-06,0.0,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,0.0072988420067365,-7.709583585306731e-06,0.0,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,0.0167587845334184,-1.099946841534472e-06,0.0,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,0.0116946416488251,5.803592456534576e-06,0.0,0.0
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,0.0116946466787488,5.727463976528969e-06,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,0.0,0.0,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,1.382377810643766,-0.0003305835184357,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,1.4074596719782129,-0.0003292938747653,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,1.422844273272584,-0.0003294820550379,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,1.4474488986775438,-0.0003274316563298,0.0,0.0
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,1.4527958020320828,-0.0003207357533668,0.0,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,0.0,0.0,0.0,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,0.0,0.0,0.0,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,2.0279907373320363,2.700235442700852e-05,0.000118255615,0.0010032158
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,2.126909523211043,2.2267883498008414e-05,0.000118255615,0.0009977539
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,2.393892139106903,2.8607189733808403e-05,0.0,0.0
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,2.3222993723907006,3.2660527096588804e-05,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,0.0,0.0,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,0.0,0.0,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,0.0,0.0,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,0.0,0.0,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,0.0,0.0,0.0,0.0
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,88.53146102487318,1.1711431842296106e-05,0.062360764,0.5132402
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,25.63504213357875,-0.0008433929829523,-0.029089928,-0.25298563
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,0.0,0.0,0.0,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,0.0,0.0,0.0,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,0.0,0.0,0.0,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,0.0,0.0,0.0,0.0
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,0.0,0.0,0.0,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,0.0,0.0,0.0,0.0
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,2.38496254478006,-0.0002117900470872,-0.049383163,-0.4209699
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,2.3328250613916928,-0.0002077722086846,-0.03827572,-0.3247102
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,2.2575981243447725,-0.0002048437016756,-0.037973404,-0.32039168
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,2.25540185664284,-0.0001998906854327,-0.0038251877,-0.031289093
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,2.2180512710729348,-0.0001939638990803,-0.03107357,-0.25574103
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,0.0,0.0,0.0,0.0
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3.620382112026846,-0.0001609531538759,-0.018166542,-0.15486184
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3.885355806401413,-0.0002227393579163,-0.027578354,-0.23395965
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4.477127423980931,-0.0003038624626273,-0.03528309,-0.29769278
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4.968099284658541,-0.0003903561534315,-0.043437004,-0.355304
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5.0141713610214165,-0.0004110272893561,-0.040765762,-0.33550948
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,73.19126124508082,-0.0001837865904616,0.0,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,55.624501503764975,-8.90821533738103e-05,0.0,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,0.0,0.0,0.0,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,0.0,0.0,0.0,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,0.0,0.0,0.0,0.0
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,0.0,0.0,0.0,0.0
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,0.0,0.0,0.0,0.0
+mock4_combined,MOCK: drill 4 package,2026,85.21158095830387,-0.0010919157504331,-0.029089928,-0.25298563
+mock4_combined,MOCK: drill 4 package,2027,84.57540773480619,-0.0032777439661343,-0.41675282,-3.5526361
+mock4_combined,MOCK: drill 4 package,2028,82.50283865376429,-0.0031707237116339,-0.3606701,-3.0597274
+mock4_combined,MOCK: drill 4 package,2029,82.29421033241302,-0.0032421293918669,-0.27419186,-2.3134296
+mock4_combined,MOCK: drill 4 package,2030,82.2663831813873,-0.0033539428590454,-0.29491043,-2.4122949
+mock4_combined,MOCK: drill 4 package,2031,95.70238351707528,-0.0034613604749069,-0.24154186,-1.9879327
