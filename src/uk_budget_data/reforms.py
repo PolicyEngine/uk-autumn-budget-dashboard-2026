@@ -739,6 +739,14 @@ MOCK4_WEEKS_PER_YEAR = 52
 # State Pension Top-up Allowance: withdrawn pound for pound above the full
 # new State Pension (weekly x 52) plus £1,000.
 MOCK4_SPTA_WITHDRAWAL_MARGIN = 1_000.0
+MOCK4_ANNEX_A_NEW_STATE_PENSION_WEEKLY = {
+    2026: 241.30,
+    2027: 251.20,
+    2028: 259.75,
+    2029: 268.05,
+    2030: 276.35,
+    2031: 284.65,
+}
 
 
 def _mock4_cb_early_years_addition_modifier(sim: Simulation) -> Simulation:
@@ -797,17 +805,16 @@ def _mock4_state_pension_topup_allowance_modifier(
     so the ESA permitted-work and property-finance-costs rules that read it
     do not change. ``personal_allowance`` is the person's tapered allowance.
     """
-    params = sim.tax_benefit_system.parameters
     for year in MOCK4_YEARS:
-        nsp_weekly = params(
-            str(year)
-        ).gov.dwp.state_pension.new_state_pension.amount
+        # Annex A full new State Pension (rebased at G3), not the engine's.
+        nsp_weekly = MOCK4_ANNEX_A_NEW_STATE_PENSION_WEEKLY[year]
         threshold = nsp_weekly * 52 + MOCK4_SPTA_WITHDRAWAL_MARGIN
         sp = np.array(sim.calculate("state_pension", year))
         pa = np.array(sim.calculate("personal_allowance", year))
         ani = np.array(sim.calculate("adjusted_net_income", year))
         allowances = np.array(sim.calculate("allowances", year))
-        full = np.maximum(0.0, sp - pa)
+        # Rounded up to the next £10 (costing note 3).
+        full = np.ceil(np.maximum(0.0, sp - pa) / 10) * 10
         withdrawal = np.maximum(0.0, ani - threshold)
         topup = np.where(sp > 0, np.maximum(0.0, full - withdrawal), 0.0)
         sim.set_input("allowances", year, allowances + topup)
@@ -934,7 +941,10 @@ def _mock4_employer_ni_under23_modifier(sim: Simulation) -> Simulation:
             np.minimum(earnings, MOCK4_EMPLOYER_NI_UNDER23_EARNINGS_CAP)
             - threshold,
         )
-        under_23 = person("age", period) < MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT
+        age = person("age", period)
+        # Under-21s already have a zero rate (Annex A); the measure extends
+        # it to ages 21 and 22 only (costing note 12).
+        under_23 = (age >= 21) & (age < MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT)
         relief = np.where(under_23, class_1.rates.employer * relieved_band, 0)
         return np.maximum(current - relief, 0)
 
@@ -1180,31 +1190,64 @@ def _mock4_param(path: str, year: int):
     return system.parameters.get_child(path)(f"{year}-04-30")
 
 
-def _mock4_fuel_duty_rates() -> dict[str, float]:
-    """MOCK: 52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from
-    1 Oct 2027, then RPI uprating from April 2028 at the baseline's ratios."""
-    fy26 = (323 * 0.5295 + 42 * 0.5495) / 365  # 6 Apr 2026 to 5 Apr 2027
-    fy27 = (178 * 0.5495 + 188 * 0.5695) / 366  # 6 Apr 2027 to 5 Apr 2028
-    rates = {"2026": round(fy26, 6), "2027": round(fy27, 6)}
-    level = 0.5695
-    path = "gov.hmrc.fuel_duty.petrol_and_diesel"
-    for year in range(2028, 2032):
-        level *= _mock4_param(path, year) / _mock4_param(path, year - 1)
-        rates[str(year)] = round(level, 6)
-    return rates
+def _mock4_fiscal_year_means(
+    schedule: list[tuple[str, float]],
+) -> dict[str, float]:
+    """Day-weighted mean rate for each model year (6 April to 5 April)."""
+    from datetime import date
+
+    steps = [(date.fromisoformat(d), v) for d, v in schedule]
+    means = {}
+    for year in MOCK4_ALL_YEARS:
+        start, end = date(year, 4, 6), date(year + 1, 4, 6)
+        total = 0.0
+        for k, (d, v) in enumerate(steps):
+            nxt = steps[k + 1][0] if k + 1 < len(steps) else end
+            lo, hi = max(d, start), min(nxt, end)
+            if hi > lo:
+                total += (hi - lo).days * v
+        means[str(year)] = round(total / (end - start).days, 6)
+    return means
+
+
+# Annex A pre-measures fuel duty path, and the costing note 5 post-measure path.
+MOCK4_FUEL_DUTY_BASELINE = [
+    ("2026-03-23", 0.5295),
+    ("2027-01-01", 0.5595),
+    ("2027-03-01", 0.5795),
+    ("2027-04-01", 0.5980),
+    ("2028-04-01", 0.6159),
+    ("2029-04-01", 0.6338),
+    ("2030-04-01", 0.6515),
+    ("2031-04-01", 0.6697),
+]
+MOCK4_FUEL_DUTY_REFORM = [
+    ("2026-03-23", 0.5295),
+    ("2027-02-23", 0.5495),
+    ("2027-10-01", 0.5695),
+    ("2028-04-01", 0.5866),
+    ("2029-04-01", 0.6036),
+    ("2030-04-01", 0.6205),
+    ("2031-04-01", 0.6379),
+]
 
 
 def _create_mock4_fuel_duty() -> Reform:
+    path = "gov.hmrc.fuel_duty.petrol_and_diesel"
     return Reform(
         id="mock4_fuel_duty",
         name="MOCK: fuel duty rises cancelled and restaged",
         description=(
             "MOCK drill 4. Fuel duty stays at 52.95p to 22 February 2027, "
-            "54.95p from 23 February 2027, 56.95p from 1 October 2027, RPI "
-            "from April 2028. Duty only, excluding VAT."
+            "54.95p from 23 February 2027, 56.95p from 1 October 2027, then "
+            "the costing's RPI path from April 2028, against the Annex A "
+            "baseline. Duty only, excluding VAT."
         ),
+        baseline_parameter_changes={
+            path: _mock4_fiscal_year_means(MOCK4_FUEL_DUTY_BASELINE)
+        },
         parameter_changes={
-            "gov.hmrc.fuel_duty.petrol_and_diesel": _mock4_fuel_duty_rates()
+            path: _mock4_fiscal_year_means(MOCK4_FUEL_DUTY_REFORM)
         },
     )
 
@@ -1284,21 +1327,38 @@ def _create_mock4_savings_starting_band() -> Reform:
 
 
 def _create_mock4_threshold_freeze_2032() -> Reform:
-    paths = [
-        "gov.hmrc.income_tax.allowances.personal_allowance.amount",
-        "gov.hmrc.income_tax.rates.uk[1].threshold",
-        "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold",
-        "gov.hmrc.national_insurance.class_1.thresholds.upper_earnings_limit",
-    ]
+    """Costing note 1: PA, basic rate limit, PT, UEL, ST and the Class 4
+    limits held for 2031-32, against Annex A's CPI-indexed 2031-32 values."""
+    ni = "gov.hmrc.national_insurance"
+    held = {
+        "gov.hmrc.income_tax.allowances.personal_allowance.amount": (
+            12_570,
+            12_850,
+        ),
+        "gov.hmrc.income_tax.rates.uk[1].threshold": (37_700, 38_600),
+        f"{ni}.class_1.thresholds.primary_threshold": (241.73, 12_850 / 52),
+        f"{ni}.class_1.thresholds.upper_earnings_limit": (966.73, 51_450 / 52),
+        f"{ni}.class_1.thresholds.secondary_threshold": (
+            5_000 / 52,
+            5_110 / 52,
+        ),
+        f"{ni}.class_4.thresholds.lower_profits_limit": (12_570, 12_850),
+        f"{ni}.class_4.thresholds.upper_profits_limit": (50_270, 51_450),
+    }
     return Reform(
         id="mock4_threshold_freeze_2032",
         name="MOCK: thresholds frozen to April 2032",
         description=(
-            "MOCK drill 4. PA, higher rate threshold and main NI thresholds (primary threshold and UEL) "
-            "held at 2030-31 levels for 2031-32."
+            "MOCK drill 4. Personal Allowance, basic rate limit, NI primary "
+            "and secondary thresholds, UEL and Class 4 limits held at "
+            "2030-31 levels for 2031-32 (Annex A baseline indexes them)."
         ),
+        baseline_parameter_changes={
+            path: {"2031": round(base, 6)} for path, (_, base) in held.items()
+        },
         parameter_changes={
-            path: {"2031": _mock4_param(path, 2030)} for path in paths
+            path: {"2031": round(frozen, 6)}
+            for path, (frozen, _) in held.items()
         },
     )
 
@@ -1326,8 +1386,15 @@ def _create_mock4_combined() -> Reform:
     Refuses a stack (two measures setting the same parameter path)."""
     measures = _get_mock4_reforms()
     params: dict = {}
+    baseline: dict = {}
     modifiers = []
     for measure in measures:
+        for path, values in (measure.baseline_parameter_changes or {}).items():
+            if path in baseline:
+                raise ValueError(
+                    f"mock4_combined: baseline {path} is set twice"
+                )
+            baseline[path] = values
         for path, values in (measure.parameter_changes or {}).items():
             if path in params:
                 raise ValueError(f"mock4_combined: {path} is set twice")
@@ -1344,6 +1411,7 @@ def _create_mock4_combined() -> Reform:
         id="mock4_combined",
         name="MOCK: drill 4 package",
         description="MOCK drill 4. All coded measures together.",
+        baseline_parameter_changes=baseline or None,
         parameter_changes=params,
         simulation_modifier=combined_modifier if modifiers else None,
     )

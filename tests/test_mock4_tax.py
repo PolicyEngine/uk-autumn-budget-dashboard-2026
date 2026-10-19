@@ -169,13 +169,24 @@ def test_employer_ni_no_relief_at_23():
 
 
 def test_employer_ni_below_cap_fully_relieved():
-    # Age 20 on £18,000: baseline 0.15 x 13,000 = £1,950, all relieved.
+    # Age 22 on £18,000: baseline 0.15 x 13,000 = £1,950, all relieved.
+    # (Under-21s are outside the measure: they already have a zero rate.)
     baseline, reformed = _pair(
-        "mock4_employer_ni_under23", _household(20, 18_000)
+        "mock4_employer_ni_under23", _household(22, 18_000)
     )
     assert float(baseline.calculate("ni_employer", 2028).sum()) == (
         pytest.approx(1_950, abs=0.01)
     )
     assert float(reformed.calculate("ni_employer", 2028).sum()) == (
         pytest.approx(0, abs=0.01)
+    )
+
+
+def test_employer_ni_under_21_not_in_measure():
+    # Costing note 12: the measure extends the under-21 zero rate to 21-22.
+    baseline, reformed = _pair(
+        "mock4_employer_ni_under23", _household(20, 18_000)
+    )
+    assert float(reformed.calculate("ni_employer", 2028).sum()) == (
+        pytest.approx(float(baseline.calculate("ni_employer", 2028).sum()))
     )
