@@ -3779,6 +3779,90 @@ def test_state_an_original_holds_edited_during_the_run_shows(restore):
     assert keys(touched) == ["non_residential_purchases"]
 
 
+EDITING_CHANNEL = "high_value_council_tax_surcharge"
+
+
+def state_edited_by_a_changed_variable(edit, ask=False, restore=False):
+    """Non-residential purchases priced by a measure-code formula reading a
+    rate held in a dict, the same on both sides, so unchanged. If
+    ``edit``, another variable's changed formula raises that rate while
+    the simulations run; if ``ask``, it then asks for the purchase price
+    and adds it; if ``restore``, it puts the rate back afterwards."""
+
+    def modifier(sim):
+        rates = {"rate": 0.01}
+
+        def priced(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * rates["rate"]
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, priced)
+        if edit:
+            native = sim.tax_benefit_system.get_variable(EDITING_CHANNEL)
+
+            def formula(household, period, parameters):
+                current = _call_formula(native, household, period, parameters)
+                rates["rate"] = 0.02
+                if ask:
+                    current = current + household(NON_RESIDENTIAL_SDLT, period)
+                if restore:
+                    rates["rate"] = 0.01
+                return current
+
+            _replace_formula(sim, EDITING_CHANNEL, formula)
+        return sim
+
+    return modifier
+
+
+def test_an_unchanged_variable_asked_for_after_its_state_is_edited_shows():
+    """A changed formula raised the rate an unchanged variable reads, asked
+    for the variable, and put the rate back: the variable's reads are its
+    own, so only the change to its state shows it. An unchanged
+    measure-code variable asked for inside a changed calculation is
+    fingerprinted afresh (put back, nothing differs after the run)."""
+    with pytest.warns(
+        data_limits.UnwatchedFormulaWarning,
+        match="changed while the simulations ran",
+    ):
+        touched = limits_touched(
+            simulation(modifier=state_edited_by_a_changed_variable(False)),
+            simulation(
+                modifier=state_edited_by_a_changed_variable(
+                    True, ask=True, restore=True
+                )
+            ),
+        )
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+
+
+def test_an_unchanged_variable_whose_state_a_run_edited_shows():
+    """A changed formula raised the rate an unchanged variable reads, and
+    the run calculated that variable afterwards, outside the changed
+    calculation: its figure moved with nothing changed at the start.
+    After the run, every unchanged measure-code variable is compared
+    again on both sides."""
+    baseline = simulation(modifier=state_edited_by_a_changed_variable(False))
+    reformed = simulation(modifier=state_edited_by_a_changed_variable(True))
+    with data_limits.observing(baseline, reformed) as observed:
+        for sim in (baseline, reformed):
+            sim.calculate(EDITING_CHANNEL, 2027)
+            sim.calculate(NON_RESIDENTIAL_SDLT, 2027)
+    assert list(observed.drifted) == [NON_RESIDENTIAL_SDLT]
+    with pytest.warns(
+        data_limits.UnwatchedFormulaWarning,
+        match="changed while the simulations ran",
+    ):
+        touched = limits_touched(baseline, reformed, observed)
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+
+
 def priced_by_a_held_branch_parameter(rate, held):
     """Non-residential purchases priced by a cloned branch's stored scale,
     or its parent node, held by the formula."""
