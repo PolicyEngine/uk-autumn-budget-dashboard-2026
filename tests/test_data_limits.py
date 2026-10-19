@@ -2710,10 +2710,28 @@ def test_a_library_enum_member_compares_by_name_and_value():
 
 
 def engine_methods():
+    """Every engine method a watch replaces, as its class holds it (None
+    for one the class inherits)."""
+    from policyengine_core.holders.holder import Holder
+    from policyengine_core.parameters.at_instant_like import AtInstantLike
+    from policyengine_core.parameters.parameter_node_at_instant import (
+        ParameterNodeAtInstant,
+    )
     from policyengine_core.populations.population import Population
     from policyengine_core.simulations.simulation import Simulation
 
-    return Simulation.__dict__["calculate"], Population.__dict__["get_holder"]
+    return tuple(
+        kind.__dict__.get(name)
+        for kind, name in (
+            (Simulation, "calculate"),
+            (Population, "get_holder"),
+            (Holder, "get_array"),
+            (AtInstantLike, "get_at_instant"),
+            (AtInstantLike, "__getattribute__"),
+            (ParameterNodeAtInstant, "__getattribute__"),
+            (ParameterNodeAtInstant, "__getitem__"),
+        )
+    )
 
 
 def test_the_watch_leaves_the_engine_as_it_found_it():
@@ -2725,7 +2743,8 @@ def test_the_watch_leaves_the_engine_as_it_found_it():
     assert [sys.monitoring.get_tool(i) for i in range(6)] == tools
     with pytest.raises(RuntimeError):
         with data_limits.observing(simulation(), reformed):
-            assert engine_methods() != before
+            during = engine_methods()
+            assert all(now is not then for now, then in zip(during, before))
             raise RuntimeError
     assert engine_methods() == before
     assert [sys.monitoring.get_tool(i) for i in range(6)] == tools
