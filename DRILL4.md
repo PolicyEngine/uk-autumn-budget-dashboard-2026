@@ -270,7 +270,7 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 | G2 first numbers (gated path; hosted API time) | 13:34 (late; target 13:15). Code SHA `10552f7` pushed 13:07 | data `5633c5f`: 12 mock4 measures + `mock4_combined`, 2026–2031, flat CSVs (wave 1 generated on `21de64f`, wave 2 on `10552f7`; same definitions). `publish stage` not reachable on Microcosm (receipt refused; G4 (a)). Hand checks: pytest 107 passed, 1 skipped. Hosted API `uk-budget-api-2026` (main `5324080`, policyengine 6.6.0): healthy; family case cold 85.4 s, warm 82.7 s, matches local 6.7.6 to the penny; serves no mock4 measure (D1). Preview: https://uk-autumn-budget-2026-drill-git-drill4-moc-2e3f4b-policy-engine.vercel.app |
 | Documents released | 13:41 (arrived in `e348634`); pulled 13:41 | `e348634`. SHA-256 prefixes: household-scoring 491395e8, ledger 4fb0cb3d, national-scoring c8b4d3dc, obr-economy c22347f6, costings f4de78c0, decisions 4965f78d, specimens 6741a5c8 |
 | G3 rebased; national sheet | | |
-| Inject released | | |
+| Inject released | 14:21 (arrived in `3be5f61`); opened 14:21 | `3be5f61`; SHA-256 d6ba4868d4a914c43506f8381ddf50638d2a73367a8ef848cd04736a783cd633. Applied in `2088500` (14:22): SPTA threshold +£1,200; fuel duty 54.95p from 9 March 2027 |
 | G5 re-run | | |
 | G4 staged on preview | | |
 | Stop | | |
