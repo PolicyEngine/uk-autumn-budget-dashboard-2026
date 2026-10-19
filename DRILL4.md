@@ -2,6 +2,8 @@
 
 MOCK DATA. This is a rehearsal only; nothing here is a real Budget. Do not merge.
 
+**Running the drill as an agent?** Start with [DRILL4-AGENT-BRIEF.md](DRILL4-AGENT-BRIEF.md).
+
 The real Budget is on **Wednesday 28 October 2026** (Chancellor John Healey, PM Andy Burnham). Drill 4 is the last drill before it. Earlier drills: [#4](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/4) / [#6](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/6), [#7](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/7) / [#8](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/8), [#9](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/9) / [#10](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/10).
 
 ## Purpose
@@ -21,7 +23,7 @@ Each question has a measurement inside the drill and an answer due at the debrie
 |---|---|---|---|
 | Q1 | **Do Budget-day reform changes go in this dashboard repo, or in policyengine-uk?** | At G1, every coded line is given a **route**: `dashboard-param`, `dashboard-structural`, `pe-uk-param`, `pe-uk-variable`, `data`, `ledger` or `not-computable`. The clock table logs minutes-to-first-number and minutes-to-published for each route. At least one line needs a pe-uk variable that **was pre-built upstream between Friday and Monday**, and at least one needs a variable **nobody anticipated**, so the fallback path is timed | route table in the clock; debrief |
 | Q2 | **Do new reforms need data work, modelling work or parameter work?** | The key gives each line a **cause class** for any gap: `parameter`, `formula`, `data_missing_input`, `data_calibration`, `behavioural`, `basis` or `not_in_scope`. At least one line is blocked by a **missing input variable** in Microcosm, not by a missing formula | national sheet; debrief |
-| Q3 | **Are we on the latest engine, and should we move?** | G0 records the engine (policyengine 6.6.0 → policyengine-uk 2.130.1; 6.6.0 bumped the bundle on 16 October without changing the model or data pair), the forced Microcosm file and what newer policyengine-uk releases exist (2.134.3 on PyPI, which 6.6.0 cannot pair with). The Friday preflight tests an upgrade and writes the **freeze decision** | G0; debrief |
+| Q3 | **Are we on the latest engine, and should we move?** | G0 records the engine (policyengine **6.7.6**, the latest, adopted on this branch on 19 October → policyengine-uk 2.130.1, the same pair as 6.5.0 and 6.6.0), the forced Microcosm files and what newer policyengine-uk releases exist (2.137.0 on PyPI, which 6.7.6 cannot pair with). The Friday preflight tests an upgrade and writes the **freeze decision** | G0; debrief |
 
 ### The working answer to Q1 (to be confirmed or overturned by the drill)
 
@@ -91,7 +93,7 @@ Each row needs evidence before Monday. A blank row blocks G0.
 | P0b | A route from last Budget's registry to an empty one. `main`'s `reforms.py` still registers the November 2025 measures, and `main`'s CLI has only `generate` and `lifetime`, with no `reset` (the reset is on the drill 3 branch). Either port `reset` and the empty-state validator, or decide how PR #3 lands (#14 Q4). The same step is needed on 28 October | Without it, the Monday 10:00 window starts with an unplanned refactor |
 | P1 | Fresh `uv sync` on this branch; record `policyengine`, `policyengine-uk` and `policyengine-core` | Q3 baseline |
 | P1b | Download the Microcosm national file (see the dataset section) and run `scripts/drill4_generate.sh --list-reforms` with `DRILL4_DATASET` set. It must print `dataset OK`. Run one baseline-only generate and record the time | The drill is forced onto Microcosm |
-| P2 | Upgrade trial: does a newer policyengine-uk (2.134.3) install alongside 6.6.0? Record what the bundle gate says and what a baseline diff shows. Do not merge the trial | Q3; the freeze decision |
+| P2 | Upgrade trial: does a newer policyengine-uk (2.137.0) install alongside 6.7.6? Record what the bundle gate says and what a baseline diff shows. Do not merge the trial | Q3; the freeze decision |
 | P3 | Dated reforms on `main`: a one-date and a two-date fuel duty change through `Scenario(parameter_changes=…)` on 2.130.1 (day-weighted since policyengine-uk #2305). Check the fiscal-year totals by hand | Fuel duty is the most probable household measure |
 | P4 | Receipting a structural reform: register one throwaway `simulation_modifier` measure and run `publish stage`. Does it receipt or get refused? | Q1: whether `dashboard-structural` can publish at all |
 | P5 | Git-installed policyengine-uk: can a branch install replace the 2.130.1 wheel without breaking `managed_microsimulation`, and what does the publication gate say? | Q1 fallback |
@@ -122,6 +124,11 @@ Every **population** run in drill 4 (national, distributional and regional figur
 - **Publish gate.** Microcosm runs **cannot be receipted, so they cannot be staged either**. Tested on 18 October: `generate --artifacts` on `04a496f2` under policyengine 6.6.0 refuses every measure with "The uk bundle cannot resolve dataset 'microcosm_uk_2024_25'". policyengine's receipt code accepts only datasets in the certified bundle. The run also exits 0 after refusing, so the clock must read the `REFUSED` line, not the exit code. G4 (a) therefore records this refusal per coded line, and the figures reach the page through G4 (b).
 
 **Dry run, 18 October (non-mock measure, `fuel_duty_freeze`, 2026):** the guard printed `dataset OK` for `04a496f2`; the plain `generate` ran in 36 s under policyengine 6.6.0 / UK 2.130.1 and wrote all six flat CSVs (−£0.96bn against the November 2025 OBR −£2.4bn; the gap is not investigated); `generate --artifacts` refused, as above. This is the G0 hash line and the P1b receipt.
+
+**Constituencies and regions (P9, tested 19 October on 6.7.6):**
+
+- **Seats run on Microcosm's local build:** `staged/uk-local-candidate-f100-s42-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_local.h5` (SHA-256 `8e10e130d0260e0b52e2e29902f0502ebdff76a14a3e57d2c876bf4cd8db5872`; staged, not released; no local build has been released yet). `geography --dataset-kind microcosm --levels constituency` wrote all 650 seats for a non-mock measure in about 3 minutes, through the #48 disclosure path.
+- **Regions:** the tool publishes regions only from the national dataset and refuses the national Microcosm file (it lacks the eFRS copy flag `household_is_cgt_band_donor`). Regions therefore run on the certified eFRS (tested: all 12 regions). This is the one recorded exception to Microcosm-only, and it is how 28 October will work too unless Microcosm gains that flag.
 
 **The open question for 28 October:** if the real Budget also runs on Microcosm, the gate needs one of two things. Either a policyengine bundle that certifies Microcosm before the day, or an agreed, recorded exception.
 
