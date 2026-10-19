@@ -70,12 +70,14 @@ def test_cb_eya_child_aged_0(year):
     from 2027, nothing in 2026."""
     base, reform = _pair(_family(0, year), "mock4_cb_early_years_addition")
     expected = 520.0 if year >= 2027 else 0.0
-    d_cb = reform.calculate("child_benefit", year)[0] - base.calculate(
-        "child_benefit", year
-    )[0]
-    d_net = reform.calculate("household_net_income", year)[0] - base.calculate(
-        "household_net_income", year
-    )[0]
+    d_cb = (
+        reform.calculate("child_benefit", year)[0]
+        - base.calculate("child_benefit", year)[0]
+    )
+    d_net = (
+        reform.calculate("household_net_income", year)[0]
+        - base.calculate("household_net_income", year)[0]
+    )
     assert d_cb == pytest.approx(expected, abs=0.01)
     assert d_net == pytest.approx(expected, abs=0.01)
 
@@ -94,9 +96,10 @@ def test_cb_eya_subject_to_hicbc():
         _family(0, 2027, employment_income=70_000),
         "mock4_cb_early_years_addition",
     )
-    d_net = reform.calculate("household_net_income", 2027)[0] - base.calculate(
-        "household_net_income", 2027
-    )[0]
+    d_net = (
+        reform.calculate("household_net_income", 2027)[0]
+        - base.calculate("household_net_income", 2027)[0]
+    )
     assert d_net == pytest.approx(260.0, abs=1.0)
 
 
@@ -130,7 +133,9 @@ def test_spta_withdrawn_pound_for_pound():
     base, reform = _pair(
         _pensioner(2027, 13_000, 1_300), "mock4_state_pension_topup_allowance"
     )
-    assert base.calculate("income_tax", 2027)[0] == pytest.approx(346.0, abs=0.01)
+    assert base.calculate("income_tax", 2027)[0] == pytest.approx(
+        346.0, abs=0.01
+    )
     assert reform.calculate("income_tax", 2027)[0] == pytest.approx(
         312.61, abs=0.02
     )

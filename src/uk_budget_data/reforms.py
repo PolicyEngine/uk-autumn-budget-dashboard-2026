@@ -759,9 +759,7 @@ def _mock4_cb_early_years_addition_modifier(sim: Simulation) -> Simulation:
         age = np.array(sim.calculate("age", year))
         is_child = np.array(sim.calculate("is_child", year))
         under_one = ((age < 1) & is_child).astype(float)
-        n_under_one = np.array(
-            sim.map_result(under_one, "person", "benunit")
-        )
+        n_under_one = np.array(sim.map_result(under_one, "person", "benunit"))
         addition = np.where(cb > 0, n_under_one * annual, 0.0)
         sim.set_input("child_benefit", year, cb + addition)
     return sim
@@ -801,7 +799,9 @@ def _mock4_state_pension_topup_allowance_modifier(
     """
     params = sim.tax_benefit_system.parameters
     for year in MOCK4_YEARS:
-        nsp_weekly = params(str(year)).gov.dwp.state_pension.new_state_pension.amount
+        nsp_weekly = params(
+            str(year)
+        ).gov.dwp.state_pension.new_state_pension.amount
         threshold = nsp_weekly * 52 + MOCK4_SPTA_WITHDRAWAL_MARGIN
         sp = np.array(sim.calculate("state_pension", year))
         pa = np.array(sim.calculate("personal_allowance", year))
