@@ -11,7 +11,7 @@ The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by
 | 1 | **Who presses merge on the day, and who reviews reconciliation exceptions?** | Vahid integrates and merges; María reviews exceptions and approves. Nobody approves their own exception. |
 | 2 | **When does `generate` switch from the flat CSVs to the gated path** (one write-once artifact per measure, published through the manifest)? | After a rehearsal on the deployed routes shows the page reading the manifest. Until then `--artifacts` is opt-in and the flat CSVs stay the default. |
 | 3 | **Should `main` require checks before a merge?** **Settled 15 October** (d1538): the ruleset "Protect main" requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint. | Still open: whether to add Publication gate to the required checks. |
-| 4 | **How does #3 land, and with it the Personal impact tab?** W5 will not rebase, rewrite or supersede #3 or the drill branches (#4, #7, #9), and builds so they keep working. | Tell us when you expect to merge #3. The page wiring in #20 follows it, and #3's household route replaces the lifecycle calculator (see "The household API" below). |
+| 4 | **How does #3 land, and with it the Personal impact tab?** W5 will not rebase, rewrite or supersede #3 or the drill branches (#4, #7, #9, #52), and builds so they keep working. | Tell us when you expect to merge #3. The page wiring in #20 follows it, and #3's household route replaces the lifecycle calculator (see "The household API" below). |
 | 5 | **When is the rehearsal?** | A full run on the deployed routes by Friday 23 October: intake, dashboard and briefing, including one model upgrade and regeneration, and again after any material change. |
 | 6 | **Where do Budget-day `simulation_modifier` functions live?** A receipt binds a modifier only from a module holding nothing but imports, literal constants and undecorated functions (policyengine.py#571). `reforms.py` keeps caches it fills at run time, so a modifier defined there cannot be receipted: on `main` today, `rail_fares_freeze`, `freeze_student_loan_thresholds` and `dividend_tax_increase_2pp` (through its baseline modifier) are refused. Measures made only of parameter changes still bind. | A new `src/uk_budget_data/budget_measures.py` of that shape holds every modifier, and `reforms.py` imports them. We can make that move in a PR after #3 lands, or you can make it in #3. |
 
@@ -24,7 +24,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 | Work | Where | State |
 |---|---|---|
 | CI fails rather than skips, and runs on every PR base | #12 | **Merged** 12 October |
-| Certified bundles, each adopted with its model and data together | #13 (6.2.6), #25 (6.3.3), #35 (6.4.1), #50 (6.5.0), #56 (6.6.0) | **Merged** 12 to 16 October. `main` runs policyengine 6.6.0 (policyengine-uk 2.130.1, uk-data 1.58.1). #18's workflow has since opened drafts #57 (6.7.0), #58 (6.7.3) and #61 (6.8.0); merging one stays your call (decision 8) |
+| Certified bundles, each adopted with its model and data together | #13 (6.2.6), #25 (6.3.3), #35 (6.4.1), #50 (6.5.0), #56 (6.6.0) | **Merged** 12 to 16 October. `main` runs policyengine 6.6.0 (policyengine-uk 2.130.1, uk-data 1.58.1). #18's workflow has since opened drafts #57 (6.7.0), #58 (6.7.3) and #61 (6.8.0); merging one stays your call |
 | Household route checker and `/api/version` | #15 | **Merged** 13 October |
 | Household API deploy: a new revision takes no traffic until a smoke test passes | #21 | **Merged** 13 October |
 | Household API deploys and rollbacks from GitHub Actions (Workload Identity Federation), so Budget day needs no laptop login | #28 | **Merged** 15 October. Grants made 15 October (d1538): a custom role `ukBudgetApiBuilds` (`cloudbuild.builds.create`, `.get`, `.list` and `storage.buckets.list`) in place of `cloudbuild.builds.editor`. The first three runs failed at "Submit the build" without `storage.buckets.list`: gcloud lists the project's buckets to check that the default staging bucket is its own. #28's description lists every grant. A deploy and a rollback were rehearsed through it on 15 October (runbook) |
@@ -34,14 +34,16 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 | Read a household API revision's memory from a workflow, read-only | #54 | **Merged** 16 October |
 | Treasury Table 4.1 import with a printed-totals check | #16, #27, #31 | **Merged** 13 to 15 October |
 | Reconciliation and responsiveness gates | #17, #34 | **Merged** 15 October; the thresholds are proposals |
-| A draft upgrade PR on each qualified policyengine release, never merged automatically; merging an upgrade on the day stays Vahid and María's call (decision 8) | #18 | **Merged** 15 October (opens draft PRs only) |
+| A draft upgrade PR on each qualified policyengine release, never merged automatically; merging an upgrade on the day stays Vahid and María's call | #18 | **Merged** 15 October (opens draft PRs only) |
 | Receipted, write-once artifacts, the manifest, the `publish` commands and combined runs, all opt-in | #19 | **Merged** 15 October |
+| W4's receipt code vendored from policyengine.py; later replaced by policyengine's released receipt APIs | #38, #50 | **Merged** 15 and 16 October |
 | The page shows only published figures: unavailable instead of zero, combined statistics only from the combined run, no hardcoded 2026 | #20 | **Merged** 15 October: modules, components and tests. Wiring into the page follows #3 |
 | Briefing exports from an approved manifest only; hardcoded figures removed | #22 | Draft, waiting for your review |
 | Drill fixes as tested measure templates and regressions, no mock measures; UC health measures built on the rebalancing amounts | #23, #47 | **Merged** 15 October |
 | Last year's chart pages no longer served | #26 | **Merged** 15 October |
-| Every public file checked for disclosure; the household scatter withdrawn from public paths | #30 | **Merged** 15 October (UK-24) |
-| Results by region and constituency, through the disclosure layer | #48 | **Merged** 16 October (UK-24) |
+| Every public file checked for disclosure; the household scatter withdrawn from public paths | #30 | **Merged** 15 October (María, UK-24) |
+| Results by region and constituency, through the disclosure layer | #48 | **Merged** 16 October (María, UK-24) |
+| Results by area on the Microcosm data pair | #59 | Draft, opened 19 October (María) |
 | Measures the certified data cannot cost (the SDLT higher rates, non-residential purchases) published as not computable, never as £0 | #51 | Draft, in independent review. To merge on the gates before the rehearsal |
 | Production Vercel project | Created 12 October | Deploys `main` at every merge (below) |
 | `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
@@ -123,6 +125,7 @@ public/data/
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
+  - `staged`: recorded in the manifest, not shown;
   - `approved`;
   - `provisional`: statement figures only, labelled on the page;
   - `stale`: set automatically, for example when a member of a combined run changes;
@@ -160,7 +163,7 @@ The receipt binds a measure by what it is, so a measure has to be written in a f
 
 - **Prefer `parameter_changes`.** They are bound by content.
 - **A `simulation_modifier` must be a module-level function**, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. It is bound by its source and this repository's commit. Closures, lambdas, nested functions and `functools.partial` are refused, because the values they capture cannot be bound. The tested measure templates are helpers to call from such a function.
-- **Its module must have a fixed shape**: at module level only docstrings, imports, one-name literal assignments and undecorated functions, each name bound once, and nothing that changes module state at run time (no caches filled through `global`, no classes, decorators, computed assignments or calls at import). Anything else makes every modifier in the module unbindable, with the line named. `tests/template_measures.py` is a working example Anywhere in the module, these are refused too: `global` statements; `globals()`, `vars()`, `eval`, `exec`, `compile`, `__import__` and `id`; `is` other than against `None`, `True`, `False` or `...`; reading dunder attributes other than `__init__` and `__name__`; and annotations that call anything (question 6).
+- **Its module must have a fixed shape**: at module level only docstrings, imports, one-name literal assignments and undecorated functions, each name bound once, and nothing that changes module state at run time (no caches filled through `global`, no classes, decorators, computed assignments or calls at import). Anything else makes every modifier in the module unbindable, with the line named. `tests/template_measures.py` is a working example. Anywhere in the module, these are refused too: `global` statements; `globals()`, `vars()`, `eval`, `exec`, `compile`, `__import__` and `id`; `is` other than against `None`, `True`, `False` or `...`; reading dunder attributes other than `__init__` and `__name__`; and annotations that call anything (question 6).
 - **Infinite values bind.** `float("inf")` for "no cap" is digested as a marked non-finite value (policyengine.py#588), so `salary_sacrifice_cap` binds as written. NaN is still refused.
 - **A combined run** is bound as the ordered list of its members' identities. Before simulating, the dashboard checks that no two members set the same parameter differently, and that every value a member sets alone still holds in the combined scenario.
 
@@ -253,5 +256,5 @@ The runbook records the actual household URL and the production publishing trigg
 
 ## Follow-ups after Budget day
 
-- **Read period keys in the household calculator as the engine does.** On `main`, `personal_impact.create_simulation` applies a parameter change only where the key is the year itself; #3's `annual_reform_parameters` keeps a key for the year its first four characters name. The national run on policyengine-uk 2.126.12 also reads `"start.stop"` intervals. Until the household calculator applies changes through the engine's own route, measures keep to bare-year keys (the runbook's rule, checked in CI by #23), and the templates refuse intervals.
-- **Delete the vendored receipt code** (`publication/_vendor_w4`) once the dashboard pins a policyengine release containing policyengine.py #571, #579 and #588.
+- **Read period keys in #3's household calculator as the engine does.** `main`'s calculator has done so since #32 (15 October). #3's `annual_reform_parameters` keeps a key for the year its first four characters name, while the national run on policyengine-uk 2.126.12 also reads `"start.stop"` intervals. Until #3's calculator applies changes through the engine's own route, measures keep to bare-year keys (the runbook's rule, checked in CI by #23), and the templates refuse intervals.
+- (Done: the vendored receipt code was deleted when #50 moved to policyengine's released receipt APIs, 55aaa87.)

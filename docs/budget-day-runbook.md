@@ -8,7 +8,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
 | Role | Owns | Does not |
 |---|---|---|
-| **Integrator** (Vahid) | Every commit, generation, `publish stage`, the pull request that deploys | Approve his own reconciliation exceptions |
+| **Integrator** (Vahid) | Every commit, generation, `publish stage`, the pull request that deploys | Approve their own reconciliation exceptions |
 | **Reconciler, then scorer** (María) | Coverage ledger, Treasury entry, reconciliation, exception review, `publish approve`, household fixtures | Push measure code |
 | **Deploy and rollback** (Vahid, W5 on standby) | The merge that publishes; Vercel and Cloud Run rollback (the Cloud Run deploy and rollback through the GitHub Actions workflow, #28) | Deploy from a laptop except as a fallback |
 | **Briefing** (to be agreed) | Export from an approved manifest revision; the article | Use any number not in the manifest |
@@ -23,8 +23,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
   - Serving revision and image: record after the last deploy before the day. On 19 October it is `uk-budget-api-2026-00018-xuv` (git `5324080`; policyengine 6.6.0, policyengine-uk 2.130.1, core 3.33.0), deployed on 16 October.
-  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 177 s on `00018-xuv`. So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures (#33).
-  - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation once the grants in #28 are made (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call: `main`'s household route has passed the smoke test since 15 October).
+  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 177 s on `00018-xuv`. So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures.
+  - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation, with the grants made on 15 October (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call: `main`'s household route has passed the smoke test since 15 October).
   - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October. Run it from an up-to-date checkout of `main`, and submit **that checkout's** `cloudbuild.yaml`, never the archive's own. An older commit's copy lacks the one-deploy-at-a-time lock and the traffic check. To deploy an older commit, change `commit` and keep the config:
 
     ```sh
@@ -65,7 +65,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 - [ ] **Deploy and roll back once through the workflow (#28)**, after the grants in d1538: deploy `main`'s head, roll back to the previous revision, deploy again. Record the revisions here.
   - **15 October, deploy of `main` at 7c5e4fa** (run 38716544528, build fb42c4a6): every step up to the smoke test passed with the d1538 grants. The candidate `uk-budget-api-2026-00003-jic` (policyengine 6.4.1, policyengine-uk 2.130.1, core 3.33.0) took no traffic. The smoke test failed with `/api/personal-impact returned HTTP 504`: the full household request did not finish within Cloud Run's 300 s. Traffic was left as it was: `uk-budget-api-2026-00001-gow` at 100%. That is 12 October's revision (git f47099d, policyengine 6.2.6, policyengine-uk 2.125.1), and `/api/version` confirms it is live.
   - **15 October, deploy of `main` at 1ce4984** (#39 and #42; run 38732006985): the candidate `uk-budget-api-2026-00004-fur` passed the smoke test and took all traffic, about 6.5 minutes from submit to live. Before: `uk-budget-api-2026-00001-gow` at 100%. `/api/version` reports 1ce4984 with policyengine 6.4.1, policyengine-uk 2.130.1 and core 3.33.0.
-  - **The rollback target is `00004-fur`.** It is the only revision that passes `main`'s smoke test. A rollback runs that test against its target before moving traffic, and `00001-gow` (12 October's) doesn't answer within 300 s, so a rollback to it would be refused before traffic moves.
+  - **On 15 October the rollback target was `00004-fur`,** then the only revision that passed `main`'s smoke test. A rollback runs that test against its target before moving traffic, and `00001-gow` (12 October's) doesn't answer within 300 s, so a rollback to it would be refused before traffic moves. (The target now is below.)
   - **15 October, rollback rehearsal, through the workflow each time:**
 
     | Step | Run | What happened | Live afterwards |
@@ -127,6 +127,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - where the limitation sentence appears on the page (the methodology section, the measure's own entry, or both).
 
 **A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
+- **Once #51 merges.** #51 is a draft, to merge before the rehearsal. Nothing below is on `main` until then, and nothing stops such a measure: hold it by hand.
 - **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property.
 - **Which parameters:** `uk_budget_data.data_limits` lists them:
   - SDLT `gov.hmrc.stamp_duty.residential.purchase.additional` (the higher rates for additional dwellings) and `gov.hmrc.stamp_duty.non_residential.purchase`;
@@ -144,7 +145,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
 - **When it lifts:** once certified data impute the purchases (policyengine-uk-data #573, with #569; Max's decision d1354). `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
-- **Every measure published on the day comes from the templates** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
+- **Every measure published on the day comes from the templates, unless it passes the human check below** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
     - **Reject the modifier if its own code uses any of these** (coordinator's ruling on #51, 19 Oct). The detector isn't required to see through them, so #55 lists what they can hide:
       1. **another simulation or system:** building or holding a simulation or tax-benefit system other than the one it's given (a clone, or a branch with a cloned system), or that simulation's parameters, entities, populations or holders;
@@ -183,9 +184,9 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 |---|---|---|
 | `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
-| `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: nothing on `main`, which applies a change only where the key is the year itself (`personal_impact.create_simulation`); in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where the household calculator showed no change. |
+| `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where the household calculator showed no change. |
 
-**The household calculator moves less than the national figure for some measures** (probed 15 October on the bundle on `main`). Both `main`'s calculator (`personal_impact.create_simulation`) and #3's (`calculate_personal_net_income`) write a change on 1 January only, while the national run applies it to the whole fiscal year before policyengine-uk derives its other parameters. One earner on £50,000, 2027:
+**#3's household calculator moves less than the national figure for some measures** (probed 15 October). #3's calculator (`calculate_personal_net_income`) writes a change on 1 January only, while the national run applies it to the whole fiscal year before policyengine-uk derives its other parameters. `main`'s did the same until #32 (15 October; issue #33). One earner on £50,000, 2027:
 
 | Change | Household calculator | National |
 |---|---|---|
@@ -193,9 +194,9 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 | Beer duty to £30 (a calendar-preserved duty) | £0.00 (#3) | −£37.10 |
 | Personal allowance to £20,000 (read on 1 January) | +£1,486.00 | +£1,486.00 |
 
-The registered `fuel_duty_freeze` shows exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…)` with the measure's bare-year keys, as the national run does, closes every gap found. It was checked against `tests/test_household_route_parity.py` (#23). **Your call**, for #3. The templates (#23) refuse calendar-preserved parameters meanwhile, and the parity test marks each known gap as a strict expected failure.
+On 1 January only, the registered `fuel_duty_freeze` showed exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…, simulation_modifier=…)` with the measure's bare-year keys, as the national run does, closes every gap found. #32 did that for `main`'s calculator, checked by `tests/test_household_route_parity.py`, which no longer expects any gap. **Your call**, for #3.
 
-**#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle now on `main` (policyengine-uk 2.126.12; probed 14 October), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
+**#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle on `main` on 14 October (policyengine-uk 2.126.12), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
 
 An earlier version of this runbook said these keys have no effect at all. That was wrong: the effect is small, not zero. Either way, the baseline is not the one the measure intends. The same values keyed by bare year, as `main`'s `fuel_duty_freeze` keys them, change every year. This needs changing in #3 when it merges `main`.
 
@@ -203,7 +204,7 @@ The templates' `rate_change` and `threshold_change` build bare-year keys and ref
 
 Three things are refused:
 - closures, lambdas, nested functions and `functools.partial`;
-- `float("inf")` and other non-finite values;
+- NaN. The receipt binds an infinite value, such as `float("inf")` for "no cap" (policyengine.py#588), but the templates take only finite numbers;
 - two measures in one combined run that set the same parameter differently.
 
 A measure that cannot be bound is refused at generation: the command prints `REFUSED <id>: <reason>` and exits non-zero. The other measures in the same run are still written.
@@ -219,7 +220,9 @@ REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
 curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
-  --manifest public/data/manifest.json --out receipts/g0-households.json
+  --expect-model-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-uk"))')" \
+  --expect-core-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-core"))')" \
+  --out receipts/g0-households.json
 uv run uk-budget-data publish check                        # (#19)
 uv run uk-budget-data publish status
 ```
@@ -231,7 +234,7 @@ Record in the clock table:
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`).
 
-**The gate fails** if any command fails, or the API's versions differ from the bundle's.
+**The gate fails** if any command fails, or the API's versions differ from the bundle's. The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
 ## G1: coverage (12:30 to 12:45)
 
@@ -296,7 +299,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **A failed year** is fixed, or María adds an exception to `data_inputs/treasury/exceptions.yaml`:
   - one of the closed explanation classes;
   - a quantified explanation;
-  - her name;
+  - the reviewer's name;
   - the artifact's `outputs_sha256`;
   - the failed row's `comparator.sha256` from `reconciliation.json`, as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
@@ -323,11 +326,13 @@ uv run uk-budget-data publish check
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
-- **Publish.** Open a pull request. The required checks must pass, including the Publication gate. Merge, and production deploys.
+- **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 
   ```sh
   curl -s https://policyengine.org/uk/autumn-budget-2026/data/manifest.json | head -5
+  # Until policyengine-app-v2#1249 is live (and at the rehearsal):
+  curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5
   uv run python -m uk_budget_data.household_route --base-url "$HOUSEHOLD_API" \
     --fixtures data_inputs/household_fixtures --manifest public/data/manifest.json
   ```
@@ -338,9 +343,9 @@ uv run uk-budget-data publish check
 
 - **Why 15:45.** ITV's evening segment needs our analysis by 16:00 UK time on 28 October (18:00 at a stretch), and the webinar starts at 16:30.
 - **What goes.** Whatever is approved in the manifest at 15:45: each measure approved at G3, and the combined run if it was approved at G4. Use one manifest revision, and record it in the clock.
-- **What is held.** A measure that has not been approved by the cut is held for the 07:00 briefing. It is not given to media as provisional, and it is left out of the webinar slides. This is the rule from the call with Nuffield on 13 October: publish only what the team is fully confident in, and drop anything not nailed down. The export commands already enforce it, because they refuse any entry that is not approved (#22).
+- **What is held.** A measure that has not been approved by the cut is held for the 07:00 briefing. It is not given to media as provisional, and it is left out of the webinar slides. This is the rule from the call with Nuffield on 13 October: publish only what the team is fully confident in, and drop anything not nailed down. #22's export commands enforce it, because they refuse any entry that is not approved. #22 is a draft: until it merges, they are not on `main`.
 - **No totals by addition.** If the combined run is not approved by the cut, the first cut carries per-measure figures only.
-- **How.** Export from that revision, to a directory of your choosing:
+- **How, once #22 has merged.** Export from that revision, to a directory of your choosing:
 
   ```sh
   uv run python scripts/generate_blog_charts.py --manifest public/data/manifest.json \
@@ -350,6 +355,7 @@ uv run uk-budget-data publish check
   ```
 
   The ITV figures and the webinar slides come from that export and nothing else.
+- **If #22 hasn't merged,** `main`'s two scripts take none of these flags: they read the flat CSVs, and `generate_combined_charts.py` still writes last year's titles. Don't use them for the first cut. Take the figures from the artifacts of the approved entries in that manifest revision (each entry names its artifact directory), and record which.
 - **The webinar** has no guest panelist, so its deck needs only our own approved results. Marketing materials go to Nuffield by Wednesday 21 October; they are not built from this runbook.
 - **Your call: the dashboard's "Provisional" label.** G2 publishes statement figures on the dashboard labelled provisional. Keep that for the dashboard, or show only approved figures there too. Either way, media and the webinar get approved figures only.
 
@@ -365,7 +371,7 @@ An approval or an exception carries over only where the outputs are byte-identic
 
 ## A model upgrade during the day (no freeze)
 
-- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call (decision 8).
+- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
 - **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile, approve, redeploy the household API and re-run the household checks.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
