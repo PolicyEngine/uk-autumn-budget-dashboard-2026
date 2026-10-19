@@ -279,19 +279,21 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 
 ### Route timing (fill in during the drill)
 
+Minutes from the statement (12:31). First number = G2 data commit 13:34; rebased = G3 14:24; published = G5 figures on the drill preview 14:51. All coded lines shared one pipeline, so the routes did not differ in time on the day; the pe-uk routes ran on dashboard-structural fallbacks.
+
 | Line | Route | Statement → first number (min) | → rebased (min) | → published (min) | Refused by gate? Reason |
 |---|---|---|---|---|---|
-| C1 fuel duty | dashboard-param | | | | |
-| C2 fuel VAT 15% | dashboard-structural | | | | |
-| C3 WHD top-up | pe-uk-variable (dashboard-structural fallback) | | | | |
-| C4 UC child element | dashboard-param | | | | |
-| C5 CB Early Years Addition | dashboard-structural | | | | |
-| C6 LHA reset | dashboard-param | | | | |
-| C7 SP Top-up Allowance | dashboard-structural | | | | |
-| C8 CA earnings limit | dashboard-param | | | | |
-| C9 employer NI under-23 | pe-uk-param (dashboard-structural fallback) | | | | |
-| C10 CGT higher rate | dashboard-param | | | | |
-| C11 savings starting band | dashboard-param | | | | |
-| C12 SDLT surcharge | data | | | | |
-| C13 thresholds to 2032 | dashboard-param | | | | |
-| C14 alcohol duty | not-computable | | | | |
+| C1 fuel duty | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C2 fuel VAT 15% | dashboard-structural | 63 | 113 | 140 | Refused: module cannot be bound (MOCK4_YEARS) |
+| C3 WHD top-up | pe-uk-variable (dashboard-structural fallback) | 63 | 113 | 140 | Refused: module cannot be bound (MOCK4_YEARS) |
+| C4 UC child element | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C5 CB Early Years Addition | dashboard-structural | 63 | 113 | 140 | Refused: module cannot be bound (MOCK4_YEARS) |
+| C6 LHA reset | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C7 SP Top-up Allowance | pe-uk-variable (dashboard-structural fallback; G1 lock) | 63 | 113 | 140 | Refused: module cannot be bound (MOCK4_YEARS) |
+| C8 CA earnings limit | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C9 employer NI under-23 | pe-uk-param (dashboard-structural fallback) | 63 | 113 | 140 | Refused: module cannot be bound (MOCK4_YEARS) |
+| C10 CGT higher rate | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C11 savings starting band | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C12 SDLT surcharge | data | n/a | n/a | 140 (listed not computable) | not run (not computable) |
+| C13 thresholds to 2032 | dashboard-param | 63 | 113 | 140 | Refused: bundle cannot resolve microcosm_uk_2024_25 |
+| C14 alcohol duty | data (G1 lock; was not-computable) | n/a | n/a | 140 (listed not computable) | not run (not computable) |
