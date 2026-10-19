@@ -264,8 +264,8 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 
 | Event | Time (BST) | Commit |
 |---|---|---|
-| G0 | | |
-| Drill start: statement released | | |
+| G0 | 12:31 (guard); logged 12:43. Late: G0 was due before 12:30 | start SHA `086aa1d`. policyengine 6.7.6 → policyengine-uk 2.130.1, core 3.33.0 (pe-uk 2.137.0 on PyPI, unpairable). Guard: `drill4: dataset OK: Microcosm microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71 (810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece); uncertified with this engine, label national figures unvalidated`. Local SHA-256 `8e10e130d0260e0b52e2e29902f0502ebdff76a14a3e57d2c876bf4cd8db5872` (staged copy). Known gap: pair built under pe-uk 2.132.6, run on 2.130.1. P0a banner missing (edge noindex + login), P0b no reset. pytest started 12:32, still running at log time |
+| Drill start: statement released | 12:31 (arrived in `4fd06c1`); opened 12:43 | `4fd06c1`; statement SHA-256 `09c6d96629b033fa8f8e9ec478460cbe4d8b81dddcadfde8c4e1fb16e6d8ae39` |
 | G1 measure list, routes locked | | |
 | G2 first numbers (gated path; hosted API time) | | |
 | Documents released | | |
