@@ -25,14 +25,32 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
 
 - **Repo:** `~/uk-budget-drill4` (a worktree), branch `drill4-mock-budget`. Run `git pull` first.
 - **Python:** `uv run …`, pinned to policyengine **6.7.6** (latest on PyPI, released 19 October 00:27 UTC), policyengine-uk 2.130.1 and core 3.33.0. policyengine-uk 2.137.0 is on PyPI too, but 6.7.6 pins 2.130.1, so it can't be used. Don't upgrade during the drill; record both versions at G0.
-- **Dataset:**
+- **Datasets: the Microcosm pair** published on 19 October. Both files come from the same Microcosm commit and spine; the national file is new.
 
   ```sh
-  export DRILL4_DATASET=~/drill4-data/staged/uk-frs-calibration-attempt-20261014T214443Z-d12ff9b3/microcosm_uk_2024_25.h5
   export HUGGING_FACE_TOKEN=$(cat ~/.cache/huggingface/token)
+  uv run python - <<'PY'
+  import os
+  from huggingface_hub import hf_hub_download
+  for tag, name in [
+      ("microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71", "microcosm_uk_2024_25.h5"),
+      ("microcosm-uk-2024-25-dense-20261019T000432Z-ee5c2dbe", "microcosm_uk_2024_25_dense.h5"),
+  ]:
+      path = hf_hub_download(
+          "policyengine/populace-uk-private", name, repo_type="dataset",
+          revision=tag, local_dir=os.path.expanduser(f"~/drill4-data/{tag}"),
+      )
+      print(path)
+  PY
+  shasum -a 256 ~/drill4-data/microcosm-uk-2024-25-*/microcosm_uk_2024_25*.h5
+  export DRILL4_DATASET=~/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5
+  export DRILL4_LOCAL_DATASET=~/drill4-data/microcosm-uk-2024-25-dense-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_dense.h5
   ```
 
-  The guard must print `dataset OK … 04a496f2…`. Log that line at G0.
+  - The guard must print `dataset OK … 810ba980…`. Log that line at G0.
+  - The local file is byte-identical to the staged `uk-local-candidate-f100-s42-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_local.h5` you already have (SHA-256 `8e10e130…5872`). You can point `DRILL4_LOCAL_DATASET` at that copy instead of downloading it again.
+  - The old national `04a496f2…` is superseded, and the guard refuses it.
+  - Both files were built under policyengine-uk 2.132.6. The drill stays on the bundle's 2.130.1, because 6.7.6 refuses 2.132.6 at import (DRILL4.md, Dataset section). Log it at G0 as a known gap.
 - **Generate** (about 40 s per measure per year):
 
   ```sh
@@ -42,18 +60,27 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
 
   It writes the flat CSVs that the page reads (G4 (b)).
 - **Gate path:** add `--artifacts` to the same command. On Microcosm it prints `REFUSED … cannot resolve dataset 'microcosm_uk_2024_25'` for every measure, and still exits 0. Record the refusal per coded line: that **is** G4 (a), so don't work around it.
-- **Constituencies (don't skip):** seats run on Microcosm's latest **local** build (staged, not released; hash-checked):
+- **Regions and constituencies (don't skip):** both run on the pair, through one guard: regions on the national file, seats on the local file.
 
   ```sh
   export UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/drill4-private/disclosure-audit
-  uv run uk-budget-data geography \
-    --dataset ~/drill4-data/staged/uk-local-candidate-f100-s42-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_local.h5 \
-    --dataset-kind microcosm --levels constituency \
-    --reforms <locked IDs> --seat-reforms <locked IDs> --years <years> --out-dir <dir>
+  scripts/drill4_geography.sh --reforms <locked IDs> --package mock4_combined \
+    --years 2026 2027 2028 2029 2030 2031
   ```
 
-  SHA-256 `8e10e130…5872`. Takes about 3 minutes per measure per year; run it in the background after G3, once for the package. Log the hash at G0. Disclosure control withholds some seats: publish what it allows, never the private audit folder.
-- **Regions:** the geography tool publishes regions only from the national dataset, and it refuses the national Microcosm file (missing eFRS copy flag `household_is_cgt_band_donor`). So regions run on the bundle's **certified eFRS**, the one sanctioned exception to Microcosm-only: `uv run uk-budget-data geography --dataset-kind efrs --levels region --reforms <locked IDs> --years <years> --out-dir <dir>` (about 30 s per measure; all 12 regions). Label them "regions: certified eFRS".
+  - **It isn't on the branch yet:** `scripts/drill4_geography.sh` arrives on this branch before G3 (13:40); María posts on PR #52 when it lands. Until then there is nothing to run for geography.
+  - It checks both SHA-256s, runs the regions and then the seats, and writes `public/data/regional.csv` and `public/data/constituency.csv` only when both succeed.
+  - It publishes the package and every measure, every year.
+  - It prints each table's SHA-256 and the review rows to add, then the count of national and regional cells where the two files disagree by more than the tolerance. That count is report only: log it, don't block on it.
+  - The eFRS exception for regions is withdrawn.
+  - Run it once, on the final post-inject SHA, after G5, and never commit a pre-inject seat or region table. Disclosure control withholds some cells: publish what it allows, never the private audit folder.
+  - Runtime is measured before it lands and posted with it.
+- **Review rows:** `npm run build` (both previews) refuses any file under `public/` whose SHA-256 doesn't match its row in `data_inputs/public_data_review.csv`.
+  - So every push that regenerates the flat CSVs, or writes the geography tables, must update those rows in the same commit, or the preview build fails.
+  - You sign them during the drill (María, 19 October). Use reviewer `vahid-ahmadi (drill 4, MOCK)`, today's date, and a basis that starts `MOCK drill 4:`.
+  - Kinds: `national_table` for the flat CSVs; `disclosure_table` for `regional.csv` and `constituency.csv`. The `constituency.csv` row replaces the current 2025 `pending` row.
+  - María reviews them all after 15:30.
+  - Check with `node scripts/check-public-files.mjs` before pushing.
 - **Tests:** `uv run pytest -q`; `bunx vitest run --exclude '.claude/**'`; `bunx tsc --noEmit -p .` before every push, because a failed build breaks the preview.
 - **Local household API** (for hand checks): `PORT=8000 uv run uk-budget-api`, then `POST localhost:8000/api/personal-impact`. Household specimens use no population dataset.
 - **Previews** (team login):
@@ -61,7 +88,7 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
   - https://uk-autumn-budget-2026-git-drill4-mock-budget-policy-engine.vercel.app
 - **Files a measure touches:**
   - `src/uk_budget_data/reforms.py`: register the measure in `_get_autumn_budget_2026_reforms`, with a `mock4_` ID prefix;
-  - `src/utils/policyConfig.js`: `POLICIES`, with an explanation starting `MOCK basis:`;
+  - `src/App.jsx`: `POLICIES` (line 18), with an explanation starting `MOCK basis:`. `src/utils/policyConfig.js` holds only the colours;
   - the tests, with hand-computed values.
 
 ## Known gaps (decided 19 October; log them, don't fix them)
@@ -69,12 +96,13 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
 - **No MOCK banner on this branch (P0a).** Both previews are behind Vercel login and send `X-Robots-Tag: noindex`. Log this as covered at the edge, banner missing.
 - **No `reset` (P0b).** The registry still holds the November 2025 measures. Register the drill measures alongside them and generate only the locked `mock4_` IDs.
 - **No manifest loader.** The page reads the flat CSVs only, and staged entries are never displayed (María, C1).
+- **Engine.** The pair was built under policyengine-uk 2.132.6, and the drill runs it on 2.130.1. 6.7.6 refuses 2.132.6 at import, and María chose not to work around it.
 
 ## Timeline (London)
 
 | Time | Do |
 |---|---|
-| **Before 12:30** | `git pull`; set the two exports; run `scripts/drill4_generate.sh --list-reforms` (must print `dataset OK`); `uv run pytest -q`. Log G0 in the DRILL4.md clock table (start SHA, versions, guard line), then commit and push |
+| **Before 12:30** | `git pull`; download the national file and set the exports (Environment); run `scripts/drill4_generate.sh --list-reforms` (must print `dataset OK … 810ba980…`); `uv run pytest -q`. Log G0 in the DRILL4.md clock table (start SHA, versions, guard line, both file SHA-256s), then commit and push |
 | **12:30** | `git pull`; open the statement. Log "Drill start" (time, SHA, `shasum -a 256` of the file), then commit and push |
 | 12:30–13:00, **G1** | Coverage ledger: every statement line is `coded` or `ledger`, with a **route** and a reason (route classes are in DRILL4.md). Post it on PR #52 for María to lock |
 | 12:35–13:15, **G2** | Code the coded lines in waves: parameters, then modifiers, then new variables. Use agents in git worktrees if useful, and merge their work yourself. Add a hand-checked test per measure. Generate, then push, and log G2 with the preview URL and one hosted household check (time it) |
@@ -83,7 +111,7 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
 | **14:20** | `git pull`; open the inject. Log it |
 | 14:20–14:50, **G5** | Apply the inject, regenerate on a new SHA and tell María. The old run stays, marked superseded. Log G5 |
 | **14:50 target, G4** | (a) `--artifacts` refusals recorded per coded line; (b) the full page on the preview from the same SHA. Lines that can't be computed show as not computable, never £0 |
-| 14:50–15:30 | Constituency run for the package on the final SHA (and regions, see Environment). Log it with the seat count published and withheld |
+| 14:50–15:30 | `scripts/drill4_geography.sh` on the final SHA: regions and seats for the package and every measure, all six years. Add the review rows it prints, run `node scripts/check-public-files.mjs`, then commit and push. Log it with the counts of seat cells published and withheld, and the pair-check count |
 | **15:30** | **Stop.** Commit and push the filled sheets. Log the stop commit |
 | 15:30–16:00 | Each engine or data finding becomes a **draft** issue text on PR #52. File nothing upstream without Vahid's go |
 | 16:00 | The key holder (another session) releases the answer key. Don't open `~/drill4-sealed` |

@@ -6,8 +6,8 @@
 #          scripts/drill4_generate.sh --output-dir <dir> --reforms <ids...>
 set -euo pipefail
 
-PINNED_SHA256="04a496f2b2c01019f5ac277c28e7fc989e12e6e3f050d062315c390ba8b79094"
-PINNED_RELEASE="microcosm-uk-2024-25-national-20261014T214443Z-d12ff9b3"
+PINNED_SHA256="810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+PINNED_RELEASE="microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71"
 
 dataset="${DRILL4_DATASET:-}"
 if [[ -z "$dataset" || ! -f "$dataset" ]]; then

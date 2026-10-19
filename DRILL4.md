@@ -46,7 +46,7 @@ The drill has to test two points in this rule. First, whether a structural refor
 
 | Finding | Change in drill 4 |
 |---|---|
-| No drill ran on the Budget-day setup. All three drills scored national figures on Microcosm `aa31bdf6` (now superseded by the 15 October release) with drill-fork code | The drill branch is cut from **`main`** and was brought up to `main` at `5324080` on 18 October (policyengine 6.6.0, the #48 seat path), with no stacking on drills 1–3. National figures use the **latest released Microcosm** (`04a496f2`, 15 October), forced by `scripts/drill4_generate.sh` |
+| No drill ran on the Budget-day setup. All three drills scored national figures on Microcosm `aa31bdf6` (now superseded by the 15 October release) with drill-fork code | The drill branch is cut from **`main`** and was brought up to `main` at `5324080` on 18 October (policyengine 6.6.0, the #48 seat path), with no stacking on drills 1–3. Every population figure uses the **Microcosm pair** published on 19 October (national `810ba980…`, local `8e10e130…`), forced by `scripts/drill4_generate.sh` and `scripts/drill4_geography.sh` |
 | The net-vs-gross basis failed in drills 2 and 3. The pipeline outputs net `gov_balance`; costings are gross tax heads on a cash basis | The pipeline must output gross tax-head series by G3, or each mismatch is scored as a basis miss |
 | Hosted Personal impact was never verified; `BUDGET_API_URL` was unset in drill 3; the household route took 25–114 s, with an HTTP 504 on `main` (#14) | A G2 condition: the hosted household API answers one released specimen, with the time recorded, and the household-route parity check (#33) passes |
 | G4/G5 scored zero because "logged" and "handed over" were different times | One definition: a gate is **met** when the complete sheet and its receipt are committed and posted |
@@ -99,38 +99,77 @@ Each row needs evidence before Monday. A blank row blocks G0.
 | P5 | Git-installed policyengine-uk: can a branch install replace the 2.130.1 wheel without breaking `managed_microsimulation`, and what does the publication gate say? | Q1 fallback |
 | P6 | Hosted household API: `BUDGET_API_URL` set on the drill preview; one family case timed cold and warm | Drill 3 never verified it |
 | P7 | Gross tax-head output: can `generate` emit income tax, NICs, VAT and duty heads next to `gov_balance`? If not, record the restatement route | The basis failure in drills 2 and 3 |
-| P9 | Constituency and regional results on Microcosm. Is Microcosm's local (seat-level) build released, and can the #48 disclosure path score it? If yes, the drill adds regional and constituency output for the package after G4. If not, regions come from the national file and seats are skipped, with the reason recorded (**question for María**) | 28 October publishes regions first, then seats (#24) |
+| P9 | Constituency and regional results on Microcosm. **Answered 19 October (María):** the local build is released, and it pairs with the national file (same Microcosm commit and spine). Regions come from the national file and seats from the local file, both through the #48 disclosure path via `scripts/drill4_geography.sh`. That covers the package and every measure, every year. See the dataset section | 28 October publishes regions first, then seats (#24) |
 | P8 | One pre-built upstream variable (**needs Vahid's go before anything is opened upstream**): a draft policyengine-uk PR for the Warm Home Discount baseline (£150) with a contrib top-up parameter, opened for review only | Exercises the `pe-uk-variable` route; flagged in all three drills and never built |
 
-## Dataset: Microcosm only
+## Dataset: the Microcosm pair
 
-Every **population** run in drill 4 (national, distributional and regional figures) uses the **latest released Microcosm national file**, not the bundle's enhanced FRS. Household specimens use no population dataset: they run `Simulation(situation=…)` on the same engine and reform definitions, so a G2 household pass is not evidence that the Microcosm path works. Constituency results use Microcosm's local build, if it is ready (see P9).
+Every **population** run in drill 4 uses the **Microcosm pair** published on 19 October, not the bundle's enhanced FRS. That covers national, distributional, regional and constituency figures. Both files come from the same Microcosm commit (`810315ac2`) and spine.
 
-| Item | Value |
-|---|---|
-| File | `microcosm_uk_2024_25.h5` |
-| SHA-256 | `04a496f2b2c01019f5ac277c28e7fc989e12e6e3f050d062315c390ba8b79094` |
-| Release | `microcosm-uk-2024-25-national-20261014T214443Z-d12ff9b3` (HF dataset `policyengine/populace-uk-private`, published 15 October) |
-| HF path | `staged/uk-frs-calibration-attempt-20261014T214443Z-d12ff9b3/microcosm_uk_2024_25.h5`; its `sha256sums.txt` lists the same hash. Note the path is under `staged/`, not a release folder |
-| Local copy (G0) | `DRILL4_DATASET=~/drill4-data/staged/uk-frs-calibration-attempt-20261014T214443Z-d12ff9b3/microcosm_uk_2024_25.h5`, downloaded and hash-checked on 18 October |
-| Built under | policyengine-uk 2.123.0 / core 3.32.19 |
-| Drill engine | policyengine-uk 2.130.1 / core 3.33.0, so the pair is **uncertified**. Every national figure is labelled *unvalidated under this engine* |
-| Superseded | `aa31bdf6…`, the file drills 2 and 3 used. The guard refuses it |
+Household specimens use no population dataset: they run `Simulation(situation=…)` on the same engine and reform definitions. So a G2 household pass is not evidence that the Microcosm path works.
+
+| Item | National file | Local file |
+|---|---|---|
+| Used for | National tables, distributional figures, regions | Constituencies |
+| File | `microcosm_uk_2024_25.h5` | `microcosm_uk_2024_25_dense.h5` |
+| SHA-256 | `810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece` | `8e10e130d0260e0b52e2e29902f0502ebdff76a14a3e57d2c876bf4cd8db5872` |
+| Release tag (HF dataset `policyengine/populace-uk-private`) | `microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71` | `microcosm-uk-2024-25-dense-20261019T000432Z-ee5c2dbe` |
+| Where | The file at the repo root at that tag; metadata in `releases/microcosm-uk-2024-25-national/` | The file at the repo root at that tag; metadata in `releases/microcosm-uk-2024-25-dense/` |
+| Environment variable | `DRILL4_DATASET` | `DRILL4_LOCAL_DATASET` |
+| Built under | policyengine-uk 2.132.6 / core 3.33.3 | policyengine-uk 2.132.6 / core 3.33.3 |
+
+- **Local file:** byte-identical to the staged `staged/uk-local-candidate-f100-s42-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_local.h5` that the P9 dry run used, so a copy with this SHA-256 can be kept.
+- **Superseded:** the national `04a496f2…` (15 October, `d12ff9b3`) and `aa31bdf6…`. The guard refuses both.
+
+**Engine.** The drill runs on the bundle's certified engine: policyengine 6.7.6, policyengine-uk 2.130.1, core 3.33.0.
+- The pair was built under 2.132.6, but policyengine 6.7.6 refuses 2.132.6 at import. The uk-data 1.58.1 release manifest certifies only 2.122.2 and 2.130.1, so the build engine can't be used without working around the certification.
+- Known gap for 28 October: either a bundle that certifies the pair's engine, or a pair built under the bundle's engine.
+- Between 2.130.1 and 2.132.6 the `household_net_income` formula is unchanged. The changes are:
+  - trade-loss relief (Microcosm supplies no losses);
+  - HBAI income measures: negative income before housing costs is reset to zero, so decile tables move;
+  - dated-scenario timing;
+  - calendar-year keys on uprating series.
+- Every figure is labelled *unvalidated under this engine*.
 
 **How it is forced:**
 
-- **Generation.** Run all generation through `scripts/drill4_generate.sh`, never `uk-budget-data generate` directly. The script checks the file's SHA-256 against the pin above and refuses any other file, including the bundle's default enhanced FRS. It also refuses a `--dataset` passed by hand, including the prefixes argparse would accept (`--datas`, `--datase`), and passes the checked file last so it is the value used.
-- **G0.** G0 logs the hash line the script prints.
-- **Publish gate.** Microcosm runs **cannot be receipted, so they cannot be staged either**. Tested on 18 October: `generate --artifacts` on `04a496f2` under policyengine 6.6.0 refuses every measure with "The uk bundle cannot resolve dataset 'microcosm_uk_2024_25'". policyengine's receipt code accepts only datasets in the certified bundle. The run also exits 0 after refusing, so the clock must read the `REFUSED` line, not the exit code. G4 (a) therefore records this refusal per coded line, and the figures reach the page through G4 (b).
+- **Generation.** Run all generation through `scripts/drill4_generate.sh`, never `uk-budget-data generate` directly.
+  - The script checks the national file's SHA-256 against the pin above and refuses any other file, including the bundle's default enhanced FRS.
+  - It also refuses a `--dataset` passed by hand, including the prefixes argparse would accept (`--datas`, `--datase`).
+  - It passes the checked file last, so that is the value used.
+- **Geography.** Regions and constituencies run only through `scripts/drill4_geography.sh`, which lands before G3.
+  - It checks both SHA-256s and refuses option overrides.
+  - It runs regions on the national file, then seats on the local file with the regional table as a prior.
+  - It compares the two files' national and regional estimates in a private report.
+- **G0.** G0 logs the hash lines the scripts print.
+- **Publish gate.** Microcosm runs **cannot be receipted, so they can't be staged either**.
+  - Tested on 18 October, on the superseded `04a496f2` under policyengine 6.6.0: `generate --artifacts` refused every measure with "The uk bundle cannot resolve dataset 'microcosm_uk_2024_25'". policyengine's receipt code accepts only datasets in the certified bundle.
+  - The run also exits 0 after refusing, so the clock must read the `REFUSED` line, not the exit code.
+  - G4 (a) therefore records this refusal per coded line, and the figures reach the page through G4 (b).
 
-**Dry run, 18 October (non-mock measure, `fuel_duty_freeze`, 2026):** the guard printed `dataset OK` for `04a496f2`; the plain `generate` ran in 36 s under policyengine 6.6.0 / UK 2.130.1 and wrote all six flat CSVs (−£0.96bn against the November 2025 OBR −£2.4bn; the gap is not investigated); `generate --artifacts` refused, as above. This is the G0 hash line and the P1b receipt.
+**Dry run, 18 October, on the superseded `04a496f2`** (non-mock measure `fuel_duty_freeze`, 2026):
+- The guard printed `dataset OK`.
+- The plain `generate` ran in 36 s under policyengine 6.6.0 / UK 2.130.1 and wrote all six flat CSVs. The result was −£0.96bn, against the November 2025 OBR −£2.4bn; the gap is not investigated.
+- `generate --artifacts` refused, as above.
 
-**Constituencies and regions (P9, tested 19 October on 6.7.6):**
+**Constituencies and regions (P9, decided 19 October):**
 
-- **Seats run on Microcosm's local build:** `staged/uk-local-candidate-f100-s42-20261019T000432Z-ee5c2dbe/microcosm_uk_2024_25_local.h5` (SHA-256 `8e10e130d0260e0b52e2e29902f0502ebdff76a14a3e57d2c876bf4cd8db5872`; staged, not released; no local build has been released yet). `geography --dataset-kind microcosm --levels constituency` wrote all 650 seats for a non-mock measure in about 3 minutes, through the #48 disclosure path.
-- **Regions:** the tool publishes regions only from the national dataset and refuses the national Microcosm file (it lacks the eFRS copy flag `household_is_cgt_band_donor`). Regions therefore run on the certified eFRS (tested: all 12 regions). This is the one recorded exception to Microcosm-only, and it is how 28 October will work too unless Microcosm gains that flag.
+- **Regions** come from the national file (`geography --dataset-kind microcosm-national`).
+  - The eFRS copy flag `household_is_cgt_band_donor` isn't needed: Microcosm links each copy to its survey household through `source_household_id`, which the tool already trusts on the local file.
+  - The eFRS exception is withdrawn.
+- **Seats** come from the local file (`--dataset-kind microcosm`), where every household carries its constituency in every year. They are published for the package (`--package mock4_combined`) and for every measure, in all six years. In the P9 dry run (19 October, 6.7.6), the staged copy of this file wrote all 650 seats for a non-mock measure in about 3 minutes.
+- **Consistency.** Seats don't add up exactly to the national figure.
+  - Each file carries its own calibrated weights, published values are rounded, and some cells are withheld. Disclosure noise is off.
+  - The guard compares the local file's national and regional estimates with the national file's, for every reform and year. It flags gaps above 5% nationally or 10% by region, with floors of £5 a household a year and 0.0005 relative.
+  - The check is private and report-only.
+- **Disclosure.** Both tables go through the #48 layer:
+  - at least 10 survey households behind a figure;
+  - the largest at most half of it;
+  - the p% rule at 10%;
+  - subtraction checks across seats, regions and the nation, and across the package and its measures.
+- **Publish once.** Both tables are published from the final post-inject SHA only. A pre-inject seat table is never committed.
 
-**The open question for 28 October:** if the real Budget also runs on Microcosm, the gate needs one of two things. Either a policyengine bundle that certifies Microcosm before the day, or an agreed, recorded exception.
+**The open question for 28 October:** if the real Budget also runs on Microcosm, the gate needs one of two things: a policyengine bundle that certifies the pair, with its engine, before the day, or an agreed, recorded exception.
 
 **What this changes in the data story (Q2):**
 
@@ -144,7 +183,7 @@ Every **population** run in drill 4 (national, distributional and regional figur
 
 | Gate | Condition (met = committed and posted with receipt) |
 |---|---|
-| **G0** | Start SHA; engine versions; the Microcosm SHA-256 printed by `scripts/drill4_generate.sh` (must be `04a496f2…`); hosted API version and health; preflight P0a–P9 results |
+| **G0** | Start SHA; engine versions; the Microcosm SHA-256s printed by `scripts/drill4_generate.sh` (national, must be `810ba980…`) and `scripts/drill4_geography.sh` (local, must be `8e10e130…`); hosted API version and health; preflight P0a–P9 results |
 | **G1** | Every statement line is coded or ledger, with a route and a reason |
 | **G2** | First numbers for `dashboard-param` lines through `publish stage`; one hand-checked household; the hosted API answers one specimen (time recorded) |
 | **G3** | Rebased on Annex A. Each national row has our figure, its basis (gross or net; cash or accrued; duty only or VAT-inclusive; fiscal or calendar), an explanation class for gaps over 10%, and a cause class |
