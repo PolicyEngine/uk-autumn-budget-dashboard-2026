@@ -266,7 +266,7 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 |---|---|---|
 | G0 | 12:31 (guard); logged 12:43. Late: G0 was due before 12:30 | start SHA `086aa1d`. policyengine 6.7.6 → policyengine-uk 2.130.1, core 3.33.0 (pe-uk 2.137.0 on PyPI, unpairable). Guard: `drill4: dataset OK: Microcosm microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71 (810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece); uncertified with this engine, label national figures unvalidated`. Local SHA-256 `8e10e130d0260e0b52e2e29902f0502ebdff76a14a3e57d2c876bf4cd8db5872` (staged copy). Known gap: pair built under pe-uk 2.132.6, run on 2.130.1. P0a banner missing (edge noindex + login), P0b no reset. pytest started 12:32, still running at log time |
 | Drill start: statement released | 12:31 (arrived in `4fd06c1`); opened 12:43 | `4fd06c1`; statement SHA-256 `09c6d96629b033fa8f8e9ec478460cbe4d8b81dddcadfde8c4e1fb16e6d8ae39` |
-| G1 measure list, routes locked | | |
+| G1 measure list, routes locked | 12:43 posted (PR #52 comment 6266406897); awaiting María's lock | ledger: 14 coded / 14 ledger |
 | G2 first numbers (gated path; hosted API time) | | |
 | Documents released | | |
 | G3 rebased; national sheet | | |
@@ -281,4 +281,17 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 
 | Line | Route | Statement → first number (min) | → rebased (min) | → published (min) | Refused by gate? Reason |
 |---|---|---|---|---|---|
-| | | | | | |
+| C1 fuel duty | dashboard-param | | | | |
+| C2 fuel VAT 15% | dashboard-structural | | | | |
+| C3 WHD top-up | pe-uk-variable (dashboard-structural fallback) | | | | |
+| C4 UC child element | dashboard-param | | | | |
+| C5 CB Early Years Addition | dashboard-structural | | | | |
+| C6 LHA reset | dashboard-param | | | | |
+| C7 SP Top-up Allowance | dashboard-structural | | | | |
+| C8 CA earnings limit | dashboard-param | | | | |
+| C9 employer NI under-23 | pe-uk-param (dashboard-structural fallback) | | | | |
+| C10 CGT higher rate | dashboard-param | | | | |
+| C11 savings starting band | dashboard-param | | | | |
+| C12 SDLT surcharge | data | | | | |
+| C13 thresholds to 2032 | dashboard-param | | | | |
+| C14 alcohol duty | not-computable | | | | |
