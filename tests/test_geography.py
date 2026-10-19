@@ -1549,6 +1549,7 @@ def run_cli(
     marker=True,
     lookup=True,
     package=None,
+    package_registered=False,
     inputs_ready=None,
 ):
     from uk_budget_data import cli
@@ -1566,6 +1567,9 @@ def run_cli(
     args = ["--reforms", "pkg", "alpha", "beta", "--years", "2026"]
     if package is not None:
         args = ["--reforms", "alpha", "beta", "--package", package]
+        if package_registered:
+            # The integrator lists the package among the reforms too.
+            args[3:3] = [package]
         args += ["--years", "2026"]
         changes[package] = changes["pkg"]
     if kind == "efrs":
@@ -1615,6 +1619,8 @@ def run_cli(
         )
 
     reforms = {r: Reform(id=r, name=r) for r in ("pkg", "alpha", "beta")}
+    if package_registered:
+        reforms[package] = Reform(id=package, name=package)
     monkeypatch.setattr(g, "simulate_reform", simulate)
     monkeypatch.setattr(g, "get_reform", reforms.get)
     monkeypatch.setattr(g, "PACKAGES", {"pkg": ("alpha", "beta")})
@@ -1837,21 +1843,61 @@ def test_a_package_is_built_from_the_chosen_measures(monkeypatch, tmp_path):
     assert summary["packages"] == {"new_combined": ["alpha", "beta"]}
 
 
-@pytest.mark.parametrize(
-    "name, message",
-    [
-        ("new_package", "must end in _combined"),
-        ("old_combined", "already a registered reform"),
-    ],
-)
-def test_a_package_name_is_checked(monkeypatch, name, message):
+def test_a_package_name_is_checked(monkeypatch):
     from uk_budget_data.models import Reform
 
-    registered = {"old_combined": Reform(id="old_combined", name="x")}
-    monkeypatch.setattr(g, "get_reform", registered.get)
+    monkeypatch.setattr(g, "get_reform", {}.get)
     measures = [Reform(id="a", name="a"), Reform(id="b", name="b")]
-    with pytest.raises(ValueError, match=message):
-        g.build_package(name, measures, [2026])
+    with pytest.raises(ValueError, match="must end in _combined"):
+        g.build_package("new_package", measures, [2026])
+
+
+def test_a_registered_package_is_used_once_checked(monkeypatch):
+    from uk_budget_data.models import Reform
+    from uk_budget_data.publication import combine
+
+    registered = Reform(id="old_combined", name="old")
+    monkeypatch.setattr(g, "get_reform", {"old_combined": registered}.get)
+    checked = []
+
+    def check(package, members, *args):
+        checked.append((package.id, [m.id for m in members]))
+
+    monkeypatch.setattr(combine, "check_consistency", check)
+    measures = [Reform(id="b", name="b"), Reform(id="a", name="a")]
+    assert g.build_package("old_combined", measures, [2026]) is registered
+    assert checked == [("old_combined", ["a", "b"])]
+
+
+def test_a_package_that_is_not_its_measures_is_refused(monkeypatch):
+    from uk_budget_data.models import Reform
+    from uk_budget_data.publication import combine
+
+    registered = Reform(id="old_combined", name="old")
+    monkeypatch.setattr(g, "get_reform", {"old_combined": registered}.get)
+
+    def check(*args):
+        raise combine.CombineInconsistent("changes another parameter")
+
+    monkeypatch.setattr(combine, "check_consistency", check)
+    measures = [Reform(id="a", name="a"), Reform(id="b", name="b")]
+    with pytest.raises(ValueError, match="another parameter"):
+        g.build_package("old_combined", measures, [2026])
+
+
+def test_a_registered_package_named_among_the_reforms_runs(
+    monkeypatch, tmp_path
+):
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm",
+        package="mock_combined",
+        package_registered=True,
+    )
+    assert code == 0
+    table = pd.read_csv(out / "constituency.csv")
+    assert set(table["reform"]) == {"alpha", "beta", "mock_combined"}
 
 
 def test_a_package_needs_two_measures(monkeypatch):
