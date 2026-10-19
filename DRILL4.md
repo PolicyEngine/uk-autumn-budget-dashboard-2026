@@ -137,7 +137,7 @@ Household specimens use no population dataset: they run `Simulation(situation=â€
   - The script checks the national file's SHA-256 against the pin above and refuses any other file, including the bundle's default enhanced FRS.
   - It also refuses a `--dataset` passed by hand, including the prefixes argparse would accept (`--datas`, `--datase`).
   - It passes the checked file last, so that is the value used.
-- **Geography.** Regions and constituencies run only through `scripts/drill4_geography.sh`, which lands before G3.
+- **Geography.** Regions and constituencies run only through `scripts/drill4_geography.sh`.
   - It checks both SHA-256s and refuses option overrides.
   - It runs regions on the national file, then seats on the local file with the regional table as a prior.
   - It compares the two files' national and regional estimates in a private report.

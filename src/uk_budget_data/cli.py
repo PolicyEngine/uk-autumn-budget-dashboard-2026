@@ -6,7 +6,12 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
-from uk_budget_data.geography import add_geography_parser, run_geography
+from uk_budget_data.geography import (
+    add_geography_parser,
+    add_pair_check_parser,
+    run_geography,
+    run_pair_check,
+)
 from uk_budget_data.lifetime_impact import (
     GRADUATE_STARTING_INCOME,
     calculate_lifetime_impact,
@@ -123,6 +128,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
     add_generate_arguments(generate_parser)
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_pair_check_parser(subparsers)
 
     # Lifetime impact command
     lifetime_parser = subparsers.add_parser(
@@ -374,6 +380,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "pair-check":
+        return run_pair_check(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -388,6 +396,10 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  pair-check - Compare a Microcosm pair's national and regional "
+            "estimates, privately"
         )
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."

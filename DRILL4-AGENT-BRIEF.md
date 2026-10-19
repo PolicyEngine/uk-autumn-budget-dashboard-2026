@@ -68,16 +68,21 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
     --years 2026 2027 2028 2029 2030 2031
   ```
 
-  - **It isn't on the branch yet:** `scripts/drill4_geography.sh` arrives on this branch before G3 (13:40); María posts on PR #52 when it lands. Until then there is nothing to run for geography.
+  - Set `DRILL4_LOCAL_DATASET` (above) as well as `DRILL4_DATASET`.
+  - **Timing**, measured 19 October on a 32 GB laptop with two measures plus their package over six years:
+    - about 4 minutes per measure, both files and all six years together; the package counts as one more measure;
+    - simulation dominates; drill measures against current law share one baseline, which helps;
+    - peak memory about 22 GB.
+    - With 10 measures that's about 45 minutes, so start as soon as the post-inject definitions are final, during G5, rather than at 14:50. If it runs past 15:30, let it finish and log the time.
   - It checks both SHA-256s, runs the regions and then the seats, and writes `public/data/regional.csv` and `public/data/constituency.csv` only when both succeed.
   - It publishes the package and every measure, every year.
   - It prints each table's SHA-256 and the review rows to add, then the count of national and regional cells where the two files disagree by more than the tolerance. That count is report only: log it, don't block on it.
   - The eFRS exception for regions is withdrawn.
   - Run it once, on the final post-inject SHA, after G5, and never commit a pre-inject seat or region table. Disclosure control withholds some cells: publish what it allows, never the private audit folder.
-  - Runtime is measured before it lands and posted with it.
+  - If `--package` is refused because two measures change the same parameter (a stack), either make them one measure in `reforms.py` or drop `--package` and pass `--seat-reforms <IDs>`. The second gives measures only, with no package map.
 - **Review rows:** `npm run build` (both previews) refuses any file under `public/` whose SHA-256 doesn't match its row in `data_inputs/public_data_review.csv`.
   - So every push that regenerates the flat CSVs, or writes the geography tables, must update those rows in the same commit, or the preview build fails.
-  - You sign them during the drill (María, 19 October). Use reviewer `vahid-ahmadi (drill 4, MOCK)`, today's date, and a basis that starts `MOCK drill 4:`.
+  - You sign them during the drill (María, 19 October). Use reviewer `vahid-ahmadi (drill 4; MOCK)`, as the geography guard prints it, today's date, and a basis that starts `MOCK drill 4:`.
   - Kinds: `national_table` for the flat CSVs; `disclosure_table` for `regional.csv` and `constituency.csv`. The `constituency.csv` row replaces the current 2025 `pending` row.
   - María reviews them all after 15:30.
   - Check with `node scripts/check-public-files.mjs` before pushing.
@@ -111,7 +116,7 @@ MOCK DATA rehearsal. Read this first, then [DRILL4.md](DRILL4.md). You are the *
 | **14:20** | `git pull`; open the inject. Log it |
 | 14:20–14:50, **G5** | Apply the inject, regenerate on a new SHA and tell María. The old run stays, marked superseded. Log G5 |
 | **14:50 target, G4** | (a) `--artifacts` refusals recorded per coded line; (b) the full page on the preview from the same SHA. Lines that can't be computed show as not computable, never £0 |
-| 14:50–15:30 | `scripts/drill4_geography.sh` on the final SHA: regions and seats for the package and every measure, all six years. Add the review rows it prints, run `node scripts/check-public-files.mjs`, then commit and push. Log it with the counts of seat cells published and withheld, and the pair-check count |
+| G5 to 15:30 | Start `scripts/drill4_geography.sh` as soon as the post-inject definitions are final, on the final SHA (about 4 minutes per measure; see Environment): regions and seats for the package and every measure, all six years. Add the review rows it prints, run `node scripts/check-public-files.mjs`, then commit and push. Log it with the counts of seat cells published and withheld, and the pair-check count |
 | **15:30** | **Stop.** Commit and push the filled sheets. Log the stop commit |
 | 15:30–16:00 | Each engine or data finding becomes a **draft** issue text on PR #52. File nothing upstream without Vahid's go |
 | 16:00 | The key holder (another session) releases the answer key. Don't open `~/drill4-sealed` |

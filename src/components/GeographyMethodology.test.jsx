@@ -21,8 +21,10 @@ describe("GeographyMethodology", () => {
     expect(text).toContain("rounded to the precision the data supports");
     expect(text).toContain("protect the confidentiality of survey respondents");
     expect(text).toContain("do not add up exactly to the regional ones");
-    expect(text).toContain("may come from a different dataset");
-    expect(text).toContain("constituency weights, which are estimated for 2025");
+    expect(text).toContain("Regional figures come from Microcosm's national dataset");
+    expect(text).toContain("each household belongs to one constituency");
+    expect(text).toContain("keeps its constituency in every year");
+    expect(text).not.toContain("estimated for 2025");
     expect(text).toContain("little change is under 0.1% of income (£10 a year)");
     expect(text).not.toMatch(/noise/i);
 
