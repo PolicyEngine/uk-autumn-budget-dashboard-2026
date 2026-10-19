@@ -1418,6 +1418,39 @@ def _create_mock4_combined() -> Reform:
     )
 
 
+def _create_mock4_stack_1_3_7() -> Reform:
+    """MOCK drill 4 scored row 1+3+7: thresholds, SPTA and savings band
+    together (2031-32 is the scored year)."""
+    keep = {
+        "mock4_threshold_freeze_2032",
+        "mock4_state_pension_topup_allowance",
+        "mock4_savings_starting_band",
+    }
+    measures = [m for m in _get_mock4_reforms() if m.id in keep]
+    params: dict = {}
+    baseline: dict = {}
+    modifiers = []
+    for measure in measures:
+        baseline.update(measure.baseline_parameter_changes or {})
+        params.update(measure.parameter_changes or {})
+        if measure.simulation_modifier is not None:
+            modifiers.append(measure.simulation_modifier)
+
+    def stack_modifier(sim):
+        for modifier in modifiers:
+            sim = modifier(sim) or sim
+        return sim
+
+    return Reform(
+        id="mock4_stack_1_3_7",
+        name="MOCK: stack of measures 1, 3 and 7",
+        description="MOCK drill 4. Measures 1, 3 and 7 together (scored row 1+3+7).",
+        baseline_parameter_changes=baseline or None,
+        parameter_changes=params,
+        simulation_modifier=stack_modifier,
+    )
+
+
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -1435,6 +1468,7 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             create_salary_sacrifice_cap_reform(),
             _create_mock4_combined(),
             *_get_mock4_reforms(),
+            _create_mock4_stack_1_3_7(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
