@@ -271,7 +271,7 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 | Documents released | 13:41 (arrived in `e348634`); pulled 13:41 | `e348634`. SHA-256 prefixes: household-scoring 491395e8, ledger 4fb0cb3d, national-scoring c8b4d3dc, obr-economy c22347f6, costings f4de78c0, decisions 4965f78d, specimens 6741a5c8 |
 | G3 rebased; national sheet | code `a2fac5c` pushed 13:51; run landed and sheet filled 14:24 (late; target 14:15) | data `6f31b5c`: 13 runs × 2026–2031; national sheet with basis, explanation and cause classes; ledger and household sheets filled. **Superseded** by the G5 run on `2088500` |
 | Inject released | 14:21 (arrived in `3be5f61`); opened 14:21 | `3be5f61`; SHA-256 d6ba4868d4a914c43506f8381ddf50638d2a73367a8ef848cd04736a783cd633. Applied in `2088500` (14:22): SPTA threshold +£1,200; fuel duty 54.95p from 9 March 2027 |
-| G5 re-run | | |
+| G5 re-run | code `2088500` 14:22; run landed 14:46; sheet posted 14:50 | data `ab79af1`; final code SHA `2761f29` (adds only the 1+3+7 stack; all 13 definitions identical to `2088500`). G3 run (`a2fac5c`/`6f31b5c`) superseded and kept. National sheet restated to cash per María (rows 1, 3, 5, 7, 8) |
 | G4 staged on preview | | |
 | Stop | | |
 | Upstream findings filed | | |
