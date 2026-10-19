@@ -3515,3 +3515,313 @@ def test_a_signed_zero_is_not_its_default():
     assert not data_limits._same_value(-0.0, 0.0)
     assert not data_limits._same_value(1, 1.0)
     assert data_limits._same_value("a", "a")
+
+
+# --- round 15's gaps (review of #51 round 15) --------------------------
+
+
+def rates_edited_by_the_wrapper(edit, restore=False):
+    """An original priced by a rate held in a dict; if ``edit``, a wrapper
+    raises the rate before calling the original for its result (and, if
+    ``restore``, puts it back after)."""
+
+    def modifier(sim):
+        rates = {"rate": 0.01}
+
+        def original(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * rates["rate"]
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, original)
+        if edit:
+            native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+
+            def formula(household, period, parameters):
+                rates["rate"] = 0.02
+                result = _call_formula(native, household, period, parameters)
+                if restore:
+                    rates["rate"] = 0.01
+                return result + 1000
+
+            _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize("restore", [False, True], ids=["left", "restored"])
+def test_state_an_original_holds_edited_during_the_run_shows(restore):
+    """Review of #51 round 15: a wrapper raised the rate its original read
+    before calling it for its result (£1,000 to £3,000 with no limit). An
+    exempt measure-code function is fingerprinted afresh as it starts."""
+    touched = limits_touched(
+        simulation(modifier=rates_edited_by_the_wrapper(False)),
+        simulation(modifier=rates_edited_by_the_wrapper(True, restore)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def priced_by_a_held_branch_parameter(rate, held):
+    """Non-residential purchases priced by a cloned branch's stored scale,
+    or its parent node, held by the formula."""
+
+    def modifier(sim):
+        from policyengine_core.parameters import get_parameter
+
+        branch = sim.get_branch("counterfactual", clone_system=True)
+        parameters = branch.tax_benefit_system.parameters
+        get_parameter(parameters, NON_RESIDENTIAL_BAND).update(
+            period="2027", value=rate
+        )
+        node = parameters.get_child(NON_RESIDENTIAL.rsplit(".", 1)[0])
+
+        def formula(household, period, parameters):
+            scale = node.purchase if held == "node" else stored
+            purchased = household("non_residential_property_purchased", period)
+            return scale(period).calc(purchased)
+
+        stored = parameters.get_child(NON_RESIDENTIAL)
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+@pytest.mark.parametrize("held", ["scale", "node"])
+def test_a_held_branch_parameter_shows(held):
+    """Review of #51 round 15: a cloned branch's stored scale or node, held
+    by a formula, compared by name whatever its values (SDLT £15,500 to
+    £17,500 with no limit). A stored parameter object matches only when it
+    is a compared system's own."""
+    touched = limits_touched(
+        simulation(modifier=priced_by_a_held_branch_parameter(0.03, held)),
+        simulation(modifier=priced_by_a_held_branch_parameter(0.05, held)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def priced_through_a_branch_entity(rate):
+    """A formula running the formula a cloned branch's entity gives it."""
+
+    def modifier(sim):
+        branch = sim.get_branch("counterfactual", clone_system=True)
+
+        def priced(household, period, parameters):
+            purchased = household("non_residential_property_purchased", period)
+            return purchased * rate
+
+        _replace_formula(branch, NON_RESIDENTIAL_SDLT, priced)
+        # The household entity the branch's system holds, bound to it.
+        entity = next(
+            entity
+            for entity in branch.tax_benefit_system.entities
+            if entity.key == "household"
+        )
+
+        def formula(household, period, parameters):
+            variable = entity.get_variable(NON_RESIDENTIAL_SDLT)
+            return variable.get_formula(period)(household, period, parameters)
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def test_a_held_branch_entity_shows():
+    """Review of #51 round 15: an entity bound to a cloned branch's system
+    compared by class name, so the formula it selected went unseen
+    (£5,000 to £10,000 with no limit)."""
+    touched = limits_touched(
+        simulation(modifier=priced_through_a_branch_entity(0.01)),
+        simulation(modifier=priced_through_a_branch_entity(0.02)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def rate_from_a_metaclass(rate, enum_based):
+    def make():
+        if enum_based:
+
+            class RateType(enum.EnumType):
+                purchase_rate = rate
+
+            class Band(enum.Enum, metaclass=RateType):
+                STANDARD = 1
+
+        else:
+
+            class RateType(type):
+                purchase_rate = rate
+
+            class Band(metaclass=RateType):
+                pass
+
+        return lambda: Band.purchase_rate
+
+    return make
+
+
+@pytest.mark.parametrize("enum_based", [False, True], ids=["type", "enum"])
+def test_a_metaclass_is_compared(enum_based):
+    """Review of #51 round 15: a rate held by a class's metaclass compared
+    equal (£1,000 to £2,000 with no limit)."""
+    touched = limits_touched(
+        simulation(
+            modifier=non_residential_times(
+                rate_from_a_metaclass(1, enum_based)
+            )
+        ),
+        simulation(
+            modifier=non_residential_times(
+                rate_from_a_metaclass(2, enum_based)
+            )
+        ),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def priced_from_a_held_input_holder(rate):
+    """Purchases read from their holder, captured before the watch."""
+
+    def modifier(sim):
+        holder = sim.get_holder("non_residential_property_purchased")
+
+        def formula(household, period, parameters):
+            values = holder.get_array(period)
+            return (
+                household.filled_array(0.0) if values is None else values
+            ) * (rate)
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def priced_from_a_branch_calculated_before(rate, by, cloned):
+    """SDLT a simulation with a cloned system calculated before the watch
+    (a clone, or a branch), read through its holder or its calculate."""
+
+    def modifier(sim):
+        from policyengine_core.parameters import get_parameter
+
+        aux = (
+            sim.clone(clone_tax_benefit_system=True)
+            if cloned
+            else sim.get_branch("counterfactual", clone_system=True)
+        )
+        get_parameter(
+            aux.tax_benefit_system.parameters, NON_RESIDENTIAL_BAND
+        ).update(period="2027", value=rate)
+        aux.drop_computed_arrays()
+        for year in data_limits.HOUSEHOLD_YEARS:
+            aux.calculate(NON_RESIDENTIAL_SDLT, year)
+        holder = aux.get_holder(NON_RESIDENTIAL_SDLT)
+
+        def formula(household, period, parameters):
+            if by == "holder":
+                return holder.get_array(period)
+            return aux.calculate(NON_RESIDENTIAL_SDLT, period)
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def test_a_held_input_holder_read_directly_shows():
+    """Review of #51 round 15: purchases read through a holder captured
+    before the watch went unseen (£5,000 to £10,000 with no limit). Holder
+    reads are watched, and a held holder carries its variable's name."""
+    touched = limits_touched(
+        simulation(modifier=priced_from_a_held_input_holder(0.05)),
+        simulation(modifier=priced_from_a_held_input_holder(0.10)),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+@pytest.mark.parametrize(
+    "by, cloned",
+    [("holder", True), ("calculate", True)],
+    ids=["clone-holder", "clone-calculate"],
+)
+def test_values_a_branch_calculated_before_the_watch_read_anything(by, cloned):
+    """Review of #51 round 15: SDLT a cloned simulation had already
+    calculated was read with nothing to watch. A value a simulation no
+    watch knows calculated unwatched makes the variable unobservable."""
+    with pytest.warns(data_limits.UnwatchedFormulaWarning):
+        touched = limits_touched(
+            simulation(
+                modifier=priced_from_a_branch_calculated_before(
+                    0.03, by, cloned
+                )
+            ),
+            simulation(
+                modifier=priced_from_a_branch_calculated_before(
+                    0.05, by, cloned
+                )
+            ),
+        )
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
+
+
+def test_a_branch_recalculating_under_the_watch_is_watched():
+    """A branch's values are dropped with its parent's when the modifier
+    is applied, so the branch calculates again under the watch, and what
+    it reads is the changed variable's: the purchase read shows."""
+    touched = limits_touched(
+        simulation(
+            modifier=priced_from_a_branch_calculated_before(
+                0.03, "calculate", False
+            )
+        ),
+        simulation(
+            modifier=priced_from_a_branch_calculated_before(
+                0.05, "calculate", False
+            )
+        ),
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+
+
+def holding_its_input_holder(sim, banded):
+    """An original reading its own simulation's purchases holder, captured
+    before the watch, falling back to the engine; if ``banded``, the
+    property-band template adds to its result."""
+    holder = sim.get_holder("non_residential_property_purchased")
+
+    def native(household, period, parameters):
+        values = holder.get_array(period)
+        if values is None:
+            values = household("non_residential_property_purchased", period)
+        return values * 0.05
+
+    _replace_formula(sim, NON_RESIDENTIAL_SDLT, native)
+    if banded:
+        apply_property_band_surcharge(
+            sim,
+            channel=NON_RESIDENTIAL_SDLT,
+            geography="UK",
+            lower_bound=100_000,
+            upper_bound=1_000_000,
+            amount=900,
+            start_year=2027,
+            end_year=2027,
+        )
+    return sim
+
+
+def test_a_template_on_an_original_holding_its_holder_stays_computable():
+    """Review of #51 round 15: an original holding its own simulation's
+    holder fingerprinted differently on each side, so the property-band
+    template on it was marked not computable. A holder of a compared
+    simulation matches by its variable."""
+    touched = limits_touched(
+        simulation(modifier=lambda sim: holding_its_input_holder(sim, False)),
+        simulation(modifier=lambda sim: holding_its_input_holder(sim, True)),
+    )
+    assert touched == []

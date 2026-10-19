@@ -521,7 +521,22 @@ class _Behaviour:
         # The systems being compared: a simulation or system a formula
         # holds matches across them only when it is one of these (its own
         # side's), never another with a policy of its own.
+        self._main_systems = tuple(main_systems)
         self._main = frozenset(id(system) for system in main_systems)
+
+    def _in_main_tree(self, value) -> bool:
+        """Whether a stored parameter object is a compared system's own, at
+        its own path."""
+        name = getattr(value, "name", None)
+        for system in self._main_systems:
+            root = getattr(system, "parameters", None)
+            try:
+                found = root if not name else root.get_child(name)
+            except Exception:  # noqa: BLE001 - not in this tree
+                continue
+            if found is value:
+                return True
+        return False
 
     # --- fingerprints
 
@@ -735,8 +750,22 @@ class _Behaviour:
             elif engine[0] == "system":
                 system = value
             elif hasattr(value, "simulation"):
-                # A population: its simulation's system.
+                # A population or holder: its simulation's system.
                 system = getattr(value.simulation, "tax_benefit_system", None)
+            elif engine[0] != "parameter" and hasattr(
+                value, "_tax_benefit_system"
+            ):
+                # An entity: the system its variables come from.
+                system = value._tax_benefit_system
+            elif (
+                engine[0] == "parameter"
+                and self._parameter_content(value) is None
+                and self._main
+                and not self._in_main_tree(value)
+            ):
+                # A stored node or scale, read by name only, that isn't a
+                # compared system's own (a cloned branch's).
+                return ("opaque", id(value))
             if self._main and system is not _NO_SYSTEM:
                 if id(system) not in self._main:
                     # A simulation or system with a policy of its own (a
@@ -768,7 +797,18 @@ class _Behaviour:
                 else ()
             )
             bases = tuple(self.of(base) for base in value.__bases__)
-            return ("class", value.__qualname__, members, bases, enum_members)
+            meta = type(value)
+            kind = (
+                () if meta is type or _library_class(meta) else self.of(meta)
+            )
+            return (
+                "class",
+                value.__qualname__,
+                members,
+                bases,
+                enum_members,
+                kind,
+            )
         kind = type(value)
         rebuilt = _rebuilt_from(value)
         if rebuilt is not None:
@@ -856,7 +896,9 @@ class _Behaviour:
                     for name, member in vars(value).items()
                     if name not in _CLASS_BOOKKEEPING
                 ]
-                self._collect((members, value.__bases__), names, held)
+                meta = type(value)
+                extra = [] if meta is type or _library_class(meta) else [meta]
+                self._collect((members, value.__bases__, extra), names, held)
         elif not _library_class(type(value)):
             # Its class too: a method can read what the fields don't name.
             fields = list(_fields_of(value).values())
@@ -1169,6 +1211,9 @@ def _engine(value):
         ("policyengine_core.populations", "policyengine_core.entities")
     ):
         return (type(value).__qualname__, None)
+    if module.startswith("policyengine_core.holders"):
+        variable = getattr(value, "variable", None)
+        return ("holder", getattr(variable, "name", None))
     return None
 
 
@@ -1200,6 +1245,17 @@ def _is_component(value) -> bool:
 # form, all read through the engine, and the engine is watched while the
 # simulations run. Each read is put down to the code that made it by the
 # Python frames between the read and the variable being calculated.
+
+
+def _measure_code(function) -> bool:
+    """Whether a function is a measure's code (a template's or a
+    modifier's), not the model's or a library's: the code whose state a
+    measure can change while the simulations run."""
+    code = getattr(function, "__code__", None)
+    if code is None:
+        return False
+    path = code.co_filename
+    return not _library_path(path) and "/policyengine_uk/" not in path
 
 
 def _formulas(variable) -> list:
@@ -1249,6 +1305,23 @@ class _Changes:
         self.exempt: dict = {}
         self._literal: dict = {}
         self._swapped: list = []
+        # Unchanged variables of measure code, with their fingerprints on
+        # each side at the start: state measure code holds can be changed
+        # while the simulations run (a dict a wrapper edits), so these are
+        # checked again (see Observation).
+        self.measure_variables: dict = {
+            name: (
+                behaviour.of(base.get(name)),
+                behaviour.of(reform.get(name)),
+            )
+            for name in sorted(base.keys() & reform.keys())
+            if name not in self.sides
+            and any(
+                _measure_code(f)
+                for side in (base[name], reform[name])
+                for f in _formulas(side)
+            )
+        }
         for name, pair in self.sides.items():
             self._exempt_for(name, pair, unchanged, installed)
 
@@ -1381,6 +1454,9 @@ class _Thread(threading.local):
         # for not at all), and what those calls returned.
         self.moving = 0
         self.returned = None
+        # While the watch fingerprints state afresh (see _drifted): what
+        # that reads is not a formula's.
+        self.checking = False
 
 
 _THREAD = _Thread()
@@ -1450,6 +1526,10 @@ def _engine_parts():
             ),
             node_getitem=ParameterNodeAtInstant.__dict__["__getitem__"],
         )
+        from policyengine_core.holders.holder import Holder
+
+        _ENGINE["holder"] = Holder
+        _ENGINE["get_array"] = Holder.__dict__["get_array"]
         _ENGINE["computing"] = frozenset(
             id(code)
             for code in (
@@ -1496,9 +1576,29 @@ def _observed_calculate(self, variable_name, *args, **kwargs):
     if top is not None and top.changed:
         inside = top.observation._read(top, variable_name, sys._getframe(1))
     observation, side = _watcher(self)
+    if (
+        observation is not None
+        and not _THREAD.checking
+        and variable_name in observation.changes.measure_variables
+    ):
+        observation._check_unchanged(entries, variable_name, side, self)
+    foreign_key = None
     if observation is None and top is not None and top.changed:
         # A simulation no watch knows, asked from inside a changed
         # variable's calculation: what it calculates is that variable's.
+        # A value it already holds was calculated unwatched, so the
+        # variable is unobservable unless this watch saw it calculated.
+        foreign_key = (
+            id(self),
+            variable_name,
+            top.observation._period(self, args, kwargs),
+        )
+        if not _THREAD.checking and foreign_key not in (
+            top.observation.foreign_calculated
+        ):
+            top.observation._foreign_cached(
+                top, self, variable_name, args, kwargs
+            )
         entry = _Entry(
             top.observation,
             top.side,
@@ -1524,6 +1624,8 @@ def _observed_calculate(self, variable_name, *args, **kwargs):
     entries.append(entry)
     try:
         result = _ENGINE["calculate"](self, variable_name, *args, **kwargs)
+        if foreign_key is not None:
+            entry.observation.foreign_calculated.add(foreign_key)
     finally:
         entries.pop()
         if not entries:
@@ -1548,39 +1650,46 @@ def _moved(values, by):
     return values
 
 
-class _MovedHolder:
-    """A holder whose arrays read moved (see :func:`_moved`), for a read
-    inside a wrapping call while a wrapping is checked."""
-
-    def __init__(self, holder, by):
-        self._holder, self._by = holder, by
-
-    def get_array(self, period, *args, **kwargs):
-        values = self._holder.get_array(period, *args, **kwargs)
-        if values is None:
-            values = self._holder.default_array()
-        return _moved(values, self._by)
-
-    def __getattr__(self, name):
-        return getattr(self._holder, name)
-
-
 def _observed_get_holder(self, variable_name):
     entries = _THREAD.entries
-    holder = _ENGINE["get_holder"](self, variable_name)
     if entries and entries[-1].changed:
         frame = sys._getframe(1)
         if not _engine_internal(frame, entries[-1].frame):
-            inside = entries[-1].observation._read(
-                entries[-1], variable_name, frame
-            )
+            entries[-1].observation._read(entries[-1], variable_name, frame)
+    return _ENGINE["get_holder"](self, variable_name)
+
+
+def _observed_get_array(self, period, *args, **kwargs):
+    """A holder's values read: by the engine's own calculation (not a
+    read), or by a formula's code, however it came by the holder (fetched
+    now, or held from before the watch). Inside a wrapping call while a
+    wrapping is checked, a limited input's values read moved."""
+    values = _ENGINE["get_array"](self, period, *args, **kwargs)
+    entries = _THREAD.entries
+    if entries and entries[-1].changed:
+        frame = sys._getframe(1)
+        if not _engine_internal(frame, entries[-1].frame):
+            name = getattr(getattr(self, "variable", None), "name", None)
+            entry = entries[-1]
+            owner = getattr(self, "simulation", None)
             if (
-                inside == _WRAPS
-                and _THREAD.moving
-                and variable_name in _MISSING_INPUTS
+                values is not None
+                and not _THREAD.checking
+                and _watcher(owner)[0] is None
+                and _held_calculated(owner, name, period)
             ):
-                return _MovedHolder(holder, _THREAD.moving)
-    return holder
+                # Values a simulation no watch knows holds: calculated
+                # unwatched, whatever they read.
+                entry.observation.unobservable.setdefault(
+                    entry.name,
+                    f"it read {name} as held by a simulation no watch knows",
+                )
+            inside = entry.observation._read(entry, name, frame)
+            if inside == _WRAPS and _THREAD.moving and name in _MISSING_INPUTS:
+                if values is None:
+                    values = self.default_array()
+                return _moved(values, _THREAD.moving)
+    return values
 
 
 def _limited_path(path) -> bool:
@@ -1701,7 +1810,7 @@ def _on_start(code, offset):
                 )
         return
     key = id(frame)
-    if not entries or not entries[-1].changed:
+    if thread.checking or not entries or not entries[-1].changed:
         thread.own.pop(key, None)
         return
     entry = entries[-1]
@@ -1713,8 +1822,11 @@ def _on_start(code, offset):
         exempt = entry.observation.changes.exempt[(entry.name, entry.side)]
         found = exempt.codes.get(id(code))
         own = 0
-        if found is not None and _own_result(
-            frame, code, entry, exempt.functions[id(code)]
+        function = exempt.functions.get(id(code), (None,))[0]
+        if (
+            found is not None
+            and _own_result(frame, code, entry, exempt.functions[id(code)])
+            and not _drifted(entry.observation, function, found)
         ):
             own = _WRAPS if found <= exempt.other_side else _OWN
         thread.own[key] = own
@@ -1725,6 +1837,29 @@ def _on_start(code, offset):
     except Exception as error:  # noqa: BLE001 - never break a formula
         thread.own[key] = 0
         entry.observation._failed(entry.name, error)
+
+
+def _drifted(observation, function, fingerprints) -> bool:
+    """Whether a measure-code function's fingerprint, taken afresh, is no
+    longer one of ``fingerprints`` (the watch-start ones): state it holds
+    was changed while the simulations ran. The model's own functions can't
+    be changed that way by a measure (editing the model's globals is not a
+    measure)."""
+    if not _measure_code(function):
+        return False
+    return _fresh(observation, function) not in fingerprints
+
+
+def _fresh(observation, value):
+    """``value``'s fingerprint taken afresh, reading nothing as a
+    formula's."""
+    thread = _THREAD
+    thread.checking = True
+    try:
+        behaviour = _Behaviour(main_systems=observation.changes.systems)
+        return behaviour.of(value)
+    finally:
+        thread.checking = False
 
 
 def _on_return(code, offset, value):
@@ -1860,6 +1995,7 @@ def _start_watching(observation):
             node = engine["node_at_instant"]
             node.__getattribute__ = _observed_node_getattribute
             node.__getitem__ = _observed_node_getitem
+            engine["holder"].get_array = _observed_get_array
         for code in [*observation.changes.codes(), engine["run_formula"]]:
             held = _MONITORED.setdefault(id(code), [code, 0])
             if held[1] == 0:
@@ -1899,6 +2035,7 @@ def _stop_watching(observation):
             else:
                 node.__getattribute__ = engine["node_getattribute"]
             node.__getitem__ = engine["node_getitem"]
+            engine["holder"].get_array = engine["get_array"]
             for event in (_EVENTS.PY_START, _EVENTS.PY_RETURN):
                 sys.monitoring.register_callback(tool, event, None)
             sys.monitoring.free_tool_id(tool)
@@ -1951,6 +2088,12 @@ class Observation:
         self.ran: set = set()
         self.wrapped: set = set()
         self.unobservable: dict = {}
+        # Unchanged variables found changed after the run (see
+        # _drift_at_end): each read as able to read anything.
+        self.drifted: dict = {}
+        # What simulations no watch knows calculated under this watch, by
+        # (simulation id, variable, period).
+        self.foreign_calculated: set = set()
         self.watching = False
         self.finished = False
 
@@ -1970,6 +2113,60 @@ class Observation:
         except Exception:  # noqa: BLE001 - the engine reports a bad period
             return None
 
+    def _foreign_cached(self, entry, sim, name, args, kwargs):
+        """A simulation no watch knows, asked for ``name`` inside a changed
+        variable's calculation: if it already holds a calculated value
+        (calculated before the watch, unseen), the variable is
+        unobservable. An input it holds is no calculation."""
+        thread = _THREAD
+        thread.checking = True
+        try:
+            held = _held_calculated(sim, name, self._period(sim, args, kwargs))
+        finally:
+            thread.checking = False
+        if held:
+            self.unobservable.setdefault(
+                entry.name,
+                f"it read {name} as already calculated by a simulation no "
+                "watch knows",
+            )
+
+    def _check_unchanged(self, entries, name, side, sim):
+        """An unchanged measure-code variable asked for inside a changed
+        variable's calculation: if its fingerprint, taken afresh, differs
+        from the watch-start one, state it holds was changed during the run
+        (by the changed code, say), so the changed variable is
+        unobservable."""
+        changed = next(
+            (e for e in reversed(entries) if e.changed and not e.foreign),
+            None,
+        )
+        if changed is None:
+            return
+        variable = sim.tax_benefit_system.variables.get(name)
+        if (
+            _fresh(self, variable)
+            != self.changes.measure_variables[name][side]
+        ):
+            self.unobservable.setdefault(
+                changed.name,
+                f"{name}, which it reads, changed while the simulations ran",
+            )
+
+    def _drift_at_end(self):
+        """After the run: an unchanged measure-code variable whose two sides
+        no longer match, taken afresh, was changed while the simulations
+        ran; what it read could not be watched, so it is unobservable."""
+        for name, start in self.changes.measure_variables.items():
+            now = tuple(
+                _fresh(self, self.changes.systems[side].variables.get(name))
+                for side in (0, 1)
+            )
+            if now[0] != now[1] or now != start:
+                self.drifted.setdefault(
+                    name, "it changed while the simulations ran"
+                )
+
     def _failed(self, name, error):
         self.unobservable.setdefault(
             name, f"watching it failed: {type(error).__name__}"
@@ -1981,6 +2178,8 @@ class Observation:
         read recorded, else what the calls it was made inside called
         (``_WRAPS`` if one is a call of the other side's formula)."""
         inside = 0
+        if _THREAD.checking:
+            return _OWN
         try:
             own = _THREAD.own
             exempt = self.changes.exempt[(entry.name, entry.side)]
@@ -2039,6 +2238,7 @@ class Observation:
         try:
             if self.watching:
                 self._confirm_wrapping()
+                self._drift_at_end()
         finally:
             try:
                 _stop_watching(self)
@@ -2157,6 +2357,26 @@ class Observation:
         return names
 
 
+def _held_calculated(sim, name, period) -> bool:
+    """Whether ``sim`` holds a value of ``name`` for ``period`` that its
+    engine calculated, not one set as an input. True when it can't tell."""
+    try:
+        from policyengine_core import periods
+
+        if period is not None and not isinstance(period, periods.Period):
+            period = periods.period(period)
+        holder = _ENGINE["get_holder"](sim.get_variable_population(name), name)
+        branch = getattr(sim, "branch_name", "default")
+        if _ENGINE["get_array"](holder, period, branch) is None:
+            return False
+        inputs = getattr(sim, "_user_input_keys", None)
+        if inputs is None:
+            return True
+        return (name, sim.branch_name, period) not in inputs
+    except Exception:  # noqa: BLE001 - can't tell: it may hold one
+        return True
+
+
 def _calculated_before(sim, name) -> bool:
     """Whether ``sim`` holds a value of ``name`` the engine calculated, which
     a run could use without its formula running. A value set as an input
@@ -2212,6 +2432,14 @@ def _formulas_touched(observation) -> dict:
     :func:`_reads`), as ``formula:<variable>``. An unobservable variable
     is warned about (:class:`UnwatchedFormulaWarning`)."""
     found: dict = {}
+    for name, why in observation.drifted.items():
+        warnings.warn(
+            f"{name}: {why}, so it is read as touching every data limit",
+            UnwatchedFormulaWarning,
+            stacklevel=3,
+        )
+        for limit in DATA_LIMITS:
+            found.setdefault(limit.key, []).append(f"formula:{name}")
     for name in observation.changes.sides:
         if name in observation.unobservable:
             warnings.warn(
