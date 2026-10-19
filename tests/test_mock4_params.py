@@ -105,3 +105,34 @@ def test_cgt_higher_rate_household_by_hand():
         .sum()
     )
     assert new26 == pytest.approx(base26, abs=0.01)
+
+
+def test_lha_reset_then_held_from_2028():
+    # María, G1 note C6: the freeze from 2028 must hold the April 2027 rates.
+    situation = {
+        "people": {"a": {"age": 30}},
+        "benunits": {"b": {"members": ["a"]}},
+        "households": {
+            "h": {
+                "members": ["a"],
+                "rent": {str(y): 9_000 for y in range(2026, 2032)},
+                "tenure_type": "RENT_PRIVATELY",
+                "region": "NORTH_WEST",
+            }
+        },
+    }
+    reform = Simulation(
+        situation=situation,
+        scenario=get_reform("mock4_lha_reset").to_scenario(),
+    )
+    base = Simulation(situation=situation)
+    cap = {
+        y: float(reform.calculate("LHA_cap", y).sum())
+        for y in range(2026, 2030)
+    }
+    assert cap[2026] == pytest.approx(
+        float(base.calculate("LHA_cap", 2026).sum())
+    )
+    assert cap[2027] > float(base.calculate("LHA_cap", 2027).sum())
+    assert cap[2028] == pytest.approx(cap[2027])
+    assert cap[2029] == pytest.approx(cap[2027])

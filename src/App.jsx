@@ -122,9 +122,9 @@ const POLICIES = [
   {
     id: "mock4_cgt_higher_rate",
     name: "MOCK: CGT higher rate 26%",
-    description: "CGT higher rate 24% → 26% from 6 April 2027",
+    description: "CGT higher (and additional) rate 24% → 26% from 6 April 2027",
     explanation:
-      "MOCK basis: higher rate of Capital Gains Tax 26% from 2027-28, including residential property. Static model with the engine's capital gains responses. Gross CGT, accrued to the tax year. Unvalidated under this engine.",
+      "MOCK basis: higher and additional rates of Capital Gains Tax 26% from 2027-28, including residential property. Static model with the engine's capital gains responses. Gross CGT, accrued to the tax year. Unvalidated under this engine.",
   },
   {
     id: "mock4_savings_starting_band",
@@ -136,9 +136,9 @@ const POLICIES = [
   {
     id: "mock4_threshold_freeze_2032",
     name: "MOCK: thresholds frozen to 2032",
-    description: "Personal Allowance, higher rate threshold and main NI thresholds frozen for 2031-32",
+    description: "Personal Allowance, higher rate threshold and main NI thresholds (primary threshold, UEL) frozen for 2031-32",
     explanation:
-      "MOCK basis: 2031-32 values held at 2030-31 levels for the Personal Allowance, higher rate threshold, NI primary and secondary thresholds and upper earnings limit. Gross, fiscal years. Unvalidated under this engine.",
+      "MOCK basis: 2031-32 values held at 2030-31 levels for the Personal Allowance, higher rate threshold, NI primary threshold and upper earnings limit (not the secondary threshold). Gross, fiscal years. Unvalidated under this engine.",
   },
   {
     id: "mock4_cb_early_years_addition",

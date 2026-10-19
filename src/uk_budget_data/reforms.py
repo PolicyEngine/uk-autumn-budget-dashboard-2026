@@ -1263,6 +1263,9 @@ def _create_mock4_cgt_higher_rate() -> Reform:
         parameter_changes={
             "gov.hmrc.cgt.higher_rate": rates,
             "gov.hmrc.cgt.residential_property.higher_rate": dict(rates),
+            # 2.130.1 keeps separate additional rates (María, G1 note C10).
+            "gov.hmrc.cgt.additional_rate": dict(rates),
+            "gov.hmrc.cgt.residential_property.additional_rate": dict(rates),
         },
     )
 
@@ -1285,14 +1288,13 @@ def _create_mock4_threshold_freeze_2032() -> Reform:
         "gov.hmrc.income_tax.allowances.personal_allowance.amount",
         "gov.hmrc.income_tax.rates.uk[1].threshold",
         "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold",
-        "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold",
         "gov.hmrc.national_insurance.class_1.thresholds.upper_earnings_limit",
     ]
     return Reform(
         id="mock4_threshold_freeze_2032",
         name="MOCK: thresholds frozen to April 2032",
         description=(
-            "MOCK drill 4. PA, higher rate threshold and main NI thresholds "
+            "MOCK drill 4. PA, higher rate threshold and main NI thresholds (primary threshold and UEL) "
             "held at 2030-31 levels for 2031-32."
         ),
         parameter_changes={
