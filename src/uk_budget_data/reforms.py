@@ -989,6 +989,35 @@ def _get_mock4_reforms() -> list[Reform]:
     ]
 
 
+def _create_mock4_combined() -> Reform:
+    """MOCK drill 4 package: every coded mock4 measure on one simulation.
+
+    Refuses a stack (two measures setting the same parameter path)."""
+    measures = _get_mock4_reforms()
+    params: dict = {}
+    modifiers = []
+    for measure in measures:
+        for path, values in (measure.parameter_changes or {}).items():
+            if path in params:
+                raise ValueError(f"mock4_combined: {path} is set twice")
+            params[path] = values
+        if measure.simulation_modifier is not None:
+            modifiers.append(measure.simulation_modifier)
+
+    def combined_modifier(sim):
+        for modifier in modifiers:
+            sim = modifier(sim) or sim
+        return sim
+
+    return Reform(
+        id="mock4_combined",
+        name="MOCK: drill 4 package",
+        description="MOCK drill 4. All coded measures together.",
+        parameter_changes=params,
+        simulation_modifier=combined_modifier if modifiers else None,
+    )
+
+
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -1004,6 +1033,7 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             _create_property_tax_increase(),
             get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
+            _create_mock4_combined(),
             *_get_mock4_reforms(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE

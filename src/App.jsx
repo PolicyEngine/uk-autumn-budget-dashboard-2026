@@ -83,6 +83,55 @@ const POLICIES = [
     explanation:
       'Caps National Insurance-free salary sacrifice pension contributions at £2,000 per year from April 2029. Contributions above this threshold become subject to employee and employer NICs. PolicyEngine estimates this will raise £3.3bn in 2029-30, assuming employers spread costs and employees maintain pension contributions. The OBR estimates £4.9bn (static) or £4.7bn (post-behavioural). See our <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">research report</a> for details.',
   },
+  {
+    id: "mock4_fuel_duty",
+    name: "MOCK: fuel duty restaged",
+    description: "Fuel duty rises cancelled and restaged from 2026-27",
+    explanation:
+      "MOCK basis: duty only (excluding VAT), cash, fiscal years. 52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from 1 Oct 2027, RPI from April 2028; changes inside a fiscal year are day-weighted by hand. Unvalidated under this engine (Microcosm pair on policyengine-uk 2.130.1).",
+  },
+  {
+    id: "mock4_uc_child_element",
+    name: "MOCK: UC child element +£12.50",
+    description: "Universal Credit child element up £12.50 a month from April 2027",
+    explanation:
+      "MOCK basis: +£12.50 a month on every child element, including the higher first-child amount, from 2027-28. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_lha_reset",
+    name: "MOCK: LHA reset",
+    description: "Local Housing Allowance reset to the 30th percentile in April 2027, then frozen",
+    explanation:
+      "MOCK basis: LHA rates redetermined at the 30th percentile of the model's rents list in 2027-28, then frozen in cash terms. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_carers_allowance_limit",
+    name: "MOCK: Carer's Allowance earnings limit",
+    description: "Earnings limit £204 → £230 a week from April 2027",
+    explanation:
+      "MOCK basis: Carer's Allowance earnings limit £230 a week from 2027-28, held flat. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_cgt_higher_rate",
+    name: "MOCK: CGT higher rate 26%",
+    description: "CGT higher rate 24% → 26% from 6 April 2027",
+    explanation:
+      "MOCK basis: higher rate of Capital Gains Tax 26% from 2027-28, including residential property. Static model with the engine's capital gains responses. Gross CGT, accrued to the tax year. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_savings_starting_band",
+    name: "MOCK: savings starting band £2,000",
+    description: "Starting rate band for savings £5,000 → £2,000 from April 2028",
+    explanation:
+      "MOCK basis: starting rate band for savings £2,000 from 2028-29. Gross income tax, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_threshold_freeze_2032",
+    name: "MOCK: thresholds frozen to 2032",
+    description: "Personal Allowance, higher rate threshold and main NI thresholds frozen for 2031-32",
+    explanation:
+      "MOCK basis: 2031-32 values held at 2030-31 levels for the Personal Allowance, higher rate threshold, NI primary and secondary thresholds and upper earnings limit. Gross, fiscal years. Unvalidated under this engine.",
+  },
 ];
 
 // Preset policy combinations
