@@ -841,6 +841,154 @@ _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
+# =============================================================================
+# MOCK DRILL 4 (rehearsal only; invented measures, 19 October 2026)
+# =============================================================================
+# Model year Y is fiscal year Y to Y+1. Annual keys are day-weighted by hand
+# where a change falls inside a fiscal year (6 April to 5 April).
+
+MOCK4_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
+
+
+def _mock4_param(path: str, year: int):
+    from policyengine_uk.system import system
+
+    return system.parameters.get_child(path)(f"{year}-04-30")
+
+
+def _mock4_fuel_duty_rates() -> dict[str, float]:
+    """MOCK: 52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from
+    1 Oct 2027, then RPI uprating from April 2028 at the baseline's ratios."""
+    fy26 = (323 * 0.5295 + 42 * 0.5495) / 365  # 6 Apr 2026 to 5 Apr 2027
+    fy27 = (178 * 0.5495 + 188 * 0.5695) / 366  # 6 Apr 2027 to 5 Apr 2028
+    rates = {"2026": round(fy26, 6), "2027": round(fy27, 6)}
+    level = 0.5695
+    path = "gov.hmrc.fuel_duty.petrol_and_diesel"
+    for year in range(2028, 2032):
+        level *= _mock4_param(path, year) / _mock4_param(path, year - 1)
+        rates[str(year)] = round(level, 6)
+    return rates
+
+
+def _create_mock4_fuel_duty() -> Reform:
+    return Reform(
+        id="mock4_fuel_duty",
+        name="MOCK: fuel duty rises cancelled and restaged",
+        description=(
+            "MOCK drill 4. Fuel duty stays at 52.95p to 22 February 2027, "
+            "54.95p from 23 February 2027, 56.95p from 1 October 2027, RPI "
+            "from April 2028. Duty only, excluding VAT."
+        ),
+        parameter_changes={
+            "gov.hmrc.fuel_duty.petrol_and_diesel": _mock4_fuel_duty_rates()
+        },
+    )
+
+
+def _create_mock4_uc_child_element() -> Reform:
+    changes = {}
+    for path in [
+        "gov.dwp.universal_credit.elements.child.amount",
+        "gov.dwp.universal_credit.elements.child.first.higher_amount",
+    ]:
+        changes[path] = {
+            str(y): round(_mock4_param(path, y) + 12.50, 2)
+            for y in MOCK4_YEARS
+            if y >= 2027
+        }
+    return Reform(
+        id="mock4_uc_child_element",
+        name="MOCK: UC child element +£12.50 a month",
+        description="MOCK drill 4. UC child element +£12.50/month per child from April 2027.",
+        parameter_changes=changes,
+    )
+
+
+def _create_mock4_lha_reset() -> Reform:
+    freeze = {str(y): y != 2027 for y in MOCK4_YEARS if y >= 2027}
+    return Reform(
+        id="mock4_lha_reset",
+        name="MOCK: LHA reset to 30th percentile",
+        description=(
+            "MOCK drill 4. LHA rates in Great Britain reset to the 30th "
+            "percentile in April 2027, then frozen."
+        ),
+        parameter_changes={"gov.dwp.LHA.freeze": freeze},
+    )
+
+
+def _create_mock4_carers_allowance_limit() -> Reform:
+    return Reform(
+        id="mock4_carers_allowance_limit",
+        name="MOCK: Carer's Allowance earnings limit £230",
+        description="MOCK drill 4. Earnings limit £204 → £230 a week from April 2027.",
+        parameter_changes={
+            "gov.dwp.carers_allowance.earnings_limit": {
+                str(y): 230 for y in MOCK4_YEARS if y >= 2027
+            }
+        },
+    )
+
+
+def _create_mock4_cgt_higher_rate() -> Reform:
+    rates = {str(y): 0.26 for y in MOCK4_YEARS if y >= 2027}
+    return Reform(
+        id="mock4_cgt_higher_rate",
+        name="MOCK: CGT higher rate 26%",
+        description="MOCK drill 4. CGT higher rate 24% → 26% from 6 April 2027, incl. residential property.",
+        parameter_changes={
+            "gov.hmrc.cgt.higher_rate": rates,
+            "gov.hmrc.cgt.residential_property.higher_rate": dict(rates),
+        },
+    )
+
+
+def _create_mock4_savings_starting_band() -> Reform:
+    return Reform(
+        id="mock4_savings_starting_band",
+        name="MOCK: savings starting-rate band £2,000",
+        description="MOCK drill 4. Starting rate band for savings £5,000 → £2,000 from April 2028.",
+        parameter_changes={
+            "gov.hmrc.income_tax.rates.savings_starter_rate.allowance": {
+                str(y): 2_000 for y in MOCK4_YEARS if y >= 2028
+            }
+        },
+    )
+
+
+def _create_mock4_threshold_freeze_2032() -> Reform:
+    paths = [
+        "gov.hmrc.income_tax.allowances.personal_allowance.amount",
+        "gov.hmrc.income_tax.rates.uk[1].threshold",
+        "gov.hmrc.national_insurance.class_1.thresholds.primary_threshold",
+        "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold",
+        "gov.hmrc.national_insurance.class_1.thresholds.upper_earnings_limit",
+    ]
+    return Reform(
+        id="mock4_threshold_freeze_2032",
+        name="MOCK: thresholds frozen to April 2032",
+        description=(
+            "MOCK drill 4. PA, higher rate threshold and main NI thresholds "
+            "held at 2030-31 levels for 2031-32."
+        ),
+        parameter_changes={
+            path: {"2031": _mock4_param(path, 2030)} for path in paths
+        },
+    )
+
+
+def _get_mock4_reforms() -> list[Reform]:
+    return [
+        _create_mock4_fuel_duty(),
+        _create_mock4_uc_child_element(),
+        _create_mock4_lha_reset(),
+        _create_mock4_carers_allowance_limit(),
+        _create_mock4_cgt_higher_rate(),
+        _create_mock4_savings_starting_band(),
+        _create_mock4_threshold_freeze_2032(),
+    ]
+
+
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -856,6 +1004,7 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             _create_property_tax_increase(),
             get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
+            *_get_mock4_reforms(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
