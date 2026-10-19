@@ -96,7 +96,7 @@ const POLICIES = [
     name: "MOCK: fuel duty restaged",
     description: "Fuel duty rises cancelled and restaged from 2026-27",
     explanation:
-      "MOCK basis: duty only (excluding VAT), cash, fiscal years. 52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from 1 Oct 2027, RPI from April 2028; changes inside a fiscal year are day-weighted by hand. Unvalidated under this engine (Microcosm pair on policyengine-uk 2.130.1).",
+      "MOCK basis: duty only (excluding VAT), liabilities by fiscal year (6 April to 5 April), household road fuel only. Post-measure path from costing note 5 (52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from 1 Oct 2027, then 58.66p, 60.36p, 62.05p, 63.79p from each April 2028) against the Annex A pre-measures path, day-weighted. Unvalidated under this engine (Microcosm pair on policyengine-uk 2.130.1).",
   },
   {
     id: "mock4_uc_child_element",
@@ -138,7 +138,7 @@ const POLICIES = [
     name: "MOCK: thresholds frozen to 2032",
     description: "Personal Allowance, higher rate threshold and main NI thresholds (primary threshold, UEL) frozen for 2031-32",
     explanation:
-      "MOCK basis: 2031-32 values held at 2030-31 levels for the Personal Allowance, higher rate threshold, NI primary threshold and upper earnings limit (not the secondary threshold). Gross, fiscal years. Unvalidated under this engine.",
+      "MOCK basis: 2031-32 only. Personal Allowance, basic rate limit, NI primary and secondary thresholds, upper earnings limit and Class 4 profits limits held at 2030-31 levels, against Annex A's September 2030 CPI indexation (£12,850; £38,600; £12,850; £5,110; £51,450). Gross income tax and NICs, liabilities. Unvalidated under this engine.",
   },
   {
     id: "mock4_cb_early_years_addition",
@@ -154,7 +154,7 @@ const POLICIES = [
     description:
       "Income tax allowance covering State Pension above the personal allowance from April 2027",
     explanation:
-      "MOCK basis: invented drill 4 measure. From April 2027, people receiving the State Pension get an income tax allowance equal to the amount by which their State Pension exceeds their personal allowance. It is withdrawn pound for pound where adjusted net income exceeds the full new State Pension (weekly rate × 52) plus £1,000. Pensioners whose State Pension is below the personal allowance gain nothing. Modelled as an addition to the income tax allowances deducted from income.",
+      "MOCK basis: from 2027-28, State Pension recipients get an income tax allowance equal to their State Pension above the Personal Allowance, rounded up to the next £10, withdrawn £1 for £1 where adjusted net income exceeds the Annex A full new State Pension (52 × weekly rate) plus £1,000. Gross income tax, liabilities by tax year. Unvalidated under this engine.",
   },
   {
     id: "mock4_fuel_vat_cut",
@@ -170,7 +170,7 @@ const POLICIES = [
     description:
       "No employer NI on the first £25,000 for employees under 23, from April 2027",
     explanation:
-      "MOCK basis: gross employer National Insurance, cash, fiscal years. From April 2027 employers pay no Class 1 secondary NI on earnings up to £25,000 a year for employees aged under 23; earnings above £25,000 pay the normal 15%. Earnings are held fixed, so the saving stays with employers and household net income does not change. Invented measure for a rehearsal; not government policy.",
+      "MOCK basis: gross employer Class 1 NICs, liabilities, fiscal years. From April 2027, no employer NI on earnings up to £25,000 for employees aged 21 and 22 (under-21s already have a zero rate). Earnings are held fixed, so household net income does not change. Unvalidated under this engine.",
   },
 ];
 
