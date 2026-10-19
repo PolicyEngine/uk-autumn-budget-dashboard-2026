@@ -1,70 +1,136 @@
 reform_id,reform_name,year,decile,avg_change
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,1,3.931746176073637
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,2,4.504544564652962
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,3,4.8832510336266655
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,4,5.354017147803135
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,5,6.421377152847963
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,6,6.3103679859498225
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,7,6.563202697475646
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,8,8.29776846534779
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,9,8.477638729668664
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,10,7.9037670265859985
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,all,6.218350475667647
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,1,18.700585450045672
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,2,21.442560056492603
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,3,24.16007154800552
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,4,25.035245348507605
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,5,30.34244354246363
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,6,30.326199404263015
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,7,31.92843057072472
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,8,38.87553013752496
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,9,40.77918901833117
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,10,37.75728032307439
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,all,29.713090567218803
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,1,13.894238877635331
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,2,15.719010423565225
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,3,18.10632249814329
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,4,18.5989104104202
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,5,22.715856219007204
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,6,22.4313152334186
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,7,23.692612616846947
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,8,28.811706377108763
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,9,30.452274573136897
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,10,27.827237036603982
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,all,22.06135908817304
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,1,13.681668348063734
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,2,15.569409383399378
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,3,17.714370180586073
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,4,18.83803286872961
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,5,22.132449020504836
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,6,21.756628023111837
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,7,23.44251422615195
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,8,28.21444940431354
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,9,29.955255279002536
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,10,27.570128589823263
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,all,21.737673017883196
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,1,12.840417532808614
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,2,15.305087688064212
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,3,17.083070243880986
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,4,17.753198895749364
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,5,21.993392476364175
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,6,21.59812279302395
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,7,22.82718262208242
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,8,27.350575073314495
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,9,29.082851004883455
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,10,26.77514312171748
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,all,21.10005870960636
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,1,13.032472390519938
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,2,15.586044647649462
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,3,17.42724741094594
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,4,17.816962176311286
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,5,22.485322532215616
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,6,22.081720431297825
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,7,23.50015715776828
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,8,27.812514639665952
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,9,29.718819271582063
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,10,27.202179287751576
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,all,21.494322747609345
+mock4_combined,MOCK: drill 4 package,2026,1,63.15696873009056
+mock4_combined,MOCK: drill 4 package,2026,2,67.39381381942316
+mock4_combined,MOCK: drill 4 package,2026,3,62.9990145289957
+mock4_combined,MOCK: drill 4 package,2026,4,59.98995742894915
+mock4_combined,MOCK: drill 4 package,2026,5,55.40551132060295
+mock4_combined,MOCK: drill 4 package,2026,6,48.15779526318695
+mock4_combined,MOCK: drill 4 package,2026,7,44.835927411305825
+mock4_combined,MOCK: drill 4 package,2026,8,41.980156664135635
+mock4_combined,MOCK: drill 4 package,2026,9,39.02318308328505
+mock4_combined,MOCK: drill 4 package,2026,10,33.139162098180705
+mock4_combined,MOCK: drill 4 package,2026,all,51.86239153881819
+mock4_combined,MOCK: drill 4 package,2027,1,145.48023961467828
+mock4_combined,MOCK: drill 4 package,2027,2,186.5049389090717
+mock4_combined,MOCK: drill 4 package,2027,3,198.7175442245639
+mock4_combined,MOCK: drill 4 package,2027,4,185.0112598017854
+mock4_combined,MOCK: drill 4 package,2027,5,148.34439239147505
+mock4_combined,MOCK: drill 4 package,2027,6,91.77028967082032
+mock4_combined,MOCK: drill 4 package,2027,7,81.1006121919029
+mock4_combined,MOCK: drill 4 package,2027,8,50.87030868652029
+mock4_combined,MOCK: drill 4 package,2027,9,11.339239904345549
+mock4_combined,MOCK: drill 4 package,2027,10,-542.1996641234149
+mock4_combined,MOCK: drill 4 package,2027,all,55.54592267021126
+mock4_combined,MOCK: drill 4 package,2028,1,137.60941211257068
+mock4_combined,MOCK: drill 4 package,2028,2,182.0852028644053
+mock4_combined,MOCK: drill 4 package,2028,3,222.76782255552413
+mock4_combined,MOCK: drill 4 package,2028,4,142.0262060182011
+mock4_combined,MOCK: drill 4 package,2028,5,123.9663081792437
+mock4_combined,MOCK: drill 4 package,2028,6,74.50283403030686
+mock4_combined,MOCK: drill 4 package,2028,7,54.82175700500267
+mock4_combined,MOCK: drill 4 package,2028,8,11.31188834110424
+mock4_combined,MOCK: drill 4 package,2028,9,-19.1486259479596
+mock4_combined,MOCK: drill 4 package,2028,10,-602.3712009811678
+mock4_combined,MOCK: drill 4 package,2028,all,32.50137066581667
+mock4_combined,MOCK: drill 4 package,2029,1,142.65265968847677
+mock4_combined,MOCK: drill 4 package,2029,2,195.6809309078544
+mock4_combined,MOCK: drill 4 package,2029,3,229.3653228600504
+mock4_combined,MOCK: drill 4 package,2029,4,157.96932613102743
+mock4_combined,MOCK: drill 4 package,2029,5,125.15879456116564
+mock4_combined,MOCK: drill 4 package,2029,6,69.16285694872732
+mock4_combined,MOCK: drill 4 package,2029,7,54.82785717466742
+mock4_combined,MOCK: drill 4 package,2029,8,11.7109905820672
+mock4_combined,MOCK: drill 4 package,2029,9,-22.111882381908973
+mock4_combined,MOCK: drill 4 package,2029,10,-617.5671426543576
+mock4_combined,MOCK: drill 4 package,2029,all,34.024181168737194
+mock4_combined,MOCK: drill 4 package,2030,1,148.75113725565055
+mock4_combined,MOCK: drill 4 package,2030,2,219.44281165448552
+mock4_combined,MOCK: drill 4 package,2030,3,226.5187553076015
+mock4_combined,MOCK: drill 4 package,2030,4,193.4253707916649
+mock4_combined,MOCK: drill 4 package,2030,5,108.54746201842072
+mock4_combined,MOCK: drill 4 package,2030,6,66.42166237344695
+mock4_combined,MOCK: drill 4 package,2030,7,54.72887035342879
+mock4_combined,MOCK: drill 4 package,2030,8,13.69076367176674
+mock4_combined,MOCK: drill 4 package,2030,9,-26.463626474993525
+mock4_combined,MOCK: drill 4 package,2030,10,-641.3294244728236
+mock4_combined,MOCK: drill 4 package,2030,all,36.1055700190442
+mock4_combined,MOCK: drill 4 package,2031,1,129.5721711516223
+mock4_combined,MOCK: drill 4 package,2031,2,166.61911532291518
+mock4_combined,MOCK: drill 4 package,2031,3,157.21235084629214
+mock4_combined,MOCK: drill 4 package,2031,4,119.93866984907218
+mock4_combined,MOCK: drill 4 package,2031,5,-33.17066676798889
+mock4_combined,MOCK: drill 4 package,2031,6,-90.73166383684384
+mock4_combined,MOCK: drill 4 package,2031,7,-130.9579992883336
+mock4_combined,MOCK: drill 4 package,2031,8,-229.25178669510527
+mock4_combined,MOCK: drill 4 package,2031,9,-339.2297082576656
+mock4_combined,MOCK: drill 4 package,2031,10,-991.3306045094996
+mock4_combined,MOCK: drill 4 package,2031,all,-121.72580637310506
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,1,3.935152528074914
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,2,4.50835118837881
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,3,4.887406980104812
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,4,5.358636522711235
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,5,6.426898547133332
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,6,6.31569969926927
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,7,6.568784948439778
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,8,8.304751814589958
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,9,8.485113633006844
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,10,7.910349693740626
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,all,6.223657022577629
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,1,18.831883218521305
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,2,21.59314955245167
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,3,24.32963319690456
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,4,25.210915502816412
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,5,30.555231207857695
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,6,30.53916129202657
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,7,32.152163498733835
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,8,39.14840443823154
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,9,41.06481473961343
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,10,38.022304163848275
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,all,29.92155198573228
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,1,14.00045496247213
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,2,15.839215464540318
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,3,18.24467197945019
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,4,18.741055905727027
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,5,22.889626475198583
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,6,22.602881018243323
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,7,23.87411338547321
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,8,29.032311996825783
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,9,30.684810312425707
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,10,28.04034961294474
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,all,22.23010827593356
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,1,13.82171457599067
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,2,15.728859747870368
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,3,17.895861692889085
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,4,19.031072508136095
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,5,22.359130262195695
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,6,21.979440934218232
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,7,23.682632788955537
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,8,28.503333195483908
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,9,30.262011351172113
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,10,27.852551214753348
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,all,21.9603085629682
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,1,12.94294820279316
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,2,15.42730904735224
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,3,17.21940470381905
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,4,17.89487052934234
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,5,22.169017368603217
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,6,21.770557560874096
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,7,23.009382305616853
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,8,27.56901485580729
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,9,29.315060432774104
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,10,26.988908181172476
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,all,21.268517502053495
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,1,13.16703692551448
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,2,15.746748785042708
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,3,17.607251058314283
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,4,18.00119107685049
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,5,22.71730611023905
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,6,22.3094955016248
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,7,23.742984225696276
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,8,28.099541542063488
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,9,30.025586721967542
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,10,27.483136803379946
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,all,21.716233423924173
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,1,0.0
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,2,0.0
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,3,0.0
@@ -274,61 +340,61 @@ mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,8,0.0
 mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,9,0.0
 mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,10,0.0
 mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,all,0.0
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,1,-2.0343259037448043
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,2,-3.953296343536488
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,3,-1.9275152028763216
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,4,-2.006839468883225
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,5,-5.012166457308193
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,6,-4.310542413275436
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,7,-7.333588589531276
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,8,-8.98946236148115
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,9,-18.679848313806037
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,10,-48.35327411526055
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,all,-10.245464340056827
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,1,-2.02958587849849
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,2,-4.257701541250157
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,3,-1.758908926931214
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,4,-2.916122232115898
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,5,-4.376861694517328
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,6,-5.10942066254114
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,7,-6.476054798833471
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,8,-10.22788023063149
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,9,-18.95913531308886
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,10,-49.086819418308046
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,all,-10.51957477197757
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,1,-2.094175978584571
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,2,-3.3844337835249494
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,3,-2.82683321983648
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,4,-2.4780618808848796
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,5,-5.1284859983815565
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,6,-5.09274215647552
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,7,-6.959435815229735
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,8,-10.386437932282329
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,9,-19.588149143454523
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,10,-49.61360913200183
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,all,-10.78279398662484
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,1,-2.154214239741957
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,2,-3.578419692062824
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,3,-2.862752280559956
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,4,-2.646940716230821
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,5,-5.476582030750198
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,6,-4.725596655758095
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,7,-7.278153884479576
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,8,-11.124222034505308
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,9,-20.048596460121527
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,10,-50.69337535063583
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,all,-11.069579310443457
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,1,-2.176364122266349
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,2,-3.6437001274701712
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,3,-2.9277675022787863
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,4,-2.720916079855364
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,5,-5.588994189879847
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,6,-5.27161539346882
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,7,-7.079415070732267
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,8,-11.264208840564212
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,9,-20.29599760022583
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,10,-51.31318871609201
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,all,-11.22691208185826
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,1,-5.1020827064563585
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,2,-6.966648175474106
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,3,-6.208377571441335
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,4,-3.989742421194669
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,5,-8.706450054169897
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,6,-7.937976266260231
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,7,-14.52994934248501
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,8,-21.466083225117934
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,9,-50.75301222120747
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,10,-596.6623033206172
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,all,-73.42027753676963
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,1,-5.256725170999196
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,2,-7.450409706157396
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,3,-6.266805544409949
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,4,-5.955064136044444
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,5,-7.328665407443701
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,6,-8.932716326522943
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,7,-13.999240149386386
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,8,-23.371349787858303
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,9,-53.425726940104745
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,10,-614.4325273151262
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,all,-76.05079667257331
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,1,-5.492589829734382
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,2,-5.32859988931936
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,3,-8.946082900156716
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,4,-4.224341899987283
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,5,-9.905524853094098
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,6,-8.93108483817451
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,7,-14.82629873603076
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,8,-24.15100809486703
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,9,-55.890003646907026
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,10,-630.2037402994367
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,all,-78.63711525359274
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,1,-5.720051537867734
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,2,-5.624304212116967
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,3,-9.294530915053052
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,4,-4.4496716285445395
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,5,-11.962340191632626
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,6,-7.343218679457556
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,7,-15.560738681325828
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,8,-25.64744623092008
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,9,-58.122090776852595
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,10,-654.5274831378483
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,all,-81.48372160737821
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,1,-5.916788056213357
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,2,-5.785776883949336
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,3,-9.69340987830702
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,4,-4.570515315257619
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,5,-12.4335439940781
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,6,-8.159072383925311
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,7,-15.827540469302509
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,8,-26.49048191258463
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,9,-60.490724894060875
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,10,-677.8047188168091
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,all,-84.3276626153877
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,1,0.0
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,2,0.0
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,3,0.0
@@ -450,17 +516,17 @@ mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,8,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,9,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,10,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,all,0.0
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,1,-28.58500627642322
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,2,-61.16637452262063
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,3,-73.63380027981746
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4,-90.739329993384
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,5,-123.40710276057264
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,6,-148.68356012164955
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,7,-174.31543944417666
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,8,-222.9328784396453
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,9,-285.1256369140953
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,10,-297.89268204245326
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,all,-148.51099143957828
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,1,-30.802300368723454
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,2,-65.9310432661216
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,3,-79.59040182232962
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4,-98.06263379355576
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,5,-133.59686311751713
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,6,-161.13246729335083
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,7,-189.10171269715943
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,8,-242.95466473561007
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,9,-311.79548996566746
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,10,-328.1071272924183
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,all,-161.78644425706204
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,1,48.21552180306336
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,2,50.21835906843992
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,3,44.392008130253735
@@ -604,61 +670,61 @@ mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,8,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,9,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,10,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,all,0.0
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,1,5.642980439427135
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,2,14.156707304791048
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3,13.576877822111184
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,4,11.991759268127346
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,5,7.25055272011263
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,6,5.019760752948042
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,7,2.893439042860362
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,8,2.4255602148590416
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,9,0.7139241271271142
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,10,1.3495886154220875
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,all,6.562237354314748
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,1,8.360741135688004
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,2,20.335240238411895
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3,19.37758541890594
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4,16.207576089023497
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,5,10.407982311535646
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,6,6.537775160194043
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,7,4.497965022189633
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,8,3.3255908786395274
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,9,1.153061366632694
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,10,1.8602007577226995
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,all,9.286575822143227
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,1,11.786769896510895
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,2,27.67780965163206
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,3,26.38672517875915
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4,22.244124666922307
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,5,13.876486994385225
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,6,9.478362634944816
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,7,6.900852188213751
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,8,4.110400943352686
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,9,1.78787449642764
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,10,2.4071792371896925
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,all,12.758340411503196
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,1,15.897068814450364
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,2,35.72823716961433
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,3,33.563079415118196
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4,29.300011116444825
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5,18.150330366394485
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,6,12.195909382549504
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,7,9.603399975987235
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,8,5.457130182605256
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,9,2.4640313408436625
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,10,3.082533318505161
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,all,16.667254011280843
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,1,18.07981972404085
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,2,38.21789780553454
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,3,34.83210550078902
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,4,31.348218585321376
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5,18.6325149900652
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,6,12.514945949658456
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,7,10.4546837869154
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,8,5.518286627402393
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,9,2.6255852234424992
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,10,3.253808817309511
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,all,17.710307818156405
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,1,5.744065657609702
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,2,14.440424780751613
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3,13.856890003468234
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,4,12.212500547178893
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,5,7.403501249845989
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,6,5.150681109119159
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,7,2.950821715835267
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,8,2.4856602357909185
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,9,0.729819315986897
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,10,1.3723205569037311
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,all,6.695624720814768
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,1,8.937856100390515
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,2,21.810198997928076
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3,20.94936437451027
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4,17.45251915320851
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,5,11.146261473885302
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,6,7.157317251844208
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,7,4.992511098790142
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,8,3.615407097120683
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,9,1.2357577532181143
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,10,1.9759455958470669
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,all,10.011576787463936
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,1,12.837877085397093
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,2,30.43951046427611
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,3,29.08351577299595
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4,24.587255922534354
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,5,15.184912676671171
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,6,10.556535910105636
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,7,7.711905471528559
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,8,4.619631174448928
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,9,1.9558456503783137
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,10,2.5997306503079183
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,all,14.056545206977653
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,1,17.423475103227155
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,2,39.67109731448335
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,3,37.26199127278743
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4,32.93533620097861
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5,20.255253341366075
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,6,13.697106994068973
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,7,10.796781277485271
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,8,6.210731306498574
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,9,2.707798075336179
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,10,3.350750816656506
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,all,18.56359760199829
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,1,19.92244063236328
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,2,43.15725116910185
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,3,39.50908545986199
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,4,36.17639637866155
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5,21.1753918769809
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,6,14.311574583383909
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,7,11.980919044037613
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,8,6.430174996350129
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,9,2.936058775125781
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,10,3.590770769231622
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,all,20.095589628514382
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,1,11.006277124238842
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,2,12.667204814768848
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,3,13.71956509684444
@@ -791,69 +857,3 @@ mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,8,0.0
 mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,9,0.0
 mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,10,0.0
 mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,all,0.0
-mock4_combined,MOCK: drill 4 package,2026,1,63.15356237808928
-mock4_combined,MOCK: drill 4 package,2026,2,67.39000719569731
-mock4_combined,MOCK: drill 4 package,2026,3,62.994858582517566
-mock4_combined,MOCK: drill 4 package,2026,4,59.98533805404104
-mock4_combined,MOCK: drill 4 package,2026,5,55.39998992631758
-mock4_combined,MOCK: drill 4 package,2026,6,48.1524635498675
-mock4_combined,MOCK: drill 4 package,2026,7,44.83034516034169
-mock4_combined,MOCK: drill 4 package,2026,8,41.973173314893465
-mock4_combined,MOCK: drill 4 package,2026,9,39.01570817994687
-mock4_combined,MOCK: drill 4 package,2026,10,33.13257943102608
-mock4_combined,MOCK: drill 4 package,2026,all,51.8570849919082
-mock4_combined,MOCK: drill 4 package,2027,1,148.31566493358238
-mock4_combined,MOCK: drill 4 package,2027,2,189.0840277029911
-mock4_combined,MOCK: drill 4 package,2027,3,202.5487321238731
-mock4_combined,MOCK: drill 4 package,2027,4,186.5977158192699
-mock4_combined,MOCK: drill 4 package,2027,5,151.67294349451652
-mock4_combined,MOCK: drill 4 package,2027,6,95.05356959332896
-mock4_combined,MOCK: drill 4 package,2027,7,88.01564995542809
-mock4_combined,MOCK: drill 4 package,2027,8,63.014298172117414
-mock4_combined,MOCK: drill 4 package,2027,9,43.110545077013754
-mock4_combined,MOCK: drill 4 package,2027,10,5.821601035068537
-mock4_combined,MOCK: drill 4 package,2027,all,118.37883910752274
-mock4_combined,MOCK: drill 4 package,2028,1,140.15322886709356
-mock4_combined,MOCK: drill 4 package,2028,2,183.6825388016951
-mock4_combined,MOCK: drill 4 package,2028,3,225.5655930709952
-mock4_combined,MOCK: drill 4 package,2028,4,143.676744826958
-mock4_combined,MOCK: drill 4 package,2028,5,126.00604161214916
-mock4_combined,MOCK: drill 4 package,2028,6,77.53413417100397
-mock4_combined,MOCK: drill 4 package,2028,7,61.66892020931794
-mock4_combined,MOCK: drill 4 package,2028,8,23.94481257632875
-mock4_combined,MOCK: drill 4 package,2028,9,15.002434149077
-mock4_combined,MOCK: drill 4 package,2028,10,-37.354567221250456
-mock4_combined,MOCK: drill 4 package,2028,all,97.1385424069738
-mock4_combined,MOCK: drill 4 package,2029,1,144.85961298880176
-mock4_combined,MOCK: drill 4 package,2029,2,194.7035398579192
-mock4_combined,MOCK: drill 4 package,2029,3,232.6063460744887
-mock4_combined,MOCK: drill 4 package,2029,4,157.17719986427608
-mock4_combined,MOCK: drill 4 package,2029,5,128.40070350878224
-mock4_combined,MOCK: drill 4 package,2029,6,71.69472886905373
-mock4_combined,MOCK: drill 4 package,2029,7,61.64342613332657
-mock4_combined,MOCK: drill 4 package,2029,8,24.677290458407143
-mock4_combined,MOCK: drill 4 package,2029,9,13.71474356612097
-mock4_combined,MOCK: drill 4 package,2029,10,-37.451873635065525
-mock4_combined,MOCK: drill 4 package,2029,all,100.35679100589674
-mock4_combined,MOCK: drill 4 package,2030,1,150.6859549214038
-mock4_combined,MOCK: drill 4 package,2030,2,217.42294639371104
-mock4_combined,MOCK: drill 4 package,2030,3,229.11533628441688
-mock4_combined,MOCK: drill 4 package,2030,4,191.44822274773733
-mock4_combined,MOCK: drill 4 package,2030,5,112.75269499521217
-mock4_combined,MOCK: drill 4 package,2030,6,67.35909914973972
-mock4_combined,MOCK: drill 4 package,2030,7,61.63589188462369
-mock4_combined,MOCK: drill 4 package,2030,8,27.241677481078128
-mock4_combined,MOCK: drill 4 package,2030,9,11.13321078962575
-mock4_combined,MOCK: drill 4 package,2030,10,-37.9776444230912
-mock4_combined,MOCK: drill 4 package,2030,all,104.4535806217539
-mock4_combined,MOCK: drill 4 package,2031,1,133.2368067040733
-mock4_combined,MOCK: drill 4 package,2031,2,167.97004519871115
-mock4_combined,MOCK: drill 4 package,2031,3,164.70017590762248
-mock4_combined,MOCK: drill 4 package,2031,4,124.07538359695975
-mock4_combined,MOCK: drill 4 package,2031,5,-19.087601416935552
-mock4_combined,MOCK: drill 4 package,2031,6,-77.48668113347848
-mock4_combined,MOCK: drill 4 package,2031,7,-109.26659106773153
-mock4_combined,MOCK: drill 4 package,2031,8,-195.28789707332575
-mock4_combined,MOCK: drill 4 package,2031,9,-273.09633822659003
-mock4_combined,MOCK: drill 4 package,2031,10,-335.53402623350473
-mock4_combined,MOCK: drill 4 package,2031,all,-38.16285241750859

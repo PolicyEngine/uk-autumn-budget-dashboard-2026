@@ -1,10 +1,16 @@
 reform_id,reform_name,year,value
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,-0.1814224195625058
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,-0.8700518707535269
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,-0.648542664927254
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,-0.6418345449968271
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,-0.6258388478759075
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,-0.6402723485604358
+mock4_combined,MOCK: drill 4 package,2026,-1.509719375891287
+mock4_combined,MOCK: drill 4 package,2027,-3.874681218630936
+mock4_combined,MOCK: drill 4 package,2028,-3.235807090983959
+mock4_combined,MOCK: drill 4 package,2029,-3.3171578597204783
+mock4_combined,MOCK: drill 4 package,2030,-3.4203880946229104
+mock4_combined,MOCK: drill 4 package,2031,1.2153128290339203
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,-0.1815768684459981
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,-0.8761583346969302
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,-0.6534980030957831
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,-0.6484098212818982
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,-0.6308332933119298
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,-0.6468823473653408
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,0.0
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,-0.7630887512394745
 mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,-0.7885815796691538
@@ -24,11 +30,11 @@ mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,-
 mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,-0.009081909152253
 mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,-0.0092310660896475
 mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,0.0
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,0.3043593522354276
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,0.3136998884786582
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,0.3229500134298126
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,0.3330050125650318
-mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,0.3391684761694708
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,2.155468293676349
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,2.2414374623057776
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,2.327919666767679
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,2.4230176402521653
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,2.518370322261135
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,0.0
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,0.0
 mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,0.2809345749067516
@@ -40,7 +46,7 @@ mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,0.0
 mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,0.0
-mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4.40966669856692
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4.803808144598465
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,-0.8213909206052933
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,0.0
 mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,0.0
@@ -54,11 +60,11 @@ mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,-0.1998826
 mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,-0.198449472370332
 mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,-0.1955545557452049
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,0.0
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,-0.1913265889206679
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,-0.2718091881508208
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,-0.3750670643750097
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,-0.4921682450847219
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,-0.5252170675625282
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,-0.1952155202265116
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,-0.2930292581743192
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,-0.4132317018092241
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,-0.5481663789087902
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,-0.5959560946953458
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,-0.5067516044321829
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,-0.2492949252881535
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,0.0
@@ -66,14 +72,8 @@ mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,0.0
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,0.0
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,0.0
 mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,0.0
-mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,-4.430302191978474
-mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,-4.500481453540953
-mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,-4.57121026507985
-mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,-4.651104051918702
-mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,-4.722448743063655
-mock4_combined,MOCK: drill 4 package,2026,-1.5095649270077949
-mock4_combined,MOCK: drill 4 package,2027,-7.880929868971268
-mock4_combined,MOCK: drill 4 package,2028,-7.338821895331918
-mock4_combined,MOCK: drill 4 package,2029,-7.516133919810186
-mock4_combined,MOCK: drill 4 package,2030,-7.729698001720723
-mock4_combined,MOCK: drill 4 package,2031,-3.606758127506662
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,-2.2651641673234955
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,-2.299019920881814
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,-2.3324379402609816
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,-2.370774586787203
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,-2.40447646518482

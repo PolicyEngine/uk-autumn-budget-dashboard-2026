@@ -1,0 +1,240 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 4, 19 October 2026. Not a real Budget. Skip one line when reading this CSV.
+household,measure,scoring_year,team_change,route_used,assumption,run_sha
+H1,1 Threshold freeze to 2032,2031-32,-243.60,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,5 Fuel duty,2026-27,9.33,hand,"1100 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H1,5 Fuel duty,2027-28,50.82,hand,"1100 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H1,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H1,18 VAT on road fuel,2026-27,20.80,hand,"1100 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H1,18 VAT on road fuel,2027-28,10.83,hand,"1100 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H1,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H1,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,"1, 3 and 7 together (stacked)",2031-32,-243.60,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H1,5 and 18 together (stacked),2026-27,29.74,hand,"1100 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H2,1 Threshold freeze to 2032,2031-32,-81.20,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,5 Fuel duty,2026-27,6.79,hand,"800 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H2,5 Fuel duty,2027-28,36.96,hand,"800 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H2,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,8 Capital Gains Tax higher rate,2027-28,-194.60,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H2,18 VAT on road fuel,2026-27,15.13,hand,"800 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H2,18 VAT on road fuel,2027-28,7.88,hand,"800 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H2,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,"£180,000 additional dwelling in Scotland: LBTT/LTT devolved, unaffected by the SDLT surcharge rise",a2fac5c
+H2,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,"1, 3 and 7 together (stacked)",2031-32,-81.20,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H2,5 and 18 together (stacked),2026-27,21.63,hand,"800 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H3,1 Threshold freeze to 2032,2031-32,-56.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,3 State Pension Top-up Allowance,2027-28,98.48,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H3,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H3,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H3,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H3,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H3,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H3,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,"1, 3 and 7 together (stacked)",2031-32,390.36,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H3,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H4,1 Threshold freeze to 2032,2031-32,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,4 Warm Home Discount top-up,2026-27,75.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H4,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H4,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H4,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H4,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H4,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H4,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,"1, 3 and 7 together (stacked)",2031-32,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H4,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H5,1 Threshold freeze to 2032,2031-32,-112.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,3 State Pension Top-up Allowance,2027-28,98.48,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,5 Fuel duty,2026-27,4.24,hand,"500 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H5,5 Fuel duty,2027-28,23.10,hand,"500 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H5,7 Starting rate for savings,2028-29,-563.86,hand,engine starter-band taper missing; hand per Annex A (22% savings rate),a2fac5c
+H5,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H5,18 VAT on road fuel,2026-27,9.46,hand,"500 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H5,18 VAT on road fuel,2027-28,4.92,hand,"500 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H5,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H5,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H5,"1, 3 and 7 together (stacked)",2031-32,-6.24,hand,engine starter-band taper missing (gave 114.36); hand per Annex A,a2fac5c
+H5,5 and 18 together (stacked),2026-27,13.52,hand,"500 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H6,1 Threshold freeze to 2032,2031-32,-35.29,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,4 Warm Home Discount top-up,2026-27,125.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,5 Fuel duty,2026-27,7.63,hand,"900 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H6,5 Fuel duty,2027-28,41.58,hand,"900 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H6,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,11 Local Housing Allowance,2027-28,1260.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,14 Universal Credit child element,2027-28,300.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,17 Child Benefit Early Years Addition,2027-28,0.00,hand,"0 benefit weeks x £10, HICBC 0%",a2fac5c
+H6,18 VAT on road fuel,2026-27,17.02,hand,"900 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H6,18 VAT on road fuel,2027-28,8.86,hand,"900 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H6,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H6,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,"1, 3 and 7 together (stacked)",2031-32,-35.29,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H6,5 and 18 together (stacked),2026-27,24.34,hand,"900 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H7,1 Threshold freeze to 2032,2031-32,-35.28,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,4 Warm Home Discount top-up,2026-27,0.00,engine+override,not on UC on 24 Aug 2026 qualifying date,a2fac5c
+H7,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H7,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H7,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,14 Universal Credit child element,2027-28,300.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,17 Child Benefit Early Years Addition,2027-28,420.00,hand,"42 benefit weeks x £10, HICBC 0%",a2fac5c
+H7,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H7,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H7,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H7,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,"1, 3 and 7 together (stacked)",2031-32,-35.28,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H7,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H8,1 Threshold freeze to 2032,2031-32,-322.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,5 Fuel duty,2026-27,11.03,hand,"1300 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H8,5 Fuel duty,2027-28,60.06,hand,"1300 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H8,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,17 Child Benefit Early Years Addition,2027-28,257.40,hand,"33 benefit weeks x £10, HICBC 22%",a2fac5c
+H8,18 VAT on road fuel,2026-27,24.58,hand,"1300 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H8,18 VAT on road fuel,2027-28,12.80,hand,"1300 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H8,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H8,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,"1, 3 and 7 together (stacked)",2031-32,-322.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H8,5 and 18 together (stacked),2026-27,35.15,hand,"1300 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H9,1 Threshold freeze to 2032,2031-32,-53.20,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H9,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H9,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H9,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H9,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H9,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H9,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,"1, 3 and 7 together (stacked)",2031-32,-53.20,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H9,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H10,1 Threshold freeze to 2032,2031-32,-84.40,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H10,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H10,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H10,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H10,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H10,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H10,21 Carer's Allowance earnings limit,2027-28,3755.44,hand,"CA 4661.80 (Annex A x52) less 20% tax; MA kept (PA 11,310)",a2fac5c
+H10,"1, 3 and 7 together (stacked)",2031-32,-84.40,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H10,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H11,1 Threshold freeze to 2032,2031-32,-243.59,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,5 Fuel duty,2026-27,8.48,hand,"1000 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H11,5 Fuel duty,2027-28,46.20,hand,"1000 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H11,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,8 Capital Gains Tax higher rate,2027-28,-740.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H11,18 VAT on road fuel,2026-27,18.91,hand,"1000 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H11,18 VAT on road fuel,2027-28,9.85,hand,"1000 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H11,20 Stamp Duty Land Tax surcharge,2027-28,-6400.00,engine+hand,"£320,000 additional dwelling, effective date in 2027-28; +2pp all bands; engine -6400.01 agrees (float32)",a2fac5c
+H11,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,"1, 3 and 7 together (stacked)",2031-32,-243.59,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H11,5 and 18 together (stacked),2026-27,27.04,hand,"1000 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H12,1 Threshold freeze to 2032,2031-32,-78.40,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,5 Fuel duty,2026-27,5.09,hand,"600 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H12,5 Fuel duty,2027-28,27.72,hand,"600 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H12,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H12,18 VAT on road fuel,2026-27,11.35,hand,"600 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H12,18 VAT on road fuel,2027-28,5.91,hand,"600 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H12,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H12,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,"1, 3 and 7 together (stacked)",2031-32,-78.40,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H12,5 and 18 together (stacked),2026-27,16.22,hand,"600 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H13,1 Threshold freeze to 2032,2031-32,-35.28,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,3 State Pension Top-up Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H13,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H13,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,11 Local Housing Allowance,2027-28,0.00,engine+override,LHA reset is GB only; NIHE rates unchanged (engine applies it UK-wide),a2fac5c
+H13,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,14 Universal Credit child element,2027-28,449.97,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,17 Child Benefit Early Years Addition,2027-28,0.00,hand,"0 benefit weeks x £10, HICBC 0%",a2fac5c
+H13,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H13,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H13,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H13,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,"1, 3 and 7 together (stacked)",2031-32,-35.28,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H13,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H14,1 Threshold freeze to 2032,2031-32,-53.20,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,3 State Pension Top-up Allowance,2027-28,57.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,4 Warm Home Discount top-up,2026-27,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,5 Fuel duty,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H14,5 Fuel duty,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H14,7 Starting rate for savings,2028-29,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,8 Capital Gains Tax higher rate,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,11 Local Housing Allowance,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,12 Employer NICs for young workers,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,14 Universal Credit child element,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,17 Child Benefit Early Years Addition,2027-28,0.00,hand,no Child Benefit claim / no child under 1,a2fac5c
+H14,18 VAT on road fuel,2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H14,18 VAT on road fuel,2027-28,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
+H14,20 Stamp Duty Land Tax surcharge,2027-28,0.00,hand,no additional-dwelling purchase in this year (specimen facts),a2fac5c
+H14,21 Carer's Allowance earnings limit,2027-28,0.00,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,"1, 3 and 7 together (stacked)",2031-32,334.40,engine,"household_net_income, policyengine-uk 2.130.1",a2fac5c
+H14,5 and 18 together (stacked),2026-27,0.00,hand,"0 l/yr fixed, even per day, pump=(58.40p+duty)xVAT",a2fac5c
