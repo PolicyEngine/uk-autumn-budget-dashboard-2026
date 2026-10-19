@@ -6,6 +6,7 @@ neither column. A measure on those rates scores £0 (before #2241, it charges
 a buyer's whole stock), so it must be published as not computable.
 """
 
+import ast
 import collections
 import contextlib
 import copy
@@ -17,6 +18,7 @@ import re
 import sys
 import types
 import warnings
+from collections.abc import Mapping
 
 import numpy as np
 import pytest
@@ -2130,21 +2132,218 @@ def test_messages_and_known_composed_names_stay_computable(modifier):
     assert limits_touched(simulation(), reformed) == []
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        "vat_modifier",
-        "payment_modifier",
-        "allowance_modifier",
-        "property_modifier",
-    ],
-)
+TEMPLATE_MODIFIERS = [
+    "vat_modifier",
+    "payment_modifier",
+    "allowance_modifier",
+    "property_modifier",
+]
+
+
+@pytest.mark.parametrize("name", TEMPLATE_MODIFIERS)
 def test_every_repository_template_measure_is_computable(name):
     """The templates are the way Budget-day measures are written: none may
     be marked not computable (review of #51 round 11: the VAT template
     was, through a helper's error message)."""
     reformed = simulation(modifier=getattr(template_measures, name))
     assert limits_touched(simulation(), reformed) == []
+
+
+# The coordinator's ruling on #51 (19 Oct, under d1625) puts three
+# constructions outside the line for hand-written modifiers only: building
+# or holding a simulation or system other than the one given, or anything
+# of one; changing state formulas hold while the simulations run; and a
+# metaclass. Templates stay inside the line, so the two tests below keep
+# them free of all three: a template that used one would need the watch
+# to cover it in full.
+TEMPLATE_MUTATORS = {
+    "add",
+    "append",
+    "clear",
+    "discard",
+    "extend",
+    "insert",
+    "pop",
+    "popitem",
+    "remove",
+    "setdefault",
+    "update",
+}
+ENGINE_BUILDERS = {
+    "CoreReform",
+    "CountryTaxBenefitSystem",
+    "Microsimulation",
+    "Reform",
+    "Simulation",
+    "TaxBenefitSystem",
+}
+
+
+def _bound_names(function) -> set:
+    names = {a.arg for a in ast.walk(function.args) if isinstance(a, ast.arg)}
+    for node in ast.walk(function):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            names.add(node.id)
+    return names
+
+
+def test_the_templates_use_no_construction_ruled_outside_the_line():
+    from uk_budget_data import measure_templates
+
+    tree = ast.parse(inspect.getsource(measure_templates))
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Global, ast.Nonlocal)):
+            found.append((node.lineno, "global or nonlocal state"))
+        elif isinstance(node, ast.ClassDef) and any(
+            keyword.arg == "metaclass" for keyword in node.keywords
+        ):
+            found.append((node.lineno, "a metaclass"))
+        elif isinstance(node, ast.Attribute) and node.attr in (
+            "clone",
+            "get_branch",
+        ):
+            found.append((node.lineno, f"another simulation ({node.attr})"))
+        elif isinstance(node, ast.Call):
+            called = node.func
+            name = getattr(called, "id", getattr(called, "attr", None))
+            if name in ENGINE_BUILDERS:
+                found.append((node.lineno, f"another system ({name})"))
+    # A formula is a function defined inside a template function: it may
+    # store to no attribute or item, and change nothing it doesn't bind.
+    for template in tree.body:
+        if not isinstance(template, ast.FunctionDef):
+            continue
+        for formula in ast.walk(template):
+            if formula is template or not isinstance(formula, ast.FunctionDef):
+                continue
+            bound = _bound_names(formula)
+            for node in ast.walk(formula):
+                targets = []
+                if isinstance(node, (ast.Assign, ast.Delete)):
+                    targets = node.targets
+                elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
+                    targets = [node.target]
+                if any(
+                    isinstance(t, (ast.Attribute, ast.Subscript))
+                    for t in targets
+                ):
+                    found.append((node.lineno, "a formula storing state"))
+                if (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in TEMPLATE_MUTATORS
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id not in bound
+                ):
+                    found.append((node.lineno, "a formula changing state"))
+    assert found == []
+
+
+@pytest.mark.parametrize("name", TEMPLATE_MODIFIERS)
+def test_template_measures_hold_and_build_no_other_engine_object(
+    name, monkeypatch
+):
+    """Run: the template's own code builds no simulation or system, and
+    its formulas hold none, nor any population, holder or stored
+    parameter; every class they hold or make has a plain or library
+    metaclass; and what they hold is the same after a watched run."""
+    from policyengine_core.holders.holder import Holder
+    from policyengine_core.parameters import (
+        Parameter,
+        ParameterNode,
+        ParameterScale,
+    )
+    from policyengine_core.populations import GroupPopulation, Population
+    from policyengine_core.simulations.simulation import (
+        Simulation as CoreSimulation,
+    )
+    from policyengine_core.taxbenefitsystems import TaxBenefitSystem
+
+    from uk_budget_data import measure_templates
+
+    template_files = {
+        inspect.getsourcefile(measure_templates),
+        inspect.getsourcefile(template_measures),
+    }
+    built = []
+
+    def recording(kind, method):
+        original = kind.__dict__[method]
+
+        def record(*args, **kwargs):
+            caller = sys._getframe(1).f_code.co_filename
+            if caller in template_files:
+                built.append(f"{kind.__name__}.{method}")
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(kind, method, record)
+
+    # Wherever a class defines them: policyengine-uk's Simulation has its
+    # own __init__ and clone, and its system class its own __init__.
+    system_class = type(simulation().tax_benefit_system)
+    for root, methods in (
+        (Simulation, ("__init__", "clone", "get_branch")),
+        (system_class, ("__init__", "clone")),
+    ):
+        for kind in root.__mro__[:-1]:
+            for method in methods:
+                if method in kind.__dict__:
+                    recording(kind, method)
+
+    baseline = simulation()
+    reformed = simulation(modifier=getattr(template_measures, name))
+    changes = data_limits._Changes(
+        baseline.tax_benefit_system,
+        reformed.tax_benefit_system,
+        data_limits._Behaviour(),
+    )
+    assert changes.sides
+    engine_objects = (
+        CoreSimulation,
+        TaxBenefitSystem,
+        Population,
+        GroupPopulation,
+        Holder,
+        Parameter,
+        ParameterNode,
+        ParameterScale,
+    )
+
+    def held():
+        values = []
+        for variable_name in changes.sides:
+            variable = reformed.tax_benefit_system.variables[variable_name]
+            assert data_limits._library_class(type(type(variable))) or (
+                type(type(variable)) is type
+            )
+            for formula in data_limits._formulas(variable):
+                for cell in formula.__closure__ or ():
+                    value = cell.cell_contents
+                    values.append(value)
+                    if isinstance(value, Mapping):
+                        values.extend(value.values())
+        return values
+
+    before = held()
+    for value in before:
+        assert not isinstance(value, engine_objects), value
+        if isinstance(value, type):
+            assert type(value) is type or data_limits._library_class(
+                type(value)
+            ), value
+    fingerprints = [data_limits._Behaviour().of(value) for value in before]
+    with data_limits.observing(baseline, reformed) as observed:
+        for sim in (baseline, reformed):
+            for variable_name in changes.sides:
+                for year in data_limits.HOUSEHOLD_YEARS:
+                    sim.calculate(variable_name, year)
+    assert observed.drifted == {}
+    assert observed.unobservable == {}
+    assert [data_limits._Behaviour().of(value) for value in held()] == (
+        fingerprints
+    )
+    assert built == []
 
 
 def numpy_subclass_rate(rate):
