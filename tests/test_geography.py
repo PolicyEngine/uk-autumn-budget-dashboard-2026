@@ -1637,11 +1637,13 @@ def run_cli(
     marker=True,
     lookup=True,
     changes_of=None,
+    package=None,
+    inputs_ready=None,
 ):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
 
-    inputs, frs_regions, codes = synthetic_inputs(tmp_path)
+    inputs, frs_regions, codes = inputs_ready or synthetic_inputs(tmp_path)
     household, person, changes = fake_world(frs_regions)
     n = len(household)
     if orphan:
@@ -1651,6 +1653,10 @@ def run_cli(
     seat_of = {code: f"Z14{i + 1:06d}" for i, code in enumerate(codes)}
     seat_regions = {f"Z14{i:06d}": codes[(i - 1) % 12] for i in range(1, 25)}
     args = ["--reforms", "pkg", "alpha", "beta", "--years", "2026"]
+    if package is not None:
+        args = ["--reforms", "alpha", "beta", "--package", package]
+        args += ["--years", "2026"]
+        changes[package] = changes["pkg"]
     if kind == "efrs":
         matrix = np.zeros((24, n))
         for column, frs in enumerate(household["region"]):
@@ -1664,6 +1670,13 @@ def run_cli(
                 (inputs / g.SEATS_FILE).read_bytes()
             )
         args += ["--seat-weights", str(weights)]
+    elif kind == "microcosm-national":
+        national = tmp_path / "national.h5"
+        with h5py.File(national, "w") as handle:
+            if marker:
+                handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "calibrated"
+        args += ["--dataset-kind", kind, "--dataset", str(national)]
+        args += ["--levels", "region"]
     else:
         household["region_code_oa"] = [
             (
@@ -1682,7 +1695,7 @@ def run_cli(
                 handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
         args += ["--dataset-kind", "microcosm", "--dataset", str(local)]
 
-    def simulate(reform, dataset, years):
+    def simulate(reform, dataset, years, members=None):
         baseline = {2026: np.full(n, BASE)}
         reformed = {2026: BASE + changes[reform.id]}
         return (
@@ -1703,6 +1716,11 @@ def run_cli(
         tmp_path, reforms, packages={"pkg": ("alpha", "beta")}
     )
     enhanced_frs_bundle(monkeypatch)
+    if package is not None:
+        from uk_budget_data.publication import combine
+
+        monkeypatch.setattr(g, "PACKAGES", {})
+        monkeypatch.setattr(combine, "check_consistency", lambda *a: None)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
     out = tmp_path / "out"
     code = cli.main(
@@ -1838,6 +1856,263 @@ def test_data_the_key_cannot_link_stops_the_command(monkeypatch, tmp_path):
     code, out, _ = run_cli(monkeypatch, tmp_path, orphan=True)
     assert code == 1
     assert not out.exists()
+
+
+# -- the Microcosm pair ------------------------------------------------------
+
+
+def national_microcosm_household(**columns):
+    return pd.DataFrame(
+        {
+            "household_id": [1, 2, 3],
+            "household_weight": [10.0, 20.0, 30.0],
+            "source_household_id": [7, 7, 9],
+            "region": ["NORTH_EAST", "NORTH_EAST", "LONDON"],
+            "household_is_spi_synthetic": [False, True, False],
+        }
+        | columns
+    )
+
+
+def test_a_microcosm_national_collector_publishes_regions(regions):
+    household = national_microcosm_household()
+    simulation = FakeSimulation(household, pd.DataFrame())
+    collector = g.GeographyCollector.from_simulation(
+        simulation,
+        kind="microcosm-national",
+        regions=regions,
+        seat_regions={},
+        microcosm_export=True,
+    )
+    assert collector.national and not collector.has_seats
+    assert list(collector.source_ids) == [7, 7, 9]
+    assert list(collector.region_codes) == ["E12000001"] * 2 + ["E12000007"]
+
+
+@pytest.mark.parametrize(
+    "kind, columns, message",
+    [
+        (
+            "microcosm-national",
+            {"constituency_code_oa": ["Z14000001"] * 3},
+            "is a Microcosm local file",
+        ),
+        ("microcosm", {}, "is not a local file"),
+        ("microcosm", {"region_code_oa": ["E12000001"] * 3}, "lacks"),
+    ],
+)
+def test_each_file_of_the_pair_is_refused_as_the_other(
+    regions, kind, columns, message
+):
+    household = national_microcosm_household(**columns)
+    simulation = FakeSimulation(household, pd.DataFrame())
+    with pytest.raises(ValueError, match=message):
+        g.GeographyCollector.from_simulation(
+            simulation,
+            kind=kind,
+            regions=regions,
+            seat_regions={},
+            microcosm_export=True,
+        )
+
+
+def test_the_national_microcosm_file_has_no_seats(tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    national = tmp_path / "national.h5"
+    with h5py.File(national, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "calibrated"
+    args = ["geography", "--dataset-kind", "microcosm-national"]
+    args += ["--dataset", str(national)]
+    with pytest.raises(ValueError, match="has no seats"):
+        g._plan(parse_args(args))
+    with pytest.raises(ValueError, match="for the eFRS only"):
+        g._plan(
+            parse_args([*args, "--levels", "region", "--seat-weights", "w"])
+        )
+
+
+def test_the_command_writes_regions_from_microcosm_national(
+    monkeypatch, tmp_path
+):
+    code, out, audit = run_cli(
+        monkeypatch, tmp_path, kind="microcosm-national"
+    )
+    assert code == 0
+    assert [p.name for p in out.iterdir()] == ["regional.csv"]
+    assert validate_public(out) == []
+    (run,) = audit.iterdir()
+    assert [p.name for p in run.iterdir()] == ["microcosm-national"]
+
+
+def test_a_package_is_built_from_the_chosen_measures(monkeypatch, tmp_path):
+    code, out, audit = run_cli(
+        monkeypatch, tmp_path, kind="microcosm", package="new_combined"
+    )
+    assert code == 0
+    table = pd.read_csv(out / "constituency.csv")
+    # With --package, the package and every measure are published by seat.
+    assert set(table["reform"]) == {"alpha", "beta", "new_combined"}
+    (run,) = audit.iterdir()
+    summary = json.loads((run / "microcosm" / "summary.json").read_text())
+    assert summary["packages"] == {"new_combined": ["alpha", "beta"]}
+
+
+@pytest.mark.parametrize(
+    "name, message",
+    [
+        ("new_package", "must end in _combined"),
+        ("old_combined", "already a registered reform"),
+    ],
+)
+def test_a_package_name_is_checked(monkeypatch, name, message):
+    from uk_budget_data.models import Reform
+
+    registered = {"old_combined": Reform(id="old_combined", name="x")}
+    monkeypatch.setattr(g, "get_reform", registered.get)
+    measures = [Reform(id="a", name="a"), Reform(id="b", name="b")]
+    with pytest.raises(ValueError, match=message):
+        g.build_package(name, measures, [2026])
+
+
+def test_a_package_needs_two_measures(monkeypatch):
+    from uk_budget_data.models import Reform
+
+    monkeypatch.setattr(g, "get_reform", {}.get)
+    with pytest.raises(ValueError, match="at least two"):
+        g.build_package("a_combined", [Reform(id="a", name="a")], [2026])
+
+
+def test_reforms_against_current_law_share_one_baseline(monkeypatch):
+    from uk_budget_data.models import Reform
+
+    built = []
+
+    def build(dataset, scenario=None):
+        built.append(scenario)
+        return object()
+
+    monkeypatch.setattr(g, "build_microsimulation", build)
+    plain = Reform(id="plain", name="plain", parameter_changes={})
+    own = Reform(
+        id="own",
+        name="own",
+        parameter_changes={},
+        baseline_parameter_changes={"gov.x": {"2026": 1}},
+    )
+    shared = object()
+    baseline, _ = g.simulate_reform(plain, None, [2026], current_law=shared)
+    assert baseline is shared and len(built) == 1
+    baseline, _ = g.simulate_reform(own, None, [2026], current_law=shared)
+    assert baseline is not shared and len(built) == 3
+    assert g.uses_current_law(plain, [2026])
+    assert not g.uses_current_law(own, [2026])
+
+
+def write_audit(path, rows):
+    path.mkdir(parents=True)
+    columns = [*g._PAIR_KEY, "exact_value"]
+    frame = pd.DataFrame(rows, columns=columns)
+    frame.to_csv(path / g.AUDIT_FILE, index=False)
+    return path
+
+
+def test_the_pair_check_flags_gaps_beyond_tolerance(tmp_path):
+    national = write_audit(
+        tmp_path / "national",
+        [
+            ("national", "UK", "a", 2026, "average_change", 100.0),
+            ("region", R1, "a", 2026, "average_change", 100.0),
+            ("region", R1, "a", 2026, "relative_change", 0.0001),
+            ("region", R2, "a", 2026, "average_change", 50.0),
+            ("national", "UK", "a__interaction", 2026, "average_change", 9.0),
+            ("national", "UK", "a", 2026, "share_gaining", 0.5),
+        ],
+    )
+    local = write_audit(
+        tmp_path / "local",
+        [
+            ("national", "UK", "a", 2026, "average_change", 104.0),
+            ("region", R1, "a", 2026, "average_change", 115.0),
+            ("region", R1, "a", 2026, "relative_change", 0.0004),
+            ("constituency", S1, "a", 2026, "average_change", 1.0),
+        ],
+    )
+    report = g.pair_consistency(national / g.AUDIT_FILE, local / g.AUDIT_FILE)
+    status = dict(
+        zip(zip(report["area_code"], report["outcome"]), report["status"])
+    )
+    assert status == {
+        ("UK", "average_change"): "within_tolerance",
+        (R1, "average_change"): "beyond_tolerance",
+        (R1, "relative_change"): "within_tolerance",
+        (R2, "average_change"): "national_only",
+    }
+    summary = g.pair_summary(report)
+    assert "4 national and regional cells" in summary
+    assert "1 beyond tolerance" in summary and "1 in one run only" in summary
+    assert "115" not in summary and "104" not in summary
+
+
+def test_a_local_run_writes_the_pair_report(monkeypatch, tmp_path, capsys):
+    inputs = synthetic_inputs(tmp_path)
+    extra = ["--run-id", "pair1"]
+    code, _, audit = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm-national",
+        extra=extra,
+        inputs_ready=inputs,
+    )
+    assert code == 0
+    national = audit / "pair1" / "microcosm-national"
+    code, _, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm",
+        extra=[*extra, "--compare-with", str(national)],
+        inputs_ready=inputs,
+    )
+    assert code == 0
+    report = audit / "pair1" / "microcosm" / g.PAIR_REPORT_FILE
+    assert stat.S_IMODE(report.stat().st_mode) == 0o600
+    assert "Pair check (report only)" in capsys.readouterr().out
+    assert set(pd.read_csv(report)["status"]) == {"within_tolerance"}
+
+
+def test_compare_with_needs_a_local_run_and_an_audit(tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    local = tmp_path / "local.h5"
+    with h5py.File(local, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "calibrated"
+    args = ["geography", "--dataset-kind", "microcosm", "--dataset"]
+    args += [str(local), "--compare-with", str(tmp_path)]
+    with pytest.raises(ValueError, match="No disclosure_audit.csv"):
+        g._plan(parse_args(args))
+    with pytest.raises(ValueError, match="for a Microcosm local run"):
+        g._plan(parse_args(["geography", "--compare-with", str(tmp_path)]))
+
+
+def test_a_run_id_is_a_plain_name(monkeypatch, tmp_path, capsys):
+    from uk_budget_data import cli
+
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
+    monkeypatch.setattr(g, "simulate_reform", no_simulation)
+    assert cli.main(["geography", "--run-id", "../escape"]) == 1
+    assert "--run-id takes" in capsys.readouterr().out
+
+
+def test_the_pair_check_command_reports_counts(tmp_path, capsys):
+    from uk_budget_data import cli
+
+    row = ("national", "UK", "a", 2026, "average_change", 100.0)
+    national = write_audit(tmp_path / "audit" / "n", [row])
+    local = write_audit(tmp_path / "audit" / "l", [row])
+    args = ["pair-check", "--national-audit", str(national)]
+    assert cli.main([*args, "--local-audit", str(local)]) == 0
+    assert "0 beyond tolerance" in capsys.readouterr().out
+    assert (local / g.PAIR_REPORT_FILE).is_file()
 
 
 # -- the front-end fixture --------------------------------------------------
