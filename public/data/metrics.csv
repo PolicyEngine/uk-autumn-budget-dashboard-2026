@@ -1,11 +1,11 @@
 reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
-mock4_combined,MOCK: drill 4 package,2026,85.21177853119582,-0.0010919718542767,-0.029089928,-0.25298563
-mock4_combined,MOCK: drill 4 package,2027,84.61747855987089,-0.0056064291339189,-0.41717815,-3.556262
-mock4_combined,MOCK: drill 4 package,2028,82.59113903628898,-0.0055384310830172,-0.36471272,-3.0940228
-mock4_combined,MOCK: drill 4 package,2029,82.53290841592211,-0.0056557489551021,-0.27529526,-2.3227391
-mock4_combined,MOCK: drill 4 package,2030,82.34109398602214,-0.0057988952438112,-0.29781628,-2.4360638
-mock4_combined,MOCK: drill 4 package,2031,95.84801908665892,-0.0059628759939386,-0.24135113,-1.9867553
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,44.599062942882554,-6.50337044379596e-05,0.0,0.0
+mock4_combined,MOCK: drill 4 package,2026,85.317133365893,-0.0010984000774578,-0.029089928,-0.25298563
+mock4_combined,MOCK: drill 4 package,2027,84.64137481591611,-0.0056246611582113,-0.42017937,-3.5818458
+mock4_combined,MOCK: drill 4 package,2028,82.60087576363469,-0.0055594194613273,-0.3649397,-3.0959482
+mock4_combined,MOCK: drill 4 package,2029,82.55388098371014,-0.0056781674709669,-0.27775478,-2.3434908
+mock4_combined,MOCK: drill 4 package,2030,82.37473338043347,-0.0058225394601321,-0.2981634,-2.4389033
+mock4_combined,MOCK: drill 4 package,2031,95.85519282198908,-0.0059886279766388,-0.24259186,-1.9969687
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,48.08734143201869,-7.148114407078868e-05,0.0,0.0
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,76.52381300755621,-0.0003085565422774,0.0,0.0
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,75.05957546452265,-0.0002257061807494,0.0,0.0
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,74.80013953159096,-0.0002187325256185,0.0,0.0
@@ -60,11 +60,11 @@ mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,2.25759812
 mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,2.25540185664284,-0.0001998906854327,-0.0038251877,-0.031289093
 mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,2.2180512710729348,-0.0001939638990803,-0.03107357,-0.25574103
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,0.0,0.0,0.0,0.0
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3.6315792752214513,-0.0001638937181252,-0.018592834,-0.1584958
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4.088811446682056,-0.0002385273381046,-0.03162098,-0.26825505
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4.564315533306192,-0.0003321583477836,-0.03638649,-0.30700248
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5.124970548832435,-0.0004308215973085,-0.046343803,-0.37908092
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5.2041659276806,-0.0004615394399943,-0.040984154,-0.3373069
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3.789506545197647,-0.0001820683946766,-0.021594048,-0.18407984
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4.197640863470788,-0.0002594504169036,-0.03184986,-0.27019674
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4.654209641744692,-0.0003545014746062,-0.038845062,-0.3277461
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5.21630995260119,-0.0004543937221678,-0.04669094,-0.38192043
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5.330725154094682,-0.0004850976505982,-0.042224884,-0.34751832
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,73.19126124508082,-0.0001837865904616,0.0,0.0
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,55.624501503764975,-8.90821533738103e-05,0.0,0.0
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,0.0,0.0,0.0,0.0

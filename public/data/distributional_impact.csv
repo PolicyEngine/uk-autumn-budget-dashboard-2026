@@ -1,74 +1,74 @@
 reform_id,reform_name,year,decile,value
-mock4_combined,MOCK: drill 4 package,2026,1st,0.2381341474474242
-mock4_combined,MOCK: drill 4 package,2026,2nd,0.1685848530389518
-mock4_combined,MOCK: drill 4 package,2026,3rd,0.1412490894913605
-mock4_combined,MOCK: drill 4 package,2026,4th,0.1236009693055645
-mock4_combined,MOCK: drill 4 package,2026,5th,0.1008250426008597
-mock4_combined,MOCK: drill 4 package,2026,6th,0.0795109348911212
-mock4_combined,MOCK: drill 4 package,2026,7th,0.0671017766560639
-mock4_combined,MOCK: drill 4 package,2026,8th,0.0576853470702947
-mock4_combined,MOCK: drill 4 package,2026,9th,0.0453407069271984
-mock4_combined,MOCK: drill 4 package,2026,10th,0.0206543278381506
-mock4_combined,MOCK: drill 4 package,2027,1st,0.5491124021153744
-mock4_combined,MOCK: drill 4 package,2027,2nd,0.4602024756451452
-mock4_combined,MOCK: drill 4 package,2027,3rd,0.4388483964717927
-mock4_combined,MOCK: drill 4 package,2027,4th,0.3763076367419707
-mock4_combined,MOCK: drill 4 package,2027,5th,0.2670903820301898
-mock4_combined,MOCK: drill 4 package,2027,6th,0.1486774633456539
-mock4_combined,MOCK: drill 4 package,2027,7th,0.1189315270357549
-mock4_combined,MOCK: drill 4 package,2027,8th,0.0690647869413599
-mock4_combined,MOCK: drill 4 package,2027,9th,0.0129263544364247
-mock4_combined,MOCK: drill 4 package,2027,10th,-0.330808935347796
-mock4_combined,MOCK: drill 4 package,2028,1st,0.518270635305936
-mock4_combined,MOCK: drill 4 package,2028,2nd,0.445813906052031
-mock4_combined,MOCK: drill 4 package,2028,3rd,0.4848015680478753
-mock4_combined,MOCK: drill 4 package,2028,4th,0.2849667071091718
-mock4_combined,MOCK: drill 4 package,2028,5th,0.2196589226125154
-mock4_combined,MOCK: drill 4 package,2028,6th,0.1184743371944487
-mock4_combined,MOCK: drill 4 package,2028,7th,0.0794905783980985
-mock4_combined,MOCK: drill 4 package,2028,8th,0.0151324044317736
-mock4_combined,MOCK: drill 4 package,2028,9th,-0.0214932483081821
-mock4_combined,MOCK: drill 4 package,2028,10th,-0.3611834942074263
-mock4_combined,MOCK: drill 4 package,2029,1st,0.53178484357169
-mock4_combined,MOCK: drill 4 package,2029,2nd,0.474071828839687
-mock4_combined,MOCK: drill 4 package,2029,3rd,0.4931685128089069
-mock4_combined,MOCK: drill 4 package,2029,4th,0.3101430259442203
-mock4_combined,MOCK: drill 4 package,2029,5th,0.2199616716728155
-mock4_combined,MOCK: drill 4 package,2029,6th,0.1081106327023675
-mock4_combined,MOCK: drill 4 package,2029,7th,0.0787475067164847
-mock4_combined,MOCK: drill 4 package,2029,8th,0.0154047630641257
-mock4_combined,MOCK: drill 4 package,2029,9th,-0.0244646253457143
-mock4_combined,MOCK: drill 4 package,2029,10th,-0.364906274830267
-mock4_combined,MOCK: drill 4 package,2030,1st,0.5519664794146313
-mock4_combined,MOCK: drill 4 package,2030,2nd,0.5213106192237886
-mock4_combined,MOCK: drill 4 package,2030,3rd,0.4856695885284593
-mock4_combined,MOCK: drill 4 package,2030,4th,0.3818568103396098
-mock4_combined,MOCK: drill 4 package,2030,5th,0.1842005199174232
-mock4_combined,MOCK: drill 4 package,2030,6th,0.1028232294371625
-mock4_combined,MOCK: drill 4 package,2030,7th,0.0778615699226616
-mock4_combined,MOCK: drill 4 package,2030,8th,0.0176171045526101
-mock4_combined,MOCK: drill 4 package,2030,9th,-0.0287809650205642
-mock4_combined,MOCK: drill 4 package,2030,10th,-0.3701340957097066
-mock4_combined,MOCK: drill 4 package,2031,1st,0.4757891318700616
-mock4_combined,MOCK: drill 4 package,2031,2nd,0.3886097976261144
-mock4_combined,MOCK: drill 4 package,2031,3rd,0.3321847902380948
-mock4_combined,MOCK: drill 4 package,2031,4th,0.2324504046049968
-mock4_combined,MOCK: drill 4 package,2031,5th,-0.0551769766170228
-mock4_combined,MOCK: drill 4 package,2031,6th,-0.13736374655834
-mock4_combined,MOCK: drill 4 package,2031,7th,-0.18114897500249
-mock4_combined,MOCK: drill 4 package,2031,8th,-0.2878363601355089
-mock4_combined,MOCK: drill 4 package,2031,9th,-0.3609292556992736
-mock4_combined,MOCK: drill 4 package,2031,10th,-0.5560612048668848
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,1st,0.0148375422568725
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,2nd,0.0112775888388999
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,3rd,0.0109579775346452
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,4th,0.0110407257606035
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,5th,0.0116954487804746
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,6th,0.0104275369093639
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,7th,0.0098308915631078
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,8th,0.0114116413283076
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,9th,0.0098587818850412
-mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,10th,0.0049302078128856
+mock4_combined,MOCK: drill 4 package,2026,1st,0.2396058173279705
+mock4_combined,MOCK: drill 4 package,2026,2nd,0.1697034354925573
+mock4_combined,MOCK: drill 4 package,2026,3rd,0.1423357850285397
+mock4_combined,MOCK: drill 4 package,2026,4th,0.1246959720089355
+mock4_combined,MOCK: drill 4 package,2026,5th,0.1019850446440103
+mock4_combined,MOCK: drill 4 package,2026,6th,0.0805448853130686
+mock4_combined,MOCK: drill 4 package,2026,7th,0.0680765000140274
+mock4_combined,MOCK: drill 4 package,2026,8th,0.0588168780960997
+mock4_combined,MOCK: drill 4 package,2026,9th,0.0463185003547385
+mock4_combined,MOCK: drill 4 package,2026,10th,0.0211433512774646
+mock4_combined,MOCK: drill 4 package,2027,1st,0.5513385129517855
+mock4_combined,MOCK: drill 4 package,2027,2nd,0.4646533576865408
+mock4_combined,MOCK: drill 4 package,2027,3rd,0.4428703749859443
+mock4_combined,MOCK: drill 4 package,2027,4th,0.3792072125217998
+mock4_combined,MOCK: drill 4 package,2027,5th,0.268638314669224
+mock4_combined,MOCK: drill 4 package,2027,6th,0.1499082487705335
+mock4_combined,MOCK: drill 4 package,2027,7th,0.119422755268816
+mock4_combined,MOCK: drill 4 package,2027,8th,0.0695657682164673
+mock4_combined,MOCK: drill 4 package,2027,9th,0.0130511990333432
+mock4_combined,MOCK: drill 4 package,2027,10th,-0.3307160331096004
+mock4_combined,MOCK: drill 4 package,2028,1st,0.520609976314564
+mock4_combined,MOCK: drill 4 package,2028,2nd,0.4509404260379074
+mock4_combined,MOCK: drill 4 package,2028,3rd,0.489346755014891
+mock4_combined,MOCK: drill 4 package,2028,4th,0.2884954292963674
+mock4_combined,MOCK: drill 4 package,2028,5th,0.2211238207364987
+mock4_combined,MOCK: drill 4 package,2028,6th,0.119698997954804
+mock4_combined,MOCK: drill 4 package,2028,7th,0.0804046259890281
+mock4_combined,MOCK: drill 4 package,2028,8th,0.0156588833185275
+mock4_combined,MOCK: drill 4 package,2028,9th,-0.0213565618149356
+mock4_combined,MOCK: drill 4 package,2028,10th,-0.3610930189748613
+mock4_combined,MOCK: drill 4 package,2029,1st,0.5347404962007574
+mock4_combined,MOCK: drill 4 package,2029,2nd,0.4793174808065246
+mock4_combined,MOCK: drill 4 package,2029,3rd,0.4979040580227574
+mock4_combined,MOCK: drill 4 package,2029,4th,0.3139637224298021
+mock4_combined,MOCK: drill 4 package,2029,5th,0.2217851837597446
+mock4_combined,MOCK: drill 4 package,2029,6th,0.1093963308421728
+mock4_combined,MOCK: drill 4 package,2029,7th,0.0796909338731594
+mock4_combined,MOCK: drill 4 package,2029,8th,0.015946412874322
+mock4_combined,MOCK: drill 4 package,2029,9th,-0.0243093363813808
+mock4_combined,MOCK: drill 4 package,2029,10th,-0.3648156591603683
+mock4_combined,MOCK: drill 4 package,2030,1st,0.5553727442924442
+mock4_combined,MOCK: drill 4 package,2030,2nd,0.5268030159578644
+mock4_combined,MOCK: drill 4 package,2030,3rd,0.490530061540625
+mock4_combined,MOCK: drill 4 package,2030,4th,0.3861202334923357
+mock4_combined,MOCK: drill 4 package,2030,5th,0.1861888989405409
+mock4_combined,MOCK: drill 4 package,2030,6th,0.104104896704145
+mock4_combined,MOCK: drill 4 package,2030,7th,0.078838177198575
+mock4_combined,MOCK: drill 4 package,2030,8th,0.0182181092927306
+mock4_combined,MOCK: drill 4 package,2030,9th,-0.0286185300907659
+mock4_combined,MOCK: drill 4 package,2030,10th,-0.3700335215540217
+mock4_combined,MOCK: drill 4 package,2031,1st,0.4797994732249865
+mock4_combined,MOCK: drill 4 package,2031,2nd,0.394575927151914
+mock4_combined,MOCK: drill 4 package,2031,3rd,0.337238124447945
+mock4_combined,MOCK: drill 4 package,2031,4th,0.2372892695554714
+mock4_combined,MOCK: drill 4 package,2031,5th,-0.0530515887146164
+mock4_combined,MOCK: drill 4 package,2031,6th,-0.1361024665250697
+mock4_combined,MOCK: drill 4 package,2031,7th,-0.1799941801790761
+mock4_combined,MOCK: drill 4 package,2031,8th,-0.2872174609203453
+mock4_combined,MOCK: drill 4 package,2031,9th,-0.3606704691508585
+mock4_combined,MOCK: drill 4 package,2031,10th,-0.5559532575334388
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,1st,0.016309182812344
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,2nd,0.0123962437942432
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,3rd,0.0120448988814251
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,4th,0.0121359431743462
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,5th,0.0128555780652467
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,6th,0.0114618857337846
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,7th,0.0108062695829575
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,8th,0.0125433164681734
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,9th,0.0108364446836428
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,10th,0.0054193514184353
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,1st,0.071080585637385
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,2nd,0.0532812746897758
 mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,3rd,0.0537296319601389
@@ -609,56 +609,56 @@ mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,7th,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,8th,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,9th,0.0
 mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,10th,0.0
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,1st,0.0216806650452067
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,2nd,0.0356316187533503
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3rd,0.0306013805199608
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,4th,0.0248397118522222
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,5th,0.0133297235723
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,6th,0.008344587820454
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,7th,0.0043272616306538
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,8th,0.0033746679508139
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,9th,0.0008319645262353
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,10th,0.0008372829306058
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,1st,0.0336618392518614
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,2nd,0.0533993114894151
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3rd,0.0455910307067865
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4th,0.035017160217873
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,5th,0.019750193098664
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,6th,0.0113814881138416
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,7th,0.007239009264125
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,8th,0.0048364544752451
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,9th,0.001387059802747
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,10th,0.0011847791647695
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,1st,0.0478564491008582
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,2nd,0.0737440152216586
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,3rd,0.0625328032997679
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4th,0.0482717358101094
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,5th,0.0266864747852885
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,6th,0.0165010290841206
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,7th,0.0110762158448503
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,8th,0.0060766227381666
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,9th,0.0021639224739841
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,10th,0.0015361113088481
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,1st,0.064652133378981
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,2nd,0.0942423533211031
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,3rd,0.0798912977044698
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4th,0.0650198584350543
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5th,0.0343720526053084
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,6th,0.0212034880213314
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,7th,0.0153602408703074
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,8th,0.0079918330122829
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,9th,0.0029448921572815
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,10th,0.0019338316102524
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,1st,0.0731587334330054
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,2nd,0.1007131389671041
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,3rd,0.0834577164697985
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,4th,0.0701070972974546
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5th,0.0352349019770554
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,6th,0.0216696068202138
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,7th,0.0165708282674016
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,8th,0.008078417038278
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,9th,0.0031241875088557
-mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,10th,0.0020144392371517
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,1st,0.0239067656272625
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,2nd,0.0400818201744661
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,3rd,0.0346233255890871
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,4th,0.0277356428261013
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,5th,0.0148776416004883
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,6th,0.0095745800088241
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,7th,0.0048184905828023
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,8th,0.0038756459117817
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,9th,0.0009566635290782
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,10th,0.0009301406057553
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,1st,0.036001155259143
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,2nd,0.0585251436924167
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,3rd,0.0501361876267052
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,4th,0.0385423580551525
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,5th,0.0212150813692863
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,6th,0.0126053800854023
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,7th,0.008153049627945
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,8th,0.0053627259957422
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,9th,0.0015235529341244
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,10th,0.0012752101533205
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,1st,0.0508120453081543
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,2nd,0.0789889625586262
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,3rd,0.067268293618385
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,4th,0.0520888696149181
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,5th,0.028509958904997
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,6th,0.0177859594861899
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,7th,0.012019630629349
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,8th,0.0066181261831904
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,9th,0.0023190199145789
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,10th,0.0016266834278702
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,1st,0.0680582716266855
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,2nd,0.0997340833097221
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,3rd,0.0847517377251319
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,4th,0.0692797953161804
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,5th,0.0363604147871618
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,6th,0.0224844107214623
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,7th,0.0163368424655285
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,8th,0.0085927471994138
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,9th,0.003107141320031
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,10th,0.0020343423573222
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,1st,0.0765421721340654
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,2nd,0.1062284619804151
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,3rd,0.0882466932566522
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,4th,0.0745311217032283
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,5th,0.0371438335453186
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,6th,0.0228808359444964
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,7th,0.0175783885208207
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,8th,0.00865334241248
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,9th,0.0033001327238845
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,10th,0.0021141230627291
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,1st,0.0414993014329487
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,2nd,0.031686864679999
 mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,3rd,0.0307604160487921
