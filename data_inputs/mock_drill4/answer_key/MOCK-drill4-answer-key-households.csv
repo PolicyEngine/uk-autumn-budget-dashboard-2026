@@ -1,0 +1,240 @@
+MOCK DATA: rehearsal Budget for PolicyEngine drill 4, 19 October 2026. Not a real Budget. Skip one line when reading this CSV.
+household,nation,measure,scoring_year,key_statutory,key_statutory_as_at_1340,changed_by_1420,independent_path_final,independent_path_as_at_1340,paths_agree
+H1,England,1 Threshold freeze to 2032,2031-32,-243.60,-243.60,no,-243.60,-243.60,yes
+H1,England,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H1,England,5 Fuel duty,2026-27,10.34,9.33,yes,10.34,9.33,yes
+H1,England,5 Fuel duty,2027-28,50.82,50.82,no,50.82,50.82,yes
+H1,England,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H1,England,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,18 VAT on road fuel,2026-27,20.80,20.80,no,20.80,20.80,yes
+H1,England,18 VAT on road fuel,2027-28,10.84,10.84,no,10.84,10.84,yes
+H1,England,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H1,England,"1, 3 and 7 together (stacked)",2031-32,-243.60,-243.60,no,-243.60,-243.60,yes
+H1,England,5 and 18 together (stacked),2026-27,30.71,29.74,yes,30.71,29.74,yes
+H2,Scotland,1 Threshold freeze to 2032,2031-32,-81.20,-81.20,no,-81.20,-81.20,yes
+H2,Scotland,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,5 Fuel duty,2026-27,7.52,6.79,yes,7.52,6.79,yes
+H2,Scotland,5 Fuel duty,2027-28,36.96,36.96,no,36.96,36.96,yes
+H2,Scotland,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,8 Capital Gains Tax higher rate,2027-28,-194.60,-194.60,no,-194.60,-194.60,yes
+H2,Scotland,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,18 VAT on road fuel,2026-27,15.13,15.13,no,15.13,15.13,yes
+H2,Scotland,18 VAT on road fuel,2027-28,7.88,7.88,no,7.88,7.88,yes
+H2,Scotland,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H2,Scotland,"1, 3 and 7 together (stacked)",2031-32,-81.20,-81.20,no,-81.20,-81.20,yes
+H2,Scotland,5 and 18 together (stacked),2026-27,22.34,21.63,yes,22.34,21.63,yes
+H3,England,1 Threshold freeze to 2032,2031-32,-56.00,-56.00,no,-56.00,-56.00,yes
+H3,England,3 State Pension Top-up Allowance,2027-28,98.48,98.48,no,98.48,98.48,yes
+H3,England,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H3,England,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H3,England,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H3,England,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H3,England,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H3,England,"1, 3 and 7 together (stacked)",2031-32,390.36,390.36,no,390.36,390.36,yes
+H3,England,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,1 Threshold freeze to 2032,2031-32,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,4 Warm Home Discount top-up,2026-27,75.00,75.00,no,75.00,75.00,yes
+H4,Wales,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,"1, 3 and 7 together (stacked)",2031-32,0.00,0.00,no,0.00,0.00,yes
+H4,Wales,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H5,England,1 Threshold freeze to 2032,2031-32,-173.60,-173.60,no,-173.60,-173.60,yes
+H5,England,3 State Pension Top-up Allowance,2027-28,98.48,98.48,no,98.48,98.48,yes
+H5,England,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H5,England,5 Fuel duty,2026-27,4.70,4.24,yes,4.70,4.24,yes
+H5,England,5 Fuel duty,2027-28,23.10,23.10,no,23.10,23.10,yes
+H5,England,7 Starting rate for savings,2028-29,-563.86,-563.86,no,-563.86,-563.86,yes
+H5,England,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,18 VAT on road fuel,2026-27,9.46,9.46,no,9.46,9.46,yes
+H5,England,18 VAT on road fuel,2027-28,4.93,4.93,no,4.93,4.93,yes
+H5,England,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H5,England,"1, 3 and 7 together (stacked)",2031-32,-6.24,-6.24,no,-6.24,-6.24,yes
+H5,England,5 and 18 together (stacked),2026-27,13.96,13.52,yes,13.96,13.52,yes
+H6,England,1 Threshold freeze to 2032,2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H6,England,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,4 Warm Home Discount top-up,2026-27,125.00,125.00,no,125.00,125.00,yes
+H6,England,5 Fuel duty,2026-27,8.46,7.63,yes,8.46,7.63,yes
+H6,England,5 Fuel duty,2027-28,41.58,41.58,no,41.58,41.58,yes
+H6,England,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H6,England,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,11 Local Housing Allowance,2027-28,1200.00,1200.00,no,1200.00,1200.00,yes
+H6,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,14 Universal Credit child element,2027-28,300.00,300.00,no,300.00,300.00,yes
+H6,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,18 VAT on road fuel,2026-27,17.02,17.02,no,17.02,17.02,yes
+H6,England,18 VAT on road fuel,2027-28,8.87,8.87,no,8.87,8.87,yes
+H6,England,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H6,England,"1, 3 and 7 together (stacked)",2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H6,England,5 and 18 together (stacked),2026-27,25.13,24.34,yes,25.13,24.34,yes
+H7,Wales,1 Threshold freeze to 2032,2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H7,Wales,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,14 Universal Credit child element,2027-28,300.00,300.00,no,300.00,300.00,yes
+H7,Wales,17 Child Benefit Early Years Addition,2027-28,420.00,420.00,no,420.00,420.00,yes
+H7,Wales,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H7,Wales,"1, 3 and 7 together (stacked)",2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H7,Wales,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,1 Threshold freeze to 2032,2031-32,-322.00,-322.00,no,-322.00,-322.00,yes
+H8,Northern Ireland,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,5 Fuel duty,2026-27,12.22,11.03,yes,12.22,11.03,yes
+H8,Northern Ireland,5 Fuel duty,2027-28,60.06,60.06,no,60.06,60.06,yes
+H8,Northern Ireland,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,17 Child Benefit Early Years Addition,2027-28,257.40,257.40,no,257.40,257.40,yes
+H8,Northern Ireland,18 VAT on road fuel,2026-27,24.58,24.58,no,24.58,24.58,yes
+H8,Northern Ireland,18 VAT on road fuel,2027-28,12.81,12.81,no,12.81,12.81,yes
+H8,Northern Ireland,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H8,Northern Ireland,"1, 3 and 7 together (stacked)",2031-32,-322.00,-322.00,no,-322.00,-322.00,yes
+H8,Northern Ireland,5 and 18 together (stacked),2026-27,36.30,35.15,yes,36.30,35.15,yes
+H9,Scotland,1 Threshold freeze to 2032,2031-32,-53.20,-53.20,no,-53.20,-53.20,yes
+H9,Scotland,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H9,Scotland,"1, 3 and 7 together (stacked)",2031-32,-53.20,-53.20,no,-53.20,-53.20,yes
+H9,Scotland,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H10,England,1 Threshold freeze to 2032,2031-32,-84.40,-84.40,no,-84.40,-84.40,yes
+H10,England,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H10,England,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H10,England,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H10,England,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H10,England,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H10,England,21 Carer's Allowance earnings limit,2027-28,3755.44,3755.44,no,3755.44,3755.44,yes
+H10,England,"1, 3 and 7 together (stacked)",2031-32,-84.40,-84.40,no,-84.40,-84.40,yes
+H10,England,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H11,England,1 Threshold freeze to 2032,2031-32,-243.60,-243.60,no,-243.60,-243.60,yes
+H11,England,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H11,England,5 Fuel duty,2026-27,9.40,8.48,yes,9.40,8.48,yes
+H11,England,5 Fuel duty,2027-28,46.20,46.20,no,46.20,46.20,yes
+H11,England,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H11,England,8 Capital Gains Tax higher rate,2027-28,-740.00,-740.00,no,-740.00,-740.00,yes
+H11,England,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,18 VAT on road fuel,2026-27,18.91,18.91,no,18.91,18.91,yes
+H11,England,18 VAT on road fuel,2027-28,9.85,9.85,no,9.85,9.85,yes
+H11,England,20 Stamp Duty Land Tax surcharge,2027-28,-6400.00,-6400.00,no,-6400.00,-6400.00,yes
+H11,England,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H11,England,"1, 3 and 7 together (stacked)",2031-32,-243.60,-243.60,no,-243.60,-243.60,yes
+H11,England,5 and 18 together (stacked),2026-27,27.92,27.04,yes,27.92,27.04,yes
+H12,Wales,1 Threshold freeze to 2032,2031-32,-78.40,-78.40,no,-78.40,-78.40,yes
+H12,Wales,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,5 Fuel duty,2026-27,5.64,5.09,yes,5.64,5.09,yes
+H12,Wales,5 Fuel duty,2027-28,27.72,27.72,no,27.72,27.72,yes
+H12,Wales,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,18 VAT on road fuel,2026-27,11.35,11.35,no,11.35,11.35,yes
+H12,Wales,18 VAT on road fuel,2027-28,5.91,5.91,no,5.91,5.91,yes
+H12,Wales,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H12,Wales,"1, 3 and 7 together (stacked)",2031-32,-78.40,-78.40,no,-78.40,-78.40,yes
+H12,Wales,5 and 18 together (stacked),2026-27,16.75,16.22,yes,16.75,16.22,yes
+H13,Northern Ireland,1 Threshold freeze to 2032,2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H13,Northern Ireland,3 State Pension Top-up Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,14 Universal Credit child element,2027-28,450.00,450.00,no,450.00,450.00,yes
+H13,Northern Ireland,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H13,Northern Ireland,"1, 3 and 7 together (stacked)",2031-32,-35.28,-35.28,no,-35.28,-35.28,yes
+H13,Northern Ireland,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,1 Threshold freeze to 2032,2031-32,-53.20,-53.20,no,-53.20,-53.20,yes
+H14,Scotland,3 State Pension Top-up Allowance,2027-28,95.00,57.00,yes,95.00,57.00,yes
+H14,Scotland,4 Warm Home Discount top-up,2026-27,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,5 Fuel duty,2026-27,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,5 Fuel duty,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,7 Starting rate for savings,2028-29,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,8 Capital Gains Tax higher rate,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,11 Local Housing Allowance,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,12 Employer NICs for young workers,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,14 Universal Credit child element,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,17 Child Benefit Early Years Addition,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,18 VAT on road fuel,2026-27,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,18 VAT on road fuel,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,20 Stamp Duty Land Tax surcharge,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,21 Carer's Allowance earnings limit,2027-28,0.00,0.00,no,0.00,0.00,yes
+H14,Scotland,"1, 3 and 7 together (stacked)",2031-32,372.40,334.40,yes,372.40,334.40,yes
+H14,Scotland,5 and 18 together (stacked),2026-27,0.00,0.00,no,0.00,0.00,yes
