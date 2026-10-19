@@ -2261,8 +2261,9 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             raise ValueError(
                 f"--package cannot join a registered package: {sorted(packages)}"
             )
-        if package in chosen:
-            raise ValueError(f"--package {package} is one of the reforms")
+        # Named among --reforms too, it is the package, not a measure.
+        reforms = [r for r in reforms if r.id != package]
+        chosen = [r.id for r in reforms]
     published = [*chosen, package] if package is not None else chosen
     levels = list(dict.fromkeys(parsed.levels))
     seat_reforms = []
@@ -2352,13 +2353,15 @@ def simulate_reform(
 def build_package(name: str, measures: Sequence[Reform], years) -> Reform:
     """The measures as one reform named ``name``, simulated whole.
 
-    It is built the way ``generate --combined`` builds a combined run, and
+    A reform registered under ``name`` is the package, so the tables by area
+    show the same package as the national tables; otherwise it is built the
+    way ``generate --combined`` builds a combined run. Either way it is
     checked to change exactly what its measures change before anything is
     simulated.
 
     Raises:
-        ValueError: If the name is not a new package id or the measures
-            cannot be combined.
+        ValueError: If the name is not a package id or the package is not
+            exactly its measures.
     """
     from uk_budget_data.publication import combine
 
@@ -2367,15 +2370,17 @@ def build_package(name: str, measures: Sequence[Reform], years) -> Reform:
             f"--package {name} must end in {PACKAGE_SUFFIX}, the suffix the "
             "page reads as the full package"
         )
-    if get_reform(name) is not None:
-        raise ValueError(f"--package {name} is already a registered reform")
     ordered = combine.member_order(list(measures))
     if len(ordered) < 2:
         raise ValueError("--package needs at least two measures")
     config = DataConfig(years=list(years))
-    combined = combine.combine_measures(ordered, config)
-    combine.check_consistency(combined, ordered, config, list(config.years))
-    return combined.model_copy(update={"id": name})
+    package = get_reform(name)
+    if package is None:
+        package = combine.combine_measures(ordered, config).model_copy(
+            update={"id": name}
+        )
+    combine.check_consistency(package, ordered, config, list(config.years))
+    return package
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
