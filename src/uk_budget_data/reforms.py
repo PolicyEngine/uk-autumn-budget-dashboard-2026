@@ -719,6 +719,9 @@ def _create_mock4_whd_topup() -> Reform:
             "via cost_of_living_support_payment."
         ),
         simulation_modifier=_mock4_whd_topup_modifier,
+    )
+
+
 # =============================================================================
 # MOCK DRILL 4 STRUCTURAL MEASURES (invented; rehearsal only)
 # =============================================================================
@@ -1040,7 +1043,7 @@ _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 # Model year Y is fiscal year Y to Y+1. Annual keys are day-weighted by hand
 # where a change falls inside a fiscal year (6 April to 5 April).
 
-MOCK4_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
+MOCK4_ALL_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
 
 
 def _mock4_param(path: str, year: int):
@@ -1086,7 +1089,7 @@ def _create_mock4_uc_child_element() -> Reform:
     ]:
         changes[path] = {
             str(y): round(_mock4_param(path, y) + 12.50, 2)
-            for y in MOCK4_YEARS
+            for y in MOCK4_ALL_YEARS
             if y >= 2027
         }
     return Reform(
@@ -1098,7 +1101,7 @@ def _create_mock4_uc_child_element() -> Reform:
 
 
 def _create_mock4_lha_reset() -> Reform:
-    freeze = {str(y): y != 2027 for y in MOCK4_YEARS if y >= 2027}
+    freeze = {str(y): y != 2027 for y in MOCK4_ALL_YEARS if y >= 2027}
     return Reform(
         id="mock4_lha_reset",
         name="MOCK: LHA reset to 30th percentile",
@@ -1117,14 +1120,14 @@ def _create_mock4_carers_allowance_limit() -> Reform:
         description="MOCK drill 4. Earnings limit £204 → £230 a week from April 2027.",
         parameter_changes={
             "gov.dwp.carers_allowance.earnings_limit": {
-                str(y): 230 for y in MOCK4_YEARS if y >= 2027
+                str(y): 230 for y in MOCK4_ALL_YEARS if y >= 2027
             }
         },
     )
 
 
 def _create_mock4_cgt_higher_rate() -> Reform:
-    rates = {str(y): 0.26 for y in MOCK4_YEARS if y >= 2027}
+    rates = {str(y): 0.26 for y in MOCK4_ALL_YEARS if y >= 2027}
     return Reform(
         id="mock4_cgt_higher_rate",
         name="MOCK: CGT higher rate 26%",
@@ -1143,7 +1146,7 @@ def _create_mock4_savings_starting_band() -> Reform:
         description="MOCK drill 4. Starting rate band for savings £5,000 → £2,000 from April 2028.",
         parameter_changes={
             "gov.hmrc.income_tax.rates.savings_starter_rate.allowance": {
-                str(y): 2_000 for y in MOCK4_YEARS if y >= 2028
+                str(y): 2_000 for y in MOCK4_ALL_YEARS if y >= 2028
             }
         },
     )
