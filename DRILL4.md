@@ -268,7 +268,7 @@ The debrief writes the answers to Q1–Q3 into the drill 4 issue. It also produc
 | Drill start: statement released | 12:31 (arrived in `4fd06c1`); opened 12:43 | `4fd06c1`; statement SHA-256 `09c6d96629b033fa8f8e9ec478460cbe4d8b81dddcadfde8c4e1fb16e6d8ae39` |
 | G1 measure list, routes locked | 12:43 posted (PR #52 comment 6266406897); awaiting María's lock | ledger: 14 coded / 14 ledger |
 | G2 first numbers (gated path; hosted API time) | 13:34 (late; target 13:15). Code SHA `10552f7` pushed 13:07 | data `5633c5f`: 12 mock4 measures + `mock4_combined`, 2026–2031, flat CSVs (wave 1 generated on `21de64f`, wave 2 on `10552f7`; same definitions). `publish stage` not reachable on Microcosm (receipt refused; G4 (a)). Hand checks: pytest 107 passed, 1 skipped. Hosted API `uk-budget-api-2026` (main `5324080`, policyengine 6.6.0): healthy; family case cold 85.4 s, warm 82.7 s, matches local 6.7.6 to the penny; serves no mock4 measure (D1). Preview: https://uk-autumn-budget-2026-drill-git-drill4-moc-2e3f4b-policy-engine.vercel.app |
-| Documents released | | |
+| Documents released | 13:41 (arrived in `e348634`); pulled 13:41 | `e348634`. SHA-256 prefixes: household-scoring 491395e8, ledger 4fb0cb3d, national-scoring c8b4d3dc, obr-economy c22347f6, costings f4de78c0, decisions 4965f78d, specimens 6741a5c8 |
 | G3 rebased; national sheet | | |
 | Inject released | | |
 | G5 re-run | | |
