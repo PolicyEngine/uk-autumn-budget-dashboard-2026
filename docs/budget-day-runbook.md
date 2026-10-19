@@ -143,7 +143,15 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
 - **Every measure published on the day comes from the templates** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
-  - Templates are tested: every template measure must stay computable (`tests/test_data_limits.py`).
+    - **Reject the modifier if its own code uses any of these** (coordinator's ruling on #51, 19 Oct). The detector isn't required to see through them, so #55 lists what they can hide:
+      1. **another simulation or system:** building or holding a simulation or tax-benefit system other than the one it's given (a clone, or a branch with a cloned system), or that simulation's parameters, entities, populations or holders;
+      2. **state changed mid-run:** changing state its formulas hold (a dict, a list, an object's fields) while the simulations run;
+      3. **a metaclass.**
+    - **The reviewer confirms each one's absence by name in the measure's PR**, for example: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no."
+    - **The rule covers the modifier's own code only.** Templates and the model's own code, such as policyengine-uk's behavioural-response branching (the capital gains response route), stay inside the detector's line: a miss through them is a bug to fix, not a listed limitation.
+  - Templates are tested:
+    - every template measure must stay computable;
+    - no template may use any of the three constructions above, checked in the templates' source and by running each template measure (`tests/test_data_limits.py`). A template that needed one would stay fully covered by the detector, and any miss through it would block.
 - **When a computable measure is marked not computable.** These known false positives all fail safe: the measure is withheld, never shown with a wrong figure.
   - **The forms (#51, round 15):**
     - the changed variable was calculated before the run was watched, so its cached value is used without its formula running, or the watch couldn't run: every limit, with an `UnwatchedFormulaWarning` naming the reason;
