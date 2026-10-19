@@ -719,6 +719,110 @@ def _create_mock4_whd_topup() -> Reform:
             "via cost_of_living_support_payment."
         ),
         simulation_modifier=_mock4_whd_topup_modifier,
+# =============================================================================
+# MOCK DRILL 4 STRUCTURAL MEASURES (invented; rehearsal only)
+# =============================================================================
+
+# Model years (Y = fiscal year Y-Y+1) in which the drill 4 measures are in
+# force: from April 2027 to the end of the drill horizon (2031-32).
+MOCK4_START_YEAR = 2027
+MOCK4_YEARS = list(range(MOCK4_START_YEAR, 2032))
+
+# Child Benefit Early Years Addition: £10 a week per child under 1, annualised
+# at 52 weeks (the 52-week convention, as the packet states it: £520 a year).
+MOCK4_CB_EYA_WEEKLY = 10.0
+MOCK4_WEEKS_PER_YEAR = 52
+
+# State Pension Top-up Allowance: withdrawn pound for pound above the full
+# new State Pension (weekly x 52) plus £1,000.
+MOCK4_SPTA_WITHDRAWAL_MARGIN = 1_000.0
+
+
+def _mock4_cb_early_years_addition_modifier(sim: Simulation) -> Simulation:
+    """MOCK drill 4: Child Benefit Early Years Addition from April 2027.
+
+    Adds £10 a week (x 52 = £520 a year) for each child aged under 1 in the
+    benefit unit, paid with Child Benefit: only benefit units that receive
+    Child Benefit in the model (``child_benefit`` > 0, so the model's take-up
+    flag ``would_claim_child_benefit`` and HICBC opt-outs are respected) get
+    it. The addition is written into ``child_benefit`` itself, so it flows to
+    household net income through the benefits aggregate and is subject to the
+    High Income Child Benefit Charge exactly as Child Benefit is (CB_HITC is a
+    percentage of the Child Benefit received).
+    """
+    annual = MOCK4_CB_EYA_WEEKLY * MOCK4_WEEKS_PER_YEAR
+    for year in MOCK4_YEARS:
+        cb = np.array(sim.calculate("child_benefit", year))
+        age = np.array(sim.calculate("age", year))
+        is_child = np.array(sim.calculate("is_child", year))
+        under_one = ((age < 1) & is_child).astype(float)
+        n_under_one = np.array(
+            sim.map_result(under_one, "person", "benunit")
+        )
+        addition = np.where(cb > 0, n_under_one * annual, 0.0)
+        sim.set_input("child_benefit", year, cb + addition)
+    return sim
+
+
+def _create_mock4_cb_early_years_addition() -> Reform:
+    return Reform(
+        id="mock4_cb_early_years_addition",
+        name="Child Benefit Early Years Addition",
+        description=(
+            "MOCK (drill 4, invented measure). From April 2027, Child Benefit "
+            "gets an Early Years Addition of £10 a week (£520 a year, 52 "
+            "weeks) for each child under 1, paid only where Child Benefit is "
+            "received and subject to the High Income Child Benefit Charge."
+        ),
+        simulation_modifier=_mock4_cb_early_years_addition_modifier,
+    )
+
+
+def _mock4_state_pension_topup_allowance_modifier(
+    sim: Simulation,
+) -> Simulation:
+    """MOCK drill 4: State Pension Top-up Allowance from April 2027.
+
+    For each person receiving the State Pension (``state_pension`` > 0):
+
+        allowance = max(0, state_pension - personal_allowance)
+        threshold = new_state_pension.amount (weekly) x 52 + £1,000
+        allowance = max(0, allowance - max(0, adjusted_net_income - threshold))
+
+    The allowance is added to the person's ``allowances`` (the income tax
+    allowances deducted from income, alongside the personal and blind
+    person's allowances), so it reduces taxable income in every band and in
+    Scottish income tax as well. ``personal_allowance`` itself is left alone,
+    so the ESA permitted-work and property-finance-costs rules that read it
+    do not change. ``personal_allowance`` is the person's tapered allowance.
+    """
+    params = sim.tax_benefit_system.parameters
+    for year in MOCK4_YEARS:
+        nsp_weekly = params(str(year)).gov.dwp.state_pension.new_state_pension.amount
+        threshold = nsp_weekly * 52 + MOCK4_SPTA_WITHDRAWAL_MARGIN
+        sp = np.array(sim.calculate("state_pension", year))
+        pa = np.array(sim.calculate("personal_allowance", year))
+        ani = np.array(sim.calculate("adjusted_net_income", year))
+        allowances = np.array(sim.calculate("allowances", year))
+        full = np.maximum(0.0, sp - pa)
+        withdrawal = np.maximum(0.0, ani - threshold)
+        topup = np.where(sp > 0, np.maximum(0.0, full - withdrawal), 0.0)
+        sim.set_input("allowances", year, allowances + topup)
+    return sim
+
+
+def _create_mock4_state_pension_topup_allowance() -> Reform:
+    return Reform(
+        id="mock4_state_pension_topup_allowance",
+        name="State Pension Top-up Allowance",
+        description=(
+            "MOCK (drill 4, invented measure). From April 2027, State Pension "
+            "recipients get an income tax allowance equal to the amount by "
+            "which their State Pension exceeds their personal allowance, "
+            "withdrawn pound for pound where adjusted net income exceeds the "
+            "full new State Pension plus £1,000."
+        ),
+        simulation_modifier=_mock4_state_pension_topup_allowance_modifier,
     )
 
 
@@ -1076,6 +1180,8 @@ def _get_mock4_reforms() -> list[Reform]:
         _create_mock4_savings_starting_band(),
         _create_mock4_threshold_freeze_2032(),
         _create_mock4_whd_topup(),
+        _create_mock4_cb_early_years_addition(),
+        _create_mock4_state_pension_topup_allowance(),
     ]
 
 

@@ -16,6 +16,8 @@ export const POLICY_COLORS = {
   "Rail fares freeze": "#2DD4BF", // Teal 400
   "Zero-rate VAT on energy": "#5EEAD4", // Teal 300 (lightest)
   "Warm Home Discount top-up (MOCK)": "#99F6E4", // Teal 200 (MOCK drill 4)
+  "Child Benefit Early Years Addition": "#115E59", // Teal 800 (MOCK drill 4)
+  "State Pension Top-up Allowance": "#CCFBF1", // Teal 100 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   "Threshold freeze extension": "#78350F", // Amber 900 (darkest)
@@ -38,6 +40,8 @@ export const POLICY_COLORS_BY_KEY = {
   rail_fares_freeze: "#2DD4BF", // Teal 400
   impact_rail_fare_freeze: "#2DD4BF",
   mock4_whd_topup: "#99F6E4", // Teal 200 (MOCK drill 4)
+  mock4_cb_early_years_addition: "#115E59", // Teal 800 (MOCK drill 4)
+  mock4_state_pension_topup_allowance: "#CCFBF1", // Teal 100 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   threshold_freeze_extension: "#78350F", // Amber 900 (darkest)

@@ -139,6 +139,22 @@ const POLICIES = [
     explanation:
       "MOCK basis: 2031-32 values held at 2030-31 levels for the Personal Allowance, higher rate threshold, NI primary and secondary thresholds and upper earnings limit. Gross, fiscal years. Unvalidated under this engine.",
   },
+  {
+    id: "mock4_cb_early_years_addition",
+    name: "Child Benefit Early Years Addition",
+    description:
+      "£10 a week extra Child Benefit for each child under 1 from April 2027",
+    explanation:
+      "MOCK basis: invented drill 4 measure. From April 2027, Child Benefit gets an Early Years Addition of £10 a week for each child under 1, modelled as £520 a year (52 weeks) per child. It is paid only to families that receive Child Benefit in the model (take-up and High Income Child Benefit Charge opt-outs as the model has them), and the High Income Child Benefit Charge applies to it as to the rest of Child Benefit.",
+  },
+  {
+    id: "mock4_state_pension_topup_allowance",
+    name: "State Pension Top-up Allowance",
+    description:
+      "Income tax allowance covering State Pension above the personal allowance from April 2027",
+    explanation:
+      "MOCK basis: invented drill 4 measure. From April 2027, people receiving the State Pension get an income tax allowance equal to the amount by which their State Pension exceeds their personal allowance. It is withdrawn pound for pound where adjusted net income exceeds the full new State Pension (weekly rate × 52) plus £1,000. Pensioners whose State Pension is below the personal allowance gain nothing. Modelled as an addition to the income tax allowances deducted from income.",
+  },
 ];
 
 // Preset policy combinations
