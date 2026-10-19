@@ -633,6 +633,95 @@ def _create_rail_fares_freeze() -> Reform:
     )
 
 
+# -----------------------------------------------------------------------------
+# MOCK drill 4: Warm Home Discount top-up (dashboard-structural fallback)
+# -----------------------------------------------------------------------------
+# policyengine-uk 2.130.1 has no Warm Home Discount variable, so the top-up is
+# paid through an existing household transfer input instead.
+
+MOCK4_WHD_TOPUP_ID = "mock4_whd_topup"
+MOCK4_WHD_YEARS = [2026]  # winter 2026-27 only = model year 2026
+MOCK4_WHD_COUNTRIES = ("ENGLAND", "WALES")
+MOCK4_WHD_CORE_BENEFITS = (
+    "universal_credit",
+    "housing_benefit",
+    "esa_income",
+    "jsa_income",
+)
+MOCK4_WHD_PENSION_BENEFITS = ("pension_credit",)
+MOCK4_WHD_CORE_TOPUP = 125.0
+MOCK4_WHD_PENSION_TOPUP = 75.0
+# Carrier: a household-level transfer that already sums into
+# household_benefits -> household_net_income and into gov_spending, and is £0
+# under current law from 2024 (cost-of-living payments withdrawn).
+MOCK4_WHD_CARRIER = "cost_of_living_support_payment"
+
+
+def _receives_any(sim: Simulation, variables, year: int) -> np.ndarray:
+    total = np.zeros(len(np.asarray(sim.calculate("household_weight", year))))
+    for variable in variables:
+        total = total + np.asarray(
+            sim.calculate(variable, year, map_to="household")
+        )
+    return total > 0
+
+
+def mock4_whd_topup_amount(sim: Simulation, year: int) -> np.ndarray:
+    """Per-household top-up: £125 if on UC/HB/income-ESA/income-JSA, else £75
+    if on Pension Credit, else £0; England and Wales only.
+
+    One payment per household: a household qualifying both ways gets the
+    higher £125 (not £200).
+    """
+    country = np.asarray(sim.calculate("country", year)).astype(str)
+    in_scope = np.isin(country, MOCK4_WHD_COUNTRIES)
+    core = _receives_any(sim, MOCK4_WHD_CORE_BENEFITS, year)
+    pension = _receives_any(sim, MOCK4_WHD_PENSION_BENEFITS, year)
+    amount = np.where(
+        core,
+        MOCK4_WHD_CORE_TOPUP,
+        np.where(pension, MOCK4_WHD_PENSION_TOPUP, 0.0),
+    )
+    return np.where(in_scope, amount, 0.0)
+
+
+def _mock4_whd_topup_modifier(sim: Simulation) -> Simulation:
+    """MOCK structural fallback: Warm Home Discount top-up, winter 2026-27.
+
+    Adds the top-up to ``cost_of_living_support_payment`` (household, YEAR),
+    which feeds household_benefits, household_net_income, hbai incomes and
+    gov_spending, so the cost lands on the taxpayer.
+
+    Caveats: receipt is the model's benefit amount > 0 (take-up as modelled),
+    not actual WHD receipt; the real WHD core group in England also needs a
+    high-energy-cost test, which this ignores (so it overstates eligibility);
+    the £150 base WHD itself is not modelled; Scotland and NI get nothing.
+    """
+    for year in MOCK4_WHD_YEARS:
+        current = np.asarray(sim.calculate(MOCK4_WHD_CARRIER, year))
+        topup = mock4_whd_topup_amount(sim, year)
+        sim.set_input(MOCK4_WHD_CARRIER, year, current + topup)
+    return sim
+
+
+def _create_mock4_whd_topup() -> Reform:
+    """MOCK drill 4: Warm Home Discount top-up (£125 / £75), 2026-27."""
+    return Reform(
+        id=MOCK4_WHD_TOPUP_ID,
+        name="Warm Home Discount top-up (MOCK)",
+        description=(
+            "MOCK drill measure. Winter 2026-27 only: households in England "
+            "and Wales getting the Warm Home Discount via Universal Credit, "
+            "Housing Benefit, income-related ESA or income-based JSA get a "
+            "further £125; Pension Credit households get a further £75. One "
+            "payment per household (the higher £125 if both). Structural "
+            "fallback: no WHD variable in policyengine-uk 2.130.1, so paid "
+            "via cost_of_living_support_payment."
+        ),
+        simulation_modifier=_mock4_whd_topup_modifier,
+    )
+
+
 def create_salary_sacrifice_cap_reform() -> Reform:
     """Create a salary sacrifice cap reform.
 
@@ -986,6 +1075,7 @@ def _get_mock4_reforms() -> list[Reform]:
         _create_mock4_cgt_higher_rate(),
         _create_mock4_savings_starting_band(),
         _create_mock4_threshold_freeze_2032(),
+        _create_mock4_whd_topup(),
     ]
 
 

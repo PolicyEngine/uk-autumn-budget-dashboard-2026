@@ -15,6 +15,7 @@ export const POLICY_COLORS = {
   "Fuel duty freeze extension": "#14B8A6", // Teal 500
   "Rail fares freeze": "#2DD4BF", // Teal 400
   "Zero-rate VAT on energy": "#5EEAD4", // Teal 300 (lightest)
+  "Warm Home Discount top-up (MOCK)": "#99F6E4", // Teal 200 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   "Threshold freeze extension": "#78350F", // Amber 900 (darkest)
@@ -36,6 +37,7 @@ export const POLICY_COLORS_BY_KEY = {
   impact_fuel_duty_freeze: "#14B8A6",
   rail_fares_freeze: "#2DD4BF", // Teal 400
   impact_rail_fare_freeze: "#2DD4BF",
+  mock4_whd_topup: "#99F6E4", // Teal 200 (MOCK drill 4)
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   threshold_freeze_extension: "#78350F", // Amber 900 (darkest)
@@ -64,6 +66,7 @@ export const ALL_POLICY_NAMES = [
   "Fuel duty freeze extension",
   "Rail fares freeze",
   "Zero-rate VAT on energy",
+  "Warm Home Discount top-up (MOCK)",
 ];
 
 // Lifecycle calculator reform configuration

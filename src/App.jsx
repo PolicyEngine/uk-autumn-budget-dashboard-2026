@@ -82,6 +82,13 @@ const POLICIES = [
     description: "Cap NI-free salary sacrifice pension contributions at £2,000",
     explanation:
       'Caps National Insurance-free salary sacrifice pension contributions at £2,000 per year from April 2029. Contributions above this threshold become subject to employee and employer NICs. PolicyEngine estimates this will raise £3.3bn in 2029-30, assuming employers spread costs and employees maintain pension contributions. The OBR estimates £4.9bn (static) or £4.7bn (post-behavioural). See our <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+  }  {
+    id: "mock4_whd_topup",
+    name: "Warm Home Discount top-up (MOCK)",
+    description:
+      "MOCK: extra £125 (means-tested) or £75 (Pension Credit) on the Warm Home Discount, winter 2026-27",
+    explanation:
+      "MOCK basis: invented drill measure. For winter 2026-27 only (model year 2026), households in England and Wales that get the £150 Warm Home Discount because they receive Universal Credit, Housing Benefit, income-related ESA or income-based JSA get a further £125, and those receiving Pension Credit get a further £75. One payment per household: a household qualifying both ways gets £125. PolicyEngine has no Warm Home Discount variable, so we pay the top-up as a household transfer to every modelled recipient of those benefits. This ignores the energy-cost eligibility test that applies to the core group in England, so it overstates who qualifies. Scotland and Northern Ireland are out of scope.",
   },
   {
     id: "mock4_fuel_duty",
