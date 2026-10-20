@@ -389,9 +389,9 @@ W5 re-measured on the same file for 2025:
 
 **Source of the £1m+ figures:** HMRC's Survey of Personal Incomes, 2023-24: £35.5bn of employment income for 21,000 people, and £11.1bn of dividends for 19,000. An earlier draft called these a 2025 HMRC projection. The 2025 calibration targets are PolicyEngine's own uprating of them: £37.4bn and £11.6bn on 1.58.1 (`storage/incomes_projection.csv`; corrected by the UK hub, uk-data#593).
 
-**Capital gains tax: taxpayer counts (from the Budget pair's data).** uk-data 1.59.0 (batch 3) publishes with policyengine-uk-data #571, which starts capital gains on HMRC's 2024-25 size-of-gain table (Max's decision d1735, 20 October). The dashboard adopts it with the Budget pair, once that is certified and promoted. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
+**Capital gains tax: taxpayer counts (from the Budget pair's data).** uk-data 1.59.1 publishes batch 3 with policyengine-uk-data #571, which starts capital gains on HMRC's 2024-25 size-of-gain table, plus a reviewed widening of the CGT taxpayer-count test's bound (Max's decision d1735, 20 October). The dashboard adopts it with the Budget pair, once that is certified and promoted. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
 - **A measure that depends on the number of taxpayers** (a change to the annual exempt amount, or to a threshold) is staged provisional on the day, not approved.
-- **A CGT rate change** depends mainly on total gains. On 1.59.0 these are 10% to 25% off the OBR's target, against 25% to 50% before. (Figures as relayed by the coordinator, 20 October.)
+- **A CGT rate change** depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
 **Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
