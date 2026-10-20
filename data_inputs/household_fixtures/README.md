@@ -26,10 +26,10 @@ The checker:
   "route": "/api/personal-impact",
   "request": {"employment_income": 30000},
   "expect": [
-    {"path": "policies.rate_change.years[2].impact", "value": 123.45}
+    {"path": "policies.threshold_freeze_extension.years.2028.net_income_change", "value": -123.45}
   ],
   "source": "hand calculation, <name>, <date>"
 }
 ```
 
-`path` is a dotted path into the JSON response, with `[i]` for list elements. A fixture with `"draft": true` documents a request shape whose answers are not yet independent. Drafts are skipped unless `--include-drafts` is passed, and a run with no non-draft fixture never passes.
+`path` is a dotted path into the JSON response, with `[i]` for list elements. In `/api/personal-impact`'s response, each policy's change in a year is at `policies.<policy id>.years.<year>.net_income_change`: `years` is keyed by year, not a list. A fixture with `"draft": true` documents a request shape whose answers are not yet independent. Drafts are skipped unless `--include-drafts` is passed, and a run with no non-draft fixture never passes.
