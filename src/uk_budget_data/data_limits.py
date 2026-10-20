@@ -2359,7 +2359,9 @@ class Observation:
 
 def _held_calculated(sim, name, period) -> bool:
     """Whether ``sim`` holds a value of ``name`` for ``period`` that its
-    engine calculated, not one set as an input. True when it can't tell."""
+    engine calculated, not one set as an input: in the variable's holder,
+    or only in the simulation's fast cache (a variable it opts out of
+    caching). True when it can't tell."""
     try:
         from policyengine_core import periods
 
@@ -2367,7 +2369,11 @@ def _held_calculated(sim, name, period) -> bool:
             period = periods.period(period)
         holder = _ENGINE["get_holder"](sim.get_variable_population(name), name)
         branch = getattr(sim, "branch_name", "default")
-        if _ENGINE["get_array"](holder, period, branch) is None:
+        fast = getattr(sim, "_fast_cache", None) or {}
+        if (
+            _ENGINE["get_array"](holder, period, branch) is None
+            and fast.get((name, period)) is None
+        ):
             return False
         inputs = getattr(sim, "_user_input_keys", None)
         if inputs is None:

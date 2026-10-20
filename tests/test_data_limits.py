@@ -2156,27 +2156,45 @@ def test_every_repository_template_measure_is_computable(name):
 # metaclass. Templates stay inside the line, so the two tests below keep
 # them free of all three: a template that used one would need the watch
 # to cover it in full.
+# Methods that change the object they are called on.
 TEMPLATE_MUTATORS = {
+    "__delitem__",
+    "__setattr__",
+    "__setitem__",
     "add",
     "append",
+    "appendleft",
     "clear",
     "discard",
     "extend",
+    "extendleft",
+    "fill",
     "insert",
+    "itemset",
     "pop",
     "popitem",
+    "popleft",
+    "put",
     "remove",
+    "resize",
+    "reverse",
     "setdefault",
+    "sort",
     "update",
 }
+# Functions that change an object passed to them.
+TEMPLATE_MUTATING_CALLS = {"copyto", "delattr", "setattr", "setitem"}
 ENGINE_BUILDERS = {
-    "CoreReform",
     "CountryTaxBenefitSystem",
     "Microsimulation",
     "Reform",
     "Simulation",
     "TaxBenefitSystem",
 }
+# The one place a template may reach the module-level system: a
+# parameter builder checking, while the measure is built, that a path
+# names a leaf. It returns nothing that holds the system.
+SYSTEM_IMPORT_ALLOWED = {"_validate_parameter_path"}
 
 
 def _bound_names(function) -> set:
@@ -2187,10 +2205,32 @@ def _bound_names(function) -> set:
     return names
 
 
+def _root_name(node):
+    """The name an attribute, item or call chain starts from, if any."""
+    while isinstance(node, (ast.Attribute, ast.Subscript, ast.Call)):
+        node = node.func if isinstance(node, ast.Call) else node.value
+    return node.id if isinstance(node, ast.Name) else None
+
+
+def _called_name(func, aliases):
+    if isinstance(func, ast.Name):
+        return aliases.get(func.id, func.id)
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
 def test_the_templates_use_no_construction_ruled_outside_the_line():
     from uk_budget_data import measure_templates
 
     tree = ast.parse(inspect.getsource(measure_templates))
+    aliases = {
+        alias.asname: alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        for alias in node.names
+        if alias.asname
+    }
     found = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.Global, ast.Nonlocal)):
@@ -2202,41 +2242,68 @@ def test_the_templates_use_no_construction_ruled_outside_the_line():
         elif isinstance(node, ast.Attribute) and node.attr in (
             "clone",
             "get_branch",
+            "__class__",
         ):
             found.append((node.lineno, f"another simulation ({node.attr})"))
         elif isinstance(node, ast.Call):
-            called = node.func
-            name = getattr(called, "id", getattr(called, "attr", None))
+            name = _called_name(node.func, aliases)
             if name in ENGINE_BUILDERS:
                 found.append((node.lineno, f"another system ({name})"))
-    # A formula is a function defined inside a template function: it may
-    # store to no attribute or item, and change nothing it doesn't bind.
-    for template in tree.body:
-        if not isinstance(template, ast.FunctionDef):
+            elif name in ("copy", "deepcopy"):
+                found.append((node.lineno, f"a copy ({name})"))
+            elif isinstance(node.func, ast.Call):
+                found.append((node.lineno, "a call of a call's result"))
+    # The module-level system, imported anywhere but the one build-time
+    # path check.
+    for top in tree.body:
+        if getattr(top, "name", None) in SYSTEM_IMPORT_ALLOWED:
             continue
-        for formula in ast.walk(template):
-            if formula is template or not isinstance(formula, ast.FunctionDef):
+        for node in ast.walk(top):
+            if isinstance(node, ast.ImportFrom) and (
+                (node.module or "").startswith("policyengine_uk.system")
+                or any(alias.name == "system" for alias in node.names)
+            ):
+                found.append((node.lineno, "the module-level system"))
+            if isinstance(node, ast.Import) and any(
+                alias.name.startswith("policyengine_uk.system")
+                for alias in node.names
+            ):
+                found.append((node.lineno, "the module-level system"))
+    # In every function, formulas included: nothing stored into, deleted
+    # from or changed on an object the function doesn't bind itself (state
+    # a formula holds, or the module's).
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef):
+            continue
+        bound = _bound_names(function)
+
+        def foreign(target):
+            root = _root_name(target)
+            return root is not None and root not in bound
+
+        for node in ast.walk(function):
+            targets = []
+            if isinstance(node, (ast.Assign, ast.Delete)):
+                targets = node.targets
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
+                targets = [node.target]
+            for target in targets:
+                if isinstance(
+                    target, (ast.Attribute, ast.Subscript)
+                ) and foreign(target):
+                    found.append((node.lineno, "held state stored into"))
+            if not isinstance(node, ast.Call):
                 continue
-            bound = _bound_names(formula)
-            for node in ast.walk(formula):
-                targets = []
-                if isinstance(node, (ast.Assign, ast.Delete)):
-                    targets = node.targets
-                elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
-                    targets = [node.target]
-                if any(
-                    isinstance(t, (ast.Attribute, ast.Subscript))
-                    for t in targets
-                ):
-                    found.append((node.lineno, "a formula storing state"))
-                if (
-                    isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Attribute)
-                    and node.func.attr in TEMPLATE_MUTATORS
-                    and isinstance(node.func.value, ast.Name)
-                    and node.func.value.id not in bound
-                ):
-                    found.append((node.lineno, "a formula changing state"))
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr in TEMPLATE_MUTATORS
+                and foreign(node.func.value)
+            ):
+                found.append((node.lineno, "held state changed"))
+            if _called_name(node.func, aliases) in TEMPLATE_MUTATING_CALLS:
+                found.append((node.lineno, "an object changed by a call"))
+            if any(keyword.arg == "out" for keyword in node.keywords):
+                found.append((node.lineno, "an array written in place"))
     assert found == []
 
 
@@ -2246,8 +2313,9 @@ def test_template_measures_hold_and_build_no_other_engine_object(
 ):
     """Run: the template's own code builds no simulation or system, and
     its formulas hold none, nor any population, holder or stored
-    parameter; every class they hold or make has a plain or library
-    metaclass; and what they hold is the same after a watched run."""
+    parameter, in their closures or in the module data they read; every
+    class they hold or make has a plain or library metaclass; and what
+    they hold is the same after a watched run."""
     from policyengine_core.holders.holder import Holder
     from policyengine_core.parameters import (
         Parameter,
@@ -2318,8 +2386,20 @@ def test_template_measures_hold_and_build_no_other_engine_object(
                 type(type(variable)) is type
             )
             for formula in data_limits._formulas(variable):
-                for cell in formula.__closure__ or ():
-                    value = cell.cell_contents
+                reached = [
+                    cell.cell_contents for cell in formula.__closure__ or ()
+                ]
+                # The module's data the formula reads by name, too.
+                reached += [
+                    formula.__globals__[name]
+                    for name in formula.__code__.co_names
+                    if name in formula.__globals__
+                    and not isinstance(
+                        formula.__globals__[name],
+                        (types.ModuleType, types.FunctionType, type),
+                    )
+                ]
+                for value in reached:
                     values.append(value)
                     if isinstance(value, Mapping):
                         values.extend(value.values())
@@ -4069,6 +4149,31 @@ def test_values_a_branch_calculated_before_the_watch_read_anything(by, cloned):
         "additional_dwelling_purchases",
         "non_residential_purchases",
     ]
+
+
+def test_a_value_kept_only_in_a_fast_cache_counts_as_calculated():
+    """Review of #51 round 16 (outside the line, construction (a)): a
+    simulation that opts out of caching a variable keeps its calculated
+    values only in its fast cache, and _held_calculated looked only at the
+    holder. Through policyengine-uk's calculate the value is calculated
+    again anyway (it decodes enums at the top of a simulation's tree,
+    which skips core's fast path), and watched; through core's calculate
+    it would be returned unwatched."""
+    from policyengine_core import periods
+
+    data_limits._engine_parts()  # what a watch loads as it starts
+    aux = simulation().clone(clone_tax_benefit_system=True)
+    aux.tax_benefit_system.cache_blacklist = {NON_RESIDENTIAL_SDLT}
+    aux.opt_out_cache = True
+    aux.calculate(NON_RESIDENTIAL_SDLT, 2027)
+    year = periods.period(2027)
+    holder = aux.get_holder(NON_RESIDENTIAL_SDLT)
+    assert holder.get_array(year) is None
+    assert aux._fast_cache.get((NON_RESIDENTIAL_SDLT, year)) is not None
+    assert data_limits._held_calculated(aux, NON_RESIDENTIAL_SDLT, year)
+    assert not data_limits._held_calculated(
+        aux, NON_RESIDENTIAL_SDLT, periods.period(2028)
+    )
 
 
 def test_a_branch_recalculating_under_the_watch_is_watched():
