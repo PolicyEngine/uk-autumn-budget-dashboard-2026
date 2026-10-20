@@ -673,22 +673,35 @@ def check_microcosm_file(
     apart: only the local file places each household in its areas.
 
     With ``file_role``, the role the build's release manifest gives the file
-    (``release_manifest_file_role``), the role decides instead, and the file
-    needs only the columns its kind reads.
+    (``release_manifest_file_role``), the role must name ``kind``, and the
+    columns must not contradict it: a file the role calls national may not
+    carry the local file's area columns, and one it calls local needs them.
 
     Raises:
         ValueError: If the columns, or the role, do not match ``kind``.
     """
     if file_role is not None:
         check_file_role(file_role, kind)
-        needed = (
-            ["region"]
-            if kind == MICROCOSM_NATIONAL
-            else MICROCOSM_LOCAL_COLUMNS
-        )
-        missing = [c for c in needed if c not in household.columns]
-        if kind == MICROCOSM_NATIONAL and missing:
-            raise ValueError("A Microcosm national file needs region")
+        area_columns = [
+            column
+            for column in MICROCOSM_LOCAL_COLUMNS
+            if column in household.columns
+        ]
+        if kind == MICROCOSM_NATIONAL:
+            if area_columns:
+                raise ValueError(
+                    "The release manifest gives this file the role "
+                    f"{file_role}, but it carries {area_columns}, which "
+                    "only Microcosm's local file has"
+                )
+            if "region" not in household.columns:
+                raise ValueError("A Microcosm national file needs region")
+            return
+        missing = [
+            column
+            for column in MICROCOSM_LOCAL_COLUMNS
+            if column not in area_columns
+        ]
         if missing:
             raise ValueError(f"A Microcosm local file needs {missing}")
         return
@@ -2221,8 +2234,8 @@ def add_geography_parser(subparsers) -> None:
         type=Path,
         default=None,
         help="The Microcosm file's release_manifest.json: a role it gives "
-        f"the file ({' or '.join(MICROCOSM_FILE_ROLES)}) decides which file "
-        "of the pair it is, instead of its columns",
+        f"the file ({' or '.join(MICROCOSM_FILE_ROLES)}) must agree with "
+        "--dataset-kind and with the file's columns",
     )
     parser.add_argument(
         "--levels",
@@ -2372,8 +2385,9 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             f"--dataset-kind {kind} needs a Microcosm export; a file "
             "built by policyengine-uk-data goes through --dataset-kind efrs"
         )
-    # A role in the build's release manifest tells the pair's files apart
-    # when it names one of them; otherwise their columns do, later.
+    # A role in the build's release manifest that names one of the pair's
+    # files must name this kind, before any simulation. The columns are
+    # checked later: against the role, or on their own without one.
     microcosm_file_role = None
     if parsed.release_manifest is not None:
         microcosm_file_role = release_manifest_file_role(
