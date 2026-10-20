@@ -7,6 +7,7 @@ ones, read from the canonical region table.
 
 import hashlib
 import json
+import re
 import stat
 from pathlib import Path
 from types import SimpleNamespace
@@ -2092,21 +2093,34 @@ def test_a_release_manifest_is_for_a_microcosm_file(tmp_path):
         g._plan(parse_args(args))
 
 
-def test_a_national_file_role_decides_over_the_area_columns(regions):
-    household = national_microcosm_household(
-        constituency_code_oa=["Z14000001"] * 3
-    )
+@pytest.mark.parametrize(
+    "area_columns",
+    [
+        {"constituency_code_oa": ["Z14000001"] * 3},
+        {"region_code_oa": ["E12000001"] * 3},
+        {
+            "region_code_oa": ["E12000001"] * 3,
+            "constituency_code_oa": ["Z14000001"] * 3,
+        },
+    ],
+)
+def test_a_national_file_role_on_a_file_with_area_columns_is_refused(
+    regions, area_columns
+):
+    # Only the local file places households in areas: a national role on
+    # such a file contradicts its columns, so neither is trusted.
+    household = national_microcosm_household(**area_columns)
     simulation = FakeSimulation(household, pd.DataFrame())
-    collector = g.GeographyCollector.from_simulation(
-        simulation,
-        kind="microcosm-national",
-        regions=regions,
-        seat_regions={},
-        microcosm_export=True,
-        file_role="national_dataset",
-    )
-    assert collector.national and not collector.has_seats
-    assert list(collector.region_codes) == ["E12000001"] * 2 + ["E12000007"]
+    message = f"role national_dataset, but it carries {list(area_columns)}"
+    with pytest.raises(ValueError, match=re.escape(message)):
+        g.GeographyCollector.from_simulation(
+            simulation,
+            kind="microcosm-national",
+            regions=regions,
+            seat_regions={},
+            microcosm_export=True,
+            file_role="national_dataset",
+        )
 
 
 @pytest.mark.parametrize(
@@ -2166,6 +2180,24 @@ def test_the_command_refuses_a_file_whose_role_is_the_other_file(
     assert code == 1
     assert not out.exists()
     assert "role local_area_dataset" in capsys.readouterr().out
+
+
+def test_the_command_refuses_a_local_file_whose_role_is_national(
+    monkeypatch, tmp_path, capsys
+):
+    # Both files given the national role: the local file, given as the
+    # national one as that role asks, is refused by its own columns.
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm",
+        given_as="microcosm-national",
+        manifest_entry={"role": "national_dataset"},
+    )
+    assert code == 1
+    assert not out.exists()
+    printed = " ".join(capsys.readouterr().out.split())
+    assert "role national_dataset, but it carries" in printed
 
 
 def test_the_command_with_a_manifest_without_roles_runs_as_before(
