@@ -664,6 +664,18 @@ def check_file_role(file_role: str, kind: str) -> None:
         )
 
 
+def file_role_note(dataset_name: str, file_role: Optional[str]) -> str:
+    """Say whether a release manifest's role or the columns decide which
+    file of the pair a dataset is (``file_role`` None: the columns)."""
+    if file_role is None:
+        return (
+            f"[yellow]The release manifest gives {dataset_name} neither "
+            f"{' nor '.join(MICROCOSM_FILE_ROLES)}, so its columns decide "
+            "which file of the pair it is[/yellow]"
+        )
+    return f"The release manifest gives {dataset_name} the role {file_role}"
+
+
 def check_microcosm_file(
     household: pd.DataFrame, kind: str, file_role: Optional[str] = None
 ) -> None:
@@ -2562,6 +2574,10 @@ def run_geography(parsed: argparse.Namespace) -> int:
         f"Geography: {parsed.dataset_kind}, levels {' '.join(plan.levels)}, "
         f"years {' '.join(map(str, plan.years))}"
     )
+    if parsed.release_manifest is not None:
+        console.print(
+            file_role_note(parsed.dataset.name, plan.microcosm_file_role)
+        )
 
     try:
         start = time.perf_counter()
