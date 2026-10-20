@@ -28,6 +28,7 @@ Nothing here prints a value, a count or a support figure: only labels.
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -38,7 +39,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
 import h5py
@@ -112,6 +113,15 @@ DATASET_KINDS = (EFRS, MICROCOSM, MICROCOSM_NATIONAL)
 MICROCOSM_KINDS = (MICROCOSM, MICROCOSM_NATIONAL)
 # Columns only Microcosm's local file carries: each household's areas.
 MICROCOSM_LOCAL_COLUMNS = ("region_code_oa", "constituency_code_oa")
+# The roles a build's release_manifest.json gives the two files of the pair,
+# each entry of its artifacts naming a file by path, with its sha256 and
+# role. Assumed until Microcosm defines the manifest's file roles: today's
+# manifests give none, and a role not listed here (such as a plain
+# "dataset") leaves the columns to tell the files apart, as before.
+MICROCOSM_FILE_ROLES = {
+    "national_dataset": MICROCOSM_NATIONAL,
+    "local_area_dataset": MICROCOSM,
+}
 # The page shows the one reform ending in this as the full package
 # (src/utils/geography/selection.js).
 PACKAGE_SUFFIX = "_combined"
@@ -569,15 +579,119 @@ def _efrs_source_ids(
     return ids.astype(np.int64)
 
 
-def check_microcosm_file(household: pd.DataFrame, kind: str) -> None:
+def file_sha256(path: Union[str, Path]) -> str:
+    """The SHA-256 of a file's bytes, read in chunks."""
+    with open(path, "rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
+
+
+def release_manifest_file_role(
+    manifest_path: Union[str, Path], dataset_path: Union[str, Path]
+) -> Optional[str]:
+    """Which file of the pair a build's release manifest says a dataset is.
+
+    The dataset's entry is the one of the manifest's ``artifacts`` whose
+    ``path`` ends in the dataset's file name. Its ``role`` counts only when
+    it is one of ``MICROCOSM_FILE_ROLES``, and then only if the entry's
+    ``sha256`` is the dataset's, so a role is never taken from a manifest
+    that lists another file of the same name. Any other role, or none, as in
+    today's manifests, returns None: the columns then decide, as before,
+    and the file is not hashed.
+
+    Raises:
+        ValueError: If the manifest is not a JSON object with an
+            ``artifacts`` mapping, does not list the dataset's file name
+            exactly once, or gives the dataset a pair role without its
+            sha256.
+    """
+    try:
+        manifest = json.loads(Path(manifest_path).read_text())
+    except ValueError:
+        raise ValueError(
+            f"The release manifest {manifest_path} is not JSON"
+        ) from None
+    artifacts = (
+        manifest.get("artifacts") if isinstance(manifest, dict) else None
+    )
+    if not isinstance(artifacts, dict):
+        raise ValueError(
+            f"The release manifest {manifest_path} has no artifacts mapping"
+        )
+    name = Path(dataset_path).name
+    entries = [
+        entry
+        for entry in artifacts.values()
+        if isinstance(entry, dict)
+        and isinstance(entry.get("path"), str)
+        and PurePosixPath(entry["path"]).name == name
+    ]
+    if not entries:
+        raise ValueError(
+            f"The release manifest {manifest_path} lists no file named {name}"
+        )
+    if len(entries) > 1:
+        raise ValueError(
+            f"The release manifest {manifest_path} lists {name} more than once"
+        )
+    role = entries[0].get("role")
+    if not isinstance(role, str) or role not in MICROCOSM_FILE_ROLES:
+        return None
+    listed = entries[0].get("sha256")
+    if not isinstance(listed, str) or listed.lower() != file_sha256(
+        dataset_path
+    ):
+        raise ValueError(
+            f"The release manifest gives {name} the role {role} without the "
+            "file's sha256, so the role is not this file's"
+        )
+    return role
+
+
+def check_file_role(file_role: str, kind: str) -> None:
+    """Refuse a file whose manifest role names the other file of the pair.
+
+    Raises:
+        ValueError: If ``file_role`` is not one of ``MICROCOSM_FILE_ROLES``
+            or names another kind than ``kind``.
+    """
+    if file_role not in MICROCOSM_FILE_ROLES:
+        raise ValueError(f"Unknown Microcosm file role {file_role!r}")
+    expected = MICROCOSM_FILE_ROLES[file_role]
+    if expected != kind:
+        raise ValueError(
+            f"The release manifest gives this file the role {file_role}; "
+            f"use --dataset-kind {expected}"
+        )
+
+
+def check_microcosm_file(
+    household: pd.DataFrame, kind: str, file_role: Optional[str] = None
+) -> None:
     """Refuse a Microcosm file given as the other file of the pair.
 
     Both files carry the same export marker, so their columns tell them
     apart: only the local file places each household in its areas.
 
+    With ``file_role``, the role the build's release manifest gives the file
+    (``release_manifest_file_role``), the role decides instead, and the file
+    needs only the columns its kind reads.
+
     Raises:
-        ValueError: If the columns do not match ``kind``.
+        ValueError: If the columns, or the role, do not match ``kind``.
     """
+    if file_role is not None:
+        check_file_role(file_role, kind)
+        needed = (
+            ["region"]
+            if kind == MICROCOSM_NATIONAL
+            else MICROCOSM_LOCAL_COLUMNS
+        )
+        missing = [c for c in needed if c not in household.columns]
+        if kind == MICROCOSM_NATIONAL and missing:
+            raise ValueError("A Microcosm national file needs region")
+        if missing:
+            raise ValueError(f"A Microcosm local file needs {missing}")
+        return
     local = [c for c in MICROCOSM_LOCAL_COLUMNS if c in household.columns]
     if kind == MICROCOSM_NATIONAL:
         if local:
@@ -856,6 +970,7 @@ class GeographyCollector:
         seat_regions: Mapping[str, str],
         seat_weights: Optional[Union[str, Path]] = None,
         microcosm_export: bool = False,
+        file_role: Optional[str] = None,
     ) -> "GeographyCollector":
         """The dataset-level arrays of the dataset a simulation runs on.
 
@@ -863,12 +978,14 @@ class GeographyCollector:
         matrix at ``seat_weights``, if given), ``microcosm-national``
         (Microcosm's national file; regions from ``region``, no seats) or
         ``microcosm`` (Microcosm's local file; seats from
-        ``constituency_code_oa``).
+        ``constituency_code_oa``). ``file_role`` is the role the build's
+        release manifest gives a Microcosm file, when it names one of the
+        pair (see :func:`check_microcosm_file`).
         """
         tables = dataset_tables(simulation)
         household = tables.household
         if kind in MICROCOSM_KINDS:
-            check_microcosm_file(household, kind)
+            check_microcosm_file(household, kind, file_role)
         source_ids = survey_household_ids(
             household,
             tables.person,
@@ -2100,6 +2217,14 @@ def add_geography_parser(subparsers) -> None:
         "for seats)",
     )
     parser.add_argument(
+        "--release-manifest",
+        type=Path,
+        default=None,
+        help="The Microcosm file's release_manifest.json: a role it gives "
+        f"the file ({' or '.join(MICROCOSM_FILE_ROLES)}) decides which file "
+        "of the pair it is, instead of its columns",
+    )
+    parser.add_argument(
         "--levels",
         nargs="+",
         choices=list(TABLE_FILES),
@@ -2216,6 +2341,7 @@ class _Plan:
     prior_regional: Optional[pd.DataFrame]
     microcosm_export: bool = False
     compare_with: Optional[Path] = None
+    microcosm_file_role: Optional[str] = None
 
 
 def _plan(parsed: argparse.Namespace) -> _Plan:
@@ -2230,6 +2356,8 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             "--dataset-kind microcosm-national has no seats; they come from "
             "the local file (--dataset-kind microcosm). Pass --levels region"
         )
+    if parsed.release_manifest is not None and kind not in MICROCOSM_KINDS:
+        raise ValueError("--release-manifest is for a Microcosm file")
     if parsed.compare_with is not None:
         if kind != MICROCOSM:
             raise ValueError("--compare-with is for a Microcosm local run")
@@ -2244,6 +2372,15 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             f"--dataset-kind {kind} needs a Microcosm export; a file "
             "built by policyengine-uk-data goes through --dataset-kind efrs"
         )
+    # A role in the build's release manifest tells the pair's files apart
+    # when it names one of them; otherwise their columns do, later.
+    microcosm_file_role = None
+    if parsed.release_manifest is not None:
+        microcosm_file_role = release_manifest_file_role(
+            parsed.release_manifest, parsed.dataset
+        )
+        if microcosm_file_role is not None:
+            check_file_role(microcosm_file_role, kind)
     ids = parsed.reforms or [r.id for r in get_autumn_budget_2026_reforms()]
     unknown = [i for i in ids if get_reform(i) is None]
     if unknown:
@@ -2322,6 +2459,7 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         prior_regional=prior,
         microcosm_export=microcosm_export,
         compare_with=parsed.compare_with,
+        microcosm_file_role=microcosm_file_role,
     )
 
 
@@ -2431,6 +2569,7 @@ def run_geography(parsed: argparse.Namespace) -> int:
                     seat_regions=plan.seat_regions,
                     seat_weights=plan.seat_weights,
                     microcosm_export=plan.microcosm_export,
+                    file_role=plan.microcosm_file_role,
                 )
             for year in plan.years:
                 collector.collect(reform.id, year, baseline, reformed)

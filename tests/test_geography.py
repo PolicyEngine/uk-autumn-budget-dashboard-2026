@@ -1551,6 +1551,7 @@ def run_cli(
     package=None,
     package_registered=False,
     inputs_ready=None,
+    manifest_entry=None,
 ):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
@@ -1592,6 +1593,7 @@ def run_cli(
                 handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "calibrated"
         args += ["--dataset-kind", kind, "--dataset", str(national)]
         args += ["--levels", "region"]
+        dataset_path = national
     else:
         household["region_code_oa"] = [
             (
@@ -1609,6 +1611,13 @@ def run_cli(
             if marker:
                 handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
         args += ["--dataset-kind", "microcosm", "--dataset", str(local)]
+        dataset_path = local
+    if manifest_entry is not None:
+        # The build's release_manifest.json, beside the file it lists.
+        manifest = write_release_manifest(
+            tmp_path / "release_manifest.json", dataset_path, **manifest_entry
+        )
+        args += ["--release-manifest", str(manifest)]
 
     def simulate(reform, dataset, years, current_law=None):
         baseline = {2026: np.full(n, BASE)}
@@ -1828,6 +1837,259 @@ def test_the_command_writes_regions_from_microcosm_national(
     assert validate_public(out) == []
     (run,) = audit.iterdir()
     assert [p.name for p in run.iterdir()] == ["microcosm-national"]
+
+
+# -- Microcosm file roles ----------------------------------------------------
+
+# A new-layout build, releases/<release>/<build>/ (assumed until Microcosm's
+# H2c defines the release manifest).
+ROLE_RELEASE = "microcosm-uk-2024-25-national"
+ROLE_BUILD = "uk-frs-calibration-attempt-20261019T083323Z-6cba5d71"
+
+
+def write_release_manifest(manifest_path, dataset_path, **entry):
+    """A build's release_manifest.json listing the dataset in artifacts.
+
+    ``entry`` adds to or replaces the dataset's entry; a value of None
+    drops that key. Without a role it has the shape of today's manifests.
+    """
+    listed = {
+        "kind": "microdata",
+        "path": dataset_path.name,
+        "repo_id": "policyengine/microcosm-uk",
+        "sha256": hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+    } | entry
+    manifest = {
+        "release": ROLE_RELEASE,
+        "build": ROLE_BUILD,
+        "artifacts": {
+            "dataset": {
+                key: value
+                for key, value in listed.items()
+                if value is not None
+            },
+            "calibration_diagnostics": {
+                "kind": "diagnostics",
+                "path": "calibration_diagnostics.json",
+                "role": "calibration_diagnostics",
+                "sha256": "0" * 64,
+            },
+        },
+    }
+    manifest_path.write_text(json.dumps(manifest))
+    return manifest_path
+
+
+def microcosm_export(path, marker="calibrated"):
+    with h5py.File(path, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = marker
+    return path
+
+
+def role_plan_args(tmp_path, kind, **entry):
+    """geography arguments for one Microcosm file and its release manifest."""
+    dataset = microcosm_export(tmp_path / "microcosm_uk_2024_25.h5")
+    manifest = write_release_manifest(
+        tmp_path / "release_manifest.json", dataset, **entry
+    )
+    args = ["geography", "--dataset-kind", kind, "--dataset", str(dataset)]
+    if kind == "microcosm-national":
+        args += ["--levels", "region"]
+    args += ["--release-manifest", str(manifest)]
+    return args + ["--data-inputs-dir", str(REPO / "data_inputs")]
+
+
+def test_the_release_manifest_is_optional():
+    from uk_budget_data.cli import parse_args
+
+    assert parse_args(["geography"]).release_manifest is None
+
+
+@pytest.mark.parametrize(
+    "role",
+    [None, "dataset", "national_default", "non_default_local_area", "local"],
+)
+def test_a_role_that_names_neither_file_leaves_the_columns_to_decide(
+    tmp_path, role
+):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, "microcosm-national", role=role)
+    assert g._plan(parse_args(args)).microcosm_file_role is None
+
+
+@pytest.mark.parametrize(
+    "kind, role, expected",
+    [
+        ("microcosm-national", "local_area_dataset", "microcosm"),
+        ("microcosm", "national_dataset", "microcosm-national"),
+    ],
+)
+def test_a_file_role_that_contradicts_the_dataset_kind_is_refused(
+    tmp_path, kind, role, expected
+):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, kind, role=role)
+    with pytest.raises(
+        ValueError, match=f"role {role}.*--dataset-kind {expected}$"
+    ):
+        g._plan(parse_args(args))
+
+
+@pytest.mark.parametrize(
+    "kind, role",
+    [
+        ("microcosm-national", "national_dataset"),
+        ("microcosm", "local_area_dataset"),
+    ],
+)
+def test_a_file_role_that_matches_the_dataset_kind_is_kept(
+    tmp_path, kind, role
+):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, kind, role=role)
+    assert g._plan(parse_args(args)).microcosm_file_role == role
+
+
+@pytest.mark.parametrize("sha256", ["f" * 64, None])
+def test_a_file_role_counts_only_with_the_files_sha256(tmp_path, sha256):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(
+        tmp_path, "microcosm-national", role="national_dataset", sha256=sha256
+    )
+    with pytest.raises(ValueError, match="sha256"):
+        g._plan(parse_args(args))
+
+
+def test_without_a_file_role_the_sha256_is_not_checked(tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, "microcosm-national", sha256="f" * 64)
+    assert g._plan(parse_args(args)).microcosm_file_role is None
+
+
+def test_the_release_manifest_must_list_the_dataset_once(tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, "microcosm-national", path="other.h5")
+    with pytest.raises(ValueError, match="lists no file named"):
+        g._plan(parse_args(args))
+    manifest = tmp_path / "release_manifest.json"
+    document = json.loads(manifest.read_text())
+    document["artifacts"]["copy"] = dict(
+        document["artifacts"]["dataset"], path="microcosm_uk_2024_25.h5"
+    )
+    document["artifacts"]["dataset"]["path"] = "folder/microcosm_uk_2024_25.h5"
+    manifest.write_text(json.dumps(document))
+    with pytest.raises(ValueError, match="more than once"):
+        g._plan(parse_args(args))
+
+
+@pytest.mark.parametrize("content", ["not json", "[]", '{"artifacts": []}'])
+def test_a_release_manifest_without_artifacts_is_refused(tmp_path, content):
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, "microcosm-national")
+    (tmp_path / "release_manifest.json").write_text(content)
+    with pytest.raises(ValueError, match="release manifest"):
+        g._plan(parse_args(args))
+
+
+def test_a_release_manifest_is_for_a_microcosm_file(tmp_path):
+    from uk_budget_data.cli import parse_args
+
+    args = ["geography", "--release-manifest", str(tmp_path / "m.json")]
+    with pytest.raises(ValueError, match="for a Microcosm file"):
+        g._plan(parse_args(args))
+
+
+def test_a_national_file_role_decides_over_the_area_columns(regions):
+    household = national_microcosm_household(
+        constituency_code_oa=["Z14000001"] * 3
+    )
+    simulation = FakeSimulation(household, pd.DataFrame())
+    collector = g.GeographyCollector.from_simulation(
+        simulation,
+        kind="microcosm-national",
+        regions=regions,
+        seat_regions={},
+        microcosm_export=True,
+        file_role="national_dataset",
+    )
+    assert collector.national and not collector.has_seats
+    assert list(collector.region_codes) == ["E12000001"] * 2 + ["E12000007"]
+
+
+@pytest.mark.parametrize(
+    "kind, role, columns, message",
+    [
+        ("microcosm", "local_area_dataset", {}, "local file needs"),
+        (
+            "microcosm",
+            "local_area_dataset",
+            {"region_code_oa": ["E12000001"] * 3},
+            "constituency_code_oa",
+        ),
+        ("microcosm-national", "national_dataset", None, "needs region"),
+        ("microcosm-national", "local_area_dataset", {}, "role local_area"),
+    ],
+)
+def test_a_file_role_still_needs_the_columns_its_kind_reads(
+    regions, kind, role, columns, message
+):
+    household = national_microcosm_household(**(columns or {}))
+    if columns is None:
+        household = household.drop(columns="region")
+    simulation = FakeSimulation(household, pd.DataFrame())
+    with pytest.raises(ValueError, match=message):
+        g.GeographyCollector.from_simulation(
+            simulation,
+            kind=kind,
+            regions=regions,
+            seat_regions={},
+            microcosm_export=True,
+            file_role=role,
+        )
+
+
+def test_the_command_reads_the_file_role_from_the_release_manifest(
+    monkeypatch, tmp_path
+):
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm",
+        manifest_entry={"role": "local_area_dataset"},
+    )
+    assert code == 0
+    assert [p.name for p in out.iterdir()] == ["constituency.csv"]
+
+
+def test_the_command_refuses_a_file_whose_role_is_the_other_file(
+    monkeypatch, tmp_path, capsys
+):
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm-national",
+        manifest_entry={"role": "local_area_dataset"},
+    )
+    assert code == 1
+    assert not out.exists()
+    assert "role local_area_dataset" in capsys.readouterr().out
+
+
+def test_the_command_with_a_manifest_without_roles_runs_as_before(
+    monkeypatch, tmp_path
+):
+    code, out, _ = run_cli(
+        monkeypatch, tmp_path, kind="microcosm-national", manifest_entry={}
+    )
+    assert code == 0
+    assert [p.name for p in out.iterdir()] == ["regional.csv"]
 
 
 def test_a_package_is_built_from_the_chosen_measures(monkeypatch, tmp_path):
