@@ -1552,7 +1552,16 @@ def run_cli(
     package_registered=False,
     inputs_ready=None,
     manifest_entry=None,
+    todays_manifest=False,
+    given_as=None,
 ):
+    """Run geography on synthetic data with the simulations faked.
+
+    ``kind`` decides which file is built; ``given_as`` is the
+    --dataset-kind it is given as (default: its own). ``manifest_entry``
+    passes a new-layout release manifest listing the file, and
+    ``todays_manifest`` one in the shape Microcosm publishes today.
+    """
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
 
@@ -1591,8 +1600,8 @@ def run_cli(
         with h5py.File(national, "w") as handle:
             if marker:
                 handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "calibrated"
-        args += ["--dataset-kind", kind, "--dataset", str(national)]
-        args += ["--levels", "region"]
+        args += ["--dataset-kind", given_as or kind]
+        args += ["--dataset", str(national), "--levels", "region"]
         dataset_path = national
     else:
         household["region_code_oa"] = [
@@ -1610,12 +1619,19 @@ def run_cli(
         with h5py.File(local, "w") as handle:
             if marker:
                 handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
-        args += ["--dataset-kind", "microcosm", "--dataset", str(local)]
+        args += ["--dataset-kind", given_as or "microcosm"]
+        args += ["--dataset", str(local)]
+        if given_as == "microcosm-national":
+            args += ["--levels", "region"]
         dataset_path = local
+    # The build's release_manifest.json, beside the file it lists.
+    manifest = tmp_path / "release_manifest.json"
     if manifest_entry is not None:
-        # The build's release_manifest.json, beside the file it lists.
-        manifest = write_release_manifest(
-            tmp_path / "release_manifest.json", dataset_path, **manifest_entry
+        write_release_manifest(manifest, dataset_path, **manifest_entry)
+        args += ["--release-manifest", str(manifest)]
+    elif todays_manifest:
+        write_todays_release_manifest(
+            manifest, dataset_path, local=kind == "microcosm"
         )
         args += ["--release-manifest", str(manifest)]
 
@@ -1880,6 +1896,76 @@ def write_release_manifest(manifest_path, dataset_path, **entry):
     return manifest_path
 
 
+def write_todays_release_manifest(manifest_path, dataset_path, *, local):
+    """A release_manifest.json in the shape Microcosm publishes today.
+
+    It follows Microcosm's tools/assemble_uk_release_dir.py (the national
+    file) and tools/assemble_uk_dense_release_dir.py (the dense release,
+    the local file): artifacts keyed by name, whose entries carry kind,
+    path, repo_id, revision and sha256 but no role; a build object; and,
+    for the dense release, a top-level dataset_role.
+    """
+    release = (
+        "microcosm-uk-2024-25-dense"
+        if local
+        else "microcosm-uk-2024-25-national"
+    )
+    tag = f"{release}-20261019T083323Z-6cba5d71"
+    dataset_key = dataset_path.stem
+
+    def artifact(kind, file_name, sha256):
+        return {
+            "kind": kind,
+            "path": file_name,
+            "repo_id": "policyengine/populace-uk-private",
+            "revision": tag,
+            "sha256": sha256,
+        }
+
+    artifacts = {
+        dataset_key: artifact(
+            "microdata",
+            dataset_path.name,
+            hashlib.sha256(dataset_path.read_bytes()).hexdigest(),
+        ),
+        "calibration_diagnostics": artifact(
+            "diagnostics", "calibration_diagnostics.json", "0" * 64
+        ),
+    }
+    manifest = {
+        "schema_version": 1,
+        "data_package": {"name": "microcosm-data", "version": "0.1.0"},
+        "default_datasets": {} if local else {"national": dataset_key},
+        "build": {
+            "build_id": release,
+            "built_at": "2026-10-19T08:33:23Z",
+            "built_with_core_package": {
+                "name": "policyengine-core",
+                "version": "3.27.1",
+            },
+            "built_with_model_package": {
+                "name": "policyengine-uk",
+                "version": "2.132.6",
+            },
+            "attempt_id": ROLE_BUILD,
+            "cut_tag": tag,
+        },
+        "artifacts": artifacts,
+    }
+    if local:
+        manifest |= {
+            "dataset_role": "non_default_local_area",
+            "is_default": False,
+            "namespace": "uk_dense",
+        }
+    else:
+        artifacts[f"{dataset_key}_calibration"] = artifact(
+            "calibration", f"{dataset_key}_calibration.npz", "0" * 64
+        )
+    manifest_path.write_text(json.dumps(manifest))
+    return manifest_path
+
+
 def microcosm_export(path, marker="calibrated"):
     with h5py.File(path, "w") as handle:
         handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = marker
@@ -2090,6 +2176,57 @@ def test_the_command_with_a_manifest_without_roles_runs_as_before(
     )
     assert code == 0
     assert [p.name for p in out.iterdir()] == ["regional.csv"]
+
+
+# #59's refusal of each file of the pair given as the other.
+COLUMN_REFUSALS = {
+    ("microcosm-national", "microcosm"): "so it is not a local file",
+    ("microcosm", "microcosm-national"): "This is a Microcosm local file",
+}
+
+
+@pytest.mark.parametrize(
+    "kind, given_as",
+    [
+        ("microcosm-national", None),
+        ("microcosm", None),
+        *COLUMN_REFUSALS,
+    ],
+)
+def test_todays_release_manifests_leave_each_run_as_on_59(
+    monkeypatch, tmp_path, capsys, kind, given_as
+):
+    """Every manifest published so far gives no file a role: with one, a
+    run writes the same tables, or makes the same refusal, as without."""
+    expected_refusal = COLUMN_REFUSALS.get((kind, given_as))
+    results = {}
+    for with_manifest in (False, True):
+        run_dir = tmp_path / f"manifest-{with_manifest}"
+        run_dir.mkdir()
+        code, out, _ = run_cli(
+            monkeypatch,
+            run_dir,
+            kind=kind,
+            given_as=given_as,
+            todays_manifest=with_manifest,
+        )
+        # Rich wraps long messages; compare the words.
+        printed = " ".join(capsys.readouterr().out.split())
+        tables = (
+            {table.name: table.read_bytes() for table in out.iterdir()}
+            if out.exists()
+            else None
+        )
+        refused_as_on_59 = (
+            expected_refusal is not None and expected_refusal in printed
+        )
+        results[with_manifest] = (code, tables, refused_as_on_59)
+    assert results[True] == results[False]
+    code, tables, refused_as_on_59 = results[False]
+    if expected_refusal is None:
+        assert code == 0 and tables
+    else:
+        assert code == 1 and tables is None and refused_as_on_59
 
 
 def test_a_package_is_built_from_the_chosen_measures(monkeypatch, tmp_path):
