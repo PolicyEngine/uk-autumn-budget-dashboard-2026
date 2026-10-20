@@ -2210,6 +2210,46 @@ def test_the_command_with_a_manifest_without_roles_runs_as_before(
     assert [p.name for p in out.iterdir()] == ["regional.csv"]
 
 
+@pytest.mark.parametrize("role", [None, "dataset", "national"])
+def test_the_command_says_when_the_columns_decide_despite_a_manifest(
+    monkeypatch, tmp_path, capsys, role
+):
+    # No role, or one that names neither file, falls back to the columns,
+    # and says so.
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm-national",
+        manifest_entry={"role": role},
+    )
+    assert code == 0
+    assert [table.name for table in out.iterdir()] == ["regional.csv"]
+    printed = " ".join(capsys.readouterr().out.split())
+    assert (
+        "The release manifest gives national.h5 neither national_dataset "
+        "nor local_area_dataset, so its columns decide which file of the "
+        "pair it is" in printed
+    )
+
+
+def test_the_command_says_which_role_the_release_manifest_gives(
+    monkeypatch, tmp_path, capsys
+):
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        kind="microcosm",
+        manifest_entry={"role": "local_area_dataset"},
+    )
+    assert code == 0
+    printed = " ".join(capsys.readouterr().out.split())
+    assert (
+        "The release manifest gives local.h5 the role local_area_dataset"
+        in printed
+    )
+    assert "its columns decide" not in printed
+
+
 # #59's refusal of each file of the pair given as the other.
 COLUMN_REFUSALS = {
     ("microcosm-national", "microcosm"): "so it is not a local file",
