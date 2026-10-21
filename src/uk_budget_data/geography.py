@@ -22,6 +22,7 @@ Nothing here prints a value, a count or a support figure: only labels.
 """
 
 import argparse
+import contextlib
 import json
 import math
 import os
@@ -60,6 +61,7 @@ from policyengine.disclosure.schema import (
 )
 from rich.console import Console
 
+from uk_budget_data import data_limits
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.private_outputs import (
@@ -2094,13 +2096,33 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
 
 
 def simulate_reform(reform: Reform, dataset: Optional[str], years) -> tuple:
-    """A reform's baseline and reformed microsimulations."""
+    """A reform's baseline and reformed microsimulations, built under the
+    data-limit build watch (``data_limits.watched_build``), as the
+    publication generator builds them."""
     config = DataConfig(years=list(years))
-    baseline = build_microsimulation(
-        dataset, reform.baseline_scenario_for(config)
+    baseline = data_limits.watched_build(
+        build_microsimulation, dataset, reform.baseline_scenario_for(config)
     )
-    reformed = build_microsimulation(dataset, reform.to_scenario())
+    reformed = data_limits.watched_build(
+        build_microsimulation, dataset, reform.to_scenario()
+    )
     return baseline, reformed
+
+
+def reform_data_limits(
+    reform: Reform, baseline, reformed, observation, years
+) -> list[dict]:
+    """The data limits a reform touches, decided as the publication
+    generator decides them: from the two built simulations and what the
+    code that differs read while the area figures were calculated; from
+    the scenarios' parameter changes only for stand-ins with no parameter
+    tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return data_limits.limits_touched(baseline, reformed, observation)
+    config = DataConfig(years=list(years))
+    return data_limits.limits_for_scenarios(
+        reform.baseline_scenario_for(config), reform.to_scenario()
+    )
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
@@ -2126,6 +2148,7 @@ def run_geography(parsed: argparse.Namespace) -> int:
     try:
         start = time.perf_counter()
         collector = None
+        limited = {}
         for reform in plan.reforms:
             console.print(f"Simulating {reform.id}")
             baseline, reformed = simulate_reform(reform, dataset, plan.years)
@@ -2138,10 +2161,42 @@ def run_geography(parsed: argparse.Namespace) -> int:
                     seat_weights=plan.seat_weights,
                     microcosm_export=plan.microcosm_export,
                 )
-            for year in plan.years:
-                collector.collect(reform.id, year, baseline, reformed)
-            del baseline, reformed
+            # A measure the certified data cannot cost has no figure by
+            # area either: what the code that differs reads is watched
+            # while the area figures are calculated, as the generator
+            # watches its run. With no limit registered, nothing is
+            # watched.
+            watch = (
+                data_limits.observing(baseline, reformed)
+                if data_limits.DATA_LIMITS
+                else contextlib.nullcontext()
+            )
+            with watch as observed:
+                for year in plan.years:
+                    collector.collect(reform.id, year, baseline, reformed)
+            if data_limits.DATA_LIMITS:
+                touched = reform_data_limits(
+                    reform, baseline, reformed, observed, plan.years
+                )
+                if touched:
+                    limited[reform.id] = touched
+            # The observation holds both simulations: free it with them, so
+            # the next pair is never built with this one still alive.
+            del baseline, reformed, observed
         simulate_s = time.perf_counter() - start
+        if limited:
+            for reform_id, touched in limited.items():
+                reasons = " ".join(item["reason"] for item in touched)
+                console.print(
+                    f"[red]Not computable on current data: {reform_id}: "
+                    f"{reasons}[/red]"
+                )
+            console.print(
+                f"[red]Error: {len(limited)} reform(s) touch a data limit, "
+                "so no tables were written. Leave them, and any package "
+                "including them, out of --reforms.[/red]"
+            )
+            return 1
 
         console.print("Estimating and checking")
         geo = build_release(
