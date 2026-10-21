@@ -8,15 +8,19 @@ instead of surfacing as a download error ten minutes into the test run, or as
 a silent skip.
 
 The check reads only metadata: it never downloads a dataset. For every UK
-artifact pinned in the installed bundle it confirms that the token can see the
-file at the pinned revision and that the file's LFS SHA-256 equals the hash in
-the bundle manifest.
+artifact pinned in the installed bundle, and every overlay dataset named with
+``--also``, it confirms that the token can see the file at the pinned
+revision and that the file's LFS SHA-256 equals the hash in the bundle
+manifest.
 
 Usage::
 
     HUGGING_FACE_TOKEN=... uv run python -m uk_budget_data.certified_data
+
+``--also DATASET``, which may be repeated, checks an overlay dataset as well.
 """
 
+import argparse
 import hashlib
 import json
 import os
@@ -29,9 +33,15 @@ TOKEN_ENV = "HUGGING_FACE_TOKEN"
 
 ACCESS_HINT = (
     "CI reads the token from the organisation secret "
-    "PE_UK_PRIVATE_HF_READ_TOKEN, a fine-grained read-only token for "
-    "policyengine/policyengine-uk-data-private. An organisation admin must "
-    "add this repository to that secret's selected repositories."
+    "PE_UK_PRIVATE_HF_READ_TOKEN. It must be able to read every Hugging Face "
+    "repository this check lists: the one the installed bundle's certified "
+    "data comes from (policyengine/populace-uk-private for Microcosm, from "
+    "policyengine 6.10.0; policyengine/policyengine-uk-data-private before), "
+    "and that of any dataset named with --also (CI names policyengine-uk-"
+    "data's tiny enhanced FRS, which stays in "
+    "policyengine/policyengine-uk-data-private). This repository must be "
+    "among that secret's selected repositories. Changing either is an "
+    "organisation admin's call."
 )
 
 
@@ -59,21 +69,48 @@ def load_bundle_manifest() -> dict:
     return json.loads(manifest.read_text())
 
 
-def uk_artifacts(manifest: dict) -> list[Artifact]:
-    """List every UK data artifact pinned in a bundle manifest."""
-    release = manifest["data_releases"]["uk"]
-    default_repo_type = release.get("data_package", {}).get(
-        "repo_type", "model"
-    )
-    artifacts = [
-        Artifact(
-            name=name,
-            repo_id=entry["repo_id"],
-            repo_type=entry.get("repo_type", default_repo_type),
-            path=entry["path"],
-            revision=entry["revision"],
-            sha256=entry["sha256"],
+def _artifact(name: str, entry: dict, package: dict) -> Artifact:
+    """One pinned dataset, located as policyengine locates it.
+
+    Where the entry names no repository, repository type or revision, the
+    release's data package supplies it, as in policyengine's
+    ``resolve_dataset_reference``; that holds for overlays too, which
+    policyengine merges into the release's datasets.
+    """
+    located = {
+        "repo_id": entry.get("repo_id") or package.get("repo_id"),
+        "path": entry.get("path"),
+        "revision": entry.get("revision")
+        or package.get("release_manifest_revision")
+        or package.get("version"),
+        "sha256": entry.get("sha256"),
+    }
+    missing = [field for field, value in located.items() if not value]
+    if missing:
+        raise CertifiedDataAccessError(
+            f"The bundle's UK dataset {name!r} pins no {', '.join(missing)}."
         )
+    return Artifact(
+        name=name,
+        repo_type=entry.get("repo_type")
+        or package.get("repo_type")
+        or "model",
+        **located,
+    )
+
+
+def uk_artifacts(manifest: dict, also: tuple[str, ...] = ()) -> list[Artifact]:
+    """List every UK data artifact pinned in a bundle manifest.
+
+    ``also`` names further datasets to check: each must be one of the
+    release's datasets (already listed) or one of the bundle's UK dataset
+    overlays, which pin a dataset outside the release, usually in its own
+    repository.
+    """
+    release = manifest["data_releases"]["uk"]
+    package = release.get("data_package", {})
+    artifacts = [
+        _artifact(name, entry, package)
         for name, entry in sorted(release["datasets"].items())
     ]
     if not any(a.name == release["default_dataset"] for a in artifacts):
@@ -81,6 +118,14 @@ def uk_artifacts(manifest: dict) -> list[Artifact]:
             f"Bundle default dataset {release['default_dataset']!r} is not "
             "listed among the bundle's UK datasets."
         )
+    overlays = manifest.get("dataset_overlays", {}).get("uk", {})
+    for name in sorted(set(also) - set(release["datasets"])):
+        entry = overlays.get(name)
+        if entry is None:
+            raise CertifiedDataAccessError(
+                f"The bundle pins no UK dataset or overlay {name!r}."
+            )
+        artifacts.append(_artifact(name, entry, package))
     return artifacts
 
 
@@ -180,10 +225,19 @@ def check_access(
     return lines
 
 
-def main() -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     """Run the check against the installed bundle and the environment."""
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--also",
+        action="append",
+        default=[],
+        metavar="DATASET",
+        help="also check this release dataset or bundle overlay",
+    )
+    args = parser.parse_args(argv)
     try:
-        artifacts = uk_artifacts(load_bundle_manifest())
+        artifacts = uk_artifacts(load_bundle_manifest(), tuple(args.also))
         for line in check_access(os.environ.get(TOKEN_ENV), artifacts):
             print(line)
     except CertifiedDataAccessError as error:
