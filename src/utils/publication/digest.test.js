@@ -169,6 +169,24 @@ describe("binding a receipt to its manifest entry", () => {
     ]);
   });
 
+  it("refuses a combined run whose own receipt records a model limit, as approved", async () => {
+    // A combined run's own receipt can record a limit no member records
+    // (the combination touches it); it is held at provisional like any
+    // measure. The edited receipt no longer matches its digest either.
+    const key = "combined--alpha+beta";
+    const entry = entries[key];
+    expect(entry.status).toBe("approved");
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    receipt.dashboard.model_limits = [
+      fixtureJson(`${entries.zeta.artifact}/receipt.json`).dashboard
+        .model_limits[0],
+    ];
+    expect(await receiptProblems(receipt, key, entry)).toContain(
+      "the receipt records model limits: held at provisional, so it " +
+        "cannot be shown as approved",
+    );
+  });
+
   it("refuses a combined entry relabelled with other members", async () => {
     // Review case: relabel alpha+beta as alpha+gamma, with a matching
     // snapshot, keeping the artifact and every other digest.

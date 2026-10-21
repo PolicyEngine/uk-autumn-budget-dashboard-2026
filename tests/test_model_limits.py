@@ -841,12 +841,12 @@ def pensioner(year, age):
 
 
 @pytest.mark.parametrize(
-    "age, rate, raised_to",
-    [(70, NEW_PENSION, 260.0), (85, BASIC_PENSION, 200.0)],
+    "age, pension, rate, raised_to",
+    [(70, "NEW", NEW_PENSION, 260.0), (85, "BASIC", BASIC_PENSION, 200.0)],
     ids=["new State Pension", "basic State Pension"],
 )
 def test_both_checks_for_the_fix_agree_with_what_the_model_does(
-    age, rate, raised_to
+    age, pension, rate, raised_to
 ):
     """The checks read code; this tripwire reads behaviour. Without #2336
     the add-on rises with the full rate, so raising the full rate moves it;
@@ -863,6 +863,9 @@ def test_both_checks_for_the_fix_agree_with_what_the_model_does(
         situation=pensioner(year, age),
         scenario=Scenario(parameter_changes={rate: {str(year): raised_to}}),
     )
+    # Each case stays the pension it is named for, so the basic case can't
+    # quietly become a second new State Pension case.
+    assert baseline.calculate("state_pension_type", year)[0] == pension
     before = baseline.calculate("additional_state_pension", year)[0]
     after = raised.calculate("additional_state_pension", year)[0]
     assert before > 0

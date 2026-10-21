@@ -222,7 +222,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **If the check prints `False`,** such a measure is staged provisional at most. The guard does this by itself:
   - **Generation:** it records `state_pension_add_on_uprating` in the measure's receipt, with the reason, whenever the measure's two simulations differ under a covered parameter and the model lacks the fix.
   - **Staging and approval:** `publish stage --provisional` accepts the measure; `publish approve` refuses it ("held at provisional, not approved", with the reason).
-  - **The page** shows such a measure as provisional and refuses to show it as approved, even from a manifest edited by hand, because its receipt records the limit.
+  - **The page,** once #20's modules are wired in after #3, shows such a measure as provisional and refuses to show it as approved, even from a manifest edited by hand, because its receipt records the limit. The loader already does.
   - **The templates** warn (`ModelLimitedWarning`) when a measure is built on one of the guard's own parameters: either full rate, the triple lock or the September CPI index. A template change elsewhere that moves them, such as to the statutory uprating inputs, doesn't warn, but generation still records it.
   - **The flat pipeline** prints "MIS-COSTED BY THIS MODEL".
   - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, with the other tests that assume the limit is active, so the limit and those tests are removed there.
