@@ -53,6 +53,8 @@ def test_the_certified_dataset_yields_a_certified_receipt():
             file_digests={"budgetary_impact.csv": "0" * 64},
             basis=load_basis(),
             revision=revision,
+            data_limits=[],
+            model_limits=[],
         ),
     )
     receipt = document["execution_receipt"]

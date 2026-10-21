@@ -1,4 +1,4 @@
-"""Measures the installed model overstates until a known fix lands.
+"""Measures the installed model mis-costs until a known fix lands.
 
 Some parameters reach more of the model than the law gives them, until a
 known fix is in the installed model. A measure that changes one of them

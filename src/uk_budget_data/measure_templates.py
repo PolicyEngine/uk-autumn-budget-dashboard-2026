@@ -26,7 +26,7 @@ installed would hide it for their periods.
 A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
 such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
 the measure is published as not computable, never as a figure. A parameter
-the installed model overstates (``uk_budget_data.model_limits``, such as the
+the installed model mis-costs (``uk_budget_data.model_limits``, such as the
 State Pension's full rates before policyengine-uk #2336) builds with a
 ``ModelLimitedWarning``: the measure is held at provisional, never approved.
 """
@@ -70,7 +70,7 @@ def _warn_if_data_limited(path: str) -> None:
 
 
 class ModelLimitedWarning(UserWarning):
-    """A change built on a parameter the installed model overstates."""
+    """A change built on a parameter the installed model mis-costs."""
 
 
 def _warn_if_model_limited(path: str) -> None:

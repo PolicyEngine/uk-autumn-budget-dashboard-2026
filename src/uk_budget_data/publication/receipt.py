@@ -481,13 +481,15 @@ class ReceiptInputs:
     member_outputs: Optional[dict[str, str]] = None
     # Combined runs: each side's phase (see combined_identities).
     composition: Optional[dict] = None
-    # The data limits the measure touches (data_limits.limits_touched on
-    # the two simulations), so it is published as not computable.
-    data_limits: list[dict] = field(default_factory=list)
-    # The model limits it touches (model_limits.limits_touched), so it is
-    # held at provisional, never approved.
-    model_limits: list[dict] = field(default_factory=list)
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
+    # The data limits the measure touches (data_limits.limits_touched on
+    # the two simulations), so it is published as not computable. Required,
+    # with no default: a caller that forgets them must fail, not record
+    # that the measure touches none.
+    data_limits: list[dict] = field(kw_only=True)
+    # The model limits it touches (model_limits.limits_touched), so it is
+    # held at provisional, never approved. Required, as data_limits is.
+    model_limits: list[dict] = field(kw_only=True)
 
 
 def build_receipt_document(

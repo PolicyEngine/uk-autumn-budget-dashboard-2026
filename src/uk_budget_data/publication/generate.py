@@ -283,7 +283,7 @@ def generate_artifacts(
         limits = _limits(
             baseline, reformed, baseline_scenario, reform_scenario, observed
         )
-        # A measure the installed model overstates is held at provisional.
+        # A measure the installed model mis-costs is held at provisional.
         held = _model_limits(
             baseline, reformed, baseline_scenario, reform_scenario
         )
