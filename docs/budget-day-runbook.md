@@ -48,8 +48,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
   Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Whether to require Publication gate too is your call (question 3 in `budget-day-publication.md`).
 - [ ] **Household fixtures: specimen households before the rehearsal.** `data_inputs/household_fixtures/` (#15) holds its README, a draft example (`example-zero-income.json`, marked `"draft": true`, which the checker skips) and the plumbing fixture (#65).
-  - **The plumbing fixture** is a single employee on £12,000. It checks that the route answers on the bundle's versions, with the response's shape, and that seven of the eight measures change a household they can't reach by £0, with no measure giving it Universal Credit. It checks no non-zero answer.
-  - **It is enough for the check to pass.** The check passes once it has checked at least one non-draft fixture, so with the plumbing fixture alone the household check passes at G0, G2 and G4. The checker doesn't require a fixture for each measure.
+  - **The plumbing fixture** is a single employee on £12,000. It checks that the route answers on the bundle's versions, with the response's shape, and that seven of the route's eight measures change a household they can't reach by £0, with no measure giving it Universal Credit. It checks no non-zero answer.
+  - **It is enough for the check to pass.** The check needs at least one non-draft fixture, and passes when every fixture it checks passes and the API's versions match the bundle's (`run_checks`). So with the plumbing fixture alone, the household check can pass at G0, G2 and G4 on `main`'s route. The checker doesn't require a fixture for each measure.
   - **The accuracy check is still to come:** specimen households whose non-zero answers are computed independently of the API (the README says how), at least one reached by each measure. Proposed: María's specimen households. Whether the checker should refuse to pass until every measure has one is your call.
 - [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3; the first two rows re-checked on 19 October against `main` (5324080):
 
@@ -243,7 +243,7 @@ Record in the clock table:
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`).
 
-**The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check passes on plumbing alone and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
+**The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check can pass on plumbing alone, and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
 ## G1: coverage (12:30 to 12:45)
 
@@ -321,7 +321,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
     --household-receipt receipts/<id>-households.json
   ```
 
-  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. *The household receipt is optional in the code today; it becomes required once the fixtures exist.*
+  Approval is refused until every gate passes. It names the exact outputs approved and stores the household receipt in the manifest. *The household receipt is optional in the code today (`REQUIRE_HOUSEHOLD_CHECKS` in `publish.py`); it becomes required once the specimen households exist.*
 
 ## G4: combined run and publish (14:50)
 
