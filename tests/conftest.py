@@ -14,7 +14,7 @@ pytest-xdist too; hooks that take the test item run only on the workers.
 
 Tests marked ``slow`` take minutes each. The Python tests job runs the suite
 on four pytest-xdist workers and these tests are collected first there, so
-its four slow units start on separate workers (see
+its slow units start on separate workers (see
 ``pytest_collection_modifyitems``).
 """
 
@@ -54,7 +54,7 @@ def pytest_collection_modifyitems(config, items):
     CI runs ``-n 4 --dist loadgroup --no-loadscope-reorder``, which hands
     out work units (a test, or the tests of one ``xdist_group``) in
     collection order: one to each worker, then a second, then more to a
-    worker only as its own tests finish. With the slow tests first, the four
+    worker only as its own tests finish. With the slow tests first, the
     slow units start on separate workers and light tests queue behind them.
     In file order, a worker that finished its light tests early could be
     given two slow units back to back. Serial runs keep file order.
