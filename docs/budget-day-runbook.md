@@ -220,7 +220,8 @@ A measure that cannot be bound is refused at generation: the command prints `REF
 git switch main && git pull
 uv sync --locked --extra dev
 mkdir -p receipts
-uv run python -m uk_budget_data.certified_data             # the bundle's data, by hash (#12)
+uv run python -m uk_budget_data.certified_data \
+  --also enhanced_frs_2024_25_tiny                         # the bundle's data and the tests' small file, by hash (#12, #70)
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
 curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
 uv run python -m uk_budget_data.household_route \

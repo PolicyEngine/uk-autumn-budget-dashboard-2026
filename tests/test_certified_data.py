@@ -115,33 +115,80 @@ def test_installed_bundle_pins_a_uk_default_dataset():
     assert all(len(a.sha256) == 64 for a in pinned)
 
 
+# A data package of type dataset, so an entry that names no type can't pass
+# for one that defaults to model.
+PACKAGE = {
+    "repo_id": "org/private",
+    "repo_type": "dataset",
+    "version": "1.0.0",
+    "release_manifest_revision": "cut-1",
+}
 OVERLAYS = {
     "tiny": {
         "repo_id": "org/old",
-        "repo_type": "dataset",
+        "repo_type": "model",
         "path": "tiny.h5",
         "revision": "2.0.0",
         "sha256": SHA_A,
     },
-    "untyped": {
-        "repo_id": "org/old",
-        "path": "untyped.h5",
-        "revision": "2.0.0",
-        "sha256": SHA_B,
-    },
+    # Only a path and a hash: the data package supplies the rest.
+    "bare": {"path": "bare.h5", "sha256": SHA_B},
 }
-WITH_OVERLAYS = {**MANIFEST, "dataset_overlays": {"uk": OVERLAYS}}
+WITH_OVERLAYS = {
+    "data_releases": {
+        "uk": {**MANIFEST["data_releases"]["uk"], "data_package": PACKAGE}
+    },
+    "dataset_overlays": {"uk": OVERLAYS},
+}
 
 
-def test_also_adds_a_named_overlay_from_its_own_repository():
-    assert uk_artifacts(WITH_OVERLAYS, ("untyped", "tiny"))[2:] == [
-        Artifact("tiny", "org/old", "dataset", "tiny.h5", "2.0.0", SHA_A),
-        Artifact("untyped", "org/old", "model", "untyped.h5", "2.0.0", SHA_B),
+def release():
+    return uk_artifacts(WITH_OVERLAYS)
+
+
+def test_also_adds_a_named_overlay_located_as_policyengine_locates_it():
+    assert uk_artifacts(WITH_OVERLAYS, ("tiny", "bare"))[2:] == [
+        Artifact("bare", "org/private", "dataset", "bare.h5", "cut-1", SHA_B),
+        Artifact("tiny", "org/old", "model", "tiny.h5", "2.0.0", SHA_A),
     ]
 
 
+def test_the_package_version_stands_in_for_a_missing_release_cut():
+    package = {**PACKAGE, "release_manifest_revision": None}
+    manifest = {
+        **WITH_OVERLAYS,
+        "data_releases": {
+            "uk": {
+                **WITH_OVERLAYS["data_releases"]["uk"],
+                "data_package": package,
+            }
+        },
+    }
+    (bare,) = uk_artifacts(manifest, ("bare",))[2:]
+    assert bare.revision == "1.0.0"
+
+
+@pytest.mark.parametrize("field", ["path", "sha256"])
+def test_an_entry_missing_what_no_package_supplies_is_refused(field):
+    entry = {**OVERLAYS["tiny"], field: None}
+    manifest = {**WITH_OVERLAYS, "dataset_overlays": {"uk": {"tiny": entry}}}
+    with pytest.raises(
+        CertifiedDataAccessError, match=f"'tiny' pins no {field}"
+    ):
+        uk_artifacts(manifest, ("tiny",))
+
+
+def test_a_repository_neither_the_entry_nor_the_package_names_is_refused():
+    with pytest.raises(
+        CertifiedDataAccessError, match="'bare' pins no repo_id"
+    ):
+        uk_artifacts(
+            {**MANIFEST, "dataset_overlays": {"uk": OVERLAYS}}, ("bare",)
+        )
+
+
 def test_also_lists_a_release_dataset_once():
-    assert uk_artifacts(WITH_OVERLAYS, ("weights",)) == artifacts()
+    assert uk_artifacts(WITH_OVERLAYS, ("weights",)) == release()
 
 
 @pytest.mark.parametrize("manifest", [MANIFEST, WITH_OVERLAYS])
@@ -150,11 +197,35 @@ def test_also_refuses_a_dataset_the_bundle_does_not_pin(manifest):
         uk_artifacts(manifest, ("nope",))
 
 
-@given(st.lists(st.sampled_from(["enhanced", "weights", "tiny", "untyped"])))
+@given(st.lists(st.sampled_from(["enhanced", "weights", "tiny", "bare"])))
 def test_also_adds_each_named_overlay_once_after_the_release(names):
     listed = uk_artifacts(WITH_OVERLAYS, tuple(names))
-    assert listed[:2] == artifacts()
+    assert listed[:2] == release()
     assert [a.name for a in listed[2:]] == sorted(set(names) & set(OVERLAYS))
+
+
+def test_every_installed_dataset_is_located_as_policyengine_locates_it():
+    """Differential: on the installed bundle, every release dataset and
+    overlay names the repository, type, file, revision and hash that
+    policyengine itself downloads and checks."""
+    from policyengine.provenance.manifest import (
+        get_release_manifest,
+        resolve_dataset_reference,
+    )
+
+    country = get_release_manifest("uk")
+    names = tuple(country.datasets)
+    located = {a.name: a for a in uk_artifacts(load_bundle_manifest(), names)}
+    assert set(located) == set(names)
+    for name, reference in country.datasets.items():
+        artifact = located[name]
+        assert resolve_dataset_reference("uk", name) == (
+            f"hf://{artifact.repo_id}/{artifact.path}@{artifact.revision}"
+        )
+        assert artifact.repo_type == (
+            reference.repo_type or country.data_package.repo_type
+        )
+        assert artifact.sha256 == reference.sha256
 
 
 def test_the_command_refuses_an_unpinned_dataset_before_any_request(
@@ -166,9 +237,9 @@ def test_the_command_refuses_an_unpinned_dataset_before_any_request(
 
 
 def test_ci_checks_the_small_dataset_the_certified_tests_read():
-    """The access step names every dataset outside the release that the
-    certified-data tests download, so a token that cannot read its
-    repository fails there, with the hint, not mid-run."""
+    """The access step names the small dataset the certified-data tests
+    download (SMALL_DATASET_NAME, an overlay from 6.10.0), so a token that
+    cannot read its repository fails there, with the hint, not mid-run."""
     workflow = (
         Path(__file__).resolve().parent.parent / ".github/workflows/ci.yml"
     )

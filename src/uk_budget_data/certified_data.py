@@ -69,26 +69,48 @@ def load_bundle_manifest() -> dict:
     return json.loads(manifest.read_text())
 
 
+def _artifact(name: str, entry: dict, package: dict) -> Artifact:
+    """One pinned dataset, located as policyengine locates it.
+
+    Where the entry names no repository, repository type or revision, the
+    release's data package supplies it, as in policyengine's
+    ``resolve_dataset_reference``; that holds for overlays too, which
+    policyengine merges into the release's datasets.
+    """
+    located = {
+        "repo_id": entry.get("repo_id") or package.get("repo_id"),
+        "path": entry.get("path"),
+        "revision": entry.get("revision")
+        or package.get("release_manifest_revision")
+        or package.get("version"),
+        "sha256": entry.get("sha256"),
+    }
+    missing = [field for field, value in located.items() if not value]
+    if missing:
+        raise CertifiedDataAccessError(
+            f"The bundle's UK dataset {name!r} pins no {', '.join(missing)}."
+        )
+    return Artifact(
+        name=name,
+        repo_type=entry.get("repo_type")
+        or package.get("repo_type")
+        or "model",
+        **located,
+    )
+
+
 def uk_artifacts(manifest: dict, also: tuple[str, ...] = ()) -> list[Artifact]:
     """List every UK data artifact pinned in a bundle manifest.
 
     ``also`` names further datasets to check: each must be one of the
     release's datasets (already listed) or one of the bundle's UK dataset
-    overlays, which pin a dataset outside the release, in its own repository.
+    overlays, which pin a dataset outside the release, usually in its own
+    repository.
     """
     release = manifest["data_releases"]["uk"]
-    default_repo_type = release.get("data_package", {}).get(
-        "repo_type", "model"
-    )
+    package = release.get("data_package", {})
     artifacts = [
-        Artifact(
-            name=name,
-            repo_id=entry["repo_id"],
-            repo_type=entry.get("repo_type", default_repo_type),
-            path=entry["path"],
-            revision=entry["revision"],
-            sha256=entry["sha256"],
-        )
+        _artifact(name, entry, package)
         for name, entry in sorted(release["datasets"].items())
     ]
     if not any(a.name == release["default_dataset"] for a in artifacts):
@@ -103,16 +125,7 @@ def uk_artifacts(manifest: dict, also: tuple[str, ...] = ()) -> list[Artifact]:
             raise CertifiedDataAccessError(
                 f"The bundle pins no UK dataset or overlay {name!r}."
             )
-        artifacts.append(
-            Artifact(
-                name=name,
-                repo_id=entry["repo_id"],
-                repo_type=entry.get("repo_type", "model"),
-                path=entry["path"],
-                revision=entry["revision"],
-                sha256=entry["sha256"],
-            )
-        )
+        artifacts.append(_artifact(name, entry, package))
     return artifacts
 
 
