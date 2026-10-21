@@ -14,10 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  python-tests:
-    name: Python tests
+  python-test-parts:
+    name: Python tests (${{ matrix.part }})
     runs-on: ubuntu-latest
+    # Two parts on two runners at once. In one job, the data-limit tests
+    # (#51; about 2,300 worker-seconds at e66e4da) and the rest of the suite
+    # (about 20 minutes on its own, 19 October) passed even a 45-minute
+    # limit.
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: data limits
+            tests: tests/test_data_limits.py tests/test_publication_data_limits.py
+          - part: the rest
+            tests: >-
+              tests/ --ignore=tests/test_data_limits.py
+              --ignore=tests/test_publication_data_limits.py
     steps:
       - uses: actions/checkout@v6
 
@@ -39,8 +53,25 @@ jobs:
       # puts the four slow units first, so each starts on its own worker.
       - name: Run tests that need no credentials
         run: >-
-          uv run pytest tests/ -m "not certified_data"
+          uv run pytest ${{ matrix.tests }} -m "not certified_data"
           -n 4 --dist loadgroup --no-loadscope-reorder --durations=15
+
+  python-tests:
+    name: Python tests
+    # The required check: it passes only when both parts pass. It runs
+    # whatever they did (always()), because a skipped job's check counts as
+    # passed.
+    needs: python-test-parts
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Both parts passed
+        env:
+          PARTS: ${{ needs.python-test-parts.result }}
+        run: |
+          echo "Python test parts: $PARTS"
+          test "$PARTS" = success
 
   public-data-check:
     name: Public data check

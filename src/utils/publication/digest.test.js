@@ -106,9 +106,35 @@ describe("binding a receipt to its manifest entry", () => {
     async (key, entry) => {
       const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
       expect(await artifactSha256(receipt)).toBe(entry.artifact_sha256);
-      expect(await receiptProblems(receipt, key, entry)).toEqual([]);
+      // A not-computable entry's receipt binds, but records data limits,
+      // so it is never loaded for its figures.
+      const expected = entry.data_limits?.length
+        ? [
+            "the receipt records data limits: not computable on current " +
+              "data, so its figures cannot be shown",
+          ]
+        : [];
+      expect(await receiptProblems(receipt, key, entry)).toEqual(expected);
     },
   );
+
+  it("refuses a receipt generated against another data-limit registry", async () => {
+    const entry = entries.alpha;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    receipt.dashboard.data_limits_registry_sha256 = "0".repeat(64);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt was generated against another data-limit registry",
+    );
+  });
+
+  it("refuses a receipt that does not record its data limits", async () => {
+    const entry = entries.alpha;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    delete receipt.dashboard.data_limits;
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt does not record its data limits",
+    );
+  });
 
   it("refuses a combined entry relabelled with other members", async () => {
     // Review case: relabel alpha+beta as alpha+gamma, with a matching

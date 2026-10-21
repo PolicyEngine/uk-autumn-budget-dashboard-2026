@@ -22,10 +22,15 @@ Runtime helpers wrap a variable's formula, so they must be applied after
 the data is loaded (a modifier's default phase): they refuse a variable
 that already holds stored values, and values loaded after a wrapper was
 installed would hide it for their periods.
+
+A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
+such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
+the measure is published as not computable, never as a figure.
 """
 
 import math
 import re
+import warnings
 from collections.abc import Mapping
 from decimal import (
     ROUND_CEILING,
@@ -43,8 +48,27 @@ from policyengine_uk.model_api import Variable
 from policyengine_uk.utils.scenario import _apply_reform_class
 
 
+class DataLimitedWarning(UserWarning):
+    """A change built on a parameter the certified data cannot cost."""
+
+
+def _warn_if_data_limited(path: str) -> None:
+    from uk_budget_data.data_limits import limits_for_paths
+
+    for limit in limits_for_paths([path]):
+        warnings.warn(
+            f"{path}: {limit.reason} A measure built on it is published as "
+            "not computable on current data, never as a figure.",
+            DataLimitedWarning,
+            # The builder's caller: rate_change and the like call
+            # _validate_parameter_path, which calls this.
+            stacklevel=4,
+        )
+
+
 def _validate_parameter_path(path: str) -> None:
-    """Require a leaf in the installed engine's native parameter tree."""
+    """Require a leaf in the installed engine's native parameter tree, and
+    warn when the certified data cannot cost it."""
     from policyengine_core.parameters import Parameter
     from policyengine_uk.system import system
 
@@ -56,6 +80,7 @@ def _validate_parameter_path(path: str) -> None:
         raise ValueError(f"Unknown parameter path: {path}") from exc
     if not isinstance(parameter, Parameter):
         raise ValueError(f"Parameter path must identify a leaf: {path}")
+    _warn_if_data_limited(path)
 
 
 # Universal Credit's health (LCWRA) element. In the years the engine's UC

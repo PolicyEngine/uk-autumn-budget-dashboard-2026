@@ -15,6 +15,7 @@ from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from uk_budget_data import data_limits
 from uk_budget_data.calculators import (
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -310,17 +311,35 @@ class DataPipeline:
                 baseline_scenario = reform.baseline_scenario_for(self.config)
                 reform_scenario = reform.to_scenario()
 
-                baseline = build_microsimulation(
-                    dataset_path, baseline_scenario
+                # Built under data_limits.building, so a modifier that
+                # reads a limited input while its simulation is built
+                # counts.
+                baseline = data_limits.watched_build(
+                    build_microsimulation, dataset_path, baseline_scenario
                 )
-                reformed = build_microsimulation(dataset_path, reform_scenario)
+                reformed = data_limits.watched_build(
+                    build_microsimulation, dataset_path, reform_scenario
+                )
 
-                # Process reform
+                # Process reform, watching what code that differs between
+                # the two reads while it runs (data_limits.observing).
                 processor = ReformProcessor(reform, self.config)
-                result = processor.process(
-                    baseline, reformed, baseline_scenario
-                )
+                with data_limits.observing(baseline, reformed) as observed:
+                    result = processor.process(
+                        baseline, reformed, baseline_scenario
+                    )
                 results.append(result)
+                # This flat path has no publication gate, so say loudly when
+                # the data cannot cost a measure: its rows are not costings.
+                for limit in data_limits.limits_touched(
+                    baseline, reformed, observed
+                ):
+                    console.print(
+                        f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                        f"{reform.name}: {limit['reason']} Its rows in these "
+                        "CSVs are not costings; publish it through the gated "
+                        "path, which lists it as not computable."
+                    )
 
                 progress.remove_task(task)
                 console.print(f"[green]✓[/green] {reform.name}")

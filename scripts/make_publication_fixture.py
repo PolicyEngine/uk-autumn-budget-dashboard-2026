@@ -13,6 +13,7 @@ dataset (see tests/publication_support.py), so it is test data only.
 import json, shutil, sys
 from pathlib import Path
 from tests.publication_support import PROJECTION_END, World
+from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, stage
@@ -41,6 +42,17 @@ try:
     refs["gamma"] = world.write("gamma", values["gamma"], rate=0.25)
     world.reconcile(refs["gamma"])
     stage(manifest, refs["gamma"].path, provisional=True, **args)
+    # A measure the certified data cannot cost (the SDLT higher rates): its
+    # receipt records the limit, so staging lists it as not computable, with
+    # its reason and no figure.
+    surcharge = record(
+        DATA_LIMITS[0],
+        ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
+    )
+    refs["epsilon"] = world.write(
+        "epsilon", {IN: 0.0, BEYOND: 0.0}, rate=0.26, data_limits=[surcharge]
+    )
+    stage(manifest, refs["epsilon"].path, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]

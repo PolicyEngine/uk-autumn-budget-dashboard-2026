@@ -16,6 +16,7 @@ Regenerate the file with::
 import json
 import sys
 
+from uk_budget_data import data_limits
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.receipt import receipt_api
@@ -83,8 +84,10 @@ def contract() -> dict:
             m.APPROVED,
             m.STALE,
             m.WITHDRAWN,
+            m.NOT_COMPUTABLE,
         ],
         "displayable": sorted(m.DISPLAYABLE),
+        "data_limits_registry_sha256": data_limits.REGISTRY_SHA256,
         "digest_vectors": digest_vectors(),
         "scatter_bins": {
             **SCATTER_BINS,

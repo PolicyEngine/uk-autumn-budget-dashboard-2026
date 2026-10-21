@@ -27,6 +27,7 @@ describe("parseManifest on the fixture", () => {
       "alpha",
       "beta",
       "delta",
+      "epsilon",
       "gamma",
     ]);
     expect(Object.keys(manifest.combined)).toEqual(["combined--alpha+beta"]);
@@ -150,6 +151,41 @@ describe("availability", () => {
     expect(measureAvailability(changed, "beta").reason).toBe(
       "Stale: the execution identity changed",
     );
+  });
+
+  it("gives a not-computable entry its reason and never its figures", () => {
+    const entry = manifest.measures.epsilon;
+    expect(entry.status).toBe("not_computable");
+    expect(isDisplayable(entry)).toBe(false);
+    expect(measureAvailability(manifest, "epsilon")).toEqual({
+      available: false,
+      status: "not_computable",
+      reason: `Not computable on current data: ${entry.reason}`,
+    });
+    expect(entry.reason).toMatch(/additional dwellings/);
+  });
+
+  it("refuses a not-computable entry that names no limit or reason", () => {
+    for (const change of [
+      (m) => (m.measures.epsilon.data_limits = []),
+      (m) => delete m.measures.epsilon.reason,
+      (m) => (m.measures.epsilon.data_limits = "additional_dwelling_purchases"),
+    ]) {
+      expect(() => parseManifest(edited(change))).toThrow(ManifestError);
+    }
+  });
+
+  it("refuses any entry that shows figures while naming data limits", () => {
+    for (const status of ["approved", "provisional"]) {
+      expect(() =>
+        parseManifest(
+          edited((m) => {
+            m.measures.alpha.data_limits = ["additional_dwelling_purchases"];
+            m.measures.alpha.status = status;
+          }),
+        ),
+      ).toThrow(/figures cannot be shown/);
+    }
   });
 
   it("never treats an inherited property as an entry", () => {
