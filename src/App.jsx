@@ -94,6 +94,17 @@ const PRESETS = [
   },
 ];
 
+// Sections of the population tab, for the in-page navigation.
+const SECTIONS = [
+  { id: "revenue", label: "Revenue" },
+  { id: "obr-comparison", label: "OBR comparison" },
+  { id: "deciles", label: "Income deciles" },
+  { id: "constituencies", label: "Constituencies" },
+  { id: "regions", label: "Regions" },
+  { id: "household", label: "Example household" },
+  { id: "policy-details", label: "Policies" },
+];
+
 function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
 
@@ -390,60 +401,57 @@ function App() {
     setActiveTab(tab);
   };
 
+  // Jump to a section of the population tab. The OBR comparison and the
+  // policy notes open first so the reader lands on their content.
+  const handleSectionJump = (id) => {
+    if (id === "obr-comparison") setShowOBRComparison(true);
+    if (id === "policy-details") setShowPolicyDetails(true);
+    setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
+  // Same sign and format as the chart's former net-impact labels.
+  const formatNetImpact = (value) =>
+    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+
   return (
     <div className="app">
       <main className="main-content">
-        {/* Title row with controls */}
-        <div className="title-row">
-          <h1>UK Autumn Budget 2026</h1>
-          {activeTab === "dashboard" && (
-            <PolicySelector
-              policies={POLICIES}
-              selectedPolicies={selectedPolicies}
-              onPolicyToggle={handlePolicyToggle}
-            />
-          )}
-        </div>
+        <header className="page-header">
+          <div className="title-row">
+            <h1>UK Autumn Budget 2026</h1>
+            {activeTab === "dashboard" && (
+              <PolicySelector
+                policies={POLICIES}
+                selectedPolicies={selectedPolicies}
+                onPolicyToggle={handlePolicyToggle}
+              />
+            )}
+          </div>
 
-        {/* Tab navigation */}
-        <div className="tab-navigation">
-          <button
-            className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
-            onClick={() => handleTabChange("dashboard")}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          {/* Tab navigation */}
+          <div className="tab-navigation" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "dashboard"}
+              className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
+              onClick={() => handleTabChange("dashboard")}
             >
-              <rect x="3" y="3" width="7" height="9" />
-              <rect x="14" y="3" width="7" height="5" />
-              <rect x="14" y="12" width="7" height="9" />
-              <rect x="3" y="16" width="7" height="5" />
-            </svg>
-            Population impact
-          </button>
-          <button
-            className={`tab-button ${activeTab === "personal" ? "active" : ""}`}
-            onClick={() => handleTabChange("personal")}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+              Population impact
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "personal"}
+              className={`tab-button ${activeTab === "personal" ? "active" : ""}`}
+              onClick={() => handleTabChange("personal")}
             >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Personal impact
-          </button>
-        </div>
+              Personal impact
+            </button>
+          </div>
+        </header>
 
         {activeTab === "personal" ? (
           <PersonalImpactTab />
@@ -459,13 +467,7 @@ function App() {
                   href="#policy-details"
                   onClick={(e) => {
                     e.preventDefault();
-                    setShowPolicyDetails(true);
-                    // Delay scroll to allow accordion to expand first
-                    setTimeout(() => {
-                      document
-                        .getElementById("policy-details")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                    }, 50);
+                    handleSectionJump("policy-details");
                   }}
                 >
                   See policy descriptions below.
@@ -495,33 +497,83 @@ function App() {
               <div className="results-container">
                 {results && (
                   <>
+                    {/* In-page navigation: a sticky row of links on desktop,
+                        a select on a phone. */}
+                    <nav className="section-nav" aria-label="Sections">
+                      <ul className="section-nav-links">
+                        {SECTIONS.map((section) => (
+                          <li key={section.id}>
+                            <a
+                              href={`#${section.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleSectionJump(section.id);
+                              }}
+                            >
+                              {section.label}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="section-nav-select">
+                        <span>Jump to</span>
+                        <select
+                          defaultValue=""
+                          onChange={(e) => {
+                            if (e.target.value) handleSectionJump(e.target.value);
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="" disabled>
+                            Choose a section
+                          </option>
+                          {SECTIONS.map((section) => (
+                            <option key={section.id} value={section.id}>
+                              {section.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </nav>
+
+                    {/* Headline strip: the net figure for each year. It is the
+                        one place these totals are printed; the chart below
+                        draws them as a line. */}
+                    <section
+                      className="headline-strip"
+                      aria-label="Net revenue impact of the selected policies"
+                    >
+                      <p className="headline-strip-label">
+                        Net revenue impact of the selected policies
+                      </p>
+                      <dl className="headline-strip-values">
+                        {results.budgetData.map((point) => (
+                          <div key={point.year} className="headline-value">
+                            <dt>
+                              {point.year}-{(point.year + 1).toString().slice(-2)}
+                            </dt>
+                            <dd>{formatNetImpact(point.netImpact)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+
                     {/* Hero Chart: Revenue Impact */}
-                    <div className="hero-chart">
+                    <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart data={results.budgetData} />
-                    </div>
+                    </section>
 
                     {/* OBR Comparison (expandable) */}
-                    <div className="obr-expandable">
+                    <section
+                      id="obr-comparison"
+                      className="report-section obr-expandable"
+                    >
                       <button
+                        type="button"
                         className="obr-toggle-button"
+                        aria-expanded={showOBRComparison}
                         onClick={() => setShowOBRComparison(!showOBRComparison)}
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                          <polyline points="10 9 9 9 8 9" />
-                        </svg>
                         Compare with OBR estimates
                         <svg
                           width="16"
@@ -532,12 +584,12 @@ function App() {
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          aria-hidden="true"
                           style={{
                             transform: showOBRComparison
                               ? "rotate(180deg)"
                               : "rotate(0deg)",
                             transition: "transform 0.2s",
-                            marginLeft: "auto",
                           }}
                         >
                           <polyline points="6 9 12 15 18 9"></polyline>
@@ -548,15 +600,22 @@ function App() {
                           <OBRComparisonTable selectedPolicies={selectedPolicies} />
                         </div>
                       )}
-                    </div>
+                    </section>
 
                     {/* Row 1: Absolute and Relative Impact with shared year slider */}
-                    <div className="distributional-section">
+                    <section
+                      id="deciles"
+                      className="report-section distributional-section"
+                    >
                       <div className="section-year-slider">
+                        <span className="section-year-label">Year</span>
                         <YearSlider
                           selectedYear={distributionalYear}
                           onYearChange={setDistributionalYear}
                         />
+                        <span className="section-year-note">
+                          Applies to every chart below
+                        </span>
                       </div>
                       <div className="charts-grid">
                         <WaterfallChart
@@ -570,31 +629,40 @@ function App() {
                           selectedYear={distributionalYear}
                         />
                       </div>
-                    </div>
+                    </section>
 
                     {/* Row 2: Constituency Map. The household scatter is
                         withdrawn: it showed survey households one by one. */}
-                    <div className="charts-grid charts-row-2">
+                    <section
+                      id="constituencies"
+                      className="report-section charts-grid charts-row-2"
+                    >
                       <ConstituencyMap
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                         policies={POLICIES}
                       />
-                    </div>
+                    </section>
 
                     {/* Results by region, as the disclosure layer published
                         them: one measure, or the whole package, never a sum. */}
-                    <div className="charts-grid charts-row-regions">
+                    <section
+                      id="regions"
+                      className="report-section charts-grid charts-row-regions"
+                    >
                       <RegionView
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                         policies={POLICIES}
                       />
-                    </div>
+                    </section>
                     <GeographyMethodology />
 
                     {/* Row 3: Net Income Analysis Charts */}
-                    <div className="charts-grid charts-row-3">
+                    <section
+                      id="household"
+                      className="report-section charts-grid charts-row-3"
+                    >
                       <EmploymentIncomeChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
@@ -603,28 +671,19 @@ function App() {
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                       />
-                    </div>
+                    </section>
 
                     {/* Policy Details Footer */}
-                    <div id="policy-details" className="policy-details-footer">
+                    <section
+                      id="policy-details"
+                      className="report-section policy-details-footer"
+                    >
                       <button
+                        type="button"
                         className="policy-details-toggle"
+                        aria-expanded={showPolicyDetails}
                         onClick={() => setShowPolicyDetails(!showPolicyDetails)}
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="12" y1="16" x2="12" y2="12"></line>
-                          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
                         About selected policies
                         <svg
                           width="16"
@@ -635,6 +694,7 @@ function App() {
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          aria-hidden="true"
                           style={{
                             transform: showPolicyDetails
                               ? "rotate(180deg)"
@@ -661,7 +721,7 @@ function App() {
                           ))}
                         </div>
                       )}
-                    </div>
+                    </section>
                   </>
                 )}
               </div>
