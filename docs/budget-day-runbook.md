@@ -193,7 +193,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
-**A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October).
+**A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October). The model-limit guard (#73, `uk_budget_data.model_limits`) enforces this.
 - **Why:** additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by prices, not with the full rates. Prices are the statutory floor (Social Security Administration Act 1992 ss. 150 and 151A), and the Up-rating Orders give September CPI.
   - The 2026 Order (SI 2026/148, articles 4(3)(a) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates (articles 4(2) and 6(1)).
   - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So anything that moves the full rates moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
@@ -207,18 +207,25 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **The check, in G0's commands for the adopted pair and again before a State Pension measure is staged:**
 
   ```sh
-  uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
+  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
   ```
 
-  `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once #2336 is released, the first policyengine-uk version with it can be checked instead.
+  - **What it prints:** `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`.
+  - **How it decides:** this is the guard's own check. It parses the installed `additional_state_pension` and requires every formula to read the index as an attribute, so a comment or a string naming it doesn't count.
+  - **The CI cross-check:** a test compares this check with the model's behaviour, whether the add-on moves when the full rate rises. So a release that fools the code check fails CI instead of lifting the guard.
 - **Which measures:** any change that moves either full rate in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
   - `gov.dwp.state_pension.basic_state_pension.amount` or `gov.dwp.state_pension.new_state_pension.amount`;
   - anything under `gov.dwp.state_pension.triple_lock`;
   - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). Setting the 2026 earnings input to 10% (from 3.9%) moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset);
-  - a macro scenario on `gov.economic_assumptions.yoy_growth.obr.average_earnings` or `consumer_price_index`, which moves those inputs in years not yet published.
-- **If the check prints `False`:** stage the measure provisional, not approved.
-  - **Nothing in the code enforces this yet.** `approve` has no State Pension gate on `main`: hold it by hand. A guard that records the limit in the receipt and refuses approval is W5's next PR.
-  - **The reason has nowhere on the page to go.** `publish stage` takes no reason, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record the reason in the coverage ledger and in the measure's PR: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair". **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
+  - a macro scenario on `gov.economic_assumptions.yoy_growth.obr.average_earnings` or `consumer_price_index`, which moves those inputs in years not yet published;
+  - a change to September CPI, `gov.economic_assumptions.indices.september_cpi_uprating`, even one the triple lock doesn't pass on. Without the fix the add-on ignores CPI, so such a change mis-costs it.
+- **If the check prints `False`,** such a measure is staged provisional at most. The guard does this by itself:
+  - **Generation:** it records `state_pension_add_on_uprating` in the measure's receipt, with the reason, whenever the measure's two simulations differ under a covered parameter and the model lacks the fix.
+  - **Staging and approval:** `publish stage --provisional` accepts the measure; `publish approve` refuses it ("held at provisional, not approved", with the reason).
+  - **The templates** warn (`ModelLimitedWarning`) as such a measure is written.
+  - **The flat pipeline** prints "OVERSTATED BY THIS MODEL".
+  - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, so the limit is removed there.
+  - **The page doesn't show the reason.** It is in the receipt, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record it in the coverage ledger too. **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
 - **With the fix,** a measure that also raises the add-on itself, above prices, needs a change to `additional_state_pension`. A rate change alone no longer reaches it, and no template covers it. That makes it a hand-written modifier, which needs the named human data-limits check above.
@@ -264,7 +271,7 @@ mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
   --also enhanced_frs_2024_25_tiny                         # the bundle's data and the tests' small file, by hash (#12, #70)
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
-uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
+uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
 curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \

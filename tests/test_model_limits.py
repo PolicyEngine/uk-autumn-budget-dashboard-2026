@@ -8,6 +8,7 @@ so a change to the full rates or the triple lock moves them too.
 
 import copy
 import warnings
+from functools import partial
 
 import pytest
 from hypothesis import given
@@ -824,3 +825,92 @@ def test_a_combined_run_with_its_own_model_limit_is_never_approved(world):
     key = stage(manifest, combined.path, **args)
     with pytest.raises(PublishError, match="held at provisional"):
         approve(manifest, key, "Reviewer", **args)
+
+
+# --- review of #73, round 2 ----------------------------------------------------
+
+
+def pensioner(year):
+    return {
+        "people": {
+            "p": {"age": {year: 70}, "state_pension_reported": {year: 20_000}}
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"]}},
+    }
+
+
+def test_both_checks_for_the_fix_agree_with_what_the_model_does():
+    """The checks read code; this tripwire reads behaviour. Without #2336
+    the add-on rises with the full rate, so raising the full rate moves it;
+    with #2336 it is uprated by September CPI and shouldn't move. If a
+    release fools the code checks, or #2336 lands in a form that still moves
+    the add-on, this fails, and the limit is revisited in that PR."""
+    year = 2028
+    baseline = Simulation(situation=pensioner(year))
+    raised = Simulation(
+        situation=pensioner(year),
+        scenario=Scenario(parameter_changes={NEW_PENSION: {str(year): 260.0}}),
+    )
+    before = baseline.calculate("additional_state_pension", year)[0]
+    after = raised.calculate("additional_state_pension", year)[0]
+    assert before > 0
+    moves = bool(after != before)
+    assert moves is not LIMIT.installed_fixed()
+    assert moves is not LIMIT.fixed(baseline.tax_benefit_system)
+
+
+def test_a_rebound_node_on_the_baseline_side_is_recorded():
+    assert limits_touched(
+        simulation(modifier=raise_the_new_state_pension_by_rebinding),
+        simulation(),
+    ) == [record(LIMIT, [NEW_PENSION])]
+
+
+def raise_the_new_state_pension_by_rebinding_its_node(sim):
+    """Rebind the node above the leaf: formulas reach the clone by
+    attribute, and the stored tree below it is the original."""
+    node = sim.tax_benefit_system.parameters.gov.dwp.state_pension
+    rebound = node.children["new_state_pension"].clone()
+    for value in rebound.children["amount"].values_list:
+        if value.value is not None:
+            value.value = value.value * 1.1
+    node.new_state_pension = rebound
+
+
+def test_a_rebound_node_above_the_leaf_is_recorded():
+    reformed = simulation(
+        modifier=raise_the_new_state_pension_by_rebinding_its_node
+    )
+    pensions = reformed.tax_benefit_system.parameters.gov.dwp.state_pension
+    assert pensions.new_state_pension is not (
+        pensions.children["new_state_pension"]
+    )
+    assert limits_touched(simulation(), reformed) == [
+        record(LIMIT, [NEW_PENSION])
+    ]
+
+
+def test_a_formula_without_compiled_code_counts_as_unfixed():
+    """A formula the guard can't read (here a partial, which has no
+    ``__code__``) is not proof of the fix, even when it wraps one that
+    reads the index."""
+    sim = simulation(modifier=with_formulas(formula=partial(reading_formula)))
+    variable = sim.tax_benefit_system.variables["additional_state_pension"]
+    [formula] = variable.formulas.values()
+    assert isinstance(formula, partial)
+    assert LIMIT.fixed(sim.tax_benefit_system) is False
+
+
+def test_the_installed_check_ignores_a_bare_name(monkeypatch, tmp_path):
+    """Only reading the index as an attribute of the parameters counts: a
+    global or local of the same name is not the index."""
+    installed_source(
+        monkeypatch,
+        tmp_path,
+        "september_cpi_uprating = 1\n"
+        "class additional_state_pension:\n"
+        "    def formula(person, period, parameters):\n"
+        "        return person('age', period) * september_cpi_uprating\n",
+    )
+    assert LIMIT.installed_fixed() is False
