@@ -12,6 +12,7 @@ from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
 from tests.publication_support import SMALL_DATASET_NAME
+from uk_budget_data import certified_data
 from uk_budget_data.certified_data import (
     Artifact,
     CertifiedDataAccessError,
@@ -59,13 +60,26 @@ def http_error(message, status=401):
 
 
 class FakeApi:
-    """Records calls and serves canned Hugging Face metadata."""
+    """Records calls and serves canned Hugging Face metadata.
 
-    def __init__(self, files=None, reject_token=False, deny_repo=False):
+    ``files`` are stored in LFS (path to SHA-256); ``git_files`` in plain
+    git (path to bytes), whose metadata carry a size and no SHA-256."""
+
+    def __init__(
+        self,
+        files=None,
+        reject_token=False,
+        deny_repo=False,
+        git_files=None,
+        deny_download=False,
+    ):
         self.files = files or {}
+        self.git_files = git_files or {}
         self.reject_token = reject_token
         self.deny_repo = deny_repo
+        self.deny_download = deny_download
         self.tokens_seen = []
+        self.downloads = []
 
     def whoami(self, token):
         self.tokens_seen.append(token)
@@ -78,10 +92,30 @@ class FakeApi:
         if self.deny_repo:
             raise http_error("401 Client Error: gated repo")
         return [
-            SimpleNamespace(path=p, lfs=SimpleNamespace(sha256=self.files[p]))
+            (
+                SimpleNamespace(
+                    path=p, lfs=SimpleNamespace(sha256=self.files[p])
+                )
+                if p in self.files
+                else SimpleNamespace(
+                    path=p, lfs=None, size=len(self.git_files[p])
+                )
+            )
             for p in paths
-            if p in self.files
+            if p in self.files or p in self.git_files
         ]
+
+    def hf_hub_download(
+        self, repo_id, filename, revision, repo_type, token, local_dir
+    ):
+        self.tokens_seen.append(token)
+        self.downloads.append(filename)
+        if self.deny_download:
+            raise http_error("403 Client Error: forbidden", status=403)
+        path = Path(local_dir) / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(self.git_files[filename])
+        return str(path)
 
 
 def artifacts():
@@ -288,6 +322,78 @@ def test_hash_mismatch_fails():
         check_access("hf_x", artifacts(), api=api)
 
 
+GIT_BYTES = b'{"certified": true}\n'
+GIT_SHA = hashlib.sha256(GIT_BYTES).hexdigest()
+
+
+def with_git_file(sha):
+    """The test bundle with its weights file pinned at ``sha``."""
+    return [
+        a if a.name != "weights" else Artifact(**{**vars(a), "sha256": sha})
+        for a in artifacts()
+    ]
+
+
+def test_a_plain_git_file_is_downloaded_and_hashed():
+    """Review of #72's CI (21 Oct): Microcosm's certification and
+    diagnostics JSON are stored in plain git, whose metadata carry no
+    SHA-256, so the check read None and refused a token that works."""
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    lines = check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == ["weights.h5"]
+    assert lines[-1].endswith("(git file, downloaded and hashed)")
+    assert "enhanced.h5" not in api.downloads
+
+
+def test_a_plain_git_file_with_other_bytes_fails_naming_their_hash():
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": b"tampered"}
+    )
+    with pytest.raises(CertifiedDataAccessError) as raised:
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert hashlib.sha256(b"tampered").hexdigest() in str(raised.value)
+    assert "bundle pins" in str(raised.value)
+
+
+def test_a_refused_download_is_an_access_error_not_a_missing_hash():
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A},
+        git_files={"weights.h5": GIT_BYTES},
+        deny_download=True,
+    )
+    with pytest.raises(CertifiedDataAccessError) as raised:
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert "cannot download" in str(raised.value)
+    assert "None" not in str(raised.value)
+
+
+def test_a_plain_git_file_over_the_limit_is_refused_without_downloading(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        certified_data, "MAX_GIT_FILE_BYTES", len(GIT_BYTES) - 1
+    )
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    with pytest.raises(CertifiedDataAccessError, match="plain git, not LFS"):
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == []
+
+
+def test_an_unreadable_repository_is_never_reported_as_a_missing_hash():
+    """A 401 or 404 on the repository stops at the metadata request, with
+    the access hint; it never reaches the hash comparison."""
+    api = FakeApi(git_files={"weights.h5": GIT_BYTES}, deny_repo=True)
+    with pytest.raises(CertifiedDataAccessError) as raised:
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert "cannot read" in str(raised.value)
+    assert "SHA-256 None" not in str(raised.value)
+    assert api.downloads == []
+
+
 def test_success_logs_each_artifact_and_never_the_token():
     token = "hf_secret_value"
     api = FakeApi(files={"enhanced.h5": SHA_A, "weights.h5": SHA_B})
@@ -317,6 +423,15 @@ OUTCOMES = {
     },
     "missing file": {"files": {"enhanced.h5": SHA_A}},
     "hash mismatch": {"files": {"enhanced.h5": SHA_A, "weights.h5": SHA_A}},
+    "git file": {
+        "files": {"enhanced.h5": SHA_A},
+        "git_files": {"weights.h5": GIT_BYTES},
+    },
+    "git file refused": {
+        "files": {"enhanced.h5": SHA_A},
+        "git_files": {"weights.h5": GIT_BYTES},
+        "deny_download": True,
+    },
 }
 
 
@@ -324,7 +439,11 @@ def outcome(token, case):
     """The log lines, or the error, that ``check_access`` gives."""
     try:
         return "\n".join(
-            check_access(token, artifacts(), api=FakeApi(**OUTCOMES[case]))
+            check_access(
+                token,
+                with_git_file(GIT_SHA) if "git" in case else artifacts(),
+                api=FakeApi(**OUTCOMES[case]),
+            )
         )
     except CertifiedDataAccessError as error:
         return str(error)
