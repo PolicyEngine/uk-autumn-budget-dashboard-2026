@@ -128,7 +128,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 **A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
 - **Once #51 merges.** #51 is a draft, to merge before the rehearsal. Nothing below is on `main` until then, and nothing stops such a measure: hold it by hand.
-- **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property.
+- **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property. On Microcosm, see "The data line changed" below: 6.10.0's data has no purchases either, and its policyengine-uk (2.132.6) predates #2241, so the whole-stock case applies.
 - **Which parameters:** `uk_budget_data.data_limits` lists them:
   - SDLT `gov.hmrc.stamp_duty.residential.purchase.additional` (the higher rates for additional dwellings) and `gov.hmrc.stamp_duty.non_residential.purchase`;
   - the LBTT additional dwelling supplement and non-residential rates;
@@ -144,14 +144,18 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - building one with the templates warns (`DataLimitedWarning`).
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
 - **When it lifts:** once certified data impute the purchases. `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
-  - **On Microcosm** (see "The data line changed" below), María's pre-Budget build imputes them (microcosm#1308, a port of policyengine-uk-data #573), so the tripwire should fire when that build is adopted. María ruled the imputation in Microcosm on 16–17 October, and says its allocation "probably overstates" purchases. When the limit is lifted, carry that statement as a disclosure wherever an SDLT higher-rates or non-residential measure is shown. (d1354, which tied lifting to uk-data #573, is parked.)
+  - **On Microcosm** (see "The data line changed" below), María's pre-Budget build imputes them (microcosm#1308, a port of policyengine-uk-data #573), so the tripwire should fire when that build is adopted. María ruled on the imputation in Microcosm on 16 and 17 October. When the limit is lifted, carry its two disclosures, re-measured on the adopted build (where they sit is your call):
+    - **additional dwellings:** the allocation is an assumption, not an observed household series, and "probably overstates" households' purchases (microcosm#1308);
+    - **non-residential:** the purchasers' stock can't carry HMRC's value, so every purchaser buys at its stock, and the fit reaches about 81% of HMRC's value (transactions within 1%; microcosm#1308), an understatement.
+
+    (d1354, which tied lifting to policyengine-uk-data #573, is parked.)
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
 - **Every measure published on the day comes from the templates, unless it passes the human check below** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
     - **Reject the modifier if its own code uses any of these** (coordinator's ruling on #51, 19 Oct). The detector isn't required to see through them, so #55 lists what they can hide:
       1. **another simulation or system:** building or holding a simulation or tax-benefit system other than the one it's given (a clone, or a branch with a cloned system), or that simulation's parameters, entities, populations or holders;
       2. **state changed mid-run:** changing state its formulas hold (a dict, a list, an object's fields) while the simulations run;
-      3. **a metaclass:** any class whose metaclass isn't plain `type`. That includes `ABC` bases and other `abc.ABCMeta` classes, and virtual subclasses registered with `register()`, which change what `isinstance` and `issubclass` return (coordinator, 21 October).
+      3. **a metaclass:** any class whose metaclass isn't plain `type`. That includes `ABC` bases and other `abc.ABCMeta` classes, and any call to an ABC's `register()`, library ABCs such as `collections.abc.Mapping` included. All of these change what `isinstance` and `issubclass` return (coordinator, 21 October).
     - **The reviewer confirms each one's absence by name in the measure's PR**, for example: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no."
     - **The rule covers the modifier's own code only.** Templates and the model's own code, such as policyengine-uk's behavioural-response branching (the capital gains response route), stay inside the detector's line: a miss through them is a bug to fix, not a listed limitation.
   - Templates are tested:
@@ -176,7 +180,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Found by the UK hub.** It is drafting an engine-side fix for a certified release before the 28th. If that changes how these parameters work, re-check this row.
 - **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:
   - the dashboard's 2030-31 UC figures rise, and so does any measure's 2030-31 effect that runs through UC. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
-  - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (approved, not yet released; UK hub, 15 Oct). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
+  - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
 **Dated changes: key every year by its bare fiscal year.**
@@ -326,7 +330,7 @@ uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
-- **Which ids.** If a CGT measure that depends on taxpayer numbers is held provisional, and the call is to leave it out of the combined run (see "Data limitations"), list every coded id but that one, and say so wherever the package total appears.
+- **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The page labels the package "All measures (the full package)" (`src/utils/geography/selection.js`), so that label changes too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
@@ -383,24 +387,25 @@ An approval or an exception carries over only where the outputs are byte-identic
 ## The data line changed: Microcosm (21 October)
 
 policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK default data, in place of policyengine-uk-data's enhanced FRS. Constituencies and local authorities route to its local-area cut. As relayed by the coordinator:
-- **6.10.0** pairs Microcosm data 0.1.0 with policyengine-uk 2.132.6. That model predates this week's fixes: #2240, #2241, #2242, #2428, #2436, #2437, #2440 and #2441. It is adopted as a shakedown of the switch.
-- **The Budget-day pair** is María's pre-Budget Microcosm build (microcosm#1329 and #1333), with a newer policyengine-uk. It is hand-certified by María.
+- **6.10.0**, releasing from policyengine.py#685, pairs Microcosm data 0.1.0 with policyengine-uk 2.132.6 (tagged 15 October). That model predates policyengine-uk #2240, #2241, #2242, #2284, #2419 (a retention-rate elasticity of 1 as the default CGT response), #2428, #2436, #2437, #2440 and #2441. It is adopted as a shakedown of the switch.
+- **The Budget-day pair** is María's pre-Budget Microcosm build (microcosm#1329, merged), with a newer policyengine-uk (microcosm#1333, an open draft waiting on a policyengine-uk release). It is hand-certified by María.
 - **The rehearsal** runs on whichever is the latest certified release on Friday morning (d1152).
-- **uk-data pairs are no longer promoted,** so uk-data 1.59.1 won't be adopted.
+- **uk-data pairs are no longer promoted,** so uk-data 1.59.1 (tagged 21 October) won't be adopted.
 
 **What in this runbook was measured on the old data, and needs re-measuring on Microcosm before it is used:**
 - the two data limitations below: the age-80 cap, and the £1m+ record count (both measured on uk-data 1.58.1);
-- the capital gains tax paragraph below (uk-data 1.59.1). On 6.10.0, #685's evidence puts CGT at £27.3bn, 21% above Microcosm's HMRC target of £22.5bn. The taxpayer-count rule needs Microcosm's own count;
+- the capital gains tax paragraph below (uk-data 1.59.1). On 6.10.0, policyengine.py#685's evidence puts CGT at £27.3bn, 21% above Microcosm's HMRC target of £22.5bn. The taxpayer-count rule (Max's d1735) stands until he rules otherwise; a Microcosm count updates the disclosure only;
 - the pension annual allowance sentence and its cause (uk-data#606, measured with policyengine-uk #2240, which 6.10.0 lacks);
-- the 2030-31 UC note: policyengine-uk 2.132.6 lacks #2428;
+- the 2030-31 UC note, and the UC health row's "from 2030" advice: policyengine-uk 2.132.6 lacks #2428, which extends the rebalancing to 2032, while the Budget-day pair's model has it, so the advice flips there;
+- the SDLT "Why" row: the certified dataset it names is uk-data 1.58.1. The tripwire re-checks it when new data are adopted;
 - the household API timings and memory, after the redeploy on the new pair;
-- results by area: Microcosm's local-area cut is not yet certified (#685).
+- results by area: Microcosm's local-area cut is not yet certified (policyengine.py#685).
 
 Until a row is re-measured, don't quote its figures.
 
 ## Data limitations: say these wherever a measure depends on them
 
-The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`); a third, on capital gains tax, comes with the Budget pair's data (below). State the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
+The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`), and a third, on capital gains tax, on uk-data 1.59.1 (below). The data line has since changed (see "The data line changed" above): once they are re-measured on the adopted Microcosm build, state the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
 
 - **Ages:** "The Family Resources Survey records adult ages only up to 80, so the 3.6 million people aged 80 or over in our data (7,718 survey records) all appear as exactly 80, and results that depend on ages above 80 rely on that grouping."
 - **£1m+ incomes:** "Fewer than 10 survey records have a total income of £1 million or more, all from self-employment alone, so the data cannot represent the £35.5bn of employment income and £11.1bn of dividends that HMRC's Survey of Personal Incomes records for people on £1 million or more in 2023-24, and estimates for measures aimed at the highest incomes rest on very little data."
@@ -411,7 +416,7 @@ W5 re-measured on the same file for 2025:
 
 **Source of the £1m+ figures:** HMRC's Survey of Personal Incomes, 2023-24: £35.5bn of employment income for 21,000 people, and £11.1bn of dividends for 19,000. An earlier draft called these a 2025 HMRC projection. The 2025 calibration targets are PolicyEngine's own uprating of them: £37.4bn and £11.6bn on 1.58.1 (`storage/incomes_projection.csv`; corrected by the UK hub, uk-data#593).
 
-**Capital gains tax: taxpayer counts (from the Budget pair's data).** Batch 3 of uk-data (policyengine-uk-data #608, with #571, which starts capital gains on HMRC's 2024-25 size-of-gain table) is merged as 1.59.0 but not yet published. It publishes as 1.59.1, with a reviewed widening of the CGT taxpayer-count test's bound (policyengine-uk-data #631; Max's decision d1735, 20 October). The dashboard adopts it with the Budget pair, once that is certified and promoted. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
+**Capital gains tax: taxpayer counts (measured on uk-data 1.59.1).** Batch 3 of uk-data (policyengine-uk-data #608, with #571, which starts capital gains on HMRC's 2024-25 size-of-gain table) was published as 1.59.1 on 21 October, with a reviewed widening of the CGT taxpayer-count test's bound (policyengine-uk-data #631; Max's decision d1735, 20 October). The dashboard won't adopt it: the Budget-day pair is on Microcosm (see "The data line changed" above), and these figures are re-measured there. The rule below stands until Max rules otherwise. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
 - **A measure that depends on the number of taxpayers** (a change to the annual exempt amount, or to a threshold) is staged provisional on the day, not approved. The 07:00 briefing takes approved entries only, so it stays out of the briefing too.
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
