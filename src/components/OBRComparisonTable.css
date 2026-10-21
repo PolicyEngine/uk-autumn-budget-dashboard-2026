@@ -77,15 +77,27 @@
 
 .comparison-table th,
 .comparison-table td {
-  padding: 10px 12px;
+  padding: 8px 10px;
   text-align: right;
-  border: 1px solid #e5e7eb;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .comparison-table th {
-  background: #f9fafb;
+  background: transparent;
   font-weight: 600;
   color: #374151;
+}
+
+.comparison-table thead {
+  border-bottom: 1px solid #111827;
+}
+
+/* A faint rule between years keeps each PE/OBR pair together */
+.comparison-table .year-header,
+.comparison-table .source-header.pe,
+.comparison-table .value-cell.pe {
+  border-left: 1px solid #e5e7eb;
 }
 
 .comparison-table th:first-child,
@@ -106,13 +118,11 @@
 }
 
 .source-header.pe {
-  background: #f0fdfa;
-  color: #0d9488;
+  color: #0f766e;
 }
 
 .source-header.obr {
-  background: #fef3c7;
-  color: #92400e;
+  color: #6b7280;
 }
 
 .policy-name-cell {
@@ -122,18 +132,13 @@
 }
 
 .value-cell {
-  font-family:
-    "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono",
-    "Source Code Pro", monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
-}
-
-.value-cell.pe {
-  background: #f0fdfa;
+  white-space: nowrap;
 }
 
 .value-cell.obr {
-  background: #fffbeb;
+  color: #6b7280;
 }
 
 /* Difference highlighting */
@@ -236,4 +241,21 @@
     flex-wrap: wrap;
     gap: 12px;
   }
+
+  /* Policy names wrap and stay in view while the years scroll sideways */
+  .comparison-table thead tr:first-child th:first-child,
+  .policy-name-cell {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #ffffff;
+    white-space: normal;
+    min-width: 128px;
+    max-width: 150px;
+  }
+}
+
+/* The PE header opens its row, so the first-column rule must not left-align it */
+.comparison-table th.source-header {
+  text-align: right;
 }
