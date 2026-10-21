@@ -143,7 +143,8 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
   - building one with the templates warns (`DataLimitedWarning`).
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
-- **When it lifts:** once certified data impute the purchases (policyengine-uk-data #573, with #569; Max's decision d1354). `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
+- **When it lifts:** once certified data impute the purchases. `tests/test_data_limits.py`'s certified-data tripwire then fails, and the limit is removed in that bundle's adoption PR.
+  - **On Microcosm** (see "The data line changed" below), María's pre-Budget build imputes them (microcosm#1308, a port of policyengine-uk-data #573), so the tripwire should fire when that build is adopted. María ruled the imputation in Microcosm on 16–17 October, and says its allocation "probably overstates" purchases. When the limit is lifted, carry that statement as a disclosure wherever an SDLT higher-rates or non-residential measure is shown. (d1354, which tied lifting to uk-data #573, is parked.)
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
 - **Every measure published on the day comes from the templates, unless it passes the human check below** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
@@ -341,6 +342,8 @@ uv run uk-budget-data publish check
 
 ## First cut for media and the webinar (proposed: 15:45)
 
+**Before it goes, a comparables review (Max, 21 October).** For each analysis it features, run a fresh comparables review, dated within 7 days. An unexplained gap of more than 25% from a comparable estimate is pulled or explained before anything is sent. The same applies to any newsletter, social post, webinar or press push featuring PolicyEngine estimates.
+
 **Proposed, not agreed.** Max is asking Vahid and María to confirm the time, and who sends ITV the figures.
 
 - **Why 15:45.** ITV's evening segment needs our analysis by 16:00 UK time on 28 October (18:00 at a stretch), and the webinar starts at 16:30.
@@ -377,6 +380,24 @@ An approval or an exception carries over only where the outputs are byte-identic
 - **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile, approve, redeploy the household API and re-run the household checks.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
+## The data line changed: Microcosm (21 October)
+
+policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK default data, in place of policyengine-uk-data's enhanced FRS. Constituencies and local authorities route to its local-area cut. As relayed by the coordinator:
+- **6.10.0** pairs Microcosm data 0.1.0 with policyengine-uk 2.132.6. That model predates this week's fixes: #2240, #2241, #2242, #2428, #2436, #2437, #2440 and #2441. It is adopted as a shakedown of the switch.
+- **The Budget-day pair** is María's pre-Budget Microcosm build (microcosm#1329 and #1333), with a newer policyengine-uk. It is hand-certified by María.
+- **The rehearsal** runs on whichever is the latest certified release on Friday morning (d1152).
+- **uk-data pairs are no longer promoted,** so uk-data 1.59.1 won't be adopted.
+
+**What in this runbook was measured on the old data, and needs re-measuring on Microcosm before it is used:**
+- the two data limitations below: the age-80 cap, and the £1m+ record count (both measured on uk-data 1.58.1);
+- the capital gains tax paragraph below (uk-data 1.59.1). On 6.10.0, #685's evidence puts CGT at £27.3bn, 21% above Microcosm's HMRC target of £22.5bn. The taxpayer-count rule needs Microcosm's own count;
+- the pension annual allowance sentence and its cause (uk-data#606, measured with policyengine-uk #2240, which 6.10.0 lacks);
+- the 2030-31 UC note: policyengine-uk 2.132.6 lacks #2428;
+- the household API timings and memory, after the redeploy on the new pair;
+- results by area: Microcosm's local-area cut is not yet certified (#685).
+
+Until a row is re-measured, don't quote its figures.
+
 ## Data limitations: say these wherever a measure depends on them
 
 The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`); a third, on capital gains tax, comes with the Budget pair's data (below). State the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
@@ -398,6 +419,8 @@ W5 re-measured on the same file for 2025:
 **Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
 ## Briefing (overnight, by 07:00)
+
+**Before it goes, the same comparables review as the first cut:** dated within 7 days for each analysis featured, with an unexplained gap of more than 25% pulled or explained.
 
 Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (#22, a draft). Use no figure that is not in that revision.
 
