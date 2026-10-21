@@ -2,8 +2,11 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install git (required for policyengine-uk git dependency)
-RUN apt-get update && apt-get install -y --no-install-recommends git && \
+# Install git (required for policyengine-uk git dependency). Installing
+# ca-certificates upgrades it to Debian's current release, so the system
+# CA store does not depend on when the base image was last rebuilt.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast dependency management
