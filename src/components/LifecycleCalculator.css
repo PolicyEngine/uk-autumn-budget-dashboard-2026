@@ -36,9 +36,10 @@
 
 /* Controls sidebar */
 .lifecycle-controls {
-  background: transparent;
-  border-top: 2px solid #111827;
-  padding: 16px 0 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
   height: fit-content;
   position: sticky;
   top: 20px;
@@ -116,6 +117,7 @@
 
 .text-input {
   flex: 1;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
@@ -130,7 +132,8 @@
 }
 
 .children-count {
-  min-width: 80px;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 /* Main content area */
@@ -216,9 +219,10 @@
 
 /* Summary figures: the same headline treatment as the population tab */
 .summary-item {
-  background: transparent;
-  border-top: 2px solid #111827;
-  padding: 12px 0 4px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 20px;
   text-align: left;
 }
 
@@ -246,9 +250,11 @@
 
 /* Chart container */
 .chart-container {
-  background: transparent;
-  padding: 0;
-  margin-bottom: 32px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
   position: relative;
 }
 
@@ -429,9 +435,10 @@
 
 /* Methodology section */
 .methodology {
-  background: transparent;
-  border-top: 1px solid #e5e7eb;
-  padding: 24px 0 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
 }
 
 .methodology h3 {
@@ -479,6 +486,11 @@
 
   .lifecycle-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-container,
+  .methodology {
+    padding: 16px;
   }
 
   .summary-value {
@@ -699,4 +711,25 @@
   .modal-panel {
     max-height: none;
   }
+}
+
+/* Chart footer: downloads on the left, the PolicyEngine logo on the right */
+.lifecycle-chart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.lifecycle-chart-footer .chart-download-menu {
+  right: auto;
+  left: 0;
+}
+
+.lifecycle-logo {
+  display: block;
+  width: 80px;
+  height: auto;
+  margin-left: auto;
 }

@@ -95,33 +95,82 @@ code {
 }
 /* ------------------------------------------------------------------
    Page layout
-   An editorial layout: white page, one reading column, sections divided
-   by hairline rules and whitespace rather than boxes and shadows.
+   A light grey page with each section or result in a light card: white,
+   a 1px border, 12px radius, no heavy shadows.
    ------------------------------------------------------------------ */
+
+:root {
+  --page-bg: #f7f8f9;
+  --card-border: #e5e7eb;
+  --card-radius: 12px;
+  --card-padding: 24px;
+  --title-row-height: 68px;
+}
+
+body {
+  background: var(--page-bg);
+}
+
+/* Only the title row is sticky: the ui-kit site nav (PolicyEngineShell
+   renders it with an inline position:sticky) scrolls away normally. */
+.min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  position: relative !important;
+}
 
 .app {
   min-height: 100vh;
-  background: var(--pe-surface);
+  background: var(--page-bg);
   font-family: var(--pe-font-family);
 }
 
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 40px 64px;
+  padding: 0 40px 64px;
 }
 
-/* Page header: title, policy selector and tabs */
-.page-header {
-  margin-bottom: 24px;
+/* Shared card treatment */
+.card,
+.headline-strip,
+.hero-chart,
+.charts-grid > div,
+.section-year-slider,
+.obr-expandable,
+.policy-details-footer,
+.main-content .geography-methodology {
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+}
+
+/* Sticky title row. It spans the page width with a white background and
+   a thin rule, and tightens once stuck. */
+/* The sentinel is the space above the title: once it scrolls away, the
+   title row is stuck. The row keeps one height in both states, so nothing
+   below it moves when it sticks. */
+.title-sentinel {
+  height: 16px;
 }
 
 .title-row {
+  position: sticky;
+  top: 0;
+  z-index: 900;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--pe-space-md);
-  margin-bottom: 20px;
+  height: var(--title-row-height);
+  background: var(--page-bg);
+  box-shadow: 0 0 0 100vmax var(--page-bg);
+  clip-path: inset(0 -100vmax);
+}
+
+.title-row.is-stuck {
+  background: var(--pe-surface);
+  box-shadow: 0 0 0 100vmax var(--pe-surface);
+  border-bottom: 1px solid var(--card-border);
+  clip-path: inset(0 -100vmax -1px);
 }
 
 .title-row h1 {
@@ -131,12 +180,25 @@ code {
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.15;
+  transition: font-size var(--pe-transition-fast);
+}
+
+.title-row.is-stuck h1 {
+  font-size: 1.25rem;
+}
+
+.title-row.is-stuck .policy-selector-toggle {
+  height: 36px;
+}
+
+/* Tabs under the title */
+.page-header {
+  margin-bottom: 24px;
 }
 
 .tab-navigation {
   display: flex;
   gap: 24px;
-  border-bottom: 1px solid var(--pe-gray-200);
 }
 
 .tab-button {
@@ -165,20 +227,18 @@ code {
 }
 
 .tab-button:focus-visible,
-.section-nav a:focus-visible,
 .obr-toggle-button:focus-visible,
 .policy-details-toggle:focus-visible {
   outline: 2px solid var(--pe-teal-500);
   outline-offset: 2px;
 }
 
-/* Standfirst */
+/* Standfirst: the full content width */
 .dashboard-intro {
   font-size: 1.0625rem;
   color: var(--pe-gray-600);
   line-height: 1.6;
   margin: 0 0 24px 0;
-  max-width: 760px;
 }
 
 .dashboard-intro a {
@@ -196,8 +256,9 @@ code {
 .empty-state {
   text-align: center;
   padding: 64px 24px;
-  max-width: 560px;
-  margin: 0 auto;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
 }
 
 .empty-state p {
@@ -230,46 +291,10 @@ code {
   background: var(--pe-teal-800);
 }
 
-/* In-page section navigation: sticky links on desktop, select on phone */
-/* The ui-kit shell's header is itself sticky (58px), so the section nav
-   docks just below it. */
-.section-nav {
-  position: sticky;
-  top: var(--dashboard-shell-header-height, 58px);
-  z-index: 50;
-  margin: 0 0 24px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--pe-gray-200);
-}
-
-.section-nav-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 24px;
-  list-style: none;
-  padding: 10px 0;
-}
-
-.section-nav-links a {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--pe-gray-600);
-  text-decoration: none;
-}
-
-.section-nav-links a:hover {
-  color: var(--pe-teal-700);
-}
-
-.section-nav-select {
-  display: none;
-}
-
-/* Headline strip */
+/* Headline strip: one card */
 .headline-strip {
-  margin: 0 0 32px;
+  padding: 20px var(--card-padding);
+  margin: 0 0 20px;
 }
 
 .headline-strip-label {
@@ -282,16 +307,11 @@ code {
 .headline-strip-values {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  border-top: 2px solid var(--pe-gray-900);
+  gap: 12px 32px;
 }
 
 .headline-value {
-  padding: 12px 16px 4px 0;
-}
-
-.headline-value + .headline-value {
-  padding-left: 16px;
-  border-left: 1px solid var(--pe-gray-200);
+  padding: 4px 0 0;
 }
 
 .headline-value dt {
@@ -308,20 +328,22 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
-
 /* Sections */
 .report-section {
-  /* Clear the shell header and the section nav when jumping to a section */
-  scroll-margin-top: 120px;
+  scroll-margin-top: calc(var(--title-row-height) + 16px);
 }
 
 .hero-chart {
-  margin-bottom: 8px;
+  padding: var(--card-padding);
+  margin-bottom: 20px;
 }
 
-/* Shared chart card treatment. Component stylesheets give each chart a
-   white box with a shadow; the redesign drops the box so charts sit on
-   the page, separated by whitespace and a rule. */
+.charts-grid > div {
+  padding: var(--card-padding);
+}
+
+/* Component stylesheets give each chart its own white box and shadow; the
+   card now comes from its container, so the component's box is cleared. */
 .main-content :is(
     .budgetary-impact-chart,
     .waterfall-chart,
@@ -331,13 +353,16 @@ code {
     .constituency-map-wrapper,
     .region-view
   ) {
-  background: transparent;
   box-shadow: none;
+  animation: none;
+  min-width: 0;
+}
+
+.main-content .budgetary-impact-chart {
+  background: transparent;
   border: none;
   border-radius: 0;
   padding: 0;
-  animation: none;
-  min-width: 0;
 }
 
 .main-content :is(
@@ -362,45 +387,39 @@ code {
   line-height: 1.55;
   color: var(--pe-gray-600);
   margin: 0 0 12px 0;
-  max-width: 760px;
 }
 
 .main-content .chart-header {
   margin-bottom: 4px;
 }
 
-.main-content .export-button {
-  width: 30px;
-  height: 30px;
-  background: transparent;
-  border: 1px solid var(--pe-gray-200);
-  border-radius: 6px;
-  color: var(--pe-gray-500);
+.main-content .map-header {
+  padding-bottom: 0;
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
-.main-content .export-button:hover {
-  background: var(--pe-gray-50);
-  color: var(--pe-gray-800);
-}
-
-/* OBR comparison and policy notes: quiet disclosure rows */
+/* Disclosure cards: OBR comparison, method notes, policy notes */
 .obr-expandable,
-.policy-details-footer {
-  margin: 0 0 40px;
-  border-top: 1px solid var(--pe-gray-200);
-  border-bottom: 1px solid var(--pe-gray-200);
+.policy-details-footer,
+.main-content .geography-methodology {
+  margin: 0 0 20px;
+  padding: 0 var(--card-padding);
 }
 
 .obr-toggle-button,
-.policy-details-toggle {
+.policy-details-toggle,
+.main-content .geography-methodology-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  padding: 14px 0;
+  padding: 16px 0;
   background: transparent;
   border: none;
+  border-radius: 0;
+  box-shadow: none;
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
@@ -410,7 +429,9 @@ code {
 }
 
 .obr-toggle-button:hover,
-.policy-details-toggle:hover {
+.policy-details-toggle:hover,
+.main-content .geography-methodology-toggle:hover {
+  background: transparent;
   color: var(--pe-teal-700);
 }
 
@@ -428,17 +449,24 @@ code {
   margin-top: 0;
 }
 
+.main-content .geography-methodology-content {
+  margin-top: 0;
+  padding: 0 0 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 0.9rem;
+}
+
 .policy-details-content {
   padding: 0 0 16px;
 }
 
 .policy-detail {
-  padding: 12px 0;
-  border-top: 1px solid var(--pe-gray-100);
+  padding: 8px 0;
   font-size: 0.9rem;
   line-height: 1.6;
   color: var(--pe-gray-600);
-  max-width: 860px;
 }
 
 .policy-detail strong {
@@ -450,16 +478,22 @@ code {
   color: var(--pe-teal-700);
 }
 
-/* Charts grid: aligned side-by-side columns */
+/* Charts grid: side-by-side cards of equal height */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 48px;
-  align-items: start;
+  gap: 20px;
+  align-items: stretch;
+  margin: 0 0 20px;
 }
 
 .charts-grid > div {
   min-width: 0;
+}
+
+.charts-row-2 > div:only-child,
+.charts-row-regions > div:only-child {
+  grid-column: 1 / -1;
 }
 
 /* Side-by-side charts share a baseline: the header takes any spare height
@@ -468,79 +502,16 @@ code {
   .charts-grid > div:not(:only-child) {
     display: flex;
     flex-direction: column;
-    height: 100%;
   }
 
   .charts-grid > div:not(:only-child) > .chart-header {
     flex: 1;
   }
-
-  .charts-grid {
-    align-items: stretch;
-  }
-}
-
-.charts-row-2 > div:only-child,
-.charts-row-regions > div:only-child {
-  grid-column: 1 / -1;
-}
-
-.charts-row-2,
-.charts-row-regions,
-.charts-row-3 {
-  padding-top: 32px;
-  margin-top: 40px;
-  border-top: 1px solid var(--pe-gray-200);
-}
-
-.charts-row-3 {
-  margin-bottom: 40px;
 }
 
 /* Distributional section with the shared year control */
 .distributional-section {
-  padding-top: 8px;
-  margin-bottom: 0;
-}
-
-.main-content .map-header {
-  padding-bottom: 0;
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-/* "How these figures are estimated": the same quiet disclosure row as the
-   OBR comparison and the policy notes */
-.main-content .geography-methodology {
-  margin-top: 24px;
-  border-top: 1px solid var(--pe-gray-200);
-  border-bottom: 1px solid var(--pe-gray-200);
-}
-
-.main-content .geography-methodology-toggle {
-  width: 100%;
-  justify-content: space-between;
-  padding: 14px 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  color: var(--pe-gray-800);
-}
-
-.main-content .geography-methodology-toggle:hover {
-  background: transparent;
-  color: var(--pe-teal-700);
-}
-
-.main-content .geography-methodology-content {
-  margin-top: 0;
-  padding: 0 0 20px;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  font-size: 0.9rem;
-  max-width: 860px;
+  margin: 0;
 }
 
 .section-year-slider {
@@ -548,7 +519,8 @@ code {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
-  margin-bottom: 28px;
+  padding: 14px var(--card-padding);
+  margin-bottom: 20px;
 }
 
 .section-year-label {
@@ -560,6 +532,35 @@ code {
 .section-year-note {
   font-size: 0.8125rem;
   color: var(--pe-gray-500);
+}
+
+/* Few rules: cards and whitespace separate things. Tables keep only the
+   underline beneath their header row. */
+.main-content .region-table th,
+.main-content .region-table td {
+  border-bottom: none;
+}
+
+.main-content .region-table thead th {
+  border-bottom: 1px solid #d1d5db;
+}
+
+.main-content .lifecycle-calculator .legend {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* PolicyEngine logo under a table or chart drawn outside Recharts */
+.card-logo {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.card-logo img {
+  display: block;
+  width: 80px;
+  height: auto;
 }
 
 /* Info icon tooltips (used by some components) */
@@ -612,80 +613,61 @@ code {
 @media (max-width: 1024px) {
   .charts-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 40px;
   }
 
   .main-content {
-    padding: 24px 24px 48px;
+    padding: 0 24px 48px;
   }
 }
 
 @media (max-width: 768px) {
+  :root {
+    --card-padding: 16px;
+    --title-row-height: 56px;
+  }
+
   .main-content {
-    padding: 20px 16px 48px;
+    padding: 0 16px 48px;
   }
 
-  .title-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+  /* One compact row on a phone: the title, and the selector reduced to
+     its count (its accessible name stays "Select policies"), with its list
+     spanning the row. */
+  .title-row h1,
+  .title-row.is-stuck h1 {
+    font-size: 1.25rem;
   }
 
-  .title-row h1 {
-    font-size: 1.625rem;
+  .title-row > .policy-selector {
+    flex: 0 0 auto;
+    position: static;
+  }
+
+  .title-row .policy-selector-toggle {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+  }
+
+  .title-row .policy-selector-label {
+    display: none;
   }
 
   .dashboard-intro {
     font-size: 1rem;
   }
 
-  .section-nav {
-    position: static;
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-bottom: none;
-    margin-bottom: 20px;
-  }
-
-  .section-nav-links {
-    display: none;
-  }
-
-  .report-section {
-    scroll-margin-top: 74px;
-  }
-
-  .section-nav-select {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--pe-gray-700);
-  }
-
-  .section-nav-select select {
-    flex: 1;
-    min-width: 0;
-    padding: 8px 10px;
-    font-family: inherit;
-    font-size: 0.9rem;
-    color: var(--pe-gray-800);
-    background: var(--pe-surface);
-    border: 1px solid var(--pe-gray-300);
-    border-radius: 6px;
-  }
-
   .headline-strip-values {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .headline-value,
-  .headline-value + .headline-value {
-    padding: 10px 12px 8px 0;
-    border-left: none;
-    border-bottom: 1px solid var(--pe-gray-200);
+  .headline-strip-values {
+    gap: 12px 16px;
+  }
+
+  .headline-value {
+    padding: 0;
   }
 
   .headline-value dd {

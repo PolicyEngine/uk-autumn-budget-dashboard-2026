@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
@@ -92,17 +92,6 @@ const PRESETS = [
     name: "Autumn Budget 2026",
     policies: POLICIES.map((p) => p.id),
   },
-];
-
-// Sections of the population tab, for the in-page navigation.
-const SECTIONS = [
-  { id: "revenue", label: "Revenue" },
-  { id: "obr-comparison", label: "OBR comparison" },
-  { id: "deciles", label: "Income deciles" },
-  { id: "constituencies", label: "Constituencies" },
-  { id: "regions", label: "Regions" },
-  { id: "household", label: "Example household" },
-  { id: "policy-details", label: "Policies" },
 ];
 
 function parseCSV(csvText) {
@@ -397,14 +386,24 @@ function App() {
     setSelectedPolicies(presetPolicies);
   };
 
+  const titleSentinelRef = useRef(null);
+  const [titleStuck, setTitleStuck] = useState(false);
+  useEffect(() => {
+    const sentinel = titleSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(([entry]) =>
+      setTitleStuck(!entry.isIntersecting),
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
 
-  // Jump to a section of the population tab. The OBR comparison and the
-  // policy notes open first so the reader lands on their content.
+  // Open the policy notes (collapsed by default) and scroll to them.
   const handleSectionJump = (id) => {
-    if (id === "obr-comparison") setShowOBRComparison(true);
     if (id === "policy-details") setShowPolicyDetails(true);
     setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -418,17 +417,22 @@ function App() {
   return (
     <div className="app">
       <main className="main-content">
+        {/* The title row is the page's sticky header: it docks at the top
+            once the reader scrolls past it, compact, with the policy
+            selector still in reach. The sentinel tells it when it is stuck. */}
+        <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
+        <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
+          <h1>UK Autumn Budget 2026</h1>
+          {activeTab === "dashboard" && (
+            <PolicySelector
+              policies={POLICIES}
+              selectedPolicies={selectedPolicies}
+              onPolicyToggle={handlePolicyToggle}
+            />
+          )}
+        </div>
+
         <header className="page-header">
-          <div className="title-row">
-            <h1>UK Autumn Budget 2026</h1>
-            {activeTab === "dashboard" && (
-              <PolicySelector
-                policies={POLICIES}
-                selectedPolicies={selectedPolicies}
-                onPolicyToggle={handlePolicyToggle}
-              />
-            )}
-          </div>
 
           {/* Tab navigation */}
           <div className="tab-navigation" role="tablist">
@@ -497,45 +501,6 @@ function App() {
               <div className="results-container">
                 {results && (
                   <>
-                    {/* In-page navigation: a sticky row of links on desktop,
-                        a select on a phone. */}
-                    <nav className="section-nav" aria-label="Sections">
-                      <ul className="section-nav-links">
-                        {SECTIONS.map((section) => (
-                          <li key={section.id}>
-                            <a
-                              href={`#${section.id}`}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleSectionJump(section.id);
-                              }}
-                            >
-                              {section.label}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                      <label className="section-nav-select">
-                        <span>Jump to</span>
-                        <select
-                          defaultValue=""
-                          onChange={(e) => {
-                            if (e.target.value) handleSectionJump(e.target.value);
-                            e.target.value = "";
-                          }}
-                        >
-                          <option value="" disabled>
-                            Choose a section
-                          </option>
-                          {SECTIONS.map((section) => (
-                            <option key={section.id} value={section.id}>
-                              {section.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </nav>
-
                     {/* Headline strip: the net figure for each year. It is the
                         one place these totals are printed; the chart below
                         draws them as a line. */}

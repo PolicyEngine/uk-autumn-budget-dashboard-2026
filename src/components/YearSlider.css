@@ -96,12 +96,15 @@
 }
 
 @media (max-width: 640px) {
+  /* The years take the full row; Play sits under them */
   .year-slider {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .year-slider .slider-container {
-    flex: 1;
+    flex: 1 1 100%;
+    order: -1;
   }
 
   .play-button {
