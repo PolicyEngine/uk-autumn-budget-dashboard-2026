@@ -189,7 +189,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So anything that moves the full rates moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
   - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. As of 21 October it is open; the UK hub expects it to land shortly.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
-  - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix;
+  - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
   - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
   - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
@@ -204,13 +204,15 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Which measures:** any change that moves either full rate in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
   - `gov.dwp.state_pension.basic_state_pension.amount` or `gov.dwp.state_pension.new_state_pension.amount`;
   - anything under `gov.dwp.state_pension.triple_lock`;
-  - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). A 10% change to the 2026 earnings input moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset).
+  - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). Setting the 2026 earnings input to 10% (from 3.9%) moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset);
+  - a macro scenario on `gov.economic_assumptions.yoy_growth.obr.average_earnings` or `consumer_price_index`, which moves those inputs in years not yet published.
 - **If the check prints `False`:** stage the measure provisional, not approved.
   - **Nothing in the code enforces this yet.** `approve` has no State Pension gate on `main`: hold it by hand. A guard that records the limit in the receipt and refuses approval is W5's next PR.
-  - **The reason has nowhere on the page to go.** `publish stage` takes no reason, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing". Record the reason in the coverage ledger and in the measure's PR: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair". **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
+  - **The reason has nowhere on the page to go.** `publish stage` takes no reason, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record the reason in the coverage ledger and in the measure's PR: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair". **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
 - **With the fix,** a measure that also raises the add-on itself, above prices, needs a change to `additional_state_pension`. A rate change alone no longer reaches it, and no template covers it. That makes it a hand-written modifier, which needs the named human data-limits check above.
+- **The adoption PR that brings #2336 must update a test.** `tests/test_measure_templates.py::test_native_pension_responds_to_rates_without_total_income_override` asserts that the add-on moves with the full rates, the behaviour #2336 removes. With #2336's formula, #71's review found two of its four cases fail (new and basic State Pension at £20,000). Update it there to expect the add-on to stay with prices, as the UC row asks of #47's table.
 
 **Dated changes: key every year by its bare fiscal year.**
 
