@@ -15,12 +15,12 @@ from policyengine_uk.utils.scenario import Scenario
 from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import (
     DATASET_YEARS,
-    OTHER_DATASET_NAME,
     PROJECTION_END,
     RATE_PATH,
     YEARS,
     World,
     make_tables,
+    other_dataset_name,
 )
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication import receipt as receipt_module
@@ -379,15 +379,16 @@ def test_different_dataset_bytes_cannot_be_receipted(world):
 
 
 def test_a_dataset_other_than_the_certified_default_is_uncertified(world):
-    tiny = world.root / f"{OTHER_DATASET_NAME}.h5"
+    name = other_dataset_name()
+    tiny = world.root / f"{name}.h5"
     tiny.write_bytes(b"a smaller dataset")
-    world.register(OTHER_DATASET_NAME, tiny)
+    world.register(name, tiny)
     document = read_receipt(
         world.write(
             "alpha",
             VALUES,
             dataset=tiny,
-            dataset_name=OTHER_DATASET_NAME,
+            dataset_name=name,
         ).path
     )
     assert (
@@ -601,15 +602,16 @@ def test_provisional_tolerates_awaiting_source_but_approval_does_not(world):
 
 
 def test_uncertified_artifact_cannot_be_provisional_or_approved(world):
-    other = world.root / f"{OTHER_DATASET_NAME}.h5"
+    name = other_dataset_name()
+    other = world.root / f"{name}.h5"
     other.write_bytes(b"uncertified")
-    world.register(OTHER_DATASET_NAME, other)
+    world.register(name, other)
     world.costing("alpha", VALUES)
     reference = world.write(
         "alpha",
         VALUES,
         dataset=other,
-        dataset_name=OTHER_DATASET_NAME,
+        dataset_name=name,
     )
     world.reconcile(reference)
     manifest = m.Manifest()

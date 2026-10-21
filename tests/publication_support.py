@@ -15,6 +15,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import policyengine.provenance.certification as certification
+import pytest
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.certified_data import load_bundle_manifest
@@ -24,17 +25,46 @@ from uk_budget_data.publication.receipt import projection_end_year
 from uk_budget_data.publication.reconcile import reconcile_artifact
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
-# The datasets the installed bundle names: its certified default, and
-# another of its own (the way to test an uncertified receipt). Read from
-# the bundle, so the fixtures follow its data line (policyengine-uk-data's
-# enhanced FRS until 6.10.0, Microcosm since).
+# The installed bundle's certified default dataset. Read from the bundle, so
+# the fixtures follow its data line (policyengine-uk-data's enhanced FRS
+# until 6.10.0, Microcosm since).
 _UK_RELEASE = load_bundle_manifest()["data_releases"]["uk"]
 DATASET_NAME = _UK_RELEASE["default_dataset"]
-OTHER_DATASET_NAME = sorted(
-    name
-    for name in _UK_RELEASE["datasets"]
-    if name != DATASET_NAME and name.startswith(DATASET_NAME)
-)[0]
+
+# A small dataset the bundle pins but does not certify, for real runs whose
+# receipts must stay uncertified: policyengine-uk-data's tiny enhanced FRS.
+# Until 6.10.0 it is one of the release's datasets; from 6.10.0 it is an
+# overlay, still in policyengine-uk-data-private, so the certified-data job's
+# token must read that repository too. CI's access check names it with
+# --also, and test_certified_data keeps the two in step.
+SMALL_DATASET_NAME = "enhanced_frs_2024_25_tiny"
+
+
+def other_dataset_name() -> str:
+    """Another dataset the bundle names beside its certified default.
+
+    A receipt for it is uncertified, which is how the tests check that only
+    the default publishes. Only an ``.h5`` variant of the default's name
+    counts (``enhanced_frs_2024_25_tiny`` until 6.10.0,
+    ``microcosm_uk_2024_25_dense`` since): weights, calibration and
+    diagnostics files are not datasets. A bundle without one fails the tests
+    that need it, not every test that imports this module.
+    """
+    names = sorted(
+        name
+        for name, entry in _UK_RELEASE["datasets"].items()
+        if name != DATASET_NAME
+        and name.startswith(DATASET_NAME)
+        and entry["path"].endswith(".h5")
+    )
+    if not names:
+        pytest.fail(
+            f"the installed bundle names no .h5 variant of its default "
+            f"dataset {DATASET_NAME!r}; choose another stand-in for an "
+            "uncertified dataset"
+        )
+    return names[0]
+
 
 BASIS = {
     "forecast": {"status": "pre_budget", "source": "test", "vintage": "v1"},

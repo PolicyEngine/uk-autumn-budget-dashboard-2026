@@ -6,15 +6,18 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+import yaml
 from huggingface_hub.errors import HfHubHTTPError
 from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
+from tests.publication_support import SMALL_DATASET_NAME
 from uk_budget_data.certified_data import (
     Artifact,
     CertifiedDataAccessError,
     check_access,
     load_bundle_manifest,
+    main,
     token_fingerprint,
     uk_artifacts,
 )
@@ -110,6 +113,76 @@ def test_installed_bundle_pins_a_uk_default_dataset():
     pinned = uk_artifacts(load_bundle_manifest())
     assert pinned
     assert all(len(a.sha256) == 64 for a in pinned)
+
+
+OVERLAYS = {
+    "tiny": {
+        "repo_id": "org/old",
+        "repo_type": "dataset",
+        "path": "tiny.h5",
+        "revision": "2.0.0",
+        "sha256": SHA_A,
+    },
+    "untyped": {
+        "repo_id": "org/old",
+        "path": "untyped.h5",
+        "revision": "2.0.0",
+        "sha256": SHA_B,
+    },
+}
+WITH_OVERLAYS = {**MANIFEST, "dataset_overlays": {"uk": OVERLAYS}}
+
+
+def test_also_adds_a_named_overlay_from_its_own_repository():
+    assert uk_artifacts(WITH_OVERLAYS, ("untyped", "tiny"))[2:] == [
+        Artifact("tiny", "org/old", "dataset", "tiny.h5", "2.0.0", SHA_A),
+        Artifact("untyped", "org/old", "model", "untyped.h5", "2.0.0", SHA_B),
+    ]
+
+
+def test_also_lists_a_release_dataset_once():
+    assert uk_artifacts(WITH_OVERLAYS, ("weights",)) == artifacts()
+
+
+@pytest.mark.parametrize("manifest", [MANIFEST, WITH_OVERLAYS])
+def test_also_refuses_a_dataset_the_bundle_does_not_pin(manifest):
+    with pytest.raises(CertifiedDataAccessError, match="'nope'"):
+        uk_artifacts(manifest, ("nope",))
+
+
+@given(st.lists(st.sampled_from(["enhanced", "weights", "tiny", "untyped"])))
+def test_also_adds_each_named_overlay_once_after_the_release(names):
+    listed = uk_artifacts(WITH_OVERLAYS, tuple(names))
+    assert listed[:2] == artifacts()
+    assert [a.name for a in listed[2:]] == sorted(set(names) & set(OVERLAYS))
+
+
+def test_the_command_refuses_an_unpinned_dataset_before_any_request(
+    monkeypatch, capsys
+):
+    monkeypatch.delenv("HUGGING_FACE_TOKEN", raising=False)
+    assert main(["--also", "nope"]) == 1
+    assert "pins no UK dataset or overlay 'nope'" in capsys.readouterr().err
+
+
+def test_ci_checks_the_small_dataset_the_certified_tests_read():
+    """The access step names every dataset outside the release that the
+    certified-data tests download, so a token that cannot read its
+    repository fails there, with the hint, not mid-run."""
+    workflow = (
+        Path(__file__).resolve().parent.parent / ".github/workflows/ci.yml"
+    )
+    steps = yaml.safe_load(workflow.read_text())["jobs"]["certified-data"][
+        "steps"
+    ]
+    (check,) = [
+        step
+        for step in steps
+        if "uk_budget_data.certified_data" in step.get("run", "")
+    ]
+    assert f"--also {SMALL_DATASET_NAME}" in check["run"]
+    pinned = uk_artifacts(load_bundle_manifest(), (SMALL_DATASET_NAME,))
+    assert SMALL_DATASET_NAME in [a.name for a in pinned]
 
 
 @pytest.mark.parametrize("token", [None, ""])
