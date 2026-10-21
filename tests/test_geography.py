@@ -1548,6 +1548,7 @@ def run_cli(
     extra=(),
     marker=True,
     lookup=True,
+    changes_of=None,
 ):
     from uk_budget_data import cli
     from uk_budget_data.models import Reform
@@ -1601,7 +1602,12 @@ def run_cli(
             FakeSimulation(household, person, reformed),
         )
 
-    reforms = {r: Reform(id=r, name=r) for r in ("pkg", "alpha", "beta")}
+    reforms = {
+        r: Reform(
+            id=r, name=r, parameter_changes=(changes_of or {}).get(r) or {}
+        )
+        for r in ("pkg", "alpha", "beta")
+    }
     monkeypatch.setattr(g, "simulate_reform", simulate)
     monkeypatch.setattr(g, "get_reform", reforms.get)
     monkeypatch.setattr(g, "PACKAGES", {"pkg": ("alpha", "beta")})
@@ -1745,3 +1751,99 @@ def test_the_front_end_fixture_shows_every_tier():
     assert set(regional["year"]) == {2026, 2027}
     seats = tables["constituency.csv"]
     assert seats["area_code"].str.startswith("Z14").all()
+
+
+# --- data limits (#51 round 19, F8) -------------------------------------------
+
+SURCHARGE_RATE = (
+    "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
+)
+INCOME_TAX_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
+
+
+def test_a_measure_the_data_cannot_cost_gets_no_table_by_area(
+    monkeypatch, tmp_path, capsys
+):
+    """Review of #51, round 19: the area view ran outside the data-limit
+    watch, so a measure published as not computable, or a package with it,
+    would still show figures by area. The command now writes no table."""
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+    )
+    printed = " ".join(capsys.readouterr().out.split())
+    assert code == 1
+    assert not out.exists()
+    assert "Not computable on current data: alpha" in printed
+    assert "beta" not in printed.split("Not computable")[1].split("Error")[0]
+
+
+def test_with_no_data_limit_registered_nothing_is_refused(
+    monkeypatch, tmp_path
+):
+    from uk_budget_data import data_limits
+
+    monkeypatch.setattr(data_limits, "DATA_LIMITS", ())
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+    )
+    assert code == 0
+    assert out.exists()
+
+
+def test_a_computable_measure_still_writes_its_tables(monkeypatch, tmp_path):
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        changes_of={"alpha": {INCOME_TAX_RATE: {"2026": 0.21}}},
+    )
+    assert code == 0
+    assert validate_public(out) == []
+
+
+def household_situation():
+    return {
+        "people": {
+            "p": {"age": {2027: 40}, "employment_income": {2027: 30_000}}
+        },
+        "benunits": {"b": {"members": ["p"]}},
+        "households": {"h": {"members": ["p"]}},
+    }
+
+
+@pytest.mark.parametrize(
+    "changes, limited",
+    [
+        ({SURCHARGE_RATE: {"2027": 0.07}}, ["additional_dwelling_purchases"]),
+        ({INCOME_TAX_RATE: {"2027": 0.21}}, []),
+    ],
+)
+def test_real_simulations_are_judged_as_the_generator_judges_them(
+    monkeypatch, changes, limited
+):
+    """On simulations with a parameter tree: built under the build watch,
+    collected under the run watch, then the generator's own rule."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data import data_limits
+    from uk_budget_data.models import Reform
+
+    monkeypatch.setattr(
+        g,
+        "build_microsimulation",
+        lambda dataset, scenario=None: Simulation(
+            situation=household_situation(), scenario=scenario
+        ),
+    )
+    reform = Reform(id="m", name="m", parameter_changes=changes)
+    baseline, reformed = g.simulate_reform(reform, None, [2027])
+    with data_limits.observing(baseline, reformed) as observed:
+        for sim in (baseline, reformed):
+            sim.calculate("household_net_income", 2027)
+    touched = g.reform_data_limits(
+        reform, baseline, reformed, observed, [2027]
+    )
+    assert [item["key"] for item in touched] == limited
