@@ -20,7 +20,7 @@ from typing import Callable, Optional
 
 from pydantic import ValidationError
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -161,6 +161,18 @@ def _limits(
     return data_limits.limits_for_scenarios(baseline_scenario, reform_scenario)
 
 
+def _model_limits(baseline, reformed, baseline_scenario, reform_scenario):
+    """The model limits a measure touches: from the two built parameter
+    trees and the models they run, as :func:`_limits` reads data limits;
+    from the scenarios' parameter changes, against the installed model,
+    only for stand-in simulations with no tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return model_limits.limits_touched(baseline, reformed)
+    return model_limits.limits_for_scenarios(
+        baseline_scenario, reform_scenario
+    )
+
+
 def _scenarios(subject: str, build_them: Callable):
     """Run a step that builds scenarios, refusing the run (not stopping the
     generation) when the configuration cannot build one. Only a Scenario or
@@ -271,6 +283,10 @@ def generate_artifacts(
         limits = _limits(
             baseline, reformed, baseline_scenario, reform_scenario, observed
         )
+        # A measure the installed model overstates is held at provisional.
+        held = _model_limits(
+            baseline, reformed, baseline_scenario, reform_scenario
+        )
 
         def build_receipt(file_digests):
             inputs = ReceiptInputs(
@@ -289,6 +305,7 @@ def generate_artifacts(
                 member_outputs=member_outputs,
                 composition=composition,
                 data_limits=limits,
+                model_limits=held,
             )
             if argv is not None:
                 inputs.generator_argv = argv

@@ -15,7 +15,7 @@ from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -339,6 +339,12 @@ class DataPipeline:
                         f"{reform.name}: {limit['reason']} Its rows in these "
                         "CSVs are not costings; publish it through the gated "
                         "path, which lists it as not computable."
+                    )
+                for limit in model_limits.limits_touched(baseline, reformed):
+                    console.print(
+                        f"[bold red]OVERSTATED BY THIS MODEL[/bold red] "
+                        f"{reform.name}: {limit['reason']} Publish it through "
+                        "the gated path, which holds it at provisional."
                     )
 
                 progress.remove_task(task)

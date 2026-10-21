@@ -10,7 +10,8 @@ Every artifact carries ``receipt.json`` with two parts:
 - ``dashboard``: what only this repository knows: the measures, the files,
   the commit and whether the tree was clean, the forecast and calibration
   basis, the years the dataset supports, the data limits the measure
-  touches (``uk_budget_data.data_limits``), and whether the artifact is
+  touches (``uk_budget_data.data_limits``), the model limits it touches
+  (``uk_budget_data.model_limits``), and whether the artifact is
   publishable.
 
 The receipt code comes from the installed policyengine release. Publication
@@ -29,7 +30,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.certified_data import load_bundle_manifest
 
 REPOSITORY = "PolicyEngine/uk-autumn-budget-dashboard-2026"
@@ -483,6 +484,9 @@ class ReceiptInputs:
     # The data limits the measure touches (data_limits.limits_touched on
     # the two simulations), so it is published as not computable.
     data_limits: list[dict] = field(default_factory=list)
+    # The model limits it touches (model_limits.limits_touched), so it is
+    # held at provisional, never approved.
+    model_limits: list[dict] = field(default_factory=list)
     generator_argv: list[str] = field(default_factory=lambda: list(sys.argv))
 
 
@@ -559,6 +563,8 @@ def build_receipt_document(
         "unsupported_years": _unsupported(receipt, years, supported),
         "data_limits": list(inputs.data_limits),
         "data_limits_registry_sha256": data_limits.REGISTRY_SHA256,
+        "model_limits": list(inputs.model_limits),
+        "model_limits_registry_sha256": model_limits.REGISTRY_SHA256,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "receipt_source": source,
         "publishable": not reasons,
@@ -700,7 +706,8 @@ def dashboard_problems(document: dict) -> list[str]:
     - the unsupported years are the execution receipt's own, when it
       records the years the dataset is projected to;
     - the data limits are ones the registry defines, with its reasons,
-      and the receipt was generated against this registry.
+      and the receipt was generated against this registry;
+    - so are the model limits, against theirs.
     """
     dashboard = document.get("dashboard") or {}
     problems = []
@@ -718,6 +725,22 @@ def dashboard_problems(document: dict) -> list[str]:
             f"data limits: {problem}"
             for problem in data_limits.record_problems(
                 dashboard["data_limits"]
+            )
+        ]
+    if dashboard.get("model_limits_registry_sha256") != (
+        model_limits.REGISTRY_SHA256
+    ):
+        problems.append(
+            "it was generated against another model-limit registry; "
+            "regenerate it"
+        )
+    if "model_limits" not in dashboard:
+        problems.append("its model limits are not recorded")
+    else:
+        problems += [
+            f"model limits: {problem}"
+            for problem in model_limits.record_problems(
+                dashboard["model_limits"]
             )
         ]
     if not isinstance(dashboard.get("tree_clean"), bool):
