@@ -1,51 +1,79 @@
 reform_id,reform_name,year,policyengine_value,obr_static_value,obr_post_behavioural_value
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2026,-6.6170900474099215,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2027,-4.5527220448090775,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2028,0.4682203384797998,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2029,8.086967888167948,,
-autumn_budget_2025_combined,Autumn Budget 2025 (combined),2030,12.353354834465314,,
-two_child_limit,2 child limit repeal,2026,-2.9481590085316145,-2.1,-2.3
-two_child_limit,2 child limit repeal,2027,-3.142898714547965,-2.2,-2.5
-two_child_limit,2 child limit repeal,2028,-3.4207809537560925,-2.4,-2.7
-two_child_limit,2 child limit repeal,2029,-3.5601392994046113,-2.7,-3.0
-two_child_limit,2 child limit repeal,2030,-3.7167508358536523,-2.8,-3.1
-fuel_duty_freeze,Fuel duty freeze extension,2026,-3.523930069910573,-2.4,-2.4
-fuel_duty_freeze,Fuel duty freeze extension,2027,-1.387856072038301,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2028,-1.210588217168649,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2029,-0.5662358025160948,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2030,-0.7166734426150546,-0.8,-0.8
-rail_fares_freeze,Rail fares freeze,2026,-0.14500041154898766,-0.1,-0.1
-rail_fares_freeze,Rail fares freeze,2027,-0.15499998783940774,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2028,-0.15999941088405886,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2029,-0.16500032185549326,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2030,-0.1500021392496534,-0.2,-0.2
-threshold_freeze_extension,Threshold freeze extension,2026,0.0,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,0.0,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2028,3.7418672257068746,3.2,3.3
-threshold_freeze_extension,Threshold freeze extension,2029,7.771802193818188,7.4,7.6
-threshold_freeze_extension,Threshold freeze extension,2030,12.123150835021688,11.6,12.1
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.0,0.0,0.3
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,1.425336012601322,1.5,1.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1.4715769704674821,1.2,1.1
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1.5182932507637588,1.3,1.2
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1.5675249869077053,1.4,1.4
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.0,0.1,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,0.5017532922953072,0.6,0.5
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,0.5310650706614664,0.6,0.5
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,0.565351877669344,0.6,0.5
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.0,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,0.7546326806970802,0.6,0.6
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,0.7814852627404638,0.4,0.4
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,0.8078807589533302,0.5,0.5
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2026,0.0,5.915,5.915
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2027,0.13303176591335356,0.255,0.255
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2028,0.26243847221629024,0.29,0.29
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2029,0.3995716624683384,0.355,0.355
-freeze_student_loan_thresholds,Freeze student loan repayment thresholds,2030,0.4106523725930223,0.4,0.4
-salary_sacrifice_cap,Salary sacrifice cap,2026,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2027,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2028,0.0,0.0,0.0
-salary_sacrifice_cap,Salary sacrifice cap,2029,2.775377330000371,4.9,4.7
-salary_sacrifice_cap,Salary sacrifice cap,2030,2.9093641105691583,5.1,2.6
+mock4_combined,MOCK: drill 4 package,2026,-1.5277287658517946,,
+mock4_combined,MOCK: drill 4 package,2027,-3.8988225387359456,,
+mock4_combined,MOCK: drill 4 package,2028,-3.2636160990896985,,
+mock4_combined,MOCK: drill 4 package,2029,-3.3476577476826224,,
+mock4_combined,MOCK: drill 4 package,2030,-3.4534562842484178,,
+mock4_combined,MOCK: drill 4 package,2031,1.178224114798376,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2026,-0.1995866519665599,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2027,-0.8761583346969302,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2028,-0.6534980030957831,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2029,-0.6484098212818982,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2030,-0.6308332933119298,,
+mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,2031,-0.6468823473653408,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2026,0.0,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2027,-0.7630887512394745,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2028,-0.7885815796691538,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2029,-0.7627496284916097,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2030,-0.7602989890973632,,
+mock4_uc_child_element,MOCK: UC child element +£12.50 a month,2031,-0.7590560356653535,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2026,0.0,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2027,-1.4732739335571692,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2028,-1.5199136810605474,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2029,-1.5672637690332774,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2030,-1.6249911200190104,,
+mock4_lha_reset,MOCK: LHA reset to 30th percentile,2031,-1.6833777737707625,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2026,0.0,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2027,-0.0053029350159621,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2028,-0.0053186647065284,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2029,-0.0119864877368291,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2030,-0.009081909152253,,
+mock4_carers_allowance_limit,MOCK: Carer's Allowance earnings limit £230,2031,-0.0092310660896475,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2026,0.0,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2027,2.155468293676349,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2028,2.2414374623057776,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2029,2.327919666767679,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2030,2.4230176402521653,,
+mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,2031,2.518370322261135,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2026,0.0,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2027,0.0,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2028,0.2809345749067516,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2029,0.2907665314577997,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2030,0.2991285210528684,,
+mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",2031,0.3105404761789212,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2026,0.0,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2027,0.0,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2028,0.0,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2029,0.0,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2030,0.0,,
+mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,2031,4.803808144598465,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2026,-0.8213909206052933,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2027,0.0,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2028,0.0,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2029,0.0,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2030,0.0,,
+mock4_whd_topup,Warm Home Discount top-up (MOCK),2031,0.0,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2026,0.0,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027,-0.2055543786774191,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2028,-0.2036783577487869,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2029,-0.1998826204260452,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2030,-0.198449472370332,,
+mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031,-0.1955545557452049,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2026,0.0,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027,-0.2193489233380986,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2028,-0.3208298185029855,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2029,-0.4437231866945847,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2030,-0.5812260897323555,,
+mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031,-0.629730125436381,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2026,-0.5067516044321829,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2027,-0.2492949252881535,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2028,0.0,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2029,0.0,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2030,0.0,,
+mock4_fuel_vat_cut,MOCK: VAT cut on road fuel,2031,0.0,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2026,0.0,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2027,-2.2651641673234955,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2028,-2.299019920881814,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2029,-2.3324379402609816,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2030,-2.370774586787203,,
+mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,2031,-2.40447646518482,,

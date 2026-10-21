@@ -14,6 +14,20 @@ import PersonalImpactTab from "./components/PersonalImpactTab";
 import RegionView from "./components/RegionView";
 import YearSlider from "./components/YearSlider";
 
+// MOCK drill 4 lines that cannot be computed: listed, never shown as £0 (#51)
+const NOT_COMPUTABLE = [
+  {
+    id: "mock4_alcohol_duty",
+    name: "Alcohol duty RPI+2",
+    reason: "no alcohol volumes in Microcosm",
+  },
+  {
+    id: "mock4_sdlt_surcharge",
+    name: "SDLT surcharge 7pp",
+    reason: "no additional-dwelling purchases in Microcosm",
+  },
+];
+
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
   {
@@ -82,6 +96,95 @@ const POLICIES = [
     description: "Cap NI-free salary sacrifice pension contributions at £2,000",
     explanation:
       'Caps National Insurance-free salary sacrifice pension contributions at £2,000 per year from April 2029. Contributions above this threshold become subject to employee and employer NICs. PolicyEngine estimates this will raise £3.3bn in 2029-30, assuming employers spread costs and employees maintain pension contributions. The OBR estimates £4.9bn (static) or £4.7bn (post-behavioural). See our <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+  },
+  {
+    id: "mock4_whd_topup",
+    name: "Warm Home Discount top-up (MOCK)",
+    description:
+      "MOCK: extra £125 (means-tested) or £75 (Pension Credit) on the Warm Home Discount, winter 2026-27",
+    explanation:
+      "MOCK basis: invented drill measure. For winter 2026-27 only (model year 2026), households in England and Wales that get the £150 Warm Home Discount because they receive Universal Credit, Housing Benefit, income-related ESA or income-based JSA get a further £125, and those receiving Pension Credit get a further £75. One payment per household: a household qualifying both ways gets £125. PolicyEngine has no Warm Home Discount variable, so we pay the top-up as a household transfer to every modelled recipient of those benefits. This ignores the energy-cost eligibility test that applies to the core group in England, so it overstates who qualifies. Scotland and Northern Ireland are out of scope.",
+  },
+  {
+    id: "mock4_fuel_duty",
+    name: "MOCK: fuel duty restaged",
+    description: "Fuel duty rises cancelled and restaged from 2026-27",
+    explanation:
+      "MOCK basis: duty only (excluding VAT), liabilities by fiscal year (6 April to 5 April), household road fuel only. Post-measure path from costing note 5 (52.95p to 22 Feb 2027, 54.95p from 23 Feb 2027, 56.95p from 1 Oct 2027, then 58.66p, 60.36p, 62.05p, 63.79p from each April 2028) against the Annex A pre-measures path, day-weighted. Unvalidated under this engine (Microcosm pair on policyengine-uk 2.130.1).",
+  },
+  {
+    id: "mock4_uc_child_element",
+    name: "MOCK: UC child element +£12.50",
+    description: "Universal Credit child element up £12.50 a month from April 2027",
+    explanation:
+      "MOCK basis: +£12.50 a month on every child element, including the higher first-child amount, from 2027-28. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_lha_reset",
+    name: "MOCK: LHA reset",
+    description: "Local Housing Allowance reset to the 30th percentile in April 2027, then frozen",
+    explanation:
+      "MOCK basis: LHA rates redetermined at the 30th percentile of the model's rents list in 2027-28, then frozen in cash terms. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_carers_allowance_limit",
+    name: "MOCK: Carer's Allowance earnings limit",
+    description: "Earnings limit £204 → £230 a week from April 2027",
+    explanation:
+      "MOCK basis: Carer's Allowance earnings limit £230 a week from 2027-28, held flat. Net, cash, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_cgt_higher_rate",
+    name: "MOCK: CGT higher rate 26%",
+    description: "CGT higher (and additional) rate 24% → 26% from 6 April 2027",
+    explanation:
+      "MOCK basis: higher and additional rates of Capital Gains Tax 26% from 2027-28, including residential property. Static model with the engine's capital gains responses. Gross CGT, accrued to the tax year. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_savings_starting_band",
+    name: "MOCK: savings starting band £2,000",
+    description: "Starting rate band for savings £5,000 → £2,000 from April 2028",
+    explanation:
+      "MOCK basis: starting rate band for savings £2,000 from 2028-29. Gross income tax, fiscal years. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_threshold_freeze_2032",
+    name: "MOCK: thresholds frozen to 2032",
+    description: "Personal Allowance, higher rate threshold and main NI thresholds (primary threshold, UEL) frozen for 2031-32",
+    explanation:
+      "MOCK basis: 2031-32 only. Personal Allowance, basic rate limit, NI primary and secondary thresholds, upper earnings limit and Class 4 profits limits held at 2030-31 levels, against Annex A's September 2030 CPI indexation (£12,850; £38,600; £12,850; £5,110; £51,450). Gross income tax and NICs, liabilities. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_cb_early_years_addition",
+    name: "Child Benefit Early Years Addition",
+    description:
+      "£10 a week extra Child Benefit for each child under 1 from April 2027",
+    explanation:
+      "MOCK basis: invented drill 4 measure. From April 2027, Child Benefit gets an Early Years Addition of £10 a week for each child under 1, modelled as £520 a year (52 weeks) per child. It is paid only to families that receive Child Benefit in the model (take-up and High Income Child Benefit Charge opt-outs as the model has them), and the High Income Child Benefit Charge applies to it as to the rest of Child Benefit.",
+  },
+  {
+    id: "mock4_state_pension_topup_allowance",
+    name: "State Pension Top-up Allowance",
+    description:
+      "Income tax allowance covering State Pension above the personal allowance from April 2027",
+    explanation:
+      "MOCK basis: from 2027-28, State Pension recipients get an income tax allowance equal to their State Pension above the Personal Allowance, rounded up to the next £10, withdrawn £1 for £1 where adjusted net income exceeds the Annex A full new State Pension (52 × weekly rate) plus £1,000. Gross income tax, liabilities by tax year. Unvalidated under this engine.",
+  },
+  {
+    id: "mock4_fuel_vat_cut",
+    name: "MOCK: VAT cut on road fuel",
+    description:
+      "Cut VAT on petrol and diesel from 20% to 15%, December 2026 to May 2027",
+    explanation:
+      "MOCK basis: VAT only (fuel duty unchanged), cash, fiscal years. VAT on road fuel falls from 20% to 15% from 1 December 2026 to 31 May 2027, with full pass-through to pump prices. The household saving is VAT-inclusive petrol and diesel spending divided by 1.20, times 5 percentage points, day-weighted: 121/365 of 2026-27 and 61/365 of 2027-28, nothing in later years. The saving is not scaled up for under-reported spending in the survey. Invented measure for a rehearsal; not government policy.",
+  },
+  {
+    id: "mock4_employer_ni_under23",
+    name: "MOCK: Employer NI relief for under-23s",
+    description:
+      "No employer NI on the first £25,000 for employees under 23, from April 2027",
+    explanation:
+      "MOCK basis: gross employer Class 1 NICs, liabilities, fiscal years. From April 2027, no employer NI on earnings up to £25,000 for employees aged 21 and 22 (under-21s already have a zero rate). Earnings are held fixed, so household net income does not change. Unvalidated under this engine.",
   },
 ];
 
@@ -404,6 +507,12 @@ function App() {
             />
           )}
         </div>
+
+        {/* MOCK drill 4: measures we cannot compute are listed, never shown as £0 (#51) */}
+        <p className="not-computable-note" data-testid="not-computable">
+          Not computable on this data (MOCK drill 4):{" "}
+          {NOT_COMPUTABLE.map((m) => `${m.name} (${m.reason})`).join("; ")}.
+        </p>
 
         {/* Tab navigation */}
         <div className="tab-navigation">

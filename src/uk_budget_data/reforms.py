@@ -633,6 +633,341 @@ def _create_rail_fares_freeze() -> Reform:
     )
 
 
+# -----------------------------------------------------------------------------
+# MOCK drill 4: Warm Home Discount top-up (dashboard-structural fallback)
+# -----------------------------------------------------------------------------
+# policyengine-uk 2.130.1 has no Warm Home Discount variable, so the top-up is
+# paid through an existing household transfer input instead.
+
+MOCK4_WHD_TOPUP_ID = "mock4_whd_topup"
+MOCK4_WHD_YEARS = [2026]  # winter 2026-27 only = model year 2026
+MOCK4_WHD_COUNTRIES = ("ENGLAND", "WALES")
+MOCK4_WHD_CORE_BENEFITS = (
+    "universal_credit",
+    "housing_benefit",
+    "esa_income",
+    "jsa_income",
+)
+MOCK4_WHD_PENSION_BENEFITS = ("pension_credit",)
+MOCK4_WHD_CORE_TOPUP = 125.0
+MOCK4_WHD_PENSION_TOPUP = 75.0
+# Carrier: a household-level transfer that already sums into
+# household_benefits -> household_net_income and into gov_spending, and is £0
+# under current law from 2024 (cost-of-living payments withdrawn).
+MOCK4_WHD_CARRIER = "cost_of_living_support_payment"
+
+
+def _receives_any(sim: Simulation, variables, year: int) -> np.ndarray:
+    total = np.zeros(len(np.asarray(sim.calculate("household_weight", year))))
+    for variable in variables:
+        total = total + np.asarray(
+            sim.calculate(variable, year, map_to="household")
+        )
+    return total > 0
+
+
+def mock4_whd_topup_amount(sim: Simulation, year: int) -> np.ndarray:
+    """Per-household top-up: £125 if on UC/HB/income-ESA/income-JSA, else £75
+    if on Pension Credit, else £0; England and Wales only.
+
+    One payment per household: a household qualifying both ways gets the
+    higher £125 (not £200).
+    """
+    country = np.asarray(sim.calculate("country", year)).astype(str)
+    in_scope = np.isin(country, MOCK4_WHD_COUNTRIES)
+    core = _receives_any(sim, MOCK4_WHD_CORE_BENEFITS, year)
+    pension = _receives_any(sim, MOCK4_WHD_PENSION_BENEFITS, year)
+    amount = np.where(
+        core,
+        MOCK4_WHD_CORE_TOPUP,
+        np.where(pension, MOCK4_WHD_PENSION_TOPUP, 0.0),
+    )
+    return np.where(in_scope, amount, 0.0)
+
+
+def _mock4_whd_topup_modifier(sim: Simulation) -> Simulation:
+    """MOCK structural fallback: Warm Home Discount top-up, winter 2026-27.
+
+    Adds the top-up to ``cost_of_living_support_payment`` (household, YEAR),
+    which feeds household_benefits, household_net_income, hbai incomes and
+    gov_spending, so the cost lands on the taxpayer.
+
+    Caveats: receipt is the model's benefit amount > 0 (take-up as modelled),
+    not actual WHD receipt; the real WHD core group in England also needs a
+    high-energy-cost test, which this ignores (so it overstates eligibility);
+    the £150 base WHD itself is not modelled; Scotland and NI get nothing.
+    """
+    for year in MOCK4_WHD_YEARS:
+        current = np.asarray(sim.calculate(MOCK4_WHD_CARRIER, year))
+        topup = mock4_whd_topup_amount(sim, year)
+        sim.set_input(MOCK4_WHD_CARRIER, year, current + topup)
+    return sim
+
+
+def _create_mock4_whd_topup() -> Reform:
+    """MOCK drill 4: Warm Home Discount top-up (£125 / £75), 2026-27."""
+    return Reform(
+        id=MOCK4_WHD_TOPUP_ID,
+        name="Warm Home Discount top-up (MOCK)",
+        description=(
+            "MOCK drill measure. Winter 2026-27 only: households in England "
+            "and Wales getting the Warm Home Discount via Universal Credit, "
+            "Housing Benefit, income-related ESA or income-based JSA get a "
+            "further £125; Pension Credit households get a further £75. One "
+            "payment per household (the higher £125 if both). Structural "
+            "fallback: no WHD variable in policyengine-uk 2.130.1, so paid "
+            "via cost_of_living_support_payment."
+        ),
+        simulation_modifier=_mock4_whd_topup_modifier,
+    )
+
+
+# =============================================================================
+# MOCK DRILL 4 STRUCTURAL MEASURES (invented; rehearsal only)
+# =============================================================================
+
+# Model years (Y = fiscal year Y-Y+1) in which the drill 4 measures are in
+# force: from April 2027 to the end of the drill horizon (2031-32).
+MOCK4_START_YEAR = 2027
+MOCK4_YEARS = list(range(MOCK4_START_YEAR, 2032))
+
+# Child Benefit Early Years Addition: £10 a week per child under 1, annualised
+# at 52 weeks (the 52-week convention, as the packet states it: £520 a year).
+MOCK4_CB_EYA_WEEKLY = 10.0
+MOCK4_WEEKS_PER_YEAR = 52
+
+# State Pension Top-up Allowance: withdrawn pound for pound above the full
+# new State Pension (weekly x 52) plus £1,000.
+# 14:20 inject: the threshold is the full new State Pension plus £1,200.
+MOCK4_SPTA_WITHDRAWAL_MARGIN = 1_200.0
+MOCK4_ANNEX_A_NEW_STATE_PENSION_WEEKLY = {
+    2026: 241.30,
+    2027: 251.20,
+    2028: 259.75,
+    2029: 268.05,
+    2030: 276.35,
+    2031: 284.65,
+}
+
+
+def _mock4_cb_early_years_addition_modifier(sim: Simulation) -> Simulation:
+    """MOCK drill 4: Child Benefit Early Years Addition from April 2027.
+
+    Adds £10 a week (x 52 = £520 a year) for each child aged under 1 in the
+    benefit unit, paid with Child Benefit: only benefit units that receive
+    Child Benefit in the model (``child_benefit`` > 0, so the model's take-up
+    flag ``would_claim_child_benefit`` and HICBC opt-outs are respected) get
+    it. The addition is written into ``child_benefit`` itself, so it flows to
+    household net income through the benefits aggregate and is subject to the
+    High Income Child Benefit Charge exactly as Child Benefit is (CB_HITC is a
+    percentage of the Child Benefit received).
+    """
+    annual = MOCK4_CB_EYA_WEEKLY * MOCK4_WEEKS_PER_YEAR
+    for year in MOCK4_YEARS:
+        cb = np.array(sim.calculate("child_benefit", year))
+        age = np.array(sim.calculate("age", year))
+        is_child = np.array(sim.calculate("is_child", year))
+        under_one = ((age < 1) & is_child).astype(float)
+        n_under_one = np.array(sim.map_result(under_one, "person", "benunit"))
+        addition = np.where(cb > 0, n_under_one * annual, 0.0)
+        sim.set_input("child_benefit", year, cb + addition)
+    return sim
+
+
+def _create_mock4_cb_early_years_addition() -> Reform:
+    return Reform(
+        id="mock4_cb_early_years_addition",
+        name="Child Benefit Early Years Addition",
+        description=(
+            "MOCK (drill 4, invented measure). From April 2027, Child Benefit "
+            "gets an Early Years Addition of £10 a week (£520 a year, 52 "
+            "weeks) for each child under 1, paid only where Child Benefit is "
+            "received and subject to the High Income Child Benefit Charge."
+        ),
+        simulation_modifier=_mock4_cb_early_years_addition_modifier,
+    )
+
+
+def _mock4_state_pension_topup_allowance_modifier(
+    sim: Simulation,
+) -> Simulation:
+    """MOCK drill 4: State Pension Top-up Allowance from April 2027.
+
+    For each person receiving the State Pension (``state_pension`` > 0):
+
+        allowance = max(0, state_pension - personal_allowance)
+        threshold = new_state_pension.amount (weekly) x 52 + £1,000
+        allowance = max(0, allowance - max(0, adjusted_net_income - threshold))
+
+    The allowance is added to the person's ``allowances`` (the income tax
+    allowances deducted from income, alongside the personal and blind
+    person's allowances), so it reduces taxable income in every band and in
+    Scottish income tax as well. ``personal_allowance`` itself is left alone,
+    so the ESA permitted-work and property-finance-costs rules that read it
+    do not change. ``personal_allowance`` is the person's tapered allowance.
+    """
+    for year in MOCK4_YEARS:
+        # Annex A full new State Pension (rebased at G3), not the engine's.
+        nsp_weekly = MOCK4_ANNEX_A_NEW_STATE_PENSION_WEEKLY[year]
+        threshold = nsp_weekly * 52 + MOCK4_SPTA_WITHDRAWAL_MARGIN
+        sp = np.array(sim.calculate("state_pension", year))
+        pa = np.array(sim.calculate("personal_allowance", year))
+        ani = np.array(sim.calculate("adjusted_net_income", year))
+        allowances = np.array(sim.calculate("allowances", year))
+        # Rounded up to the next £10 (costing note 3).
+        full = np.ceil(np.maximum(0.0, sp - pa) / 10) * 10
+        withdrawal = np.maximum(0.0, ani - threshold)
+        topup = np.where(sp > 0, np.maximum(0.0, full - withdrawal), 0.0)
+        sim.set_input("allowances", year, allowances + topup)
+    return sim
+
+
+def _create_mock4_state_pension_topup_allowance() -> Reform:
+    return Reform(
+        id="mock4_state_pension_topup_allowance",
+        name="State Pension Top-up Allowance",
+        description=(
+            "MOCK (drill 4, invented measure). From April 2027, State Pension "
+            "recipients get an income tax allowance equal to the amount by "
+            "which their State Pension exceeds their personal allowance, "
+            "withdrawn pound for pound where adjusted net income exceeds the "
+            "full new State Pension plus £1,000."
+        ),
+        simulation_modifier=_mock4_state_pension_topup_allowance_modifier,
+    )
+
+
+# --- MOCK drill 4 measures (invented; rehearsal only) -----------------------
+
+# Share of each fiscal year (model year Y = Y-Y+1) inside the 1 December 2026
+# to 31 May 2027 window: 1 Dec 2026-31 Mar 2027 is 121 days of 2026-27;
+# 1 Apr-31 May 2027 is 61 days of 2027-28. Zero in every other year.
+MOCK4_FUEL_VAT_DAY_WEIGHTS = {2026: 121 / 365, 2027: 61 / 365}
+MOCK4_FUEL_VAT_OLD_RATE = 0.20
+MOCK4_FUEL_VAT_NEW_RATE = 0.15
+
+
+def _mock4_fuel_vat_cut_modifier(sim: Simulation) -> Simulation:
+    """MOCK: VAT on road fuel 20% -> 15%, 1 Dec 2026 to 31 May 2027.
+
+    policyengine-uk 2.130.1 has no fuel-specific VAT rate: ``vat`` is
+    standard rate x full-rated share of ``consumption`` / microdata coverage.
+    So wrap ``vat`` and subtract the saving on road fuel, with full
+    pass-through: (petrol_spending + diesel_spending) / 1.20 x 0.05, times
+    the day weight of the fiscal year. ``petrol_spending`` and
+    ``diesel_spending`` are VAT-inclusive pump spend (litres = spend / pump
+    price). The saving is not grossed up by ``microdata_vat_coverage``.
+    ``vat_change`` (vat - baseline_vat) carries it into ``household_tax``
+    and so ``household_net_income``; ``vat`` itself is in ``gov_tax`` and so
+    ``gov_balance``. Basis: VAT only (fuel duty unchanged), cash, fiscal.
+    """
+    from uk_budget_data.measure_templates import (
+        _call_formula,
+        _replace_formula,
+    )
+
+    native = sim.tax_benefit_system.get_variable("vat")
+    rate_cut = MOCK4_FUEL_VAT_OLD_RATE - MOCK4_FUEL_VAT_NEW_RATE
+
+    def formula(household, period, parameters):
+        current = _call_formula(native, household, period, parameters)
+        weight = MOCK4_FUEL_VAT_DAY_WEIGHTS.get(period.start.year, 0.0)
+        if weight == 0:
+            return current
+        fuel = household("petrol_spending", period) + household(
+            "diesel_spending", period
+        )
+        saving = fuel / (1 + MOCK4_FUEL_VAT_OLD_RATE) * rate_cut * weight
+        return current - saving
+
+    _replace_formula(sim, "vat", formula)
+    return sim
+
+
+def _create_mock4_fuel_vat_cut() -> Reform:
+    """MOCK drill 4: temporary cut in VAT on road fuel."""
+    return Reform(
+        id="mock4_fuel_vat_cut",
+        name="MOCK: VAT cut on road fuel",
+        description=(
+            "MOCK. VAT on petrol and diesel falls from 20% to 15% from "
+            "1 December 2026 to 31 May 2027, fully passed through. Basis: "
+            "VAT only, cash, fiscal years, day-weighted (121/365 of 2026-27, "
+            "61/365 of 2027-28)."
+        ),
+        simulation_modifier=_mock4_fuel_vat_cut_modifier,
+    )
+
+
+MOCK4_EMPLOYER_NI_UNDER23_START_YEAR = 2027
+MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT = 23
+MOCK4_EMPLOYER_NI_UNDER23_EARNINGS_CAP = 25_000
+
+
+def _mock4_employer_ni_under23_modifier(sim: Simulation) -> Simulation:
+    """MOCK: no employer Class 1 NI on the first £25,000 for under-23s.
+
+    policyengine-uk 2.130.1 has only the single secondary threshold (no
+    age-based upper secondary threshold), so wrap ``ni_class_1_employer``
+    and, from 2027-28, take off employer rate x max(0, min(NI base, 25,000)
+    - secondary threshold) for anyone aged under 23. The NI base is the
+    native one (``ni_class_1_income``; employer pension contributions are
+    exempt by default, so salary sacrifice follows the native treatment).
+    No employer NI parameter changes, so ``employer_ni_fixed_employer_cost
+    _change`` passes nothing through to wages: household net income is
+    unchanged, and the national figure is gross employer NI in ``gov_tax``.
+    """
+    from uk_budget_data.measure_templates import (
+        _call_formula,
+        _replace_formula,
+    )
+
+    native = sim.tax_benefit_system.get_variable("ni_class_1_employer")
+
+    def formula(person, period, parameters):
+        current = _call_formula(native, person, period, parameters)
+        if period.start.year < MOCK4_EMPLOYER_NI_UNDER23_START_YEAR:
+            return current
+        class_1 = parameters(period).gov.hmrc.national_insurance.class_1
+        threshold = class_1.thresholds.secondary_threshold * 52
+        earnings = person("ni_class_1_income", period)
+        if not parameters(
+            period
+        ).gov.contrib.policyengine.employer_ni.exempt_employer_pension_contributions:
+            earnings = earnings + person(
+                "employer_pension_contributions", period
+            )
+        relieved_band = np.maximum(
+            0,
+            np.minimum(earnings, MOCK4_EMPLOYER_NI_UNDER23_EARNINGS_CAP)
+            - threshold,
+        )
+        age = person("age", period)
+        # Under-21s already have a zero rate (Annex A); the measure extends
+        # it to ages 21 and 22 only (costing note 12).
+        under_23 = (age >= 21) & (age < MOCK4_EMPLOYER_NI_UNDER23_AGE_LIMIT)
+        relief = np.where(under_23, class_1.rates.employer * relieved_band, 0)
+        return np.maximum(current - relief, 0)
+
+    _replace_formula(sim, "ni_class_1_employer", formula)
+    return sim
+
+
+def _create_mock4_employer_ni_under23() -> Reform:
+    """MOCK drill 4: employer NI relief for employees under 23."""
+    return Reform(
+        id="mock4_employer_ni_under23",
+        name="MOCK: Employer NI relief for under-23s",
+        description=(
+            "MOCK. From April 2027 employers pay no Class 1 secondary NI on "
+            "earnings up to £25,000 a year for employees aged under 23. "
+            "Basis: gross employer NI, cash, fiscal years; wages fixed, so "
+            "household net income is unchanged."
+        ),
+        simulation_modifier=_mock4_employer_ni_under23_modifier,
+    )
+
+
 def create_salary_sacrifice_cap_reform() -> Reform:
     """Create a salary sacrifice cap reform.
 
@@ -841,6 +1176,281 @@ _ALL_REFORMS_CACHE: list[Reform] | None = None
 _REFORM_LOOKUP_CACHE: dict[str, Reform] | None = None
 
 
+# =============================================================================
+# MOCK DRILL 4 (rehearsal only; invented measures, 19 October 2026)
+# =============================================================================
+# Model year Y is fiscal year Y to Y+1. Annual keys are day-weighted by hand
+# where a change falls inside a fiscal year (6 April to 5 April).
+
+MOCK4_ALL_YEARS = [2026, 2027, 2028, 2029, 2030, 2031]
+
+
+def _mock4_param(path: str, year: int):
+    from policyengine_uk.system import system
+
+    return system.parameters.get_child(path)(f"{year}-04-30")
+
+
+def _mock4_fiscal_year_means(
+    schedule: list[tuple[str, float]],
+) -> dict[str, float]:
+    """Day-weighted mean rate for each model year (6 April to 5 April)."""
+    from datetime import date
+
+    steps = [(date.fromisoformat(d), v) for d, v in schedule]
+    means = {}
+    for year in MOCK4_ALL_YEARS:
+        start, end = date(year, 4, 6), date(year + 1, 4, 6)
+        total = 0.0
+        for k, (d, v) in enumerate(steps):
+            nxt = steps[k + 1][0] if k + 1 < len(steps) else end
+            lo, hi = max(d, start), min(nxt, end)
+            if hi > lo:
+                total += (hi - lo).days * v
+        means[str(year)] = round(total / (end - start).days, 6)
+    return means
+
+
+# Annex A pre-measures fuel duty path, and the costing note 5 post-measure path.
+MOCK4_FUEL_DUTY_BASELINE = [
+    ("2026-03-23", 0.5295),
+    ("2027-01-01", 0.5595),
+    ("2027-03-01", 0.5795),
+    ("2027-04-01", 0.5980),
+    ("2028-04-01", 0.6159),
+    ("2029-04-01", 0.6338),
+    ("2030-04-01", 0.6515),
+    ("2031-04-01", 0.6697),
+]
+MOCK4_FUEL_DUTY_REFORM = [
+    ("2026-03-23", 0.5295),
+    ("2027-03-09", 0.5495),  # 14:20 inject: 9 March 2027, not 23 February,
+    ("2027-10-01", 0.5695),
+    ("2028-04-01", 0.5866),
+    ("2029-04-01", 0.6036),
+    ("2030-04-01", 0.6205),
+    ("2031-04-01", 0.6379),
+]
+
+
+def _create_mock4_fuel_duty() -> Reform:
+    path = "gov.hmrc.fuel_duty.petrol_and_diesel"
+    return Reform(
+        id="mock4_fuel_duty",
+        name="MOCK: fuel duty rises cancelled and restaged",
+        description=(
+            "MOCK drill 4. Fuel duty stays at 52.95p to 22 February 2027, "
+            "54.95p from 23 February 2027, 56.95p from 1 October 2027, then "
+            "the costing's RPI path from April 2028, against the Annex A "
+            "baseline. Duty only, excluding VAT."
+        ),
+        baseline_parameter_changes={
+            path: _mock4_fiscal_year_means(MOCK4_FUEL_DUTY_BASELINE)
+        },
+        parameter_changes={
+            path: _mock4_fiscal_year_means(MOCK4_FUEL_DUTY_REFORM)
+        },
+    )
+
+
+def _create_mock4_uc_child_element() -> Reform:
+    changes = {}
+    for path in [
+        "gov.dwp.universal_credit.elements.child.amount",
+        "gov.dwp.universal_credit.elements.child.first.higher_amount",
+    ]:
+        changes[path] = {
+            str(y): round(_mock4_param(path, y) + 12.50, 2)
+            for y in MOCK4_ALL_YEARS
+            if y >= 2027
+        }
+    return Reform(
+        id="mock4_uc_child_element",
+        name="MOCK: UC child element +£12.50 a month",
+        description="MOCK drill 4. UC child element +£12.50/month per child from April 2027.",
+        parameter_changes=changes,
+    )
+
+
+def _create_mock4_lha_reset() -> Reform:
+    freeze = {str(y): y != 2027 for y in MOCK4_ALL_YEARS if y >= 2027}
+    return Reform(
+        id="mock4_lha_reset",
+        name="MOCK: LHA reset to 30th percentile",
+        description=(
+            "MOCK drill 4. LHA rates in Great Britain reset to the 30th "
+            "percentile in April 2027, then frozen."
+        ),
+        parameter_changes={"gov.dwp.LHA.freeze": freeze},
+    )
+
+
+def _create_mock4_carers_allowance_limit() -> Reform:
+    return Reform(
+        id="mock4_carers_allowance_limit",
+        name="MOCK: Carer's Allowance earnings limit £230",
+        description="MOCK drill 4. Earnings limit £204 → £230 a week from April 2027.",
+        parameter_changes={
+            "gov.dwp.carers_allowance.earnings_limit": {
+                str(y): 230 for y in MOCK4_ALL_YEARS if y >= 2027
+            }
+        },
+    )
+
+
+def _create_mock4_cgt_higher_rate() -> Reform:
+    rates = {str(y): 0.26 for y in MOCK4_ALL_YEARS if y >= 2027}
+    return Reform(
+        id="mock4_cgt_higher_rate",
+        name="MOCK: CGT higher rate 26%",
+        description="MOCK drill 4. CGT higher rate 24% → 26% from 6 April 2027, incl. residential property.",
+        parameter_changes={
+            "gov.hmrc.cgt.higher_rate": rates,
+            "gov.hmrc.cgt.residential_property.higher_rate": dict(rates),
+            # 2.130.1 keeps separate additional rates (María, G1 note C10).
+            "gov.hmrc.cgt.additional_rate": dict(rates),
+            "gov.hmrc.cgt.residential_property.additional_rate": dict(rates),
+        },
+    )
+
+
+def _create_mock4_savings_starting_band() -> Reform:
+    return Reform(
+        id="mock4_savings_starting_band",
+        name="MOCK: savings starting-rate band £2,000",
+        description="MOCK drill 4. Starting rate band for savings £5,000 → £2,000 from April 2028.",
+        parameter_changes={
+            "gov.hmrc.income_tax.rates.savings_starter_rate.allowance": {
+                str(y): 2_000 for y in MOCK4_ALL_YEARS if y >= 2028
+            }
+        },
+    )
+
+
+def _create_mock4_threshold_freeze_2032() -> Reform:
+    """Costing note 1: PA, basic rate limit, PT, UEL, ST and the Class 4
+    limits held for 2031-32, against Annex A's CPI-indexed 2031-32 values."""
+    ni = "gov.hmrc.national_insurance"
+    held = {
+        "gov.hmrc.income_tax.allowances.personal_allowance.amount": (
+            12_570,
+            12_850,
+        ),
+        "gov.hmrc.income_tax.rates.uk[1].threshold": (37_700, 38_600),
+        f"{ni}.class_1.thresholds.primary_threshold": (241.73, 12_850 / 52),
+        f"{ni}.class_1.thresholds.upper_earnings_limit": (966.73, 51_450 / 52),
+        f"{ni}.class_1.thresholds.secondary_threshold": (
+            5_000 / 52,
+            5_110 / 52,
+        ),
+        f"{ni}.class_4.thresholds.lower_profits_limit": (12_570, 12_850),
+        f"{ni}.class_4.thresholds.upper_profits_limit": (50_270, 51_450),
+    }
+    return Reform(
+        id="mock4_threshold_freeze_2032",
+        name="MOCK: thresholds frozen to April 2032",
+        description=(
+            "MOCK drill 4. Personal Allowance, basic rate limit, NI primary "
+            "and secondary thresholds, UEL and Class 4 limits held at "
+            "2030-31 levels for 2031-32 (Annex A baseline indexes them)."
+        ),
+        baseline_parameter_changes={
+            path: {"2031": round(base, 6)} for path, (_, base) in held.items()
+        },
+        parameter_changes={
+            path: {"2031": round(frozen, 6)}
+            for path, (frozen, _) in held.items()
+        },
+    )
+
+
+def _get_mock4_reforms() -> list[Reform]:
+    return [
+        _create_mock4_fuel_duty(),
+        _create_mock4_uc_child_element(),
+        _create_mock4_lha_reset(),
+        _create_mock4_carers_allowance_limit(),
+        _create_mock4_cgt_higher_rate(),
+        _create_mock4_savings_starting_band(),
+        _create_mock4_threshold_freeze_2032(),
+        _create_mock4_whd_topup(),
+        _create_mock4_cb_early_years_addition(),
+        _create_mock4_state_pension_topup_allowance(),
+        _create_mock4_fuel_vat_cut(),
+        _create_mock4_employer_ni_under23(),
+    ]
+
+
+def _create_mock4_combined() -> Reform:
+    """MOCK drill 4 package: every coded mock4 measure on one simulation.
+
+    Refuses a stack (two measures setting the same parameter path)."""
+    measures = _get_mock4_reforms()
+    params: dict = {}
+    baseline: dict = {}
+    modifiers = []
+    for measure in measures:
+        for path, values in (measure.baseline_parameter_changes or {}).items():
+            if path in baseline:
+                raise ValueError(
+                    f"mock4_combined: baseline {path} is set twice"
+                )
+            baseline[path] = values
+        for path, values in (measure.parameter_changes or {}).items():
+            if path in params:
+                raise ValueError(f"mock4_combined: {path} is set twice")
+            params[path] = values
+        if measure.simulation_modifier is not None:
+            modifiers.append(measure.simulation_modifier)
+
+    def combined_modifier(sim):
+        for modifier in modifiers:
+            sim = modifier(sim) or sim
+        return sim
+
+    return Reform(
+        id="mock4_combined",
+        name="MOCK: drill 4 package",
+        description="MOCK drill 4. All coded measures together.",
+        baseline_parameter_changes=baseline or None,
+        parameter_changes=params,
+        simulation_modifier=combined_modifier if modifiers else None,
+    )
+
+
+def _create_mock4_stack_1_3_7() -> Reform:
+    """MOCK drill 4 scored row 1+3+7: thresholds, SPTA and savings band
+    together (2031-32 is the scored year)."""
+    keep = {
+        "mock4_threshold_freeze_2032",
+        "mock4_state_pension_topup_allowance",
+        "mock4_savings_starting_band",
+    }
+    measures = [m for m in _get_mock4_reforms() if m.id in keep]
+    params: dict = {}
+    baseline: dict = {}
+    modifiers = []
+    for measure in measures:
+        baseline.update(measure.baseline_parameter_changes or {})
+        params.update(measure.parameter_changes or {})
+        if measure.simulation_modifier is not None:
+            modifiers.append(measure.simulation_modifier)
+
+    def stack_modifier(sim):
+        for modifier in modifiers:
+            sim = modifier(sim) or sim
+        return sim
+
+    return Reform(
+        id="mock4_stack_1_3_7",
+        name="MOCK: stack of measures 1, 3 and 7",
+        description="MOCK drill 4. Measures 1, 3 and 7 together (scored row 1+3+7).",
+        baseline_parameter_changes=baseline or None,
+        parameter_changes=params,
+        simulation_modifier=stack_modifier,
+    )
+
+
 def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -856,6 +1466,9 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             _create_property_tax_increase(),
             get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
+            _create_mock4_combined(),
+            *_get_mock4_reforms(),
+            _create_mock4_stack_1_3_7(),
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
