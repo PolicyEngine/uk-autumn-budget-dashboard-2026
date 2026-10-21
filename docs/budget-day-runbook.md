@@ -183,6 +183,32 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
+**A State Pension measure (the basic or new State Pension's full rate, or the triple lock) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved, with the reason stated** (the UK hub, via the coordinator, 21 October).
+- **Why:** in law, additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by September CPI, not with the full rates.
+  - The 2026 Up-rating Order (SI 2026/148, articles 4(3) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates.
+  - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So a change to the full rates, or to the triple lock, moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
+  - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone under a reform to the full rates. As of 21 October it is open; the UK hub expects it to land shortly.
+- **How much, on uk-data 1.58.1, from #2336's own runs:**
+  - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix, and the net cost is £0.76bn to £1.11bn a year lower;
+  - in the baseline, State Pension falls by £353m in 2025-26 and by £782m in 2030-31.
+
+  So without the fix, a 10% rise's net cost is overstated by about £0.8bn to £1.1bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
+- **The check, at G0 for the adopted pair and again before a State Pension measure is staged:**
+
+  ```sh
+  uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text())"
+  ```
+
+  `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once #2336 is released, the first policyengine-uk version with it can be checked instead.
+- **Which measures:** any change, in `parameter_changes` or a modifier, to:
+  - `gov.dwp.state_pension.basic_state_pension.amount`;
+  - `gov.dwp.state_pension.new_state_pension.amount`;
+  - anything under `gov.dwp.state_pension.triple_lock`.
+- **If the check prints `False`:** stage the measure provisional, not approved. The reason to record is: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair".
+  - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
+  - **G4:** it holds up the combined run, as a provisional CGT measure does ("Which ids" at G4).
+- **With the fix,** a measure that also raises the add-on itself, above September CPI, needs a change to `additional_state_pension`; a rate change alone no longer reaches it. This is the law: the Orders raise the add-on by prices only.
+
 **Dated changes: key every year by its bare fiscal year.**
 
 | Key | What it means | Use it? |
@@ -330,7 +356,7 @@ uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
-- **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
+- **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
