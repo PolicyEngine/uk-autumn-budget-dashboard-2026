@@ -376,7 +376,9 @@ uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
-- **Results by area** (`uk-budget-data geography`): leave out of `--reforms` any measure that is not computable, or held by hand under "Held by default" above, and any package including it. With #76 the command refuses a reform that records a data limit: it names it and writes no table. A measure held only by hand records no data limit, so #76 can't catch it: leaving it out stays the Reconciler's check.
+- **Results by area** (`uk-budget-data geography`): leave out of `--reforms` any measure that is not computable, or held by hand under "Held by default" above, and any package including it.
+  - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
+  - **What it doesn't:** it reads no receipts, holds or ledger, so the Reconciler still checks the list. A measure held only by hand records no data limit. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
