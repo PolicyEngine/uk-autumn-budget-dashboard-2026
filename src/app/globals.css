@@ -700,3 +700,73 @@ code {
     width: 100%;
   }
 }
+
+/* Compact site footer (see SiteFooter.jsx): one row on desktop, in place of
+   the ui-kit shell's taller stacked footer. */
+.site-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  background: linear-gradient(to right, #234e52, #2c7a7b);
+}
+
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+}
+
+.site-footer-logo img {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+}
+
+.site-footer-links a {
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.site-footer-links a:hover {
+  opacity: 0.8;
+}
+
+.site-footer-copy {
+  margin: 0 0 0 auto;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 1024px) {
+  .site-footer-inner {
+    padding: 20px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 16px;
+  }
+
+  .site-footer-links {
+    gap: 6px 16px;
+  }
+
+  .site-footer-copy {
+    margin: 0;
+  }
+}

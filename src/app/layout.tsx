@@ -3,6 +3,7 @@ import "@policyengine/ui-kit/styles.css";
 
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import SiteFooter from '@/components/SiteFooter';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
@@ -42,7 +43,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <PolicyEngineShell country="uk">{children}        </PolicyEngineShell>
+        <PolicyEngineShell country="uk" showFooter={false}>
+          {children}
+          <SiteFooter />
+        </PolicyEngineShell>
       </body>
     </html>
   );
