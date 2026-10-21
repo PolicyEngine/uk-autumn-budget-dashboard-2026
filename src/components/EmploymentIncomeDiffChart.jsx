@@ -14,6 +14,14 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
+import {
+  useNarrowViewport,
+  GRID_PROPS,
+  TICK_STYLE,
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  TOOLTIP_CONTENT_STYLE,
+} from "../utils/chartTheme";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -33,6 +41,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const chartRef = useRef(null);
+  const narrow = useNarrowViewport();
 
   const chartTitle = `Net income change, ${formatYearRange(selectedYear)}`;
 
@@ -190,48 +199,52 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={430}>
+        <ResponsiveContainer width="100%" height={narrow ? 380 : 430}>
           <AreaChart
             data={data}
-            margin={{ top: 25, right: 30, left: 20, bottom: 60 }}
+            margin={
+              narrow
+                ? { top: 12, right: 20, left: 0, bottom: 34 }
+                : // Bottom space matches the legend of the chart beside it,
+                  // so the two x-axes line up.
+                  { top: 16, right: 24, left: 8, bottom: 47 }
+            }
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="employment"
               type="number"
+              axisLine={AXIS_LINE}
+              tickLine={false}
               label={{
                 value: "Household head employment income",
                 position: "insideBottom",
-                offset: -5,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 13,
-                  fontWeight: 500,
-                },
+                offset: 4,
+                style: AXIS_TITLE_STYLE,
               }}
               tickFormatter={formatCurrency}
-              tick={{ fontSize: 12, fill: "#6b7280" }}
-              height={60}
+              tick={TICK_STYLE}
+              height={48}
               ticks={[0, 20000, 40000, 60000, 80000, 100000]}
               domain={[0, 100000]}
             />
             <YAxis
-              label={{
-                value: "Change in net income",
-                angle: -90,
-                position: "insideLeft",
-                dx: 10,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 13,
-                  fontWeight: 500,
-                },
-              }}
+              axisLine={false}
+              tickLine={false}
+              label={
+                narrow
+                  ? undefined
+                  : {
+                      value: "Change in net income",
+                      angle: -90,
+                      position: "insideLeft",
+                      dx: 6,
+                      style: AXIS_TITLE_STYLE,
+                    }
+              }
               tickFormatter={formatCurrency}
-              tick={{ fontSize: 12, fill: "#6b7280" }}
-              width={80}
+              tick={TICK_STYLE}
+              width={narrow ? 52 : 76}
               domain={[-yMax, yMax]}
             />
             <Tooltip
@@ -242,13 +255,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
               labelFormatter={(label) =>
                 `Employment income: ${formatCurrency(label)}`
               }
-              contentStyle={{
-                background: "white",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                padding: "12px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
               labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
             />
             <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />

@@ -16,45 +16,20 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import { POLICY_COLORS, ALL_POLICY_NAMES } from "../utils/policyConfig";
+import {
+  useNarrowViewport,
+  GRID_PROPS,
+  TICK_STYLE,
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  chartMargin,
+  legendWrapperStyle,
+  legendLabelStyle,
+  TOOLTIP_CONTENT_STYLE,
+  fiscalYearTick,
+} from "../utils/chartTheme";
 import "./BudgetaryImpactChart.css";
 import "./ChartExport.css";
-
-// Custom label component for net impact values
-const NetImpactLabel = (props) => {
-  const { x, y, value } = props;
-
-  const formattedValue =
-    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
-  const yOffset = value >= 0 ? -20 : 28;
-
-  return (
-    <g>
-      {/* White background for readability */}
-      <rect
-        x={x - 32}
-        y={y + yOffset - 10}
-        width={64}
-        height={18}
-        fill="white"
-        rx={3}
-        ry={3}
-        stroke="#000000"
-        strokeWidth={1}
-      />
-      <text
-        x={x}
-        y={y + yOffset}
-        fill="#000000"
-        fontSize={13}
-        fontWeight={700}
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
-        {formattedValue}
-      </text>
-    </g>
-  );
-};
 
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
@@ -63,6 +38,7 @@ const CHART_DESCRIPTION =
 
 function BudgetaryImpactChart({ data }) {
   const chartRef = useRef(null);
+  const narrow = useNarrowViewport();
 
   if (!data || data.length === 0) return null;
 
@@ -78,9 +54,22 @@ function BudgetaryImpactChart({ data }) {
 
   const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
 
-  // Fixed y-axis domain to ensure 0 is always a tick mark
-  // Narrowed to +/-10bn for the 3 announced policies
-  const yAxisDomain = [-10, 10];
+  // Y-axis domain: at least +/-10bn, widened to the next £5bn so the
+  // tallest stacked bar sits under the top tick rather than above it.
+  const stackExtent = (sign) =>
+    Math.max(
+      0,
+      ...data.map((d) =>
+        ALL_POLICY_NAMES.reduce((sum, name) => {
+          const v = d[name] || 0;
+          return sign * v > 0 ? sum + Math.abs(v) : sum;
+        }, 0),
+      ),
+    );
+  const yAxisDomain = [
+    -Math.max(10, Math.ceil(stackExtent(-1) / 5) * 5),
+    Math.max(10, Math.ceil(stackExtent(1) / 5) * 5),
+  ];
 
   // Build legend items for export - include ALL policies for consistency across exports
   const legendItems = [
@@ -140,34 +129,39 @@ function BudgetaryImpactChart({ data }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={narrow ? 420 : 400}>
           <ComposedChart
             data={data}
-            margin={{ top: 15, right: 20, left: 70, bottom: 15 }}
+            margin={chartMargin(narrow, { left: 60 })}
             stackOffset="sign"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="year"
-              tick={{ fontSize: 11, fill: "#666" }}
-              tickFormatter={(year) => `${year}-${(year + 1).toString().slice(-2)}`}
+              tick={TICK_STYLE}
+              axisLine={AXIS_LINE}
+              tickLine={false}
+              interval={0}
+              tickFormatter={fiscalYearTick}
             />
             <YAxis
               domain={yAxisDomain}
-              label={{
-                value: "Impact (£bn)",
-                angle: -90,
-                position: "insideLeft",
-                dx: -30,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 12,
-                  fontWeight: 500,
-                },
-              }}
+              width={narrow ? 48 : 60}
+              axisLine={false}
+              tickLine={false}
+              label={
+                narrow
+                  ? undefined
+                  : {
+                      value: "Impact (£bn)",
+                      angle: -90,
+                      position: "insideLeft",
+                      dx: -20,
+                      style: AXIS_TITLE_STYLE,
+                    }
+              }
               tickFormatter={formatCurrencyTick}
-              tick={{ fontSize: 11, fill: "#666" }}
+              tick={TICK_STYLE}
               interval={0}
               ticks={(() => {
                 const [min, max] = yAxisDomain;
@@ -186,12 +180,8 @@ function BudgetaryImpactChart({ data }) {
                 formatCurrencyTooltip(value),
                 name === "netImpact" ? "Net impact" : name,
               ]}
-              labelFormatter={(year) => `${year}-${(year + 1).toString().slice(-2)}`}
-              contentStyle={{
-                background: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-              }}
+              labelFormatter={fiscalYearTick}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
               wrapperStyle={{
                 top: "-120px",
                 left: "50%",
@@ -200,16 +190,11 @@ function BudgetaryImpactChart({ data }) {
               cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
             />
             <Legend
-              wrapperStyle={{ paddingTop: "20px", paddingRight: "140px" }}
+              wrapperStyle={legendWrapperStyle(narrow)}
               iconType="rect"
+              iconSize={10}
               formatter={(value) => (
-                <span
-                  style={{
-                    color: "#374151",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                  }}
-                >
+                <span style={legendLabelStyle(narrow)}>
                   {value === "netImpact" ? "Net impact" : value}
                 </span>
               )}
@@ -246,12 +231,11 @@ function BudgetaryImpactChart({ data }) {
               type="monotone"
               dataKey="netImpact"
               stroke="#000000"
-              strokeWidth={3}
-              dot={{ fill: "#000000", stroke: "#000000", strokeWidth: 1, r: 3 }}
+              strokeWidth={2}
+              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 4 }}
               name="netImpact"
               animationDuration={500}
               hide={activePolicies.length <= 1}
-              label={activePolicies.length > 1 ? <NetImpactLabel /> : false}
             />
             <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
             <Customized component={PolicyEngineLogo} />

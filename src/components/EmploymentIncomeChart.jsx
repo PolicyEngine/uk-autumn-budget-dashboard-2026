@@ -14,6 +14,16 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./EmploymentIncomeChart.css";
 import "./ChartExport.css";
+import {
+  useNarrowViewport,
+  GRID_PROPS,
+  TICK_STYLE,
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  legendWrapperStyle,
+  legendLabelStyle,
+  TOOLTIP_CONTENT_STYLE,
+} from "../utils/chartTheme";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -33,6 +43,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const chartRef = useRef(null);
+  const narrow = useNarrowViewport();
 
   const chartTitle = `Household net income analysis, ${formatYearRange(selectedYear)}`;
 
@@ -178,48 +189,50 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={430}>
+        <ResponsiveContainer width="100%" height={narrow ? 420 : 430}>
           <LineChart
             data={data}
-            margin={{ top: 25, right: 30, left: 20, bottom: 60 }}
+            margin={
+              narrow
+                ? { top: 12, right: 20, left: 0, bottom: 8 }
+                : { top: 16, right: 24, left: 8, bottom: 8 }
+            }
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="employment"
               type="number"
+              axisLine={AXIS_LINE}
+              tickLine={false}
               label={{
                 value: "Household head employment income",
                 position: "insideBottom",
-                offset: -5,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 13,
-                  fontWeight: 500,
-                },
+                offset: 4,
+                style: AXIS_TITLE_STYLE,
               }}
               tickFormatter={formatCurrency}
-              tick={{ fontSize: 12, fill: "#6b7280" }}
-              height={60}
+              tick={TICK_STYLE}
+              height={48}
               ticks={[0, 20000, 40000, 60000, 80000, 100000]}
               domain={[0, 100000]}
             />
             <YAxis
-              label={{
-                value: "Household net income",
-                angle: -90,
-                position: "insideLeft",
-                dx: 10,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 13,
-                  fontWeight: 500,
-                },
-              }}
+              axisLine={false}
+              tickLine={false}
+              label={
+                narrow
+                  ? undefined
+                  : {
+                      value: "Household net income",
+                      angle: -90,
+                      position: "insideLeft",
+                      dx: 6,
+                      style: AXIS_TITLE_STYLE,
+                    }
+              }
               tickFormatter={formatCurrency}
-              tick={{ fontSize: 12, fill: "#6b7280" }}
-              width={80}
+              tick={TICK_STYLE}
+              width={narrow ? 52 : 76}
               ticks={[0, 20000, 40000, 60000, 80000]}
               domain={[0, 80000]}
             />
@@ -228,33 +241,15 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
               labelFormatter={(label) =>
                 `Employment income: ${formatCurrency(label)}`
               }
-              contentStyle={{
-                background: "white",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                padding: "12px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
               labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
             />
             <Legend
-              wrapperStyle={{
-                paddingTop: "15px",
-                paddingBottom: "0px",
-                paddingRight: "140px",
-              }}
+              wrapperStyle={legendWrapperStyle(narrow)}
               iconType="line"
               iconSize={18}
               formatter={(value) => (
-                <span
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    color: "#374151",
-                  }}
-                >
-                  {value}
-                </span>
+                <span style={legendLabelStyle(narrow)}>{value}</span>
               )}
               verticalAlign="bottom"
               align="center"
@@ -263,7 +258,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
               type="monotone"
               dataKey="baseline"
               stroke="#9CA3AF"
-              strokeWidth={3}
+              strokeWidth={2.5}
               dot={false}
               name="Pre-Autumn Budget"
               animationDuration={500}
@@ -273,7 +268,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
               type="monotone"
               dataKey="reform"
               stroke="#319795"
-              strokeWidth={3}
+              strokeWidth={2.5}
               strokeDasharray="8 4"
               dot={false}
               name="Post-Autumn Budget"

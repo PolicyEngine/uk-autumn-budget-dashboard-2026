@@ -17,6 +17,17 @@ import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import { POLICY_COLORS } from "../utils/policyConfig";
 import "./WaterfallChart.css";
 import "./ChartExport.css";
+import {
+  useNarrowViewport,
+  GRID_PROPS,
+  TICK_STYLE,
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  chartMargin,
+  legendWrapperStyle,
+  legendLabelStyle,
+  TOOLTIP_CONTENT_STYLE,
+} from "../utils/chartTheme";
 
 // Order for waterfall chart: good for households first, then bad
 const ALL_POLICY_NAMES = [
@@ -42,6 +53,7 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const chartRef = useRef(null);
+  const narrow = useNarrowViewport();
 
   // Build chart data for internal year
   const POLICIES = [
@@ -251,39 +263,45 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={420}>
+        <ResponsiveContainer width="100%" height={narrow ? 460 : 480}>
           <ComposedChart
             data={data}
-            margin={{ top: 20, right: 30, left: 70, bottom: 20 }}
+            margin={chartMargin(narrow, { left: 64 })}
             stackOffset="sign"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+            <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="decile"
-              tick={{ fontSize: 11, fill: "#666" }}
+              tick={TICK_STYLE}
+              axisLine={AXIS_LINE}
+              tickLine={false}
+              interval={0}
+              height={44}
               label={{
                 value: "Income decile",
                 position: "insideBottom",
-                offset: -10,
-                style: { fill: "#374151", fontSize: 12, fontWeight: 500 },
+                offset: 2,
+                style: AXIS_TITLE_STYLE,
               }}
             />
             <YAxis
               domain={yAxisDomain}
               tickFormatter={formatCurrency}
-              tick={{ fontSize: 11, fill: "#666" }}
-              label={{
-                value: "Average change per household (£)",
-                angle: -90,
-                position: "insideLeft",
-                dx: -30,
-                style: {
-                  textAnchor: "middle",
-                  fill: "#374151",
-                  fontSize: 12,
-                  fontWeight: 500,
-                },
-              }}
+              tick={TICK_STYLE}
+              width={narrow ? 52 : 60}
+              axisLine={false}
+              tickLine={false}
+              label={
+                narrow
+                  ? undefined
+                  : {
+                      value: "Average change per household (£)",
+                      angle: -90,
+                      position: "insideLeft",
+                      dx: -16,
+                      style: AXIS_TITLE_STYLE,
+                    }
+              }
               ticks={(() => {
                 const [min, max] = yAxisDomain;
                 const range = max - min;
@@ -299,19 +317,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
                 return ticks.sort((a, b) => a - b);
               })()}
             />
-            <ReferenceLine y={0} stroke="#666" strokeWidth={1} />
+            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
             <Tooltip
               formatter={(value, name) => [
                 formatCurrency(value),
                 name === "netChange" ? "Net change" : name,
               ]}
               labelFormatter={(label) => `Decile: ${label}`}
-              contentStyle={{
-                background: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
               wrapperStyle={{
                 top: "-120px",
                 left: "50%",
@@ -320,18 +333,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
               cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
             />
             <Legend
-              wrapperStyle={{ paddingTop: "20px", paddingRight: "140px" }}
+              wrapperStyle={legendWrapperStyle(narrow)}
               iconType="rect"
+              iconSize={10}
               formatter={(value) => (
-                <span
-                  style={{
-                    color: "#374151",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {value}
-                </span>
+                <span style={legendLabelStyle(narrow)}>{value}</span>
               )}
               payload={[
                 ...ALL_POLICY_NAMES.map((name) => ({
@@ -366,8 +372,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
               type="monotone"
               dataKey="netChange"
               stroke="#000000"
-              strokeWidth={3}
-              dot={{ fill: "#000000", stroke: "#000000", strokeWidth: 1, r: 3 }}
+              strokeWidth={2}
+              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
               name="netChange"
               animationDuration={500}
               hide={activePolicies.length <= 1}
