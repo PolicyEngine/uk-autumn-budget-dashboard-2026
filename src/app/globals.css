@@ -231,9 +231,11 @@ code {
 }
 
 /* In-page section navigation: sticky links on desktop, select on phone */
+/* The ui-kit shell's header is itself sticky (58px), so the section nav
+   docks just below it. */
 .section-nav {
   position: sticky;
-  top: 0;
+  top: var(--dashboard-shell-header-height, 58px);
   z-index: 50;
   margin: 0 0 24px;
   background: rgba(255, 255, 255, 0.96);
@@ -309,7 +311,8 @@ code {
 
 /* Sections */
 .report-section {
-  scroll-margin-top: 64px;
+  /* Clear the shell header and the section nav when jumping to a section */
+  scroll-margin-top: 120px;
 }
 
 .hero-chart {
@@ -647,6 +650,10 @@ code {
 
   .section-nav-links {
     display: none;
+  }
+
+  .report-section {
+    scroll-margin-top: 74px;
   }
 
   .section-nav-select {
