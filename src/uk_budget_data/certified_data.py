@@ -15,8 +15,9 @@ manifest.
 
 Usage::
 
-    HUGGING_FACE_TOKEN=... uv run python -m uk_budget_data.certified_data \
-        [--also DATASET ...]
+    HUGGING_FACE_TOKEN=... uv run python -m uk_budget_data.certified_data
+
+``--also DATASET``, which may be repeated, checks an overlay dataset as well.
 """
 
 import argparse
