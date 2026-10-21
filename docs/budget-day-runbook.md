@@ -426,8 +426,14 @@ An approval or an exception carries over only where the outputs are byte-identic
 ## A model upgrade during the day (no freeze)
 
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
-- **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile and approve.
-- **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then re-run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
+- **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
+  - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
+  - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
+- **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
+- **Approve once the household checks pass on the new release.**
+  - **The alternative:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`), so the Approver can approve on the upgrade branch, before merging.
+  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional. But it approves figures before any household check has run on the new release.
+  - **Your call** which order to use on the day.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -501,9 +507,10 @@ Exports are built only from approved entries of one manifest revision. A measure
 
   Then re-run the household check against the live route.
 - **A model release.** To go back to the previous bundle after an upgrade:
-  1. Revert the upgrade's merge through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`), and merge it. An upgrade PR changes only `uv.lock` and `pyproject.toml`, so the revert restores exactly the previous pair; keep it that way, and put anything else an upgrade needs in its own PR.
-  2. Merging the revert doesn't redeploy the household API (see "A model upgrade during the day"). Run the workflow's `rollback` to the last revision on the previous release, or `deploy` the reverted `main`. A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
-  3. Regenerate every published measure and the combined run on the previous release, and stage the first with `--adopt-execution`, as for an upgrade. Every other entry becomes stale until it is re-staged. Reconcile and approve again.
+  1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes. Check that nothing merged since depends on what is reverted.
+  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
 
 ## Clock
 
