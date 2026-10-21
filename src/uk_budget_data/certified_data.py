@@ -268,16 +268,19 @@ def _git_file_sha256(api, artifact: Artifact, info, token: str) -> str:
                 repo_type=artifact.repo_type,
                 token=token,
                 local_dir=directory,
-                # A copy already in the cache is not what the pin names.
-                force_download=True,
             )
         except (HfHubHTTPError, LocalEntryNotFoundError) as error:
             # huggingface_hub reports a plain 403, a server error or a
-            # network failure as LocalEntryNotFoundError, with the HTTP
-            # error as its cause.
-            cause = error.__cause__ if error.__cause__ is not None else error
+            # network failure as LocalEntryNotFoundError, with the HTTP or
+            # connection error as its cause, which says what happened.
+            # (force_download is not passed: with it, the library turns
+            # these into a bare ValueError. Whatever bytes are hashed must
+            # equal the pin, so a cached copy that matches is the file.)
+            cause = error
+            if isinstance(error, LocalEntryNotFoundError) and error.__cause__:
+                cause = error.__cause__
             raise CertifiedDataAccessError(
-                f"The token cannot download {where}: {_reason(cause)}. "
+                f"Could not download {where}: {_reason(cause)}. "
                 f"{ACCESS_HINT}"
             ) from error
         digest = hashlib.sha256()
