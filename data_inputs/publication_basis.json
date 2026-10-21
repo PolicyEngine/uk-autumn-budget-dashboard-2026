@@ -6,7 +6,7 @@
   },
   "calibration": {
     "status": "pre_budget",
-    "source": "policyengine-uk-data, the release pinned by the installed policyengine bundle",
+    "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
     "vintage": "as pinned by the installed bundle"
   },
   "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."

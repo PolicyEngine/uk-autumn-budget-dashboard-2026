@@ -426,7 +426,8 @@ An approval or an exception carries over only where the outputs are byte-identic
 ## A model upgrade during the day (no freeze)
 
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
-- **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile, approve, redeploy the household API and re-run the household checks.
+- **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile and approve.
+- **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then re-run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -479,7 +480,7 @@ Exports are built only from approved entries of one manifest revision. A measure
 
 - **Dashboard.**
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
-  2. `git revert` the bad merge through a pull request, and wait for its deployment to build.
+  2. Revert the bad merge through a pull request, and wait for its deployment to build. This repository merges with merge commits, so use GitHub's Revert button or `git revert -m 1 <merge>`; a plain `git revert` of a merge commit fails.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
 - **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). The rollback runs as its own Cloud Build pipeline, and only one deploy or rollback runs at a time, however it was started. The pipeline:
   - accepts only a ready revision whose own deploy build succeeded. That build must be of a commit on `main`, and must have pushed the exact image the revision runs (checked against Cloud Build's record, not only the revision's labels);
@@ -499,6 +500,10 @@ Exports are built only from approved entries of one manifest revision. A measure
   ```
 
   Then re-run the household check against the live route.
+- **A model release.** To go back to the previous bundle after an upgrade:
+  1. Revert the upgrade's merge through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`), and merge it. An upgrade PR changes only `uv.lock` and `pyproject.toml`, so the revert restores exactly the previous pair; keep it that way, and put anything else an upgrade needs in its own PR.
+  2. Merging the revert doesn't redeploy the household API (see "A model upgrade during the day"). Run the workflow's `rollback` to the last revision on the previous release, or `deploy` the reverted `main`. A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  3. Regenerate every published measure and the combined run on the previous release, and stage the first with `--adopt-execution`, as for an upgrade. Every other entry becomes stale until it is re-staged. Reconcile and approve again.
 
 ## Clock
 
