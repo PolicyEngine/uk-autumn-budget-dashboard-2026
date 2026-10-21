@@ -47,7 +47,10 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Frontend build, tests and lint.
 
   Force-push and deletion are blocked. Org admins can bypass through a pull request, and the policyengine App always. Whether to require Publication gate too is your call (question 3 in `budget-day-publication.md`).
-- [ ] **Household fixtures: add at least one before the rehearsal.** On `main`, `data_inputs/household_fixtures/` (#15) holds only its README and a draft example (`example-zero-income.json`, marked `"draft": true`), which the checker skips. The check passes only when it has checked at least one fixture, so until one exists the household check exits 1 at G0, G2 and G4. Each fixture needs answers computed independently of the API; the README says how. Proposed: María's specimen households.
+- [ ] **Household fixtures: specimen households before the rehearsal.** `data_inputs/household_fixtures/` (#15) holds its README, a draft example (`example-zero-income.json`, marked `"draft": true`, which the checker skips) and the plumbing fixture (#65).
+  - **The plumbing fixture** is a single employee on £12,000. It checks that the route answers on the bundle's versions, with the response's shape, and that seven of the eight measures change a household they can't reach by £0, with no measure giving it Universal Credit. It checks no non-zero answer.
+  - **It is enough for the check to pass.** The check passes once it has checked at least one non-draft fixture, so with the plumbing fixture alone the household check passes at G0, G2 and G4. The checker doesn't require a fixture for each measure.
+  - **The accuracy check is still to come:** specimen households whose non-zero answers are computed independently of the API (the README says how), at least one reached by each measure. Proposed: María's specimen households. Whether the checker should refuse to pass until every measure has one is your call.
 - [ ] **Nothing published says 2025.** The repository began as a copy of last year's dashboard. Checked on 13 October against `main` (93d0609) and #3; the first two rows re-checked on 19 October against `main` (5324080):
 
   | Where | What it says | Shown today? | Who fixes it |
@@ -240,7 +243,7 @@ Record in the clock table:
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`).
 
-**The gate fails** if any command fails, or the API's versions differ from the bundle's. Until a non-draft household fixture exists, the household check exits 1 (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
+**The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check passes on plumbing alone and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
 ## G1: coverage (12:30 to 12:45)
 
