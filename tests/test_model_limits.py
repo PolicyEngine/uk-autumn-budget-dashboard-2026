@@ -168,11 +168,12 @@ UPRATING_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs"
 )
 def test_an_uprating_input_that_moves_the_full_rates_records_them(changes):
     """By effect: the triple lock is built from these inputs, so the full
-    rates' stored amounts move, and those are what is recorded (#71's
-    review found a 10% earnings input moved a pensioner's add-on)."""
-    assert limits_touched(simulation(), simulation(changes)) == [
-        record(LIMIT, [BASIC_PENSION, NEW_PENSION])
-    ]
+    rates' stored amounts move and are recorded (#71's review found a 10%
+    earnings input moved a pensioner's add-on). A CPI input also moves the
+    September CPI index, recorded too."""
+    (touched,) = limits_touched(simulation(), simulation(changes))
+    assert touched["key"] == LIMIT.key
+    assert {BASIC_PENSION, NEW_PENSION} <= set(touched["parameters"])
 
 
 def test_a_change_to_the_cached_views_alone_records_it():
@@ -547,3 +548,279 @@ def test_the_flat_pipeline_says_when_this_model_overstates_a_measure(
     assert out.count("OVERSTATED BY THIS MODEL") == 1
     assert "Pension rise: The installed model" in out
     assert "Income: The installed model" not in out
+
+
+# --- review of #73, round 1 ----------------------------------------------------
+
+CPI_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
+CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+
+
+def named_only_formula(person, period, parameters):
+    """Names the index (september_cpi_uprating) but never reads it."""
+    # TODO: uprate by september_cpi_uprating
+    unused = "gov.economic_assumptions.indices.september_cpi_uprating"
+    del unused
+    return person("age", period) * 0
+
+
+def ignoring_formula(person, period, parameters):
+    return person("age", period) * 0
+
+
+def reading_formula(person, period, parameters):
+    index = parameters(
+        period
+    ).gov.economic_assumptions.indices.september_cpi_uprating
+    return person("age", period) * 0 * index
+
+
+def with_formulas(**formulas):
+    """A modifier installing an ``additional_state_pension`` whose own class
+    carries exactly these formulas. (A subclass with no formulas of its own
+    keeps the baseline's: core merges a reform variable's formulas with the
+    baseline's before its first date.)"""
+    variable = type(
+        "additional_state_pension",
+        (Variable,),
+        {
+            "entity": Person,
+            "definition_period": YEAR,
+            "value_type": float,
+            "label": "Additional State Pension (a stand-in)",
+            **formulas,
+        },
+    )
+
+    def modifier(sim):
+        sim.tax_benefit_system.update_variable(variable)
+
+    return modifier
+
+
+def installed_formulas(sim):
+    variable = sim.tax_benefit_system.variables["additional_state_pension"]
+    return {date: f.__name__ for date, f in variable.formulas.items()}
+
+
+def test_naming_the_index_without_reading_it_is_not_the_fix():
+    """Review of #73, finding A: a comment, docstring or string naming the
+    index counted as fixed, so the guard would lift itself."""
+    sim = simulation(modifier=with_formulas(formula=named_only_formula))
+    assert installed_formulas(sim) == {"0001-01-01": "named_only_formula"}
+    assert LIMIT.fixed(sim.tax_benefit_system) is False
+    reading = simulation(modifier=with_formulas(formula=reading_formula))
+    assert LIMIT.fixed(reading.tax_benefit_system) is True
+
+
+def test_every_dated_formula_must_read_the_index():
+    """Fixed only from 2026 is not fixed: the formula before then still
+    rises with the full rates."""
+    sim = simulation(
+        modifier=with_formulas(
+            formula=ignoring_formula, formula_2026=reading_formula
+        )
+    )
+    assert installed_formulas(sim) == {
+        "0001-01-01": "ignoring_formula",
+        "2026-01-01": "reading_formula",
+    }
+    assert LIMIT.fixed(sim.tax_benefit_system) is False
+
+
+def installed_source(monkeypatch, tmp_path, text):
+    """Point the installed-model check at a file holding ``text``."""
+    path = tmp_path / "additional_state_pension.py"
+    path.write_text(text, encoding="utf-8")
+
+    class Root:
+        def joinpath(self, *parts):
+            return path
+
+    monkeypatch.setattr(model_limits, "files", lambda package: Root())
+
+
+def test_the_installed_check_reads_the_formula_not_the_text(
+    monkeypatch, tmp_path
+):
+    installed_source(
+        monkeypatch,
+        tmp_path,
+        "class additional_state_pension:\n"
+        "    def formula(person, period, parameters):\n"
+        "        # september_cpi_uprating\n"
+        "        return 'september_cpi_uprating'\n",
+    )
+    assert LIMIT.installed_fixed() is False
+    installed_source(
+        monkeypatch,
+        tmp_path,
+        "class additional_state_pension:\n"
+        "    def formula(person, period, parameters):\n"
+        "        return parameters(period).gov.economic_assumptions"
+        ".indices.september_cpi_uprating\n",
+    )
+    assert LIMIT.installed_fixed() is True
+    # Every formula of the class must read it, not just one.
+    installed_source(
+        monkeypatch,
+        tmp_path,
+        "class additional_state_pension:\n"
+        "    def formula(person, period, parameters):\n"
+        "        return 0\n"
+        "    def formula_2026(person, period, parameters):\n"
+        "        return parameters(period).gov.economic_assumptions"
+        ".indices.september_cpi_uprating\n",
+    )
+    assert LIMIT.installed_fixed() is False
+
+
+@pytest.mark.parametrize("problem", ["missing", "unparsable"])
+def test_an_unreadable_installed_source_counts_as_unfixed(
+    monkeypatch, tmp_path, problem
+):
+    if problem == "missing":
+        monkeypatch.setattr(model_limits, "_ADD_ON_FILE", "no/such/file.py")
+    else:
+        installed_source(monkeypatch, tmp_path, "class (:\n")
+    assert LIMIT.installed_fixed() is False
+
+
+def raise_the_new_state_pension_by_rebinding(sim):
+    """A modifier that rebinds the node formulas read by attribute, leaving
+    the stored tree's child as it was (review of #73, finding B)."""
+    node = sim.tax_benefit_system.parameters.gov.dwp.state_pension
+    node = node.new_state_pension
+    rebound = node.children["amount"].clone()
+    for value in rebound.values_list:
+        if value.value is not None:
+            value.value = value.value * 1.1
+    node.amount = rebound
+
+
+def test_a_rebound_node_is_recorded():
+    assert limits_touched(
+        simulation(),
+        simulation(modifier=raise_the_new_state_pension_by_rebinding),
+    ) == [record(LIMIT, [NEW_PENSION])]
+
+
+def test_a_cpi_change_that_does_not_bind_the_full_rates_is_recorded():
+    """Review of #73, finding C: without the fix the add-on ignores CPI, so
+    a CPI change the triple lock doesn't pass on (earnings bind) still
+    mis-costs it, though the full rates don't move."""
+    touched = limits_touched(
+        simulation(), simulation({CPI_INPUT: {"2026": 0.030}})
+    )
+    assert [item["key"] for item in touched] == [LIMIT.key]
+    paths = touched[0]["parameters"]
+    assert any(path.startswith(CPI_INDEX) for path in paths)
+
+
+def test_the_fix_missing_on_the_baseline_side_only_still_records_it():
+    """Either side lacking the fix holds the measure (the reverse of
+    test_the_fix_on_one_side_only_still_records_it)."""
+    assert limits_touched(
+        simulation(), fixed({NEW_PENSION: {"2027": 250.0}})
+    ) == [record(LIMIT, [NEW_PENSION])]
+
+
+def test_detection_leaves_the_parameter_caches_as_it_found_them():
+    baseline = simulation()
+    reformed = simulation({NEW_PENSION: {"2027": 250.0}})
+    systems = [baseline.tax_benefit_system, reformed.tax_benefit_system]
+
+    def caches():
+        """Every cache detection could fill: the system's, the root's, and
+        each covered node's (views are built at the prefixes whose stored
+        trees match)."""
+        return [
+            (
+                set(system._parameters_at_instant_cache),
+                set(system.parameters._at_instant_cache),
+                *(
+                    set(
+                        getattr(
+                            system.parameters.get_child(prefix),
+                            "_at_instant_cache",
+                            {},
+                        )
+                    )
+                    for prefix in LIMIT.parameters
+                ),
+            )
+            for system in systems
+        ]
+
+    before = caches()
+    assert limits_touched(baseline, reformed)
+    assert caches() == before
+
+
+def add_a_triple_lock_leaf(sim):
+    from policyengine_core.parameters import Parameter
+
+    node = sim.tax_benefit_system.parameters.get_child(
+        "gov.dwp.state_pension.triple_lock"
+    )
+    node.add_child(
+        "extra",
+        Parameter(
+            "gov.dwp.state_pension.triple_lock.extra",
+            {"values": {"2020-01-01": 1.0}},
+        ),
+    )
+
+
+def test_an_added_leaf_under_a_covered_prefix_is_recorded():
+    touched = limits_touched(
+        simulation(), simulation(modifier=add_a_triple_lock_leaf)
+    )
+    assert touched and touched[0]["key"] == LIMIT.key
+    assert (
+        "gov.dwp.state_pension.triple_lock.extra" in touched[0]["parameters"]
+    )
+
+
+def test_the_scenarios_record_a_change_on_the_baseline_side():
+    assert limits_for_scenarios(
+        scenario({NEW_PENSION: {"2027": 250.0}}), None
+    ) == [record(LIMIT, [NEW_PENSION])]
+
+
+def test_a_combined_run_with_its_own_model_limit_is_never_approved(world):
+    """Even with every member approved, a combined run whose own receipt
+    records a model limit is refused approval."""
+    from uk_budget_data.publication.artifacts import read_receipt as receipt_of
+
+    manifest = m.Manifest()
+    args = dict(data_root=world.data_root, inputs=world.inputs)
+    for key in ("alpha", "beta"):
+        stage(manifest, world.ready(key, VALUES).path, **args)
+        approve(manifest, key, "Reviewer", **args)
+    records = [
+        {
+            "id": member,
+            "reform": receipt_of(
+                world.data_root / manifest.measures[member].artifact
+            )["execution_receipt"]["reform"],
+            "baseline": receipt_of(
+                world.data_root / manifest.measures[member].artifact
+            )["execution_receipt"]["baseline"],
+        }
+        for member in ("alpha", "beta")
+    ]
+    combined = world.write(
+        "combined--alpha+beta",
+        {2027: 2.0, 2028: 4.0},
+        members=records,
+        measure_ids=["alpha", "beta"],
+        member_outputs={
+            member: manifest.measures[member].outputs_sha256
+            for member in ("alpha", "beta")
+        },
+        model_limits=[HELD],
+    )
+    key = stage(manifest, combined.path, **args)
+    with pytest.raises(PublishError, match="held at provisional"):
+        approve(manifest, key, "Reviewer", **args)
