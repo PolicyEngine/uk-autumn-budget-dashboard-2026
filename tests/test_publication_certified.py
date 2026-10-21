@@ -2,7 +2,11 @@
 
 import pytest
 
-from tests.publication_support import SOURCE_HEADER
+from tests.publication_support import (
+    DATASET_NAME,
+    SMALL_DATASET_NAME,
+    SOURCE_HEADER,
+)
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.publication import manifest as m
@@ -53,7 +57,7 @@ def test_the_certified_dataset_yields_a_certified_receipt():
     )
     receipt = document["execution_receipt"]
     assert receipt["certification_status"] == "certified"
-    assert receipt["data"]["dataset"] == "enhanced_frs_2024_25"
+    assert receipt["data"]["dataset"] == DATASET_NAME
     reasons = document["dashboard"]["reasons"]
     assert not [r for r in reasons if "uncommitted" not in r]
     years = dataset_years(sim)
@@ -63,9 +67,9 @@ def test_the_certified_dataset_yields_a_certified_receipt():
 
 @pytest.mark.certified_data
 def test_generate_reconcile_and_stage_on_a_real_simulation(tmp_path):
-    """A real run on the bundle's tiny dataset, through to staging.
+    """A real run on a small dataset the bundle pins, through to staging.
 
-    The tiny dataset is not the certified default, so the artifact can be
+    The small dataset is not the certified default, so the artifact can be
     staged but never shown or approved.
     """
     measure = Reform(
@@ -75,7 +79,7 @@ def test_generate_reconcile_and_stage_on_a_real_simulation(tmp_path):
     )
     config = DataConfig(
         years=[2027],
-        dataset_path="enhanced_frs_2024_25_tiny",
+        dataset_path=SMALL_DATASET_NAME,
         data_dir=tmp_path / "no-weights",
     )
     data_root = tmp_path / "public" / "data"
