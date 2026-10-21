@@ -1,0 +1,103 @@
+.chart-download,
+.chart-header > .chart-download {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.chart-download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #4b5563;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chart-download-button:hover,
+.chart-download-button[aria-expanded="true"] {
+  color: #0f766e;
+  border-color: #319795;
+}
+
+.chart-download-button:focus-visible,
+.chart-download-item:focus-visible {
+  outline: 2px solid #319795;
+  outline-offset: 2px;
+}
+
+.chart-download-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 168px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
+}
+
+.chart-download-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  color: #111827;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chart-download-item:hover:not(:disabled) {
+  background: #f0fdfa;
+}
+
+.chart-download-item:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.chart-download-format {
+  font-weight: 600;
+}
+
+.chart-download-detail {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+/* On a phone the menu goes under the chart's title and description, so the
+   text keeps the card's full width. */
+@media (max-width: 640px) {
+  .chart-header:has(> .chart-download) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .chart-header > .chart-download {
+    align-self: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .chart-header > .chart-download .chart-download-menu {
+    right: auto;
+    left: 0;
+  }
+}

@@ -307,11 +307,24 @@ export async function exportMapAsSvg(
   filename = "map",
   options = {},
 ) {
+  const built = await buildMapSvg(svgElement, options);
+  if (!built) return false;
+  downloadSvg(built.svg, filename);
+  return true;
+}
+
+/**
+ * Build the map's export SVG without downloading it, for the SVG and PNG
+ * downloads alike. Takes the same options as exportMapAsSvg.
+ *
+ * @returns {Promise<{svg: string, width: number, height: number}|null>}
+ */
+export async function buildMapSvg(svgElement, options = {}) {
   const { title, description, logo, tooltip } = options;
 
   if (!svgElement) {
     console.error("exportMapAsSvg: No SVG element provided");
-    return false;
+    return null;
   }
 
   // Clone the SVG
@@ -433,11 +446,11 @@ export async function exportMapAsSvg(
     createTooltipCard(clonedSvg, tooltip, cardX, cardY);
   }
 
-  // Serialize and download
-  const svgString = serializeSvg(clonedSvg);
-  downloadSvg(svgString, filename);
-
-  return true;
+  return {
+    svg: serializeSvg(clonedSvg),
+    width: Number(clonedSvg.getAttribute("width")) || width,
+    height: Number(clonedSvg.getAttribute("height")) || 0,
+  };
 }
 
 export default exportMapAsSvg;

@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
-import { downloadSvg } from "../utils/downloadFile";
+import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
@@ -203,7 +203,8 @@ describe("ConstituencyMap", () => {
     expect(logo.getAttribute("y")).toBe("575");
 
     // The file shows the drawing area alone, with the legend in its corner.
-    fireEvent.click(screen.getByRole("button", { name: "Download map as SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "SVG" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
     const root = new DOMParser().parseFromString(svgText, "image/svg+xml")
@@ -428,10 +429,30 @@ describe("ConstituencyMap", () => {
     ).toHaveAttribute("href", "#results-by-region");
   });
 
+  it("downloads every constituency's published row as CSV", async () => {
+    await renderMap();
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "CSV" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
+    expect(filename).toBe(
+      "constituency-results-autumn_budget_2026_combined-2029.csv",
+    );
+    expect(mimeType).toBe("text/csv;charset=utf-8");
+    const lines = content.slice(1).trim().split("\r\n");
+    expect(lines[0]).toMatch(/^# Generated: /);
+    expect(lines).toContain("# Reform: autumn_budget_2026_combined");
+    expect(lines).toContain("# Year: 2029-30");
+    const header = lines.find((line) => !line.startsWith("#") && !line.startsWith('"#'));
+    expect(header.split(",")[0]).toBe("area_code");
+  });
+
   it("exports the hatch, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
-    fireEvent.click(screen.getByRole("button", { name: "Download map as SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "SVG" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
     expect(filename).toBe(

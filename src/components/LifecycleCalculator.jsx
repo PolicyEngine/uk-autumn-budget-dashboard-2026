@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import { LIFECYCLE_REFORMS } from "../utils/policyConfig";
+import { CHART_LOGO } from "../utils/chartLogo";
+import { buildChartSvg } from "../utils/exportChartAsSvg";
+import { downloadFile, downloadSvg } from "../utils/downloadFile";
+import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import { lifecycleCsv } from "../utils/chartCsv";
+import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./LifecycleCalculator.css";
 
 // API URL - supplied by the environment; no fallback.
@@ -748,63 +754,46 @@ function LifecycleCalculator() {
     previousDataRef.current = displayData;
   }, [displayData, formatSignedCurrency, showModal]);
 
-  // Download CSV
-  const downloadCSV = () => {
-    if (!data.length) return;
-
-    const headers = [
-      "age",
-      "year",
-      "gross_income",
-      "income_tax",
-      "national_insurance",
-      "student_loan_payment",
-      "student_loan_debt_remaining",
-      "baseline_net_income",
-      "impact_rail_fare_freeze",
-      "impact_fuel_duty_freeze",
-      "impact_threshold_freeze",
-      "impact_unearned_income_tax",
-      "impact_salary_sacrifice_cap",
-      "impact_sl_threshold_freeze",
-      "impact_two_child_limit",
-      "net_policy_impact",
-    ];
-
-    const rows = data.map((row) => {
-      const netImpact = REFORMS.reduce((sum, r) => sum + (row[r.key] || 0), 0);
-      return [
-        row.age,
-        row.year,
-        row.gross_income,
-        row.income_tax,
-        row.national_insurance,
-        row.student_loan_payment,
-        row.student_loan_debt_remaining,
-        row.baseline_net_income,
-        row.impact_rail_fare_freeze,
-        row.impact_fuel_duty_freeze,
-        row.impact_threshold_freeze,
-        row.impact_unearned_income_tax,
-        row.impact_salary_sacrifice_cap,
-        row.impact_sl_threshold_freeze,
-        row.impact_two_child_limit,
-        netImpact,
-      ].join(",");
-    });
-
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "lifetime-policy-impact.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // Downloads: the year-by-year figures as shown (cash or 2025 prices) as
+  // CSV, and the chart with its title, legend and logo as SVG or PNG.
+  const downloads = useMemo(() => {
+    const exportOptions = {
+      title: "Lifetime policy impact",
+      description: `The change in net income from each policy, year by year over a working life, ${
+        showRealTerms ? "in 2025 prices" : "in cash terms"
+      }.`,
+      legendItems: [
+        ...REFORMS.map((r) => ({ color: r.color, label: r.label, type: "rect" })),
+        { color: "#000000", label: "Net impact", type: "rect" },
+      ],
+      logo: CHART_LOGO,
+      svgSelector: "svg",
+      reservedLegendHeight: 0,
+    };
+    return data.length
+      ? {
+          csv: () =>
+            downloadFile(
+              lifecycleCsv(
+                displayData,
+                REFORMS.map((r) => r.key),
+                { real: showRealTerms },
+              ),
+              "lifetime-policy-impact.csv",
+              "text/csv;charset=utf-8",
+            ),
+          png: async () =>
+            downloadSvgAsPng(
+              await buildChartSvg(chartRef, exportOptions),
+              "lifetime-policy-impact",
+            ),
+          svg: async () => {
+            const built = await buildChartSvg(chartRef, exportOptions);
+            if (built) downloadSvg(built.svg, "lifetime-policy-impact");
+          },
+        }
+      : {};
+  }, [data.length, displayData, showRealTerms]);
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
@@ -1424,11 +1413,11 @@ function LifecycleCalculator() {
               </div>
             </div>
 
-            {/* Download buttons */}
-            <div className="download-buttons">
-              <button className="download-btn" onClick={downloadCSV}>
-                Download CSV
-              </button>
+            {/* PolicyEngine logo and downloads */}
+            <div className="lifecycle-chart-footer">
+              <ChartDownloadMenu formats={downloads} ariaLabel="Download lifetime impact" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
             </div>
           </div>
 

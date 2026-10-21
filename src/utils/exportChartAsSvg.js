@@ -370,21 +370,48 @@ export async function exportChartAsSvg(
   filename = "chart",
   options = {},
 ) {
-  const { title, description, legendItems = [], logo } = options;
+  const built = await buildChartSvg(containerRef, options);
+  if (!built) return false;
+  downloadSvg(built.svg, filename);
+  return true;
+}
+
+/**
+ * Build the export SVG (title, description, chart, legend and logo) without
+ * downloading it, for the SVG and PNG downloads alike.
+ *
+ * Takes the same options as exportChartAsSvg, plus:
+ * @param {string} [options.svgSelector] - Selector for the chart's SVG when
+ *   it is not a Recharts chart (default: the Recharts wrapper's SVG)
+ * @param {number} [options.reservedLegendHeight] - Space the chart keeps for
+ *   a legend when it has no Recharts legend (default 60)
+ * @returns {Promise<{svg: string, width: number, height: number}|null>}
+ */
+export async function buildChartSvg(containerRef, options = {}) {
+  const {
+    title,
+    description,
+    legendItems = [],
+    logo,
+    svgSelector,
+    reservedLegendHeight = 60,
+  } = options;
 
   if (!containerRef?.current) {
     console.error("exportChartAsSvg: No container ref provided");
-    return false;
+    return null;
   }
 
-  // Find the SVG element within the Recharts container
-  const rechartsWrapper =
-    containerRef.current.querySelector(".recharts-wrapper");
-  const svgElement = rechartsWrapper?.querySelector("svg");
+  // Find the SVG element within the Recharts container (or the selector)
+  const svgElement = svgSelector
+    ? containerRef.current.querySelector(svgSelector)
+    : containerRef.current
+        .querySelector(".recharts-wrapper")
+        ?.querySelector("svg");
 
   if (!svgElement) {
     console.error("exportChartAsSvg: No SVG element found in container");
-    return false;
+    return null;
   }
 
   // Get dimensions
@@ -401,7 +428,7 @@ export async function exportChartAsSvg(
   const originalLegendWrapper = svgElement
     .closest(".recharts-wrapper")
     ?.querySelector(".recharts-legend-wrapper");
-  let originalLegendHeight = 60; // Default fallback
+  let originalLegendHeight = reservedLegendHeight; // Default fallback
   if (originalLegendWrapper) {
     const legendRect = originalLegendWrapper.getBoundingClientRect();
     originalLegendHeight = legendRect.height;
@@ -564,11 +591,11 @@ export async function exportChartAsSvg(
     }
   }
 
-  // Serialize and download
-  const svgString = serializeSvg(clonedSvg);
-  downloadSvg(svgString, filename);
-
-  return true;
+  return {
+    svg: serializeSvg(clonedSvg),
+    width: chartWidth,
+    height: finalTotalHeight,
+  };
 }
 
 export default exportChartAsSvg;

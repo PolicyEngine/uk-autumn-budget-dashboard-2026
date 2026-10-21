@@ -7,7 +7,19 @@ import {
   useGeographyData,
 } from "../hooks/useGeographyData";
 import { CHART_LOGO } from "../utils/chartLogo";
-import { exportMapAsSvg, MAP_ZOOM_LAYER_CLASS } from "../utils/exportMapAsSvg";
+import {
+  buildMapSvg,
+  exportMapAsSvg,
+  MAP_ZOOM_LAYER_CLASS,
+} from "../utils/exportMapAsSvg";
+import { downloadFile } from "../utils/downloadFile";
+import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import {
+  EXPORT_UNITS,
+  buildCsv,
+  formatGenerated,
+} from "../utils/geography/exportTable";
+import ChartDownloadMenu from "./ChartDownloadMenu";
 import { OUTCOME_LABELS } from "../utils/geography/format";
 import {
   LEGEND_INSET,
@@ -17,7 +29,7 @@ import {
   placeMapLegend,
 } from "../utils/geography/legend";
 import { DIRECTION_TEXT_COLOURS } from "../utils/geography/palette";
-import { hasReform } from "../utils/geography/rows";
+import { hasReform, rowsFor } from "../utils/geography/rows";
 import {
   describeSeat,
   seatCode,
@@ -26,13 +38,31 @@ import {
   seatStyle,
   seatSummary,
 } from "../utils/geography/seats";
-import { choiceLabel, chooseReform } from "../utils/geography/selection";
+import {
+  choiceLabel,
+  choiceMeasureNames,
+  chooseReform,
+} from "../utils/geography/selection";
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import "./ChartExport.css";
 
 const CHART_TITLE = "Constituency-level impacts";
+
+/** CSV text of every constituency's published row for a reform and year. */
+function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, label, names }) {
+  if (!reform || !table) return null;
+  const measures = packageChoice ? `${label}: ${names.join("; ")}` : label;
+  return buildCsv(rowsFor(table, { reform, year }), [
+    ["Generated", formatGenerated(new Date())],
+    [packageChoice ? "Measures" : "Measure", measures],
+    ["Reform", reform],
+    ["Year", yearLabel],
+    ["Units", EXPORT_UNITS],
+    ["Source", "PolicyEngine UK Autumn Budget 2026 dashboard"],
+  ]);
+}
 
 /** The exported map's description: what it shows, and how to read it. */
 const exportDescription = (label, outcome) =>
@@ -450,18 +480,44 @@ export default function ConstituencyMap({
     clearSelection();
   };
 
+  const exportName = `constituency-map-${reform}-${outcome}-${selectedYear}`;
+  // Built when a download runs, as the SVG export always was.
+  const exportOptions = () => ({
+    title: `${CHART_TITLE}, ${yearLabel}`,
+    description: exportDescription(label, outcome),
+    logo: CHART_LOGO,
+    tooltip,
+  });
   const handleExportSvg = async () => {
     if (!svgNode) return;
-    await exportMapAsSvg(
-      svgNode,
-      `constituency-map-${reform}-${outcome}-${selectedYear}`,
-      {
-        title: `${CHART_TITLE}, ${yearLabel}`,
-        description: exportDescription(label, outcome),
-        logo: CHART_LOGO,
-        tooltip,
-      },
-    );
+    await exportMapAsSvg(svgNode, exportName, exportOptions());
+  };
+  // The CSV holds the published strings for every constituency, as the
+  // region export does: withheld figures stay blank.
+  const handleExportCsv = () => {
+    const text = constituencyCsvText(constituency.table, {
+      reform,
+      year: selectedYear,
+      yearLabel,
+      packageChoice: choice.kind === "package",
+      label,
+      names: choiceMeasureNames(choice, policies),
+    });
+    if (text) {
+      downloadFile(
+        text,
+        `constituency-results-${reform}-${selectedYear}.csv`,
+        "text/csv;charset=utf-8",
+      );
+    }
+  };
+  const downloads = {
+    csv: handleExportCsv,
+    png: async () => {
+      if (!svgNode) return;
+      await downloadSvgAsPng(await buildMapSvg(svgNode, exportOptions()), exportName);
+    },
+    svg: handleExportSvg,
   };
 
   return (
@@ -482,28 +538,7 @@ export default function ConstituencyMap({
             </p>
           </div>
           {view.kind === "rows" && (
-            <button
-              className="export-button"
-              onClick={handleExportSvg}
-              title="Download as SVG"
-              aria-label="Download map as SVG"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
+            <ChartDownloadMenu formats={downloads} ariaLabel="Download map" />
           )}
         </div>
       </div>

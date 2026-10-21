@@ -11,7 +11,11 @@ import {
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { exportChartAsSvg } from "../utils/exportChartAsSvg";
+import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
+import { downloadFile } from "../utils/downloadFile";
+import { downloadSvgAsPng } from "../utils/rasteriseSvg";
+import { householdChangeCsv } from "../utils/chartCsv";
+import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
 import {
@@ -45,13 +49,27 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
 
   const chartTitle = `Net income change, ${formatYearRange(selectedYear)}`;
 
+  const exportName = `net-income-change-${selectedYear}`;
+  const exportOptions = {
+    title: chartTitle,
+    description: getChartDescription(),
+    legendItems: LEGEND_ITEMS,
+    logo: CHART_LOGO,
+  };
   const handleExportSvg = async () => {
-    await exportChartAsSvg(chartRef, "net-income-change", {
-      title: chartTitle,
-      description: getChartDescription(),
-      legendItems: LEGEND_ITEMS,
-      logo: CHART_LOGO,
-    });
+    await exportChartAsSvg(chartRef, exportName, exportOptions);
+  };
+  // One menu: the chart's data as CSV, and the SVG export as SVG or PNG.
+  const downloads = {
+    csv: () =>
+      downloadFile(
+        householdChangeCsv(data, { year: selectedYear }),
+        `${exportName}.csv`,
+        "text/csv;charset=utf-8",
+      ),
+    png: async () =>
+      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
+    svg: handleExportSvg,
   };
 
   useEffect(() => {
@@ -174,28 +192,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             primary earner contributes £10,000 annually to their pension.
           </p>
         </div>
-        <button
-          className="export-button"
-          onClick={handleExportSvg}
-          title="Download as SVG"
-          aria-label="Download chart as SVG"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
+        <ChartDownloadMenu formats={downloads} />
       </div>
 
       <div ref={chartRef}>
