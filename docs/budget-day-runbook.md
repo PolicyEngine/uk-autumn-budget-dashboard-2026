@@ -183,31 +183,34 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
-**A State Pension measure (the basic or new State Pension's full rate, or the triple lock) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved, with the reason stated** (the UK hub, via the coordinator, 21 October).
-- **Why:** in law, additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by September CPI, not with the full rates.
-  - The 2026 Up-rating Order (SI 2026/148, articles 4(3) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates.
-  - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So a change to the full rates, or to the triple lock, moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
-  - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone under a reform to the full rates. As of 21 October it is open; the UK hub expects it to land shortly.
-- **How much, on uk-data 1.58.1, from #2336's own runs:**
-  - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix, and the net cost is £0.76bn to £1.11bn a year lower;
-  - in the baseline, State Pension falls by £353m in 2025-26 and by £782m in 2030-31.
+**A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October).
+- **Why:** additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by prices, not with the full rates. Prices are the statutory floor (Social Security Administration Act 1992 ss. 150 and 151A), and the Up-rating Orders give September CPI.
+  - The 2026 Order (SI 2026/148, articles 4(3)(a) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates (articles 4(2) and 6(1)).
+  - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So anything that moves the full rates moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
+  - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. As of 21 October it is open; the UK hub expects it to land shortly.
+- **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
+  - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix;
+  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
+  - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
-  So without the fix, a 10% rise's net cost is overstated by about £0.8bn to £1.1bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
-- **The check, at G0 for the adopted pair and again before a State Pension measure is staged:**
+  So without the fix, a 10% rise's net cost is overstated by about £0.85bn to £1.06bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
+- **The check, in G0's commands for the adopted pair and again before a State Pension measure is staged:**
 
   ```sh
-  uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text())"
+  uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
   ```
 
   `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once #2336 is released, the first policyengine-uk version with it can be checked instead.
-- **Which measures:** any change, in `parameter_changes` or a modifier, to:
-  - `gov.dwp.state_pension.basic_state_pension.amount`;
-  - `gov.dwp.state_pension.new_state_pension.amount`;
-  - anything under `gov.dwp.state_pension.triple_lock`.
-- **If the check prints `False`:** stage the measure provisional, not approved. The reason to record is: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair".
+- **Which measures:** any change that moves either full rate in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
+  - `gov.dwp.state_pension.basic_state_pension.amount` or `gov.dwp.state_pension.new_state_pension.amount`;
+  - anything under `gov.dwp.state_pension.triple_lock`;
+  - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). A 10% change to the 2026 earnings input moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset).
+- **If the check prints `False`:** stage the measure provisional, not approved.
+  - **Nothing in the code enforces this yet.** `approve` has no State Pension gate on `main`: hold it by hand. A guard that records the limit in the receipt and refuses approval is W5's next PR.
+  - **The reason has nowhere on the page to go.** `publish stage` takes no reason, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing". Record the reason in the coverage ledger and in the measure's PR: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair". **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
-  - **G4:** it holds up the combined run, as a provisional CGT measure does ("Which ids" at G4).
-- **With the fix,** a measure that also raises the add-on itself, above September CPI, needs a change to `additional_state_pension`; a rate change alone no longer reaches it. This is the law: the Orders raise the add-on by prices only.
+  - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
+- **With the fix,** a measure that also raises the add-on itself, above prices, needs a change to `additional_state_pension`. A rate change alone no longer reaches it, and no template covers it. That makes it a hand-written modifier, which needs the named human data-limits check above.
 
 **Dated changes: key every year by its bare fiscal year.**
 
@@ -248,6 +251,7 @@ uv sync --locked --extra dev
 mkdir -p receipts
 uv run python -m uk_budget_data.certified_data             # the bundle's data, by hash (#12)
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
+uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
 curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
@@ -264,7 +268,8 @@ Record in the clock table:
 - the manifest revision and its execution identity;
 - the dataset SHA-256;
 - the household API identity;
-- the basis in `data_inputs/publication_basis.json` (expected `pre_budget`).
+- the basis in `data_inputs/publication_basis.json` (expected `pre_budget`);
+- whether the model has policyengine-uk #2336 (the State Pension check above prints `True`). If not, every State Pension measure today is held at provisional.
 
 **The gate fails** if any command fails, or the API's versions differ from the bundle's. Until a non-draft household fixture exists, the household check exits 1 (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
@@ -424,6 +429,7 @@ policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK defaul
 - the pension annual allowance sentence and its cause (uk-data#606, measured with policyengine-uk #2240, which 6.10.0 lacks);
 - the 2030-31 UC note, and the UC health row's "from 2030" advice: policyengine-uk 2.132.6 lacks #2428, which extends the rebalancing to 2032, while the Budget-day pair's model has it, so the advice flips there;
 - the SDLT "Why" row: the certified dataset it names is uk-data 1.58.1. The tripwire re-checks it when new data are adopted;
+- the State Pension row's figures: #2336's reports ran on uk-data 1.58.1;
 - the household API timings and memory, after the redeploy on the new pair;
 - results by area: Microcosm's local-area cut is not yet certified (policyengine.py#685).
 
