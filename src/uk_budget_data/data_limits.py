@@ -2407,6 +2407,95 @@ def _calculated_before(sim, name) -> bool:
         return True
 
 
+# --- the build ------------------------------------------------------------
+#
+# A modifier runs while its simulation is built, before any watch opens. If
+# it reads a limited input there (directly, or by asking for a variable
+# calculated from one), it can carry the value into the run as an input it
+# sets, a value its formula holds or a template's argument, with no read
+# for the watch to see (review of #51 round 17). So the build is watched
+# too: every read of an input a limit names, while a simulation is built
+# for publication, is recorded on the simulation and counts as touching the
+# limit (``build:<input>``). Reads the model makes itself count as well;
+# none is made today, which tests/test_data_limits.py checks.
+
+_BUILD_ATTRIBUTE = "_data_limit_build_reads"
+
+
+class _Build(threading.local):
+    def __init__(self):
+        self.records: list = []
+
+
+_BUILD = _Build()
+_BUILDING: list = []
+
+
+class BuildRecord:
+    """The inputs a data limit names that were read while a simulation was
+    built (see :func:`building`)."""
+
+    def __init__(self):
+        self.reads: set = set()
+
+    def attach(self, sim):
+        """Record what the build read on the simulation it built, for
+        :func:`limits_touched`."""
+        try:
+            setattr(sim, _BUILD_ATTRIBUTE, frozenset(self.reads))
+        except AttributeError:  # a stand-in that takes no attributes
+            pass
+
+
+def _built_get_array(self, *args, **kwargs):
+    if _BUILD.records:
+        name = getattr(getattr(self, "variable", None), "name", None)
+        if name in _MISSING_INPUTS:
+            for record in _BUILD.records:
+                record.reads.add(name)
+    return _ENGINE["get_array"](self, *args, **kwargs)
+
+
+@contextmanager
+def building():
+    """Watch a simulation being built: yields a :class:`BuildRecord` of the
+    inputs a data limit names that the build read, directly or through a
+    calculation. Every read of an input's value goes through
+    ``Holder.get_array``: the engine's calculation looks there first, and
+    its other caches only hold what an earlier read returned. Not while a
+    watch runs."""
+    with _HOOK_LOCK:
+        if _WATCHING:
+            raise RuntimeError("a simulation is built while a watch runs")
+        engine = _engine_parts()
+        if not _BUILDING:
+            engine["holder"].get_array = _built_get_array
+        record = BuildRecord()
+        _BUILDING.append(record)
+        _BUILD.records.append(record)
+    try:
+        yield record
+    finally:
+        with _HOOK_LOCK:
+            _BUILD.records.remove(record)
+            _BUILDING.remove(record)
+            if not _BUILDING:
+                engine["holder"].get_array = engine["get_array"]
+
+
+def watched_build(build, *args, **kwargs):
+    """``build(*args, **kwargs)``, its simulation carrying what the build
+    read of the inputs a data limit names (see :func:`building`)."""
+    with building() as record:
+        sim = build(*args, **kwargs)
+    record.attach(sim)
+    return sim
+
+
+def _build_reads(sim) -> frozenset:
+    return getattr(sim, _BUILD_ATTRIBUTE, frozenset())
+
+
 @contextmanager
 def observing(sim_baseline, sim_reform):
     """Watch what the code that differs between two built simulations reads
@@ -2419,6 +2508,8 @@ def observing(sim_baseline, sim_reform):
     ):
         yield None
         return
+    if _BUILDING:
+        raise RuntimeError("a watch starts while a simulation is built")
     observation = Observation(sim_baseline, sim_reform)
     observation._start()
     try:
@@ -2489,7 +2580,9 @@ def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
       recorded as the limit's own prefix;
     - or a variable behaves differently and the code that differs read what
       the limit covers while the simulations ran (see :class:`Observation`),
-      recorded as ``formula:<variable>``.
+      recorded as ``formula:<variable>``;
+    - or either simulation's build read the input the limit names (see
+      :func:`building`), recorded as ``build:<input>``.
 
     ``observation`` is the watch (:func:`observing`) kept over the run that
     made the figures, finished. Without one, each changed variable is
@@ -2513,6 +2606,7 @@ def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
         raise ValueError("the observation is still watching")
     behaviour = observation.changes.behaviour
     formulas = _formulas_touched(observation)
+    built = _build_reads(sim_baseline) | _build_reads(sim_reform)
     touched = []
     with (
         _caches_left_as_found(base_system),
@@ -2536,6 +2630,8 @@ def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
                     found = [prefix]
                 differing += found
             differing += formulas.get(limit.key, [])
+            if limit.missing_input in built:
+                differing.append(f"build:{limit.missing_input}")
             if differing:
                 touched.append(record(limit, differing))
     return touched
@@ -2557,6 +2653,12 @@ def _formula_path(path) -> bool:
         and path.startswith("formula:")
         and path[len("formula:") :].isidentifier()
     )
+
+
+def _build_path(path, limit: DataLimit) -> bool:
+    """A recorded ``build:<input>`` path: the limit's own missing input,
+    read while a simulation was built (see :func:`limits_touched`)."""
+    return path == f"build:{limit.missing_input}"
 
 
 def record_problems(records) -> list[str]:
@@ -2587,7 +2689,9 @@ def record_problems(records) -> list[str]:
             or not paths
             or paths != sorted(set(paths))
             or any(
-                limits_for_paths([path]) != [limit] and not _formula_path(path)
+                limits_for_paths([path]) != [limit]
+                and not _formula_path(path)
+                and not _build_path(path, limit)
                 for path in paths
             )
         ):

@@ -9,6 +9,11 @@ test modules on import, and the receipt refuses a function whose loaded
 code no longer matches its source file.
 """
 
+import numpy as np
+
+PURCHASED = "non_residential_property_purchased"
+NON_RESIDENTIAL_SDLT = "sdlt_on_non_residential_property_transactions"
+
 
 def module_level_modifier(sim, rate=0.21):
     """A structural measure that binds by code revision."""
@@ -26,4 +31,16 @@ def raise_additional_dwelling_rates(sim, year=2027, rate=0.07):
     sim.tax_benefit_system.parameters.get_child(
         "gov.hmrc.stamp_duty.residential.purchase.additional.rate"
     ).brackets[1].rate.update(period=f"year:{year}:1", value=rate)
+    return sim
+
+
+def sdlt_from_purchases_read_at_build(
+    sim, rate=0.1, start_year=2025, end_year=2031
+):
+    """Non-residential SDLT set as an input, priced on purchases read while
+    the simulation is built, so before any watch of the run (review of #51
+    round 17)."""
+    for year in range(start_year, end_year + 1):
+        purchases = np.asarray(sim.calculate(PURCHASED, year))
+        sim.set_input(NON_RESIDENTIAL_SDLT, year, purchases * rate)
     return sim

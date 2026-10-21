@@ -28,7 +28,10 @@ from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
 from tests import purchase_helpers, template_measures
-from tests.fixed_shape_measures import raise_additional_dwelling_rates
+from tests.fixed_shape_measures import (
+    raise_additional_dwelling_rates,
+    sdlt_from_purchases_read_at_build,
+)
 from uk_budget_data import data_limits
 from uk_budget_data.data_limits import (
     DATA_LIMITS,
@@ -2183,7 +2186,29 @@ TEMPLATE_MUTATORS = {
     "update",
 }
 # Functions that change an object passed to them.
-TEMPLATE_MUTATING_CALLS = {"copyto", "delattr", "setattr", "setitem"}
+TEMPLATE_MUTATING_CALLS = {
+    "copyto",
+    "delattr",
+    "fill_diagonal",
+    "place",
+    "put",
+    "put_along_axis",
+    "putmask",
+    "setattr",
+    "setitem",
+}
+# What reaches another simulation, or the engine, from where a formula is.
+FORMULA_ENGINE_ATTRIBUTES = {
+    "baseline",
+    "branches",
+    "parent_branch",
+    "simulation",
+    "tax_benefit_system",
+}
+# Ways to reach a module, or an attribute, by a name built at run time.
+DYNAMIC_ACCESS = {"__import__", "import_module", "importlib", "modules"}
+# A class with one of these as a base makes its own metaclass, or has one.
+METACLASS_BASES = {"ABC", "ABCMeta", "EnumMeta", "EnumType", "type"}
 ENGINE_BUILDERS = {
     "CountryTaxBenefitSystem",
     "Microsimulation",
@@ -2231,14 +2256,42 @@ def test_the_templates_use_no_construction_ruled_outside_the_line():
         for alias in node.names
         if alias.asname
     }
+    from_operator = {
+        alias.asname or alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == "operator"
+        for alias in node.names
+    }
     found = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.Global, ast.Nonlocal)):
             found.append((node.lineno, "global or nonlocal state"))
-        elif isinstance(node, ast.ClassDef) and any(
-            keyword.arg == "metaclass" for keyword in node.keywords
+        elif isinstance(node, ast.ClassDef) and (
+            any(keyword.arg == "metaclass" for keyword in node.keywords)
+            or any(
+                getattr(base, "id", getattr(base, "attr", None))
+                in METACLASS_BASES
+                for base in node.bases
+            )
         ):
             found.append((node.lineno, "a metaclass"))
+        elif (
+            isinstance(node, (ast.Import, ast.ImportFrom))
+            and any(
+                (alias.name.split(".")[0] in ("importlib", "operator"))
+                for alias in node.names
+            )
+            or (
+                isinstance(node, ast.ImportFrom)
+                and (node.module or "").split(".")[0]
+                in ("importlib", "operator")
+            )
+        ):
+            found.append((node.lineno, "a module reached by name"))
+        elif (isinstance(node, ast.Name) and node.id in DYNAMIC_ACCESS) or (
+            isinstance(node, ast.Attribute) and node.attr in DYNAMIC_ACCESS
+        ):
+            found.append((node.lineno, "a module reached by name"))
         elif isinstance(node, ast.Attribute) and node.attr in (
             "clone",
             "get_branch",
@@ -2253,6 +2306,18 @@ def test_the_templates_use_no_construction_ruled_outside_the_line():
                 found.append((node.lineno, f"a copy ({name})"))
             elif isinstance(node.func, ast.Call):
                 found.append((node.lineno, "a call of a call's result"))
+            elif name in ("getattr", "setattr", "delattr", "hasattr") and not (
+                len(node.args) >= 2
+                and isinstance(node.args[1], ast.Constant)
+                and isinstance(node.args[1].value, str)
+            ):
+                found.append((node.lineno, "an attribute named at run time"))
+            elif name in from_operator or (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "operator"
+            ):
+                found.append((node.lineno, "an operator function"))
     # The module-level system, imported anywhere but the one build-time
     # path check.
     for top in tree.body:
@@ -2269,6 +2334,22 @@ def test_the_templates_use_no_construction_ruled_outside_the_line():
                 for alias in node.names
             ):
                 found.append((node.lineno, "the module-level system"))
+    # A formula (a function inside a template function) reaches no
+    # simulation, system or branch: only what the engine passes it.
+    for template in tree.body:
+        if not isinstance(template, ast.FunctionDef):
+            continue
+        for formula in ast.walk(template):
+            if formula is template or not isinstance(formula, ast.FunctionDef):
+                continue
+            for node in ast.walk(formula):
+                if (
+                    isinstance(node, ast.Attribute)
+                    and node.attr in FORMULA_ENGINE_ATTRIBUTES
+                ):
+                    found.append(
+                        (node.lineno, f"a formula reaching {node.attr}")
+                    )
     # In every function, formulas included: nothing stored into, deleted
     # from or changed on an object the function doesn't bind itself (state
     # a formula holds, or the module's).
@@ -2633,7 +2714,200 @@ def test_a_template_on_an_unrelated_rate_does_not_warn():
         rate_change(INCOME_TAX, {2027: 0.21})
 
 
+# --- the build (review of #51 round 17) ------------------------------------
+
+PURCHASED = "non_residential_property_purchased"
+BUILD_YEARS = tuple(data_limits.HOUSEHOLD_YEARS)
+
+
+def built(changes=None, modifier=None):
+    """A household simulation built under the build watch, as the pipeline
+    and the generator build theirs."""
+    return data_limits.watched_build(simulation, changes, modifier)
+
+
+def captured_in_a_formula(rate):
+    """Purchases read while the measure is built, priced by a formula that
+    holds them."""
+
+    def modifier(sim):
+        native = sim.tax_benefit_system.get_variable(NON_RESIDENTIAL_SDLT)
+        purchases = {
+            year: np.asarray(sim.calculate(PURCHASED, year))
+            for year in BUILD_YEARS
+        }
+
+        def formula(household, period, parameters):
+            current = _call_formula(native, household, period, parameters)
+            return current + purchases[period.start.year] * rate
+
+        _replace_formula(sim, NON_RESIDENTIAL_SDLT, formula)
+        return sim
+
+    return modifier
+
+
+def set_as_an_input(rate):
+    """SDLT set as an input, priced on purchases read while built."""
+
+    def modifier(sim):
+        for year in BUILD_YEARS:
+            purchases = np.asarray(sim.calculate(PURCHASED, year))
+            sim.set_input(NON_RESIDENTIAL_SDLT, year, purchases * rate)
+        return sim
+
+    return modifier
+
+
+def read_through_a_holder(rate):
+    """As set_as_an_input, reading the purchases through their holder."""
+
+    def modifier(sim):
+        holder = sim.get_holder(PURCHASED)
+        for year in BUILD_YEARS:
+            values = holder.get_array(year)
+            purchases = np.zeros(1) if values is None else values
+            sim.set_input(NON_RESIDENTIAL_SDLT, year, purchases * rate)
+        return sim
+
+    return modifier
+
+
+def own_tax_doubled(rate):
+    """SDLT's own result read while built, scaled and set as an input:
+    reading the tax reads the purchases it is calculated from."""
+
+    def modifier(sim):
+        for year in BUILD_YEARS:
+            tax = np.asarray(sim.calculate(NON_RESIDENTIAL_SDLT, year))
+            sim.set_input(NON_RESIDENTIAL_SDLT, year, tax * rate)
+        return sim
+
+    return modifier
+
+
+def template_amount_from_purchases(rate):
+    """A template whose argument is priced on purchases read while built."""
+
+    def modifier(sim):
+        mean = float(np.mean(sim.calculate(PURCHASED, 2027)))
+        return apply_property_band_surcharge(
+            sim,
+            lower_bound=1_000_000,
+            upper_bound=2_000_000,
+            amount=mean * rate + 900,
+            start_year=2027,
+            end_year=2027,
+            geography="UK",
+        )
+
+    return modifier
+
+
+def mixed_with_a_band(rate):
+    """A costable band charge plus an SDLT surcharge on captured purchases:
+    responsive on its costable part, so only the limit stops its figure."""
+    capture = captured_in_a_formula(rate)
+
+    def modifier(sim):
+        template_measures.property_modifier(sim)
+        return capture(sim)
+
+    return modifier
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        captured_in_a_formula,
+        set_as_an_input,
+        read_through_a_holder,
+        own_tax_doubled,
+        template_amount_from_purchases,
+        mixed_with_a_band,
+    ],
+)
+def test_a_limited_input_read_while_the_measure_is_built_shows(make):
+    """Review of #51 round 17: a modifier read the purchases (or SDLT
+    calculated from them) while its simulation was built, before the watch,
+    and carried them into the run with no read to see (SDLT £14,500 to
+    £50,000 with no limit). The build is watched too."""
+    touched = limits_touched(
+        built(modifier=make(0.05)), built(modifier=make(0.10))
+    )
+    assert keys(touched) == ["non_residential_purchases"]
+    assert f"build:{PURCHASED}" in touched[0]["parameters"]
+
+
+@pytest.mark.parametrize("name", TEMPLATE_MODIFIERS)
+def test_the_templates_read_no_limited_input_while_built(name):
+    """No false positive: a template reads no data while its measure is
+    built, and neither does the model building a simulation."""
+    assert data_limits._build_reads(built()) == frozenset()
+    reformed = built(modifier=getattr(template_measures, name))
+    assert data_limits._build_reads(reformed) == frozenset()
+    assert limits_touched(built(), reformed) == []
+
+
+def test_the_build_watch_leaves_the_engine_as_it_found_it():
+    before = engine_methods()
+    with pytest.raises(RuntimeError, match="boom"):
+        with data_limits.building():
+            assert engine_methods() != before
+            raise RuntimeError("boom")
+    assert engine_methods() == before
+
+
+def test_a_build_and_a_watch_never_overlap():
+    """Both replace Holder.get_array, so neither starts inside the other
+    (a watch with a changed variable to watch)."""
+    baseline = simulation()
+    reformed = simulation(modifier=template_measures.property_modifier)
+    before = engine_methods()
+    with data_limits.building():
+        with pytest.raises(RuntimeError, match="while a simulation is built"):
+            with data_limits.observing(baseline, reformed):
+                pass
+    with data_limits.observing(baseline, reformed):
+        with pytest.raises(RuntimeError, match="while a watch runs"):
+            with data_limits.building():
+                pass
+    assert engine_methods() == before
+
+
+def test_a_build_read_is_recorded_only_against_its_own_limit():
+    """The receipt check accepts build:<input> only for the limit that
+    names the input."""
+    for limit in DATA_LIMITS:
+        good = record(limit, [f"build:{limit.missing_input}"])
+        assert data_limits.record_problems([good]) == []
+        other = [x for x in DATA_LIMITS if x is not limit][0]
+        bad = record(limit, [f"build:{other.missing_input}"])
+        assert data_limits.record_problems([bad])
+        assert data_limits.record_problems(
+            [record(limit, ["build:employment_income"])]
+        )
+
+
 # --- the certified data ----------------------------------------------------
+
+
+@pytest.mark.certified_data
+def test_building_a_certified_simulation_reads_no_limited_input():
+    """The build watch counts every read of a limited input, the model's
+    own included; building a certified simulation, with or without a
+    template, makes none, so the watch flags only what a measure reads."""
+    from uk_budget_data.pipeline import build_microsimulation
+
+    plain = data_limits.watched_build(build_microsimulation, None)
+    assert data_limits._build_reads(plain) == frozenset()
+    del plain
+    templated = data_limits.watched_build(
+        build_microsimulation,
+        None,
+        Scenario(simulation_modifier=template_measures.property_modifier),
+    )
+    assert data_limits._build_reads(templated) == frozenset()
 
 
 @pytest.mark.certified_data
@@ -2664,7 +2938,8 @@ def test_the_flat_pipeline_warns_for_a_measure_the_data_cannot_cost(
     monkeypatch, capsys
 ):
     """The flat CSV path has no publication gate; it says loudly that the
-    measure's rows are not costings, and stays quiet for the others."""
+    measure's rows are not costings, and stays quiet for the others. Its
+    builds are watched too (review of #51 round 17)."""
     from uk_budget_data import pipeline
     from uk_budget_data.models import DataConfig, Reform
 
@@ -2701,12 +2976,18 @@ def test_the_flat_pipeline_warns_for_a_measure_the_data_cannot_cost(
             name="Income",
             parameter_changes={INCOME_TAX: {"2027": 0.22}},
         ),
+        Reform(
+            id="captured",
+            name="Captured",
+            simulation_modifier=sdlt_from_purchases_read_at_build,
+        ),
     ]
     pipeline.DataPipeline(reforms, DataConfig(years=[2027])).run(
         skip_input_check=True
     )
     out = " ".join(capsys.readouterr().out.split())
-    assert out.count("NOT COMPUTABLE ON CURRENT DATA") == 2
+    assert out.count("NOT COMPUTABLE ON CURRENT DATA") == 3
+    assert "Captured: The survey data" in out
     assert "Surcharge: The survey data" in out
     assert "Structural: The survey data" in out
     assert "Income: The survey data" not in out

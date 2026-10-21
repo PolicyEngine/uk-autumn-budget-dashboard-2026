@@ -11,7 +11,10 @@ import pytest
 from policyengine_uk import Simulation
 from pydantic import ValidationError
 
-from tests.fixed_shape_measures import raise_additional_dwelling_rates
+from tests.fixed_shape_measures import (
+    raise_additional_dwelling_rates,
+    sdlt_from_purchases_read_at_build,
+)
 from tests.publication_support import World, make_household_rows, make_tables
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.models import DataConfig, Reform, ReformResult
@@ -509,6 +512,25 @@ def test_generation_records_a_modifier_on_a_limited_rate(world):
         simulation_modifier=raise_additional_dwelling_rates,
     )
     assert generated_limits(world, reform, built(world)) == [SURCHARGE]
+
+
+def test_generation_records_a_limited_input_read_while_the_measure_is_built(
+    world,
+):
+    """Review of #51 round 17: a bindable modifier set SDLT as an input,
+    priced on purchases it read while its simulation was built, and the
+    receipt recorded no limit. Generation watches the build."""
+    reform = Reform(
+        id="captured",
+        name="Captured",
+        simulation_modifier=sdlt_from_purchases_read_at_build,
+    )
+    assert generated_limits(world, reform, built(world)) == [
+        record(
+            BY_KEY["non_residential_purchases"],
+            ["build:non_residential_property_purchased"],
+        )
+    ]
 
 
 def test_generation_records_nothing_for_a_change_to_the_current_value(world):

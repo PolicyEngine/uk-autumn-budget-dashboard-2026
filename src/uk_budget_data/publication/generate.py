@@ -252,8 +252,15 @@ def generate_artifacts(
             key, lambda: baseline_for(reform, uses_config_baseline)
         )
         reform_scenario = _scenarios(key, reform.to_scenario)
-        baseline = build(dataset_path, baseline_scenario)
-        reformed = build(dataset_path, reform_scenario)
+        # Built under data_limits.building: a modifier that reads a limited
+        # input while its simulation is built carries it past the watch,
+        # so the build is watched too.
+        baseline = data_limits.watched_build(
+            build, dataset_path, baseline_scenario
+        )
+        reformed = data_limits.watched_build(
+            build, dataset_path, reform_scenario
+        )
         # What the code that differs reads is watched while the run makes
         # the figures; a measure the data cannot cost is then published as
         # not computable.

@@ -302,10 +302,15 @@ class DataPipeline:
                 baseline_scenario = reform.baseline_scenario_for(self.config)
                 reform_scenario = reform.to_scenario()
 
-                baseline = build_microsimulation(
-                    dataset_path, baseline_scenario
+                # Built under data_limits.building, so a modifier that
+                # reads a limited input while its simulation is built
+                # counts.
+                baseline = data_limits.watched_build(
+                    build_microsimulation, dataset_path, baseline_scenario
                 )
-                reformed = build_microsimulation(dataset_path, reform_scenario)
+                reformed = data_limits.watched_build(
+                    build_microsimulation, dataset_path, reform_scenario
+                )
 
                 # Process reform, watching what code that differs between
                 # the two reads while it runs (data_limits.observing).
