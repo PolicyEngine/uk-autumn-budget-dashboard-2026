@@ -1,0 +1,13 @@
+code,name,frs_region,microcosm_region_code,constituencies_region,geojson_region,geojson_country
+E12000001,North East,NORTH_EAST,E12000001,North East,North East,England
+E12000002,North West,NORTH_WEST,E12000002,North West,North West,England
+E12000003,Yorkshire and The Humber,YORKSHIRE,E12000003,Yorkshire and the Humber,Yorkshire and the Humber,England
+E12000004,East Midlands,EAST_MIDLANDS,E12000004,East Midlands,East Midlands,England
+E12000005,West Midlands,WEST_MIDLANDS,E12000005,West Midlands,West Midlands,England
+E12000006,East of England,EAST_OF_ENGLAND,E12000006,Eastern,East of England,England
+E12000007,London,LONDON,E12000007,London,Greater London,England
+E12000008,South East,SOUTH_EAST,E12000008,South East,South East,England
+E12000009,South West,SOUTH_WEST,E12000009,South West,South West,England
+W92000004,Wales,WALES,W99999999,Wales,,Wales
+S92000003,Scotland,SCOTLAND,S99999999,Scotland,,Scotland
+N92000002,Northern Ireland,NORTHERN_IRELAND,N99999999,Northern Ireland,,Northern Ireland

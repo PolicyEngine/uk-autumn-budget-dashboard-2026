@@ -599,6 +599,18 @@ code {
   animation-delay: 0.45s;
 }
 
+.charts-row-regions {
+  margin-top: 24px;
+}
+
+.charts-row-regions > div:only-child {
+  grid-column: 1 / -1;
+}
+
+.charts-row-regions > div:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
 .charts-row-3 {
   margin-top: 24px;
 }
