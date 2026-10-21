@@ -20,6 +20,7 @@ from tests.publication_support import (
     YEARS,
     World,
     make_tables,
+    other_dataset_name,
 )
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication import receipt as receipt_module
@@ -378,15 +379,16 @@ def test_different_dataset_bytes_cannot_be_receipted(world):
 
 
 def test_a_dataset_other_than_the_certified_default_is_uncertified(world):
-    tiny = world.root / "enhanced_frs_2024_25_tiny.h5"
+    name = other_dataset_name()
+    tiny = world.root / f"{name}.h5"
     tiny.write_bytes(b"a smaller dataset")
-    world.register("enhanced_frs_2024_25_tiny", tiny)
+    world.register(name, tiny)
     document = read_receipt(
         world.write(
             "alpha",
             VALUES,
             dataset=tiny,
-            dataset_name="enhanced_frs_2024_25_tiny",
+            dataset_name=name,
         ).path
     )
     assert (
@@ -600,15 +602,16 @@ def test_provisional_tolerates_awaiting_source_but_approval_does_not(world):
 
 
 def test_uncertified_artifact_cannot_be_provisional_or_approved(world):
-    other = world.root / "enhanced_frs_2024_25_tiny.h5"
+    name = other_dataset_name()
+    other = world.root / f"{name}.h5"
     other.write_bytes(b"uncertified")
-    world.register("enhanced_frs_2024_25_tiny", other)
+    world.register(name, other)
     world.costing("alpha", VALUES)
     reference = world.write(
         "alpha",
         VALUES,
         dataset=other,
-        dataset_name="enhanced_frs_2024_25_tiny",
+        dataset_name=name,
     )
     world.reconcile(reference)
     manifest = m.Manifest()

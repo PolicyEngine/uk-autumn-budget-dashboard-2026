@@ -97,8 +97,13 @@ jobs:
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked --extra dev
 
+      # --also: the certified-data tests also run on policyengine-uk-data's
+      # tiny enhanced FRS (tests/publication_support.py's SMALL_DATASET_NAME),
+      # a bundle overlay from 6.10.0 that stays in its own repository.
       - name: Check access to the bundle's certified data
-        run: uv run python -m uk_budget_data.certified_data
+        run: >-
+          uv run python -m uk_budget_data.certified_data
+          --also enhanced_frs_2024_25_tiny
 
       - name: Run certified-data tests
         run: uv run pytest tests/ -m certified_data
