@@ -252,6 +252,7 @@ class World:
         reform_identity=None,
         config_baseline=None,
         data_limits=(),
+        model_limits=(),
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -296,6 +297,7 @@ class World:
             composition=composition,
             config_baseline_identity=config_baseline,
             data_limits=list(data_limits),
+            model_limits=list(model_limits),
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)

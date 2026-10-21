@@ -25,7 +25,10 @@ installed would hide it for their periods.
 
 A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
 such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
-the measure is published as not computable, never as a figure.
+the measure is published as not computable, never as a figure. A parameter
+the installed model overstates (``uk_budget_data.model_limits``, such as the
+State Pension's full rates before policyengine-uk #2336) builds with a
+``ModelLimitedWarning``: the measure is held at provisional, never approved.
 """
 
 import math
@@ -66,6 +69,24 @@ def _warn_if_data_limited(path: str) -> None:
         )
 
 
+class ModelLimitedWarning(UserWarning):
+    """A change built on a parameter the installed model overstates."""
+
+
+def _warn_if_model_limited(path: str) -> None:
+    from uk_budget_data.model_limits import limits_for_paths
+
+    for limit in limits_for_paths([path]):
+        if not limit.installed_fixed():
+            warnings.warn(
+                f"{path}: {limit.reason} A measure built on it is held at "
+                "provisional, never approved.",
+                ModelLimitedWarning,
+                # The builder's caller, as for _warn_if_data_limited.
+                stacklevel=4,
+            )
+
+
 def _validate_parameter_path(path: str) -> None:
     """Require a leaf in the installed engine's native parameter tree, and
     warn when the certified data cannot cost it."""
@@ -81,6 +102,7 @@ def _validate_parameter_path(path: str) -> None:
     if not isinstance(parameter, Parameter):
         raise ValueError(f"Parameter path must identify a leaf: {path}")
     _warn_if_data_limited(path)
+    _warn_if_model_limited(path)
 
 
 # Universal Credit's health (LCWRA) element. In the years the engine's UC

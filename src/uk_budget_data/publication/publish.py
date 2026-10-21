@@ -17,6 +17,10 @@ The gates, in order:
    as ``not_computable``: listed with its reason, never with a figure, and
    never approved. It skips responsiveness and reconciliation, which would
    only measure the £0 the data give it. Every other check still applies.
+4b. **Model limits.** A measure the installed model overstates until a
+   known fix lands (``uk_budget_data.model_limits``, recorded in its
+   receipt) may be staged or provisional, with its figure, but is never
+   approved.
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or
@@ -393,6 +397,12 @@ def gate_problems(
                 )
             if level == m.APPROVED and summary not in (PASS, ACCEPTED):
                 problems.append(f"reconciliation is {summary}")
+
+    if level == m.APPROVED and dashboard.get("model_limits"):
+        problems.append(
+            "held at provisional, not approved: "
+            + " ".join(item["reason"] for item in dashboard["model_limits"])
+        )
 
     if level == m.APPROVED:
         years = [
