@@ -2312,6 +2312,10 @@ def test_the_templates_use_no_construction_ruled_outside_the_line():
                 and isinstance(node.args[1].value, str)
             ):
                 found.append((node.lineno, "an attribute named at run time"))
+            elif name == "register":
+                # An ABC's virtual-subclass registration changes what
+                # isinstance and issubclass return: construction (c).
+                found.append((node.lineno, "an ABC registration"))
             elif name in from_operator or (
                 isinstance(node.func, ast.Attribute)
                 and isinstance(node.func.value, ast.Name)
