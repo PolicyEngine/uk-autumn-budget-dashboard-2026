@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 import yaml
-from huggingface_hub.errors import HfHubHTTPError
+from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
 from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
@@ -80,6 +80,7 @@ class FakeApi:
         self.deny_download = deny_download
         self.tokens_seen = []
         self.downloads = []
+        self.download_calls = []
 
     def whoami(self, token):
         self.tokens_seen.append(token)
@@ -106,13 +107,40 @@ class FakeApi:
         ]
 
     def hf_hub_download(
-        self, repo_id, filename, revision, repo_type, token, local_dir
+        self,
+        repo_id,
+        filename,
+        revision,
+        repo_type,
+        token,
+        local_dir,
+        force_download=False,
     ):
+        """As huggingface_hub 1.1.5 behaves: a 401 or 404 raises an
+        HfHubHTTPError; a plain 403, a server error or a network failure
+        raises LocalEntryNotFoundError, with the HTTP error as its cause."""
         self.tokens_seen.append(token)
         self.downloads.append(filename)
-        if self.deny_download:
-            raise http_error("403 Client Error: forbidden", status=403)
         path = Path(local_dir) / filename
+        self.download_calls.append(
+            dict(
+                repo_id=repo_id,
+                revision=revision,
+                repo_type=repo_type,
+                token=token,
+                force_download=force_download,
+                path=path,
+            )
+        )
+        if self.deny_download == 401:
+            raise http_error("401 Client Error: Unauthorized", status=401)
+        if self.deny_download:
+            try:
+                raise http_error("403 Client Error: Forbidden", status=403)
+            except HfHubHTTPError as cause:
+                raise LocalEntryNotFoundError(
+                    "An error happened while trying to locate the file"
+                ) from cause
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(self.git_files[filename])
         return str(path)
@@ -344,7 +372,18 @@ def test_a_plain_git_file_is_downloaded_and_hashed():
     lines = check_access("hf_x", with_git_file(GIT_SHA), api=api)
     assert api.downloads == ["weights.h5"]
     assert lines[-1].endswith("(git file, downloaded and hashed)")
-    assert "enhanced.h5" not in api.downloads
+    # At the pin, from its own repository, with the token, never from a
+    # cached copy, and into a directory removed afterwards (#74's review).
+    (call,) = api.download_calls
+    assert (call["repo_id"], call["revision"], call["repo_type"]) == (
+        "org/private",
+        "1.0.0",
+        "model",
+    )
+    assert call["token"] == "hf_x"
+    assert call["force_download"] is True
+    assert not call["path"].exists()
+    assert not call["path"].parent.exists()
 
 
 def test_a_plain_git_file_with_other_bytes_fails_naming_their_hash():
@@ -357,16 +396,66 @@ def test_a_plain_git_file_with_other_bytes_fails_naming_their_hash():
     assert "bundle pins" in str(raised.value)
 
 
-def test_a_refused_download_is_an_access_error_not_a_missing_hash():
+@pytest.mark.parametrize("refusal", [403, 401])
+def test_a_refused_download_is_an_access_error_not_a_missing_hash(refusal):
+    """Both ways huggingface_hub reports a refusal: a plain 403 as
+    LocalEntryNotFoundError caused by the HTTP error, a 401 directly."""
     api = FakeApi(
         files={"enhanced.h5": SHA_A},
         git_files={"weights.h5": GIT_BYTES},
-        deny_download=True,
+        deny_download=refusal,
     )
     with pytest.raises(CertifiedDataAccessError) as raised:
         check_access("hf_x", with_git_file(GIT_SHA), api=api)
     assert "cannot download" in str(raised.value)
+    assert f"{refusal} Client Error" in str(raised.value)
+    assert certified_data.ACCESS_HINT in str(raised.value)
     assert "None" not in str(raised.value)
+    assert not api.download_calls[0]["path"].parent.exists()
+
+
+def test_a_plain_git_file_at_the_limit_is_downloaded(monkeypatch):
+    monkeypatch.setattr(certified_data, "MAX_GIT_FILE_BYTES", len(GIT_BYTES))
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == ["weights.h5"]
+
+
+@pytest.mark.parametrize("size", [None, True, "12", 12.0])
+def test_a_plain_git_file_without_a_whole_size_is_refused(size):
+    class Sized(FakeApi):
+        def get_paths_info(self, *args, **kwargs):
+            infos = super().get_paths_info(*args, **kwargs)
+            for info in infos:
+                if info.lfs is None:
+                    info.size = size
+            return infos
+
+    api = Sized(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    with pytest.raises(CertifiedDataAccessError, match="plain git, not LFS"):
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == []
+
+
+def test_a_plain_git_file_bigger_than_one_read_is_hashed_whole():
+    """More than one 1 MiB block, so every block counts."""
+    payload = bytes(range(256)) * (5 * 4096 + 7)
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": payload}
+    )
+    check_access(
+        "hf_x", with_git_file(hashlib.sha256(payload).hexdigest()), api=api
+    )
+    with pytest.raises(CertifiedDataAccessError, match="bundle pins"):
+        check_access(
+            "hf_x",
+            with_git_file(hashlib.sha256(payload[: 1 << 20]).hexdigest()),
+            api=api,
+        )
 
 
 def test_a_plain_git_file_over_the_limit_is_refused_without_downloading(
@@ -598,3 +687,9 @@ def test_a_module_skipped_while_collecting_is_allowed_locally(
         workers,
     )
     assert result.ret in (0, pytest.ExitCode.NO_TESTS_COLLECTED)
+
+
+def test_the_limit_covers_the_largest_plain_git_file_a_bundle_pins():
+    """policyengine 6.10.0's largest file in plain git is Microcosm's
+    calibration diagnostics, 9,949,150 bytes (metadata read on 21 Oct)."""
+    assert certified_data.MAX_GIT_FILE_BYTES >= 9_949_150

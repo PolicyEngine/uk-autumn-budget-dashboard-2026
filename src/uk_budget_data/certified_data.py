@@ -242,13 +242,17 @@ def check_access(
 
 def _git_file_sha256(api, artifact: Artifact, info, token: str) -> str:
     """The SHA-256 of a file stored in plain git, whose metadata carry none:
-    downloaded to a temporary directory and hashed. A refused download is
-    an access error, never a hash."""
-    from huggingface_hub.errors import HfHubHTTPError
+    downloaded to a temporary directory and hashed. A refused or failed
+    download is an access error, never a hash."""
+    from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
 
     where = f"{artifact.repo_id}@{artifact.revision}/{artifact.path}"
     size = getattr(info, "size", None)
-    if not isinstance(size, int) or size > MAX_GIT_FILE_BYTES:
+    if (
+        not isinstance(size, int)
+        or isinstance(size, bool)
+        or size > MAX_GIT_FILE_BYTES
+    ):
         raise CertifiedDataAccessError(
             f"{where} is stored in plain git, not LFS, so its metadata carry "
             f"no SHA-256, and at {size} bytes it is not downloaded to check "
@@ -264,10 +268,16 @@ def _git_file_sha256(api, artifact: Artifact, info, token: str) -> str:
                 repo_type=artifact.repo_type,
                 token=token,
                 local_dir=directory,
+                # A copy already in the cache is not what the pin names.
+                force_download=True,
             )
-        except HfHubHTTPError as error:
+        except (HfHubHTTPError, LocalEntryNotFoundError) as error:
+            # huggingface_hub reports a plain 403, a server error or a
+            # network failure as LocalEntryNotFoundError, with the HTTP
+            # error as its cause.
+            cause = error.__cause__ if error.__cause__ is not None else error
             raise CertifiedDataAccessError(
-                f"The token cannot download {where}: {_reason(error)}. "
+                f"The token cannot download {where}: {_reason(cause)}. "
                 f"{ACCESS_HINT}"
             ) from error
         digest = hashlib.sha256()
