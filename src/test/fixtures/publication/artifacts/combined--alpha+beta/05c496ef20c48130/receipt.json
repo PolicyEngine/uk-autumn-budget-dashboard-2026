@@ -23,6 +23,8 @@
       "reform_sha256": null,
       "representation": null
     },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
       2025,
@@ -47,7 +49,7 @@
       "metrics.csv": "6bf8fd4ef06c38ff696e240d1b888c1fefcd4edaca3bd837eb1e800dfd0d1e68",
       "winners_losers.csv": "4e426166df46c20c67fdaccbd316304a9efb5862636a6a41128ac7484241b8f4"
     },
-    "generated_at": "2026-10-16T02:51:30.860782+00:00",
+    "generated_at": "2026-10-16T04:46:22.355580+00:00",
     "generator_argv": [
       "test"
     ],

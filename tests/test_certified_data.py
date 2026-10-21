@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 import yaml
-from huggingface_hub.errors import HfHubHTTPError
+from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
 from hypothesis import assume, example, given
 from hypothesis import strategies as st
 
@@ -80,6 +80,7 @@ class FakeApi:
         self.deny_download = deny_download
         self.tokens_seen = []
         self.downloads = []
+        self.download_calls = []
 
     def whoami(self, token):
         self.tokens_seen.append(token)
@@ -106,13 +107,38 @@ class FakeApi:
         ]
 
     def hf_hub_download(
-        self, repo_id, filename, revision, repo_type, token, local_dir
+        self,
+        repo_id,
+        filename,
+        revision,
+        repo_type,
+        token,
+        local_dir,
     ):
+        """As huggingface_hub 1.1.5 behaves: a 401 or 404 raises an
+        HfHubHTTPError; a plain 403, a server error or a network failure
+        raises LocalEntryNotFoundError, with the HTTP error as its cause."""
         self.tokens_seen.append(token)
         self.downloads.append(filename)
-        if self.deny_download:
-            raise http_error("403 Client Error: forbidden", status=403)
         path = Path(local_dir) / filename
+        self.download_calls.append(
+            dict(
+                repo_id=repo_id,
+                revision=revision,
+                repo_type=repo_type,
+                token=token,
+                path=path,
+            )
+        )
+        if self.deny_download == 401:
+            raise http_error("401 Client Error: Unauthorized", status=401)
+        if self.deny_download:
+            try:
+                raise http_error("403 Client Error: Forbidden", status=403)
+            except HfHubHTTPError as cause:
+                raise LocalEntryNotFoundError(
+                    "An error happened while trying to locate the file"
+                ) from cause
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(self.git_files[filename])
         return str(path)
@@ -344,7 +370,17 @@ def test_a_plain_git_file_is_downloaded_and_hashed():
     lines = check_access("hf_x", with_git_file(GIT_SHA), api=api)
     assert api.downloads == ["weights.h5"]
     assert lines[-1].endswith("(git file, downloaded and hashed)")
-    assert "enhanced.h5" not in api.downloads
+    # At the pin, from its own repository, with the token, and into a
+    # directory removed afterwards (#74's review).
+    (call,) = api.download_calls
+    assert (call["repo_id"], call["revision"], call["repo_type"]) == (
+        "org/private",
+        "1.0.0",
+        "model",
+    )
+    assert call["token"] == "hf_x"
+    assert not call["path"].exists()
+    assert not call["path"].parent.exists()
 
 
 def test_a_plain_git_file_with_other_bytes_fails_naming_their_hash():
@@ -357,16 +393,66 @@ def test_a_plain_git_file_with_other_bytes_fails_naming_their_hash():
     assert "bundle pins" in str(raised.value)
 
 
-def test_a_refused_download_is_an_access_error_not_a_missing_hash():
+@pytest.mark.parametrize("refusal", [403, 401])
+def test_a_refused_download_is_an_access_error_not_a_missing_hash(refusal):
+    """Both ways huggingface_hub reports a refusal: a plain 403 as
+    LocalEntryNotFoundError caused by the HTTP error, a 401 directly."""
     api = FakeApi(
         files={"enhanced.h5": SHA_A},
         git_files={"weights.h5": GIT_BYTES},
-        deny_download=True,
+        deny_download=refusal,
     )
     with pytest.raises(CertifiedDataAccessError) as raised:
         check_access("hf_x", with_git_file(GIT_SHA), api=api)
-    assert "cannot download" in str(raised.value)
+    assert "Could not download" in str(raised.value)
+    assert f"{refusal} Client Error" in str(raised.value)
+    assert certified_data.ACCESS_HINT in str(raised.value)
     assert "None" not in str(raised.value)
+    assert not api.download_calls[0]["path"].parent.exists()
+
+
+def test_a_plain_git_file_at_the_limit_is_downloaded(monkeypatch):
+    monkeypatch.setattr(certified_data, "MAX_GIT_FILE_BYTES", len(GIT_BYTES))
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == ["weights.h5"]
+
+
+@pytest.mark.parametrize("size", [None, True, "12", 12.0])
+def test_a_plain_git_file_without_a_whole_size_is_refused(size):
+    class Sized(FakeApi):
+        def get_paths_info(self, *args, **kwargs):
+            infos = super().get_paths_info(*args, **kwargs)
+            for info in infos:
+                if info.lfs is None:
+                    info.size = size
+            return infos
+
+    api = Sized(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": GIT_BYTES}
+    )
+    with pytest.raises(CertifiedDataAccessError, match="plain git, not LFS"):
+        check_access("hf_x", with_git_file(GIT_SHA), api=api)
+    assert api.downloads == []
+
+
+def test_a_plain_git_file_bigger_than_one_read_is_hashed_whole():
+    """More than one 1 MiB block, so every block counts."""
+    payload = bytes(range(256)) * (5 * 4096 + 7)
+    api = FakeApi(
+        files={"enhanced.h5": SHA_A}, git_files={"weights.h5": payload}
+    )
+    check_access(
+        "hf_x", with_git_file(hashlib.sha256(payload).hexdigest()), api=api
+    )
+    with pytest.raises(CertifiedDataAccessError, match="bundle pins"):
+        check_access(
+            "hf_x",
+            with_git_file(hashlib.sha256(payload[: 1 << 20]).hexdigest()),
+            api=api,
+        )
 
 
 def test_a_plain_git_file_over_the_limit_is_refused_without_downloading(
@@ -598,3 +684,156 @@ def test_a_module_skipped_while_collecting_is_allowed_locally(
         workers,
     )
     assert result.ret in (0, pytest.ExitCode.NO_TESTS_COLLECTED)
+
+
+def test_the_limit_covers_the_largest_plain_git_file_a_bundle_pins():
+    """policyengine 6.10.0's largest file in plain git is Microcosm's
+    calibration diagnostics, 9,949,150 bytes (metadata read on 21 Oct)."""
+    assert certified_data.MAX_GIT_FILE_BYTES >= 9_949_150
+
+
+# --- the real huggingface_hub (#74's review, round 2) ------------------------
+#
+# The fake client above twice claimed behaviour the library doesn't have, so
+# these drive the real HfApi.hf_hub_download with only the network replaced:
+# the HEAD request (get_hf_file_metadata) and the GET (http_get). Nothing is
+# downloaded, and the endpoint is a closed local port in case anything leaks.
+
+GIT_PATH = (
+    "releases/microcosm-uk-2024-25-national/calibration_diagnostics.json"
+)
+REAL_TOKEN = "hf_FAKEsecretTOKENvalue0123456789"
+
+
+@pytest.fixture
+def real_library(monkeypatch, tmp_path):
+    from huggingface_hub import constants, file_download
+
+    monkeypatch.setattr(constants, "HF_HUB_OFFLINE", False)
+    monkeypatch.setattr(constants, "ENDPOINT", "https://127.0.0.1:9")
+    monkeypatch.setattr(constants, "HF_HUB_CACHE", str(tmp_path / "cache"))
+    gets = []
+
+    def http_get(url, temp_file, **kwargs):
+        assert REAL_TOKEN not in url
+        gets.append(url)
+        temp_file.write(GIT_BYTES)
+
+    def head_ok(url, timeout=None, headers=None, token=None, endpoint=None):
+        return file_download.HfFileMetadata(
+            commit_hash="a" * 40,
+            etag="0123456789abcdef0123456789abcdef01234567",
+            location=url,
+            size=len(GIT_BYTES),
+            xet_file_data=None,
+        )
+
+    monkeypatch.setattr(file_download, "http_get", http_get)
+    monkeypatch.setattr(file_download, "get_hf_file_metadata", head_ok)
+    return SimpleNamespace(
+        gets=gets,
+        head=lambda fn: monkeypatch.setattr(
+            file_download, "get_hf_file_metadata", fn
+        ),
+    )
+
+
+def real_api():
+    from huggingface_hub import HfApi
+    from huggingface_hub.hf_api import RepoFile
+
+    class Api(HfApi):
+        """The real download; canned identity and file metadata."""
+
+        def whoami(self, token=None):
+            return {"name": "ci-bot"}
+
+        def get_paths_info(self, repo_id, paths, **kwargs):
+            return [RepoFile(path=GIT_PATH, size=len(GIT_BYTES), oid="b" * 40)]
+
+    return Api()
+
+
+GIT_ARTIFACT = Artifact(
+    name="calibration_diagnostics",
+    repo_id="policyengine/populace-uk-private",
+    repo_type="dataset",
+    path=GIT_PATH,
+    revision="microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+    sha256=GIT_SHA,
+)
+
+
+def test_the_real_library_downloads_and_hashes_a_plain_git_file(real_library):
+    lines = check_access(REAL_TOKEN, [GIT_ARTIFACT], api=real_api())
+    assert lines[-1].endswith("(git file, downloaded and hashed)")
+    assert len(real_library.gets) == 1
+    assert all(REAL_TOKEN not in line for line in lines)
+
+
+def head_error(status, error_code=None):
+    def raise_(url, timeout=None, headers=None, token=None, endpoint=None):
+        import httpx
+        from huggingface_hub.utils import hf_raise_for_status
+
+        headers = {"X-Error-Code": error_code} if error_code else {}
+        hf_raise_for_status(
+            httpx.Response(
+                status, request=httpx.Request("HEAD", url), headers=headers
+            )
+        )
+        raise AssertionError("hf_raise_for_status did not raise")
+
+    return raise_
+
+
+def head_unreachable(
+    url, timeout=None, headers=None, token=None, endpoint=None
+):
+    import httpx
+
+    raise httpx.ConnectError("connection refused")
+
+
+@pytest.mark.parametrize(
+    "head, says",
+    [
+        (head_error(401), "401 Client Error"),
+        (head_error(401, "RepoNotFound"), "401 Client Error"),
+        (head_error(403), "403 Forbidden"),
+        (head_error(403, "GatedRepo"), "403 Client Error"),
+        (head_error(404, "RepoNotFound"), "404 Client Error"),
+        (head_error(404, "EntryNotFound"), "404 Client Error"),
+        (head_error(404, "RevisionNotFound"), "404 Client Error"),
+        (head_error(500), "500 Internal Server Error"),
+        (head_unreachable, "connection refused"),
+    ],
+    ids=[
+        "401",
+        "401-repo-not-found",
+        "403",
+        "403-gated",
+        "404-repo-not-found",
+        "404-entry-not-found",
+        "404-revision-not-found",
+        "500",
+        "unreachable",
+    ],
+)
+def test_every_failed_real_download_is_an_access_error(
+    real_library, head, says
+):
+    """Whatever the library raises for a failed download, the check reports
+    it with the hint and the library's own reason (unwrapped from
+    LocalEntryNotFoundError only), never a traceback; nothing is fetched."""
+    real_library.head(head)
+    with pytest.raises(CertifiedDataAccessError) as raised:
+        check_access(REAL_TOKEN, [GIT_ARTIFACT], api=real_api())
+    text = str(raised.value)
+    assert text.startswith(
+        "Could not download policyengine/populace-uk-private@"
+    )
+    assert says in text
+    assert certified_data.ACCESS_HINT in text
+    assert REAL_TOKEN not in text
+    assert real_library.gets == []

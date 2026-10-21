@@ -21,7 +21,7 @@ A fixture file is JSON::
       "name": "single earner, basic-rate change",
       "route": "/api/personal-impact",
       "request": {...},
-      "expect": [{"path": "policies.x.years[2].impact", "value": 123.45}],
+      "expect": [{"path": "policies.x.years.2027.net_income_change", "value": 123.45}],
       "source": "hand calculation, M. Juaristi, 28 Oct"
     }
 
