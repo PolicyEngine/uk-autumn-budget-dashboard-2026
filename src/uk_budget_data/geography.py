@@ -2180,7 +2180,9 @@ def run_geography(parsed: argparse.Namespace) -> int:
                 )
                 if touched:
                     limited[reform.id] = touched
-            del baseline, reformed
+            # The observation holds both simulations: free it with them, so
+            # the next pair is never built with this one still alive.
+            del baseline, reformed, observed
         simulate_s = time.perf_counter() - start
         if limited:
             for reform_id, touched in limited.items():

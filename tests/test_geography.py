@@ -1847,3 +1847,248 @@ def test_real_simulations_are_judged_as_the_generator_judges_them(
         reform, baseline, reformed, observed, [2027]
     )
     assert [item["key"] for item in touched] == limited
+
+
+# --- the command on real simulations (#76's review) ----------------------------
+#
+# The command tests above run on stand-ins, for which the watch yields
+# nothing, so they can't tell whether the area figures were watched. These
+# run the real command on household simulations, replacing only the dataset
+# builder, the dataset-level collector (one record) and the
+# Microsimulation-only ``unweighted`` keyword (adapted from the review's
+# probes).
+
+PURCHASES = "additional_residential_property_purchased"
+# The same name in ROT13, which no check of a formula's written names reads.
+HIDDEN_PURCHASES = "nqqvgvbany_erfvqragvny_cebcregl_chepunfrq"
+REFUSED = "Not computable on current data"
+
+
+def real_household_build(dataset, scenario=None):
+    from policyengine_uk import Simulation
+
+    return Simulation(situation=household_situation(), scenario=scenario)
+
+
+@pytest.fixture
+def real_simulations(monkeypatch):
+    monkeypatch.setattr(g, "build_microsimulation", real_household_build)
+    monkeypatch.setattr(
+        g,
+        "household_values",
+        lambda sim, variable, year: np.asarray(
+            sim.calculate(variable, period=year, map_to="household"),
+            dtype=float,
+        ),
+    )
+
+    def one_record(cls, sim, **kwargs):
+        return cls(
+            source_ids=np.array([1]),
+            region_codes=np.array(["E12000007"], dtype=object),
+            national=True,
+        )
+
+    monkeypatch.setattr(
+        g.GeographyCollector, "from_simulation", classmethod(one_record)
+    )
+
+
+def geography_command(
+    monkeypatch, tmp_path, capsys, reforms, years=("2027",), packages=None
+):
+    from uk_budget_data import cli
+
+    lookup = {reform.id: reform for reform in reforms}
+    monkeypatch.setattr(g, "get_reform", lookup.get)
+    monkeypatch.setattr(g, "PACKAGES", packages or {})
+    monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
+    inputs = Path(g.__file__).parents[2] / "data_inputs"
+    code = cli.main(
+        ["geography", "--reforms", *lookup, "--years", *years]
+        + ["--levels", "region", "--out-dir", str(tmp_path / "out")]
+        + ["--data-inputs-dir", str(inputs)]
+    )
+    printed = " ".join(capsys.readouterr().out.split())
+    return code, printed
+
+
+def refused(printed):
+    return [
+        part.split(":")[0].strip()
+        for part in printed.split(REFUSED + ": ")[1:]
+    ]
+
+
+def sdlt_priced_on_purchases(sim):
+    """A limit that shows only in a formula: SDLT priced on second-home
+    purchases."""
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def formula(household, period, parameters):
+        return household(PURCHASES, period) * 0.05
+
+    _replace_formula(sim, "sdlt_on_residential_property_transactions", formula)
+    return sim
+
+
+def council_tax_on_purchases_from_2028(sim):
+    """Council tax charged on second-home purchases, read only from 2028, so
+    a watch over the first year alone would miss it. Council tax's own
+    formula reads nothing limited, and the input's name is decoded as the
+    formula runs, so nothing in 2027 gives it away: only watching 2028
+    does."""
+    from uk_budget_data.measure_templates import _replace_formula
+
+    def formula(household, period, parameters):
+        import codecs
+
+        if period.start.year >= 2028:
+            name = codecs.decode(HIDDEN_PURCHASES, "rot13")
+            return household(name, period) * 0.05
+        return household.empty_array()
+
+    _replace_formula(sim, "council_tax", formula)
+    return sim
+
+
+def test_a_limit_only_in_a_formula_is_refused_on_real_simulations(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [
+            Reform(
+                id="f", name="f", simulation_modifier=sdlt_priced_on_purchases
+            )
+        ],
+    )
+    assert code == 1
+    assert refused(printed) == ["f"], printed
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_limit_read_only_in_a_later_year_is_refused(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [
+            Reform(
+                id="late",
+                name="late",
+                simulation_modifier=council_tax_on_purchases_from_2028,
+            )
+        ],
+        years=("2027", "2028"),
+    )
+    assert code == 1
+    assert refused(printed) == ["late"], printed
+
+
+def test_a_limit_read_only_while_the_measure_is_built_is_refused(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from tests import fixed_shape_measures
+    from uk_budget_data.models import Reform
+
+    reform = Reform(
+        id="b",
+        name="b",
+        simulation_modifier=fixed_shape_measures.sdlt_from_purchases_read_at_build,
+    )
+    code, printed = geography_command(monkeypatch, tmp_path, capsys, [reform])
+    assert code == 1
+    assert refused(printed) == ["b"], printed
+
+
+def test_a_package_including_a_limited_measure_is_refused(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    both = {INCOME_TAX_RATE: {"2027": 0.21}, SURCHARGE_RATE: {"2027": 0.07}}
+    reforms = [
+        Reform(id="pkg", name="pkg", parameter_changes=both),
+        Reform(
+            id="a",
+            name="a",
+            parameter_changes={INCOME_TAX_RATE: {"2027": 0.21}},
+        ),
+        Reform(
+            id="b",
+            name="b",
+            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
+        ),
+    ]
+    code, printed = geography_command(
+        monkeypatch, tmp_path, capsys, reforms, packages={"pkg": ("a", "b")}
+    )
+    assert code == 1
+    assert refused(printed) == ["pkg", "b"], printed
+
+
+@pytest.mark.parametrize(
+    "name", ["property_modifier", "vat_modifier", "payment_modifier"]
+)
+def test_a_template_measure_is_not_refused_on_real_simulations(
+    real_simulations, monkeypatch, tmp_path, capsys, name
+):
+    """No false refusal: without the run watch, or with its sides swapped,
+    a template measure would be refused or the run would stop."""
+    from tests import template_measures
+    from uk_budget_data.models import Reform
+
+    reform = Reform(
+        id="tpl",
+        name="tpl",
+        simulation_modifier=getattr(template_measures, name),
+    )
+    code, printed = geography_command(monkeypatch, tmp_path, capsys, [reform])
+    assert REFUSED not in printed, printed
+    assert "Estimating and checking" in printed, printed
+
+
+def test_each_pair_of_simulations_is_freed_before_the_next_is_built(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    """#76's review: the observation holds both simulations, so keeping it
+    kept the previous pair alive while the next was built (up to four
+    microsimulations at once on certified data)."""
+    import gc
+    import weakref
+
+    from uk_budget_data.models import Reform
+
+    built = []
+    simulate = g.simulate_reform
+
+    def simulate_and_check(reform, dataset, years):
+        gc.collect()
+        alive = [ref for ref in built if ref() is not None]
+        assert not alive, f"{len(alive)} earlier simulation(s) still alive"
+        pair = simulate(reform, dataset, years)
+        built.extend(weakref.ref(sim) for sim in pair)
+        return pair
+
+    monkeypatch.setattr(g, "simulate_reform", simulate_and_check)
+    reforms = [
+        Reform(
+            id=f"r{rate}",
+            name=f"r{rate}",
+            parameter_changes={INCOME_TAX_RATE: {"2027": rate}},
+        )
+        for rate in (0.21, 0.22)
+    ]
+    code, printed = geography_command(monkeypatch, tmp_path, capsys, reforms)
+    assert "earlier simulation" not in printed, printed
+    assert len(built) == 4
+    assert "Estimating and checking" in printed, printed
