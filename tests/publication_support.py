@@ -24,6 +24,18 @@ from uk_budget_data.publication.receipt import projection_end_year
 from uk_budget_data.publication.reconcile import reconcile_artifact
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
+# The datasets the installed bundle names: its certified default, and
+# another of its own (the way to test an uncertified receipt). Read from
+# the bundle, so the fixtures follow its data line (policyengine-uk-data's
+# enhanced FRS until 6.10.0, Microcosm since).
+_UK_RELEASE = load_bundle_manifest()["data_releases"]["uk"]
+DATASET_NAME = _UK_RELEASE["default_dataset"]
+OTHER_DATASET_NAME = sorted(
+    name
+    for name in _UK_RELEASE["datasets"]
+    if name != DATASET_NAME and name.startswith(DATASET_NAME)
+)[0]
+
 BASIS = {
     "forecast": {"status": "pre_budget", "source": "test", "vintage": "v1"},
     "calibration": {"status": "pre_budget", "source": "test", "vintage": "v1"},
@@ -124,7 +136,7 @@ class World:
         self._expected: list[str] = []
         self._write_inputs()
 
-        self._dataset = self.root / "enhanced_frs_2024_25.h5"
+        self._dataset = self.root / f"{DATASET_NAME}.h5"
         self._dataset.write_bytes(b"dummy certified dataset")
         self.bundle = self._bundle_for(self._dataset)
         (self.root / "manifest.json").write_text(json.dumps(self.bundle))
@@ -159,7 +171,7 @@ class World:
         bundle = copy.deepcopy(load_bundle_manifest())
         release = bundle["data_releases"]["uk"]
         release["certified_data_artifact"]["sha256"] = digest
-        release["datasets"]["enhanced_frs_2024_25"]["sha256"] = digest
+        release["datasets"][DATASET_NAME]["sha256"] = digest
         return bundle
 
     # --- simulations and receipts ------------------------------------
@@ -168,7 +180,7 @@ class World:
         self,
         dataset: Path = None,
         years=DATASET_YEARS,
-        dataset_name: str = "enhanced_frs_2024_25",
+        dataset_name: str = DATASET_NAME,
     ):
         """A stand-in simulation carrying what the receipt builder reads.
 
@@ -206,7 +218,7 @@ class World:
         measure_ids=None,
         tables=None,
         member_outputs=None,
-        dataset_name: str = "enhanced_frs_2024_25",
+        dataset_name: str = DATASET_NAME,
         reform_identity=None,
         config_baseline=None,
     ):

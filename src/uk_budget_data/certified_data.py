@@ -29,9 +29,12 @@ TOKEN_ENV = "HUGGING_FACE_TOKEN"
 
 ACCESS_HINT = (
     "CI reads the token from the organisation secret "
-    "PE_UK_PRIVATE_HF_READ_TOKEN, a fine-grained read-only token for "
-    "policyengine/policyengine-uk-data-private. An organisation admin must "
-    "add this repository to that secret's selected repositories."
+    "PE_UK_PRIVATE_HF_READ_TOKEN. It must be able to read the Hugging Face "
+    "repository the installed bundle's certified data comes from "
+    "(policyengine/populace-uk-private for Microcosm, from policyengine "
+    "6.10.0; policyengine/policyengine-uk-data-private before), and this "
+    "repository must be among that secret's selected repositories. "
+    "Changing either is an organisation admin's call."
 )
 
 

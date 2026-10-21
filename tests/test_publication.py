@@ -15,6 +15,7 @@ from policyengine_uk.utils.scenario import Scenario
 from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import (
     DATASET_YEARS,
+    OTHER_DATASET_NAME,
     PROJECTION_END,
     RATE_PATH,
     YEARS,
@@ -378,15 +379,15 @@ def test_different_dataset_bytes_cannot_be_receipted(world):
 
 
 def test_a_dataset_other_than_the_certified_default_is_uncertified(world):
-    tiny = world.root / "enhanced_frs_2024_25_tiny.h5"
+    tiny = world.root / f"{OTHER_DATASET_NAME}.h5"
     tiny.write_bytes(b"a smaller dataset")
-    world.register("enhanced_frs_2024_25_tiny", tiny)
+    world.register(OTHER_DATASET_NAME, tiny)
     document = read_receipt(
         world.write(
             "alpha",
             VALUES,
             dataset=tiny,
-            dataset_name="enhanced_frs_2024_25_tiny",
+            dataset_name=OTHER_DATASET_NAME,
         ).path
     )
     assert (
@@ -600,15 +601,15 @@ def test_provisional_tolerates_awaiting_source_but_approval_does_not(world):
 
 
 def test_uncertified_artifact_cannot_be_provisional_or_approved(world):
-    other = world.root / "enhanced_frs_2024_25_tiny.h5"
+    other = world.root / f"{OTHER_DATASET_NAME}.h5"
     other.write_bytes(b"uncertified")
-    world.register("enhanced_frs_2024_25_tiny", other)
+    world.register(OTHER_DATASET_NAME, other)
     world.costing("alpha", VALUES)
     reference = world.write(
         "alpha",
         VALUES,
         dataset=other,
-        dataset_name="enhanced_frs_2024_25_tiny",
+        dataset_name=OTHER_DATASET_NAME,
     )
     world.reconcile(reference)
     manifest = m.Manifest()
