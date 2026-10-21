@@ -144,7 +144,7 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
       <div className="chart-header">
         <div>
           <h2 id={titleId}>
-            {TITLE}, {yearLabel}
+            {TITLE}, <span className="nowrap">{yearLabel}</span>
           </h2>
           <p className="chart-description">
             The average change in household net income in each region and

@@ -204,7 +204,7 @@ describe("ConstituencyMap", () => {
 
     // The file shows the drawing area alone, with the legend in its corner.
     fireEvent.click(screen.getByRole("button", { name: "Download map" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
     const root = new DOMParser().parseFromString(svgText, "image/svg+xml")
@@ -433,7 +433,7 @@ describe("ConstituencyMap", () => {
     await renderMap();
     vi.mocked(downloadFile).mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Download map" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(
@@ -452,7 +452,7 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
     fireEvent.click(screen.getByRole("button", { name: "Download map" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "SVG" }));
+    fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
     expect(filename).toBe(

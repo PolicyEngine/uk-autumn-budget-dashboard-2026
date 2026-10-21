@@ -6,9 +6,9 @@
  */
 import { useEffect, useState } from "react";
 
-// Below this width a chart drops its rotated y-axis title, tightens its
+// At or below this width (the page's phone breakpoint) a chart drops its rotated y-axis title, tightens its
 // margins and puts the PolicyEngine logo under the legend, not beside it.
-export const NARROW_QUERY = "(max-width: 640px)";
+export const NARROW_QUERY = "(max-width: 768px)";
 
 export function useNarrowViewport() {
   const [narrow, setNarrow] = useState(false);
@@ -78,6 +78,12 @@ export const TOOLTIP_CONTENT_STYLE = {
   boxShadow: "0 4px 12px rgba(17, 24, 39, 0.08)",
   fontSize: "13px",
 };
+
+/** Short fiscal year label for a phone axis: 2026 -> "26–27". */
+export function shortFiscalYearTick(year) {
+  const y = Number(year);
+  return `${String(y).slice(-2)}\u2013${String(y + 1).slice(-2)}`;
+}
 
 /** Fiscal year label: 2026 -> "2026-27". */
 export function fiscalYearTick(year) {

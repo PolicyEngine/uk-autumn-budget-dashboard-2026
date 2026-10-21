@@ -16,6 +16,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { householdIncomeCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import NoBreakYear from "./NoBreakYear";
 import "./EmploymentIncomeChart.css";
 import "./ChartExport.css";
 import {
@@ -158,7 +159,9 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
   if (loading) {
     return (
       <div className="employment-income-chart">
-        <h2>{chartTitle}</h2>
+        <h2>
+            <NoBreakYear text={chartTitle} />
+          </h2>
         <p className="chart-description">
           This chart shows the relationship between household head employment
           income and total household net income in {formatYearRange(selectedYear)}.
@@ -174,7 +177,9 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
     <div className="employment-income-chart">
       <div className="chart-header">
         <div>
-          <h2>{chartTitle}</h2>
+          <h2>
+            <NoBreakYear text={chartTitle} />
+          </h2>
           <p className="chart-description">
             This chart models a household with 2 adults (both age 40) and 3
             children (ages 7, 5, and 3) in {formatYearRange(selectedYear)}. The primary earner
@@ -249,7 +254,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
                 <span style={legendLabelStyle(narrow)}>{value}</span>
               )}
               verticalAlign="bottom"
-              align="center"
+              align="left"
             />
             <Line
               type="monotone"

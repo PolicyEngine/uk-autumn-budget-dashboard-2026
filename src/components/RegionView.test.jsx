@@ -188,7 +188,7 @@ describe("RegionView", () => {
     renderView();
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Download results by region" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     expect(downloadFile).toHaveBeenCalledTimes(1);
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
@@ -234,7 +234,7 @@ describe("RegionView", () => {
     renderView({ selectedPolicies: ["fuel_duty_freeze"] });
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Download results by region" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "TXT" }));
+    fireEvent.click(screen.getByRole("button", { name: "TXT Plain text" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe("results-by-region-fuel_duty_freeze-2029.txt");

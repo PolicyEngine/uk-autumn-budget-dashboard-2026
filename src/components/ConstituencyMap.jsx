@@ -526,7 +526,7 @@ export default function ConstituencyMap({
         <div className="chart-header">
           <div>
             <h2>
-              {CHART_TITLE}, {yearLabel}
+              {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
             </h2>
             <p className="chart-description">
               The average change in household net income in each constituency.

@@ -94,6 +94,11 @@ const PRESETS = [
   },
 ];
 
+// The ui-kit shell's sticky site nav, as globals.css selects it to make it
+// scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+export const SHELL_STICKY_NAV_SELECTOR =
+  '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
+
 function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
 
@@ -396,6 +401,18 @@ function App() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
+  }, []);
+
+  // globals.css un-sticks the ui-kit site nav with a selector written
+  // against the shell's markup. Say so in development if it stops matching.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (!document.querySelector(SHELL_STICKY_NAV_SELECTOR)) {
+      console.warn(
+        "The ui-kit site nav was not found by SHELL_STICKY_NAV_SELECTOR; " +
+          "update it in App.jsx and globals.css so only the title row is sticky.",
+      );
+    }
   }, []);
 
   const handleTabChange = (tab) => {

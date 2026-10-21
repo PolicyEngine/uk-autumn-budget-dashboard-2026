@@ -40,6 +40,9 @@ function PolicySelector({ policies, selectedPolicies, onPolicyToggle }) {
               ? "policy selected"
               : "policies selected"}
         </span>
+        <span className="policy-selector-label-short" aria-hidden="true">
+          selected
+        </span>
         <span className="policy-selector-icon">{isExpanded ? "▲" : "▼"}</span>
       </button>
 

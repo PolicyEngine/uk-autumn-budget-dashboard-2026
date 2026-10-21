@@ -4,7 +4,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 20px;
+  /* The card (white, border, radius, padding) comes from the page layout */
+  padding: 0;
   min-width: 0;
 }
 

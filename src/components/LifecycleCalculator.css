@@ -13,12 +13,12 @@
   margin: 0 0 6px 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--pe-gray-900);
 }
 
 .lifecycle-subtitle {
   margin: 0;
-  color: #4b5563;
+  color: var(--pe-gray-600);
   font-size: 1rem;
 }
 
@@ -35,14 +35,13 @@
 }
 
 /* Controls sidebar */
+/* Not sticky: only the page's title row sticks */
 .lifecycle-controls {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 20px;
   height: fit-content;
-  position: sticky;
-  top: 20px;
 }
 
 .lifecycle-controls h3 {
@@ -106,12 +105,13 @@
   cursor: pointer;
 }
 
+/* The value sits right after its track, so every track ends at its value */
 .slider-value {
-  min-width: 80px;
+  min-width: 64px;
   font-size: 0.85rem;
   font-weight: 600;
   color: #319795;
-  text-align: right;
+  text-align: left;
   font-variant-numeric: tabular-nums;
 }
 
@@ -123,6 +123,10 @@
   border-radius: 6px;
   font-size: 0.85rem;
   font-family: inherit;
+}
+
+.text-input::placeholder {
+  color: var(--pe-gray-500);
 }
 
 .text-input:focus {
@@ -219,16 +223,16 @@
 
 /* Summary figures: the same headline treatment as the population tab */
 .summary-item {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 16px 20px;
   text-align: left;
 }
 
 .summary-label {
   font-size: 0.8125rem;
-  color: #6b7280;
+  color: var(--pe-gray-500);
   margin-bottom: 4px;
 }
 
@@ -236,7 +240,7 @@
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #111827;
+  color: var(--pe-gray-900);
   font-variant-numeric: tabular-nums;
 }
 
@@ -250,9 +254,9 @@
 
 /* Chart container */
 .chart-container {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 24px;
   margin-bottom: 20px;
   position: relative;
@@ -435,9 +439,9 @@
 
 /* Methodology section */
 .methodology {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 24px;
 }
 
@@ -502,17 +506,7 @@
   }
 }
 
-@media (max-width: 480px) {
-  .slider-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-  }
-
-  .slider-value {
-    text-align: left;
-  }
-}
+/* On a phone the value stays beside its track, as on desktop */
 
 /* Modal styles */
 .modal-overlay {

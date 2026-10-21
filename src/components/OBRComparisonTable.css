@@ -90,7 +90,7 @@
 
 /* The only rule: under the header */
 .comparison-table thead {
-  border-bottom: 1px solid #d1d5db;
+  border-bottom: 1px solid var(--card-border);
 }
 
 /* Space, not rules, between the year pairs */

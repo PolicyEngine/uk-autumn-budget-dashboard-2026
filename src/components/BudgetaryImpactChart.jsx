@@ -31,6 +31,7 @@ import {
   legendLabelStyle,
   TOOLTIP_CONTENT_STYLE,
   fiscalYearTick,
+  shortFiscalYearTick,
 } from "../utils/chartTheme";
 import "./BudgetaryImpactChart.css";
 import "./ChartExport.css";
@@ -38,7 +39,7 @@ import "./ChartExport.css";
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  "This chart shows the annual budgetary impact from 2026 to 2029, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
+  "This chart shows the annual budgetary impact from 2026-27 to 2030-31, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
 
 function BudgetaryImpactChart({ data }) {
   const chartRef = useRef(null);
@@ -75,9 +76,9 @@ function BudgetaryImpactChart({ data }) {
     Math.max(10, Math.ceil(stackExtent(1) / 5) * 5),
   ];
 
-  // Build legend items for export - include ALL policies for consistency across exports
+  // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...ALL_POLICY_NAMES.map((name) => ({
+    ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
@@ -116,7 +117,7 @@ function BudgetaryImpactChart({ data }) {
         <div>
           <h2>Revenue impact</h2>
           <p className="chart-description">
-            This chart shows the annual budgetary impact from 2026 to 2029,
+            This chart shows the annual budgetary impact from 2026-27 to 2030-31,
             measured in billions of pounds. Positive values indicate revenue
             gains for the Government, whilst negative values indicate costs to
             the Treasury.
@@ -126,7 +127,7 @@ function BudgetaryImpactChart({ data }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 420 : 400}>
+        <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { left: 60 })}
@@ -139,7 +140,7 @@ function BudgetaryImpactChart({ data }) {
               axisLine={AXIS_LINE}
               tickLine={false}
               interval={0}
-              tickFormatter={fiscalYearTick}
+              tickFormatter={narrow ? shortFiscalYearTick : fiscalYearTick}
             />
             <YAxis
               domain={yAxisDomain}
@@ -188,6 +189,7 @@ function BudgetaryImpactChart({ data }) {
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
+              align="left"
               iconType="rect"
               iconSize={10}
               formatter={(value) => (

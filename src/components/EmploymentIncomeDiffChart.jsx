@@ -16,6 +16,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { householdChangeCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import NoBreakYear from "./NoBreakYear";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
 import {
@@ -160,7 +161,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
   if (loading) {
     return (
       <div className="employment-income-diff-chart">
-        <h2>{chartTitle}</h2>
+        <h2>
+            <NoBreakYear text={chartTitle} />
+          </h2>
         <p className="chart-description">
           This chart shows the change in household net income for a household
           with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
@@ -185,7 +188,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
     <div className="employment-income-diff-chart">
       <div className="chart-header">
         <div>
-          <h2>{chartTitle}</h2>
+          <h2>
+            <NoBreakYear text={chartTitle} />
+          </h2>
           <p className="chart-description">
             This chart shows the change in household net income for a household
             with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The

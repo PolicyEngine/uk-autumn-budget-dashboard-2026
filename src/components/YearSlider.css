@@ -95,7 +95,7 @@
   pointer-events: none;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   /* The years take the full row; Play sits under them */
   .year-slider {
     width: 100%;

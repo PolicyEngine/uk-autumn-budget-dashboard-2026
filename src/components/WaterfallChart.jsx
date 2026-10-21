@@ -18,6 +18,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import NoBreakYear from "./NoBreakYear";
 import { POLICY_COLORS } from "../utils/policyConfig";
 import "./WaterfallChart.css";
 import "./ChartExport.css";
@@ -208,9 +209,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
 
   const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
 
-  // Build legend items for export - include ALL policies for consistency across exports
+  // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...ALL_POLICY_NAMES.map((name) => ({
+    ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
@@ -252,7 +253,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     <div className="waterfall-chart">
       <div className="chart-header">
         <div>
-          <h2>{chartTitle}</h2>
+          <h2>
+            <NoBreakYear text={chartTitle} />
+          </h2>
           <p className="chart-description">
             This chart shows the absolute change in net income by decile,
             measured in pounds per year. This represents the actual cash amount
@@ -263,7 +266,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 460 : 480}>
+        <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { left: 64 })}
@@ -334,13 +337,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
+              align="left"
               iconType="rect"
               iconSize={10}
               formatter={(value) => (
                 <span style={legendLabelStyle(narrow)}>{value}</span>
               )}
               payload={[
-                ...ALL_POLICY_NAMES.map((name) => ({
+                ...activePolicies.map((name) => ({
                   value: name,
                   type: "rect",
                   color: POLICY_COLORS[name],

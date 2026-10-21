@@ -11,14 +11,17 @@ const FORMAT_LABELS = {
 const ORDER = ["csv", "png", "svg", "txt"];
 
 /**
- * One download menu per chart: a button that opens a short list of
- * formats. `formats` maps a format (csv, png, svg, txt) to the function
- * that downloads it; formats without a function are left out.
+ * One download menu per chart: a disclosure button that shows a short list
+ * of format buttons. `formats` maps a format (csv, png, svg, txt) to the
+ * function that downloads it; formats without a function are left out.
+ * Escape or a click outside closes the list; Escape returns focus to the
+ * button.
  */
 function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const rootRef = useRef(null);
+  const buttonRef = useRef(null);
   const menuId = useId();
   const available = ORDER.filter((format) => typeof formats?.[format] === "function");
 
@@ -28,7 +31,10 @@ function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
       if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
     };
     const onKey = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
     };
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -55,9 +61,9 @@ function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
   return (
     <div className="chart-download" ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
         className="chart-download-button"
-        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         aria-label={ariaLabel}
@@ -81,19 +87,17 @@ function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
         {label}
       </button>
       {open && (
-        <ul className="chart-download-menu" role="menu" id={menuId}>
+        <ul className="chart-download-menu" id={menuId}>
           {available.map((format) => (
-            <li key={format} role="none">
+            <li key={format}>
               <button
                 type="button"
-                role="menuitem"
                 className="chart-download-item"
                 data-format={format}
-                aria-label={FORMAT_LABELS[format].name}
                 disabled={busy !== null}
                 onClick={() => run(format)}
               >
-                <span className="chart-download-format">{FORMAT_LABELS[format].name}</span>
+                <span className="chart-download-format">{FORMAT_LABELS[format].name}</span>{" "}
                 <span className="chart-download-detail">
                   {busy === format ? "Preparing…" : FORMAT_LABELS[format].detail}
                 </span>

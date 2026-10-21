@@ -13,22 +13,22 @@
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #4b5563;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
+  color: var(--pe-gray-600);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .chart-download-button:hover,
 .chart-download-button[aria-expanded="true"] {
-  color: #0f766e;
-  border-color: #319795;
+  color: var(--pe-teal-700);
+  border-color: var(--pe-teal-500);
 }
 
 .chart-download-button:focus-visible,
 .chart-download-item:focus-visible {
-  outline: 2px solid #319795;
+  outline: 2px solid var(--pe-teal-500);
   outline-offset: 2px;
 }
 
@@ -41,8 +41,8 @@
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-200);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
 }
@@ -57,7 +57,7 @@
   font-family: inherit;
   font-size: 0.875rem;
   text-align: left;
-  color: #111827;
+  color: var(--pe-gray-900);
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -65,7 +65,7 @@
 }
 
 .chart-download-item:hover:not(:disabled) {
-  background: #f0fdfa;
+  background: var(--pe-teal-50);
 }
 
 .chart-download-item:disabled {
@@ -79,12 +79,12 @@
 
 .chart-download-detail {
   font-size: 0.8125rem;
-  color: #6b7280;
+  color: var(--pe-gray-500);
 }
 
-/* On a phone the menu goes under the chart's title and description, so the
-   text keeps the card's full width. */
-@media (max-width: 640px) {
+/* Phone: the button goes under the chart's title and description, so the
+   text keeps the card's full width, and every target is at least 40px. */
+@media (max-width: 768px) {
   .chart-header:has(> .chart-download) {
     flex-direction: column;
     align-items: stretch;
@@ -96,7 +96,19 @@
     margin-bottom: 8px;
   }
 
-  .chart-header > .chart-download .chart-download-menu {
+  .chart-download-button {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 0.875rem;
+  }
+
+  .chart-download-item {
+    align-items: center;
+    min-height: 40px;
+  }
+
+  .chart-header > .chart-download .chart-download-menu,
+  .lifecycle-chart-footer .chart-download-menu {
     right: auto;
     left: 0;
   }
