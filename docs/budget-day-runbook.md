@@ -150,7 +150,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
     - **Reject the modifier if its own code uses any of these** (coordinator's ruling on #51, 19 Oct). The detector isn't required to see through them, so #55 lists what they can hide:
       1. **another simulation or system:** building or holding a simulation or tax-benefit system other than the one it's given (a clone, or a branch with a cloned system), or that simulation's parameters, entities, populations or holders;
       2. **state changed mid-run:** changing state its formulas hold (a dict, a list, an object's fields) while the simulations run;
-      3. **a metaclass.**
+      3. **a metaclass:** any class whose metaclass isn't plain `type`. That includes `ABC` bases and other `abc.ABCMeta` classes, and virtual subclasses registered with `register()`, which change what `isinstance` and `issubclass` return (coordinator, 21 October).
     - **The reviewer confirms each one's absence by name in the measure's PR**, for example: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no."
     - **The rule covers the modifier's own code only.** Templates and the model's own code, such as policyengine-uk's behavioural-response branching (the capital gains response route), stay inside the detector's line: a miss through them is a bug to fix, not a listed limitation.
   - Templates are tested:
@@ -325,6 +325,7 @@ uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
+- **Which ids.** If a CGT measure that depends on taxpayer numbers is held provisional, and the call is to leave it out of the combined run (see "Data limitations"), list every coded id but that one, and say so wherever the package total appears.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
@@ -389,8 +390,8 @@ W5 re-measured on the same file for 2025:
 
 **Source of the £1m+ figures:** HMRC's Survey of Personal Incomes, 2023-24: £35.5bn of employment income for 21,000 people, and £11.1bn of dividends for 19,000. An earlier draft called these a 2025 HMRC projection. The 2025 calibration targets are PolicyEngine's own uprating of them: £37.4bn and £11.6bn on 1.58.1 (`storage/incomes_projection.csv`; corrected by the UK hub, uk-data#593).
 
-**Capital gains tax: taxpayer counts (from the Budget pair's data).** Batch 3 of uk-data (policyengine-uk-data #608, with #571, which starts capital gains on HMRC's 2024-25 size-of-gain table) is merged as 1.59.0 but not yet published. It publishes as 1.59.1, with a reviewed widening of the CGT taxpayer-count test's bound (Max's decision d1735, 20 October). The dashboard adopts it with the Budget pair, once that is certified and promoted. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
-- **A measure that depends on the number of taxpayers** (a change to the annual exempt amount, or to a threshold) is staged provisional on the day, not approved.
+**Capital gains tax: taxpayer counts (from the Budget pair's data).** Batch 3 of uk-data (policyengine-uk-data #608, with #571, which starts capital gains on HMRC's 2024-25 size-of-gain table) is merged as 1.59.0 but not yet published. It publishes as 1.59.1, with a reviewed widening of the CGT taxpayer-count test's bound (policyengine-uk-data #631; Max's decision d1735, 20 October). The dashboard adopts it with the Budget pair, once that is certified and promoted. Its built count of CGT taxpayers is about a third below HMRC's: 375,000 weighted against 548,000.
+- **A measure that depends on the number of taxpayers** (a change to the annual exempt amount, or to a threshold) is staged provisional on the day, not approved. The 07:00 briefing takes approved entries only, so it stays out of the briefing too, unless someone approves an exception for it.
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
