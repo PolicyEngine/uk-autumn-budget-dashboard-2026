@@ -432,7 +432,7 @@ An approval or an exception carries over only where the outputs are byte-identic
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
 - **Approve once the household checks pass on the new release.**
   - **The alternative:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`), so the Approver can approve on the upgrade branch, before merging.
-  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional. But it approves figures before any household check has run on the new release.
+  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional (re-stage them with `--provisional` to keep them visible). But it approves figures before any household check has run on the new release.
   - **Your call** which order to use on the day.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
@@ -507,7 +507,9 @@ Exports are built only from approved entries of one manifest revision. A measure
 
   Then re-run the household check against the live route.
 - **A model release.** To go back to the previous bundle after an upgrade:
-  1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes. Check that nothing merged since depends on what is reverted.
+  1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
+     - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
+     - Check that nothing else merged since depends on what is reverted.
   2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
   3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
   4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
