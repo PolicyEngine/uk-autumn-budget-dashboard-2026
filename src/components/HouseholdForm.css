@@ -1,0 +1,125 @@
+/* The Personal impact view's household questions: labelled fields in a
+   two-column grid (one column on a phone), the extra questions in their
+   own group below. */
+.household-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.household-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  align-items: start;
+}
+
+.household-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.household-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.household-field input[type="number"],
+.household-field input[type="text"],
+.household-field select {
+  height: 40px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #374151;
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 8px;
+}
+
+.household-field input:focus-visible,
+.household-field select:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 1px;
+}
+
+/* A checkbox sits before its label, on one line */
+.household-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  align-self: center;
+}
+
+.household-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #319795;
+}
+
+.household-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #666;
+}
+
+.household-extra {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.household-extra legend {
+  padding: 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.household-extra .household-hint {
+  margin-bottom: 12px;
+}
+
+.household-problem {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #b42318;
+}
+
+.household-submit {
+  align-self: flex-start;
+  height: 40px;
+  padding: 0 20px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #319795;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.household-submit:hover:not(:disabled) {
+  background: #2c7a7b;
+}
+
+.household-submit:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.household-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+  .household-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

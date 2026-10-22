@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { POST, TIMEOUT_MS } from "./route";
+import { POST, maxDuration } from "./route";
 
 const APP_URL = "https://policyengine--uk-budget-2026-household-impact.modal.run";
 const REQUEST = { year: 2029, policies: ["two_child_limit"], household: { age: 40 } };
@@ -76,7 +76,7 @@ describe("the household impact route", () => {
     expect(response.status).toBe(503);
   });
 
-  it("answers 503 when the app takes longer than the timeout", async () => {
+  it("answers 503 when the app doesn't answer before Vercel stops the route", async () => {
     vi.useFakeTimers();
     vi.stubEnv("HOUSEHOLD_IMPACT_API_URL", APP_URL);
     stubFetch(
@@ -89,7 +89,7 @@ describe("the household impact route", () => {
     );
 
     const pending = POST(post());
-    await vi.advanceTimersByTimeAsync(TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(maxDuration * 1000);
     const response = await pending;
 
     expect(response.status).toBe(503);
