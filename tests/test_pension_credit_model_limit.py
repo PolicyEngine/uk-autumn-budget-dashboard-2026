@@ -103,12 +103,16 @@ def stand_in(
     index=AT_EARNINGS,
     rates=(SINGLE, COUPLE),
     amounts=None,
+    reformed_only=False,
 ):
     """A processed tree whose guarantee rates in ``rates`` name ``index``
     as their uprating rule, with ``amounts`` typed in for April 2027.
 
-    The raw tree records whether May to July 2026 earnings are published,
-    separately from the processed input, which a forecast can fill.
+    A built model has both in the tree as built, the ``baseline`` child
+    the check reads; ``reformed_only`` puts them only in the tree a
+    measure changes. The raw tree records whether May to July 2026
+    earnings are published, separately from the processed input, which a
+    forecast can fill.
     """
     system = copy.copy(installed_system)
     system.parameters = installed_system.parameters.clone()
@@ -116,11 +120,15 @@ def stand_in(
     system._raw_parameters = statutory_parameters()
     if not published:
         _update(system._raw_parameters, EARNINGS, "2026-07-01", None)
-    for path in rates:
-        node = system.parameters.get_child(path)
-        node.metadata = {**node.metadata, "uprating": index}
-    for path, value in (amounts or {}).items():
-        _update(system.parameters, path, "2027-04-01", value)
+    trees = [system.parameters]
+    if not reformed_only:
+        trees.append(system.parameters.children["baseline"])
+    for tree in trees:
+        for path in rates:
+            node = tree.get_child(path)
+            node.metadata = {**node.metadata, "uprating": index}
+        for path, value in (amounts or {}).items():
+            _update(tree, path, "2027-04-01", value)
     return SimpleNamespace(tax_benefit_system=system)
 
 
@@ -178,6 +186,17 @@ TYPED_IN = {SINGLE: 247.30, COUPLE: 377.45}
 )
 def test_the_fix_is_an_earnings_rule_for_both_rates(kwargs, fixed):
     assert LIMIT.fixed(stand_in(**kwargs).tax_benefit_system) is fixed
+
+
+def test_a_measure_cannot_make_its_own_model_count_as_fixed():
+    """The check reads the tree as the model built it: a scenario that
+    sets earnings-level 2027 rates, or a modifier that repoints the rule
+    in the tree it changes, leaves the model unfixed (review of #90)."""
+    scenario = simulation({SINGLE: {"2027": 250.0}, COUPLE: {"2027": 380.0}})
+    assert LIMIT.fixed(scenario.tax_benefit_system) is False
+    assert LIMIT.fixed(stand_in(reformed_only=True).tax_benefit_system) is (
+        False
+    )
 
 
 def test_an_unreadable_system_counts_as_unfixed():
@@ -276,7 +295,10 @@ def test_with_the_fix_a_guarantee_measure_records_only_the_benefit_limit(
     """The limit expires on its own once the model has the fix, whatever
     the measure does to the guarantee: the check reads the rule, not the
     measure's amounts."""
-    reformed = stand_in(amounts={SINGLE: value})
+    reformed = stand_in()
+    _update(
+        reformed.tax_benefit_system.parameters, SINGLE, "2027-04-01", value
+    )
     touched = limits_touched(stand_in(), reformed)
     assert [item["key"] for item in touched] == [BENEFIT_LIMIT.key]
 

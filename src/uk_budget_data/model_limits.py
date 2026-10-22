@@ -182,6 +182,14 @@ _EARNINGS_INPUT = (
 _INDEX_TOLERANCE = 1e-5
 
 
+def _unreformed(parameters):
+    """The tree as the model built it, before any reform: policyengine-core
+    keeps it as the ``baseline`` child of every built tree."""
+    children = getattr(parameters, "children", None)
+    baseline = children.get("baseline") if isinstance(children, dict) else None
+    return baseline if baseline is not None else parameters
+
+
 def _uprating_index(node):
     """The index a parameter's uprating metadata names, or None."""
     rule = (getattr(node, "metadata", None) or {}).get("uprating")
@@ -195,9 +203,10 @@ def _minimum_guarantee_earnings(system) -> bool:
 
     Social Security Administration Act 1992 s. 150A(2) requires each
     April's rise to be at least the May to July earnings growth before it.
-    The check reads the uprating rule, not the amounts, so a measure that
-    sets the guarantee can't make its own simulation count as fixed, and
-    2027-28 rates typed in over a CPI rule don't count either: both rates
+    The check reads the uprating rule, from the tree as the model built it,
+    not the amounts, so a measure that sets the guarantee can't make its
+    own simulation count as fixed, and 2027-28 rates typed in over a CPI
+    rule don't count either: both rates
     must be uprated by an index other than the benefit index, whose April
     2026 to April 2027 step reaches the May to July 2026 earnings growth.
     That figure is read from the raw input, so a forecast can't count. The
@@ -216,12 +225,13 @@ def _minimum_guarantee_earnings(system) -> bool:
         earnings = raw.get_child(_EARNINGS_INPUT)("2026-07-01")
         if earnings is None:
             return False
-        guarantee = system.parameters.get_child(_MINIMUM_GUARANTEE)
+        tree = _unreformed(system.parameters)
+        guarantee = tree.get_child(_MINIMUM_GUARANTEE)
         for name in ("SINGLE", "COUPLE"):
             path = _uprating_index(guarantee.get_child(name))
             if path is None or path == _BENEFIT_INDEX:
                 return False
-            index = system.parameters.get_child(path)
+            index = tree.get_child(path)
             step = index("2027-04-30") / index("2026-04-30")
             if step < 1 + earnings - _INDEX_TOLERANCE:
                 return False
