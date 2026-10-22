@@ -81,11 +81,24 @@ def _two_argument_formula(household, period):
     return household.empty_array() + 100
 
 
+def _two_argument_property_formula(household, period):
+    """A two-argument channel with an explicit native valuation index."""
+    index = household.simulation.tax_benefit_system.parameters(
+        period
+    ).gov.economic_assumptions.indices.obr.per_capita.gdp
+    return household.empty_array() + 100 + index * 0
+
+
 def _with_two_argument_formula(sim, channel):
+    formula = (
+        _two_argument_property_formula
+        if channel == "high_value_council_tax_surcharge"
+        else _two_argument_formula
+    )
     replacement = type(
         channel,
         (Variable,),
-        {"formula": _two_argument_formula, "__module__": __name__},
+        {"formula": formula, "__module__": __name__},
     )
 
     class Prior(CoreReform):

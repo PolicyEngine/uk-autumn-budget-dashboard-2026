@@ -619,7 +619,11 @@ def test_generation_records_a_change_on_the_baseline_side(world):
         id="pension_baseline",
         name="Pension baseline",
         parameter_changes={},
-        baseline_parameter_changes={NEW_PENSION: {"2027": 250.0}},
+        # Every scored year: after a bounded change an uprated amount
+        # returns to the old path, so generation refuses a gap (#2430).
+        baseline_parameter_changes={
+            NEW_PENSION: {"2027": 250.0, "2028": 260.0}
+        },
     )
     assert generated(world, reform, built(world)) == [HELD]
 

@@ -18,6 +18,15 @@ digits, and refuse any other key: a lone date changes one day, and the
 builders take one value a year, so a measure that needs an interval is
 written and reviewed as one (``tests/test_measure_keys.py``).
 
+After a change bounded to some years, the engine returns an uprated
+amount (a parameter with ``uprating`` metadata: the State Pension, benefit
+rates, the LEL and the like) to its old projected path, rather than
+uprating from the changed amount (policyengine-uk #2430). So a measure on
+one gives it a value for every scored year from its first changed year.
+The builders cannot know the scored years, so their callers supply them;
+generation refuses a measure that leaves one out
+(``uk_budget_data.scored_years``).
+
 Runtime helpers wrap a variable's formula, so they must be applied after
 the data is loaded (a modifier's default phase): they refuse a variable
 that already holds stored values, and values loaded after a wrapper was
@@ -35,6 +44,7 @@ VAT base template, before policyengine-uk #2187).
 
 import math
 import re
+import types
 import warnings
 from collections.abc import Mapping
 from decimal import (
@@ -108,14 +118,38 @@ def _warn_if_variable_model_limited(name: str) -> None:
             )
 
 
+# The engine's wealth_tax applies this scale to total_wealth, which adds
+# property, corporate, private pension and savings wealth and nets no debts
+# (variables/contrib/ubi_center/wealth_tax.py and
+# variables/household/wealth/total_wealth.py); net_wealth does the netting.
+WEALTH_TAX = "gov.contrib.ubi_center.wealth_tax"
+
+
+def _refuse_wealth_tax(path: str) -> None:
+    """Refuse the engine's wealth-tax scale: it taxes the wrong base for a
+    wealth tax announced on net assets (the UK hub's Budget triage, S4)."""
+    if path == WEALTH_TAX or path.startswith(
+        (WEALTH_TAX + ".", WEALTH_TAX + "[")
+    ):
+        raise ValueError(
+            f"{path} is under {WEALTH_TAX}, which the engine's wealth_tax "
+            "applies to total_wealth: gross wealth (property, corporate, "
+            "private pension and savings) with no debts netted. A wealth tax "
+            "on net assets would be scored on the wrong base (the UK hub's "
+            "budget-triage/JUDGED.md, S4)."
+        )
+
+
 def _validate_parameter_path(path: str) -> None:
-    """Require a leaf in the installed engine's native parameter tree, and
-    warn when the certified data cannot cost it."""
+    """Require a leaf in the installed engine's native parameter tree,
+    refuse the wealth-tax scale, and warn when the certified data cannot
+    cost the change or the installed model mis-costs it."""
     from policyengine_core.parameters import Parameter
     from policyengine_uk.system import system
 
     if not isinstance(path, str) or not path:
         raise ValueError("A nonempty parameter path is required")
+    _refuse_wealth_tax(path)
     try:
         parameter = system.parameters.get_child(path)
     except (KeyError, AttributeError, IndexError, ValueError) as exc:
@@ -128,8 +162,9 @@ def _validate_parameter_path(path: str) -> None:
 
 # Universal Credit's health (LCWRA) element. In the years the engine's UC
 # rebalancing runs (policyengine_uk/scenarios/uc_reform.py,
-# add_universal_credit_reform: 2026 to 2029, while rebalancing is active),
-# it overwrites each claimant's element after the formula: pre-2026
+# add_universal_credit_reform, while rebalancing is active; the engine
+# exports them as REBALANCING_YEARS in policyengine-uk 2.145.0), it
+# overwrites each claimant's element after the formula: pre-2026
 # claimants get rebalancing.protected_health_element (or the UC Act 2025
 # s. 4 floor where that is null), new claimants
 # rebalancing.new_claimant_health_element. Both are monthly amounts.
@@ -141,7 +176,37 @@ UC_NEW_CLAIMANT_HEALTH = (
     "gov.dwp.universal_credit.rebalancing.new_claimant_health_element"
 )
 UC_REBALANCING_ACTIVE = "gov.dwp.universal_credit.rebalancing.active"
-UC_REBALANCED_YEARS = range(2026, 2030)
+
+
+# Older engines (policyengine-uk 2.130.1, 2.132.6) loop over these years
+# in add_universal_credit_reform and export none.
+UC_REBALANCED_YEARS_BEFORE_EXPORT = range(2026, 2030)
+
+
+def _uc_rebalanced_years() -> range:
+    """The years the installed engine's UC rebalancing runs.
+
+    Its export where it has one (policyengine-uk 2.145.0 runs the
+    rebalancing to 2032-33), else the years older engines loop over.
+    ``tests/test_uc_health_template.py`` checks either against the awards
+    the installed engine pays, so an engine that changes the years without
+    exporting them fails there rather than taking the fallback.
+    """
+    from policyengine_uk.scenarios import uc_reform
+
+    exported = getattr(uc_reform, "REBALANCING_YEARS", None)
+    if exported is None:
+        return UC_REBALANCED_YEARS_BEFORE_EXPORT
+    years = sorted(int(year) for year in exported)
+    if not years or years != list(range(years[0], years[-1] + 1)):
+        raise ValueError(
+            "policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS must be "
+            f"consecutive years; got {exported!r}"
+        )
+    return range(years[0], years[-1] + 1)
+
+
+UC_REBALANCED_YEARS = _uc_rebalanced_years()
 UC_HEALTH_ADVICE = (
     "build a UC health measure with uc_health_element_change(), which sets "
     f"{UC_PROTECTED_HEALTH} (pre-2026 claimants) and {UC_NEW_CLAIMANT_HEALTH} "
@@ -155,12 +220,12 @@ def _refuse_uc_health_traps(path: str, years) -> None:
 
     The LCWRA element's amount in the rebalanced years: the rebalancing
     overwrites every claimant's element, so a change to it moves no award.
-    Outside them a change to it scores. From 2030 the installed engine's
+    Outside them a change to it scores: after them the installed engine's
     rebalancing no longer runs, so every claimant, protected or not, gets
     the element's amount (policyengine-uk issue #2282).
-    tests/test_uc_health_template.py pins both edges to the engine, so a
-    bundle that extends the rebalancing fails there until
-    UC_REBALANCED_YEARS follows it. Switching rebalancing off is not the
+    tests/test_uc_health_template.py pins both edges to the engine, so an
+    engine that changes the rebalanced years without exporting them fails
+    there. Switching rebalancing off is not the
     law before the Universal Credit Act 2025 either: the 2026 element
     amount is already the new claimants' rate, so everyone would get it.
     """
@@ -240,6 +305,9 @@ def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
     ISO dates are deliberately refused: ``2029-04-01`` denotes one day,
     not a rate that continues until the next change. Intervals are refused
     too: the builders take one value a year (see the module docstring).
+    For an uprated amount, supply every scored year from the first changed
+    year: a bounded change returns to the old path (policyengine-uk #2430,
+    see the module docstring).
     """
     _validate_parameter_path(path)
     annual = _annual_values(values)
@@ -250,7 +318,12 @@ def rate_change(path: str, values: Mapping) -> dict[str, dict[str, float]]:
 def threshold_change(
     path: str, values: Mapping
 ) -> dict[str, dict[str, float]]:
-    """Build explicit annual thresholds on an existing native parameter."""
+    """Build explicit annual thresholds on an existing native parameter.
+
+    For an uprated amount, supply every scored year from the first changed
+    year: a bounded change returns to the old path (policyengine-uk #2430,
+    see the module docstring).
+    """
     _validate_parameter_path(path)
     annual = _annual_values(values)
     _refuse_uc_health_traps(path, annual)
@@ -262,17 +335,22 @@ def uc_health_element_change(
 ) -> dict[str, dict[str, float]]:
     """Change Universal Credit's health (LCWRA) element as the model pays it.
 
-    In 2026 to 2029 the engine's UC rebalancing sets each claimant's
+    In UC_REBALANCED_YEARS the engine's UC rebalancing sets each claimant's
     element itself, so a measure on the element's own amount scores
     nothing. This builds the change on the amounts it uses instead:
     ``protected`` for pre-2026 claimants
     (rebalancing.protected_health_element) and ``new_claimant`` for those
     who claim from April 2026 (rebalancing.new_claimant_health_element).
     Values are monthly amounts, in pounds, by fiscal year, as the
-    parameters are. Only 2026 to 2029: in other years the rebalancing does
-    not run, and the values would score nothing. From 2030 every claimant
-    gets the element's own amount, so a 2030 measure is
+    parameters are. Only the rebalanced years: in other years the
+    rebalancing does not run, and the values would score nothing. After
+    them every claimant gets the element's own amount: build that with
     ``rate_change(UC_LCWRA_AMOUNT, ...)``.
+
+    The two rebalancing amounts carry no uprating metadata in the installed
+    engines, so the scored-year rule (policyengine-uk #2430, see the module
+    docstring) does not bind them; the element's own amount is uprated, so
+    a measure on it gives every scored year from its first changed year.
     """
     changes = {}
     for path, values in (
@@ -310,6 +388,10 @@ def allowance_uprating(
     Years must be consecutive; growth values are fractional changes, so 0.01
     means 1%. ``up``, ``down`` and ``nearest`` are explicit rounding policies.
     Decimal inputs retain their exact values until the final rounding step.
+    For an uprated amount, supply growth for every scored year from the
+    first changed year to the last: the years must be consecutive, but
+    nothing here makes them reach the last scored year (policyengine-uk
+    #2430, see the module docstring).
 
     These are untapered amounts. The existing personal-allowance formula (or
     an age-conditioned formula) applies its income taper afterwards. A
@@ -378,6 +460,9 @@ def pension_uprating(
 
     Opt in for every affected pension independently; deriving basic pension
     from an already rounded new-pension ratio misses basic pension rounding.
+    The full rates are uprated amounts, so a measure writes a value for
+    every scored year from its first changed year (policyengine-uk #2430,
+    see the module docstring).
     """
     base = _finite_decimal(amount, "Weekly amount")
     increase = _finite_decimal(growth, "Pension growth")
@@ -696,6 +781,80 @@ def apply_age_conditioned_allowance(
     return sim
 
 
+# The indices a native property surcharge deflates values by, as the names
+# its compiled code reads: up to policyengine-uk 2.139.0 the High Value
+# Council Tax Surcharge reads indices.obr.per_capita.gdp, and from 2.139.1
+# indices.obr.house_prices, comparing against bands it projects in the
+# values' stored precision (high_value_council_tax_surcharge.py).
+_PROPERTY_INDICES = {
+    "gdp_per_capita": frozenset({"indices", "per_capita", "gdp"}),
+    "house_prices": frozenset({"indices", "house_prices"}),
+}
+
+
+def _code_names(code) -> set:
+    """The names compiled code, or code nested in it, reads.
+
+    As in ``model_limits._reads``: a comment, docstring or string literal
+    naming an index is not a read of it, since only names the code looks
+    up are in ``co_names``.
+    """
+    names = set()
+    stack = [code] if isinstance(code, types.CodeType) else []
+    while stack:
+        current = stack.pop()
+        names.update(current.co_names)
+        stack.extend(
+            const
+            for const in current.co_consts
+            if isinstance(const, types.CodeType)
+        )
+    return names
+
+
+def _wrapped_native(formula):
+    """The native variable a band formula wraps, read from its closure.
+
+    Read, never stored on the formula: a template stores nothing on an
+    object it doesn't bind (the template guard in tests/test_data_limits.py).
+    """
+    code = getattr(formula, "__code__", None)
+    closure = getattr(formula, "__closure__", None) or ()
+    if code is None or "native" not in code.co_freevars:
+        return None
+    return closure[code.co_freevars.index("native")].cell_contents
+
+
+def _property_band_index(native, year) -> str:
+    """The index the native channel's formula for ``year`` deflates by.
+
+    A band wrapped by this template earlier is followed to the formula it
+    wraps: its own code names both indices, since it reads whichever that
+    formula does. Refuse a formula that reads neither or both, so that a
+    band never deflates by another index than the native bands do.
+    """
+    formula = native.get_formula(str(year))
+    wrapped = _wrapped_native(formula)
+    if wrapped is not None and any(
+        getattr(formula, "__code__", None) is const
+        for const in apply_property_band_surcharge.__code__.co_consts
+    ):
+        return _property_band_index(wrapped, year)
+    names = _code_names(getattr(formula, "__code__", None))
+    found = [
+        index for index, reads in _PROPERTY_INDICES.items() if reads <= names
+    ]
+    if len(found) != 1:
+        raise ValueError(
+            f"Property surcharge channel {native.name} in {year} must read "
+            "exactly one of the OBR GDP per capita and house price indices: "
+            "a band deflates property values by the index the native "
+            "formula reads, so that it meets the native bands exactly. Its "
+            f"formula reads {'both' if found else 'neither'}."
+        )
+    return found[0]
+
+
 def apply_property_band_surcharge(
     sim,
     *,
@@ -712,9 +871,13 @@ def apply_property_band_surcharge(
 
     Preserve existing native bands. Bounds and amount are explicit finite
     defaults on the calling module-level modifier; use a finite upper bound.
-    Property values are deflated by the native GDP-per-capita index into
-    ``value_year`` prices. The amount is annual cash, with no implicit
-    uprating.
+    Bounds are in ``value_year`` prices, moved to each year by the index
+    the native formula reads (``_property_band_index``), so that a band
+    meets the native bands exactly: values are deflated by OBR GDP per
+    capita, or the bounds projected by the OBR house price index in the
+    values' stored precision, as the engine does for each. A native
+    formula that reads neither index, or both, is refused. The amount is
+    annual cash, with no implicit uprating.
     Geography is a country enum name, or UK for every country.
     """
     years = _annual_years(start_year, end_year)
@@ -734,6 +897,7 @@ def apply_property_band_surcharge(
             "Property surcharge channel must be annual: the amount is a "
             "yearly charge"
         )
+    indices = {year: _property_band_index(native, year) for year in years}
     country_enum = sim.tax_benefit_system.get_variable(
         "country"
     ).possible_values
@@ -757,15 +921,25 @@ def apply_property_band_surcharge(
             if geography == "UK"
             else country == country_enum[geography]
         )
-        index = parameters(
-            period
-        ).gov.economic_assumptions.indices.obr.per_capita.gdp
-        base_index = parameters(
-            value_year
-        ).gov.economic_assumptions.indices.obr.per_capita.gdp
+        obr = parameters(period).gov.economic_assumptions.indices.obr
+        base = parameters(value_year).gov.economic_assumptions.indices.obr
         value = np.asarray(household("main_residence_value", period))
-        value = value / (index / base_index)
-        in_band = owners & in_geography & (value >= lower) & (value < upper)
+        if indices[period.start.year] == "gdp_per_capita":
+            value = value / (obr.per_capita.gdp / base.per_capita.gdp)
+            band_lower, band_upper = lower, upper
+        else:
+            # Project the bounds, as the engine projects its own: dividing
+            # the values instead can move a value on an exact native
+            # boundary into this band.
+            band_lower, band_upper = np.asarray(
+                [lower, upper], dtype=value.dtype
+            ) * (obr.house_prices / base.house_prices)
+        in_band = (
+            owners
+            & in_geography
+            & (value >= band_lower)
+            & (value < band_upper)
+        )
         return current + in_band * amount
 
     _replace_formula(sim, channel, formula)
