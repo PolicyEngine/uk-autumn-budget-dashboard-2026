@@ -4,7 +4,7 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
 
 The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policyengine-uk 2.145.0 (`ecd531776`), Core 3.33.3 and the national Microcosm UK 2024–25 cut (SHA-256 `810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece`). Dashboard's checked-in `uv.lock` actually installs UK 2.132.6. For this rehearsal only, after `uv sync --frozen`, install the official 2.145.0 wheel with `uv pip install --python .venv/bin/python --no-deps policyengine-uk==2.145.0`, and use `uv run --no-sync` thereafter. Set `REBASE_REHEARSAL=1` before step 1 to apply the overlay immediately after the frozen sync; otherwise the sync restores UK 2.132.6. Do not mistake that local overlay for adoption of a certified production bundle. On Budget day require the reviewed model/data pair and record the actual versions, lock hash and Git SHA before starting.
 
-**Rehearsal status:** the official March economy workbook returned HTTP 403, so the complete economy round trip is unvalidated. The original cached receipts workbook reproduced all five September-CPI gaps exactly; 24 upstream importer fixture tests passed. Resource waits are additional, unbounded time. Do not infer a validated Budget-day completion deadline from a failed download or a gated run.
+**Rehearsal status:** scripted OBR acquisition returned HTTP 403, but the follow-up rehearsal completed the March round trip from the original cached economy and receipts workbooks. The installed UK 2.145.0 CLI took 107.740 s including cold imports; the identical standalone importer took 5.704 s, and all 24 importer fixture tests passed. The import is not byte-idempotent: 22 small annual-rate precision changes and 10 compensating forecast-gap changes require review. The source workbook's 2030 mortgage-interest cell is blank, so that dated model assumption remains retained. See the acquisition notes below. Resource waits are additional, unbounded time; a successful local import does not establish a simulation completion deadline.
 
 1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Do not run concurrent jobs.
 
@@ -40,7 +40,15 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 2. **Download both EFO workbooks and round-trip March first.** Obtain the economy and receipts detailed forecast tables from the [OBR EFO page](https://obr.uk/economic-and-fiscal-outlooks/). Preserve source URLs, download time and SHA-256 checksums. The [March 2026 EFO](https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/) economy endpoint is `https://obr.uk/download/march-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/`; the matching receipts endpoint ends `detailed-forecast-tables-receipts/`. A 403 is a failed acquisition, not a matching round trip; obtain the original files through the operator's authorized download route before relying on this validation.
 
-   The importer is `policyengine_uk/utils/import_obr_forecasts.py` (repository CLI `scripts/import_obr_forecasts.py`). Copy the parameter tree into scratch so it can update growth and both gap files atomically:
+   **Vahid's browser-download checklist (try with March tables in Friday's rehearsal):**
+
+   - [ ] Create `$REBASE_SCRATCH/sources` with `mkdir -p "$REBASE_SCRATCH/sources"`. Use the normal browser to open the release's EFO page and select **Detailed forecast tables: economy** and **Detailed forecast tables: receipts**. Scripted downloads return HTTP 403 on this host; use the browser's download/Save As flow.
+   - [ ] The direct URL patterns are `https://obr.uk/download/<month>-<year>-economic-and-fiscal-outlook-detailed-forecast-tables-economy/` and `https://obr.uk/download/<month>-<year>-economic-and-fiscal-outlook-detailed-forecast-tables-receipts/`, with the month in lower case. For Friday use `march-2026`; for Budget day use the actual published month/year, checking the EFO page before substituting it.
+   - [ ] Save the original economy workbook as `$REBASE_SCRATCH/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx` and the receipts workbook as `$REBASE_SCRATCH/sources/efo-march-2026-detailed-forecast-tables-receipts.xlsx`. Download the Excel workbooks, rather than the EFO PDF, chart CSV or an HTML access-denied page. If OBR serves an economy ZIP, retain that original ZIP and set `MARCH_ECONOMY` to its path; the importer accepts the archive too. Do not re-save Excel contents through a spreadsheet application.
+   - [ ] Open the downloaded files to confirm their release and that economy tables 1.6, 1.7 and 1.16 and receipts table 2.1 are present. Record the source URLs, download time (`date -u`) and `shasum -a 256` output beside the files. The known March checksums are economy `fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510` and receipts `f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28`; a changed checksum requires review, not an automatic rejection of a revised OBR workbook.
+   - [ ] Run the local-path import command below, then inspect the value diff and both statutory gap files. No OBR network request is needed by this command. Keep the source files and checksum log for the Budget-day audit. For October, use the corresponding saved October filenames in `OCTOBER_ECONOMY` and `OCTOBER_RECEIPTS` and follow the horizon check below.
+
+   The importer is `policyengine_uk/utils/import_obr_forecasts.py` (repository CLI `scripts/import_obr_forecasts.py`). Both entry points already support `--file` and `--receipts-file` in UK 2.145.0 and the checked 22 October upstream `main`; no importer patch or separate PR is needed. Copy the parameter tree into scratch so it can update growth and both gap files atomically:
 
    ```sh
    export PARAMETER_SOURCE="$(uv run --no-sync python - <<'PYCODE'
@@ -50,8 +58,10 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    PYCODE
    )"
    cp -R "$PARAMETER_SOURCE" "$REBASE_SCRATCH/parameters"
-   export MARCH_ECONOMY=/absolute/path/to/original-March-economy.xlsx
-   export MARCH_RECEIPTS=/absolute/path/to/original-March-receipts.xlsx
+   export MARCH_ECONOMY="$REBASE_SCRATCH/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx"
+   export MARCH_RECEIPTS="$REBASE_SCRATCH/sources/efo-march-2026-detailed-forecast-tables-receipts.xlsx"
+   test -s "$MARCH_ECONOMY"
+   test -s "$MARCH_RECEIPTS"
    /usr/bin/time -p uv run --no-sync python -m policyengine_uk.utils.import_obr_forecasts \
      --file "$MARCH_ECONOMY" --receipts-file "$MARCH_RECEIPTS" \
      --yaml-path "$REBASE_SCRATCH/parameters/gov/economic_assumptions/yoy_growth.yaml" \
@@ -61,7 +71,9 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
      "$REBASE_SCRATCH/parameters/gov/economic_assumptions"
    ```
 
-   Review **values** separately from changed comments/reference metadata. Explain every numerical difference before continuing. Do not use `--output` for the full round trip: it suppresses gap-file writes. March ends in 2030, and the pinned importer replaces existing dated lines rather than adding them. Before importing October's 2026–2031 window, seed any missing 2031 line in the scratch YAML with a clearly labelled temporary copy of its last value. The command checks all seven importer targets, rejects missing earlier years and requires the workbook to supply every target year, so a placeholder cannot silently remain as a forecast. It preserves the YAML's comments and indentation.
+   Review **values** separately from changed comments/reference metadata. Explain every numerical difference before continuing. The 22 October local March round trip changed 22 annual rates (six AWE, four CPI, six RPI and six house-price observations), by at most 0.04 percentage points; every revised value rounds to the original model rate at three decimal places as a fraction. The ten statutory forecast-gap changes offset annual-rate precision changes exactly, preserving the implied September CPI and May–July AWE paths. Those changes affect `yoy_growth.yaml` and both forecast-gap files only. Economy sheet `1.7`, cell `H120` (2030 mortgage-interest growth) is blank: the importer silently retains model value `.0553` for that year. Record it as a retained assumption; do not claim seven complete source-backed six-year replacements.
+
+   Do not use `--output` for the full round trip: it suppresses gap-file writes. March ends in 2030, and the pinned importer replaces existing dated lines rather than adding them. Before importing October's 2026–2031 window, seed any missing 2031 line in the scratch YAML with a clearly labelled temporary copy of its last value. The command checks all seven importer targets, rejects missing earlier years and requires the workbook to supply every target year, so a placeholder or an inherited blank-cell value cannot silently remain as a forecast. It preserves the YAML's comments and indentation. If October has a blank/missing target, stop and obtain an explicitly reviewed retained assumption or replacement source; do not disable the preflight check.
 
    ```sh
    export OCTOBER_ECONOMY=/absolute/path/to/original-October-economy.xlsx
@@ -202,8 +214,10 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
                return time.perf_counter()-waited
            time.sleep(30)
 
-   variables=['employment_income_before_lsr','universal_credit','child_benefit',
-              'state_pension','council_tax','vat','main_residence_value','gov_balance']
+   variables=['employment_income_before_lsr',
+              'food_and_non_alcoholic_beverages_consumption','dividend_income',
+              'universal_credit','child_benefit','state_pension','council_tax',
+              'vat','main_residence_value','gov_balance']
    forecast=json.loads(Path(os.environ['REBASE_JSON']).read_text())
    arms=os.environ.get('SMOKE_ARMS','unshifted,rebased').split(',')
    assert arms and set(arms)<=set(['unshifted','rebased'])
@@ -252,16 +266,9 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
    ```
 
-   Expected synthetic directions: earnings down about 0.49% from the changed year; CPI-uprated stored amounts up about 0.49% after 2026 and 0.98% cumulatively after 2027, before fiscal blending/interactions; housing values up about 1.94%; GDP/head inputs down about 0.29%. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. An unexpected zero or one-year lag on earnings/CPI stops the run.
+   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, residential values `1.049/1.029 - 1 = +1.94363%`, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. Compare both weighted and unweighted aggregates; fiscal-year blending and interactions may change aggregate responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. An unexpected zero or one-year lag on earnings/CPI stops the run for investigation.
 
-   Run only one national rebased simulation after the subset checks pass. This invocation checks the gate again and records national aggregates separately; it does not rerun the national unshifted arm. It leaves the shell's `DATASET` pointing at the subset for the measure comparison in step 5.
-
-   ```sh
-   DATASET="$NATIONAL_DATASET" SMOKE_ARMS=rebased SMOKE_OUTPUT=national-smoke.json \
-     uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
-   ```
-
-   Keep one simulation process at a time and all numerical thread pools at four. There is no timeout exception to load1 ≤110 and available disk ≥55 **decimal** GB. Log wait time separately; do not substitute a previous passing gate for the next check. Before production artifact generation in step 6, explicitly restore `export DATASET="$NATIONAL_DATASET"`; a subset cannot produce publishable national receipts.
+   Keep one simulation process at a time and all numerical thread pools at four. There is no timeout exception to load1 ≤110 and available disk ≥55 **decimal** GB. Log wait time separately; do not substitute a previous passing gate for the next check. Run each command in the foreground: do not append `&`, start a background retry or leave a scheduled simulation behind. If the gate remains closed, keep observing that foreground session or cancel it with Ctrl-C and record that no constructor ran. Before retrying, confirm the cancelled process has exited; the new invocation must check the gate again. Do not delete unrelated work or shared environments to open the disk gate.
 
 5. **Check the real route and regenerate a registered measure with the forecast in both arms.** This command reads the dataset in place, runs the dashboard's full `ReformProcessor`, and prints only aggregate budgetary rows and timings. It writes a reusable helper script into scratch so the same reviewed gate/merge functions can be used in the artifact step. The macro dict is part of both scenario identities; retain every registered policy change and modifier. `DataConfig.baseline_parameter_changes` alone does not rebase the reform arm and is overridden by a measure's own baseline.
 
@@ -426,6 +433,15 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    This runs the whole processor: costing, distribution, winners/losers, metrics, income curve and household scatter. The output above is aggregate only. The internal result also contains household rows; do not print or export them. The gate checks `uptime` and `os.statvfs` before every managed microsimulation and each of the income curve's household `Simulation` constructions. Each 5-year measure builds two microsimulations plus ten vectorised household situations; all run sequentially.
 
+   **Then run one national rebased simulation**, after both subset arms and both registered-measure bases have passed. This invocation checks the gate again and records national aggregates separately; it does not rerun the national unshifted arm. It leaves the shell's `DATASET` pointing at the subset. The rehearsal order is subset comparison → registered measure on both bases → one national simulation.
+
+   ```sh
+   DATASET="$NATIONAL_DATASET" SMOKE_ARMS=rebased SMOKE_OUTPUT=national-smoke.json \
+     uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
+   ```
+
+   Before production artifact generation in step 6, explicitly restore `export DATASET="$NATIONAL_DATASET"`; a subset cannot produce publishable national receipts.
+
 6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact. The default artifact builder makes a private copy of a local dataset and hashes exactly those bytes, so allow disk space for that copy in addition to the 55 GB reserve. The preceding validation reads the source in place; this receipted production route deliberately uses the dashboard's exact-byte provenance mechanism.
 
    ```sh
@@ -504,7 +520,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 The 22 October scratch fixture proved the basis transition with the real CLI parser/handler: refusal without adoption took 0.00052 s and left the manifest byte-for-byte unchanged; adoption took 0.03565 s, staged the new entry and made the previously approved old entry stale with its approval cleared. The complete test process took 301.346 s, including 300.054 s of cold imports under the host conditions. These are synthetic aggregate artifacts and dummy data. Only the test world's certification fields were adjusted to isolate adoption semantics; the unmodified bundle independently refused provisional publication as uncertified. None of this certifies economic outputs or measures national regeneration time.
 
-7. **Check coverage, timings and release readiness.** Record wall time for acquisition/import, dictionary construction/review, first subset simulation, one complete measure, national smoke run and staging. Estimate serial regeneration as `10 × one-measure time` only as a labelled extrapolation: the registry contains nine individual measures plus `autumn_budget_2026_combined`; different policies/calculators may cost more. The generator builds two microsimulations and ten vectorised household simulations per five-year measure. Explicit combined artifacts add work. The Budget-day critical path is **OBR acquisition → importer/value diff → manual omitted-series/statutory review → subset probes → one national probe → all measure generation → reconciliation → one basis adoption plus restaging → reviews/approvals**. Include resource waits and rework; do not put a fixed 30-minute promise on this path without measured national/all-measure evidence. Preinstall the environment and preflight downloads before publication time.
+7. **Check coverage, timings and release readiness.** Record wall time for acquisition/import, dictionary construction/review, first subset simulation, one complete measure, national smoke run and staging. Estimate serial regeneration as `10 × one-measure time` only as a labelled extrapolation: the registry contains nine individual measures plus `autumn_budget_2026_combined`; different policies/calculators may cost more. The generator builds two microsimulations and ten vectorised household simulations per five-year measure. Explicit combined artifacts add work. The Budget-day critical path is **OBR acquisition → importer/value diff → manual omitted-series/statutory review → subset probes → one registered measure on both bases → one national probe → all measure generation → reconciliation → one basis adoption plus restaging → reviews/approvals**. Include resource waits and rework; do not put a fixed 30-minute promise on this path without measured national/all-measure evidence. Preinstall the environment and preflight downloads before publication time.
 
 8. **Label retained inputs and model limits.** Use the inventory below as the review checklist. None of these labels bypasses an existing publication gate.
 
