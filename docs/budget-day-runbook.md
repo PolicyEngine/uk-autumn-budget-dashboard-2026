@@ -447,59 +447,62 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
   - **The final cut, Tuesday 27:** the build starts by 16:00Z, and the release is out by about 22:00Z. Adoption, regeneration and smoke tests run overnight and finish by **06:00Z on Wednesday 28**.
-- **Each cut is an adoption,** as in "A model upgrade during the day" below:
+- **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch;
-  3. merge, and open its revert PR as a draft;
+  3. merge with a merge commit (`gh pr merge --merge`), since `git revert -m 1` needs one, and open its revert PR as a draft;
   4. redeploy the household API;
   5. run the household check, and the "Read API memory" workflow on the new revision.
-- **Approval for re-cuts and the final cut: on the adoption branch, before the merge** (coordinator, 22 October). It's an ordering change, not a lower bar.
+- **Approval for re-cuts and the final cut: on the adoption branch, before the merge** (coordinator, 22 October). It's an ordering change, not a lower bar. Use the same order for the rehearsal cut, so that the rehearsal exercises it.
   - **Who:** the named approvers approve on the branch, on the new release's figures.
   - **Right after the merge and the API deploy,** run the household check.
   - **If it fails,** merge the prepared revert PR and roll the API back to the previous revision (see "The fast revert" below).
   - **Why this order:** the approvals then live in the adoption PR, which is what keeps the revert clean.
 - **The 07:00Z go/no-go, Wednesday 28:**
   - **Go** with the final cut only if every gate is green and its change against the previous cut is attributed (d1682).
-  - **Otherwise stay on the previous cut.**
+  - **Otherwise go back to the previous cut.** By then the final cut is merged and deployed, so going back means the fast revert below.
   - **After 07:00Z,** only an emergency revert to the previous cut. G0's start receipt at 11:30 pins whatever is live.
 - **How long one adoption takes** (measured 19 to 22 October, with the runner queue as it was):
 
   | Step | Quiet runners | 21–22 October's queue |
   |---|---|---|
-  | The release reaches the dashboard (policyengine.py's dispatch, or W5's by hand) | 0–40 min | 40 min |
+  | The release reaches the dashboard (policyengine.py's dispatch, or W5's by hand) | a few minutes | 40 min |
   | Adoption workflow to draft PR | 10–21 min | 80 min |
-  | CI on the lock change | 20 min | 58–105 min |
+  | CI on the lock change | 20 min | 46–105 min |
   | Review of a lock-only PR | 15 min | 15 min |
-  | Regenerate, stage and reconcile every published measure and the combined run | **not yet measured** | **not yet measured** |
-  | CI again, with the regenerated artifacts and manifest | 20 min | 58–105 min |
-  | Merge, then deploy the household API (smoke test included) | 7–10 min | 10 min |
-  | Household timings and memory read | 15 min | 25 min |
-  | Approval PR, if approving after the household check | 20 min | 58–105 min |
+  | Regenerate, stage, reconcile and approve every published measure and the combined run | **not yet measured** | **not yet measured** |
+  | CI again, with the regenerated artifacts and manifest | 20 min | 46–105 min |
+  | Merge, then deploy the household API (smoke test included) | 6–7 min | 10 min |
+  | Household timings and memory read | 15 min | 15 min |
 
-  - **Totals:** leaving out regeneration, about 1 h 50 min with quiet runners, and up to about 6 h 20 min at 21–22 October's queue.
+  - **Totals,** leaving out regeneration: about 1 h 30 min to 1 h 45 min with quiet runners, and up to about 6 h 10 min at 21–22 October's queue. Approval on the branch needs no CI run of its own.
   - **Where CI time goes:** each CI run's ten jobs queue separately for runners. In #72's run the work took about 16 minutes; the rest was queueing.
   - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table.
   - **To fit the overnight window:**
     - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
     - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
     - approve on the adoption branch, as above. That also saves the separate approval PR's CI run.
-  - **If adoption plus regeneration on a busy queue would take more than about 12 hours,** the coordinator moves the final build's start earlier, to Tuesday morning, and tells the UK hub. So report the regeneration time measured at Friday's rehearsal.
+  - **The window, and moving the build earlier:**
+    - From the final release (about 22:00Z) to 06:00Z is 8 hours. At 21–22 October's queue, adoption without regeneration takes up to about 6 h 10 min, which leaves about 1 h 50 min for regeneration.
+    - The coordinator moves the final build's start earlier, to Tuesday morning, and tells the UK hub, if the time doesn't fit. Its stated threshold is about 12 hours for adoption plus regeneration on a busy queue, and what that span starts from is being confirmed with it.
+    - So report the regeneration time measured at Friday's rehearsal.
 - **The fast revert to the previous cut:**
   - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
-  - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. A revert is then the merge of a green PR, not a wait in the runner queue.
-  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI.
+  - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. Green means every check passes, the Publication gate included, though it isn't a required check. A revert is then the merge of a green PR, not a wait in the runner queue.
+  - **Keep it current.** Checks don't require a branch to be up to date. So if anything merges to `main` after the revert PR's CI ran, update the revert PR and let its CI run again.
+  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
   - **Then, to revert:**
-    1. merge the revert PR;
+    1. mark the revert PR ready (a draft can't be merged), and merge it;
     2. run the API `rollback` to the recorded revision;
     3. run the household check.
 
-    The previous cut's artifacts and manifest come back with the revert, still certified on its release.
+    The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
 
-## A model upgrade during the day (no freeze)
+## Adopting a release (each re-cut)
 
 **On 28 October no upgrade is adopted after the 07:00Z go/no-go.** Only an emergency revert to the previous cut is allowed (see "Rolling re-cuts" above). The steps below are how each re-cut is adopted before then.
 
-- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
+- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). If its dispatch is late, W5 dispatches the adoption by hand. The workflow opens draft PRs only. Each re-cut's PR merges on its gates, after approval on the branch.
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
   - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
   - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
@@ -584,9 +587,10 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
      - Check that nothing else merged since depends on what is reverted.
-  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
-  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
-  4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
+  2. **Regenerate on the revert branch, before merging, if anything was published after the upgrade.** With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, and approve, as for a re-cut. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+     - **A clean revert needs no regeneration.** If nothing was published after the upgrade, the revert brings back the previous lock with its manifest, artifacts and approvals together, and `publish check` passes.
+  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "Adopting a release (each re-cut)"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  4. **Run the household checks.** After a clean revert, the previous cut's approvals are already back, with its manifest.
 
 ## Clock
 
