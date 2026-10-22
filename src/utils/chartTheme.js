@@ -41,13 +41,18 @@ export const AXIS_TITLE_STYLE = {
 };
 
 /**
- * Chart margins. On a phone the y-axis title is dropped (the chart's lead
- * sentence names the unit), so the left margin only needs room for ticks.
+ * Chart margins: the plot spans the card's width. The unit is a label above
+ * the plot (ChartUnitLabel), so the left margin needs only the ticks, which
+ * the YAxis width covers; the top margin leaves room for that label.
  */
-export function chartMargin(narrow, { left = 70, right = 20, top } = {}) {
-  return narrow
-    ? { top: top ?? 12, right: 8, left: 4, bottom: 8 }
-    : { top: top ?? 16, right, left, bottom: 12 };
+export function chartMargin(narrow, { top } = {}) {
+  return { top: top ?? 24, right: 8, left: 0, bottom: 0 };
+}
+
+/** A YAxis width that fits its longest tick label (12px text). */
+export function axisWidth(ticks, format = String) {
+  const longest = Math.max(...ticks.map((tick) => format(tick).length), 1);
+  return Math.ceil(longest * 7) + 10;
 }
 
 /**

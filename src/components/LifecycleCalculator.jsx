@@ -400,7 +400,7 @@ function LifecycleCalculator() {
     const existingSvg = d3.select(container).select("svg");
     const isUpdate = existingSvg.size() > 0;
 
-    const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+    const margin = { top: 20, right: 8, bottom: 40, left: 56 };
     const width = container.clientWidth - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 

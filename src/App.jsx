@@ -13,6 +13,7 @@ import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
 import YearSlider from "./components/YearSlider";
+import PillSelect from "./components/PillSelect";
 import ReplicationLine from "./components/ReplicationLine";
 import { DISPLAY_YEARS } from "./utils/displayYears";
 
@@ -449,37 +450,19 @@ function App() {
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
 
-          {/* The two tabs, as a segmented control in the band */}
-          <div
-            className="band-tabs"
-            role="tablist"
-            aria-label="Dashboard views"
-            onKeyDown={(event) => {
-              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-              event.preventDefault();
-              const next = activeTab === "dashboard" ? "personal" : "dashboard";
-              handleTabChange(next);
-              document.getElementById(`tab-${next}`)?.focus();
-            }}
-          >
-            {[
-              ["dashboard", "Population impact"],
-              ["personal", "Personal impact"],
-            ].map(([tab, name]) => (
-              <button
-                key={tab}
-                id={`tab-${tab}`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                aria-controls={`panel-${tab}`}
-                tabIndex={activeTab === tab ? 0 : -1}
-                className={`band-tab ${activeTab === tab ? "active" : ""}`}
-                onClick={() => handleTabChange(tab)}
-              >
-                {name}
-              </button>
-            ))}
+          {/* The view (Population or Personal impact): a pill like the
+              year and policy pills, switching the tab panel below */}
+          <div className="band-view">
+            <PillSelect
+              name="View"
+              label="impact"
+              value={activeTab}
+              onChange={handleTabChange}
+              options={[
+                { value: "dashboard", label: "Population impact", badge: "Population" },
+                { value: "personal", label: "Personal impact", badge: "Personal" },
+              ]}
+            />
           </div>
 
           {activeTab === "dashboard" && (
@@ -507,8 +490,8 @@ function App() {
         {activeTab === "personal" ? (
           <div
             id="panel-personal"
-            role="tabpanel"
-            aria-labelledby="tab-personal"
+            role="region"
+            aria-label="Personal impact"
             className="tab-panel"
           >
             <PersonalImpactTab />
@@ -516,26 +499,24 @@ function App() {
         ) : (
           <div
             id="panel-dashboard"
-            role="tabpanel"
-            aria-labelledby="tab-dashboard"
+            role="region"
+            aria-label="Population impact"
             className="tab-panel"
           >
-            {/* Dashboard description */}
+            {/* Lead: what the page shows, and where its controls are */}
             <p className="dashboard-intro">
-              Explore the fiscal and distributional impacts of potential UK
-              budget policies. Select policies to see how they affect government
-              revenue, household incomes, and inequality across income groups.{" "}
-              {selectedPolicies.length > 0 && (
-                <a
-                  href="#policy-details"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSectionJump("policy-details");
-                  }}
-                >
-                  See policy descriptions below.
-                </a>
-              )}
+              The fiscal and distributional effects of the UK Autumn Budget
+              2026 measures. Choose policies and a year in the bar above;{" "}
+              <a
+                href="#policy-details"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSectionJump("policy-details");
+                }}
+              >
+                policy details
+              </a>{" "}
+              are at the bottom of the page.
             </p>
 
             {selectedPolicies.length === 0 ? (
@@ -665,7 +646,7 @@ function App() {
                     {/* Row 3: Net Income Analysis Charts */}
                     <SectionHeading
                       title="Example household"
-                      subtitle="A family with two adults and three children, across a range of earnings."
+                      subtitle="Two adults aged 40 and three children aged 7, 5 and 3. The main earner pays £10,000 a year into a pension."
                     />
                     <section
                       id="household"

@@ -117,13 +117,13 @@ export function decileCsv(data, policyNames, { kind, year }) {
 /** The example household's net income before and after, by earnings. */
 export function householdIncomeCsv(data, { year }) {
   return buildChartCsv({
-    title: `Household net income analysis, ${fiscalYear(year)}`,
+    title: `Household net income, ${fiscalYear(year)}`,
     units:
       "£ per year; a household with 2 adults (both age 40) and 3 children (ages 7, 5 and 3)",
     columns: [
       { key: "employment", label: "Household head employment income", decimals: 0 },
-      { key: "baseline", label: "Pre-Autumn Budget net income", decimals: 2 },
-      { key: "reform", label: "Post-Autumn Budget net income", decimals: 2 },
+      { key: "baseline", label: "Net income before the Budget", decimals: 2 },
+      { key: "reform", label: "Net income after the Budget", decimals: 2 },
     ],
     rows: data,
   });

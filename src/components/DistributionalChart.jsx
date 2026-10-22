@@ -18,6 +18,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { POLICY_COLORS } from "../utils/policyConfig";
@@ -33,6 +34,7 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
   TOOLTIP_CONTENT_STYLE,
+  axisWidth,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
@@ -290,7 +292,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
           <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
             <ComposedChart
               data={data}
-              margin={chartMargin(narrow, { left: 64 })}
+              margin={chartMargin(narrow)}
               stackOffset="sign"
             >
               <CartesianGrid {...GRID_PROPS} />
@@ -311,20 +313,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
               />
               <YAxis
                 domain={yAxisDomain}
-                width={narrow ? 52 : 60}
+                width={axisWidth(yAxisDomain, formatPercent)}
                 axisLine={false}
                 tickLine={false}
-                label={
-                  narrow
-                    ? undefined
-                    : {
-                        value: "Percentage change in net income (%)",
-                        angle: -90,
-                        position: "insideLeft",
-                        dx: -16,
-                        style: AXIS_TITLE_STYLE,
-                      }
-                }
                 tickFormatter={formatPercent}
                 tick={TICK_STYLE}
                 ticks={(() => {
@@ -394,7 +385,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                 />
               ))}
               <Line
-                type="monotone"
+                // Straight segments: deciles are categories, not a curve
+                type="linear"
                 dataKey="netChange"
                 stroke="#000000"
                 strokeWidth={2}
@@ -403,7 +395,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                 animationDuration={500}
                 hide={activePolicies.length <= 1}
               />
-              <Customized component={PolicyEngineLogo} />
+              <Customized component={<ChartUnitLabel text="Percentage change in net income (%)" />} />
+            <Customized component={PolicyEngineLogo} />
             </ComposedChart>
           </ResponsiveContainer>
         ) : (

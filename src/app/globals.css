@@ -169,11 +169,11 @@ body {
   top: 0;
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
-  /* One row on a wide screen: title, tabs, then the year and policy pills
-     at the right. Narrower screens use two fixed rows (below). */
+  /* One row on a wide screen: the title, then the view, year and policy
+     pills at the right. Narrower screens use two fixed rows (below). */
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "title tabs . year policy";
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "title view year policy";
   align-items: center;
   column-gap: 16px;
   row-gap: 8px;
@@ -214,47 +214,8 @@ body {
   grid-area: policy;
 }
 
-/* The two tabs: a segmented pill like the other band controls; the active
-   one white with teal text */
-.band-tabs {
-  grid-area: tabs;
-  display: flex;
-  height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.band-tab {
-  flex: 1 1 auto;
-  padding: 0 16px;
-  font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #ffffff;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.band-tab + .band-tab {
-  border-left: 1px solid rgba(255, 255, 255, 0.35);
-}
-
-.band-tab:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.band-tab.active {
-  color: #285e61;
-  background: #ffffff;
-  font-weight: 600;
-}
-
-.band-tab:focus-visible {
-  outline: 2px solid #ffffff;
-  outline-offset: -4px;
+.band-view {
+  grid-area: view;
 }
 
 .tab-panel {
@@ -328,9 +289,9 @@ body {
 /* Standfirst: the full content width */
 .dashboard-intro {
   font-size: 1.0625rem;
-  color: var(--pe-gray-600);
+  color: var(--pe-gray-700);
   line-height: 1.6;
-  margin: 0;
+  margin: 8px 0 40px;
 }
 
 .dashboard-intro a {
@@ -386,7 +347,23 @@ body {
 /* Section headings: a title and a subtitle on the page, above the
    section's cards */
 .section-heading {
-  margin: 48px 0 16px;
+  margin: 0 0 16px;
+}
+
+/* Between sections: a soft divider that fades at both ends, 48px below the
+   last section and 32px above the next title. None above the first. */
+.section-heading:not(:first-of-type)::before {
+  content: "";
+  display: block;
+  height: 1px;
+  margin: 48px 0 32px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--pe-gray-200) 12%,
+    var(--pe-gray-200) 88%,
+    transparent
+  );
 }
 
 .section-heading h2 {
@@ -919,19 +896,23 @@ body {
   }
 }
 
-/* Below 1100px the band has two fixed rows: the title and the pills, then
-   the tabs across the width. One height, stuck or not. */
-@media (max-width: 1099px) {
+/* Below 900px the band has two fixed rows: the title and the policy
+   pill, then the view and year pills. One height, stuck or not. */
+@media (max-width: 899px) {
   :root {
-    --title-row-height: 112px;
+    --title-row-height: 104px;
   }
 
   .title-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "title year policy"
-      "tabs tabs tabs";
+      "title policy"
+      "view year";
     align-content: center;
+  }
+
+  .band-view {
+    justify-self: start;
   }
 }
 
@@ -949,35 +930,8 @@ body {
     padding-inline: 16px;
   }
 
-  /* Two fixed rows on a phone: the title and the policy pill, then the
-     tabs and the year pill. */
-  .title-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "title policy"
-      "tabs year";
-    column-gap: 8px;
-  }
-
   .title-row h1 {
     font-size: 1.125rem;
-  }
-
-  .band-tabs {
-    height: 36px;
-  }
-
-  .band-tabs {
-    min-width: 0;
-  }
-
-  .band-tab {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 0 8px;
-    font-size: 0.75rem;
-    text-overflow: ellipsis;
-    overflow: hidden;
   }
 
   .band-year .year-picker-toggle {
@@ -991,8 +945,14 @@ body {
 
   /* The pills' lists span the band */
   .band-policy .policy-selector,
-  .band-year .year-picker {
+  .band-year .year-picker,
+  .band-view .pill-select {
     position: static;
+  }
+
+  /* The view pill shows its badge only */
+  .band-view .policy-selector-label {
+    display: none;
   }
 
   .title-row .policy-selector-toggle {

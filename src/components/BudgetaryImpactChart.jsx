@@ -20,6 +20,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { POLICY_COLORS, ALL_POLICY_NAMES } from "../utils/policyConfig";
 import {
   useNarrowViewport,
@@ -33,6 +34,7 @@ import {
   TOOLTIP_CONTENT_STYLE,
   fiscalYearTick,
   shortFiscalYearTick,
+  axisWidth,
 } from "../utils/chartTheme";
 import "./BudgetaryImpactChart.css";
 import "./ChartExport.css";
@@ -220,7 +222,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
           <ComposedChart
             data={data}
-            margin={chartMargin(narrow, { left: 60, top: 32 })}
+            margin={chartMargin(narrow, { top: 36 })}
             stackOffset="sign"
           >
             <CartesianGrid {...GRID_PROPS} />
@@ -245,20 +247,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             />
             <YAxis
               domain={yAxisDomain}
-              width={narrow ? 48 : 60}
+              width={axisWidth(yAxisDomain, formatCurrencyTick)}
               axisLine={false}
               tickLine={false}
-              label={
-                narrow
-                  ? undefined
-                  : {
-                      value: "Impact (£bn)",
-                      angle: -90,
-                      position: "insideLeft",
-                      dx: -20,
-                      style: AXIS_TITLE_STYLE,
-                    }
-              }
               tickFormatter={formatCurrencyTick}
               tick={TICK_STYLE}
               interval={0}
@@ -328,7 +319,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               />
             ))}
             <Line
-              type="monotone"
+              type="linear"
               dataKey="netImpact"
               stroke="#000000"
               strokeWidth={2}
@@ -347,6 +338,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 />
               }
             />
+            <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
             <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>

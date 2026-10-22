@@ -1,5 +1,6 @@
 import {
   CartesianGrid,
+  Customized,
   ReferenceLine,
   ResponsiveContainer,
   ScatterChart,
@@ -15,8 +16,10 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
+  axisWidth,
 } from "../utils/chartTheme";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 
@@ -79,11 +82,7 @@ function HouseholdScatterTemplate({ selectedYear = 2029 }) {
       <div className="chart-plot household-scatter-template-plot">
         <ResponsiveContainer width="100%" height={narrow ? 340 : 380}>
           <ScatterChart
-            margin={
-              narrow
-                ? { top: 12, right: 16, left: 0, bottom: 30 }
-                : { top: 16, right: 24, left: 8, bottom: 30 }
-            }
+            margin={{ top: 24, right: 16, left: 0, bottom: 0 }}
           >
             <CartesianGrid {...GRID_PROPS} />
             <XAxis
@@ -111,20 +110,10 @@ function HouseholdScatterTemplate({ selectedYear = 2029 }) {
               tick={TICK_STYLE}
               axisLine={false}
               tickLine={false}
-              width={narrow ? 56 : 76}
-              label={
-                narrow
-                  ? undefined
-                  : {
-                      value: "Change in household net income (£ a year)",
-                      angle: -90,
-                      position: "insideLeft",
-                      dx: 6,
-                      style: AXIS_TITLE_STYLE,
-                    }
-              }
+              width={axisWidth([SCATTER_BINS.change_min, SCATTER_BINS.change_max], pounds)}
             />
             <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <Customized component={<ChartUnitLabel text="Change in household net income (£ a year)" />} />
           </ScatterChart>
         </ResponsiveContainer>
         <p className="household-scatter-template-note" role="status">

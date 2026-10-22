@@ -125,8 +125,8 @@ function OBRComparisonTable({ selectedPolicies }) {
   return (
     <div className="obr-comparison-section">
       <p className="comparison-description">
-        PolicyEngine's static estimates against the OBR's costings from the
-        November 2025{" "}
+        PolicyEngine's static estimates, which leave out behavioural
+        responses, against the OBR's costings from the November 2025{" "}
         <a
           href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
           target="_blank"
@@ -225,11 +225,6 @@ function OBRComparisonTable({ selectedPolicies }) {
           <span className="legend-dot diff-large" aria-hidden="true"></span>
           over £2bn
         </span>
-      </p>
-
-      <p className="comparison-note">
-        PolicyEngine estimates are static: they leave out behavioural
-        responses, which the OBR's post-behavioural costings include.
       </p>
     </div>
   );

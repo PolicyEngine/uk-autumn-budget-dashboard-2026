@@ -16,6 +16,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { householdChangeCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import "./EmploymentIncomeDiffChart.css";
@@ -27,6 +28,7 @@ import {
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   TOOLTIP_CONTENT_STYLE,
+  axisWidth,
 } from "../utils/chartTheme";
 
 // Format year for display (e.g., 2026 -> "2026-27")
@@ -35,7 +37,7 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 // Chart metadata for export
 const CHART_TITLE = "Net income change";
 const getChartDescription = () =>
-  `This chart shows the change in household net income for a household with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The primary earner contributes £10,000 annually to their pension.`;
+  "Change in net income from the selected policies, by the main earner's pay.";
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -175,9 +177,8 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             <NoBreakYear text={chartTitle} />
           </h3>
         <p className="chart-description">
-          This chart shows the change in household net income for a household
-          with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-          primary earner contributes £10,000 annually to their pension.
+          Change in net income from the selected policies, by the main
+          earner's pay.
         </p>
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
           Loading income curve data...
@@ -202,9 +203,8 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             <NoBreakYear text={chartTitle} />
           </h3>
           <p className="chart-description">
-            This chart shows the change in household net income for a household
-            with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
-            primary earner contributes £10,000 annually to their pension.
+            Change in net income from the selected policies, by the main
+            earner's pay.
           </p>
         </div>
         <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
@@ -217,10 +217,10 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
               data={data}
               margin={
                 narrow
-                  ? { top: 12, right: 20, left: 0, bottom: 34 }
+                  ? { top: 24, right: 16, left: 0, bottom: 34 }
                   : // Bottom space matches the legend (and logo row) of the
                     // chart beside it, so the two x-axes line up.
-                    { top: 16, right: 24, left: 8, bottom: 76 }
+                    { top: 24, right: 16, left: 0, bottom: 68 }
               }
             >
               <CartesianGrid {...GRID_PROPS} />
@@ -244,20 +244,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                label={
-                  narrow
-                    ? undefined
-                    : {
-                        value: "Change in net income",
-                        angle: -90,
-                        position: "insideLeft",
-                        dx: 6,
-                        style: AXIS_TITLE_STYLE,
-                      }
-                }
                 tickFormatter={formatCurrency}
                 tick={TICK_STYLE}
-                width={narrow ? 52 : 76}
+                width={axisWidth([-yMax, yMax], formatCurrency)}
                 domain={[-yMax, yMax]}
               />
               <Tooltip
@@ -300,7 +289,8 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
                   animationBegin={0}
                 />
               )}
-              <Customized component={PolicyEngineLogo} />
+              <Customized component={<ChartUnitLabel text="Change in net income" />} />
+            <Customized component={PolicyEngineLogo} />
             </AreaChart>
           </ResponsiveContainer>
         ) : (

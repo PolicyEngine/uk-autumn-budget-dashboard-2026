@@ -1,0 +1,113 @@
+.pill-select {
+  position: relative;
+}
+
+.pill-select-badge {
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+/* The list, white in both variants */
+.pill-select-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+  min-width: 200px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+}
+
+.pill-select-list:focus {
+  outline: none;
+}
+
+.pill-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+  color: var(--pe-gray-900);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pill-select-option.is-active {
+  background: var(--pe-teal-50);
+}
+
+.pill-select-list:focus-visible .pill-select-option.is-active {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+}
+
+.pill-select-option[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--pe-teal-700);
+}
+
+.pill-select-check {
+  width: 14px;
+  color: var(--pe-teal-700);
+}
+
+/* Light variant: the in-card version of the band pills */
+.pill-select-light .pill-select-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 14px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pill-select-light .pill-select-toggle:hover {
+  border-color: var(--pe-teal-500);
+}
+
+.pill-select-light .pill-select-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.pill-select-prefix {
+  color: var(--pe-gray-500);
+}
+
+.pill-select-light .pill-select-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  min-width: 0;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+}
+
+.pill-select-light .policy-selector-icon {
+  color: var(--pe-gray-500);
+}
+
+@media (max-width: 768px) {
+  .pill-select-band .pill-select-list {
+    right: auto;
+    left: 0;
+  }
+}

@@ -99,7 +99,7 @@ describe("chart CSV downloads", () => {
       }),
     );
     expect(income.slice(2)).toEqual([
-      "Household head employment income,Pre-Autumn Budget net income,Post-Autumn Budget net income",
+      "Household head employment income,Net income before the Budget,Net income after the Budget",
       "20000,30000.12,31000.5",
     ]);
     const change = lines(
