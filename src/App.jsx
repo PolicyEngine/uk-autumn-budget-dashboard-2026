@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
-import PolicySelector from "./components/PolicySelector";
+import { useState, useEffect } from "react";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
@@ -12,15 +11,14 @@ import GeographyMethodology from "./components/GeographyMethodology";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
-import YearSlider from "./components/YearSlider";
-import PillSelect from "./components/PillSelect";
+import TitleBand from "./components/TitleBand";
 import ReplicationLine from "./components/ReplicationLine";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
   REVENUE_RAISING_NAMES,
 } from "./utils/policyConfig";
-import { DISPLAY_YEARS } from "./utils/displayYears";
+import { buildBudgetData } from "./utils/budgetData";
 
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
@@ -158,10 +156,6 @@ function App() {
   const [selectedPolicies, setSelectedPolicies] = useState(
     POLICIES.map((p) => p.id),
   );
-  // Default to 2029 so more policies have visible impact
-  const [selectedYear, setSelectedYear] = useState(2030);
-  // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
-  const [distributionalYear, setDistributionalYear] = useState(2029);
   const [results, setResults] = useState(null);
   const [showPolicyDetails, setShowPolicyDetails] = useState(false);
   const [showOBRComparison, setShowOBRComparison] = useState(false);
@@ -219,7 +213,7 @@ function App() {
     window.history.replaceState({}, "", newUrl);
   }, [selectedPolicies, activeTab]);
 
-  // Run analysis when policies or year change
+  // Run analysis when the policies change (each chart picks its own year)
   useEffect(() => {
     if (selectedPolicies.length === 0) {
       setResults(null);
@@ -227,7 +221,7 @@ function App() {
     }
 
     runAnalysis();
-  }, [selectedPolicies, selectedYear]);
+  }, [selectedPolicies]);
 
   const runAnalysis = async () => {
     try {
@@ -263,96 +257,14 @@ function App() {
         selectedPolicies.includes(row.reform_id),
       );
 
-      // Build budgetary impact data for chart (2026-2029)
-      // Always include all policy keys for smooth animations
-      const years = [2026, 2027, 2028, 2029, 2030];
-      const budgetData = years.map((year) => {
-        const dataPoint = { year };
-        let netImpact = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = budgetaryData.find(
-            (row) => row.reform_id === policy.id && parseInt(row.year) === year,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netImpact += value;
-        });
-        dataPoint.netImpact = netImpact;
-        return dataPoint;
-      });
+      // One point per year the dashboard shows; a year the files do not
+      // cover yet is marked unpublished, never zero
+      const budgetData = buildBudgetData(budgetaryData, POLICIES, selectedPolicies);
 
       // Calculate budgetary impact for 2026 (metrics always show 2026)
       const budgetaryImpact2026 = filteredBudgetary
         .filter((row) => parseInt(row.year) === 2026)
         .reduce((sum, row) => sum + parseFloat(row.value), 0);
-
-      // Build distributional data (grouped by decile with policy breakdown)
-      // Always include all policy keys for smooth animations
-      const decileOrder = [
-        "1st",
-        "2nd",
-        "3rd",
-        "4th",
-        "5th",
-        "6th",
-        "7th",
-        "8th",
-        "9th",
-        "10th",
-      ];
-      const distributionalSelectedYear = distributionalData.filter(
-        (row) => parseInt(row.year) === selectedYear,
-      );
-      const distributionalChartData = decileOrder.map((decile) => {
-        const dataPoint = { decile };
-        let netChange = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = distributionalSelectedYear.find(
-            (row) => row.reform_id === policy.id && row.decile === decile,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netChange += value;
-        });
-        dataPoint.netChange = netChange;
-        return dataPoint;
-      });
-
-      // Build waterfall data (grouped by decile with policy breakdown)
-      // Always include all policy keys for smooth animations
-      const waterfallSelectedYear = winnersLosersData.filter(
-        (row) => parseInt(row.year) === selectedYear && row.decile !== "all",
-      );
-      const waterfallDeciles = [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-      ];
-      const waterfallData = waterfallDeciles.map((decile) => {
-        const dataPoint = { decile };
-        let netChange = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = waterfallSelectedYear.find(
-            (row) => row.reform_id === policy.id && row.decile === decile,
-          );
-          const value =
-            isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
-          dataPoint[policy.name] = value;
-          netChange += value;
-        });
-        dataPoint.netChange = netChange;
-        return dataPoint;
-      });
 
       // Extract metrics for 2026 (metrics always show 2026)
       const metrics2026 = filteredMetrics.find(
@@ -383,9 +295,6 @@ function App() {
           povertyRateChange,
         },
         budgetData,
-        distributionalData:
-          distributionalChartData.length > 0 ? distributionalChartData : null,
-        waterfallData: waterfallData.length > 0 ? waterfallData : null,
         rawDistributional: filteredDistributional,
         rawWinnersLosers: filteredWinnersLosers,
       });
@@ -408,18 +317,6 @@ function App() {
   const handlePresetClick = (presetPolicies) => {
     setSelectedPolicies(presetPolicies);
   };
-
-  const titleSentinelRef = useRef(null);
-  const [titleStuck, setTitleStuck] = useState(false);
-  useEffect(() => {
-    const sentinel = titleSentinelRef.current;
-    if (!sentinel || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(([entry]) =>
-      setTitleStuck(!entry.isIntersecting),
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
 
   // globals.css un-sticks the ui-kit site nav with a selector written
   // against the shell's markup. Say so in development if it stops matching.
@@ -448,48 +345,13 @@ function App() {
   return (
     <div className="app">
       <main className="main-content">
-        {/* The title row is the page's sticky header: it docks at the top
-            once the reader scrolls past it, compact, with the policy
-            selector still in reach. The sentinel tells it when it is stuck. */}
-        <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
-        <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
-          <h1>UK Autumn Budget 2026</h1>
-
-          {/* The year applies to every chart on the Population view, and
-              the revenue chart highlights it; it lives in the band so it can
-              be changed from anywhere. The Personal view has its own inputs. */}
-          {activeTab === "dashboard" && (
-            <div className="band-year">
-              <YearSlider
-                selectedYear={distributionalYear}
-                onYearChange={setDistributionalYear}
-              />
-            </div>
-          )}
-
-          {/* The view (Population or Personal impact): a pill like the
-              year and policy pills, switching the tab panel below */}
-          <div className="band-view">
-            <PillSelect
-              name="View"
-              label="impact"
-              value={activeTab}
-              onChange={handleTabChange}
-              options={[
-                { value: "dashboard", label: "Population impact", badge: "Population" },
-                { value: "personal", label: "Personal impact", badge: "Personal" },
-              ]}
-            />
-          </div>
-          {/* The policy pill applies to both views */}
-          <div className="band-policy">
-            <PolicySelector
-              policies={POLICIES}
-              selectedPolicies={selectedPolicies}
-              onPolicyToggle={handlePolicyToggle}
-            />
-          </div>
-        </div>
+        <TitleBand
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          policies={POLICIES}
+          selectedPolicies={selectedPolicies}
+          onPolicyToggle={handlePolicyToggle}
+        />
 
         {activeTab === "personal" ? (
           <div
@@ -510,7 +372,7 @@ function App() {
             {/* Lead: what the page shows, and where its controls are */}
             <p className="dashboard-intro">
               The fiscal and distributional effects of the UK Autumn Budget
-              2026 measures. Choose policies and a year in the bar above;{" "}
+              2026 measures. Choose policies in the bar above and a year on each chart;{" "}
               <a
                 href="#policy-details"
                 onClick={(e) => {
@@ -562,18 +424,7 @@ function App() {
                       subtitle="Net effect of the selected policies on government revenue and spending, by year."
                     />
                     <section id="revenue" className="report-section hero-chart">
-                      <BudgetaryImpactChart
-                        data={DISPLAY_YEARS.map(
-                          (year) =>
-                            results.budgetData.find((point) => point.year === year) ?? {
-                              // In the config, not yet in the published files
-                              year,
-                              netImpact: null,
-                              unpublished: true,
-                            },
-                        )}
-                        selectedYear={distributionalYear}
-                      />
+                      <BudgetaryImpactChart data={results.budgetData} />
                       {/* OBR comparison: an expandable row at the foot of the card */}
                       <div id="obr-comparison" className="obr-expandable">
                         <button
@@ -607,14 +458,13 @@ function App() {
                           <div className="obr-content">
                             <OBRComparisonTable
                               selectedPolicies={selectedPolicies}
-                              selectedYear={distributionalYear}
                             />
                           </div>
                         )}
                       </div>
                     </section>
 
-                    {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
+                    {/* Row 1: Absolute and Relative Impact, each with its own year */}
                     <SectionHeading
                       title="Households by income"
                       subtitle="How net income changes across the income distribution in the selected year."
@@ -627,12 +477,10 @@ function App() {
                         <WaterfallChart
                           rawData={results.rawWinnersLosers}
                           selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
                         />
                         <DistributionalChart
                           rawData={results.rawDistributional}
                           selectedPolicies={selectedPolicies}
-                          selectedYear={distributionalYear}
                         />
                       </div>
                     </section>
@@ -653,12 +501,11 @@ function App() {
                     >
                       <ConstituencyMap
                         selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
                         policies={POLICIES}
                         showRegionLink={false}
                         footer={<GeographyMethodology />}
                       />
-                      <HouseholdScatterTemplate selectedYear={distributionalYear} />
+                      <HouseholdScatterTemplate />
                     </section>
 
                     {/* Row 3: Net Income Analysis Charts */}
@@ -672,11 +519,9 @@ function App() {
                     >
                       <EmploymentIncomeChart
                         selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
                       />
                       <EmploymentIncomeDiffChart
                         selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
                       />
                     </section>
 

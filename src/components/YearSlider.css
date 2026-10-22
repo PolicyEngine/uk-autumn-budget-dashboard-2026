@@ -1,6 +1,7 @@
-/* The year picker on the teal title band: a pill like the policy selector
-   (it shares .policy-selector-toggle), opening a short list with Play at
-   the top. While playing, the pill shows the year and a pause control. */
+/* The year picker in a chart's controls row: a light pill like the
+   in-card PillSelect (it shares .policy-selector-toggle's parts), opening
+   a short list with Play at the top. While playing, the pill shows the
+   year and a pause control. */
 .year-picker {
   position: relative;
 }
@@ -95,4 +96,43 @@
     right: auto;
     left: 0;
   }
+}
+
+/* In a card: the light pill, matching .pill-select-light */
+.chart-controls .year-picker-toggle {
+  gap: 8px;
+  height: 36px;
+  min-width: 0;
+  padding: 0 12px 0 6px;
+  font-size: 0.8125rem;
+  border-radius: 999px;
+}
+
+.chart-controls .year-picker-toggle:hover {
+  border-color: var(--pe-teal-500);
+}
+
+.chart-controls .year-picker-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.chart-controls .year-picker-badge {
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+}
+
+.chart-controls .year-picker .policy-selector-label {
+  font-size: 0.8125rem;
+}
+
+/* The list opens under the pill's left edge, inside the card */
+.chart-controls .year-picker-dropdown {
+  right: auto;
+  left: 0;
+}
+
+/* The controls row leaves space before the plot */
+.chart-controls {
+  padding-bottom: 12px;
 }

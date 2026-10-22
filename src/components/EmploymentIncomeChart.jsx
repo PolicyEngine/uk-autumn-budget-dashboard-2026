@@ -20,6 +20,8 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 import "./EmploymentIncomeChart.css";
 import "./ChartExport.css";
 import {
@@ -47,7 +49,8 @@ const LEGEND_ITEMS = [
   { color: "#319795", label: "After the Budget", type: "line" },
 ];
 
-function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
+function EmploymentIncomeChart({ selectedPolicies, initialYear }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const chartRef = useRef(null);
@@ -198,6 +201,10 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
           </p>
         </div>
         <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
+      </div>
+
+      <div className="chart-controls">
+        <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
       </div>
 
       <div ref={chartRef}>

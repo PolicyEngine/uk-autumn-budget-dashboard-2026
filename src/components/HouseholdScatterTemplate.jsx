@@ -21,6 +21,8 @@ import {
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 import "./HouseholdScatterTemplate.css";
 
 const CHART_TITLE = "Household income impacts";
@@ -45,7 +47,8 @@ const thousands = (value) => (value === 0 ? "£0" : `£${value / 1000}k`);
  * row. It shows binned cells, never single survey households (the
  * per-household scatter was withdrawn for disclosure; see App.jsx).
  */
-function HouseholdScatterTemplate({ selectedYear = 2029 }) {
+function HouseholdScatterTemplate({ initialYear }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const narrow = useNarrowViewport();
   const chartTitle = `${CHART_TITLE}, ${fiscalYearLabel(selectedYear)}`;
   const incomeTicks = [];
@@ -77,7 +80,9 @@ function HouseholdScatterTemplate({ selectedYear = 2029 }) {
       </div>
 
       {/* Rows shared with the map beside it */}
-      <div className="chart-controls" aria-hidden="true" />
+      <div className="chart-controls">
+        <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
+      </div>
 
       <div className="chart-plot household-scatter-template-plot">
         <ResponsiveContainer width="100%" height={narrow ? 340 : 380}>

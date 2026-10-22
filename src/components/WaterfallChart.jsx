@@ -23,6 +23,8 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import "./WaterfallChart.css";
 import "./ChartExport.css";
@@ -50,7 +52,8 @@ const CHART_DESCRIPTION =
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+function WaterfallChart({ rawData, selectedPolicies, initialYear }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -268,6 +271,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
           </p>
         </div>
         <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
+      </div>
+
+      <div className="chart-controls">
+        <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
       </div>
 
       <div ref={chartRef}>

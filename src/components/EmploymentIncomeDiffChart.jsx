@@ -21,6 +21,8 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
 import {
@@ -48,7 +50,8 @@ const LEGEND_ITEMS = [
   { color: "#D97706", label: "Lower net income", type: "rect" },
 ];
 
-function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
+function EmploymentIncomeDiffChart({ selectedPolicies, initialYear }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const chartRef = useRef(null);
@@ -211,6 +214,10 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
           </p>
         </div>
         <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
+      </div>
+
+      <div className="chart-controls">
+        <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
       </div>
 
       <div ref={chartRef}>

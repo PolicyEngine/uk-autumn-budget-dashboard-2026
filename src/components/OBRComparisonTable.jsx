@@ -3,8 +3,11 @@ import "./OBRComparisonTable.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 
-function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
+function OBRComparisonTable({ selectedPolicies, initialYear }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const [comparisonData, setComparisonData] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
   const [showTable, setShowTable] = useState(false);
@@ -155,6 +158,10 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
             ]}
           />
         )}
+      </div>
+
+      <div className="chart-controls">
+        <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
       </div>
 
       <OBRDumbbellChart

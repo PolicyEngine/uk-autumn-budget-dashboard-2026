@@ -48,6 +48,8 @@ import {
 } from "../utils/geography/selection";
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
+import YearSlider from "./YearSlider";
+import useChartYear from "../hooks/useChartYear";
 import "./ConstituencyMap.css";
 import "./ChartExport.css";
 
@@ -251,7 +253,8 @@ function MapScalePlaceholder() {
 
 export default function ConstituencyMap({
   selectedPolicies = [],
-  selectedYear = 2029,
+  // The year the map starts at; its own control changes it
+  initialYear,
   policies = [],
   // Whether the page shows the results by region, so a notice can link
   // to them.
@@ -259,6 +262,7 @@ export default function ConstituencyMap({
   // Shown at the bottom of the card (the method note)
   footer = null,
 }) {
+  const [selectedYear, setSelectedYear] = useChartYear(initialYear);
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
   const boundaries = useConstituencyBoundaries();
@@ -655,6 +659,7 @@ export default function ConstituencyMap({
               </div>
             </div>
             <OutcomeToggle value={outcome} onChange={setOutcome} />
+            <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
           </div>
         ) : (
           <div className="map-top-bar">
@@ -672,6 +677,7 @@ export default function ConstituencyMap({
                 />
               </div>
             </div>
+            <YearSlider selectedYear={selectedYear} onYearChange={setSelectedYear} />
           </div>
         )}
       </div>
