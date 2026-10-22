@@ -767,3 +767,257 @@
 .methodology-content {
   padding: 0 0 20px;
 }
+
+/* ---------- Step-by-step form ---------- */
+.wizard {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 32px 24px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+}
+
+.wizard-title {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.wizard-lead {
+  margin: 0 0 20px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+/* Numbered step tabs */
+.wizard-steps ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-step-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 4px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.wizard-step-tab:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.wizard-step-tab.is-reachable {
+  color: var(--pe-gray-700);
+  border-color: var(--pe-gray-300);
+}
+
+.wizard-step-tab.is-current {
+  color: #ffffff;
+  background: #285e61;
+  border-color: #285e61;
+  font-weight: 600;
+}
+
+.wizard-step-tab:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.wizard-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+}
+
+.wizard-step-tab.is-current .wizard-step-number {
+  color: #285e61;
+  background: #ffffff;
+}
+
+.wizard-steps-compact,
+.wizard-progress {
+  display: none;
+}
+
+/* The step itself */
+.wizard-step {
+  margin-top: 24px;
+}
+
+.wizard-step h3 {
+  margin: 0 0 16px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.wizard-step h3:focus {
+  outline: none;
+}
+
+.wizard-step h3:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 4px;
+}
+
+.wizard-fields .control-group {
+  margin-bottom: 20px;
+}
+
+.wizard-fields .control-group label {
+  cursor: default;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.wizard-summary {
+  margin: -8px 0 16px;
+  font-size: 0.8125rem;
+  color: var(--pe-gray-500);
+}
+
+/* Results inside the form card: no nested card borders */
+.wizard-results .chart-container {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.wizard-results .lifecycle-summary {
+  margin-bottom: 16px;
+}
+
+/* Back / Next */
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.wizard-actions .light-pill-button:disabled {
+  visibility: hidden;
+}
+
+.wizard-next {
+  height: 40px;
+  padding: 0 22px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #285e61;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.wizard-next:hover {
+  background: var(--pe-teal-800);
+}
+
+.wizard-next:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+/* The API-not-set message, tidy inside the results */
+.wizard-results .lifecycle-error {
+  position: static;
+  transform: none;
+  margin: 8px 0 16px;
+  padding: 16px;
+  font-size: 0.875rem;
+  color: var(--pe-gray-700);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
+  border-radius: 8px;
+}
+
+.lifecycle-error p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.lifecycle-error .lifecycle-error-title {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+@media (max-width: 768px) {
+  .wizard {
+    padding: 20px 16px 16px;
+  }
+
+  .wizard-steps ol {
+    display: none;
+  }
+
+  .wizard-steps-compact {
+    display: block;
+    margin: 0 0 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--pe-gray-700);
+  }
+
+  .wizard-progress {
+    display: block;
+    height: 4px;
+    background: var(--pe-gray-100);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .wizard-progress span {
+    display: block;
+    height: 100%;
+    background: #285e61;
+  }
+
+  .wizard-actions {
+    flex-direction: column-reverse;
+  }
+
+  .wizard-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wizard-actions .light-pill-button:disabled {
+    display: none;
+  }
+}

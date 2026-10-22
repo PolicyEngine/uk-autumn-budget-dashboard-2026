@@ -74,6 +74,31 @@ const DEFAULT_INPUTS = {
 };
 
 // Slider configurations
+// The form's steps: the inputs each one asks for, then the results
+const WIZARD_STEPS = [
+  { title: "About you", fields: ["current_age", "retirement_age", "life_expectancy"] },
+  { title: "Earnings", fields: ["current_salary", "salary_sacrifice_per_year"] },
+  {
+    title: "Other income",
+    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+  },
+  { title: "Student loan", fields: ["student_loan_debt"] },
+  { title: "Spending", fields: ["rail_spending_per_year", "petrol_spending_per_year"] },
+  { title: "Family", fields: ["children_ages"] },
+  { title: "Results", fields: [] },
+];
+
+// Hints for fields whose config has no explanation of its own
+const FIELD_HINTS = {
+  current_age: "Your age now.",
+  retirement_age: "The age you stop working.",
+  life_expectancy: "The projection runs to this age.",
+  student_loan_debt: "Plan 2 balance when you start work. It changes with interest and repayments.",
+};
+
+// The form's last state, kept for the session so switching tabs keeps it
+const savedWizard = { inputs: null, step: 0, maxStep: 0 };
+
 const SLIDER_CONFIGS = [
   {
     id: "current_age",
@@ -181,12 +206,17 @@ const SLIDER_CONFIGS = [
 ];
 
 function LifecycleCalculator() {
-  const [inputs, setInputs] = useState(DEFAULT_INPUTS);
+  const [inputs, setInputs] = useState(() => savedWizard.inputs ?? DEFAULT_INPUTS);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRealTerms, setShowRealTerms] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
+  // The form's step; kept between tab switches for the session
+  const [step, setStep] = useState(() => savedWizard.step);
+  const [maxStep, setMaxStep] = useState(() => savedWizard.maxStep);
+  const stepHeadingRef = useRef(null);
+  const isResults = step === WIZARD_STEPS.length - 1;
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAge, setModalAge] = useState(null);
   const [modalActiveTab, setModalActiveTab] = useState("summary");
@@ -799,6 +829,39 @@ function LifecycleCalculator() {
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
+  const goToStep = (next) => {
+    const target = Math.max(0, Math.min(WIZARD_STEPS.length - 1, next));
+    setStep(target);
+    setMaxStep((reached) => Math.max(reached, target));
+  };
+
+  // Focus the step's heading when the step changes (not on first load)
+  const firstStepRender = useRef(true);
+  useEffect(() => {
+    if (firstStepRender.current) {
+      firstStepRender.current = false;
+      return;
+    }
+    stepHeadingRef.current?.focus();
+  }, [step]);
+
+  // Remember the inputs and step for this session, across tab switches
+  useEffect(() => {
+    savedWizard.inputs = inputs;
+    savedWizard.step = step;
+    savedWizard.maxStep = maxStep;
+  }, [inputs, step, maxStep]);
+
+  const money = (value) => `£${d3.format(",.0f")(value)}`;
+  const inputSummary = [
+    `Age ${inputs.current_age}, retiring at ${inputs.retirement_age}`,
+    `salary ${money(inputs.current_salary)}`,
+    `student loan ${money(inputs.student_loan_debt)}`,
+    childrenCount === 0
+      ? "no children"
+      : `${childrenCount} ${childrenCount === 1 ? "child" : "children"}`,
+  ].join(" · ");
+
   // Common table styling for modal
   const tableStyle = `width: 100%; border-collapse: collapse; font-size: 0.85rem;`;
   const thStyle = `padding: 10px 12px; text-align: right; font-weight: 600; border-bottom: 2px solid #e2e8f0; color: #1e293b;`;
@@ -1282,224 +1345,301 @@ function LifecycleCalculator() {
 
   return (
     <div className="lifecycle-calculator">
-      <div className="lifecycle-header">
-        <div className="lifecycle-header-content">
-          <h2>Lifetime policy impact</h2>
-          <p className="lifecycle-subtitle">
-            Model the impact of UK budget policy reforms over your lifetime
+      {/* A step-by-step form in one card: a few questions per step, then
+          the results. Inputs keep their values between steps and tabs. */}
+      <div className="wizard">
+        <h2 className="wizard-title">Your lifetime impact</h2>
+        <p className="wizard-lead">
+          Answer a few questions about yourself to see how the selected
+          policies change your take-home pay over your working life.
+        </p>
+
+        <nav className="wizard-steps" aria-label="Steps">
+          <ol>
+            {WIZARD_STEPS.map((wizardStep, index) => (
+              <li key={wizardStep.title}>
+                <button
+                  type="button"
+                  className={`wizard-step-tab ${index === step ? "is-current" : ""} ${
+                    index < step || index <= maxStep ? "is-reachable" : ""
+                  }`}
+                  aria-current={index === step ? "step" : undefined}
+                  disabled={index > maxStep}
+                  onClick={() => goToStep(index)}
+                >
+                  <span className="wizard-step-number">{index + 1}</span>
+                  <span className="wizard-step-name">{wizardStep.title}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          {/* On a phone: "Step 2 of 7 · Earnings" and a progress bar */}
+          <p className="wizard-steps-compact" aria-hidden="true">
+            Step {step + 1} of {WIZARD_STEPS.length} · {WIZARD_STEPS[step].title}
           </p>
-        </div>
-      </div>
+          <div className="wizard-progress" aria-hidden="true">
+            <span style={{ width: `${((step + 1) / WIZARD_STEPS.length) * 100}%` }} />
+          </div>
+        </nav>
 
-      <div className="lifecycle-layout">
-        {/* Controls sidebar */}
-        <div className="lifecycle-controls">
-          <h3>Household inputs (2025)</h3>
+        <section className="wizard-step" aria-labelledby="wizard-step-heading">
+          <h3 id="wizard-step-heading" ref={stepHeadingRef} tabIndex={-1}>
+            {WIZARD_STEPS[step].title}
+          </h3>
 
-          {SLIDER_CONFIGS.map((config) => (
-            <div className="control-group" key={config.id}>
-              <label title={config.tooltip}>{config.label}</label>
-              <div className="slider-container">
-                <input
-                  type="range"
-                  value={inputs[config.id]}
-                  min={config.min}
-                  max={config.max}
-                  step={config.step}
-                  onChange={(e) => handleInputChange(config.id, e.target.value)}
-                />
-                <span className="slider-value">
-                  {config.format(inputs[config.id])}
-                </span>
-              </div>
-            </div>
-          ))}
-
-          {/* Children ages input */}
-          <div className="control-group">
-            <label title="Ages of children in 2025 (comma-separated). Impact from two-child limit abolition.">
-              Children ages
-            </label>
-            <div className="slider-container">
-              <input
-                type="text"
-                value={inputs.children_ages}
-                placeholder="e.g. 5, 3, 1"
-                className="text-input"
-                onChange={(e) =>
-                  handleInputChange("children_ages", e.target.value)
+          {!isResults && (
+            <div className="wizard-fields">
+              {WIZARD_STEPS[step].fields.map((id) => {
+                if (id === "children_ages") {
+                  return (
+                    <div className="control-group" key={id}>
+                      <label htmlFor="field-children_ages">
+                        Children's ages
+                      </label>
+                      <div className="slider-container">
+                        <input
+                          id="field-children_ages"
+                          type="text"
+                          value={inputs.children_ages}
+                          placeholder="e.g. 5, 3, 1"
+                          className="text-input"
+                          aria-describedby="hint-children_ages"
+                          onChange={(e) =>
+                            handleInputChange("children_ages", e.target.value)
+                          }
+                        />
+                        <span className="slider-value children-count">
+                          {childrenCount === 0
+                            ? "0 children"
+                            : childrenCount === 1
+                              ? "1 child"
+                              : `${childrenCount} children`}
+                        </span>
+                      </div>
+                      <p className="field-hint" id="hint-children_ages">
+                        Ages in 2025, separated by commas. Leave blank if none.
+                      </p>
+                    </div>
+                  );
                 }
-              />
-              <span className="slider-value children-count">
-                {childrenCount === 0
-                  ? "0 children"
-                  : childrenCount === 1
-                    ? "1 child"
-                    : `${childrenCount} children`}
-              </span>
+                const config = SLIDER_CONFIGS.find((item) => item.id === id);
+                return (
+                  <div className="control-group" key={id}>
+                    <label htmlFor={`field-${id}`}>{config.label}</label>
+                    <div className="slider-container">
+                      <input
+                        id={`field-${id}`}
+                        type="range"
+                        value={inputs[id]}
+                        min={config.min}
+                        max={config.max}
+                        step={config.step}
+                        aria-describedby={`hint-${id}`}
+                        aria-valuetext={config.format(inputs[id])}
+                        onChange={(e) => handleInputChange(id, e.target.value)}
+                      />
+                      <span className="slider-value">{config.format(inputs[id])}</span>
+                    </div>
+                    <p className="field-hint" id={`hint-${id}`}>
+                      {FIELD_HINTS[id] ?? config.tooltip}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Main content */}
-        <div className="lifecycle-main">
-          {/* Prices: the light in-card pill, like every in-card switch */}
-          <div className="toggle-row">
-            <PillSelect
-              variant="light"
-              name="Prices"
-              prefix="Prices"
-              value={showRealTerms ? "real" : "nominal"}
-              onChange={(value) => setShowRealTerms(value === "real")}
-              options={[
-                { value: "nominal", label: "Nominal" },
-                { value: "real", label: "2025 £" },
-              ]}
-            />
-          </div>
-
-          {/* Summary cards */}
-          <div className="lifecycle-summary">
-            <div className="summary-item highlighted">
-              <div className="summary-label">
-                Net lifetime impact{showRealTerms ? " (2025 £)" : ""}
-              </div>
-              <div className="summary-value">
-                {formatSignedCurrency(summaryStats.netTotal)}
-              </div>
-            </div>
-            <div className="summary-item">
-              <div className="summary-label">
-                Average per year{showRealTerms ? " (2025 £)" : ""}
-              </div>
-              <div
-                className={`summary-value ${summaryStats.avgPerYear >= 0 ? "positive" : "negative"}`}
-              >
-                {formatSignedCurrency(summaryStats.avgPerYear)}
-              </div>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div className="chart-container">
-            {loading && <div className="loading">Loading...</div>}
-            {error && <div className="error">Error: {error}</div>}
-            <div ref={chartRef} className="chart"></div>
-
-            {/* Legend */}
-            <div className="legend">
-              {REFORMS.map((r) => (
-                <div className="legend-item" key={r.key}>
-                  <div
-                    className="legend-color"
-                    style={{ background: r.color }}
-                  ></div>
-                  <span>{r.label}</span>
+          {isResults && (
+            <div className="wizard-results">
+              <p className="wizard-summary">{inputSummary}</p>
+                {/* Prices: the light in-card pill, like every in-card switch */}
+                <div className="toggle-row">
+                  <PillSelect
+                    variant="light"
+                    name="Prices"
+                    prefix="Prices"
+                    value={showRealTerms ? "real" : "nominal"}
+                    onChange={(value) => setShowRealTerms(value === "real")}
+                    options={[
+                      { value: "nominal", label: "Nominal" },
+                      { value: "real", label: "2025 £" },
+                    ]}
+                  />
                 </div>
-              ))}
-              <div className="legend-item">
-                <div
-                  className="legend-color"
-                  style={{ background: "#000000" }}
-                ></div>
-                <span>Net impact</span>
-              </div>
-            </div>
 
-            {/* PolicyEngine logo and downloads */}
-            <div className="lifecycle-chart-footer">
-              <ChartDownloadMenu formats={downloads} chartTitle="Lifetime policy impact" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
+                {/* Summary cards */}
+                <div className="lifecycle-summary">
+                  <div className="summary-item highlighted">
+                    <div className="summary-label">
+                      Net lifetime impact{showRealTerms ? " (2025 £)" : ""}
+                    </div>
+                    <div className="summary-value">
+                      {formatSignedCurrency(summaryStats.netTotal)}
+                    </div>
+                  </div>
+                  <div className="summary-item">
+                    <div className="summary-label">
+                      Average per year{showRealTerms ? " (2025 £)" : ""}
+                    </div>
+                    <div
+                      className={`summary-value ${summaryStats.avgPerYear >= 0 ? "positive" : "negative"}`}
+                    >
+                      {formatSignedCurrency(summaryStats.avgPerYear)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chart */}
+                <div className="chart-container">
+                  {loading && <div className="loading">Loading...</div>}
+                  {error && (
+                    <div className="lifecycle-error" role="status">
+                      <p className="lifecycle-error-title">Results are not available here.</p>
+                      <p>{error}</p>
+                    </div>
+                  )}
+                  <div ref={chartRef} className="chart"></div>
+
+                  {/* Legend */}
+                  <div className="legend">
+                    {REFORMS.map((r) => (
+                      <div className="legend-item" key={r.key}>
+                        <div
+                          className="legend-color"
+                          style={{ background: r.color }}
+                        ></div>
+                        <span>{r.label}</span>
+                      </div>
+                    ))}
+                    <div className="legend-item">
+                      <div
+                        className="legend-color"
+                        style={{ background: "#000000" }}
+                      ></div>
+                      <span>Net impact</span>
+                    </div>
+                  </div>
+
+                  {/* PolicyEngine logo and downloads */}
+                  <div className="lifecycle-chart-footer">
+                    <ChartDownloadMenu formats={downloads} chartTitle="Lifetime policy impact" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
+                  </div>
+                  {/* About this model: an expandable row, collapsed by default. The
+                      values below are the lifecycle model's own
+                      (uk_budget_data/lifecycle_calculator.py). */}
+                  <div className="methodology">
+                    <button
+                      type="button"
+                      className="methodology-toggle"
+                      aria-expanded={showAbout}
+                      aria-controls="lifecycle-about"
+                      onClick={() => setShowAbout((value) => !value)}
+                    >
+                      About this model
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                        style={{ transform: showAbout ? "rotate(180deg)" : "none" }}
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    {showAbout && (
+                      <div id="lifecycle-about" className="methodology-content">
+                        <p>
+                          Estimates the lifetime change in take-home pay for a graduate
+                          who starts work at 22, from the selected policies, allowing
+                          for earnings growth, tax thresholds and student loan
+                          repayments.
+                        </p>
+
+                        <h4>Policies modelled</h4>
+                      <ul>
+                        <li>
+                          <strong>Threshold freeze extension</strong>: income tax
+                          thresholds frozen until 2030-31.
+                        </li>
+                        <li>
+                          <strong>Dividend, savings and property income tax
+                          increase</strong>: tax on that income up 5%.
+                        </li>
+                        <li>
+                          <strong>Salary sacrifice cap</strong>: £2,000 a year, from
+                          2029.
+                        </li>
+                        <li>
+                          <strong>Freeze student loan repayment thresholds</strong>:
+                          Plan 2 frozen at £27,295, 2027-28 to 2029-30.
+                        </li>
+                        <li>
+                          <strong>2 child limit repeal</strong>: removed from 2026.
+                        </li>
+                        <li>
+                          <strong>Fuel duty freeze extension</strong>: the 5p cut
+                          kept longer, then phased rises.
+                        </li>
+                        <li>
+                          <strong>Rail fares freeze</strong>: regulated fares held
+                          for one year in 2026.
+                        </li>
+                      </ul>
+
+                      <h4>Assumptions</h4>
+                        <ul>
+                          <li>Work starts at 22 on the chosen salary.</li>
+                          <li>
+                            Earnings rise with age to 2.2 times the starting salary by
+                            50.
+                          </li>
+                          <li>
+                            CPI and RPI follow the OBR forecast, then 2% and 2.39%.
+                          </li>
+                        </ul>
+                        <p>
+                          Positive values mean higher net income under the policies;
+                          negative values mean lower.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
             </div>
-            {/* About this model: an expandable row, collapsed by default. The
-                values below are the lifecycle model's own
-                (uk_budget_data/lifecycle_calculator.py). */}
-            <div className="methodology">
+          )}
+        </section>
+
+        <div className="wizard-actions">
+          {isResults ? (
+            <button type="button" className="light-pill-button" onClick={() => goToStep(0)}>
+              Edit details
+            </button>
+          ) : (
+            <>
               <button
                 type="button"
-                className="methodology-toggle"
-                aria-expanded={showAbout}
-                aria-controls="lifecycle-about"
-                onClick={() => setShowAbout((value) => !value)}
+                className="light-pill-button"
+                onClick={() => goToStep(step - 1)}
+                disabled={step === 0}
               >
-                About this model
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  style={{ transform: showAbout ? "rotate(180deg)" : "none" }}
-                >
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+                Back
               </button>
-              {showAbout && (
-                <div id="lifecycle-about" className="methodology-content">
-                  <p>
-                    Estimates the lifetime change in take-home pay for a graduate
-                    who starts work at 22, from the selected policies, allowing
-                    for earnings growth, tax thresholds and student loan
-                    repayments.
-                  </p>
-
-                  <h4>Policies modelled</h4>
-                <ul>
-                  <li>
-                    <strong>Threshold freeze extension</strong>: income tax
-                    thresholds frozen until 2030-31.
-                  </li>
-                  <li>
-                    <strong>Dividend, savings and property income tax
-                    increase</strong>: tax on that income up 5%.
-                  </li>
-                  <li>
-                    <strong>Salary sacrifice cap</strong>: £2,000 a year, from
-                    2029.
-                  </li>
-                  <li>
-                    <strong>Freeze student loan repayment thresholds</strong>:
-                    Plan 2 frozen at £27,295, 2027-28 to 2029-30.
-                  </li>
-                  <li>
-                    <strong>2 child limit repeal</strong>: removed from 2026.
-                  </li>
-                  <li>
-                    <strong>Fuel duty freeze extension</strong>: the 5p cut
-                    kept longer, then phased rises.
-                  </li>
-                  <li>
-                    <strong>Rail fares freeze</strong>: regulated fares held
-                    for one year in 2026.
-                  </li>
-                </ul>
-
-                <h4>Assumptions</h4>
-                  <ul>
-                    <li>Work starts at 22 on the chosen salary.</li>
-                    <li>
-                      Earnings rise with age to 2.2 times the starting salary by
-                      50.
-                    </li>
-                    <li>
-                      CPI and RPI follow the OBR forecast, then 2% and 2.39%.
-                    </li>
-                  </ul>
-                  <p>
-                    Positive values mean higher net income under the policies;
-                    negative values mean lower.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Methodology section */}
+              <button
+                type="button"
+                className="wizard-next"
+                onClick={() => goToStep(step + 1)}
+              >
+                {step === WIZARD_STEPS.length - 2 ? "See results" : "Next"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
