@@ -449,10 +449,15 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **The final cut, Tuesday 27:** the build starts by 16:00Z, and the release is out by about 22:00Z. Adoption, regeneration and smoke tests run overnight and finish by **06:00Z on Wednesday 28**.
 - **Each cut is an adoption,** as in "A model upgrade during the day" below:
   1. the draft PR, and its CI;
-  2. regenerate and stage on the branch;
-  3. merge;
+  2. regenerate, stage, reconcile and approve on the branch;
+  3. merge, and open its revert PR as a draft;
   4. redeploy the household API;
   5. run the household check, and the "Read API memory" workflow on the new revision.
+- **Approval for re-cuts and the final cut: on the adoption branch, before the merge** (coordinator, 22 October). It's an ordering change, not a lower bar.
+  - **Who:** the named approvers approve on the branch, on the new release's figures.
+  - **Right after the merge and the API deploy,** run the household check.
+  - **If it fails,** merge the prepared revert PR and roll the API back to the previous revision (see "The fast revert" below).
+  - **Why this order:** the approvals then live in the adoption PR, which is what keeps the revert clean.
 - **The 07:00Z go/no-go, Wednesday 28:**
   - **Go** with the final cut only if every gate is green and its change against the previous cut is attributed (d1682).
   - **Otherwise stay on the previous cut.**
@@ -477,11 +482,12 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **To fit the overnight window:**
     - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
     - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
-    - for the final cut, approve on the adoption branch before merging (the alternative order below). That saves a CI run.
+    - approve on the adoption branch, as above. That also saves the separate approval PR's CI run.
+  - **If adoption plus regeneration on a busy queue would take more than about 12 hours,** the coordinator moves the final build's start earlier, to Tuesday morning, and tells the UK hub. So report the regeneration time measured at Friday's rehearsal.
 - **The fast revert to the previous cut:**
   - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
   - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. A revert is then the merge of a green PR, not a wait in the runner queue.
-  - **That stays clean only while nothing is published after the adoption.** For the final cut, approve in the adoption PR itself. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI.
+  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI.
   - **Then, to revert:**
     1. merge the revert PR;
     2. run the API `rollback` to the recorded revision;
@@ -491,15 +497,17 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 
 ## A model upgrade during the day (no freeze)
 
+**On 28 October no upgrade is adopted after the 07:00Z go/no-go.** Only an emergency revert to the previous cut is allowed (see "Rolling re-cuts" above). The steps below are how each re-cut is adopted before then.
+
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
   - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
   - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
-- **Approve once the household checks pass on the new release.**
-  - **The alternative:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`), so the Approver can approve on the upgrade branch, before merging.
-  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional (re-stage them with `--provisional` to keep them visible). But it approves figures before any household check has run on the new release.
-  - **Your call** which order to use on the day.
+- **Approve on the upgrade branch, before merging, for re-cuts and the final cut** (coordinator, 22 October; see "Rolling re-cuts" above).
+  - **Why it's possible:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`).
+  - **What it avoids:** a gap. If approval came after the merge, figures that were approved would show at most as provisional from the merge until approval (re-staging them with `--provisional` keeps them visible).
+  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check immediately after the merge and the deploy, and revert if it fails.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
