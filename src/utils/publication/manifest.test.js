@@ -28,6 +28,7 @@ describe("parseManifest on the fixture", () => {
       "beta",
       "delta",
       "epsilon",
+      "eta",
       "gamma",
       "zeta",
     ]);

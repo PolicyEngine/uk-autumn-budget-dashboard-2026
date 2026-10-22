@@ -286,7 +286,7 @@ def _view_at(parameters, prefix: str, instant: str):
     return node.get_at_instant(instant)
 
 
-def _views(system, prefix: str, behaviour=None) -> list:
+def _views(system, prefix: str, behaviour=None, *, from_year=None) -> list:
     """What formulas read under ``prefix`` at the start of each year. Run
     inside :func:`_caches_left_as_found`: building a view caches it."""
     behaviour = behaviour or _Behaviour()
@@ -295,6 +295,7 @@ def _views(system, prefix: str, behaviour=None) -> list:
             _view_at(system.parameters, prefix, f"{year}-01-01"), behaviour
         )
         for year in VIEW_YEARS
+        if from_year is None or year >= from_year
     ]
 
 
@@ -321,15 +322,19 @@ def _structure(parameters, prefix: str) -> dict:
     return found
 
 
-def _same_effect(before, after) -> bool:
+def _same_effect(before, after, *, from_year=None) -> bool:
     """Whether two leaves from :func:`_structure` have the same value at
-    every breakpoint of either side."""
+    every breakpoint of either side, optionally from a year boundary."""
     if before is None or after is None:
         return before is after
     instants = sorted(
         {v.instant_str for v in before.values_list}
         | {v.instant_str for v in after.values_list}
     )
+    if from_year is not None:
+        start = f"{from_year}-01-01"
+        # Include the boundary: an earlier breakpoint can still be in force.
+        instants = sorted({start, *(i for i in instants if i >= start)})
     return all(_equal(before(i), after(i)) for i in instants)
 
 
