@@ -20,6 +20,7 @@ from typing import Optional
 import numpy as np
 from policyengine_uk import Simulation
 
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import Reform
 
 # Default years for parameter changes
@@ -257,31 +258,20 @@ def _create_threshold_freeze_extension() -> Reform:
 # Property: +2pp from April 2027 (basic 20%->22%, higher 40%->42%, add 45%->47%)
 
 
-def _set_pre_budget_dividend_rates(sim):
-    """Set pre-budget dividend rates in the baseline simulation.
+# The pre-Budget dividend rates (basic 8.75%, higher 33.75%), as parameter
+# changes for every policy year from 2027-28 (OBR fiscal year timing: the
+# first full year of the April 2026 rise). They were a simulation modifier,
+# which policyengine.py's household calculation and the receipts can't take.
+DIVIDEND_BASIC_RATE = "gov.hmrc.income_tax.rates.dividends[0].rate"
+DIVIDEND_HIGHER_RATE = "gov.hmrc.income_tax.rates.dividends[1].rate"
 
-    Reverts the Autumn Budget 2026 changes:
-    - Basic rate: 10.75% -> 8.75%
-    - Higher rate: 35.75% -> 33.75%
 
-    Uses simulation_modifier because dividend rates are stored in a
-    ParameterScale which requires direct bracket access. Modifies
-    values_list entries for 2026+ to revert to pre-budget rates.
-    """
-    div = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
-
-    # Find and modify all entries from 2027 onwards to pre-budget rates
-    # values_list is ordered most recent first, so iterate through all
-    # OBR fiscal year timing: 2026-27 starts April 2026, so first full year is 2027
-    for val_entry in div.brackets[0].rate.values_list:
-        if val_entry.instant_str >= "2027":
-            val_entry.value = 0.0875  # Pre-budget basic rate
-
-    for val_entry in div.brackets[1].rate.values_list:
-        if val_entry.instant_str >= "2027":
-            val_entry.value = 0.3375  # Pre-budget higher rate
-
-    return sim
+def _pre_budget_dividend_rates() -> dict:
+    years = [str(year) for year in POLICY_YEARS if year >= 2027]
+    return {
+        DIVIDEND_BASIC_RATE: {year: 0.0875 for year in years},
+        DIVIDEND_HIGHER_RATE: {year: 0.3375 for year in years},
+    }
 
 
 def _create_dividend_tax_increase() -> Reform:
@@ -298,8 +288,6 @@ def _create_dividend_tax_increase() -> Reform:
     - 2028-29: £1.0bn
     - 2029-30: £1.0bn
     """
-    # Uses baseline_simulation_modifier because dividend rates are stored
-    # in a ParameterScale which requires direct bracket modification
     return Reform(
         id="dividend_tax_increase_2pp",
         name="Dividend tax increase (+2pp)",
@@ -308,7 +296,7 @@ def _create_dividend_tax_increase() -> Reform:
             "2026. Basic rate: 8.75% → 10.75%, Higher rate: 33.75% → 35.75%. "
             "OBR estimates £1.0-1.1bn annual yield from 2027-28."
         ),
-        baseline_simulation_modifier=_set_pre_budget_dividend_rates,
+        baseline_parameter_changes=_pre_budget_dividend_rates(),
         parameter_changes={},  # Uses new rates from policyengine-uk
     )
 
@@ -794,10 +782,12 @@ def _create_combined_autumn_budget_reform() -> Reform:
         },
     }
 
-    # Combined baseline simulation modifier for dividend rates and student loans
+    # Pre-Budget dividend rates (parameter changes, as the measure states them)
+    combined_baseline_params.update(_pre_budget_dividend_rates())
+
+    # Combined baseline simulation modifier for student loans
     def combined_baseline_modifier(sim):
-        """Apply pre-budget dividend rates and connect student loan variables."""
-        _set_pre_budget_dividend_rates(sim)
+        """Connect student loan variables."""
         _connect_student_loan_variables(sim)
         return sim
 

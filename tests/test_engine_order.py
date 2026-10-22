@@ -31,7 +31,9 @@ def _reference_pre_budget_dividend_rates(sim):
     its pre-Budget rates as parameter changes: every annualised dividend
     rate from 2027 set to its pre-Budget value. Kept as the reference the
     parameter changes are checked against."""
-    dividends = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
+    dividends = (
+        sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
+    )
     for entry in dividends.brackets[0].rate.values_list:
         if entry.instant_str >= "2027":
             entry.value = 0.0875
