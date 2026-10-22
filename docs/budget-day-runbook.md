@@ -435,6 +435,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 ## G3: rebase and reconcile (13:40 to 14:10)
 
 - **If the forecast is rebased** on the Budget's OBR tables: update `data_inputs/publication_basis.json` (`forecast.status: updated`, with source and vintage), regenerate every measure, and stage with `--adopt-basis`. Every entry on the old basis becomes stale. Follow the [forecast-rebase runbook](forecast-rebase-runbook.md) for inputs, validation, timings and retained-basis caveats.
+- **The 13:40–14:10 rebase slot is a target pending a complete timed rehearsal.** The local March importer works, but importer success alone does not time subset validation, national generation, all measures and review. Include foreground resource waits, and use the forecast-rebase runbook's measured critical path before promising completion in this window.
 - **Reconcile** each measure: `uv run uk-budget-data publish reconcile <artifact>`. A year passes within 10% or £50m of the static costing, whichever is larger. *The numbers are still to be agreed.* Every year the artifact reports must have one model output; a missing year fails and no exception can accept it (#17).
 - **A failed year** is fixed, or María adds an exception to `data_inputs/treasury/exceptions.yaml`:
   - one of the closed explanation classes;
