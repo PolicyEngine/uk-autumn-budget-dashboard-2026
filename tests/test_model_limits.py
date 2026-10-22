@@ -45,9 +45,16 @@ from uk_budget_data.publication.generate import generate_artifacts
 from uk_budget_data.publication.publish import PublishError, approve, stage
 from uk_budget_data.publication.receipt import dashboard_problems
 
-LIMIT = MODEL_LIMITS[0]
-BENEFIT_LIMIT = MODEL_LIMITS[1]
-PENSION_CREDIT_LIMIT = MODEL_LIMITS[2]
+
+def limit_by_key(key):
+    """A registered limit by key, so removing another limit at adoption
+    breaks only the tests about that limit."""
+    return {limit.key: limit for limit in MODEL_LIMITS}[key]
+
+
+LIMIT = limit_by_key("state_pension_add_on_uprating")
+BENEFIT_LIMIT = limit_by_key("benefit_uprating_september_cpi")
+PENSION_CREDIT_LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
 BENEFIT_RATE = "gov.hmrc.child_benefit.amount.eldest"
 NEW_PENSION = "gov.dwp.state_pension.new_state_pension.amount"
 BASIC_PENSION = "gov.dwp.state_pension.basic_state_pension.amount"
@@ -158,9 +165,11 @@ def test_a_system_without_the_variable_counts_as_unfixed():
 def test_a_state_pension_measure_without_the_fix_records_the_limit(
     changes, recorded
 ):
-    assert limits_touched(simulation(), simulation(changes)) == [
-        record(LIMIT, recorded)
-    ]
+    """The triple lock's CPI leg also reads the September 2026 input, so
+    the September CPI limit holds the triple-lock change as well."""
+    assert limits_touched(simulation(), simulation(changes))[0] == record(
+        LIMIT, recorded
+    )
 
 
 UPRATING_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs"
@@ -171,11 +180,11 @@ UPRATING_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs"
     [
         (
             {f"{UPRATING_INPUTS}.awe_total_pay_may_july": {"2026": 0.10}},
-            PENSION_CREDIT_LIMIT,
+            [BENEFIT_LIMIT, PENSION_CREDIT_LIMIT],
         ),
         (
             {f"{UPRATING_INPUTS}.cpi_september": {"2027": 0.10}},
-            BENEFIT_LIMIT,
+            [BENEFIT_LIMIT],
         ),
     ],
 )
@@ -186,13 +195,14 @@ def test_an_uprating_input_that_moves_the_full_rates_records_them(
     rates' stored amounts move and are recorded (#71's review found a 10%
     earnings input moved a pensioner's add-on). A CPI input also moves the
     September CPI index, recorded too. Each input is also covered by
-    another limit: the earnings input by the minimum guarantee's, the
-    September CPI index from 2027 by the benefit index's."""
+    other limits: from 2027 the triple lock index and the September CPI
+    index are the September CPI limit's, and the earnings input is the
+    minimum guarantee's."""
     touched = {
         item["key"]: item
         for item in limits_touched(simulation(), simulation(changes))
     }
-    assert list(touched) == [LIMIT.key, also.key]
+    assert list(touched) == [LIMIT.key, *(limit.key for limit in also)]
     assert {BASIC_PENSION, NEW_PENSION} <= set(
         touched[LIMIT.key]["parameters"]
     )
@@ -326,8 +336,12 @@ def test_the_scenarios_record_nothing_once_the_installed_model_has_it():
 def test_limits_for_paths_matches_prefixes_not_name_fragments():
     assert limits_for_paths([NEW_PENSION]) == [LIMIT]
     assert limits_for_paths([NEW_PENSION + "_extra"]) == []
-    assert limits_for_paths(["gov.dwp.state_pension.triple_lock"]) == [LIMIT]
-    assert limits_for_paths([TRIPLE_LOCK_MINIMUM]) == [LIMIT]
+    # The triple lock is also the September CPI limit's, from 2027.
+    assert limits_for_paths(["gov.dwp.state_pension.triple_lock"]) == [
+        LIMIT,
+        BENEFIT_LIMIT,
+    ]
+    assert limits_for_paths([TRIPLE_LOCK_MINIMUM]) == [LIMIT, BENEFIT_LIMIT]
     assert limits_for_paths([INCOME_TAX]) == []
 
 

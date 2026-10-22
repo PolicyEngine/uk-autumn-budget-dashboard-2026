@@ -30,6 +30,7 @@ describe("parseManifest on the fixture", () => {
       "epsilon",
       "eta",
       "gamma",
+      "theta",
       "zeta",
     ]);
     expect(Object.keys(manifest.combined)).toEqual(["combined--alpha+beta"]);

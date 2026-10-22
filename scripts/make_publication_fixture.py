@@ -82,6 +82,21 @@ try:
     )
     world.reconcile(refs["eta"])
     stage(manifest, refs["eta"].path, provisional=True, **args)
+    # A 2027 Pension Credit measure held until the minimum guarantee follows
+    # earnings: a third limit, honoured like the other two.
+    guarantee = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "pc_minimum_guarantee_uprating"
+        ),
+        ["gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"],
+    )
+    world.expect("theta", "positive", IN)
+    refs["theta"] = world.write(
+        "theta", {IN: 1.3, BEYOND: 1.4}, rate=0.29, model_limits=[guarantee]
+    )
+    world.reconcile(refs["theta"])
+    stage(manifest, refs["theta"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]

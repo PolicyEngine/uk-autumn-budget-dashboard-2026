@@ -16,20 +16,20 @@ from policyengine_uk.tax_benefit_system import statutory_parameters
 from tests.test_model_limits import (
     INCOME_TAX,
     fixed,
+    limit_by_key,
     scenario,
     simulation,
 )
 from uk_budget_data import data_limits
 from uk_budget_data.model_limits import (
-    MODEL_LIMITS,
     limits_for_scenarios,
     limits_touched,
     record,
 )
 
-STATE_PENSION_LIMIT = MODEL_LIMITS[0]
-LIMIT = MODEL_LIMITS[1]
-PENSION_CREDIT_LIMIT = MODEL_LIMITS[2]
+STATE_PENSION_LIMIT = limit_by_key("state_pension_add_on_uprating")
+LIMIT = limit_by_key("benefit_uprating_september_cpi")
+PENSION_CREDIT_LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
 BENEFIT_INDEX = "gov.benefit_uprating_cpi"
 SEPTEMBER_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
@@ -38,6 +38,9 @@ PROTECTED_HEALTH = (
     "gov.dwp.universal_credit.rebalancing.protected_health_element"
 )
 PIP = "gov.dwp.pip.daily_living.standard"
+TRIPLE_LOCK = "gov.dwp.state_pension.triple_lock"
+TRIPLE_LOCK_INDEX = "gov.economic_assumptions.indices.triple_lock"
+NEW_PENSION = "gov.dwp.state_pension.new_state_pension.amount"
 UC = "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD"
 PENSION_CREDIT = (
     "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
@@ -50,6 +53,11 @@ def test_the_pinned_prefixes_equal_the_installed_uprating_metadata():
     Uprating metadata propagates into nodes and scale brackets, and the
     processed baseline repeats the names. Keep the topmost distinct names,
     including the UC standard allowance parent and all four of its amounts.
+
+    On a later engine, don't repin to the metadata alone: amounts that move
+    to indices of their own still built from the lagged benefit index (the
+    UC standard allowance and LCWRA element on policyengine-uk 2.146.5)
+    stay in the limit until #2533's fix (review of #90).
     """
     names = {
         parameter.name
@@ -68,6 +76,8 @@ def test_the_pinned_prefixes_equal_the_installed_uprating_metadata():
     assert set(LIMIT.parameters) == prefixes | {
         PROTECTED_HEALTH,
         SEPTEMBER_INDEX,
+        TRIPLE_LOCK,
+        TRIPLE_LOCK_INDEX,
     }
     assert "gov.dwp.universal_credit.standard_allowance.amount" in prefixes
     assert PENSION_CREDIT in prefixes
@@ -223,6 +233,30 @@ def test_with_2336_but_not_2533_the_add_on_is_held_by_this_limit(changes):
     assert limits_touched(fixed(), fixed(changes)) == [
         record(LIMIT, [SEPTEMBER_INDEX])
     ]
+
+
+@pytest.mark.parametrize(
+    "rule, value",
+    [("include_earnings", False), ("minimum_rate", 0.05)],
+    ids=["a double lock", "a higher minimum"],
+)
+def test_with_2336_but_not_2533_a_triple_lock_measure_is_held(rule, value):
+    """The triple lock's April 2027 CPI leg reads the same forecast, so a
+    measure on its rule is mis-costed first-hand: dropping the earnings
+    leg gives max(2.1% forecast, 2.5%) against max(3.5%, 2.5%) with the
+    outturn. The State Pension limit lifts with #2336; this one holds it
+    until #2533's fix (review of #90)."""
+    path = f"{TRIPLE_LOCK}.{rule}"
+    assert limits_touched(fixed(), fixed({path: {"2027": value}})) == [
+        record(LIMIT, [path, TRIPLE_LOCK_INDEX])
+    ]
+
+
+def test_with_2336_a_full_rate_measure_is_not_held():
+    """After #2336 the full rates don't move the add-on, so a measure on
+    them alone isn't held; its second-hand error through means tests is a
+    disclosure, not a hold (coordinator on #90, 22 October)."""
+    assert limits_touched(fixed(), fixed({NEW_PENSION: {"2027": 260.0}})) == []
 
 
 def test_a_measure_confined_to_2026_does_not_record_the_limit():

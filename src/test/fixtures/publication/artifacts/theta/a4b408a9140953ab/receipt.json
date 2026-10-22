@@ -29,30 +29,38 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
-      "receipt_sha256": "14fad67ea13be970500d975b9f2f9e440d741476ef4cd24285c2fb883ea96424"
+      "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
+      "receipt_sha256": "bff114a8f4a8981cb2a446c857afe2a0702f7cad85647d99c2dd7f48606285f0"
     },
     "files": {
-      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
-      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
-      "household_scatter_binned.csv": "d9b4a255b8b19ecfb4ec10e0664df4a0ec1dd90e5357597b71edd9b8b2974a90",
-      "income_curve.csv": "a271e3e7d6bc97cf626b9f0f7dccb86c4c204c4d0a9c8924a7a18e59900b1c69",
-      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
-      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
+      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
+      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
+      "household_scatter_binned.csv": "0e3143dfe1379b10592be357f7c64d779f8886d78e6ab4290dde255ff77d4c8b",
+      "income_curve.csv": "f44da90cef172468161fee797f81c1617ee69f5919d89f32009dd0a498597291",
+      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
+      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
     },
-    "generated_at": "2026-10-22T13:01:42.752744+00:00",
+    "generated_at": "2026-10-22T14:50:34.444167+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "delta",
+    "key": "theta",
     "measure_ids": [
-      "delta"
+      "theta"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [],
-    "model_limits_registry_sha256": "0a6af61874632cf96be81bc671d03df183bb20423ebc751e6cf5a707d6a15edb",
+    "model_limits": [
+      {
+        "key": "pc_minimum_guarantee_uprating",
+        "parameters": [
+          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+        ],
+        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -65,7 +73,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "delta baseline"
+      "name": "theta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -105,13 +113,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
+    "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "delta",
-      "reform_sha256": "fedd36d4624a231b098739785efd96a369842e03e22aa5a502ff66e07177f404",
+      "name": "theta",
+      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

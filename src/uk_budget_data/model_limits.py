@@ -178,21 +178,32 @@ _MINIMUM_GUARANTEE = (
 _EARNINGS_INPUT = (
     "gov.economic_assumptions.statutory_uprating_inputs.awe_total_pay_may_july"
 )
-# One 5p step of a weekly rate: the Up-rating Orders round the guarantee to
-# 5p, and lagged CPI falls short of earnings by pounds a week.
-_GUARANTEE_ROUNDING = 0.05
+# Indices are stored to five decimal places.
+_INDEX_TOLERANCE = 1e-5
+
+
+def _uprating_index(node):
+    """The index a parameter's uprating metadata names, or None."""
+    rule = (getattr(node, "metadata", None) or {}).get("uprating")
+    if isinstance(rule, dict):
+        rule = rule.get("parameter")
+    return rule if isinstance(rule, str) else None
 
 
 def _minimum_guarantee_earnings(system) -> bool:
-    """Whether the standard minimum guarantee rises with earnings.
+    """Whether the standard minimum guarantee is uprated with earnings.
 
-    Social Security Administration Act 1992 s. 150A(2) requires the April
-    2027 rise to be at least the May to July 2026 earnings growth. The
-    earnings figure is read from the raw input, so a forecast filled into
-    an unpublished year can't count, and both the single and the couple
-    rate must reach it in the built tree. The pension-age Housing Benefit
-    allowances and the savings credit threshold, which the same fix covers,
-    have no statutory floor to test, so the guarantee stands for them.
+    Social Security Administration Act 1992 s. 150A(2) requires each
+    April's rise to be at least the May to July earnings growth before it.
+    The check reads the uprating rule, not the amounts, so a measure that
+    sets the guarantee can't make its own simulation count as fixed, and
+    2027-28 rates typed in over a CPI rule don't count either: both rates
+    must be uprated by an index other than the benefit index, whose April
+    2026 to April 2027 step reaches the May to July 2026 earnings growth.
+    That figure is read from the raw input, so a forecast can't count. The
+    pension-age Housing Benefit allowances and the savings credit
+    threshold, which the same fix covers, have no statutory floor to test,
+    so the guarantee stands for them.
     """
     if not hasattr(system, "parameters"):
         return False
@@ -207,12 +218,21 @@ def _minimum_guarantee_earnings(system) -> bool:
             return False
         guarantee = system.parameters.get_child(_MINIMUM_GUARANTEE)
         for name in ("SINGLE", "COUPLE"):
-            amount = guarantee.get_child(name)
-            floor = amount("2026-04-30") * (1 + earnings)
-            if amount("2027-04-30") < floor - _GUARANTEE_ROUNDING:
+            path = _uprating_index(guarantee.get_child(name))
+            if path is None or path == _BENEFIT_INDEX:
+                return False
+            index = system.parameters.get_child(path)
+            step = index("2027-04-30") / index("2026-04-30")
+            if step < 1 + earnings - _INDEX_TOLERANCE:
                 return False
         return True
-    except (AttributeError, KeyError, TypeError, ValueError):
+    except (
+        AttributeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        ZeroDivisionError,
+    ):
         return False
 
 
@@ -336,10 +356,16 @@ _BENEFIT_CPI_PARAMETERS = (
 # new State Pension protected payments rise by it, so a pair with #2336 but
 # without #2533's fix gives them a forecast for their April 2027 rise
 # (coordinator, 22 October). Any route that moves the index (the input, a
-# CPI growth path or its forecast gap) changes its stored values.
+# CPI growth path or its forecast gap) changes its stored values. The
+# triple lock reads the same input for its April 2027 CPI leg, so a
+# measure on its rule, or anything that moves the index it builds, is held
+# too: the State Pension limit no longer holds it once #2336 is in (review
+# of #90). A measure on the full rates alone is not held.
 _SEPTEMBER_INPUT_READERS = (
     "gov.dwp.universal_credit.rebalancing.protected_health_element",
     _SEPTEMBER_CPI_INDEX,
+    "gov.dwp.state_pension.triple_lock",
+    "gov.economic_assumptions.indices.triple_lock",
 )
 
 
@@ -380,11 +406,11 @@ MODEL_LIMITS = (
             "among them, step by 2.3% in April 2027 against September 2026 "
             "CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC "
             "protected health element's 2027 amount also reads the "
-            "September 2026 input, which is still a forecast, and so does "
-            "the September CPI index, by which additional State Pension and "
-            "new State Pension protected payments rise once policyengine-uk "
-            "#2336 is in the model. The 2026-27 rates are hard-coded and "
-            "unaffected. policyengine-uk #2533 must both enter the September "
+            "September 2026 input, which is still a forecast, and so do the "
+            "triple lock's CPI leg and the September CPI index, by which "
+            "additional State Pension and new State Pension protected "
+            "payments rise once policyengine-uk #2336 is in the model. The "
+            "2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September "
             "outturn and repoint the benefit index to September CPI. Until "
             "both steps are in the model, measures "
             "touching these benefit levels from 2027 are held at "

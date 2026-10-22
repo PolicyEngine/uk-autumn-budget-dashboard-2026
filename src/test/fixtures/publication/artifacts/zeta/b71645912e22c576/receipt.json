@@ -40,7 +40,7 @@
       "metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
       "winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30"
     },
-    "generated_at": "2026-10-22T13:01:43.309365+00:00",
+    "generated_at": "2026-10-22T14:50:34.141101+00:00",
     "generator_argv": [
       "test"
     ],
@@ -60,7 +60,7 @@
         "reason": "The installed model raises additional State Pension and new State Pension protected payments with the full rates, not with prices, so anything that moves the full rates moves them too, and a change to September CPI misses them. They rise by prices: the statutory floor, which the Up-rating Orders give as September CPI (SI 2026/148 articles 4(3)(a) and 6(3)(b)). So this measure is mis-costed: on uk-data 1.58.1, a 10% rise in the full rates overstates its net cost by about \u00a30.85bn to \u00a31.06bn a year over 2026-27 to 2030-31. policyengine-uk #2336 fixes it; it is not in this model. Held at provisional."
       }
     ],
-    "model_limits_registry_sha256": "0a6af61874632cf96be81bc671d03df183bb20423ebc751e6cf5a707d6a15edb",
+    "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",

@@ -20,17 +20,16 @@ from policyengine_uk import Simulation
 from policyengine_uk.system import system as installed_system
 from policyengine_uk.tax_benefit_system import statutory_parameters
 
-from tests.test_model_limits import simulation
-from uk_budget_data import data_limits
+from tests.test_model_limits import limit_by_key, simulation
 from uk_budget_data.measure_templates import ModelLimitedWarning, rate_change
 from uk_budget_data.model_limits import (
-    MODEL_LIMITS,
+    limits_for_paths,
     limits_touched,
     record,
 )
 
-BENEFIT_LIMIT = MODEL_LIMITS[1]
-LIMIT = MODEL_LIMITS[2]
+BENEFIT_LIMIT = limit_by_key("benefit_uprating_september_cpi")
+LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
 GUARANTEE = "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
 SINGLE = f"{GUARANTEE}.SINGLE"
 COUPLE = f"{GUARANTEE}.COUPLE"
@@ -41,17 +40,25 @@ HOUSING_BENEFIT = "gov.dwp.housing_benefit.allowances.single.aged"
 SAVINGS_CREDIT = "gov.dwp.pension_credit.savings_credit.threshold.SINGLE"
 ALLOWANCES = "gov.dwp.housing_benefit.allowances"
 EARNINGS_2026 = 0.039
+BENEFIT_INDEX = "gov.benefit_uprating_cpi"
+INDICES = "gov.economic_assumptions.indices"
+# Stand-in indices from the installed model, by their April 2027 step: the
+# triple lock's is the May to July 2026 earnings figure (3.9%), calendar-year
+# OBR earnings growth's is 2.4%, and lagged CPI's is 2.3%.
+AT_EARNINGS = f"{INDICES}.triple_lock"
+CALENDAR_EARNINGS = f"{INDICES}.obr.average_earnings"
+LAGGED_CPI = f"{INDICES}.obr.lagged_cpi"
 
 
 def test_the_limit_is_registered_with_its_key():
-    assert LIMIT.key == "pc_minimum_guarantee_uprating"
     assert LIMIT.from_year == 2027
 
 
 def test_every_pension_age_housing_benefit_allowance_is_covered():
     """Adoption tripwire: later policyengine-uk releases split each
     pension-age allowance in two (``aged`` and ``aged_from_cutoff``). When
-    the adopted model has more of them, this fails until each is listed."""
+    the adopted model has more of them, this fails until each is listed,
+    here and in the September CPI limit's pinned list."""
     allowances = installed_system.parameters.get_child(ALLOWANCES)
     pension_age = {
         f"{ALLOWANCES}.{group}.{name}"
@@ -63,6 +70,29 @@ def test_every_pension_age_housing_benefit_allowance_is_covered():
     assert pension_age <= set(LIMIT.parameters)
 
 
+@pytest.mark.parametrize(
+    "path, covered",
+    [
+        (SINGLE, True),
+        (COUPLE, True),
+        (SAVINGS_CREDIT, True),
+        (HOUSING_BENEFIT, True),
+        ("gov.dwp.housing_benefit.allowances.couple.aged", True),
+        ("gov.dwp.housing_benefit.allowances.lone_parent.aged", True),
+        (EARNINGS, True),
+        ("gov.dwp.housing_benefit.allowances.single.older", False),
+        ("gov.dwp.housing_benefit.allowances.single.younger", False),
+        (
+            "gov.economic_assumptions.statutory_uprating_inputs"
+            ".cpi_september",
+            False,
+        ),
+    ],
+)
+def test_the_limit_covers_the_pension_age_amounts_only(path, covered):
+    assert (LIMIT in limits_for_paths([path])) is covered
+
+
 def _update(parameters, path, date, value):
     parameters.get_child(path).update(start=instant(date), value=value)
 
@@ -70,12 +100,12 @@ def _update(parameters, path, date, value):
 def stand_in(
     *,
     published=True,
-    rise=1 + EARNINGS_2026,
-    short_by=0.0,
+    index=AT_EARNINGS,
     rates=(SINGLE, COUPLE),
+    amounts=None,
 ):
-    """A processed tree whose guarantee rises by ``rise`` in April 2027,
-    less ``short_by`` pounds a week.
+    """A processed tree whose guarantee rates in ``rates`` name ``index``
+    as their uprating rule, with ``amounts`` typed in for April 2027.
 
     The raw tree records whether May to July 2026 earnings are published,
     separately from the processed input, which a forecast can fill.
@@ -87,10 +117,21 @@ def stand_in(
     if not published:
         _update(system._raw_parameters, EARNINGS, "2026-07-01", None)
     for path in rates:
-        amount = system.parameters.get_child(path)
-        uprated = amount("2026-04-30") * rise - short_by
-        _update(system.parameters, path, "2027-04-01", uprated)
+        node = system.parameters.get_child(path)
+        node.metadata = {**node.metadata, "uprating": index}
+    for path, value in (amounts or {}).items():
+        _update(system.parameters, path, "2027-04-01", value)
     return SimpleNamespace(tax_benefit_system=system)
+
+
+def test_the_stand_in_indices_step_as_described():
+    def step(path):
+        index = installed_system.parameters.get_child(path)
+        return index("2027-04-30") / index("2026-04-30")
+
+    assert step(AT_EARNINGS) == pytest.approx(1 + EARNINGS_2026, abs=1e-5)
+    assert step(CALENDAR_EARNINGS) < 1.03
+    assert step(LAGGED_CPI) < 1.03
 
 
 def test_the_installed_model_publishes_the_2026_earnings_input():
@@ -100,33 +141,42 @@ def test_the_installed_model_publishes_the_2026_earnings_input():
     assert raw == pytest.approx(EARNINGS_2026)
 
 
+# Earnings-level 2027-28 rates, as an Up-rating statement would give them.
+TYPED_IN = {SINGLE: 247.30, COUPLE: 377.45}
+
+
 @pytest.mark.parametrize(
     "kwargs, fixed",
     [
         ({}, True),
-        ({"rise": 1.0399}, True),
-        # Rounded down to the 5p step below the floor still counts.
-        ({"short_by": 0.04}, True),
-        ({"short_by": 0.06}, False),
-        ({"rise": 1.023}, False),
-        ({"rise": 1.035}, False),
+        ({"index": {"parameter": AT_EARNINGS}}, True),
+        # Typed-in 2027-28 rates over the CPI rule: 2028 onwards still
+        # follows CPI, and a measure could type them in too.
+        ({"index": BENEFIT_INDEX, "amounts": TYPED_IN}, False),
+        ({"index": BENEFIT_INDEX}, False),
+        ({"index": LAGGED_CPI}, False),
+        ({"index": CALENDAR_EARNINGS}, False),
+        ({"index": f"{INDICES}.no_such_index"}, False),
+        ({"index": None}, False),
         ({"published": False}, False),
         ({"rates": (SINGLE,)}, False),
         ({"rates": (COUPLE,)}, False),
     ],
     ids=[
-        "earnings",
-        "above earnings",
-        "within a 5p step",
-        "beyond a 5p step",
+        "earnings rule",
+        "earnings rule, long form",
+        "typed-in rates",
+        "benefit index",
         "lagged CPI",
-        "September CPI",
+        "calendar-year earnings",
+        "a missing index",
+        "no rule",
         "earnings unpublished",
         "single only",
         "couple only",
     ],
 )
-def test_the_fix_needs_both_rates_to_reach_published_earnings(kwargs, fixed):
+def test_the_fix_is_an_earnings_rule_for_both_rates(kwargs, fixed):
     assert LIMIT.fixed(stand_in(**kwargs).tax_benefit_system) is fixed
 
 
@@ -153,19 +203,23 @@ def test_the_installed_model_still_lacks_the_fix():
     ), f"{LIMIT.fixed_by} is in the installed model: remove {LIMIT.key}"
 
 
-def test_the_fix_check_agrees_with_the_guarantee_a_pensioner_gets():
-    """Differential: the check reads the parameter tree; this reads the
-    standard minimum guarantee the model gives a single pensioner, through
-    its formulas, in 2026-27 and 2027-28."""
+def pensioners(year, count):
+    people = {f"p{i}": {"age": {year: 70}} for i in range(count)}
+    return {
+        "people": people,
+        "benunits": {"b": {"members": list(people)}},
+        "households": {"h": {"members": list(people)}},
+    }
+
+
+@pytest.mark.parametrize("count", [1, 2], ids=["single", "couple"])
+def test_the_fix_check_agrees_with_the_guarantee_pensioners_get(count):
+    """Differential: the check reads the uprating rule; this reads the
+    standard minimum guarantee the model gives a pensioner benefit unit,
+    through its formulas, in 2026-27 and 2027-28."""
 
     def guarantee(year):
-        sim = Simulation(
-            situation={
-                "people": {"p": {"age": {year: 70}}},
-                "benunits": {"b": {"members": ["p"]}},
-                "households": {"h": {"members": ["p"]}},
-            }
-        )
+        sim = Simulation(situation=pensioners(year, count))
         return sim.calculate("standard_minimum_guarantee", year)[0]
 
     before, after = guarantee(2026), guarantee(2027)
@@ -201,8 +255,8 @@ def test_a_2027_savings_credit_threshold_measure_records_the_limit():
 )
 def test_a_change_to_the_earnings_input_records_the_limit(key):
     """Without the fix the guarantee ignores earnings, so the change misses
-    it. The triple lock reads the input too, so the State Pension limit is
-    recorded beside it while #2336 is missing."""
+    it. The triple lock reads the input too, so other limits are recorded
+    beside it."""
     touched = limits_touched(simulation(), simulation({EARNINGS: {key: 0.1}}))
     assert record(LIMIT, [EARNINGS]) in touched
 
@@ -215,33 +269,29 @@ def test_a_measure_confined_to_2026_does_not_record_the_limit():
     )
 
 
-def test_with_the_fix_a_guarantee_measure_records_only_the_benefit_limit():
-    """The limit expires on its own once the model has the fix."""
-
-    def build(changes=None):
-        sim = stand_in()
-        if changes:
-            sim = SimpleNamespace(
-                tax_benefit_system=copy.copy(sim.tax_benefit_system)
-            )
-            parameters = sim.tax_benefit_system.parameters.clone()
-            sim.tax_benefit_system.parameters = parameters
-            sim.tax_benefit_system._parameters_at_instant_cache = {}
-            for path, value in changes.items():
-                _update(parameters, path, "2027-04-01", value)
-        return sim
-
-    touched = limits_touched(build(), build({SINGLE: 300.0}))
+@pytest.mark.parametrize("value", [238.0, 300.0], ids=["freeze", "raise"])
+def test_with_the_fix_a_guarantee_measure_records_only_the_benefit_limit(
+    value,
+):
+    """The limit expires on its own once the model has the fix, whatever
+    the measure does to the guarantee: the check reads the rule, not the
+    measure's amounts."""
+    reformed = stand_in(amounts={SINGLE: value})
+    touched = limits_touched(stand_in(), reformed)
     assert [item["key"] for item in touched] == [BENEFIT_LIMIT.key]
+
+
+def test_a_measure_typing_in_the_guarantee_does_not_count_as_the_fix():
+    """Earnings-level 2027 rates on both sides, over the CPI rule, leave the
+    model unfixed, so a measure on another covered amount stays held."""
+    baseline = stand_in(index=BENEFIT_INDEX, amounts=TYPED_IN)
+    reformed = stand_in(
+        index=BENEFIT_INDEX, amounts={**TYPED_IN, SAVINGS_CREDIT: 230.0}
+    )
+    touched = limits_touched(baseline, reformed)
+    assert record(LIMIT, [SAVINGS_CREDIT]) in touched
 
 
 def test_a_template_built_measure_warns():
     with pytest.warns(ModelLimitedWarning, match="minimum guarantee"):
         rate_change(SINGLE, {2027: 260.0})
-
-
-def test_the_covered_paths_fall_under_this_limit():
-    for path in LIMIT.parameters:
-        assert any(
-            data_limits._under(path, prefix) for prefix in LIMIT.parameters
-        )

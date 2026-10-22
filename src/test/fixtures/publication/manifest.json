@@ -14,13 +14,13 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "3176c24d73d4ad99c437378233c3d44cbb7f41ea1299aa8c004d8d6ea1e2efe5",
-        "at": "2026-10-22T13:01:43.814139+00:00",
+        "artifact_sha256": "a4e6f55864a77132b7af3cdba2194d75a8ee13a4aac65186743f45b6cce34ab1",
+        "at": "2026-10-22T14:50:34.746873+00:00",
         "by": "Reviewer",
         "outputs_sha256": "dd0a04f370a92c68abf111b63eaf2f33e7d8531174633d70412ef5296b807260"
       },
-      "artifact": "artifacts/combined--alpha+beta/3176c24d73d4ad99",
-      "artifact_sha256": "3176c24d73d4ad99c437378233c3d44cbb7f41ea1299aa8c004d8d6ea1e2efe5",
+      "artifact": "artifacts/combined--alpha+beta/a4e6f55864a77132",
+      "artifact_sha256": "a4e6f55864a77132b7af3cdba2194d75a8ee13a4aac65186743f45b6cce34ab1",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "measures": [
@@ -88,13 +88,13 @@
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "e2a7cdc865df28d639f6f5ff727ffa94c8075548cd7ed84f5ff0c03cd70346f9",
-        "at": "2026-10-22T13:01:42.859527+00:00",
+        "artifact_sha256": "f43e744dc3268cdd0ed755f7a3743fe5ef6487bba20effd05909300151d3eba7",
+        "at": "2026-10-22T14:50:33.681551+00:00",
         "by": "Reviewer",
         "outputs_sha256": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e"
       },
-      "artifact": "artifacts/alpha/e2a7cdc865df28d6",
-      "artifact_sha256": "e2a7cdc865df28d639f6f5ff727ffa94c8075548cd7ed84f5ff0c03cd70346f9",
+      "artifact": "artifacts/alpha/f43e744dc3268cdd",
+      "artifact_sha256": "f43e744dc3268cdd0ed755f7a3743fe5ef6487bba20effd05909300151d3eba7",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Alpha",
@@ -115,13 +115,13 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "270eb7234a289f68f4c4d5f8f30e652af8de58d9caf5b17ef62c2ef6a21a04e4",
-        "at": "2026-10-22T13:01:42.914613+00:00",
+        "artifact_sha256": "b2e28bd1d7158b7c8e69f55cd9d84634e0eba8e1c8ac3309652d0729dcb64b3a",
+        "at": "2026-10-22T14:50:33.739233+00:00",
         "by": "Reviewer",
         "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1"
       },
-      "artifact": "artifacts/beta/270eb7234a289f68",
-      "artifact_sha256": "270eb7234a289f68f4c4d5f8f30e652af8de58d9caf5b17ef62c2ef6a21a04e4",
+      "artifact": "artifacts/beta/b2e28bd1d7158b7c",
+      "artifact_sha256": "b2e28bd1d7158b7c8e69f55cd9d84634e0eba8e1c8ac3309652d0729dcb64b3a",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Beta",
@@ -141,8 +141,8 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/9ccd59a2a706a82b",
-      "artifact_sha256": "9ccd59a2a706a82b483e6c879a5872d13a3e3df05d1a3594dba01c82493169ce",
+      "artifact": "artifacts/delta/461a00b73ceb14ea",
+      "artifact_sha256": "461a00b73ceb14ea95c61d6a2e3e5e918f84befc007fa2eb59dce129fa4ad128",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Delta",
@@ -162,8 +162,8 @@
       ]
     },
     "epsilon": {
-      "artifact": "artifacts/epsilon/86e101ee7f6a62d3",
-      "artifact_sha256": "86e101ee7f6a62d3cf04e35744af7805032e918486868257fe902577f46cdd41",
+      "artifact": "artifacts/epsilon/efd16cb4d1e7b888",
+      "artifact_sha256": "efd16cb4d1e7b8884549924113b7b9cf251278d4f97f8b935f9234a4ed41a8cf",
       "data_limits": [
         "additional_dwelling_purchases"
       ],
@@ -182,8 +182,8 @@
       ]
     },
     "eta": {
-      "artifact": "artifacts/eta/c87fb2ee44b405b9",
-      "artifact_sha256": "c87fb2ee44b405b9d123581f7ff4b32882c3ab3d1cdfc7cd62404333f5bc4371",
+      "artifact": "artifacts/eta/1f1426a74174d90c",
+      "artifact_sha256": "1f1426a74174d90c179901b6de32d5c7156e8f0c41606cc3ec81d895b9417f26",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Eta",
@@ -203,8 +203,8 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/d83b363a065d30de",
-      "artifact_sha256": "d83b363a065d30de2989b5a14cef6d7c3589122acd0f8329e07fb4e504707d4a",
+      "artifact": "artifacts/gamma/9770f2c8632369f0",
+      "artifact_sha256": "9770f2c8632369f04a8dbccf266862b592aa132240c5ab4a9ebddfe60fa0bd4a",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Gamma",
@@ -223,9 +223,30 @@
         2033
       ]
     },
+    "theta": {
+      "artifact": "artifacts/theta/a4b408a9140953ab",
+      "artifact_sha256": "a4b408a9140953abfb41e8c440a8577071f3a20ca3da77a59708f81ae366444f",
+      "data_limits": [],
+      "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
+      "name": "Theta",
+      "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
+      "receipt_sha256": "bff114a8f4a8981cb2a446c857afe2a0702f7cad85647d99c2dd7f48606285f0",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "awaiting_source"
+      },
+      "status": "provisional",
+      "unsupported_years": [
+        2033
+      ],
+      "years": [
+        2032,
+        2033
+      ]
+    },
     "zeta": {
-      "artifact": "artifacts/zeta/b49b99e598fb2272",
-      "artifact_sha256": "b49b99e598fb2272f285f7f48ed70984e7d8374a52505f485524c04c5f8f9ba6",
+      "artifact": "artifacts/zeta/b71645912e22c576",
+      "artifact_sha256": "b71645912e22c576650a86996d9a94884f10357f39226e346026cdcad5d4853b",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Zeta",
@@ -248,5 +269,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-22T13:01:43.814297+00:00"
+  "updated_at": "2026-10-22T14:50:34.747128+00:00"
 }

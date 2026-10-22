@@ -107,7 +107,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes`, `00018-xuv` and `00020-pal`, after #46. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
   - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
-  - **Time the regeneration** (step 5 of each cut: regenerate, stage, reconcile), as under "How long one adoption takes" below, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
+  - **Time the regeneration** (regenerate, stage, reconcile: the fifth row of the table under "How long one adoption takes" below), as that section says, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
 
 ## How a measure must be written
 
@@ -146,7 +146,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side;
   - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for;
   - every level that shows a figure refuses it, and so does approval;
-  - the page shows "Not computable on current data" and the reason, never a number;
+  - once option (d) is on `main`, the page shows "Not computable on current data" and the reason, never a number;
   - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
   - building one with the templates warns (`DataLimitedWarning`).
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
@@ -233,7 +233,11 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - **The templates** warn (`ModelLimitedWarning`) when a measure is built on one of the guard's own parameters: either full rate, the triple lock or the September CPI index. A template change elsewhere that moves them, such as to the statutory uprating inputs, doesn't warn, but generation still records it.
   - **The flat pipeline** prints "MIS-COSTED BY THIS MODEL".
   - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, with the other tests that assume the limit is active, so the limit and those tests are removed there.
-  - **If the adopted pair has #2336 but not #2557** (#2533's fix, below), the add-on's April 2027 rise reads the September 2026 input, which is still a forecast there. So a measure that moves the September CPI index from 2027 stays held, by the September CPI limit below, until #2557 is in the pair (coordinator, 22 October). policyengine-uk 2.146.5 is that case, so the next bundle may be too.
+    - **Retarget, don't delete, the guard's general tests.** Some tests of how the guard works are written against this limit: cache hygiene, rebound nodes, added leaves, cached views, modifiers, the baseline side, generation, the flat pipeline and the template warning. The other limits rely on the same code, so move those tests to a remaining limit, such as the September CPI limit with a 2027 PIP change (review of #90).
+  - **If the adopted pair has #2336 but not #2557** (#2533's fix, below), the add-on's April 2027 rise reads the September 2026 input, which is still a forecast there. policyengine-uk 2.146.5 is that case, so the next bundle may be too. Until #2557 is in the pair, the September CPI limit below holds:
+    - **a measure that moves the September CPI index from 2027** (coordinator, 22 October);
+    - **a measure on the triple lock's rule,** such as dropping its earnings leg, or anything else that moves the triple lock index from 2027. Its April 2027 CPI leg reads the same forecast: 2.1% on 2.146.5, against the 3.5% outturn (review of #90).
+  - **A measure on the full rates alone is not held then.** After #2336 it doesn't move the add-on. Its cost is still slightly off through means tests such as Pension Credit, since the 2027-28 baseline's add-on uses the forecast: disclose that (see "Data and model limitations" below; coordinator on #90, 22 October).
   - **The page doesn't show the reason.** It is in the receipt, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record it in the coverage ledger too. **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
@@ -249,11 +253,17 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Which measures:** changes from 2027 onwards, on either side of the measure, to:
   - any parameter whose uprating metadata names the benefit uprating index (79 prefixes, the UC standard allowance among them);
   - the UC protected health element;
-  - or the September CPI index, `gov.economic_assumptions.indices.september_cpi_uprating`, by any route that moves it: the index itself, the September input, or a CPI growth path. Without #2336 the State Pension limit holds such a change too.
+  - the September CPI index, `gov.economic_assumptions.indices.september_cpi_uprating`, by any route that moves it: the index itself, the September input, or a CPI growth path;
+  - or the triple lock: its rule, `gov.dwp.state_pension.triple_lock`, or anything that moves the index it builds, `gov.economic_assumptions.indices.triple_lock`.
+
+  Without #2336 the State Pension limit holds the last two as well. A measure on the State Pension's full rates alone isn't held by this limit.
 
   The registry pins those prefixes, and a test compares the pin with the installed engine's metadata.
   - **Not held:** a structural measure that changes no covered parameter, such as repealing the two-child limit. The 2027 benefit levels it interacts with are still about 1.2% low.
 - **What the guard does:** generation records `benefit_uprating_september_cpi` and its reason in the receipt. Provisional staging is allowed; approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such measures stay out of the first cut and briefing, which take approved entries only; a combined run including one is provisional at most.
+- **At an adoption before #2557, update the pin, keeping what's still lagged.** On policyengine-uk 2.146.5 the pinned-metadata test fails (review of #90):
+  - three `aged_from_cutoff` Housing Benefit allowances join the index. Add them to the pin, and to the Pension Credit limit below;
+  - the UC standard allowance and the UC LCWRA element (`elements.disabled.amount`) move to indices of their own, `uc_standard_allowance` and `uc_health_element`, which are still built from the lagged benefit index. Keep both in this limit beside the protected health element, rather than repinning to the metadata alone, until #2557.
 - **When it lifts:** the adopted pair must include both steps of #2533: enter the September 2026 outturn (`0.035`) in `statutory_uprating_inputs.cpi_september`, and make the benefit uprating index follow the September CPI index. The guard checks the input and the resulting April 2026 to April 2027 uprating; entering the outturn alone does not lift it. The fix is policyengine-uk #2557, which also repoints the UC Act indices and so fixes the UC protected health element (coordinator, 22 October). Its adoption PR removes this limit when the tripwire test finds the fix in the adopted model.
 
 **A measure on the Pension Credit minimum guarantee, the pension-age Housing Benefit allowances or the savings credit threshold, from 2027, needs the UK hub's earnings fix for the guarantee in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (`pc_minimum_guarantee_uprating`; coordinator, 22 October).
@@ -263,7 +273,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Which measures:** changes from 2027 onwards, on either side, to:
   - the standard minimum guarantee, single or couple;
   - the savings credit threshold;
-  - the pension-age Housing Benefit allowances: the three `aged` ones on policyengine-uk 2.132.6, and the six of later releases, which add `aged_from_cutoff`. A test fails in the adoption PR until those are listed too;
+  - the pension-age Housing Benefit allowances: the three `aged` ones on policyengine-uk 2.132.6, and the six of later releases, which add `aged_from_cutoff`. The adoption PR for such a release lists the new three here and in the September CPI limit's pinned list; a test of each fails until it does;
   - the May to July earnings input, `statutory_uprating_inputs.awe_total_pay_may_july`, by any route that moves it, such as an earnings growth path. Without the fix the guarantee ignores earnings, so such a change misses it.
 
   The first three are also on the benefit index, so until #2557 is in the pair they record the September CPI limit too.
@@ -418,8 +428,8 @@ uv run uk-budget-data publish check
     - The Integrator doesn't stage them.
     - The Reconciler lists each one in the coverage ledger as not computable, with its reason.
     - A combined run that includes one is refused, since a member missing from the manifest blocks it.
-    - **Option (d), coming in W5's next PR:** such an artifact holds only its receipt, which gets a row reading "not computable, staged by <Integrator>".
-  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. Under option (d), the helper will delete any artifact the manifest doesn't reference, with its row (coordinator, 22 October). Until then, such artifacts stay.
+    - **Option (d), coming in W5's next PR:** such an artifact holds only its receipt, which gets a row reading "not computable, staged by <stager>".
+  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. The coordinator's ruling for option (d) (22 October): "The helper deletes any `public/data/artifacts/<id>` the manifest doesn't reference, with its row." Which of these earlier artifacts that covers is for the (d) PR to settle.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -485,7 +495,7 @@ uv run uk-budget-data publish check
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
   - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
   - **What it doesn't:** the manifest records publication approval, but the command does not read the holds ledger. The Reconciler still checks that measures held by hand have not been approved. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
-  - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). **The coordinator's ruling on the page caveat** (22 October): the area views show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement. Until they add it, the page doesn't show the label, and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
+  - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). **The coordinator's ruling on the page caveat** (22 October): the area views show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement. Until it's added, the page doesn't show the label, and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
@@ -595,10 +605,10 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
     - **At 21–22 October's queue:** about 7 h 15 min, plus any regeneration beyond about 1 h 45 min.
   - **Where CI time goes:** each CI run's ten jobs queue separately for runners. In #72's run the work took about 16 minutes; the rest was queueing.
   - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table:
-    - **What to time:** regenerate every published measure and the combined run, reconcile, and stage, as the final cut would. Hand-written modifiers each take a `generate` call of their own.
-    - **How:** run `date -u` before the first `generate`, and again after the last `publish stage`.
+    - **What to time:** regenerate every published measure and the combined run, stage, and reconcile, as the final cut would. Hand-written modifiers each take a `generate` call of their own.
+    - **How:** run `date -u` before the first `generate`, and again after the last `publish stage` or `publish reconcile`, whichever comes last.
     - **What to record:** both times, how many measures and combined runs were regenerated, and the bundle. The rehearsal may carry fewer measures than the day, so the count lets the time be scaled.
-    - **Who:** whoever runs the rehearsal's regeneration, probably the Integrator. W5's cloud session has no data access, so it can't time it itself.
+    - **Who:** whoever runs the rehearsal's regeneration, probably the Integrator (pending Max's answer on #88). W5's cloud session has no data access, so it can't time it itself.
   - **To fit the overnight window:**
     - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
     - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
@@ -699,6 +709,12 @@ W5 re-measured on the same file for 2025:
 - **Universal Credit has no transitional element for managed migrants** (policyengine-uk #1912).
 - **Universal Credit doesn't exclude full-time students** (policyengine-uk #2346).
 - **Children aged 9 to 11 months get no working-parent childcare hours** (policyengine-uk-data #547): the data store whole-year ages.
+
+**State Pension measures from 2027-28, in a pair with #2336 but without #2557** (coordinator on #90, 22 October). Say this wherever such a measure's figure appears, and in the briefing's caveats when one is published:
+
+> "Until #2557 is in the adopted pair, the 2027-28 baseline's additional State Pension and protected payments use forecast September CPI, so a full-rate measure's cost is slightly off through means tests such as Pension Credit."
+
+It lifts with #2557. A measure that moves September CPI or the triple lock is held at provisional instead (the September CPI limit above).
 
 **Where they go:** the data limitations describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The model gaps can also reach a household answer wherever the household has the circumstance, for example a full-time student claiming UC. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
