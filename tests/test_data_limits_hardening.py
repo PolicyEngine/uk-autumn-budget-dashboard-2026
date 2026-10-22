@@ -20,6 +20,37 @@ NONRES = "sdlt_on_non_residential_property_transactions"
 RESIDENTIAL = "sdlt_on_residential_property_transactions"
 
 
+def test_calculation_attributes_match_the_core_audit():
+    """The fingerprint's coverage must not shrink with its parametrisation."""
+    assert set(data_limits._VARIABLE_CALCULATION_ATTRIBUTES) == {
+        "name",
+        "entity",
+        "is_neutralized",
+        "requires_computation_after",
+        "definition_period",
+        "quantity_type",
+        "defined_for",
+        "uprating",
+        "_uprating",
+        "calculate_output",
+        "default_value",
+        "value_type",
+        "possible_values",
+        "dtype",
+        "adds",
+        "subtracts",
+        "end",
+        "get_formula",
+        "default_array",
+        "check_defined_for_variable",
+        "check_uprating_value_type",
+        "exhaustive_parameter_dependencies",
+        "baseline_variable",
+        "_explicit_attribute_names",
+        "set_input",
+    }
+
+
 @pytest.mark.parametrize(
     "attribute", data_limits._VARIABLE_CALCULATION_ATTRIBUTES
 )
@@ -261,12 +292,33 @@ def test_input_presence_periods_branches_and_values_all_count():
     for changed in (
         {},
         {NONRES: {("default", "1901"): np.zeros(1)}},
-        {NONRES: {("other", "1900"): np.zeros(1)}},
+        {
+            NONRES: {
+                ("default", "1900"): np.zeros(1),
+                ("other", "1900"): np.ones(1),
+            }
+        },
         {NONRES: {("default", "1900"): np.ones(1)}},
     ):
         assert data_limits._inputs_changed(
             stored_simulation(base), stored_simulation(changed), limit
         ) == [f"input:{NONRES}"]
+
+
+def test_other_branch_values_count_with_matching_default_inputs():
+    limit = BY_KEY["non_residential_purchases"]
+    sides = [
+        {
+            NONRES: {
+                ("default", "1900"): np.zeros(1),
+                ("other", "1900"): np.array([value]),
+            }
+        }
+        for value in (1, 2)
+    ]
+    assert data_limits._inputs_changed(
+        stored_simulation(sides[0]), stored_simulation(sides[1]), limit
+    ) == [f"input:{NONRES}"]
 
 
 def test_computed_values_do_not_become_stored_input_differences():
