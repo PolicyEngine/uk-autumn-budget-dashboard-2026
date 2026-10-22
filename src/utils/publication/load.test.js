@@ -1,9 +1,12 @@
 // @vitest-environment node
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
 import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
+  FIXTURE_ROOT,
   fixtureFetch,
   fixtureJson,
   fixtureText,
@@ -40,6 +43,16 @@ describe("loadPublication", () => {
     const result = await loadPublication(BASE_PATH, ["delta"], { fetchImpl });
     expect(result.tablesByKey).toEqual({});
     expect(fetchImpl.calls.some((url) => url.includes("/delta/"))).toBe(false);
+  });
+
+  it("has only a receipt, binding no files, for a not-computable measure", () => {
+    const entry = manifest.measures.epsilon;
+    expect(readdirSync(join(FIXTURE_ROOT, entry.artifact))).toEqual([
+      "receipt.json",
+    ]);
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    expect(receipt.dashboard.files).toEqual({});
+    expect(receipt.dashboard.name).toBe(entry.name);
   });
 
   it("never fetches a not-computable measure's files", async () => {

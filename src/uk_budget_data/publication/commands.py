@@ -3,7 +3,7 @@
 ``uk-budget-data generate --artifacts`` writes receipted artifacts, and
 ``uk-budget-data publish ...`` reconciles, stages, approves, withdraws and
 checks manifest entries, and writes the public-file review rows for the
-entries the page displays.
+entries the page lists.
 """
 
 import argparse
@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from uk_budget_data.publication import manifest as m
-from uk_budget_data.publication.artifacts import ARTIFACTS_ROOT
+from uk_budget_data.publication.artifacts import ARTIFACTS_ROOT, read_receipt
 from uk_budget_data.publication.publish import (
     TREASURY_INPUTS,
     PublishError,
@@ -23,6 +23,7 @@ from uk_budget_data.publication.publish import (
 )
 from uk_budget_data.publication.reconcile import (
     ReconciliationInputError,
+    not_computable,
     reconcile_artifact,
 )
 from uk_budget_data.publication.review_rows import (
@@ -76,7 +77,9 @@ def add_publish_parser(subparsers) -> None:
     actions = publish.add_subparsers(dest="action")
 
     reconcile = actions.add_parser(
-        "reconcile", help="Write reconciliation.json for artifacts"
+        "reconcile",
+        help="Write reconciliation.json for artifacts (a not-computable "
+        "one has nothing to reconcile, and is skipped)",
     )
     reconcile.add_argument("artifacts", nargs="+", type=Path)
 
@@ -114,8 +117,9 @@ def add_publish_parser(subparsers) -> None:
 
     rows = actions.add_parser(
         "review-rows",
-        help="Write the public-file review rows for the displayed entries' "
-        "files and the manifest",
+        help="Write the public-file review rows for the listed entries' "
+        "files and the manifest, after deleting the artifacts no manifest "
+        "entry names",
     )
     rows.add_argument(
         "--reviewer", required=True, help="Who reviewed these bytes"
@@ -123,8 +127,8 @@ def add_publish_parser(subparsers) -> None:
     rows.add_argument(
         "--staged-by",
         default=None,
-        help="Who staged the provisional entries (the manifest does not "
-        "record it); needed when any is displayed",
+        help="Who staged the provisional and not-computable entries (the "
+        "manifest does not record it); needed when any is listed",
     )
     rows.add_argument(
         "--on",
@@ -147,6 +151,15 @@ def add_publish_parser(subparsers) -> None:
     )
 
 
+def _receipt_or_empty(path: Path) -> dict:
+    """An artifact's receipt, or {} when it cannot be read (reconciling it
+    then reports why)."""
+    try:
+        return read_receipt(path)
+    except (ValueError, OSError):
+        return {}
+
+
 def run_publish(parsed: argparse.Namespace, out=print) -> int:
     """Run a ``publish`` action. Returns the process exit code."""
     data_root, inputs = parsed.data_root, parsed.inputs
@@ -155,6 +168,16 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
     if action == "reconcile":
         code = 0
         for path in parsed.artifacts:
+            # A not-computable artifact holds its receipt alone: there is
+            # nothing to reconcile, and no file may be added beside it.
+            receipt = _receipt_or_empty(path)
+            if not_computable(receipt):
+                key = receipt["dashboard"].get("key", path)
+                out(
+                    f"{key}: not computable on current data; nothing to "
+                    "reconcile"
+                )
+                continue
             try:
                 result = reconcile_artifact(path, inputs)
             except ReconciliationInputError as error:
@@ -259,12 +282,17 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
             out(f"  - {problem}")
         return 1
     for label, paths in (
+        ("deleted", report.deleted),
         ("added", report.added),
         ("replaced", report.replaced),
         ("removed", report.removed),
     ):
         for path in paths:
             out(f"{label} {path}")
+    out(
+        f"deleted {len(report.deleted)} paths under the data root's "
+        "artifacts/ that no manifest entry names"
+    )
     out(
         f"review rows for manifest revision {report.revision}: "
         f"{len(report.added)} added, {len(report.replaced)} replaced "

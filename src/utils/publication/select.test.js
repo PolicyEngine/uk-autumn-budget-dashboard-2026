@@ -30,9 +30,11 @@ const TABLE_NAMES = [
   "winners_losers",
   "metrics",
 ];
+// A not-computable entry's artifact is its receipt alone: it has no tables.
 const tablesByKey = Object.fromEntries(
-  Object.entries({ ...manifest.measures, ...manifest.combined }).map(
-    ([key, entry]) => [
+  Object.entries({ ...manifest.measures, ...manifest.combined })
+    .filter(([, entry]) => entry.status !== "not_computable")
+    .map(([key, entry]) => [
       key,
       Object.fromEntries(
         TABLE_NAMES.map((table) => [
@@ -40,8 +42,7 @@ const tablesByKey = Object.fromEntries(
           parseTable(table, fixtureText(`${entry.artifact}/${table}.csv`)),
         ]),
       ),
-    ],
-  ),
+    ]),
 );
 
 describe("selection on the fixture", () => {

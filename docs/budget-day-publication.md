@@ -122,15 +122,18 @@ public/data/
 
 - **No household rows.** #30 (15 October) withdrew the household scatter from every public path: one row per survey household, with its id and weight, is unit-record data under the UK Data Service licence. An artifact carries the scatter binned only, in `household_scatter_binned.csv`: the weighted number of households in each £5,000 baseline income band × £100 income change band, outer bands open-ended, cells with fewer than 10 survey households left out, counts rounded to the nearest 1,000. The sampler reads and writes only in the private directory.
 - **Results by area** come from the disclosure layer (#48), not from the artifacts.
+- **Not computable.** A measure the certified data cannot cost (#51), or a combined run including one, is written as `receipt.json` alone: its receipt lists no files, so no figure is published, even as a file. Its entry is listed with its reason, and its name comes from the receipt.
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
+- **Clearing up.** `publish review-rows` deletes every artifact directory under `public/data/artifacts/` that no current manifest entry names, with its review rows, before it writes the new ones. So stage an artifact before writing the review rows, or it goes.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
   - `staged`: recorded in the manifest, not shown;
   - `approved`;
   - `provisional`: statement figures only, labelled on the page;
   - `stale`: set automatically, for example when a member of a combined run changes;
-  - `withdrawn`.
-- **Corrections.** A correction stages a complete new run. The superseded entry stays in the manifest for audit, as in drill 3.
+  - `withdrawn`;
+  - `not_computable`: listed with its reason, never with a figure, and never approved.
+- **Corrections.** A correction stages a complete new run. The superseded entry stays in the manifest for audit, as in drill 3. Its artifact is deleted from `public/` the next time the review rows are written.
 
 ## Receipts
 

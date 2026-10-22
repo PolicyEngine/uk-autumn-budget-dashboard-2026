@@ -15,8 +15,10 @@ The gates, in order:
 4a. **Data limits.** A measure the certified data cannot cost
    (``uk_budget_data.data_limits``, recorded in its receipt) is staged only
    as ``not_computable``: listed with its reason, never with a figure, and
-   never approved. It skips responsiveness and reconciliation, which would
-   only measure the £0 the data give it. Every other check still applies.
+   never approved. Its artifact is receipt-only: the receipt lists no
+   files, and the directory holds ``receipt.json`` and nothing else. It
+   skips responsiveness and reconciliation, which would only measure the £0
+   the data give it. Every other check still applies.
 4b. **Model limits.** A measure the installed model overstates until a
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
@@ -31,18 +33,23 @@ The gates, in order:
    definition the combined run used, and with the outputs it had when the
    combined run was generated; approval needs every member approved.
 
+An entry's name is the one its receipt records (``dashboard.name``), which
+any tables the artifact has must also carry; it is never taken from the key.
+
 Staging an artifact supersedes the previous entry for its key and marks any
 combined run that included different outputs for that measure as stale, in
 the same write.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
+    RECEIPT_FILE,
     capture,
     captured_file_problems,
     captured_tables,
@@ -121,11 +128,13 @@ def binding_problems(
     Besides the digests, every field the entry copies from the receipt
     (name, years, unsupported years, and a combined run's members and
     member snapshot) must still say what the receipt says, so nothing that
-    reads the manifest alone can be told something else.
+    reads the manifest alone can be told something else. The name is the
+    receipt's, and so is the tables' (``_name_problems``), whichever the
+    artifact has; never the key.
     """
     dashboard = document["dashboard"]
     digests = dashboard["digests"]
-    problems = []
+    problems = _name_problems(dashboard, tables)
     actual = artifact_sha256(document)
     if actual != entry.artifact_sha256:
         problems.append(
@@ -139,7 +148,7 @@ def binding_problems(
     ):
         if digests[name] != getattr(entry, name):
             problems.append(f"the artifact's {name} is not the entry's")
-    if entry.name != _name_from(tables, key):
+    if entry.name != dashboard.get("name"):
         problems.append("the entry's name is not the artifact's")
     if entry.years != document["execution_receipt"]["years"]:
         problems.append("the entry's years are not the artifact's")
@@ -162,6 +171,51 @@ def binding_problems(
             )
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
+    return problems
+
+
+def _name_problems(dashboard: dict, tables: dict) -> list[str]:
+    """Ways the artifact does not carry one name: its receipt must record
+    one, and every row of every table it has must say the same."""
+    name = dashboard.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return ["its receipt records no name for the page to show"]
+    differing = sorted(
+        table
+        for table, rows in tables.items()
+        if any(row.get("reform_name") != name for row in rows)
+    )
+    if differing:
+        return [
+            "its tables name it differently from its receipt: "
+            + ", ".join(differing)
+        ]
+    return []
+
+
+def _receipt_only_problems(document: dict, path: Path) -> list[str]:
+    """Ways a not-computable artifact holds more than its receipt.
+
+    It binds no figures: its receipt lists no files, and its directory
+    holds ``receipt.json`` and nothing else, whatever the other entry is
+    (a stray table, ``reconciliation.json``, a directory).
+    """
+    problems = []
+    if document["dashboard"].get("files"):
+        problems.append(
+            "its receipt lists files, but a not-computable artifact binds "
+            "no figures"
+        )
+    try:
+        names = sorted(os.listdir(path))
+    except OSError as error:
+        return problems + [f"its directory cannot be listed: {error}"]
+    problems += [
+        f"{name} is in it, but a not-computable artifact holds only "
+        f"{RECEIPT_FILE}"
+        for name in names
+        if name != RECEIPT_FILE
+    ]
     return problems
 
 
@@ -291,10 +345,11 @@ def gate_problems(
 
     ``level`` is ``staged``, ``provisional``, ``approved`` or
     ``not_computable``; an artifact recording a data limit may hold only
-    the last, and one recording none may not hold it. ``entry`` is
-    the manifest entry the artifact is meant to be, when there is one: the
-    artifact must then be exactly the bytes it names. The second return
-    value carries the receipt document and reconciliation summary.
+    the last, and must hold its receipt alone, and one recording none may
+    not hold it, and must list its files. ``entry`` is the manifest entry
+    the artifact is meant to be, when there is one: the artifact must then
+    be exactly the bytes it names. The second return value carries the
+    receipt document and reconciliation summary.
     """
     try:
         captured = capture(path)
@@ -316,6 +371,8 @@ def gate_problems(
         problems.append("its directory is not named by its digest")
     if entry is not None:
         problems += binding_problems(document, tables, entry, key)
+    else:
+        problems += _name_problems(dashboard, tables)
     problems += dashboard_problems(document)
     problems += _identity_problems(document, manifest)
     problems += _year_problems(document, tables)
@@ -326,6 +383,13 @@ def gate_problems(
     }
 
     limited = bool(dashboard.get("data_limits"))
+    if limited:
+        problems += _receipt_only_problems(document, path)
+    elif not dashboard.get("files"):
+        problems.append(
+            "its receipt lists no files, which only a not-computable "
+            "artifact may"
+        )
     if limited and level != m.NOT_COMPUTABLE:
         return (
             problems
@@ -459,11 +523,6 @@ def _supported_rows(tables: dict, years: list[int]) -> dict:
     }
 
 
-def _name_from(tables: dict, key: str) -> str:
-    rows = tables.get("budgetary_impact") or []
-    return rows[0]["reform_name"] if rows else key
-
-
 def _mark_dependants_stale(
     manifest: m.Manifest, key: str, outputs: Optional[str]
 ) -> None:
@@ -573,7 +632,9 @@ def stage(
     group = working.combined if is_combined(key) else working.measures
     previous = group.get(key)
     entry = m.Entry(
-        name=_name_from(info["tables"], key),
+        # The name in the receipt the gate checked, which any tables carry
+        # too: never the key.
+        name=info["document"]["dashboard"]["name"],
         status=level,
         artifact=relative.as_posix(),
         outputs_sha256=digests["outputs_sha256"],
@@ -630,12 +691,15 @@ def stage(
     if not is_combined(key):
         # A measure that becomes not computable stales every combined run
         # using it, even with unchanged outputs: their figures included it.
-        # Restaging one that already was, unchanged, stales nothing.
+        # Restaging one that already was, unchanged, stales nothing. Every
+        # receipt-only artifact has the outputs digest of no files, so only
+        # the same artifact counts as unchanged.
         becomes_limited = level == m.NOT_COMPUTABLE and not (
             previous is not None
             and previous.status == m.NOT_COMPUTABLE
             and previous.outputs_sha256 == entry.outputs_sha256
             and previous.data_limits == entry.data_limits
+            and previous.artifact_sha256 == entry.artifact_sha256
         )
         _mark_dependants_stale(
             working, key, None if becomes_limited else entry.outputs_sha256

@@ -140,9 +140,12 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - the LTT higher residential and non-residential rates.
 
   Main-home rates are computable.
-- **What happens:**
-  - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side;
-  - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for;
+- **What happens** (the coordinator's option (d), 22 October):
+  - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side. It still runs the measure, but writes only the receipt: no tables, and the receipt lists no files;
+  - `publish reconcile` skips it ("not computable on current data; nothing to reconcile") and writes nothing beside it;
+  - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for. Its name is the one its receipt records, never the key;
+  - `publish check` fails if its directory holds anything but `receipt.json`, or if the entry's name isn't its receipt's;
+  - `publish review-rows` writes one row, for its receipt, reading "not computable, staged by <Integrator>";
   - every level that shows a figure refuses it, and so does approval;
   - the page shows "Not computable on current data" and the reason, never a number;
   - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
@@ -393,9 +396,11 @@ uv run uk-budget-data publish check
   - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
   - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
   - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
-  - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
-  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: **an open question for the coordinator, to settle before the rehearsal.**
-  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. Whether such artifacts are deleted before the helper runs is with the coordinator.
+  - **What it covers.** Rows go to the displayed entries' files, each not-computable entry's `receipt.json`, and the manifest. The command refuses, writing and deleting nothing, if any file is not what the gate bound.
+  - **Not-computable entries** (coordinator's ruling, 22 October, option (d)). Such an artifact is its `receipt.json` alone, and its row reads "not computable, staged by <Integrator>". So `--staged-by` is needed while any provisional or not-computable entry is listed. Anything else in its directory, a stray table or `reconciliation.json` included, makes the command refuse.
+  - **What it deletes.** Before it writes, it deletes everything under `public/data/artifacts/` that no current manifest entry names, with the rows for those files, and prints each path. That covers runs generated but not staged, and superseded artifacts after a G5 correction or a re-cut. **Stage every artifact you want to keep before running it.**
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries.
+  - **What it keeps.** Artifacts of staged, stale and withdrawn entries stay, since their entries still name them. It removes a row only when its file is gone, so a withdrawn entry's artifact keeps the row it had while displayed.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -465,7 +470,7 @@ uv run uk-budget-data publish check
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
-- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional or not-computable entry is listed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 

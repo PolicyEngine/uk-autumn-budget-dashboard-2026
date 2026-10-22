@@ -7,7 +7,10 @@ own write-once directory. A combined set is one simulation of all its
 members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
-still written.
+still written. A measure or combined run the certified data cannot cost
+(its run records a data limit) is still processed, since the limits are
+observed while it runs, but its artifact is receipt-only: it is listed as
+not computable and binds no figure, so no table is written.
 """
 
 import atexit
@@ -306,22 +309,26 @@ def generate_artifacts(
                 composition=composition,
                 data_limits=limits,
                 model_limits=held,
+                name=reform.name,
             )
             if argv is not None:
                 inputs.generator_argv = argv
             return build_receipt_document(baseline, reformed, inputs)
 
+        # A run the data cannot cost writes its receipt alone: its tables
+        # hold no figure the page may show, so none is published.
         reference = write_artifact(
-            result_tables(result, list(config.years)),
+            None if limits else result_tables(result, list(config.years)),
             key,
             build_receipt,
             artifacts_root,
         )
         report.written.append(reference)
         written_outputs[key] = reference.outputs_sha256
+        note = " (not computable on current data: receipt only)"
         on_progress(
             f"{key}: {'wrote' if reference.created else 'unchanged'} "
-            f"{reference.path}"
+            f"{reference.path}{note if limits else ''}"
         )
 
     for reform in reforms:

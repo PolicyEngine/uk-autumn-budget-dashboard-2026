@@ -1031,6 +1031,13 @@ def _agrees(name: str, flag, stated):
     return stated
 
 
+def not_computable(receipt) -> bool:
+    """Whether a receipt records a data limit: its artifact holds no
+    figures, so there is nothing to reconcile."""
+    dashboard = receipt.get("dashboard") if isinstance(receipt, dict) else {}
+    return isinstance(dashboard, dict) and bool(dashboard.get("data_limits"))
+
+
 def reconcile_artifact(
     artifact: Path,
     inputs: Path,
@@ -1042,13 +1049,20 @@ def reconcile_artifact(
 ) -> dict:
     """Reconcile an artifact directory using the inputs directory.
 
-    See ``reconcile_receipted`` for what the receipt supplies.
+    See ``reconcile_receipted`` for what the receipt supplies. An artifact
+    whose receipt records a data limit is not computable, so it has no
+    figures to reconcile, and is refused.
     """
     receipt_path = artifact / "receipt.json"
     receipt = (
         json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
     )
     measure_id = _measure_from(receipt, measure_id)
+    if not_computable(receipt):
+        raise ReconciliationInputError(
+            f"{measure_id}: not computable on current data; nothing to "
+            "reconcile"
+        )
     return reconcile_receipted(
         receipt,
         read_budgetary(artifact, measure_id),

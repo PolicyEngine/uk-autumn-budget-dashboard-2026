@@ -14,13 +14,13 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "8b99e04224af06870e4f1f09e67b231b39b500c1e87e47c35939d8d951253edf",
-        "at": "2026-10-22T11:32:16.295154+00:00",
+        "artifact_sha256": "e80c5382e6f16fe1228afc4f552820a336c9cafb2f9d0ff4453823e9d082da97",
+        "at": "2026-10-22T13:02:27.221574+00:00",
         "by": "Reviewer",
         "outputs_sha256": "dd0a04f370a92c68abf111b63eaf2f33e7d8531174633d70412ef5296b807260"
       },
-      "artifact": "artifacts/combined--alpha+beta/8b99e04224af0687",
-      "artifact_sha256": "8b99e04224af06870e4f1f09e67b231b39b500c1e87e47c35939d8d951253edf",
+      "artifact": "artifacts/combined--alpha+beta/e80c5382e6f16fe1",
+      "artifact_sha256": "e80c5382e6f16fe1228afc4f552820a336c9cafb2f9d0ff4453823e9d082da97",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "measures": [
@@ -88,13 +88,13 @@
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "e271f4696807051a165b0304da90ecb56448ff998eb13928cd1ccd184739b95f",
-        "at": "2026-10-22T11:32:15.925723+00:00",
+        "artifact_sha256": "ae364d1701a8f2e156846c9717df6afe91055486a0cfef0a346d81bae45b4cd6",
+        "at": "2026-10-22T13:02:26.386788+00:00",
         "by": "Reviewer",
         "outputs_sha256": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e"
       },
-      "artifact": "artifacts/alpha/e271f4696807051a",
-      "artifact_sha256": "e271f4696807051a165b0304da90ecb56448ff998eb13928cd1ccd184739b95f",
+      "artifact": "artifacts/alpha/ae364d1701a8f2e1",
+      "artifact_sha256": "ae364d1701a8f2e156846c9717df6afe91055486a0cfef0a346d81bae45b4cd6",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Alpha",
@@ -115,13 +115,13 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "7d9292d8b5347930eebd62e930f690df67ce200646153c96fc08171add23c995",
-        "at": "2026-10-22T11:32:15.948764+00:00",
+        "artifact_sha256": "010aea0873877e76564d8e502f54f2b10579b370062ffc086ecba92e7ffc3b2f",
+        "at": "2026-10-22T13:02:26.444546+00:00",
         "by": "Reviewer",
         "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1"
       },
-      "artifact": "artifacts/beta/7d9292d8b5347930",
-      "artifact_sha256": "7d9292d8b5347930eebd62e930f690df67ce200646153c96fc08171add23c995",
+      "artifact": "artifacts/beta/010aea0873877e76",
+      "artifact_sha256": "010aea0873877e76564d8e502f54f2b10579b370062ffc086ecba92e7ffc3b2f",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Beta",
@@ -141,8 +141,8 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/797730b804ac7cef",
-      "artifact_sha256": "797730b804ac7cef99f1f63003791d8a00b94c30c8414f666d77b6ed5e0ab966",
+      "artifact": "artifacts/delta/49cbc6deed3cbe33",
+      "artifact_sha256": "49cbc6deed3cbe337ed3c5b024111367789c2177e86febbb247d5b7e739cb70f",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Delta",
@@ -162,16 +162,16 @@
       ]
     },
     "epsilon": {
-      "artifact": "artifacts/epsilon/3359921e4eb9c6cc",
-      "artifact_sha256": "3359921e4eb9c6ccf8f0667f0857a7b6d557d66ce6b4e4f9b170ab4c90259184",
+      "artifact": "artifacts/epsilon/f479fac38ed3f341",
+      "artifact_sha256": "f479fac38ed3f3415608596aab3c9bf36937151424b08bb636ba7d487354ed3a",
       "data_limits": [
         "additional_dwelling_purchases"
       ],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Epsilon",
-      "outputs_sha256": "1d942d3b30562d174e0310a456095b63ad9d4ecfceae21db9317238efe7fdcd5",
+      "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this.",
-      "receipt_sha256": "08b7178d24f6c4d59aa2e4d73909b6bcc5ac6166cdae9cf8cca51e98949ce14f",
+      "receipt_sha256": "0a94e5a391415481c7cdb6e55c61721cebbd0e9c0204b8ec0c0933028aaae403",
       "status": "not_computable",
       "unsupported_years": [
         2033
@@ -182,8 +182,8 @@
       ]
     },
     "eta": {
-      "artifact": "artifacts/eta/cf3a1bbc0aa00c50",
-      "artifact_sha256": "cf3a1bbc0aa00c5024635347557a72a224949738d91482b7720a553d9c27fdeb",
+      "artifact": "artifacts/eta/e3f8354c944c1a28",
+      "artifact_sha256": "e3f8354c944c1a282dadf9ebd01c4f17657f9b96bc6d2ddde5db122e2a82340c",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Eta",
@@ -203,8 +203,8 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/2e2df01e53b2c9f9",
-      "artifact_sha256": "2e2df01e53b2c9f96bb489c2c57514a764bcf8b41ed4f75dd6c0455facf736e9",
+      "artifact": "artifacts/gamma/101a0ffea2f70694",
+      "artifact_sha256": "101a0ffea2f70694d9bec2cd25ab7487f7cc51ffdd2af60932a4bb6370e5a819",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Gamma",
@@ -224,8 +224,8 @@
       ]
     },
     "zeta": {
-      "artifact": "artifacts/zeta/9b4f5071b66e6896",
-      "artifact_sha256": "9b4f5071b66e68968626d13b0f071e92c75972e3b9832008c3cd6d4c270edc55",
+      "artifact": "artifacts/zeta/fb22be2ef4ad85d8",
+      "artifact_sha256": "fb22be2ef4ad85d836920149f4869b29cb004db17998088801ac08e955636f5b",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Zeta",
@@ -248,5 +248,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-22T11:32:16.295232+00:00"
+  "updated_at": "2026-10-22T13:02:27.221985+00:00"
 }
