@@ -1263,12 +1263,12 @@ def test_the_command_prints_each_deleted_path_and_a_count(base, capsys):
         f"deleted {ARTIFACTS}omega/",
         f"deleted {ARTIFACTS}omega/0123456789abcdef/",
     ]
-    assert deleted[-1] == (
-        "deleted 9 paths under the data root's artifacts/ that no manifest "
-        "entry names"
-    )
     # The key directory, the artifact directory and its seven files.
-    assert len(deleted) == 1 + 9
+    assert len(deleted) == 9
+    assert (
+        "9 paths deleted under the data root's artifacts/ that no manifest "
+        "entry names"
+    ) in output
 
 
 def test_record_level_identifiers_in_the_manifest_refuse(base):
@@ -1499,7 +1499,7 @@ def test_the_command_refuses_with_a_reason(base, capsys):
     output = capsys.readouterr().out
     assert code == 1
     assert output.splitlines() == [
-        "REFUSED review rows (nothing written):",
+        "REFUSED review rows (nothing written or deleted):",
         "  - provisional entries are displayed (gamma) and not-computable "
         f"entries are listed ({LIMITED_KEY}); name who staged them with "
         "--staged-by (the manifest does not record it)",

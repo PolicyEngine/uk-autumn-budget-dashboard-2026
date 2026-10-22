@@ -277,7 +277,7 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
             review_csv=parsed.review_csv,
         )
     except ReviewRowsError as error:
-        out("REFUSED review rows (nothing written):")
+        out("REFUSED review rows (nothing written or deleted):")
         for problem in error.problems:
             out(f"  - {problem}")
         return 1
@@ -290,7 +290,7 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
         for path in paths:
             out(f"{label} {path}")
     out(
-        f"deleted {len(report.deleted)} paths under the data root's "
+        f"{len(report.deleted)} paths deleted under the data root's "
         "artifacts/ that no manifest entry names"
     )
     out(

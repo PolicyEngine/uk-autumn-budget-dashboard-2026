@@ -398,7 +398,7 @@ uv run uk-budget-data publish check
   - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
   - **What it covers.** Rows go to the displayed entries' files, each not-computable entry's `receipt.json`, and the manifest. The command refuses, writing and deleting nothing, if any file is not what the gate bound.
   - **Not-computable entries** (coordinator's ruling, 22 October, option (d)). Such an artifact is its `receipt.json` alone, and its row reads "not computable, staged by <Integrator>". So `--staged-by` is needed while any provisional or not-computable entry is listed. Anything else in its directory, a stray table or `reconciliation.json` included, makes the command refuse.
-  - **What it deletes.** Before it writes, it deletes everything under `public/data/artifacts/` that no current manifest entry names, with the rows for those files, and prints each path. That covers runs generated but not staged, and superseded artifacts after a G5 correction or a re-cut. **Stage every artifact you want to keep before running it.**
+  - **What it deletes.** Before it writes, it deletes everything under `public/data/artifacts/` that no current manifest entry names, with the rows for those files, and prints each path. That covers runs generated but not staged, and superseded artifacts after a G5 correction or a re-cut. **Stage every artifact you want to keep before running it, and never run it while a `generate` is running in the same checkout:** it would delete that run's half-written directory.
   - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries.
   - **What it keeps.** Artifacts of staged, stale and withdrawn entries stay, since their entries still name them. It removes a row only when its file is gone, so a withdrawn entry's artifact keeps the row it had while displayed.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
@@ -518,7 +518,7 @@ uv run uk-budget-data publish check
 ## G5: corrections (whenever one arrives)
 
 1. **Fix the measure and commit.**
-2. **Regenerate it.** This writes a new artifact; the old one is untouched.
+2. **Regenerate it.** This writes a new artifact; the old one is untouched until step 5's review rows delete it (its entry stays in `superseded` for audit).
 3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
 4. **Regenerate the combined run**, stage it, and approve both.
 5. **Write the review rows, as at G2, and publish through a pull request.**

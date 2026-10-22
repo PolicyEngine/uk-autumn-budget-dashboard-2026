@@ -73,6 +73,7 @@ from uk_budget_data.publication.reconcile import (
     reconcile_receipted,
 )
 from uk_budget_data.publication.responsiveness import RESPONSIVE
+from uk_budget_data.publication.tables import TABLES
 from uk_budget_data.publication.validate import table_problems
 
 TREASURY_INPUTS = Path("data_inputs/treasury")
@@ -176,14 +177,16 @@ def binding_problems(
 
 def _name_problems(dashboard: dict, tables: dict) -> list[str]:
     """Ways the artifact does not carry one name: its receipt must record
-    one, and every row of every table it has must say the same."""
+    one, and every row of every table it has with a ``reform_name`` column
+    must say the same."""
     name = dashboard.get("name")
     if not isinstance(name, str) or not name.strip():
         return ["its receipt records no name for the page to show"]
     differing = sorted(
         table
         for table, rows in tables.items()
-        if any(row.get("reform_name") != name for row in rows)
+        if "reform_name" in TABLES[table].column_names
+        and any(row.get("reform_name") != name for row in rows)
     )
     if differing:
         return [
@@ -206,6 +209,9 @@ def _receipt_only_problems(document: dict, path: Path) -> list[str]:
             "its receipt lists files, but a not-computable artifact binds "
             "no figures"
         )
+    receipt = path / RECEIPT_FILE
+    if receipt.is_symlink() or not receipt.is_file():
+        problems.append(f"its {RECEIPT_FILE} is not a regular file")
     try:
         names = sorted(os.listdir(path))
     except OSError as error:
@@ -277,6 +283,12 @@ def _members_problems(
     Each member must be in the manifest at a needed status, with the measure
     definition the combined run used, and with the outputs it had when the
     combined run was generated (recorded in the combined receipt).
+
+    Every not-computable member has the outputs digest of no files, so the
+    snapshot cannot tell two such artifacts of one measure apart. Staging
+    the second still stales the combined run (``stage``), but restaging
+    that run unchanged is not refused here. No figure rests on it: a
+    combined run with a not-computable member is not computable itself.
     """
     dashboard = document["dashboard"]
     recorded = dashboard.get("member_outputs_sha256")

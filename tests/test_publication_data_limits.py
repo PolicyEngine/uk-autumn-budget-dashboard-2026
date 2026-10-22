@@ -30,6 +30,7 @@ from uk_budget_data.publication.artifacts import (
 from uk_budget_data.publication.generate import generate_artifacts
 from uk_budget_data.publication.publish import (
     PublishError,
+    _name_problems,
     approve,
     check,
     gate_problems,
@@ -737,13 +738,15 @@ def stray_bytes(name: str) -> bytes:
 
 
 @pytest.mark.parametrize(
-    "stray", ["budgetary_impact.csv", "reconciliation.json", "notes"]
+    "stray",
+    ["budgetary_impact.csv", "reconciliation.json", "notes.csv", "notes"],
 )
 def test_anything_beside_a_not_computable_receipt_fails_check_and_stage(
     world, stray
 ):
-    """A stray table, a reconciliation record or a directory: the artifact
-    holds its receipt alone, so publish check and stage refuse it."""
+    """A stray table, a reconciliation record, any other file or a
+    directory: the artifact holds its receipt alone, so publish check and
+    stage refuse it."""
     manifest = m.Manifest()
     reference = staged(world, manifest, "alpha", ZERO, [SURCHARGE])
     assert (
@@ -782,6 +785,18 @@ def test_a_not_computable_artifact_written_with_its_tables_is_refused(world):
         "its receipt lists files, but a not-computable artifact binds no "
         "figures" in refused.value.problems
     )
+
+
+def test_a_not_computable_receipt_must_be_a_regular_file(world, tmp_path):
+    manifest = m.Manifest()
+    reference = staged(world, manifest, "alpha", ZERO, [SURCHARGE])
+    receipt = reference.path / "receipt.json"
+    outside = tmp_path / "receipt.json"
+    shutil.copyfile(receipt, outside)
+    receipt.unlink()
+    receipt.symlink_to(outside)
+    failures = check(manifest, data_root=world.data_root, inputs=world.inputs)
+    assert "alpha: its receipt.json is not a regular file" in failures
 
 
 def test_an_artifact_with_no_data_limit_must_list_its_files(world):
@@ -884,6 +899,69 @@ def test_a_receipt_recording_no_name_is_refused(world, limits):
     assert "its receipt records no name for the page to show" in (
         refused.value.problems
     )
+
+
+def nameless(reference):
+    """``reference``'s artifact as generated before receipts recorded the
+    name: the same files, its receipt without ``dashboard.name``, in the
+    directory its new digest names. Returns the path and the digest."""
+    document = read_receipt(reference.path)
+    del document["dashboard"]["name"]
+    digest = artifact_sha256(document)
+    path = reference.path.parent / digest[:16]
+    shutil.copytree(reference.path, path)
+    (path / "receipt.json").write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n"
+    )
+    return path, digest
+
+
+@pytest.mark.parametrize("limits", [[], [SURCHARGE]])
+def test_a_receipt_with_no_name_field_fails_stage_and_check(world, limits):
+    """As every receipt written before receipts recorded the name: stage
+    and publish check refuse it, never taking the key in its place."""
+    manifest = m.Manifest()
+    world.costing("alpha", VALUES)
+    world.expect("alpha", "negative", 2027)
+    reference = world.write("alpha", VALUES, data_limits=limits)
+    stage(
+        manifest,
+        reference.path,
+        data_root=world.data_root,
+        inputs=world.inputs,
+        provisional=True,
+    )
+    path, digest = nameless(reference)
+    with pytest.raises(PublishError) as refused:
+        stage(
+            m.Manifest(),
+            path,
+            data_root=world.data_root,
+            inputs=world.inputs,
+            provisional=True,
+        )
+    assert "its receipt records no name for the page to show" in (
+        refused.value.problems
+    )
+    entry = manifest.measures["alpha"]
+    entry.artifact = path.relative_to(world.data_root).as_posix()
+    entry.artifact_sha256 = digest
+    failures = check(manifest, data_root=world.data_root, inputs=world.inputs)
+    assert "alpha: its receipt records no name for the page to show" in (
+        failures
+    )
+    assert "alpha: the entry's name is not the artifact's" in failures
+
+
+def test_tables_with_no_reform_name_column_are_not_checked_for_the_name():
+    """Only a table that carries the name can disagree with the receipt."""
+    dashboard = {"name": "Alpha"}
+    assert (
+        _name_problems(dashboard, {"constituency": [{"reform_id": "a"}]}) == []
+    )
+    assert _name_problems(
+        dashboard, {"metrics": [{"reform_name": "Other"}]}
+    ) == ["its tables name it differently from its receipt: metrics"]
 
 
 # --- reconciliation ----------------------------------------------------------
