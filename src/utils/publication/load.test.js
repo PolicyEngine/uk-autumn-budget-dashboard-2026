@@ -77,30 +77,36 @@ describe("loadPublication", () => {
     ).toBe(false);
   });
 
-  it("loads a model-limited measure's figures as provisional", async () => {
+  it.each([
+    ["zeta", 0.9],
+    ["eta", 1.1],
+  ])("loads %s's model-limited figures as provisional", async (key, value) => {
     const fetchImpl = fixtureFetch();
-    const result = await loadPublication(BASE_PATH, ["zeta"], { fetchImpl });
+    const result = await loadPublication(BASE_PATH, [key], { fetchImpl });
     expect(result.failures).toEqual({});
-    expect(result.tablesByKey.zeta.budgetary_impact[0].value).toBe(0.9);
+    expect(result.tablesByKey[key].budgetary_impact[0].value).toBe(value);
   });
 
-  it("refuses a model-limited artifact relabelled as approved", async () => {
-    // Review of #73: a manifest edited by hand to approve zeta. Its receipt
-    // records the State Pension's model limit, so no figure loads.
-    const edited = structuredClone(manifest);
-    edited.measures.zeta.status = "approved";
-    const fetchImpl = fixtureFetch({
-      overrides: { "manifest.json": JSON.stringify(edited) },
-    });
-    const result = await loadPublication(BASE_PATH, ["zeta"], { fetchImpl });
-    expect(result.tablesByKey.zeta).toBeUndefined();
-    expect(result.failures.zeta).toMatch(/records model limits/);
-    expect(
-      fetchImpl.calls.some(
-        (url) => url.includes("/zeta/") && url.endsWith(".csv"),
-      ),
-    ).toBe(false);
-  });
+  it.each(["zeta", "eta"])(
+    "refuses %s's model-limited artifact relabelled as approved",
+    async (key) => {
+      // A manifest edited by hand to approve either model-limited measure
+      // cannot make its figures load while its receipt records the limit.
+      const edited = structuredClone(manifest);
+      edited.measures[key].status = "approved";
+      const fetchImpl = fixtureFetch({
+        overrides: { "manifest.json": JSON.stringify(edited) },
+      });
+      const result = await loadPublication(BASE_PATH, [key], { fetchImpl });
+      expect(result.tablesByKey[key]).toBeUndefined();
+      expect(result.failures[key]).toMatch(/records model limits/);
+      expect(
+        fetchImpl.calls.some(
+          (url) => url.includes(`/${key}/`) && url.endsWith(".csv"),
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("shows no combined figure when a member fails verification", async () => {
     // Review of #51 round 2: a member whose receipt was refused (there, one

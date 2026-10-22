@@ -28,9 +28,9 @@
       2032
     ],
     "digests": {
-      "execution_identity_sha256": "c031b1130e45c9222a4d3b72377b669931d107838ab97cf5332898b6f778fe04",
+      "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
-      "receipt_sha256": "e026ca494723261c965992a5f85a3773b62692bf263b9dfd6479f2068efd2b9f"
+      "receipt_sha256": "14fad67ea13be970500d975b9f2f9e440d741476ef4cd24285c2fb883ea96424"
     },
     "files": {
       "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
@@ -40,7 +40,7 @@
       "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
       "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
     },
-    "generated_at": "2026-10-21T23:02:31.026928+00:00",
+    "generated_at": "2026-10-22T11:32:15.869291+00:00",
     "generator_argv": [
       "test"
     ],
@@ -52,10 +52,10 @@
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
-    "model_limits_registry_sha256": "70c0e6fa3edb0b7a77de1c11e465cf908c30b65ef53d37161ee3f9500be36fda",
+    "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
     "publishable": true,
     "reasons": [],
-    "receipt_source": "policyengine==6.6.0",
+    "receipt_source": "policyengine==6.10.0",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -68,33 +68,32 @@
       "name": "delta baseline"
     },
     "certificate": {
-      "bundle_version": "6.6.0",
-      "certificate_sha256": "e60c472272eaeb5a5d71d0856c7e51ad4677b61fc3e017936137b73dd5f219d0",
+      "bundle_version": "6.10.0",
+      "certificate_sha256": "a8d00d9f557e32fe199a799ee2c86fe51dc6ec1d1e570ec23002c11a10ac447a",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "certified_for_core_version": "3.33.0",
-      "certified_for_model_version": "2.130.1",
-      "compatibility_basis": "legacy_compatible_model_package",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
       "country_id": "uk"
     },
     "certification_status": "certified",
     "core": {
       "name": "policyengine-core",
-      "version": "3.33.0"
+      "version": "3.33.3"
     },
     "country_id": "uk",
     "data": {
-      "build_fingerprint": "sha256:c094d7006fdd81df220090284212f16bbffb15624643bc442c4bb3e1b1e5dac8",
-      "build_id": "policyengine-uk-data-1.58.1",
-      "build_model_version": "2.122.2",
-      "data_package": "policyengine-uk-data",
-      "dataset": "enhanced_frs_2024_25",
-      "dataset_revision": "1.58.1",
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "dataset_uri": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.58.1",
-      "release_manifest_revision": "89be6b73fc1e6eeba6dae2f9400676d8510bcd51",
-      "release_version": "1.58.1"
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
     },
     "fiscal_year": {
       "convention": "uk_fiscal_year",
@@ -104,7 +103,7 @@
     },
     "model": {
       "name": "policyengine-uk",
-      "version": "2.130.1"
+      "version": "2.132.6"
     },
     "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
     "receipt_type": "policyengine.execution_receipt",
@@ -133,7 +132,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.6.0"
+      "version": "6.10.0"
     },
     "years": [
       2032,
