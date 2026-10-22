@@ -111,3 +111,30 @@
     left: 0;
   }
 }
+
+/* A plain button in the light pill style (e.g. Show table) */
+.light-pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.light-pill-button:hover {
+  border-color: var(--pe-teal-500);
+  color: var(--pe-teal-700);
+}
+
+.light-pill-button:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}

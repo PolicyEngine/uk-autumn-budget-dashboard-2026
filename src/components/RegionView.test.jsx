@@ -94,15 +94,15 @@ describe("RegionView", () => {
   it("switches to £ per household with the published digits", async () => {
     renderView();
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
     const london = within(rowFor("London"));
     expect(london.getByText("+£1,234.5")).toBeInTheDocument();
     expect(london.getByText("£1,100 to £1,369")).toBeInTheDocument();
     expect(within(rowFor("Yorkshire and The Humber")).getByText("-£50")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "£ per household" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "Show the change as: £ per household" }),
+    ).toBeInTheDocument();
   });
 
   it("marks a region with no published row as no data, never a value", async () => {

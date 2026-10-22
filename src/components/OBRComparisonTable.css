@@ -280,30 +280,33 @@
 }
 
 /* The table sits behind a toggle under the dumbbell chart */
+/* Show table: the light pill button (PillSelect.css .light-pill-button) */
 .obr-table-toggle {
-  display: inline-flex;
-  align-items: center;
   margin-bottom: 12px;
-  padding: 6px 14px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  background: white;
-  border: 1px solid var(--pe-gray-300);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.obr-table-toggle:hover {
-  background: var(--pe-gray-100);
-}
-
-.obr-table-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
 }
 
 .comparison-table-wrapper[hidden],
 .comparison-legend[hidden] {
   display: none;
+}
+
+/* Intro left, the OBR basis pill right, top-aligned; on a phone the pill
+   goes above the intro */
+.obr-intro-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.obr-intro-row .comparison-description {
+  flex: 1;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .obr-intro-row {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
 }

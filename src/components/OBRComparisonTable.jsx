@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
+import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 
@@ -126,45 +127,35 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
   return (
     <div className="obr-comparison-section">
-      <p className="comparison-description">
-        PolicyEngine's static estimates, which leave out behavioural
-        responses, against the OBR's costings from the November 2025{" "}
-        <a
-          href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Economic and Fiscal Outlook
-        </a>
-        , in £ billion a year. Positive values raise revenue or reduce
-        spending; negative values do the opposite.
-      </p>
-
-      {hasBothTypes && (
-        <div className="obr-toggle-container">
-          <span className="toggle-label" id="obr-basis-label">
-            OBR basis
-          </span>
-          <div className="toggle-buttons" role="group" aria-labelledby="obr-basis-label">
-            <button
-              type="button"
-              aria-pressed={!showBehavioural}
-              className={`toggle-btn ${!showBehavioural ? "active" : ""}`}
-              onClick={() => setShowBehavioural(false)}
-            >
-              Static
-            </button>
-            <button
-              type="button"
-              aria-pressed={showBehavioural}
-              className={`toggle-btn ${showBehavioural ? "active" : ""}`}
-              onClick={() => setShowBehavioural(true)}
-            >
-              Post-behavioural
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Intro on the left, the OBR basis pill on the right, top-aligned */}
+      <div className="obr-intro-row">
+        <p className="comparison-description">
+          PolicyEngine's static estimates, which leave out behavioural
+          responses, against the OBR's costings from the November 2025{" "}
+          <a
+            href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Economic and Fiscal Outlook
+          </a>
+          , in £ billion a year. Positive values raise revenue or reduce
+          spending; negative values do the opposite.
+        </p>
+        {hasBothTypes && (
+          <PillSelect
+            variant="light"
+            name="OBR basis"
+            prefix="OBR basis"
+            value={showBehavioural ? "post" : "static"}
+            onChange={(value) => setShowBehavioural(value === "post")}
+            options={[
+              { value: "static", label: "Static" },
+              { value: "post", label: "Post-behavioural" },
+            ]}
+          />
+        )}
+      </div>
 
       <OBRDumbbellChart
         policies={policies}
@@ -174,7 +165,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
       <button
         type="button"
-        className="obr-table-toggle"
+        className="obr-table-toggle light-pill-button"
         aria-expanded={showTable}
         aria-controls="obr-comparison-table"
         onClick={() => setShowTable(!showTable)}

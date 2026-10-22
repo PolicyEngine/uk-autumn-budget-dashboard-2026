@@ -167,7 +167,8 @@ describe("ConstituencyMap", () => {
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
         "Large gain: £100 or more",
@@ -325,7 +326,8 @@ describe("ConstituencyMap", () => {
 
   it("switches to £ per household with the published digits", async () => {
     const { container } = await renderMap();
-    fireEvent.click(screen.getByRole("button", { name: "£ per household" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Show the change as:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
         approximateFill("large_gain"),

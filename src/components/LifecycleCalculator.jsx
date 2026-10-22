@@ -7,6 +7,7 @@ import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { lifecycleCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import PillSelect from "./PillSelect";
 import "./LifecycleCalculator.css";
 
 // API URL - supplied by the environment; no fallback.
@@ -1342,28 +1343,19 @@ function LifecycleCalculator() {
 
         {/* Main content */}
         <div className="lifecycle-main">
-          {/* Real terms toggle */}
+          {/* Prices: the light in-card pill, like every in-card switch */}
           <div className="toggle-row">
-            <div className="toggle-container">
-              <span
-                className={`toggle-label nominal ${!showRealTerms ? "active" : ""}`}
-              >
-                Nominal
-              </span>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={showRealTerms}
-                  onChange={(e) => setShowRealTerms(e.target.checked)}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-              <span
-                className={`toggle-label real ${showRealTerms ? "active" : ""}`}
-              >
-                2025 £
-              </span>
-            </div>
+            <PillSelect
+              variant="light"
+              name="Prices"
+              prefix="Prices"
+              value={showRealTerms ? "real" : "nominal"}
+              onChange={(value) => setShowRealTerms(value === "real")}
+              options={[
+                { value: "nominal", label: "Nominal" },
+                { value: "real", label: "2025 £" },
+              ]}
+            />
           </div>
 
           {/* Summary cards */}
