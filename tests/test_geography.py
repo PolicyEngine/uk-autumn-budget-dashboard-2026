@@ -1419,6 +1419,7 @@ def test_geography_arguments():
     assert parsed.seat_lookup is None
     assert parsed.years == [2026, 2027, 2028, 2029, 2030]
     assert parsed.out_dir == Path("public/data")
+    assert parsed.manifest == Path("public/data/manifest.json")
     parsed = parse_args(
         [
             "geography",
@@ -1450,6 +1451,71 @@ def no_simulation(*args, **kwargs):
     raise AssertionError("a simulation was built")
 
 
+def publication_manifest(tmp_path, ids, packages=None, statuses=None):
+    """A real approved publication manifest over synthetic receipts.
+
+    These approvals exercise the command's entry gate; the area run still
+    has to pass its independent data-limit and disclosure checks.
+    """
+    from tests.publication_support import World
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import read_receipt
+    from uk_budget_data.publication.combine import combined_key
+    from uk_budget_data.publication.publish import approve, stage
+
+    world = World()
+    try:
+        manifest = m.Manifest()
+        args = dict(data_root=world.data_root, inputs=world.inputs)
+        records = {}
+        for key in ids:
+            if key in (packages or {}):
+                continue
+            reference = world.ready(key, {2027: -1.0})
+            stage(manifest, reference.path, **args)
+            approve(manifest, key, "Reviewer", **args)
+            receipt = read_receipt(reference.path)["execution_receipt"]
+            records[key] = {
+                "id": key,
+                "baseline": receipt["baseline"],
+                "reform": receipt["reform"],
+            }
+        for members in (packages or {}).values():
+            key = combined_key(list(members))
+            reference = world.write(
+                key,
+                {2027: -float(len(members))},
+                members=[records[member] for member in members],
+                measure_ids=list(members),
+                member_outputs={
+                    member: manifest.measures[member].outputs_sha256
+                    for member in members
+                },
+            )
+            world.reconcile(reference)
+            stage(manifest, reference.path, **args)
+            approve(manifest, key, "Reviewer", **args)
+        for key, status in (statuses or {}).items():
+            manifest.entries()[key].status = status
+        path = tmp_path / "publication.json"
+        path.write_text(manifest.model_dump_json(by_alias=True))
+        return path
+    finally:
+        world.close()
+
+
+def enhanced_frs_bundle(monkeypatch):
+    """The enhanced-FRS bundle route, without loading its dataset."""
+    monkeypatch.setattr(
+        g,
+        "_bundle_dataset",
+        lambda: (
+            "enhanced_frs_2024_25",
+            "policyengine/policyengine-uk-data-private",
+        ),
+    )
+
+
 def test_without_a_private_directory_nothing_runs(monkeypatch):
     from uk_budget_data import cli
 
@@ -1467,26 +1533,46 @@ def test_a_local_dataset_needs_a_path(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize(
-    "args",
+    ("args", "message"),
     [
-        ["--reforms", "no_such_reform"],
-        ["--reforms", "autumn_budget_2026_combined", "two_child_limit"],
-        ["--reforms", "two_child_limit", "--seat-reforms", "fuel_duty_freeze"],
-        ["--reforms", "two_child_limit", "--levels", "constituency"],
-        ["--seat-weights", "missing.h5"],
+        (["--reforms", "no_such_reform"], "absent from the manifest"),
+        (["--reforms", "pkg", "alpha"], "pkg needs its measures"),
+        (
+            ["--reforms", "alpha", "--seat-reforms", "beta"],
+            "--seat-reforms must name chosen reforms",
+        ),
+        (
+            ["--reforms", "alpha", "--seat-reforms", "absent"],
+            "absent from the manifest",
+        ),
+        (["--seat-weights", "missing.h5"], "No seat weights"),
     ],
 )
 def test_options_are_checked_before_any_simulation(
-    args, monkeypatch, tmp_path
+    args, message, monkeypatch, tmp_path, capsys
 ):
     from uk_budget_data import cli
+    from uk_budget_data.models import Reform
 
+    packages = {"pkg": ("alpha", "beta")}
+    ids = ("pkg", "alpha", "beta")
+    manifest = publication_manifest(tmp_path, ids, packages)
+    monkeypatch.setattr(g, "PACKAGES", packages)
+    monkeypatch.setattr(
+        g, "get_reform", {key: Reform(id=key, name=key) for key in ids}.get
+    )
+    enhanced_frs_bundle(monkeypatch)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path))
     monkeypatch.setattr(g, "simulate_reform", no_simulation)
     data = ["--data-dir", str(tmp_path), "--data-inputs-dir"]
     assert (
-        cli.main(["geography", *args, *data, str(REPO / "data_inputs")]) == 1
+        cli.main(
+            ["geography", "--manifest", str(manifest), *args, *data]
+            + [str(REPO / "data_inputs")]
+        )
+        == 1
     )
+    assert message in " ".join(capsys.readouterr().out.split())
 
 
 def synthetic_inputs(tmp_path):
@@ -1611,10 +1697,22 @@ def run_cli(
     monkeypatch.setattr(g, "simulate_reform", simulate)
     monkeypatch.setattr(g, "get_reform", reforms.get)
     monkeypatch.setattr(g, "PACKAGES", {"pkg": ("alpha", "beta")})
+    manifest = publication_manifest(
+        tmp_path, reforms, packages={"pkg": ("alpha", "beta")}
+    )
+    enhanced_frs_bundle(monkeypatch)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
     out = tmp_path / "out"
     code = cli.main(
-        ["geography", *args, *extra, "--out-dir", str(out)]
+        [
+            "geography",
+            "--manifest",
+            str(manifest),
+            *args,
+            *extra,
+            "--out-dir",
+            str(out),
+        ]
         + ["--data-inputs-dir", str(inputs)]
     )
     return code, out, tmp_path / "audit" / "geography"
@@ -1684,11 +1782,15 @@ def test_a_local_file_without_the_export_marker_is_refused(
     assert "needs a Microcosm export" in capsys.readouterr().out
     with h5py.File(local, "a") as handle:
         handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+    manifest = publication_manifest(tmp_path, ["two_child_limit"])
+    args += ["--manifest", str(manifest), "--seat-reforms", "two_child_limit"]
     assert g._plan(parse_args(args)).microcosm_export
 
 
 @pytest.mark.parametrize("lookup", ["missing", "reordered", "elsewhere"])
-def test_seat_weights_need_the_lookup_they_were_built_from(lookup, tmp_path):
+def test_seat_weights_need_the_lookup_they_were_built_from(
+    lookup, tmp_path, monkeypatch
+):
     from uk_budget_data.cli import parse_args
 
     weights_dir = tmp_path / "release"
@@ -1704,8 +1806,19 @@ def test_seat_weights_need_the_lookup_they_were_built_from(lookup, tmp_path):
             extra = ["--seat-lookup", str(path)]
         seats.to_csv(path, index=False)
     write_seat_weights(weights_dir / g.SEAT_WEIGHTS_FILE, np.zeros((650, 1)))
+    manifest = publication_manifest(tmp_path, ["two_child_limit"])
+    enhanced_frs_bundle(monkeypatch)
     parsed = parse_args(
-        ["geography", "--levels", "constituency", *extra]
+        [
+            "geography",
+            "--manifest",
+            str(manifest),
+            "--levels",
+            "constituency",
+            "--seat-reforms",
+            "two_child_limit",
+            *extra,
+        ]
         + ["--data-dir", str(weights_dir)]
         + ["--data-inputs-dir", str(REPO / "data_inputs")]
     )
@@ -1895,22 +2008,351 @@ def real_simulations(monkeypatch):
 
 
 def geography_command(
-    monkeypatch, tmp_path, capsys, reforms, years=("2027",), packages=None
+    monkeypatch,
+    tmp_path,
+    capsys,
+    reforms,
+    years=("2027",),
+    packages=None,
+    statuses=None,
+    extra=(),
+    bundle_efrs=True,
 ):
     from uk_budget_data import cli
 
     lookup = {reform.id: reform for reform in reforms}
     monkeypatch.setattr(g, "get_reform", lookup.get)
     monkeypatch.setattr(g, "PACKAGES", packages or {})
+    manifest = publication_manifest(tmp_path, lookup, packages, statuses)
+    if bundle_efrs:
+        enhanced_frs_bundle(monkeypatch)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
     inputs = Path(g.__file__).parents[2] / "data_inputs"
     code = cli.main(
-        ["geography", "--reforms", *lookup, "--years", *years]
+        [
+            "geography",
+            "--manifest",
+            str(manifest),
+            "--reforms",
+            *lookup,
+            "--years",
+            *years,
+        ]
         + ["--levels", "region", "--out-dir", str(tmp_path / "out")]
         + ["--data-inputs-dir", str(inputs)]
+        + list(extra)
     )
     printed = " ".join(capsys.readouterr().out.split())
     return code, printed
+
+
+def test_an_unapproved_run_builds_no_simulation_and_writes_no_tables(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="held", name="Held")],
+        statuses={"held": "provisional"},
+    )
+    assert code == 1
+    assert "held: provisional" in printed
+    assert not (tmp_path / "out").exists()
+    assert not list((tmp_path / "audit").rglob("summary.json"))
+
+
+def test_an_approved_run_proceeds_on_real_simulations(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    code, printed = geography_command(
+        monkeypatch, tmp_path, capsys, [Reform(id="alpha", name="Alpha")]
+    )
+    assert code == 0, printed
+    assert (tmp_path / "out" / "regional.csv").is_file()
+    assert validate_public(tmp_path / "out") == []
+    assert "UNCERTIFIED" not in printed
+
+
+def test_a_microcosm_run_has_banners_and_an_uncertified_private_audit(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    local = tmp_path / "local.h5"
+    with h5py.File(local, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset-kind", "microcosm", "--dataset", str(local)),
+    )
+    assert code == 0, printed
+    assert printed.startswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.endswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.count(g.MICROCOSM_UNCERTIFIED) == 2
+    (audit,) = (tmp_path / "audit").rglob("summary.json")
+    summary = json.loads(audit.read_text())
+    assert summary["certified"] is False
+    assert summary["certification_reason"] == g.MICROCOSM_UNCERTIFIED
+    assert validate_public(tmp_path / "out") == []
+
+
+def test_explicit_efrs_data_keeps_its_route_on_a_microcosm_bundle(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    # The fixture builds an in-memory household simulation for this path.
+    # An explicit eFRS file must not resolve the bundle's default dataset.
+    monkeypatch.setattr(g, "_bundle_dataset", no_simulation)
+    local = tmp_path / "efrs.h5"
+    with h5py.File(local, "w"):
+        pass
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", str(local)),
+        bundle_efrs=False,
+    )
+    assert code == 0, printed
+    assert (tmp_path / "out" / "regional.csv").is_file()
+    assert "UNCERTIFIED" not in printed
+
+
+def test_the_default_microcosm_bundle_refuses_efrs_before_simulation(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    from uk_budget_data.models import Reform
+
+    # Pin 6.10.0's metadata so this also exercises the guard on 6.6.0.
+    monkeypatch.setattr(
+        g,
+        "_bundle_dataset",
+        lambda: ("microcosm_uk_2024_25", "policyengine/populace-uk-private"),
+    )
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        bundle_efrs=False,
+    )
+    assert code == 1
+    assert "installed bundle defaults to microcosm_uk_2024_25" in printed
+    assert "PR #59" in printed
+    assert printed.startswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.endswith(g.MICROCOSM_UNCERTIFIED)
+    assert not (tmp_path / "out").exists()
+
+
+def test_the_default_efrs_bundle_proceeds_without_a_microcosm_label(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    """6.6.0's enhanced-FRS default remains usable on either model."""
+    from uk_budget_data.models import Reform
+
+    enhanced_frs_bundle(monkeypatch)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        bundle_efrs=False,
+    )
+    assert code == 0, printed
+    assert (tmp_path / "out" / "regional.csv").is_file()
+    assert "UNCERTIFIED" not in printed
+
+
+def pinned_bundle_dataset(monkeypatch, name, repository, inherit=False):
+    """Metadata only, with the same repository fallback as bundle overlays."""
+    release = SimpleNamespace(
+        default_dataset=name,
+        datasets={
+            name: SimpleNamespace(repo_id=None if inherit else repository)
+        },
+        data_package=SimpleNamespace(repo_id=repository),
+    )
+    monkeypatch.setattr(g, "get_release_manifest", lambda country: release)
+
+
+@pytest.mark.parametrize(
+    "repository",
+    [
+        "policyengine/policyengine-uk-data",
+        "policyengine/policyengine-uk-data-private",
+    ],
+)
+@pytest.mark.parametrize("inherit", [False, True])
+def test_named_efrs_accepts_public_or_private_uk_data(
+    real_simulations, monkeypatch, tmp_path, capsys, repository, inherit
+):
+    """Named eFRS datasets may carry or inherit either uk-data repository."""
+    from uk_budget_data.models import Reform
+
+    name = "enhanced_frs_2024_25"
+    pinned_bundle_dataset(monkeypatch, name, repository, inherit)
+    assert g._bundle_dataset(name) == (name, repository)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", name),
+        bundle_efrs=False,
+    )
+    assert code == 0, printed
+    assert (tmp_path / "out" / "regional.csv").is_file()
+    assert "UNCERTIFIED" not in printed
+
+
+def test_installed_efrs_dataset_and_overlay_resolve_without_loading_data():
+    """On 6.10.0 the eFRS name is an overlay; on 6.6.0 it is certified."""
+    assert g._bundle_dataset("enhanced_frs_2024_25") == (
+        "enhanced_frs_2024_25",
+        "policyengine/policyengine-uk-data-private",
+    )
+    assert g._bundle_dataset("populace_uk_2023") == (
+        "populace_uk_2023",
+        "policyengine/populace-uk-private",
+    )
+
+
+@pytest.mark.parametrize("named", [False, True])
+def test_efrs_looking_name_from_another_repository_is_refused(
+    real_simulations, monkeypatch, tmp_path, capsys, named
+):
+    """A name alone cannot establish that uk-data built an enhanced FRS."""
+    from uk_budget_data.models import Reform
+
+    name = "enhanced_frs_2024_25"
+    pinned_bundle_dataset(monkeypatch, name, "another-owner/another-dataset")
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", name) if named else (),
+        bundle_efrs=False,
+    )
+    assert code == 1
+    assert "another-owner/another-dataset" in printed
+    assert "policyengine/policyengine-uk-data or" in printed
+    assert "policyengine/policyengine-uk-data-private" in printed
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("name", ["microcosm_uk_2024_25", "populace_uk_2023"])
+def test_named_microcosm_data_through_efrs_is_refused_and_labelled(
+    real_simulations, monkeypatch, tmp_path, capsys, name
+):
+    """Both the dataset name and its repository identify Microcosm data."""
+    from uk_budget_data.models import Reform
+
+    pinned_bundle_dataset(
+        monkeypatch, name, "policyengine/populace-uk-private"
+    )
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", name),
+        bundle_efrs=False,
+    )
+    assert code == 1
+    assert name in printed
+    assert "PR #59" in printed
+    assert printed.startswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.endswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.count(g.MICROCOSM_UNCERTIFIED) == 2
+    assert not (tmp_path / "out").exists()
+
+
+def test_bundle_names_take_precedence_over_local_files(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    """A local namesake cannot hide the dataset the engine would load."""
+    from uk_budget_data.models import Reform
+
+    name = "microcosm_uk_2024_25"
+    pinned_bundle_dataset(
+        monkeypatch, name, "policyengine/populace-uk-private"
+    )
+    monkeypatch.chdir(tmp_path)
+    with h5py.File(name, "w"):
+        pass
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", name),
+        bundle_efrs=False,
+    )
+    assert code == 1
+    assert "PR #59" in printed
+    assert printed.count(g.MICROCOSM_UNCERTIFIED) == 2
+
+
+def test_unknown_named_dataset_is_refused_before_simulation(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    """A name absent from the installed bundle cannot take the local route."""
+    from uk_budget_data.models import Reform
+
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", "unknown_dataset"),
+        bundle_efrs=False,
+    )
+    assert code == 1
+    assert "has no UK dataset 'unknown_dataset'" in printed
+    assert not (tmp_path / "out").exists()
+
+
+def test_local_microcosm_export_through_efrs_is_refused_and_labelled(
+    real_simulations, monkeypatch, tmp_path, capsys
+):
+    """The export marker closes the local-file route regardless of its name."""
+    from uk_budget_data.models import Reform
+
+    local = tmp_path / "enhanced_frs.h5"
+    with h5py.File(local, "w") as handle:
+        handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
+    monkeypatch.setattr(g, "build_microsimulation", no_simulation)
+    code, printed = geography_command(
+        monkeypatch,
+        tmp_path,
+        capsys,
+        [Reform(id="alpha", name="Alpha")],
+        extra=("--dataset", str(local)),
+    )
+    assert code == 1
+    assert "efrs refuses a Microcosm export" in printed
+    assert "PR #59" in printed
+    assert printed.startswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.endswith(g.MICROCOSM_UNCERTIFIED)
+    assert printed.count(g.MICROCOSM_UNCERTIFIED) == 2
+    assert not (tmp_path / "out").exists()
 
 
 def refused(printed):
