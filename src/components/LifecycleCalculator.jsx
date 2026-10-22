@@ -1467,8 +1467,8 @@ function LifecycleCalculator() {
                   />
                 </div>
 
-                {/* Summary cards */}
-                <div className="lifecycle-summary">
+                {/* Summary cards: only with results, never as £0 */}
+                <div className="lifecycle-summary" hidden={!data.length}>
                   <div className="summary-item highlighted">
                     <div className="summary-label">
                       Net lifetime impact{showRealTerms ? " (2025 £)" : ""}
@@ -1498,10 +1498,13 @@ function LifecycleCalculator() {
                       <p>{error}</p>
                     </div>
                   )}
-                  <div ref={chartRef} className="chart"></div>
+                  <div
+                    ref={chartRef}
+                    className={`chart ${data.length ? "" : "chart-empty"}`}
+                  ></div>
 
                   {/* Legend */}
-                  <div className="legend">
+                  <div className="legend" hidden={!data.length}>
                     {REFORMS.map((r) => (
                       <div className="legend-item" key={r.key}>
                         <div
@@ -1520,8 +1523,8 @@ function LifecycleCalculator() {
                     </div>
                   </div>
 
-                  {/* PolicyEngine logo and downloads */}
-                  <div className="lifecycle-chart-footer">
+                  {/* PolicyEngine logo and downloads (the chart's own) */}
+                  <div className="lifecycle-chart-footer" hidden={!data.length}>
                     <ChartDownloadMenu formats={downloads} chartTitle="Lifetime policy impact" />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />

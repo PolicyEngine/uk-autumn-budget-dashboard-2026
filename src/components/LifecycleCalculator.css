@@ -1021,3 +1021,17 @@
     display: none;
   }
 }
+
+.lifecycle-summary[hidden],
+.legend[hidden] {
+  display: none;
+}
+
+/* No results: the chart's empty space collapses */
+.wizard-results .chart-empty {
+  min-height: 0;
+}
+
+.lifecycle-chart-footer[hidden] {
+  display: none;
+}
