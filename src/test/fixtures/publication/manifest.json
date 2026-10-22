@@ -14,13 +14,13 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "19bbd4af9c8c5970ddb1a2ea7adc64041d91975ca97665151c07d7956b5d9683",
-        "at": "2026-10-22T17:58:08.458522+00:00",
+        "artifact_sha256": "a62a39e82bf58b913224035a1f189b4dd681cd74e2f9f160ecea3c184d3f5d91",
+        "at": "2026-10-22T21:37:26.979789+00:00",
         "by": "Reviewer",
         "outputs_sha256": "dd0a04f370a92c68abf111b63eaf2f33e7d8531174633d70412ef5296b807260"
       },
-      "artifact": "artifacts/combined--alpha+beta/19bbd4af9c8c5970",
-      "artifact_sha256": "19bbd4af9c8c5970ddb1a2ea7adc64041d91975ca97665151c07d7956b5d9683",
+      "artifact": "artifacts/combined--alpha+beta/a62a39e82bf58b91",
+      "artifact_sha256": "a62a39e82bf58b913224035a1f189b4dd681cd74e2f9f160ecea3c184d3f5d91",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "measures": [
@@ -88,13 +88,13 @@
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "e779bb30489ff0bfa83a8e4ac594b032748de7156b8b3aa080991a7854caefbb",
-        "at": "2026-10-22T17:58:07.427439+00:00",
+        "artifact_sha256": "dd0556c8ffba8c83eb53491749af6798842b75ff698d9b67555946e851bed1cd",
+        "at": "2026-10-22T21:37:25.732909+00:00",
         "by": "Reviewer",
         "outputs_sha256": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e"
       },
-      "artifact": "artifacts/alpha/e779bb30489ff0bf",
-      "artifact_sha256": "e779bb30489ff0bfa83a8e4ac594b032748de7156b8b3aa080991a7854caefbb",
+      "artifact": "artifacts/alpha/dd0556c8ffba8c83",
+      "artifact_sha256": "dd0556c8ffba8c83eb53491749af6798842b75ff698d9b67555946e851bed1cd",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Alpha",
@@ -115,13 +115,13 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "74e628bf3ea2582ba2e57ed9085b9c0007aaa4ebd41c13d2f28abbe53baaee63",
-        "at": "2026-10-22T17:58:07.477557+00:00",
+        "artifact_sha256": "9795faf1fa2a3e0f090ab0e336bd79c10db1e063c7bbcef189a2a3b0a6cd1173",
+        "at": "2026-10-22T21:37:25.783957+00:00",
         "by": "Reviewer",
         "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1"
       },
-      "artifact": "artifacts/beta/74e628bf3ea2582b",
-      "artifact_sha256": "74e628bf3ea2582ba2e57ed9085b9c0007aaa4ebd41c13d2f28abbe53baaee63",
+      "artifact": "artifacts/beta/9795faf1fa2a3e0f",
+      "artifact_sha256": "9795faf1fa2a3e0f090ab0e336bd79c10db1e063c7bbcef189a2a3b0a6cd1173",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Beta",
@@ -141,8 +141,8 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/d534a5f7fbb1fb2c",
-      "artifact_sha256": "d534a5f7fbb1fb2c4d692408637db61bf992a23a05c2dff99a7c2a39a5f3f2ba",
+      "artifact": "artifacts/delta/1791ea8a600ac6f0",
+      "artifact_sha256": "1791ea8a600ac6f054695ff75fc384d0e32bae825de47df49dc4a45ecf3757ee",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Delta",
@@ -162,8 +162,8 @@
       ]
     },
     "epsilon": {
-      "artifact": "artifacts/epsilon/13b79ab272d39957",
-      "artifact_sha256": "13b79ab272d399579385e4398caae100fd65cba3419236da6b0a689eb124a19c",
+      "artifact": "artifacts/epsilon/79c0a5826c6ebebd",
+      "artifact_sha256": "79c0a5826c6ebebd63253235bbf03f33d897c4fea2faa5f817aafcdf359505a6",
       "data_limits": [
         "additional_dwelling_purchases"
       ],
@@ -182,8 +182,8 @@
       ]
     },
     "eta": {
-      "artifact": "artifacts/eta/f0e8d0f1874a76e7",
-      "artifact_sha256": "f0e8d0f1874a76e7fe20e2f6d13a10b227f69cb7470e209e4d7272ab8c16b480",
+      "artifact": "artifacts/eta/2a27318bb75f3fb6",
+      "artifact_sha256": "2a27318bb75f3fb628ec9c1c798568fb99767bfa3b91f4ea1a091ed727a14347",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Eta",
@@ -203,8 +203,8 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/828c98a049fc56b0",
-      "artifact_sha256": "828c98a049fc56b0163202272d6a451a74d2b5233bf3430fda67abb515b2ff95",
+      "artifact": "artifacts/gamma/560b10fe49872af0",
+      "artifact_sha256": "560b10fe49872af0f079f11e885820ba672a85f16698499142f652d720af5d81",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Gamma",
@@ -224,8 +224,8 @@
       ]
     },
     "iota": {
-      "artifact": "artifacts/iota/95aae7c2c8eb5b72",
-      "artifact_sha256": "95aae7c2c8eb5b72e42a588130def0703e67ddc11883cc5f254dd475e182e0f7",
+      "artifact": "artifacts/iota/f62efd9a4dc2d154",
+      "artifact_sha256": "f62efd9a4dc2d1540c96e939afd2142dbb61ae6a9370184d8985088513ef2c06",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Iota",
@@ -245,8 +245,8 @@
       ]
     },
     "theta": {
-      "artifact": "artifacts/theta/7ff9714ded0e5ffd",
-      "artifact_sha256": "7ff9714ded0e5ffdcbfe35dc1c99caf53b5f870ad17bd69ddbb0fd578989bd5c",
+      "artifact": "artifacts/theta/e5ad2bf06602b1de",
+      "artifact_sha256": "e5ad2bf06602b1de437d2edd7dcdab610dfe2c845ba3b677282afb10b9a0934c",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Theta",
@@ -266,8 +266,8 @@
       ]
     },
     "zeta": {
-      "artifact": "artifacts/zeta/6ccb96247c77a1f5",
-      "artifact_sha256": "6ccb96247c77a1f537ebf16699a16634b233266d0471be431772cf392c23896c",
+      "artifact": "artifacts/zeta/f25b2a3c83acf4c6",
+      "artifact_sha256": "f25b2a3c83acf4c61530f2380a6ed724136d52b5d2007feb0a76f686612d0937",
       "data_limits": [],
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
       "name": "Zeta",
@@ -290,5 +290,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-22T17:58:08.458691+00:00"
+  "updated_at": "2026-10-22T21:37:26.980045+00:00"
 }

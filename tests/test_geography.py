@@ -1917,6 +1917,33 @@ def test_a_computable_measure_still_writes_its_tables(monkeypatch, tmp_path):
     assert validate_public(out) == []
 
 
+# On the Pension Credit model limit, which holds this from 2027 until the
+# UK hub's earnings fix is in the model.
+MINIMUM_GUARANTEE = (
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+)
+
+
+def test_a_measure_touching_a_model_limit_writes_no_tables(
+    monkeypatch, tmp_path, capsys
+):
+    """Review of the VAT model limit: approval alone held the area view, so
+    a measure approved before its model limit was registered, or on a model
+    with the fix, still ran by area. The command now judges its own run, as
+    the generator does, and writes no table."""
+    code, out, _ = run_cli(
+        monkeypatch,
+        tmp_path,
+        changes_of={"alpha": {MINIMUM_GUARANTEE: {"2027": 250.0}}},
+    )
+    printed = " ".join(capsys.readouterr().out.split())
+    assert code == 1
+    assert not out.exists()
+    assert "Mis-costed by this model: alpha" in printed
+    assert "touch a model limit, so no tables were written" in printed
+    assert "Not computable" not in printed
+
+
 def household_situation():
     return {
         "people": {
@@ -2485,10 +2512,15 @@ def test_a_template_measure_is_not_refused_on_real_simulations(
     real_simulations, monkeypatch, tmp_path, capsys, name
 ):
     """No false refusal: without the run watch, or with its sides swapped,
-    a template measure would be refused or the run would stop."""
+    a template measure would be refused or the run would stop. The data
+    limits are under test: the model limits are set aside, since the VAT
+    base template is held by one until policyengine-uk #2187
+    (tests/test_vat_model_limit.py)."""
     from tests import template_measures
+    from uk_budget_data import model_limits
     from uk_budget_data.models import Reform
 
+    monkeypatch.setattr(model_limits, "MODEL_LIMITS", ())
     reform = Reform(
         id="tpl",
         name="tpl",

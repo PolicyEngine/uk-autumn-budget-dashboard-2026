@@ -12,9 +12,9 @@ differ under one of those parameters, compared as
 ``uk_budget_data.data_limits`` compares them (the stored trees by position
 and effective value, and what formulas read at each year's start), or in
 one of those variables: its formulas or what decides how they run, or the
-values stored for it as inputs (recorded as ``variable:<name>``). A limit
-expires on its own: once the model has the fix, nothing is recorded, and
-its tripwire test fails so the limit is removed.
+values stored for it (recorded as ``variable:<name>``). A limit expires on
+its own: once the model has the fix, nothing is recorded, and its tripwire
+test fails so the limit is removed.
 """
 
 import ast
@@ -47,7 +47,7 @@ class ModelLimit:
     # Compare effective values only from this fiscal year, if specified.
     from_year: int | None = None
     # Variables a measure can change the limit through without changing a
-    # covered parameter: a replaced formula, or an input set on one side.
+    # covered parameter: a replaced formula, or a value stored on one side.
     variables: tuple[str, ...] = ()
 
 
@@ -65,14 +65,14 @@ _CPI_ADD_ON = "september_cpi_uprating"
 _ADD_ON_FILE = "variables/gov/dwp/additional_state_pension.py"
 
 
-def _reads(code: types.CodeType) -> bool:
-    """Whether compiled code, or code nested in it, looks the index up by
-    name. A comment, docstring or string literal mentioning it does not
-    count: only names the code reads are in ``co_names``."""
+def _reads(code: types.CodeType, name: str) -> bool:
+    """Whether compiled code, or code nested in it, looks ``name`` up. A
+    comment, docstring or string literal mentioning it does not count: only
+    names the code reads are in ``co_names``."""
     stack = [code]
     while stack:
         current = stack.pop()
-        if _CPI_ADD_ON in current.co_names:
+        if name in current.co_names:
             return True
         stack.extend(
             const
@@ -82,14 +82,23 @@ def _reads(code: types.CodeType) -> bool:
     return False
 
 
+def _every_formula_reads(system, variable: str, name: str) -> bool:
+    """Whether the system's ``variable`` has formulas, and every one of them
+    looks ``name`` up (:func:`_reads`)."""
+    found = (getattr(system, "variables", None) or {}).get(variable)
+    formulas = list((getattr(found, "formulas", None) or {}).values())
+    codes = [getattr(formula, "__code__", None) for formula in formulas]
+    return bool(codes) and all(
+        isinstance(code, types.CodeType) and _reads(code, name)
+        for code in codes
+    )
+
+
 def _cpi_add_on(system) -> bool:
     """Whether the system's additional State Pension rises by September CPI
     (policyengine-uk #2336): every formula it has reads the index."""
-    variable = getattr(system, "variables", {}).get("additional_state_pension")
-    formulas = list((getattr(variable, "formulas", None) or {}).values())
-    codes = [getattr(formula, "__code__", None) for formula in formulas]
-    return bool(codes) and all(
-        isinstance(code, types.CodeType) and _reads(code) for code in codes
+    return _every_formula_reads(
+        system, "additional_state_pension", _CPI_ADD_ON
     )
 
 
@@ -417,25 +426,32 @@ _VAT_FILES = (
 def _vat_grossing_factors(system) -> bool:
     """Whether the system grosses household VAT up by survey consumption
     coverage and the household share of receipts (policyengine-uk #2187):
-    both factors are leaves of the tree as the model built it.
+    both factors are leaves of the tree as the model built it, and every
+    formula of its ``baseline_vat`` looks up the helper that divides by
+    their product.
 
-    Read from that tree, not from the formulas or the tree a measure
-    changes, so a measure can't make its own model count as fixed, nor a
-    fixed one as unfixed: the VAT base template replaces the ``vat``
-    formula on the reform side, and a modifier that added the factors would
-    add them to the tree it changes. As for the minimum guarantee, one that
-    adds them to the tree as built changes the model: review it as such.
+    Neither reads what a measure changes, so a measure can't make its own
+    model count as fixed, nor a fixed one as unfixed: the VAT base template
+    replaces ``vat``'s formula, never ``baseline_vat``'s, and a modifier
+    that adds the factors adds them to the tree it changes. The formula
+    check is behaviour, so factors added to the tree as built, which the
+    model's formulas don't read, don't count either. A modifier that adds
+    the factors there and also replaces ``baseline_vat`` on both sides
+    changes the model: review it as such.
     """
     if not hasattr(system, "parameters"):
         return False
     try:
         tree = _unreformed(system.parameters)
-        return all(
+        factors = all(
             hasattr(tree.get_child(path), "values_list")
             for path in _VAT_FACTORS
         )
     except (AttributeError, KeyError, TypeError, ValueError):
         return False
+    return factors and _every_formula_reads(
+        system, "baseline_vat", _VAT_GROSSING
+    )
 
 
 def _calls(function: ast.FunctionDef, name: str) -> bool:
@@ -508,9 +524,10 @@ _CONSUMPTION_CATEGORIES = (
 )
 
 # consumption's categories rise by this index in years after the data's, so
-# a CPI path moves VAT without changing a VAT parameter or a stored input;
-# test_vat_model_limit.py fails if the installed model uprates them by
-# another.
+# a CPI path moves VAT without changing a VAT parameter. In a household
+# calculation it changes no stored input either; on a dataset the projected
+# inputs follow it, and record too. test_vat_model_limit.py fails if the
+# installed model uprates them by another.
 _CONSUMPTION_UPRATING = (
     "gov.economic_assumptions.indices.obr.consumer_price_index"
 )
@@ -613,6 +630,10 @@ MODEL_LIMITS = (
             "gov.hmrc.vat",
             "gov.simulation.microdata_vat_coverage",
             _CONSUMPTION_UPRATING,
+            # baseline_vat reads the engine's copy of the tree as built, and
+            # vat_change subtracts it, so an edit to that copy moves VAT.
+            "baseline.gov.hmrc.vat",
+            "baseline.gov.simulation.microdata_vat_coverage",
         ),
         variables=_VAT_VARIABLES,
         fixed_by="policyengine-uk #2187",
@@ -624,9 +645,11 @@ MODEL_LIMITS = (
             "= 0.469, so this model's VAT is about 23% higher (the UK hub "
             "measured about 24% on Microcosm, 22 October 2026), and a "
             "measure that moves a VAT rate, the VAT base or the consumption "
-            "VAT is charged on can be overstated by as much. #2187 is not "
-            "in this model. Until a pair with it is adopted, such measures "
-            "are held at provisional."
+            "VAT is charged on can be overstated by as much. A measure "
+            "built with the VAT base template is held too, though the term "
+            "the template adds is not grossed. #2187 is not in this model. "
+            "Until a pair with it is adopted, such measures are held at "
+            "provisional."
         ),
         fixed=_vat_grossing_factors,
         installed_fixed=_installed_vat_grossing_factors,
@@ -634,24 +657,30 @@ MODEL_LIMITS = (
 )
 
 
+def _registry_digest(limits: Iterable[ModelLimit]) -> str:
+    """A digest of what a registry records and decides by: every field of
+    each limit but its checks for the fix."""
+    return hashlib.sha256(
+        json.dumps(
+            [
+                [
+                    limit.key,
+                    list(limit.parameters),
+                    list(limit.variables),
+                    limit.fixed_by,
+                    limit.reason,
+                    limit.from_year,
+                ]
+                for limit in limits
+            ],
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+
+
 # A digest of the registry, recorded in every receipt: an artifact
 # generated against another registry is refused until it is regenerated.
-REGISTRY_SHA256 = hashlib.sha256(
-    json.dumps(
-        [
-            [
-                limit.key,
-                list(limit.parameters),
-                list(limit.variables),
-                limit.fixed_by,
-                limit.reason,
-                limit.from_year,
-            ]
-            for limit in MODEL_LIMITS
-        ],
-        separators=(",", ":"),
-    ).encode()
-).hexdigest()
+REGISTRY_SHA256 = _registry_digest(MODEL_LIMITS)
 
 
 def _covers(limit: ModelLimit, path: str) -> bool:
@@ -772,8 +801,8 @@ def _variables_differing(sim_baseline, sim_reform, names, behaviour):
     it closes over and the globals it looks up, so a template applied with
     other arguments shows), whether it is neutralised, what it adds and
     subtracts, its default and :data:`_VARIABLE_METADATA`; or when the
-    values stored for it as inputs differ (:func:`_inputs`). What can't be
-    read counts as different.
+    values stored for it differ (:func:`_stored`). What can't be read
+    counts as different.
     """
     systems = (sim_baseline.tax_benefit_system, sim_reform.tax_benefit_system)
     found = []
@@ -785,12 +814,12 @@ def _variables_differing(sim_baseline, sim_reform, names, behaviour):
         if pair[0] is None and pair[1] is None:
             continue
         try:
-            same_inputs = _same_inputs(
-                _inputs(sim_baseline, name), _inputs(sim_reform, name)
+            same_values = _same_stored(
+                _stored(sim_baseline, name), _stored(sim_reform, name)
             )
         except Exception:  # noqa: BLE001 - unreadable means different
-            same_inputs = False
-        if _behaves_differently(*pair, behaviour) or not same_inputs:
+            same_values = False
+        if _behaves_differently(*pair, behaviour) or not same_values:
             found.append(variable_path(name))
     return found
 
@@ -808,43 +837,55 @@ def _behaves_differently(base, reform, behaviour) -> bool:
         return True
 
 
-def _inputs(sim, name):
-    """The values ``sim`` stores for ``name`` as inputs, by branch and
-    period; None for a simulation without the engine's holders (a
-    stand-in), which is not compared.
+def _stored(sim, name):
+    """What ``sim`` stores for ``name``: the values the engine records as
+    inputs, and every value its holder keeps, calculated or cached, each by
+    branch and period. None for a simulation without the engine's holders
+    (a stand-in), which is not compared.
 
-    Detection runs after the figures are made, so holders also keep what
-    the engine calculated: only the values the engine records as inputs
-    are compared. An engine that records none is read whole.
+    Detection runs after the figures are made, so one side can hold a value
+    the other never calculated: inputs are compared slot for slot, and other
+    values only where both sides hold one (:func:`_same_stored`). An engine
+    that records no inputs has all it holds compared as inputs.
     """
     get_holder = getattr(sim, "get_holder", None)
     if get_holder is None:
         return None
     if name not in sim.tax_benefit_system.variables:
-        return {}
+        return {}, {}
     holder = get_holder(name)
+    known = {
+        (branch, str(period)): holder.get_array(period, branch)
+        for branch, period in holder.get_known_branch_periods()
+    }
     keys = getattr(sim, "_user_input_keys", None)
     if keys is None:
-        slots = holder.get_known_branch_periods()
-    else:
-        slots = [
-            (branch, period)
-            for variable, branch, period in keys
-            if variable == name
-        ]
-    return {
+        return known, known
+    inputs = {
         (branch, str(period)): holder.get_array(period, branch)
-        for branch, period in slots
+        for variable, branch, period in keys
+        if variable == name
     }
+    return inputs, known
 
 
-def _same_inputs(base, reform) -> bool:
-    """Whether two simulations store the same inputs (NaN equal to NaN);
-    true where either can't be read."""
+def _same_stored(base, reform) -> bool:
+    """Whether two simulations store the same for a variable (NaN equal to
+    NaN): the same inputs in the same slots, and the same value in every
+    slot both hold. True where either can't be read."""
     if base is None or reform is None:
         return True
-    return base.keys() == reform.keys() and all(
-        _same_array(base[slot], reform[slot]) for slot in base
+    (base_inputs, base_known), (reform_inputs, reform_known) = base, reform
+    return (
+        base_inputs.keys() == reform_inputs.keys()
+        and all(
+            _same_array(base_inputs[slot], reform_inputs[slot])
+            for slot in base_inputs
+        )
+        and all(
+            _same_array(base_known[slot], reform_known[slot])
+            for slot in base_known.keys() & reform_known.keys()
+        )
     )
 
 

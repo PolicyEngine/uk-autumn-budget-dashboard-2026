@@ -62,7 +62,7 @@ from policyengine.disclosure.schema import (
 from policyengine.provenance.manifest import get_release_manifest
 from rich.console import Console
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.private_outputs import (
@@ -2310,6 +2310,16 @@ def reform_data_limits(
     return data_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
 
 
+def reform_model_limits(reform: Reform, baseline, reformed, years) -> list:
+    """The model limits a reform touches, decided as the publication
+    generator decides them: from the two built simulations and the models
+    they run; from the scenarios' parameter changes, against the installed
+    model, only for stand-ins with no parameter tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return model_limits.limits_touched(baseline, reformed)
+    return model_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
+
+
 def run_geography(parsed: argparse.Namespace) -> int:
     """Run the ``geography`` command. Prints labels only."""
     microcosm = _uses_microcosm(parsed)
@@ -2372,6 +2382,7 @@ def _run_geography(
         start = time.perf_counter()
         collector = None
         limited = {}
+        held = {}
         for reform in plan.reforms:
             console.print(f"Simulating {reform.id}")
             baseline, reformed = simulate_reform(reform, dataset, plan.years)
@@ -2403,22 +2414,44 @@ def _run_geography(
                 )
                 if touched:
                     limited[reform.id] = touched
+            # A measure the installed model mis-costs is never approved, but
+            # one approved before its limit was registered, or on a model
+            # with the fix, still is: judge the area run's own simulations,
+            # as the generator judges its run.
+            touched = reform_model_limits(
+                reform, baseline, reformed, plan.years
+            )
+            if touched:
+                held[reform.id] = touched
             # The observation holds both simulations: free it with them, so
             # the next pair is never built with this one still alive.
             del baseline, reformed, observed
         simulate_s = time.perf_counter() - start
+        for reform_id, touched in limited.items():
+            reasons = " ".join(item["reason"] for item in touched)
+            console.print(
+                f"[red]Not computable on current data: {reform_id}: "
+                f"{reasons}[/red]"
+            )
+        for reform_id, touched in held.items():
+            reasons = " ".join(item["reason"] for item in touched)
+            console.print(
+                f"[red]Mis-costed by this model: {reform_id}: "
+                f"{reasons}[/red]"
+            )
         if limited:
-            for reform_id, touched in limited.items():
-                reasons = " ".join(item["reason"] for item in touched)
-                console.print(
-                    f"[red]Not computable on current data: {reform_id}: "
-                    f"{reasons}[/red]"
-                )
             console.print(
                 f"[red]Error: {len(limited)} reform(s) touch a data limit, "
                 "so no tables were written. Leave them, and any package "
                 "including them, out of --reforms.[/red]"
             )
+        if held:
+            console.print(
+                f"[red]Error: {len(held)} reform(s) touch a model limit, "
+                "so no tables were written. Leave them, and any package "
+                "including them, out of --reforms.[/red]"
+            )
+        if limited or held:
             return 1
 
         console.print("Estimating and checking")
