@@ -241,6 +241,36 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where #3's household calculator showed no change. |
 
+**A macro path is the exception: never key it by a bare year** (coordinator, 21 October). The OBR growth series under `gov.economic_assumptions.yoy_growth.obr` are stored at 1 January of each calendar year, and the statutory uprating inputs read them from there. Which year a bare-year key reaches has changed between models. With `Scenario(applied_before_data_load=True)`, a change of `"2026": 0.10` to `consumer_price_index` moved:
+- on policyengine-uk 2.130.1, the September **2027** CPI input;
+- on policyengine-uk 2.132.6, the September **2026** input.
+
+`"2026-01-01"` and `"2026-01-01.2026-12-31"` both moved the September 2026 input on both models (W5, 21 October).
+- **The cause is policyengine-uk #2404, first in 2.131.1.** Since then, a bare year on the economic growth rates names the calendar year, as intended. Before it, a bare year named the fiscal year from 6 April, and so moved the next year: 2.131.1's changelog gives a 2027 earnings growth rate that moved the 2028 index and the April 2029 triple lock.
+- **So anything generated on 6.6.0 (policyengine-uk 2.130.1, `main`'s pin before #72) with bare-year growth keys is off by a year.** Regenerate it on the adopted pair.
+- **Key a macro path by its calendar year,** `"YYYY-01-01.YYYY-12-31"`, whatever the model.
+- **Apply it only through `Scenario(applied_before_data_load=True)`.** That is the PolicyEngine-wide rule for macro paths.
+- **Before the scenario is used, probe the adopted pair.** Put the scenario's own change in `CHANGES`, and in `INPUT` the statutory input it should move (`cpi_september`, or `awe_total_pay_may_july` for earnings). The probe prints the instants that moved: `['2026-09-01']` for the example below.
+  - **Earnings move on 1 July.** With `awe_total_pay_may_july`, a 2027 earnings change prints `['2027-07-01']` on both models.
+  - **`[]` means that year is already published,** not that the key is wrong. May to July 2026 is published (3.9%), so a 2026 earnings change prints `[]`. A published year never moves (see "Which measures" above). Don't fall back to a bare year: on 2.130.1 it silently moves the next year instead.
+- **A registered measure can't carry a macro path today.** `Reform.to_scenario` never applies a change before the data loads, and `tests/test_measure_keys.py` refuses any key that isn't a bare year. A macro scenario is a separate run, through `Scenario(applied_before_data_load=True)`.
+
+```sh
+uv run python - <<'EOF'
+from policyengine_uk import Simulation
+from policyengine_uk.utils.scenario import Scenario
+INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+CHANGES = {"gov.economic_assumptions.yoy_growth.obr.consumer_price_index": {"2026-01-01.2026-12-31": 0.10}}
+H = {"people": {"p": {"age": {2026: 70}}}, "benunits": {"b": {"members": ["p"]}}, "households": {"h": {"members": ["p"]}}}
+def stored(changes=None):
+    scenario = Scenario(parameter_changes=changes, applied_before_data_load=True) if changes else None
+    leaf = Simulation(situation=H, scenario=scenario).tax_benefit_system.parameters.get_child(INPUT)
+    return {v.instant_str: v.value for v in leaf.values_list}
+base, changed = stored(), stored(CHANGES)
+print(sorted(k for k in base.keys() | changed.keys() if base.get(k) != changed.get(k)))
+EOF
+```
+
 **#3's household calculator moves less than the national figure for some measures** (probed 15 October). #3's calculator (`calculate_personal_net_income`) writes a change on 1 January only, while the national run applies it to the whole fiscal year before policyengine-uk derives its other parameters. `main`'s did the same until #32 (15 October; issue #33). One earner on £50,000, 2027:
 
 | Change | Household calculator | National |
@@ -271,19 +301,28 @@ git switch main && git pull
 uv sync --locked --extra dev
 mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
-  --also enhanced_frs_2024_25_tiny                         # the bundle's data and the tests' small file, by hash (#12, #70)
+  --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
 uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
-curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
+curl -s "$HOUSEHOLD_API/api/version"
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
   --expect-model-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-uk"))')" \
   --expect-core-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-core"))')" \
   --expect-wrapper-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine"))')" \
   --out receipts/g0-households.json
-uv run uk-budget-data publish check                        # (#19)
+uv run uk-budget-data publish check
 uv run uk-budget-data publish status
 ```
+
+What they check:
+- `certified_data`: the token reads the bundle's data and the tests' small dataset, each file by its pinned hash (#12, #70);
+- the certified-data tests, which fail rather than skip here;
+- the State Pension check: whether the model has policyengine-uk #2336;
+- `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
+- `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
+
+The shell blocks in this runbook carry no comments, so they paste into zsh as they are, once any `<placeholder>` in them is filled in.
 
 Record in the clock table:
 - the start SHA;
@@ -345,10 +384,10 @@ uv run uk-budget-data publish check
 uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   --source-id AB2026-T4.1 --document "Autumn Budget 2026" \
   --out data_inputs/treasury/sources/AB2026-T4.1.csv \
-  --static-template data_inputs/treasury/sources/AB2026-static.csv      # (#16)
+  --static-template data_inputs/treasury/sources/AB2026-static.csv
 ```
 
-- **Totals check.** The importer checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
+- **Totals check.** The importer (#16) checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
 
@@ -395,8 +434,17 @@ uv run uk-budget-data publish check
 
   ```sh
   curl -s https://policyengine.org/uk/autumn-budget-2026/data/manifest.json | head -5
-  # Until policyengine-app-v2#1249 is live (and at the rehearsal):
+  ```
+
+  Until policyengine-app-v2#1249 is live, and at the rehearsal, read the Vercel deployment instead:
+
+  ```sh
   curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5
+  ```
+
+  Either way, then run the household check:
+
+  ```sh
   uv run python -m uk_budget_data.household_route --base-url "$HOUSEHOLD_API" \
     --fixtures data_inputs/household_fixtures --manifest public/data/manifest.json
   ```
