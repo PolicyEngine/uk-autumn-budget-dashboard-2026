@@ -261,7 +261,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 
 | Key | What it means | Use it? |
 |---|---|---|
-| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
+| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2031 (the last year in `POLICY_YEARS`, `budget_years.json`). |
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where #3's household calculator showed no change. |
 
@@ -383,13 +383,13 @@ For each coded measure:
 ## G2: provisional numbers (13:15)
 
 ```sh
-uv run uk-budget-data generate --artifacts --reforms <ids> \
-  --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --artifacts --reforms <ids>
 uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish check
 ```
 
+- **Years.** `--years` defaults to every policy year in `budget_years.json`, 2026-27 to 2031-32. Pass it only to run fewer.
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
 - **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
@@ -457,7 +457,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 ## G4: combined run and publish (14:50)
 
 ```sh
-uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --combined <all coded ids>
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 uv run uk-budget-data publish check
@@ -468,6 +468,10 @@ uv run uk-budget-data publish check
   - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
   - **What it doesn't:** the manifest records publication approval, but the command does not read the holds ledger. The Reconciler still checks that measures held by hand have not been approved. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
   - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). The page doesn't show the label yet: a caveat on the area views is a change to the public page, so it's Vahid's and María's call (the coordinator has it), and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
+- **Results by group** (`uk-budget-data demographics`): the same rules for which ids it runs as the results by area, from the same manifest. It writes `demographics.csv` (the average change in household net income of the people in each age group, age band and group of 18 to 24-year-olds in or not in work or education, through the disclosure layer) and `poverty_by_age.csv` (absolute poverty rates before housing costs by age group, without and with each reform; rates only) to `--out-dir`, default `public/data`, and the layer's audit to the private directory (`UK_BUDGET_DISCLOSURE_AUDIT_DIR`).
+  - **Employment status is left out** unless `--employment-reviewer "<name>"` names who accepts the layer's `unchecked_overlap` finding: employment groups overlap the age groups, so the layer can't check what a reader recovers by subtracting one from the other.
+  - **Review rows:** both files need rows in `data_inputs/public_data_review.csv`, as every public file does: `demographics.csv` as a disclosure table, `poverty_by_age.csv` as a national table.
+  - **On the page:** the "Who is affected" section says "not yet published" until the files exist, and offers employment status only when `demographics.csv` has it. Ages and statuses are the data year's in every year (no ageing; see "Projected years have no ageing" below), and the cards say so.
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
