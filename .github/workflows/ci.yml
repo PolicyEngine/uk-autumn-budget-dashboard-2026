@@ -50,7 +50,8 @@ jobs:
       # Four workers, one per vCPU on GitHub's public-repository runner.
       # loadgroup keeps each xdist_group on one worker, and without the
       # reorder it hands out work in collection order, where tests/conftest.py
-      # puts the four slow units first, so each starts on its own worker.
+      # puts the slow units first: the first four start on separate workers, and
+      # the rest follow as each worker's next unit.
       - name: Run tests that need no credentials
         run: >-
           uv run pytest ${{ matrix.tests }} -m "not certified_data"
