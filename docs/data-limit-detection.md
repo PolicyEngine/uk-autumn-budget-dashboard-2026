@@ -58,9 +58,21 @@ core's read order, so a shadowed input is compared too.
 Those readers are derived from the installed model's formula variable names
 and parameter paths, together with both compared systems, rather than a
 second list of SDLT, LBTT and LTT names. Derived calculation caches are
-excluded. Presence matters: a supplied zero differs from no supplied input.
+excluded, so a value seeded into a limited tax's engine calculation cache
+with `put_in_cache(..., derived=True)` is not detected. For example, this
+can replace `sdlt_on_non_residential_property_transactions` without recording
+its limit. Presence matters: a supplied zero differs from no supplied input.
 Receipt records use `input:<variable>`, accepted only for variables covered
 by that same limit.
+
+Totals that contain a limited tax are outside these direct-reader comparisons.
+The detector does not record a limit for neutralising `sdlt_on_transactions`,
+abolishing it through `gov.abolitions`, replacing its formula with zero,
+supplying a one-sided input on it, or setting `sdlt_liable` false. This is the
+accepted "partly computable" scope from round 19's F9 for
+`gov.hmrc.stamp_duty.abolish`. Modifiers that seed the cache or change these totals
+are both held today as hand-written modifiers while a data limit is active, pending
+the two-person attestation of the exact receipt described in the runbook.
 
 The static receipt validator can prove reader names only against the installed
 model. A modifier adding a new reader and supplying it an input is detected,
