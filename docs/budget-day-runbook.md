@@ -222,10 +222,10 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **The check, in G0's commands for the adopted pair and again before a State Pension measure is staged:**
 
   ```sh
-  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
+  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print({limit.key: limit.installed_fixed() for limit in MODEL_LIMITS})"
   ```
 
-  - **What it prints:** `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`.
+  - **What it prints:** each model limit's key, with whether the installed model has its fix. For `state_pension_add_on_uprating`, `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does, and `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once a fix is in the adopted pair, its adoption PR removes the limit, so its key no longer appears.
   - **How it decides:** this is the guard's own check. It parses the installed `additional_state_pension` and requires every formula to read the index as an attribute, so a comment or a string naming it doesn't count.
   - **The CI cross-check:** a test compares this check with the model's behaviour: whether the add-on moves when either full rate rises, for a new State Pension recipient and for a basic one. So a release that fools the code check, or fixes only one pension's add-on, fails CI instead of lifting the guard.
 - **Which measures:** any change that moves either full rate, or September CPI, in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
@@ -287,7 +287,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   The first three are also on the benefit index, so until #2557 is in the pair they record the September CPI limit too.
 - **What the guard does:** as for the September CPI limit. Generation records `pc_minimum_guarantee_uprating` and its reason in the receipt. The measure can be staged provisional, approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such a measure stays out of the first cut and the briefing, and a combined run including one is provisional at most.
 - **When it lifts:** when, in the model as built, the uprating rule for both rates of the guarantee names an index other than the benefit index (`gov.benefit_uprating_cpi`), and that index's April 2026 to April 2027 step reaches the published May to July 2026 earnings growth.
-  - The check reads the tree as the model built it, so a measure can't satisfy it, and 2027-28 rates typed in over a CPI rule don't count. #2557 alone doesn't lift it.
+  - The check reads the tree as the model built it, so a measure can't satisfy it, and 2027-28 rates typed in over a CPI rule don't count. #2557 alone doesn't lift it. A modifier that rebuilds the parameters on both sides changes the model: review it as one.
   - **If the UK hub's build raises the guarantee some other way,** such as with a formula or typed-in rates, `test_the_fix_check_agrees_with_the_guarantee_pensioners_get` fails in the adoption PR, and a person decides there whether the limit goes.
   - **Otherwise** the guard's tripwire test fails in the adoption PR, which removes the limit.
 
@@ -371,7 +371,7 @@ mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
   --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
-uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
+uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print({limit.key: limit.installed_fixed() for limit in MODEL_LIMITS})"
 curl -s "$HOUSEHOLD_API/api/version"
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
@@ -386,7 +386,7 @@ uv run uk-budget-data publish status
 What they check:
 - `certified_data`: the token reads the bundle's data and the tests' small dataset, each file by its pinned hash (#12, #70);
 - the certified-data tests, which fail rather than skip here;
-- the State Pension check: whether the model has policyengine-uk #2336;
+- the model-limit check: whether the model has each limit's fix (policyengine-uk #2336, #2533's fix, and the minimum guarantee's earnings fix);
 - `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
 - `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
 
@@ -398,7 +398,7 @@ Record in the clock table:
 - the dataset SHA-256;
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`);
-- whether the model has policyengine-uk #2336 (the State Pension check above prints `True`). If not, every State Pension measure today is held at provisional.
+- which model limits are active: each key the model-limit check prints with `False`. While `state_pension_add_on_uprating` is active, every State Pension measure today is held at provisional; the other two hold their measures from 2027 (see "How a measure must be written").
 
 **The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check can pass on plumbing alone, and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
