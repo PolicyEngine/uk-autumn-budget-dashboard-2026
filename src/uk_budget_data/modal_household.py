@@ -19,6 +19,13 @@ The image installs exactly what ``uv.lock`` pins (``uv_sync``), so the app
 calculates with the same policyengine.py, policyengine-uk and
 policyengine-core as the national figures.
 
+Modal imports this module twice: where it is deployed from, with the
+repository checked out, to define the image; and again in every container,
+from /root/modal_household.py, with only the image's files. So the image is
+defined only where the repository is (``modal.is_local()``): any other work
+at import that needs the repository would deploy cleanly and then stop
+every container from starting.
+
 Deploy from a commit on main with the "Deploy the household impact app"
 workflow (``deploy-household-impact.yml``), which runs::
 
@@ -31,21 +38,33 @@ from pathlib import Path
 import modal
 
 APP_NAME = "uk-budget-2026-household-impact"
-# The repository: pyproject.toml and uv.lock
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PYTHON_VERSION = (PROJECT_ROOT / ".python-version").read_text().strip()
 # Idle seconds before a container stops; none run while nobody asks
 SCALEDOWN_WINDOW = 15 * 60
 MAX_CONTAINERS = 20
 # The year the snapshot's warm-up household is calculated in
 WARMUP_YEAR = 2029
+# Files of the package the image leaves out. Modal's default leaves out
+# every file but .py, and the package reads budget_years.json on import.
+PACKAGE_IGNORE = ["**/__pycache__/**"]
 
-image = (
-    modal.Image.debian_slim(python_version=PYTHON_VERSION)
-    .uv_sync(str(PROJECT_ROOT), frozen=True)
-    .env({"GIT_SHA": os.environ.get("GIT_SHA", "")})
-    .add_local_python_source("uk_budget_data")
-)
+
+def build_image() -> modal.Image:
+    """The image, defined from the repository where the app is deployed
+    from. In a container it is already built, and this stands in for it."""
+    if not modal.is_local():
+        return modal.Image.debian_slim()
+    # The repository: .python-version, pyproject.toml and uv.lock
+    project_root = Path(__file__).resolve().parents[2]
+    python_version = (project_root / ".python-version").read_text().strip()
+    return (
+        modal.Image.debian_slim(python_version=python_version)
+        .uv_sync(str(project_root), frozen=True)
+        .env({"GIT_SHA": os.environ.get("GIT_SHA", "")})
+        .add_local_python_source("uk_budget_data", ignore=PACKAGE_IGNORE)
+    )
+
+
+image = build_image()
 
 app = modal.App(APP_NAME, image=image)
 
