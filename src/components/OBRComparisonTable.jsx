@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
 import { displayYears } from "../utils/displayYears";
+import OBRDumbbellChart from "./OBRDumbbellChart";
 
-function OBRComparisonTable({ selectedPolicies }) {
+function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
+  const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
     // Fetch both OBR comparison data and PolicyEngine budgetary impact data
@@ -152,7 +154,28 @@ function OBRComparisonTable({ selectedPolicies }) {
         </div>
       )}
 
-      <div className="comparison-table-wrapper">
+      <OBRDumbbellChart
+        policies={policies}
+        year={selectedYear}
+        showBehavioural={showBehavioural}
+      />
+
+      <button
+        type="button"
+        className="obr-table-toggle"
+        aria-expanded={showTable}
+        aria-controls="obr-comparison-table"
+        onClick={() => setShowTable(!showTable)}
+      >
+        {showTable ? "Hide table" : "Show table"}
+      </button>
+
+      {/* The table and its key sit behind the toggle, collapsed by default */}
+      <div
+        id="obr-comparison-table"
+        className="comparison-table-wrapper"
+        hidden={!showTable}
+      >
         <table className="comparison-table">
           <thead>
             <tr>
@@ -201,7 +224,7 @@ function OBRComparisonTable({ selectedPolicies }) {
         </table>
       </div>
 
-      <div className="comparison-legend">
+      <div className="comparison-legend" hidden={!showTable}>
         <span className="legend-item">
           <span className="legend-dot diff-small"></span>
           Difference &lt; £0.5bn

@@ -561,7 +561,10 @@ function App() {
                         </button>
                         {showOBRComparison && (
                           <div className="obr-content">
-                            <OBRComparisonTable selectedPolicies={selectedPolicies} />
+                            <OBRComparisonTable
+                              selectedPolicies={selectedPolicies}
+                              selectedYear={distributionalYear}
+                            />
                           </div>
                         )}
                       </div>
