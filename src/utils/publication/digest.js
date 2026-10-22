@@ -14,6 +14,7 @@
 
 import canonicalize from "canonicalize";
 import contract from "./contract.json";
+import { attestationProblems } from "./manifest";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -103,6 +104,73 @@ function sameSet(left, right) {
   const a = [...new Set(left ?? [])].sort();
   const b = [...new Set(right ?? [])].sort();
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** The receipt records one proof for each modifier bound on each side. */
+export function modifierTemplatesProblems(receipt) {
+  const proofs = receipt?.dashboard?.modifier_templates;
+  if (
+    proofs === null ||
+    typeof proofs !== "object" ||
+    Array.isArray(proofs) ||
+    !sameSet(Object.keys(proofs), ["baseline", "reform"])
+  ) {
+    return ["the receipt does not record its modifier templates"];
+  }
+  const problems = [];
+  for (const side of ["baseline", "reform"]) {
+    if (!Array.isArray(proofs[side])) {
+      problems.push(`the receipt's ${side} modifier templates are malformed`);
+      continue;
+    }
+    const members = receipt?.dashboard?.members;
+    const bound = (identity) => identity?.binding === "code_revision";
+    const count =
+      Array.isArray(members) && members.length > 0
+        ? members.filter(
+            (member) =>
+              (side !== "baseline" || member?.baseline_bound === true) &&
+              bound(member?.[side]),
+          ).length
+        : Number(bound(receipt?.execution_receipt?.[side]));
+    if (proofs[side].length !== count) {
+      problems.push(
+        `the receipt's ${side} modifier templates do not match its bound modifiers`,
+      );
+    }
+    for (const proof of proofs[side]) {
+      if (proof === null) continue;
+      if (
+        !Array.isArray(proof) ||
+        proof.length === 0 ||
+        proof.some((id) => !contract.measure_templates.includes(id)) ||
+        !sameList(proof, [...new Set(proof)].sort())
+      ) {
+        problems.push(`the receipt's ${side} modifier templates are malformed`);
+        break;
+      }
+    }
+  }
+  if (
+    ["baseline", "reform"].some(
+      (side) => Array.isArray(proofs[side]) && proofs[side].includes(null),
+    ) &&
+    (typeof receipt?.dashboard?.generation_id !== "string" ||
+      !/^[0-9a-f]{32}$/.test(receipt.dashboard.generation_id) ||
+      receipt.dashboard.generation_id.length !== 32)
+  ) {
+    problems.push("the receipt's hand-written generation id is malformed");
+  }
+  return problems;
+}
+
+function isHeld(receipt) {
+  return (
+    contract.data_limits_active &&
+    ["baseline", "reform"].some((side) =>
+      receipt?.dashboard?.modifier_templates?.[side]?.includes(null),
+    )
+  );
 }
 
 /**
@@ -195,6 +263,24 @@ export async function receiptProblems(receipt, key, entry) {
       "the receipt records model limits: held at provisional, so it " +
         "cannot be shown as approved",
     );
+  }
+  // Pure template proofs are recorded at generation time. Any hand-written
+  // modifier, on either side or in a combined run, needs an attestation of
+  // this complete receipt, including its generation timestamp and id.
+  const templateProblems = modifierTemplatesProblems(receipt);
+  problems.push(...templateProblems);
+  if (templateProblems.length === 0 && isHeld(receipt)) {
+    const attestation = entry.attestation;
+    if (
+      attestationProblems(attestation, key).length > 0 ||
+      attestation.receipt_sha256 !== (await jcsSha256(receipt))
+    ) {
+      problems.push(
+        "held: a hand-written modifier while a data limit is active " +
+          "(coordinator's ruling on #51); attest it in " +
+          `data_inputs/publication/attestations/${key}.json`,
+      );
+    }
   }
   return problems;
 }

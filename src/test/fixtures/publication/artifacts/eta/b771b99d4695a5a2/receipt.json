@@ -29,30 +29,42 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "abcb0bf409161a9fdba979d9fc254c5f95aedbf99846b0fd53ce5514008c5417",
-      "receipt_sha256": "c8a67fea78b4c0cbc0692a092993818c56ff7c933fcb4e4f5a4ef52a0043eb81"
+      "outputs_sha256": "1b510ea706bf6e97fa4fc9f5794f6ed9659513a562ec7fb067311a763681b00e",
+      "receipt_sha256": "ae96e708b4c49f2e62720b1d707ba448bf8fbfaa74069dfd06fc28961f8534bf"
     },
     "files": {
-      "budgetary_impact.csv": "a8540037193cb4045f536fa9e2916565265f4c7516780f0f3092c39f5b56847a",
-      "distributional_impact.csv": "b6718d684ce2219ba4f32e38303e557a15b9fdd0c27812939ffd76a81cf5e1c3",
-      "household_scatter_binned.csv": "5e531e6d09c6fd3dc94f193e674275f28216c6fcb6610ded996ec85d0a505234",
-      "income_curve.csv": "8c6fb85ade4a11de3d21c7fc00d1ba483b9a1e0c2e56153054231d81a8d4b773",
-      "metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
-      "winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733"
+      "budgetary_impact.csv": "133e061e5262b1a15d66a91fffe038a2773b4a998b7483b2481d55b84750ef9d",
+      "distributional_impact.csv": "bd1ab71bd08975706b669b0b8eaa418857235dd06d676f3d2a9380dadd1526a9",
+      "household_scatter_binned.csv": "8d1a477dff60c730f23cb14eca4521105e8d62f24a764c6e8550ea9bf89bf9f8",
+      "income_curve.csv": "3e064bb10db87ce846556d15a071de4d120c4200b6cba9dd40d0cf61e3092481",
+      "metrics.csv": "272dac329abf27c8245eec820d9bbaa66d8ed393ac0869a2aac068119fc94111",
+      "winners_losers.csv": "d6910eecf8dab6bd685bbcb4d5a666fa9fa3d8ddd75ec56dc97a2c4f71101fd8"
     },
-    "generated_at": "2026-10-22T11:32:15.982656+00:00",
+    "generated_at": "2026-10-22T14:02:09.257501+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "gamma",
+    "key": "eta",
     "measure_ids": [
-      "gamma"
+      "eta"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [],
+    "model_limits": [
+      {
+        "key": "benefit_uprating_september_cpi",
+        "parameters": [
+          "gov.hmrc.child_benefit.amount.eldest"
+        ],
+        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
+      }
+    ],
     "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -65,7 +77,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "gamma baseline"
+      "name": "eta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -105,13 +117,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "abcb0bf409161a9fdba979d9fc254c5f95aedbf99846b0fd53ce5514008c5417",
+    "outputs_sha256": "1b510ea706bf6e97fa4fc9f5794f6ed9659513a562ec7fb067311a763681b00e",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "gamma",
-      "reform_sha256": "7c1c5ceafaa678dcedab02064eebda65cf2c513cca9329c2bcc9a981d8ea7f5c",
+      "name": "eta",
+      "reform_sha256": "f98f1a3f7b5e64f25b85eeb84f2f8e2fdfd2ec49e1b0479e0ea0101e6d94c4c5",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

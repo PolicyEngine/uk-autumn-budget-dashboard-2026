@@ -29,38 +29,37 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "1b510ea706bf6e97fa4fc9f5794f6ed9659513a562ec7fb067311a763681b00e",
-      "receipt_sha256": "ae96e708b4c49f2e62720b1d707ba448bf8fbfaa74069dfd06fc28961f8534bf"
+      "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
+      "receipt_sha256": "5e22db29da90a2c9e92a1a26a58a3ae036086c3396b4a2c0ff918bc06344b4fc"
     },
     "files": {
-      "budgetary_impact.csv": "133e061e5262b1a15d66a91fffe038a2773b4a998b7483b2481d55b84750ef9d",
-      "distributional_impact.csv": "bd1ab71bd08975706b669b0b8eaa418857235dd06d676f3d2a9380dadd1526a9",
-      "household_scatter_binned.csv": "8d1a477dff60c730f23cb14eca4521105e8d62f24a764c6e8550ea9bf89bf9f8",
-      "income_curve.csv": "3e064bb10db87ce846556d15a071de4d120c4200b6cba9dd40d0cf61e3092481",
-      "metrics.csv": "272dac329abf27c8245eec820d9bbaa66d8ed393ac0869a2aac068119fc94111",
-      "winners_losers.csv": "d6910eecf8dab6bd685bbcb4d5a666fa9fa3d8ddd75ec56dc97a2c4f71101fd8"
+      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
+      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
+      "household_scatter_binned.csv": "d9b4a255b8b19ecfb4ec10e0664df4a0ec1dd90e5357597b71edd9b8b2974a90",
+      "income_curve.csv": "a271e3e7d6bc97cf626b9f0f7dccb86c4c204c4d0a9c8924a7a18e59900b1c69",
+      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
+      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
     },
-    "generated_at": "2026-10-22T11:32:16.179118+00:00",
+    "generated_at": "2026-10-22T14:02:08.939401+00:00",
+    "generation_id": "ef0703ef149b4b81a33ae599e462cfaf",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "eta",
+    "key": "delta",
     "measure_ids": [
-      "eta"
+      "delta"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [
-      {
-        "key": "benefit_uprating_september_cpi",
-        "parameters": [
-          "gov.hmrc.child_benefit.amount.eldest"
-        ],
-        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
-      }
-    ],
+    "model_limits": [],
     "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        null
+      ]
+    },
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -73,7 +72,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "eta baseline"
+      "name": "delta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -113,13 +112,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "1b510ea706bf6e97fa4fc9f5794f6ed9659513a562ec7fb067311a763681b00e",
+    "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
-      "binding": "content",
+      "binding": "code_revision",
       "kind": "reform",
-      "name": "eta",
-      "reform_sha256": "f98f1a3f7b5e64f25b85eeb84f2f8e2fdfd2ec49e1b0479e0ea0101e6d94c4c5",
+      "name": "delta",
+      "reform_sha256": "06ec53a980e3e571631b4b2dcd92cba283fe63a0457095c4cb5d99ae67a3e9f1",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

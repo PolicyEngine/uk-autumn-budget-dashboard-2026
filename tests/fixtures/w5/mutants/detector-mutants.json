@@ -1,0 +1,72 @@
+{
+  "metadata_end_omitted": [
+    "src/uk_budget_data/data_limits.py",
+    "    \"end\",\n",
+    ""
+  ],
+  "abolitions_ignored": [
+    "src/uk_budget_data/data_limits.py",
+    "abolished = _abolitions_changed(base_system, reform_system, behaviour)",
+    "abolished = set()"
+  ],
+  "abolition_cached_views_ignored": [
+    "src/uk_budget_data/data_limits.py",
+    "for left, right in zip(*views):",
+    "for left, right in ():"
+  ],
+  "stored_inputs_not_recorded": [
+    "src/uk_budget_data/data_limits.py",
+    "differing += _inputs_changed(sim_baseline, sim_reform, limit)",
+    "differing += []"
+  ],
+  "stored_input_values_ignored": [
+    "src/uk_budget_data/data_limits.py",
+    "or not _equal(before[key], after[key])",
+    "or False"
+  ],
+  "input_paths_accept_unrelated_variables": [
+    "src/uk_budget_data/data_limits.py",
+    "and not _input_path(path, limit)",
+    "and False"
+  ],
+  "input_readers_not_derived": [
+    "src/uk_budget_data/data_limits.py",
+    "                found.add(name)",
+    "                pass"
+  ],
+  "cache_parameter_metadata_omitted": [
+    "src/uk_budget_data/data_limits.py",
+    "    \"exhaustive_parameter_dependencies\",\n",
+    ""
+  ],
+  "disk_inputs_hidden_by_memory": [
+    "src/uk_budget_data/data_limits.py",
+    "for storage in (holder._memory_storage, holder._disk_storage):",
+    "for storage in (holder._memory_storage,):"
+  ],
+  "storage_input_values_not_saved": [
+    "src/uk_budget_data/data_limits.py",
+    "values.append(_copied(value))",
+    "values.append(None)"
+  ],
+  "entity_mapping_metadata_ignored": [
+    "src/uk_budget_data/data_limits.py",
+    "if name == \"entity\":",
+    "if False:"
+  ],
+  "abolition_cached_items_read_as_attributes": [
+    "src/uk_budget_data/data_limits.py",
+    "_views(system, prefix, behaviour, True)",
+    "_views(system, prefix, behaviour, False)"
+  ],
+  "abolition_cached_only_ancestor_ignored": [
+    "src/uk_budget_data/data_limits.py",
+    "            complete = False\n            break",
+    "            return None"
+  ],
+  "empty_registry_cleanup_unguarded": [
+    "src/uk_budget_data/data_limits.py",
+    "if _LIMITED_PREFIXES:\n    del _prefix, _parts_of, _depth",
+    "del _prefix, _parts_of, _depth"
+  ]
+}

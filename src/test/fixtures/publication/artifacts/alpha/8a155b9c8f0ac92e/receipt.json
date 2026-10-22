@@ -14,15 +14,7 @@
     },
     "composition": null,
     "config_baseline": null,
-    "data_limits": [
-      {
-        "key": "additional_dwelling_purchases",
-        "parameters": [
-          "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
-        ],
-        "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this."
-      }
-    ],
+    "data_limits": [],
     "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
@@ -37,30 +29,34 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "1d942d3b30562d174e0310a456095b63ad9d4ecfceae21db9317238efe7fdcd5",
-      "receipt_sha256": "08b7178d24f6c4d59aa2e4d73909b6bcc5ac6166cdae9cf8cca51e98949ce14f"
+      "outputs_sha256": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e",
+      "receipt_sha256": "8ff176bc448fbfefc722c39496790fb806e26f8e3f6aa0564aae43cbcd9aa3b9"
     },
     "files": {
-      "budgetary_impact.csv": "50abe4f9c12cad36c31d69b0410db5cfe2612cbb9c263198888e6a834353c1a5",
-      "distributional_impact.csv": "040dd07c94c6bcd18a9b82b734c69e3d568a6e09492c7f394994327ce0154b0c",
-      "household_scatter_binned.csv": "c9838035cbc4fe302534ba6956dbecca9193281f78209a703b8d4c3144ccbeef",
-      "income_curve.csv": "efedcd0f23619e521d7c63db4be5df2dd9c27ad3f1b622bc496c30d7afd22287",
-      "metrics.csv": "85c86ac747ef3f3c1d373c82b35681078f7358c2432a2934d0a04b8f40ea6d20",
-      "winners_losers.csv": "eba5cf5ec98832c177a9f28c8ecd9d747f50e958a0a495395293eeba84ae53ad"
+      "budgetary_impact.csv": "b1eda58d7c5800d22e6a2e49574f282bcdf2f0b688d6dbe9cc91cc1dee644f43",
+      "distributional_impact.csv": "81a5bb4dfce3ac4059178729877d944bd51142bd09605f822d63496c22f67fb0",
+      "household_scatter_binned.csv": "9e76f6c9f4a52445281f6194ba881939fb41dd6f0b825ac211b1daaebb1b7164",
+      "income_curve.csv": "c4171e1b5ed81b902548de092451be0fd4e9d735dccf4967c1e07e255e5310af",
+      "metrics.csv": "e6efec18ecc0730939225c5465636e4e44fa09e99520d5817300982d983ea5e3",
+      "winners_losers.csv": "812d47f4fb84077214197dcbb8099dd637daa67dc5278a6ce90fa9de304f6df4"
     },
-    "generated_at": "2026-10-22T11:32:16.059015+00:00",
+    "generated_at": "2026-10-22T14:02:08.836525+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "epsilon",
+    "key": "alpha",
     "measure_ids": [
-      "epsilon"
+      "alpha"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
     "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -73,7 +69,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "epsilon baseline"
+      "name": "alpha baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -113,13 +109,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "1d942d3b30562d174e0310a456095b63ad9d4ecfceae21db9317238efe7fdcd5",
+    "outputs_sha256": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "epsilon",
-      "reform_sha256": "6d64fa2298d4c04d10be25e40776ed4c289e668287d5cbce1d820a214f81ad54",
+      "name": "alpha",
+      "reform_sha256": "30d1752d96dc171b2110dc1bfe897bf064aa21c6adc68cb8af2b350afb70c247",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

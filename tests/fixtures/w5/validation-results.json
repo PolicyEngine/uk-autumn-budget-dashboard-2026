@@ -1,0 +1,1686 @@
+{
+  "canonical_inventory": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/final-full-nodeids.json",
+  "canonical_inventory_sha256": "9a4c5a50aacff854f41d9f6972535f3a64a889ea3d7a8223e96b8e5bd36e62d2",
+  "environments": {
+    "pe6100": {
+      "all_expected_passed": false,
+      "all_expected_successful": true,
+      "attempts_low_to_high_precedence": [
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/final-unit-baseline-pe6100.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "isolated_units",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "seconds": 13.395,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/final-unit-baseline-pe6100.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 1,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/private/tmp/w5-limits-final-pe6100.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "initial_ordered",
+          "raw_counts": {
+            "error": 0,
+            "failed": 1,
+            "passed": 131,
+            "skipped": 0
+          },
+          "seconds": 1652.211,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 1,
+            "passed": 131,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 1,
+            "passed": 131,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/private/tmp/w5-limits-final-pe6100.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": true,
+          "duplicate_rows": 0,
+          "evidence_used": "/private/tmp/w5-limits-resume-pe6100.xml",
+          "final_xml_complete": true,
+          "live_reports": "/private/tmp/w5-limits-resume-pe6100-reports.jsonl",
+          "name": "resume",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 319,
+            "skipped": 2
+          },
+          "seconds": 2707.502,
+          "selected_completed_count": 321,
+          "selected_count": 321,
+          "selected_inventory": "/private/tmp/w5-limits-resume-pe6100-nodeids.json",
+          "selected_missing_nodeids": [],
+          "selected_unique_count": 321,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 319,
+            "skipped": 2
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 319,
+            "skipped": 2
+          },
+          "warnings": [],
+          "xml": "/private/tmp/w5-limits-resume-pe6100.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/private/tmp/w5-model-fixture-retry-pe6100.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "model_fixture_retry",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "seconds": 65.698,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/private/tmp/w5-model-fixture-retry-pe6100.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe6100.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "publication_data_final",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "seconds": 85.718,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe6100.xml",
+          "xml_present": true
+        }
+      ],
+      "incomplete": false,
+      "per_file": {
+        "tests/test_attestation_inputs.py": {
+          "completed": 21,
+          "error": 0,
+          "expected": 21,
+          "fail": 0,
+          "pass": 21,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_attestation_paths.py": {
+          "completed": 6,
+          "error": 0,
+          "expected": 6,
+          "fail": 0,
+          "pass": 6,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_data_limits.py": {
+          "completed": 248,
+          "error": 0,
+          "expected": 248,
+          "fail": 0,
+          "pass": 246,
+          "skip": 2,
+          "unrun": 0
+        },
+        "tests/test_data_limits_hardening.py": {
+          "completed": 62,
+          "error": 0,
+          "expected": 62,
+          "fail": 0,
+          "pass": 62,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_data_limits_hardening_unit.py": {
+          "completed": 14,
+          "error": 0,
+          "expected": 14,
+          "fail": 0,
+          "pass": 14,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_model_limits.py": {
+          "completed": 57,
+          "error": 0,
+          "expected": 57,
+          "fail": 0,
+          "pass": 57,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_attestations.py": {
+          "completed": 28,
+          "error": 0,
+          "expected": 28,
+          "fail": 0,
+          "pass": 28,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_data_limits.py": {
+          "completed": 48,
+          "error": 0,
+          "expected": 48,
+          "fail": 0,
+          "pass": 48,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_hardening_unit.py": {
+          "completed": 33,
+          "error": 0,
+          "expected": 33,
+          "fail": 0,
+          "pass": 33,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_template_proof.py": {
+          "completed": 37,
+          "error": 0,
+          "expected": 37,
+          "fail": 0,
+          "pass": 37,
+          "skip": 0,
+          "unrun": 0
+        }
+      },
+      "required_broad_run": "resume",
+      "resolved_failures": [
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-limits-final-pe6100.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "initial_ordered",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_model_limits.py::test_generation_records_the_limit_from_the_scenarios_and_the_trees",
+          "resolved_by": {
+            "evidence": "/private/tmp/w5-model-fixture-retry-pe6100.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "model_fixture_retry",
+            "when": "junit"
+          }
+        }
+      ],
+      "scope": [
+        "tests/test_attestation_inputs.py",
+        "tests/test_attestation_paths.py",
+        "tests/test_data_limits.py",
+        "tests/test_data_limits_hardening.py",
+        "tests/test_data_limits_hardening_unit.py",
+        "tests/test_model_limits.py",
+        "tests/test_publication_attestations.py",
+        "tests/test_publication_data_limits.py",
+        "tests/test_publication_hardening_unit.py",
+        "tests/test_template_proof.py"
+      ],
+      "selected_run_counts": {
+        "initial_ordered": 131,
+        "isolated_units": 53,
+        "model_fixture_retry": 1,
+        "publication_data_final": 48,
+        "resume": 321
+      },
+      "skip_details": [
+        {
+          "evidence": "/private/tmp/w5-limits-resume-pe6100.xml",
+          "nodeid": "tests/test_data_limits.py::test_building_a_certified_simulation_reads_no_limited_input",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "resume"
+        },
+        {
+          "evidence": "/private/tmp/w5-limits-resume-pe6100.xml",
+          "nodeid": "tests/test_data_limits.py::test_the_certified_data_still_lack_every_limits_input",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "resume"
+        }
+      ],
+      "totals": {
+        "completed": 554,
+        "error": 0,
+        "expected": 554,
+        "fail": 0,
+        "pass": 552,
+        "skip": 2,
+        "unrun": 0
+      },
+      "unattributed_failures": [],
+      "unresolved_failures": [],
+      "unresolved_nodeids": {
+        "failed": [],
+        "unrun": []
+      }
+    },
+    "pe660": {
+      "all_expected_passed": false,
+      "all_expected_successful": true,
+      "attempts_low_to_high_precedence": [
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/final-unit-baseline.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "isolated_units",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "seconds": 8.673,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 53,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/final-unit-baseline.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 2,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/private/tmp/w5-full-final-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "initial_full",
+          "raw_counts": {
+            "error": 0,
+            "failed": 2,
+            "passed": 581,
+            "skipped": 0
+          },
+          "seconds": 5147.235,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 2,
+            "passed": 581,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 2,
+            "passed": 581,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/private/tmp/w5-full-final-pe660.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": true,
+          "duplicate_rows": 0,
+          "evidence_used": "/private/tmp/w5-remainder-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/remainder-pe660-reports.jsonl",
+          "name": "remainder",
+          "raw_counts": {
+            "error": 0,
+            "failed": 5,
+            "passed": 1365,
+            "skipped": 5
+          },
+          "seconds": 4238.681,
+          "selected_completed_count": 1375,
+          "selected_count": 1375,
+          "selected_inventory": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/remainder-pe660-nodeids.json",
+          "selected_missing_nodeids": [],
+          "selected_unique_count": 1375,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 5,
+            "passed": 1365,
+            "skipped": 5
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 5,
+            "passed": 1365,
+            "skipped": 5
+          },
+          "warnings": [],
+          "xml": "/private/tmp/w5-remainder-pe660.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/model-limits-final-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "model_final",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 57,
+            "skipped": 0
+          },
+          "seconds": 648.883,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 57,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 57,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/model-limits-final-pe660.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "publication_data_final",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "seconds": 183.517,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 48,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/api-concurrency-rerun-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "api_retry",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "seconds": 57.169,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/api-concurrency-rerun-pe660.xml",
+          "xml_present": true
+        },
+        {
+          "anonymous_rows_ignored": 0,
+          "broad_attempt_scope_complete": false,
+          "duplicate_rows": 0,
+          "evidence_used": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/worker-exact-rerun-pe660.xml",
+          "final_xml_complete": true,
+          "live_reports": null,
+          "name": "worker_retry",
+          "raw_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "seconds": 887.554,
+          "selected_completed_count": null,
+          "selected_count": null,
+          "selected_inventory": null,
+          "selected_missing_nodeids": null,
+          "selected_unique_count": null,
+          "status": "complete",
+          "unattributed_failures": [],
+          "unexpected_nodeids": [],
+          "unique_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "unique_expected_counts": {
+            "error": 0,
+            "failed": 0,
+            "passed": 1,
+            "skipped": 0
+          },
+          "warnings": [],
+          "xml": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/worker-exact-rerun-pe660.xml",
+          "xml_present": true
+        }
+      ],
+      "incomplete": false,
+      "per_file": {
+        "tests/test_api_concurrency.py": {
+          "completed": 4,
+          "error": 0,
+          "expected": 4,
+          "fail": 0,
+          "pass": 4,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_api_url.py": {
+          "completed": 2,
+          "error": 0,
+          "expected": 2,
+          "fail": 0,
+          "pass": 2,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_attestation_inputs.py": {
+          "completed": 21,
+          "error": 0,
+          "expected": 21,
+          "fail": 0,
+          "pass": 21,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_attestation_paths.py": {
+          "completed": 6,
+          "error": 0,
+          "expected": 6,
+          "fail": 0,
+          "pass": 6,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_budget_years.py": {
+          "completed": 23,
+          "error": 0,
+          "expected": 23,
+          "fail": 0,
+          "pass": 23,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_bundle_adoption.py": {
+          "completed": 113,
+          "error": 0,
+          "expected": 113,
+          "fail": 0,
+          "pass": 113,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_calculators.py": {
+          "completed": 12,
+          "error": 0,
+          "expected": 12,
+          "fail": 0,
+          "pass": 12,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_certified_data.py": {
+          "completed": 37,
+          "error": 0,
+          "expected": 37,
+          "fail": 0,
+          "pass": 37,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_check_public_data.py": {
+          "completed": 28,
+          "error": 0,
+          "expected": 28,
+          "fail": 0,
+          "pass": 28,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_check_public_files_build.py": {
+          "completed": 4,
+          "error": 0,
+          "expected": 4,
+          "fail": 0,
+          "pass": 4,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_cli.py": {
+          "completed": 13,
+          "error": 0,
+          "expected": 13,
+          "fail": 0,
+          "pass": 13,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_cloudbuild.py": {
+          "completed": 23,
+          "error": 0,
+          "expected": 23,
+          "fail": 0,
+          "pass": 23,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_cloudbuild_rollback.py": {
+          "completed": 44,
+          "error": 0,
+          "expected": 44,
+          "fail": 0,
+          "pass": 44,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_combine.py": {
+          "completed": 18,
+          "error": 0,
+          "expected": 18,
+          "fail": 0,
+          "pass": 18,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_data_limits.py": {
+          "completed": 248,
+          "error": 0,
+          "expected": 248,
+          "fail": 0,
+          "pass": 246,
+          "skip": 2,
+          "unrun": 0
+        },
+        "tests/test_data_limits_hardening.py": {
+          "completed": 62,
+          "error": 0,
+          "expected": 62,
+          "fail": 0,
+          "pass": 62,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_data_limits_hardening_unit.py": {
+          "completed": 14,
+          "error": 0,
+          "expected": 14,
+          "fail": 0,
+          "pass": 14,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_deploy_smoke.py": {
+          "completed": 48,
+          "error": 0,
+          "expected": 48,
+          "fail": 0,
+          "pass": 48,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_deploy_workflow.py": {
+          "completed": 42,
+          "error": 0,
+          "expected": 42,
+          "fail": 0,
+          "pass": 42,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_engine_order.py": {
+          "completed": 5,
+          "error": 0,
+          "expected": 5,
+          "fail": 0,
+          "pass": 5,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_geography.py": {
+          "completed": 101,
+          "error": 0,
+          "expected": 101,
+          "fail": 0,
+          "pass": 101,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_household_calculator_route.py": {
+          "completed": 33,
+          "error": 0,
+          "expected": 33,
+          "fail": 0,
+          "pass": 33,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_household_fixtures.py": {
+          "completed": 2,
+          "error": 0,
+          "expected": 2,
+          "fail": 0,
+          "pass": 2,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_household_route.py": {
+          "completed": 34,
+          "error": 0,
+          "expected": 34,
+          "fail": 0,
+          "pass": 34,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_household_route_parity.py": {
+          "completed": 10,
+          "error": 0,
+          "expected": 10,
+          "fail": 0,
+          "pass": 10,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_household_scatter_sample.py": {
+          "completed": 10,
+          "error": 0,
+          "expected": 10,
+          "fail": 0,
+          "pass": 10,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_keys.py": {
+          "completed": 15,
+          "error": 0,
+          "expected": 15,
+          "fail": 0,
+          "pass": 15,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_template_age.py": {
+          "completed": 5,
+          "error": 0,
+          "expected": 5,
+          "fail": 0,
+          "pass": 5,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_template_composition.py": {
+          "completed": 8,
+          "error": 0,
+          "expected": 8,
+          "fail": 0,
+          "pass": 8,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_template_receipt.py": {
+          "completed": 8,
+          "error": 0,
+          "expected": 8,
+          "fail": 0,
+          "pass": 8,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_template_round3.py": {
+          "completed": 10,
+          "error": 0,
+          "expected": 10,
+          "fail": 0,
+          "pass": 10,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_template_rounding.py": {
+          "completed": 16,
+          "error": 0,
+          "expected": 16,
+          "fail": 0,
+          "pass": 16,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_measure_templates.py": {
+          "completed": 79,
+          "error": 0,
+          "expected": 79,
+          "fail": 0,
+          "pass": 79,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_model_limits.py": {
+          "completed": 57,
+          "error": 0,
+          "expected": 57,
+          "fail": 0,
+          "pass": 57,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_models.py": {
+          "completed": 17,
+          "error": 0,
+          "expected": 17,
+          "fail": 0,
+          "pass": 17,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_native_measure_regressions.py": {
+          "completed": 14,
+          "error": 0,
+          "expected": 14,
+          "fail": 0,
+          "pass": 14,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_personal_impact.py": {
+          "completed": 15,
+          "error": 0,
+          "expected": 15,
+          "fail": 0,
+          "pass": 15,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_personal_impact_speed.py": {
+          "completed": 6,
+          "error": 0,
+          "expected": 6,
+          "fail": 0,
+          "pass": 6,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_personal_impact_workers.py": {
+          "completed": 30,
+          "error": 0,
+          "expected": 30,
+          "fail": 0,
+          "pass": 30,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_pipeline.py": {
+          "completed": 16,
+          "error": 0,
+          "expected": 16,
+          "fail": 0,
+          "pass": 16,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_private_outputs.py": {
+          "completed": 5,
+          "error": 0,
+          "expected": 5,
+          "fail": 0,
+          "pass": 5,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_projection_horizon.py": {
+          "completed": 9,
+          "error": 0,
+          "expected": 9,
+          "fail": 0,
+          "pass": 9,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication.py": {
+          "completed": 47,
+          "error": 0,
+          "expected": 47,
+          "fail": 0,
+          "pass": 47,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_attestations.py": {
+          "completed": 28,
+          "error": 0,
+          "expected": 28,
+          "fail": 0,
+          "pass": 28,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_certified.py": {
+          "completed": 2,
+          "error": 0,
+          "expected": 2,
+          "fail": 0,
+          "pass": 0,
+          "skip": 2,
+          "unrun": 0
+        },
+        "tests/test_publication_contract.py": {
+          "completed": 4,
+          "error": 0,
+          "expected": 4,
+          "fail": 0,
+          "pass": 4,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_data_limits.py": {
+          "completed": 48,
+          "error": 0,
+          "expected": 48,
+          "fail": 0,
+          "pass": 48,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_flow.py": {
+          "completed": 11,
+          "error": 0,
+          "expected": 11,
+          "fail": 0,
+          "pass": 11,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_hardening_unit.py": {
+          "completed": 33,
+          "error": 0,
+          "expected": 33,
+          "fail": 0,
+          "pass": 33,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_publication_review.py": {
+          "completed": 66,
+          "error": 0,
+          "expected": 66,
+          "fail": 0,
+          "pass": 66,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_read_memory_workflow.py": {
+          "completed": 49,
+          "error": 0,
+          "expected": 49,
+          "fail": 0,
+          "pass": 49,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_reconcile.py": {
+          "completed": 203,
+          "error": 0,
+          "expected": 203,
+          "fail": 0,
+          "pass": 203,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_reforms.py": {
+          "completed": 33,
+          "error": 0,
+          "expected": 33,
+          "fail": 0,
+          "pass": 32,
+          "skip": 1,
+          "unrun": 0
+        },
+        "tests/test_released_receipt.py": {
+          "completed": 2,
+          "error": 0,
+          "expected": 2,
+          "fail": 0,
+          "pass": 2,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_student_loan_measure.py": {
+          "completed": 4,
+          "error": 0,
+          "expected": 4,
+          "fail": 0,
+          "pass": 4,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_template_proof.py": {
+          "completed": 37,
+          "error": 0,
+          "expected": 37,
+          "fail": 0,
+          "pass": 37,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_treasury_import.py": {
+          "completed": 150,
+          "error": 0,
+          "expected": 150,
+          "fail": 0,
+          "pass": 150,
+          "skip": 0,
+          "unrun": 0
+        },
+        "tests/test_uc_health_template.py": {
+          "completed": 32,
+          "error": 0,
+          "expected": 32,
+          "fail": 0,
+          "pass": 32,
+          "skip": 0,
+          "unrun": 0
+        }
+      },
+      "required_broad_run": "remainder",
+      "resolved_failures": [
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-full-final-pe660.xml",
+              "message": "assert 0.3794659169798251 < 0.3",
+              "outcome": "failed",
+              "run": "initial_full",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_api_concurrency.py::test_version_answers_while_a_household_is_calculated",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/api-concurrency-rerun-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "api_retry",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-full-final-pe660.xml",
+              "message": "TimeoutError: The worker calls took more than 280 s",
+              "outcome": "failed",
+              "run": "initial_full",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_personal_impact_workers.py::test_workers_give_exactly_the_serial_answer",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/worker-exact-rerun-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "worker_retry",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-remainder-pe660.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "remainder",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_publication_data_limits.py::test_generation_records_a_limited_input_read_while_the_measure_is_built",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "publication_data_final",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-remainder-pe660.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "remainder",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_publication_data_limits.py::test_generation_records_a_modifier_on_a_limited_rate",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "publication_data_final",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-remainder-pe660.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "remainder",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_publication_data_limits.py::test_generation_records_a_parameter_change_on_a_limited_rate",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "publication_data_final",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-remainder-pe660.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "remainder",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_publication_data_limits.py::test_generation_records_nothing_for_a_change_to_the_current_value",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "publication_data_final",
+            "when": "junit"
+          }
+        },
+        {
+          "failed_attempts": [
+            {
+              "evidence": "/private/tmp/w5-remainder-pe660.xml",
+              "message": "AttributeError: 'types.SimpleNamespace' object has no attribute 'get_holder'",
+              "outcome": "failed",
+              "run": "remainder",
+              "when": "junit"
+            }
+          ],
+          "nodeid": "tests/test_publication_data_limits.py::test_generation_records_nothing_for_an_unrelated_measure",
+          "resolved_by": {
+            "evidence": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-probes/publication-data-limits-final-pe660.xml",
+            "message": "",
+            "outcome": "passed",
+            "run": "publication_data_final",
+            "when": "junit"
+          }
+        }
+      ],
+      "scope": "full canonical inventory",
+      "selected_run_counts": {
+        "api_retry": 1,
+        "initial_full": 581,
+        "isolated_units": 1,
+        "model_final": 57,
+        "publication_data_final": 48,
+        "remainder": 1327,
+        "worker_retry": 1
+      },
+      "skip_details": [
+        {
+          "evidence": "/private/tmp/w5-remainder-pe660.xml",
+          "nodeid": "tests/test_data_limits.py::test_building_a_certified_simulation_reads_no_limited_input",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "remainder"
+        },
+        {
+          "evidence": "/private/tmp/w5-remainder-pe660.xml",
+          "nodeid": "tests/test_data_limits.py::test_the_certified_data_still_lack_every_limits_input",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "remainder"
+        },
+        {
+          "evidence": "/private/tmp/w5-remainder-pe660.xml",
+          "nodeid": "tests/test_publication_certified.py::test_generate_reconcile_and_stage_on_a_real_simulation",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "remainder"
+        },
+        {
+          "evidence": "/private/tmp/w5-remainder-pe660.xml",
+          "nodeid": "tests/test_publication_certified.py::test_the_certified_dataset_yields_a_certified_receipt",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "remainder"
+        },
+        {
+          "evidence": "/private/tmp/w5-remainder-pe660.xml",
+          "nodeid": "tests/test_reforms.py::TestDividendTaxIncrease::test_baseline_modifier_sets_pre_budget_rates",
+          "reason": "HUGGING_FACE_TOKEN is not set; the certified dataset is needed",
+          "run": "remainder"
+        }
+      ],
+      "totals": {
+        "completed": 2016,
+        "error": 0,
+        "expected": 2016,
+        "fail": 0,
+        "pass": 2011,
+        "skip": 5,
+        "unrun": 0
+      },
+      "unattributed_failures": [],
+      "unresolved_failures": [],
+      "unresolved_nodeids": {
+        "failed": [],
+        "unrun": []
+      }
+    }
+  },
+  "generated_at": "2026-10-22T13:53:42.459822+00:00",
+  "incomplete": false,
+  "portable_inventory": "tests/fixtures/w5/python-nodeids.json",
+  "precedence_rule": "Explicit listed run order, lowest to highest. Isolated unit baselines only supply fallback coverage. Final XML replaces that attempt's live JSONL; anonymous timing rows are excluded. Duplicate rows within one attempt retain the most severe outcome, so teardown errors cannot be hidden by successful calls. A skipped rerun cannot resolve a failure; a named passing fresh rerun may. Anonymous failures remain visible.",
+  "source_identity": {
+    "baseline": "a63a05e3f946d1e25f5e7fc03416c53c0aa2bdd1",
+    "branch": "w5/data-limits-hardening",
+    "head": "b6c3d3510b22781d07a128aa4a83c4aecbf244d8",
+    "implementation_git_dir": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2/.w5-commits.git",
+    "ordinary_checkout_at_assigned_checkpoint": true,
+    "ordinary_checkout_head": "a63a05e3f946d1e25f5e7fc03416c53c0aa2bdd1",
+    "ordinary_checkout_metadata_read_only": true,
+    "sha256": {
+      ".gitignore": "fae70262f7dce0f747f5244afe5be1b83a15373d62946bb93722f265a37b5de9",
+      "docs/budget-day-runbook.md": "dc0710bb99107984678e3df78e2fcb9989fda27acc985813a0bbc8ec4f41801f",
+      "docs/data-limit-detection.md": "6794ef50a024961bbdf46a5d6e6ab9aa500425b4378cbc1eac94f7aefeeb64a1",
+      "scripts/check_public_data.py": "e3d3ccffd5866913a824e9dbd56c212948638a40c3baaf193bfb2fad5558f8e2",
+      "scripts/data_sources_guide.py": "bffc91d3ee755c1032c33a81159b10ed30b8918d857de1063096323ac3cb43fc",
+      "scripts/generate_blog_charts.py": "a75f04e834907919db3ee6136986b06b483e436d00739a33fa14fdbbc848a8de",
+      "scripts/generate_combined_charts.py": "7e74d4f676e51dbc2e09748df4a7e481d6ba349caea817ebdc7295bdaf73cb1c",
+      "scripts/make_publication_fixture.py": "23f1d38d1bba5ea44e841b9948d3b805ce1239206ce45e420eadcb69ed2aa93b",
+      "scripts/read_api_memory.py": "71ac1880921ce0dcd6b1ec6147fb795ee288f157e6dd8c829b535b590f169985",
+      "scripts/sample_household_scatter.py": "fa67ccf5465fd21c208f377c25e36217163f7e0461fa10b3ba7689f0e154d4c7",
+      "scripts/validate_constituency_data.py": "b30f1c8afdca9733292500be08d1aa35db228b3a0ea1971ebf6a07c570624685",
+      "src/App.jsx": "64f7b2968089a71491c029932c30662d6f59acb35d286bdc80854f40482f1994",
+      "src/app/layout.tsx": "2168ad6908d56d0bc4fd574a9daac6768b6e6ee619f217a88d145a98ac90d990",
+      "src/app/page.tsx": "ec1fb5374645bb3eec9f721ad33b12f8607bad6a6bc502ef4300b8d5df989869",
+      "src/components/BudgetaryImpactChart.jsx": "28a5b51cf630e8bdec33c79a4e050bd3f04010e6ee745e555fc27abc714d179f",
+      "src/components/BudgetaryImpactChart.test.jsx": "69605bfbb41aea22e3c883aac34ccc334868e7d00913bd2220de4cbf2e615f65",
+      "src/components/ConstituencyMap.jsx": "0cfdbd98e0d66afb007eb5d979238ab134eb4acb70e4d3896c3ce0a5e187349e",
+      "src/components/ConstituencyMap.test.jsx": "e5ded080d9b0a8f7e9cc74489cc20744d21749465c437e0dca2c0e53afb8498f",
+      "src/components/DistributionalChart.jsx": "d041f807192b3ecc15d732996721b69d6c1d048a1761a78f9cd9eb96519096a7",
+      "src/components/EmploymentIncomeChart.jsx": "e1af02fd212a1a5f68f9ff8b8ada9db20125219caa825418dbb6d1336fb5283e",
+      "src/components/EmploymentIncomeDiffChart.jsx": "874324b2f3a92082c7043367888d48cdcf3587922751d9df9f10d591140b0971",
+      "src/components/FiscalHeadroom.jsx": "61fe1984530bcc77f27d46dd4dcdacb0e03d72e0b67c84c746dd867a7cd8a13e",
+      "src/components/GeographyMethodology.jsx": "99162d1e34aa7d604f4a1a8ed52aa1e753b1735572533a1777421b62aa1b6c67",
+      "src/components/GeographyMethodology.test.jsx": "f1482cedaf34bdc0d755ceec91854f63647d4de06b6af8dbc55919c520d6acab",
+      "src/components/HouseholdChart.jsx": "62c94b44ec6a55c1cab1a17f72ddd5f45877cc6ac154f55ddef3097dcc0f82de",
+      "src/components/HouseholdImpactChart.jsx": "1852e68be8ce37affeb620e5bac909ce95600a5aea40ba9edb7ca03569c9b4ff",
+      "src/components/LifecycleCalculator.jsx": "570a194e9c16f71bf5fd010bd1fc4d47db85d1c92257f216734c4371091bac53",
+      "src/components/MetricsBar.jsx": "61aeb16aca15ec9c2b19423785ee98e0ed1c2dc53c5fb52e4f652eed0203cd7f",
+      "src/components/OBRComparisonTable.jsx": "39585c0557f7f7076e95e1453fdeabea4fd5a02ae9c6abebec655d23b1383fa9",
+      "src/components/OutcomeToggle.jsx": "5d24e81c91ae37684ee828bf906cece35de78feff4e07eda34a2f0e68d35bcd8",
+      "src/components/PersonalImpactForm.jsx": "07738e63f6fc66daad530fdf6f968e6951ac33112ca3ed1ec1a63c488d3cf1d2",
+      "src/components/PersonalImpactResults.jsx": "b279a8ce9a786bbd71aff362f13b0506423b221e35c5bc252525b1fe5e3b6e30",
+      "src/components/PersonalImpactTab.jsx": "b596e4c3eb5d61f0010317034696136505f10f14043e148c66e241971587f575",
+      "src/components/PolicySelector.jsx": "fa209e9612ee30f3ecb07f8bd021dc4f4af17f30adcbeb52a6e77e51c5e25318",
+      "src/components/RegionView.jsx": "76dddc7cfc8cf3f1bc989187aca19203cfeee40ffeb2fba3320bdd272ab42926",
+      "src/components/RegionView.test.jsx": "3097b83afaefee0b8c67bb0e12dd729b09fb2ed7803e5fb7da4c6f1887593593",
+      "src/components/Results.jsx": "bf85d5914e19619cb76f345291cadf6ee1102abc43c5e82ebd8607c13562093b",
+      "src/components/Sidebar.jsx": "0a04524ce94882330243dc98d25ffb56fd9edc56235cd264ab47943b915847f5",
+      "src/components/WaterfallChart.jsx": "e298692d5cdec85a404dc7add22f06bb4470d6b23dd988ddb02c439ae223a109",
+      "src/components/YearSelector.jsx": "6a692a1c5c2a37b039a9b29d5810989fd4c596ae56ce0429135bd817b7ff4e97",
+      "src/components/YearSlider.jsx": "e571785852051731f0adbd6a60fad182e299518ec75e81c9e62f278c5d199917",
+      "src/components/publication/BinnedHouseholdScatter.jsx": "1dc90af603e9015e77910eeeb5c920d23553700d2eb2d79dc2b7067a624fd4b6",
+      "src/components/publication/CombinedStats.jsx": "0442452d0860acbf4af2268c6ad70e2bc980b6d73b000f5d6831fa89954d9ce8",
+      "src/components/publication/FiscalSummary.jsx": "1ab7b23cf5c99d8c8cbd37d567c1251aa5ee1183da7e678e3c71b186cefdb2b2",
+      "src/components/publication/UnavailableNotice.jsx": "501517179ba6e41d5f93b41a6ea1a3b71e0e6e18fd46f49209ca96cc6580d467",
+      "src/components/publication/publication.test.jsx": "3860ce02b9313abaff8fbe653c3f6003dc7422c24812a1f0e522ac1333544339",
+      "src/hooks/useGeographyData.js": "85507075f11dce26320cb805e1a264c2085afd445cc676e63d5a5ac7b27c4e4e",
+      "src/hooks/useGeographyData.test.jsx": "218fed55df852526eefecaa1c3e54b22e5acd4d06177f3be3aff0d3572d7c87f",
+      "src/hooks/usePublication.js": "e9203ccd94e4170ea07ab9722947005611777732bfdf1d86027f54aed2d0338f",
+      "src/hooks/usePublication.test.jsx": "3682d715f3b20d17238d1a8d54c0af185f2fbaff6334184ff955ee3417feea56",
+      "src/staticPages.test.js": "30a02fb5c899b3ca6adf3f00e86806b855ba3e387a64b2e3bbe487c9559d3eeb",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/budgetary_impact.csv": "b1eda58d7c5800d22e6a2e49574f282bcdf2f0b688d6dbe9cc91cc1dee644f43",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/distributional_impact.csv": "81a5bb4dfce3ac4059178729877d944bd51142bd09605f822d63496c22f67fb0",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/household_scatter_binned.csv": "9e76f6c9f4a52445281f6194ba881939fb41dd6f0b825ac211b1daaebb1b7164",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/income_curve.csv": "c4171e1b5ed81b902548de092451be0fd4e9d735dccf4967c1e07e255e5310af",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/metrics.csv": "e6efec18ecc0730939225c5465636e4e44fa09e99520d5817300982d983ea5e3",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/receipt.json": "d1139f8d7a14d5242b7280673189cbe344866d3bced866896fbd645e3dcbc5c0",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/reconciliation.json": "a83660407656fc2b4860bdcb17900d57821366c35b5e3551d8dd62dbf9124818",
+      "src/test/fixtures/publication/artifacts/alpha/399fc0b2d34cd9c8/winners_losers.csv": "812d47f4fb84077214197dcbb8099dd637daa67dc5278a6ce90fa9de304f6df4",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/distributional_impact.csv": "a3481d4a2b347b4aeb7bca68cc92f8858da5e0798388c42aa3fdb84a6fe7288b",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/household_scatter_binned.csv": "43b04c8663220e9553d23a17776c86f9ee38bb828c20ef62e9c3cdea2b2e2628",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/income_curve.csv": "c80a11732088b4d7b2f9765e7e3781deb098377783e8c29e8a6c38e7972df7d3",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/receipt.json": "8b14f1f9ef9194e02d7514446daa2b3ce1e8463880e4996b057479fc4d233fe3",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/reconciliation.json": "b05132818cf6d78a6ec87fd84da6e0ef0383b857df4dc736ec74281e7ade8f06",
+      "src/test/fixtures/publication/artifacts/beta/dfe9b9dfd52b92b3/winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/budgetary_impact.csv": "4ebccc35f13f77c2c9a6e7182c1dfea6091b7a3edda990a677a8125243f7f509",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/distributional_impact.csv": "2a8c63393c1d822dbcc72cebb2571ae043e7ff075fa75c6dda60eafb0698dfac",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/household_scatter_binned.csv": "448274d20776b11c2f0974b811b2d554a7468ee0c43ddbe4f7a65b6176a7d4cb",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/income_curve.csv": "25d4ee98c97a322d336176eecae6bce8fb23549a72a58415b0fc89e659bf6d62",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/metrics.csv": "6bf8fd4ef06c38ff696e240d1b888c1fefcd4edaca3bd837eb1e800dfd0d1e68",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/receipt.json": "64c6426a8811b9d64ba5e2b8739b9a4b4c642db7128d8c946f5bbcac6bf71c48",
+      "src/test/fixtures/publication/artifacts/combined--alpha+beta/4c710d7511206b09/winners_losers.csv": "4e426166df46c20c67fdaccbd316304a9efb5862636a6a41128ac7484241b8f4",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/household_scatter_binned.csv": "d9b4a255b8b19ecfb4ec10e0664df4a0ec1dd90e5357597b71edd9b8b2974a90",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/income_curve.csv": "a271e3e7d6bc97cf626b9f0f7dccb86c4c204c4d0a9c8924a7a18e59900b1c69",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/receipt.json": "582a60c7fb623f4452ae421f3efbedbde5c22d403e51b3b63118e41c46d8825a",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/reconciliation.json": "94ddefeb0d208130d2bdcf9b850b902c76226242787ed85bd5734239267cdd9c",
+      "src/test/fixtures/publication/artifacts/delta/2c0c6306c04e7eb1/winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/budgetary_impact.csv": "50abe4f9c12cad36c31d69b0410db5cfe2612cbb9c263198888e6a834353c1a5",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/distributional_impact.csv": "040dd07c94c6bcd18a9b82b734c69e3d568a6e09492c7f394994327ce0154b0c",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/household_scatter_binned.csv": "c9838035cbc4fe302534ba6956dbecca9193281f78209a703b8d4c3144ccbeef",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/income_curve.csv": "efedcd0f23619e521d7c63db4be5df2dd9c27ad3f1b622bc496c30d7afd22287",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/metrics.csv": "85c86ac747ef3f3c1d373c82b35681078f7358c2432a2934d0a04b8f40ea6d20",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/receipt.json": "f9b158812358287803476918b0d1112bed3b4eadac1351fdb72f7ce343aa95fe",
+      "src/test/fixtures/publication/artifacts/epsilon/99735d1f6ebb67ba/winners_losers.csv": "eba5cf5ec98832c177a9f28c8ecd9d747f50e958a0a495395293eeba84ae53ad",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/budgetary_impact.csv": "a8540037193cb4045f536fa9e2916565265f4c7516780f0f3092c39f5b56847a",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/distributional_impact.csv": "b6718d684ce2219ba4f32e38303e557a15b9fdd0c27812939ffd76a81cf5e1c3",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/household_scatter_binned.csv": "5e531e6d09c6fd3dc94f193e674275f28216c6fcb6610ded996ec85d0a505234",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/income_curve.csv": "8c6fb85ade4a11de3d21c7fc00d1ba483b9a1e0c2e56153054231d81a8d4b773",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/receipt.json": "8bccbeab4d3bfe096a56d0c442a844c90f4c28a9e6d3274c4e63d0834e54c2f1",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/reconciliation.json": "0dc7074face672471be212a5fe42d6a7a56b4775cfe237d7df534dc9a7a2ec3b",
+      "src/test/fixtures/publication/artifacts/gamma/8c6df407b72ec0d0/winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/budgetary_impact.csv": "3232247c23f75c3d2c8d1b7086c36d1738928ecc93811c0c9419ba8627475c7a",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/distributional_impact.csv": "08e9f78a74ed06a222b635fd33f5f2e9e2561ea53f44e4767e15d6f5d18c6d69",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/household_scatter_binned.csv": "f138628fa84e1aaa8dfd6c9a9d96bb7bf8a823d4d494ae514ff01ee14583d290",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/income_curve.csv": "38524bff2275af68fc27e83773d6cf2afe1d8b74a4d8ff673d29716d35217dba",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/receipt.json": "ffdc9dee6c79e1ccfbca80f555760fa75cdd5cba287bc471c049e3c72e9411a6",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/reconciliation.json": "6b98ab1f74142f19a1a3ee391841e3a08f30111b0798030bf33cdfb89c956828",
+      "src/test/fixtures/publication/artifacts/zeta/0121d9d0744a0f64/winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30",
+      "src/test/fixtures/publication/manifest.json": "0161a1d7065298658d735d6a679a0028535bfd5dcb8a46580548271b5933234d",
+      "src/test/geographyFixture.js": "a9aa7ab6ee125445f0ef17774343c41a60cad9ab9f7082e0da5c8e307b3bd3e7",
+      "src/test/publicationFixture.js": "658d1cd31b1f48cc4e6dff0050c9522286a9cc8b93e97f81dbd7613aaddef6ba",
+      "src/test/setup.js": "49ee850d960e3dd0ca6767f587fd1bbd7da6bfe16d3c9a8fff3e87d60e6ed0a6",
+      "src/uk_budget_data/__init__.py": "3742c5c5b7ce1c85870b4011c0a82aeabce49410c0c4e2a2c75ef5292372bee6",
+      "src/uk_budget_data/api.py": "f1b743b5a1c6bf6d2443332303519e97a9c5cb7bef576d050690ac3c57b58316",
+      "src/uk_budget_data/budget_years.py": "32777adc3c5adeeaff9a3f7bfea6e4f1df9bd0e5580b3524766e5b24695b7d7d",
+      "src/uk_budget_data/bundle_adoption.py": "e22c3dc4f526c5603f1f1397e176e853326b25629dfaab8a78c36793875d7283",
+      "src/uk_budget_data/calculators.py": "1332f23711603874263f2425b54f5012721fe57e788def7ce43f82aa7a5ca629",
+      "src/uk_budget_data/certified_data.py": "f939ea086c674f775c99d872e7dd2e5f0850fe4f4677bee39f2120eca548ece8",
+      "src/uk_budget_data/cli.py": "1cfdc6c67e83210f2175986f2fd0092a2b9119004b5c73fa5c4a6bc9647bdfef",
+      "src/uk_budget_data/data_limits.py": "25117cf79812891a1396d0ef0e969e0f89ec70860c3e0398967d92cec7362f03",
+      "src/uk_budget_data/deploy_smoke.py": "3fb6422ec59ee2f2a3e5dfff9c5cc7f8e4cd74d29572515e4c1bd4f6153bb1a1",
+      "src/uk_budget_data/geography.py": "e691c490659ba5a703a8a4d61e640aedfd32fe6be4cd26abeed61908da972f1d",
+      "src/uk_budget_data/household_route.py": "0e79f3dbe86b53b2fcf3e5de8eaf1ef0d7cc4c2f9c7efb9481f9495a5d281052",
+      "src/uk_budget_data/lifecycle_calculator.py": "8274c4c38aa107146aae0dea01873a577289f53763c5074ccd0665ccb6a5c568",
+      "src/uk_budget_data/lifetime_impact.py": "30dc87c645e65edf87a42eebe8d245c381835475497e3bd7ef1aa0faaa87d970",
+      "src/uk_budget_data/measure_templates.py": "47fba8d89a1e12a878a6d2383553c8fcd546ab8680aea9d76acd4b16e9ac8674",
+      "src/uk_budget_data/model_limits.py": "05c0f19e0417e5904c0cbaf2efcc6ce2ee9a333199c107940d7de9f78a6bc5c0",
+      "src/uk_budget_data/models.py": "b21b26d3d0950b3561845aee3c09ed4581c906861e83edc3859bd45151fa4844",
+      "src/uk_budget_data/personal_impact.py": "cfe2fe308c814a38830490f6e68f5dabf74d769d0810e0d13d05a76403f29949",
+      "src/uk_budget_data/pipeline.py": "3a15782ee112c52c03215acc62d904a6cdeaa77db5585224210c688838058756",
+      "src/uk_budget_data/private_outputs.py": "b8892915f259306ec9c87c73c83df979c21981dfc767a6092aea9a9ed8e4ed2d",
+      "src/uk_budget_data/publication/__init__.py": "5c48edafc0c2f33ad930810e2ef081e783d11f685735aa273a12c650ca35065c",
+      "src/uk_budget_data/publication/artifacts.py": "e9584c34d6b64d984f9dcbd56179b14676d55045a37a16664d23e27be879a9c3",
+      "src/uk_budget_data/publication/attestations.py": "dc0a2c490b85bd84cf2a5112de6c9faf3466dc01df29ef3233f150631048eeb9",
+      "src/uk_budget_data/publication/combine.py": "f8ae02861f9a28ed8dc85a1fc1b5d1cc6a3ee706eed52bb915970728ab6479c7",
+      "src/uk_budget_data/publication/commands.py": "3c1e8b72ed0fc89504ae549a54f175eb53305fa568778f2c40b334248de2bf76",
+      "src/uk_budget_data/publication/contract.py": "b02cbec322fd6d5a034201776409aaff2a2ad699725967bdeb244fb719364781",
+      "src/uk_budget_data/publication/exports.py": "e93f649b619deab670e0d527b8752bb3b2860372ed210c1befee14f425d081fa",
+      "src/uk_budget_data/publication/generate.py": "bfd8e5f8a8bda1cd4573bd93ca3b08b6e080f363ad1a874e193c3b88cebc87b9",
+      "src/uk_budget_data/publication/manifest.py": "ad790d820f66aba53114acc7d64c7edbd5b3a5e113390630f3057937298cd560",
+      "src/uk_budget_data/publication/publish.py": "09fd6dcd6179bb036f995563b71ea960f86290e6ae7dd5713c172dfbdf0ca77b",
+      "src/uk_budget_data/publication/receipt.py": "93b127d8f41d4aa74a8441d593084db7bb57454577615fd2aec86b0fa7bd29ef",
+      "src/uk_budget_data/publication/reconcile.py": "586bfd7a29dda14c75d4f06e13b02da70736b62d6e596efad2c674144e08565c",
+      "src/uk_budget_data/publication/responsiveness.py": "75c2fc618a44dac0ca1c019c1d5846c39680d40a02706fe960cb5635b31c566f",
+      "src/uk_budget_data/publication/tables.py": "c5b90cb7190e7010910332a3dbafe8f2d6459bdfa748d7ffdf640b1a68aef3bd",
+      "src/uk_budget_data/publication/template_proof.py": "4ea10908161fe8502447b168196394968eeffdae27931fed7bd8eb1b3c0121d7",
+      "src/uk_budget_data/publication/validate.py": "2e06f481e6f0a2f516bb8f5e3ca7589f6140db864c57bf714372fb325e7ee08f",
+      "src/uk_budget_data/reforms.py": "afb497586f43905d33df0569b52409a8a63f2b2665ee490fa5455636e8358821",
+      "src/uk_budget_data/runtime_identity.py": "fc5c4f3dbf62fac247f33d6b612a89d5840180cbf3a3a3c3a1d37fc8d6e98808",
+      "src/uk_budget_data/treasury_import.py": "7ad06e3189ec41d4a14c9ac27bf27bbff11fc39af53c1c01c7ca24b506437ffb",
+      "src/utils/chartLogo.jsx": "f1bd3ef6f188a93318821886ebb6a207dd859edc34e9fcc75d9fb03a4b0db2dd",
+      "src/utils/downloadFile.js": "4b37be2676a8c934d9c042dc765274ef9f0c594fdce77fd6a4c75f8a354e61a1",
+      "src/utils/exportChartAsSvg.js": "50a10dfee3f0f6512607bc98452c061dd34741aae6fff0147d10d4cacaea21b4",
+      "src/utils/exportMapAsSvg.js": "05a56d73a3a596e4f7d0d6819b42d19aec9f20bc97855b89cf5288aca45aa38c",
+      "src/utils/geography/classify.js": "5a167bcb8867c74c20a283bd78a1b70301237270fc09d2b150b3ac1a187dfc76",
+      "src/utils/geography/classify.test.js": "40cf358e33d4732fd963cf74f7b98d6c3fa6c676ecbdddf6063b936d4ba1c890",
+      "src/utils/geography/columns.js": "ab5dca1943a7b83e2b2aa6dba3315a02826ef4607430ddaf4af79b69b2eaa418",
+      "src/utils/geography/decimal.js": "8e3af1c2668e422cde35cbba6fe42b07e3459710a64ab479a0ad9f442f5ddc99",
+      "src/utils/geography/decimal.test.js": "4f9bba27163d283c6092586fe81d9ce781077d925ba3571c64854a74fa0190d8",
+      "src/utils/geography/exportTable.js": "c99dabfbabb08bacfdaf2f905ebf8e6b5a815ab1a76e94f3363163e4b0e7e840",
+      "src/utils/geography/exportTable.test.js": "cadc601bc836d3f1b37298c742e9bbc9820af1f4a4068bfc68dfddc49bf7de17",
+      "src/utils/geography/format.js": "6981f311df8dc9e6f4455cd1b964b351bec72670ed79ae5da096076e8c4c5cde",
+      "src/utils/geography/format.test.js": "d67f11b973a1c3aabfe03b316f05f14e857d55bd3536fd148bcc9adcf8d903ca",
+      "src/utils/geography/layerFixture.test.js": "cb38c306577708d53b63ba16ccc33e0ad8997f58f2f8a83af319c74bf647e11e",
+      "src/utils/geography/legend.js": "614e33db1a956e6ec5cd01c3766a4d8f52497195c4181e0e7c05f1919c5fbdaf",
+      "src/utils/geography/palette.js": "9767894d7b62b3b6dbe06477639f1c8f486256a9738a6f27c450806993bf2cc8",
+      "src/utils/geography/parse.js": "cdd9e7760baf217b2958e97675ad4b685ca3f6241398c82d6c5b8338e75592c4",
+      "src/utils/geography/parse.test.js": "deb8c928f782208a70bf5a62074160fc92203d999335c85b4303e6789a92f480",
+      "src/utils/geography/regions.js": "6e1b1c911ea91fa80b780b354fd0d1281eda4bc204ea107991e0d50a8b2c2135",
+      "src/utils/geography/regions.test.js": "ef2109dd4280f754c854a6ec0b90dfd7f17db3b7c5cac47370b9f6141ec07d00",
+      "src/utils/geography/rows.js": "6d48eff69e675f64a6f65e45f8e12729b32c512cd14dbf34ea3a55a7e72660db",
+      "src/utils/geography/seats.js": "5d8113a7e5a4bdb4516a904145796af7c0143b8986b0d5b51b42217cf422af8a",
+      "src/utils/geography/seats.test.js": "da391d28a8d0fa709525c97c0f3257ea85c2c56e9af7ae00197bdb3f85d027b2",
+      "src/utils/geography/selection.js": "db192ee4ee4321e052482db17f534a937c4b7966ce941cdf7f3bfd8574634eb8",
+      "src/utils/geography/selection.test.js": "110ddfdffe1e857e273455820c436472d4d51b12c674d3193bb2ff5b27a338a2",
+      "src/utils/geography/view.js": "e372cc7a5fe5345c361742bf709f18e3a8b3d84bf478ee12e1dc8ce8c5c2e287",
+      "src/utils/index.js": "5aab54f09ce55c050e06adbd035e618c693d53b0aac0f459a87b3c27608a6115",
+      "src/utils/policyConfig.js": "725b3ebf7e11d5f39e75c5de232a4b5387f0fa18839f045d947996d44a182ae3",
+      "src/utils/publication/contract.json": "87707211c079925e7d600d56be985df6bf756808ca1aec59ca65feabf941749e",
+      "src/utils/publication/csv.js": "8450c65ce6384ad2cb415500459a44773345a19802181e616dc464c68affc740",
+      "src/utils/publication/csv.test.js": "e966f44bbf23e9fa150f6cac01567e316ceac9fc71d3e92dbd9ef4cd6ffe491a",
+      "src/utils/publication/digest.js": "c70180dd2812bb21e87aeea59c546e90c3c92eed76a038cfba82a1d1a6ff6230",
+      "src/utils/publication/digest.test.js": "b6e9711139be546d98bf2b9a89cde95dd588a5da630cd3fbc3144bddea1221e4",
+      "src/utils/publication/format.js": "3ac5ca51ac2c57f6e4260c7f5021e6add4131fcf1419af3eb7593ff23e1815d2",
+      "src/utils/publication/format.test.js": "0e4490989e2a1e796f4f09383ff154acfce7e5e4d894403405700940b8f01405",
+      "src/utils/publication/load.js": "45eea9bc9e36d43dd9c80bf663eddf195fb9d739e45763a6b73010c693409043",
+      "src/utils/publication/load.test.js": "4b2093dc96422867ff57aabb9bd686c762758302e4cab9b1db423f62acb465fa",
+      "src/utils/publication/manifest.js": "24be68ced84e742a2a5148f8496373ef62076882817856c2bc6d6b7ca7e1d5be",
+      "src/utils/publication/manifest.test.js": "b3d534cd71cd828df7bc82e5d07e19dc3519c8e3ccc15176fd6cdfb243af4928",
+      "src/utils/publication/scatter.js": "2f2da1346d61bd2d540e73a22997a4f8d287d7e222aba94651ab88682aff9ca6",
+      "src/utils/publication/scatter.test.js": "1565e64b20531c30c2ec6ceecdace755e26a6bc304d601c1cdae6ac02ce3a5ac",
+      "src/utils/publication/select.js": "8968bd2d8e64d96055ccb115b66f747147b6c3e953f696f081817e98336a5766",
+      "src/utils/publication/select.test.js": "ec61d5b995469317cd1ee9a07d187c2a4c60e6bccbfb3105195bb7d59a643e53",
+      "src/utils/svgHelpers.js": "6020e03a0b605639cd99ed70c08557cee7aefef3495b334c90d471e351f9b4dd",
+      "src/utils/textMeasure.js": "d6ebc74e092adb6f52cf2fcd357f923db1ba9647eebbebe997403e98e297cbfc",
+      "tests/__init__.py": "fe75588d025e62f24b600cfd023c1863cab3d17e09b278f3aa6e1f774a9b6632",
+      "tests/attestation_measures.py": "4a749ee84dcaf31ed7dd2be484d7a19f9d6c700fee8d388448c56d9651f05c33",
+      "tests/conftest.py": "8a1ad62c16bbcbfc6572a7f0c363d684faeefc0635d4519c48cf98a89f189f39",
+      "tests/fixed_shape_measures.py": "d50054b5575fac03fba786fa363ff30a47d1742536fed06b4b0db08483e640a7",
+      "tests/fixtures/w5/acceptance/README.md": "fd2d37913bc99a25a7751fc387a0eef60aeb007a43946a587d52b2fa2c9b0e6f",
+      "tests/fixtures/w5/acceptance/direct-after-pe660.jsonl": "2fc95e87bc4861e6d33f12fd82c5b8ee1eebdc8ad9c3ec8f5dc19a1e483ce1b8",
+      "tests/fixtures/w5/acceptance/direct-before-pe660.jsonl": "537d92ec0e4f511691d0398a5223b83f3cba86ae25ce962e42e1b7940ed5a3ea",
+      "tests/fixtures/w5/acceptance/metadata-fingerprint-after-pe660.jsonl": "07ef6f96b23657dfde954b783edd22f314ab9b6b216b832fc0c74797bfb634b2",
+      "tests/fixtures/w5/acceptance/receipts-after-pe660.jsonl": "ab892d848e534ca12363f95fc73bf29fa62988399ee3bb90539f7a23408815c5",
+      "tests/fixtures/w5/acceptance/receipts-before-pe660.jsonl": "f5278fca5e9c36e92db66fd095ffcd6758abf43e0fe39ad7b4e0dbaa70f44872",
+      "tests/fixtures/w5/mutants/README.md": "30bc34e131799f1da0886422b8e220df46905bd1fbf251786b1c17f2d7c0afd4",
+      "tests/fixtures/w5/mutants/detector-mutants.json": "76f48644ee85d28be46d53be9912d538123d5583daa44073794e46402f81e812",
+      "tests/fixtures/w5/mutants/gate-mutants.json": "da9b3865849f23ddf34297f46ee603899e627c071e7f096dd6c33135920e030d",
+      "tests/fixtures/w5/mutants/input-mutants.json": "9a3d16ae83d9613fd840ae7d7d69fa7323d352b5dacd2937b94a20eca2a7fe79",
+      "tests/fixtures/w5/mutants/mutation-targets.json": "ed9952b43101604b9378672a281be556c95aa64ad3db35ba53be6c42e4a9010b",
+      "tests/fixtures/w5/mutants/path-mutants.json": "0863e046055a716009e9cafe29210ac3f9118b4f36618d7d2e881265f8c0c144",
+      "tests/fixtures/w5/mutants/results.json": "26969bc4866fd1da8f93878edddf7365289b38adc08254f297bd02a814299740",
+      "tests/fixtures/w5/mutants/results.txt": "a99f9a0b7ef702863289e3b129c89d6bdf7ab48a1cedbce02a460e74392301af",
+      "tests/fixtures/w5/mutants/serial_python.py": "6861c9a8ad0648aa175356b96c71756bf41aaf0201a1bfa73c49b240fa266c3b",
+      "tests/fixtures/w5/mutants/template-mutants.json": "362747614b6540286b8080a9be273d8ec233db677e151bb2ee542a1792172252",
+      "tests/geography_fixture.py": "ef81bd588bf11b7e1964affc4e310bc56f592d99d75d82309b7714bcda0cd086",
+      "tests/publication_support.py": "04242d44db978a53dc8dcce6da5c0cc93f9fcf292211d171f46b483647ea582d",
+      "tests/purchase_helpers.py": "887c3bd83edd89a0ea0f9cc9d9d0e2e08df2f065e9fcec7f82e7dc7c4e916a69",
+      "tests/smoke_server.py": "61d1c900536e72fd89b550f919dc221c91498bf810a77342977b9e77e337839e",
+      "tests/template_measures.py": "c067aaf55bacd4150e7f019638a48f42b0db3a2fc0412091cc93fb71a8fed3da",
+      "tests/test_api_concurrency.py": "27a2aa3c3614268a6c657b9cedad6524ec6c94de7301310c205e222940299ef5",
+      "tests/test_api_url.py": "c38acdc9f90ed8c9c69d3ea16df024a34a29ac546a85b0661d75060db0ee50fb",
+      "tests/test_attestation_inputs.py": "bd3aa3a46e5ecfc3324ae43af6b2d026268271f94f525be4211e2ed6983af47e",
+      "tests/test_attestation_paths.py": "5dc1b734037745f5ddb23acbf0272e429037144e8c2bd4c28b086c4f9c6c3b4d",
+      "tests/test_budget_years.py": "c1bf946885d14424282efaa7317946c021716b35f1910dc279725be247ac9fc3",
+      "tests/test_bundle_adoption.py": "b5a46c09ac45cb4358541a0560403ec5fffc776218030c720e92fd4cc2fbae7f",
+      "tests/test_calculators.py": "fd08c9abc90b943eb08fbf751802d1b165b07ca1e9f95cb1a6d8aa1a2e02bd8f",
+      "tests/test_certified_data.py": "f10aa6f26698be5451fc2dcfb53ca623f055aea56a32c75357edb7fa4e55197f",
+      "tests/test_check_public_data.py": "7a30678ff9ae50828ad3a6365e676fddf1f92a2e55ed370fd314325edc47b296",
+      "tests/test_check_public_files_build.py": "f77af7f25abaf31d4a941290d0ab3f9e243f6620aad37898f8273a532d5a14f4",
+      "tests/test_cli.py": "fddf2aae5a26cb6ee5fe59ea9c7e3c7fd7e049132795b95e13ec51da581bc0d2",
+      "tests/test_cloudbuild.py": "5b9910081b6a42cc293678a5fd6af97c36039e204f711a424c7ffe3d92df80cc",
+      "tests/test_cloudbuild_rollback.py": "c4f8ff16f0cfbdc625a1fdb9a686a275c6cc7c5ab27339e7a04c6b851e3df56e",
+      "tests/test_combine.py": "27035c4097880cdb36306ca9579b8673afecc4e99bcd4b982ab60ee244f24ced",
+      "tests/test_data_limits.py": "bd6a636701f913fba50b70c3b947b772bf11cfbaf3d75c8431bb8bb36819807d",
+      "tests/test_data_limits_hardening.py": "048c0cbdc680131b83bf88faec7985276b2eca3722f3fb9267baa4bcc51bf6a1",
+      "tests/test_data_limits_hardening_unit.py": "31e8fe4152cf5582ec3e903c9fcbc16414bb33c93fc8a47b57c449953fe4221f",
+      "tests/test_deploy_smoke.py": "1e8d8938e984d213fcb989022544774de2a015e530a868d05cfb4c38cb526801",
+      "tests/test_deploy_workflow.py": "d7ee853199d704d41801fd173361ca90c87eb63f1d7083c5d5eb3da334480e59",
+      "tests/test_engine_order.py": "5dca4aeaeee01ef60354dfb4e02fe9e5461410f9c0d244f458073902b878f35c",
+      "tests/test_geography.py": "47d035ae3ca1508af6efd7d7d348fbba5eeba2a04fdb7aaf9bd6b8e6ff6e8930",
+      "tests/test_household_calculator_route.py": "e6f81b62634a02fd1202170f8e9701107c98a7b2fca1d4e27cb01319f66d7493",
+      "tests/test_household_fixtures.py": "d776d1062f3f45747f7ca46b04a7f81ced2e82fdf17470a617960ad462349615",
+      "tests/test_household_route.py": "c7a6adba80e71e11298e444211ea82d7844ad5b88afe91015c171fa719388ca9",
+      "tests/test_household_route_parity.py": "73b4ef0743ff2adce38b1bff09558f0faa2be8c8921e4ec9d229b2c08a94107c",
+      "tests/test_household_scatter_sample.py": "b1a6b13038d0f62b86c00fcc73783d94ceef8cb6571368fb7c5909c05ce85541",
+      "tests/test_measure_keys.py": "593af478718ada0eb5cee481a47a3c5e96aace32e97e46ed6d7e45dd31397e1c",
+      "tests/test_measure_template_age.py": "7f613f871fd61c2ac51e82d929b135f0371269f369c4d2c1a77afd4f252c621f",
+      "tests/test_measure_template_composition.py": "bd19457b611df08e2f87e9861e27958ae3b796ac0d35b018f5097b0203601bab",
+      "tests/test_measure_template_receipt.py": "8ee9f504029392d276ba5e3d96a169eb9b6c00ae281d1099bfef9f9990553327",
+      "tests/test_measure_template_round3.py": "d57f3e17aa9863f30e569e1c3457099971a49af49bd53864044d45129db92b19",
+      "tests/test_measure_template_rounding.py": "376355344f52707234f92956f8ea51b6d274722bf697e92717d78d5a00720fd7",
+      "tests/test_measure_templates.py": "d1e888ab15959958f68af993892e103f97677a1a4b611cd54cdaadf10f284568",
+      "tests/test_model_limits.py": "ed036d06c101f65156c43033d56828bf193727629c32600dfc233032b278d035",
+      "tests/test_models.py": "fc33a0f81cfc5d9cb9557be24573ba899b30916c9d959716f1097071cdf93ffb",
+      "tests/test_native_measure_regressions.py": "cced9080b34bd9a4c56f96a8a0f8870c997238a6b6619eb32b02aa5462b78e81",
+      "tests/test_personal_impact.py": "bdc4e436f2619b5b9fd13f0d2f30027996fc2dcaf20636fde6e9d32ea940ddc3",
+      "tests/test_personal_impact_speed.py": "21fe021b5b977f08191d23bd7fba87b7b39b43fe61bf79a2f41861e642a5a3bc",
+      "tests/test_personal_impact_workers.py": "d744c6fd6b95bbe08486c058ecb8c02bd304cfe807ef714ea41427824f3561e9",
+      "tests/test_pipeline.py": "5ab0926d7f90e514a1fbacae329425b3b69c16a6006a0a22e6795eec25c615cc",
+      "tests/test_private_outputs.py": "1a67ff49bea14a4277a822f1ceff3aed396d356570dd5566a3b0cf1d8f0650e0",
+      "tests/test_projection_horizon.py": "e369a4446ea9af1b7f2869ae697923ec72fd6d7bff283c211c9aa5573a523e1f",
+      "tests/test_publication.py": "4057a1b64c847ed85382f0df23c8a6b9db89c8734f40443205c29ed376697545",
+      "tests/test_publication_attestations.py": "9f3aa6390dd2294244ef6de4283e916838490b2adf807dabe43b4ea9d755846c",
+      "tests/test_publication_certified.py": "0b5c83a85f5bedbd3d6c924b23ac894eb715aee43d21e48e872e8ac96aed65ee",
+      "tests/test_publication_contract.py": "595a82bbd2414357643f41986911971c3bedd0cbb739c339c7be687f0c4d25bf",
+      "tests/test_publication_data_limits.py": "1fd6bc672c9e2c3e643babed561ef3007f59cc0388ab11f7d4e56eaf4b80dcb0",
+      "tests/test_publication_flow.py": "1083a93454b28ea54d564d6916cada01cea1ae3c1ed00f3ef8c89079d454684b",
+      "tests/test_publication_hardening_unit.py": "1b0834e0eb1645b1adb744ad938611d5dc839f025bbac0802a8dd7899bf6b322",
+      "tests/test_publication_review.py": "8f31cb025104518014350d13bcf9decf3ba7c7acb947eacd42db82f6b6d45c12",
+      "tests/test_read_memory_workflow.py": "4e3b4cf532b6ea69dd5a9340befa75842a27c74357f3bfd8b88189c1b024de09",
+      "tests/test_reconcile.py": "fe5764ec547d0edfc89807f7302db84673998dac87c50a6af0f599e565603b6a",
+      "tests/test_reforms.py": "2da43f7c6cd6f1d496618095651a9be52e5016c9266d0e70bb8cda14f440bb47",
+      "tests/test_released_receipt.py": "45746dfd8994a74a122f9e46a6a45b572e032e3ae0f005f6c40c1f39b500368a",
+      "tests/test_student_loan_measure.py": "ebc237399c4fa98e7f9b3a48e9014b56a151b7ee981ada94bde0fb4934f8f8bb",
+      "tests/test_template_proof.py": "c521834d2241573984d5ce03490ad78c20fd753d6093c91cb924575004222829",
+      "tests/test_treasury_import.py": "2071743b89a03999220022c44f557c8962ce5b7a9c2214cd60e062865150d8fe",
+      "tests/test_uc_health_template.py": "093457297a5e0f3abe631a7f68d78e4b250b963f3c46d357f1011ccb2842cffd",
+      "tests/unbindable_template_measures.py": "87818aa73a4e94fa4e5385f59ed76d8603d258ba4a76fb461f7294b4c62f7657"
+    },
+    "tracked_status": ""
+  },
+  "validation_notes": {
+    "credentials": "HF_HUB_OFFLINE=1; HUGGING_FACE_TOKEN unset. No certified data downloaded. All skips require certified data.",
+    "evidence_paths": "Absolute JUnit paths identify the original local attempts; the portable inventory and this aggregate preserve their counts and resolved failure history.",
+    "frontend": {
+      "command": "bunx vitest run --exclude '.w5-probes/**' --maxWorkers=2 --testTimeout=60000",
+      "files": 24,
+      "passed": 312,
+      "seconds": 460.9
+    },
+    "last_source_followup": "The final empty-registry import guard leaves active-registry behaviour unchanged and was covered by both final 53-case baselines plus its killed mutant.",
+    "lint": {
+      "black": "25.11.0: black --check src tests; 107 files unchanged",
+      "ruff": "0.14.6: ruff check src/ tests/; all checks passed"
+    },
+    "mutants": {
+      "defined": 40,
+      "evidence": "tests/fixtures/w5/mutants/results.json",
+      "killed": 40,
+      "survived": 0,
+      "unrun": 0
+    },
+    "round18": "tests/fixtures/w5/acceptance/README.md",
+    "scope": "Exact-nodeid aggregate of split/resumed runs and named fresh reruns; not a single default-timeout green invocation.",
+    "stale_helper_failures": "Five publication data-limit cases in the in-flight pe660 remainder loaded the old simulation stand-in. The corrected whole file passed all 48 cases in both environments.",
+    "timing_retries": "Unchanged API retry retained its original latency assertion. The exact serial/worker comparison used local HOUSEHOLD_CALCULATION_TIMEOUT=1800 after the original 280-second timeout; production settings were unchanged."
+  },
+  "workspace": "/Users/maxghenis/.subfleet/worktrees/20261021-192920-w5-hardening-v2"
+}

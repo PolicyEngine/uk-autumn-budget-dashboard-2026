@@ -1,0 +1,1028 @@
+{
+  "generated_at": "2026-10-22T13:28:13.911649+00:00",
+  "environment": "PolicyEngine 6.6.0 (pe660), offline, no token",
+  "runner": "coordinator's unchanged mutants_files.py",
+  "counts": {
+    "defined": 40,
+    "killed": 40
+  },
+  "survivors": [],
+  "not_run": [],
+  "final_sources_sha256": {
+    "src/uk_budget_data/data_limits.py": "25117cf79812891a1396d0ef0e969e0f89ec70860c3e0398967d92cec7362f03",
+    "src/uk_budget_data/publication/attestations.py": "dc0a2c490b85bd84cf2a5112de6c9faf3466dc01df29ef3233f150631048eeb9",
+    "src/uk_budget_data/publication/publish.py": "09fd6dcd6179bb036f995563b71ea960f86290e6ae7dd5713c172dfbdf0ca77b",
+    "src/uk_budget_data/publication/receipt.py": "93b127d8f41d4aa74a8441d593084db7bb57454577615fd2aec86b0fa7bd29ef",
+    "src/uk_budget_data/publication/template_proof.py": "4ea10908161fe8502447b168196394968eeffdae27931fed7bd8eb1b3c0121d7"
+  },
+  "baselines": [
+    {
+      "environment": "pe660",
+      "tests": 53,
+      "failures": 0,
+      "errors": 0,
+      "junit_suite_seconds": 8.673,
+      "passed_by_file": {
+        "test_data_limits_hardening_unit.py": 14,
+        "test_publication_hardening_unit.py": 33,
+        "test_attestation_paths.py": 6
+      }
+    },
+    {
+      "environment": "pe6100",
+      "tests": 53,
+      "failures": 0,
+      "errors": 0,
+      "junit_suite_seconds": 13.395,
+      "passed_by_file": {
+        "test_data_limits_hardening_unit.py": 14,
+        "test_publication_hardening_unit.py": 33,
+        "test_attestation_paths.py": 6
+      }
+    },
+    {
+      "environment": "pe660",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "junit_suite_seconds": 304.179,
+      "passed_by_file": {
+        "test_publication_attestations.py": 2
+      }
+    }
+  ],
+  "mutants": [
+    {
+      "name": "metadata_end_omitted",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_a_formula_end_changes_behaviour",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_formula_end_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_formula_end_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T114604Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_formula_end_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T120630Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_a_formula_end_changes_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_formula_end_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_a_formula_end_changes_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_formula_end_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "abolitions_ignored",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_changes_enter_the_observed_variables",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_changes_enter_the_observed_variables"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_changes_enter_the_observed_variables"
+          ],
+          "run": "detector-mutants-20261022T120630Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_changes_enter_the_observed_variables",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_changes_enter_the_observed_variables"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_changes_enter_the_observed_variables",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_changes_enter_the_observed_variables"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "abolition_cached_views_ignored",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_comparison_uses_stored_values_and_cached_views",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_comparison_uses_stored_values_and_cached_views"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_comparison_uses_stored_values_and_cached_views",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_comparison_uses_stored_values_and_cached_views"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_comparison_uses_stored_values_and_cached_views",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_comparison_uses_stored_values_and_cached_views"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "stored_inputs_not_recorded",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "stored_input_values_ignored",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_input_differences_reach_the_limit_record",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_input_differences_reach_the_limit_record"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "input_paths_accept_unrelated_variables",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_input_records_accept_only_variables_of_their_limit",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_input_records_accept_only_variables_of_their_limit"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_input_records_accept_only_variables_of_their_limit",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_input_records_accept_only_variables_of_their_limit"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_input_records_accept_only_variables_of_their_limit",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_input_records_accept_only_variables_of_their_limit"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "input_readers_not_derived",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_reader_names_are_derived_from_formula_input_and_parameter_reads",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_reader_names_are_derived_from_formula_input_and_parameter_reads"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_reader_names_are_derived_from_formula_input_and_parameter_reads",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_reader_names_are_derived_from_formula_input_and_parameter_reads"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_reader_names_are_derived_from_formula_input_and_parameter_reads",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_reader_names_are_derived_from_formula_input_and_parameter_reads"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "cache_parameter_metadata_omitted",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_macro_cache_parameter_metadata_changes_behaviour",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_macro_cache_parameter_metadata_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_macro_cache_parameter_metadata_changes_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_macro_cache_parameter_metadata_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_macro_cache_parameter_metadata_changes_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_macro_cache_parameter_metadata_changes_behaviour"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "disk_inputs_hidden_by_memory",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+            "test_storage_location_alone_does_not_change_a_stored_input"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "storage_input_values_not_saved",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+            "test_storage_location_alone_does_not_change_a_stored_input"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_stored_inputs_read_both_tiers_without_calculation_or_neutralisation"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "entity_mapping_metadata_ignored",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_entity_population_keys_and_person_status_change_behaviour",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_entity_population_keys_and_person_status_change_behaviour"
+          ],
+          "run": "detector-mutants-20261022T111242Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_entity_population_keys_and_person_status_change_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_entity_population_keys_and_person_status_change_behaviour"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_entity_population_keys_and_person_status_change_behaviour",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_entity_population_keys_and_person_status_change_behaviour"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "abolition_cached_items_read_as_attributes",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_views_read_the_mapping_core_uses",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_views_read_the_mapping_core_uses",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_views_read_the_mapping_core_uses"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_abolition_views_read_the_mapping_core_uses",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_abolition_views_read_the_mapping_core_uses"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "abolition_cached_only_ancestor_ignored",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_cached_abolitions_need_no_stored_branch",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_cached_abolitions_need_no_stored_branch",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_cached_abolitions_need_no_stored_branch[root]",
+            "test_cached_abolitions_need_no_stored_branch[gov]"
+          ],
+          "run": "detector-mutants-20261022T120944Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_cached_abolitions_need_no_stored_branch",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_cached_abolitions_need_no_stored_branch[root]",
+            "test_cached_abolitions_need_no_stored_branch[gov]"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "empty_registry_cleanup_unguarded",
+      "map": "detector-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_data_limits_hardening_unit.py::test_an_empty_registry_imports_without_holding_any_parameters",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_data_limits_hardening_unit.py::test_an_empty_registry_imports_without_holding_any_parameters",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_an_empty_registry_imports_without_holding_any_parameters"
+          ],
+          "run": "detector-mutants-20261022T132601Z"
+        }
+      ]
+    },
+    {
+      "name": "automatic_hold_disabled",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_modifiers_on_either_side_need_attestation",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_modifiers_on_either_side_need_attestation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_handwritten_modifiers_on_either_side_need_attestation[baseline]",
+            "test_handwritten_modifiers_on_either_side_need_attestation[reform]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "automatic_hold_ignores_empty_registry",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_no_active_limit_means_no_hold",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_no_active_limit_means_no_hold",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_no_active_limit_means_no_hold"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "automatic_hold_ignores_baseline_modifiers",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_modifiers_on_either_side_need_attestation",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_modifiers_on_either_side_need_attestation",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_handwritten_modifiers_on_either_side_need_attestation[baseline]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_digest_not_bound",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates0]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_distinct_reviewers_not_required",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates3]",
+            "test_invalid_review_never_releases_the_receipt[updates4]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_lower_instead_of_casefold",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates4]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_empty_fields_not_rejected",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates5]",
+            "test_invalid_review_never_releases_the_receipt[updates6]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_other_measure_accepted",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates1]",
+            "test_invalid_review_never_releases_the_receipt[updates2]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_measure_id_is_trimmed",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates2]"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_uses_execution_only_digest",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_review_digest_binds_the_whole_receipt_document",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_review_digest_binds_the_whole_receipt_document",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_review_digest_binds_the_whole_receipt_document"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "handwritten_regeneration_reuses_artifact",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_each_handwritten_generation_gets_a_new_identity",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_each_handwritten_generation_gets_a_new_identity",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_each_handwritten_generation_gets_a_new_identity"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "manifest_release_is_not_recorded",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_staging_copies_the_review_into_the_manifest",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_staging_copies_the_review_into_the_manifest",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_staging_copies_the_review_into_the_manifest"
+          ],
+          "run": "gate-mutants-20261022T112753Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_staging_copies_the_review_into_the_manifest",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_staging_copies_the_review_into_the_manifest"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "combined_member_release_is_not_rechecked",
+      "map": "gate-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_combined_members_must_keep_their_current_release",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_combined_members_must_keep_their_current_release",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_combined_members_must_keep_their_current_release"
+          ],
+          "run": "gate-mutants-20261022T112753Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_combined_members_must_keep_their_current_release",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_combined_members_must_keep_their_current_release"
+          ],
+          "run": "gate-mutants-20261022T113206Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_input_accepts_uncommitted_bytes",
+      "map": "input-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_an_uncommitted_review_cannot_release_the_receipt",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_attestation_inputs.py",
+          "workers": 2,
+          "failing_tests_reported_by_runner": [
+            "test_a_review_without_a_git_repository_stays_held",
+            "test_a_nested_repository_cannot_release_an_untracked_dashboard_input"
+          ],
+          "run": "input-mutants-20261022T105539Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_an_uncommitted_review_cannot_release_the_receipt",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_an_uncommitted_review_cannot_release_the_receipt"
+          ],
+          "run": "input-mutants-20261022T114518Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_timestamp_overflow_escapes_validation",
+      "map": "input-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt[updates8]",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_attestation_inputs.py",
+          "workers": 2,
+          "failing_tests_reported_by_runner": [
+            "test_a_committed_timestamp_that_overflows_utc_stays_held[9999-12-31T23:59:59-23:59]",
+            "test_a_committed_timestamp_that_overflows_utc_stays_held[0001-01-01T00:00:00+23:59]"
+          ],
+          "run": "input-mutants-20261022T105539Z"
+        },
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_invalid_review_never_releases_the_receipt[updates8]",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_invalid_review_never_releases_the_receipt[updates8]"
+          ],
+          "run": "input-mutants-20261022T114518Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_accepts_working_symlink",
+      "map": "path-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_attestation_paths.py::test_a_working_symlink_cannot_replace_the_exact_committed_path",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_attestation_paths.py::test_a_working_symlink_cannot_replace_the_exact_committed_path",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_a_working_symlink_cannot_replace_the_exact_committed_path[False]",
+            "test_a_working_symlink_cannot_replace_the_exact_committed_path[True]"
+          ],
+          "run": "path-mutants-20261022T114238Z"
+        }
+      ]
+    },
+    {
+      "name": "attestation_accepts_committed_symlink_type",
+      "map": "path-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_attestation_paths.py::test_matching_bytes_do_not_make_a_committed_symlink_a_regular_file",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_attestation_paths.py::test_matching_bytes_do_not_make_a_committed_symlink_a_regular_file",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_matching_bytes_do_not_make_a_committed_symlink_a_regular_file"
+          ],
+          "run": "path-mutants-20261022T114238Z"
+        }
+      ]
+    },
+    {
+      "name": "template_registry_accepts_missing",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_registered_template_members_must_exist",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_registered_template_members_must_exist",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_registered_template_members_must_exist"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_classifier_skips_runtime_source_check",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_pure_source_calls_the_receipt_binding_check",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_pure_source_calls_the_receipt_binding_check",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_pure_source_calls_the_receipt_binding_check"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_classifier_accepts_arbitrary_arguments",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_extra_statements_or_arbitrary_arguments_are_handwritten[    unused = template(sim.value)\\n]",
+            "test_extra_statements_or_arbitrary_arguments_are_handwritten[    unused = template(abs(-1))\\n]"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_classifier_allows_extra_pass",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_extra_statements_or_arbitrary_arguments_are_handwritten[    pass\\n]"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_classifier_accepts_non_template_assignments",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_extra_statements_or_arbitrary_arguments_are_handwritten",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_extra_statements_or_arbitrary_arguments_are_handwritten[    unused = 1\\n]",
+            "test_extra_statements_or_arbitrary_arguments_are_handwritten[    unused = abs(-1)\\n]"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_proofs_ignore_modifier_count",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_proof_count_covers_every_bound_modifier",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_proof_count_covers_every_bound_modifier",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_proof_count_covers_every_bound_modifier"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "template_proof_not_required",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_modifier_proofs_cannot_be_omitted",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_modifier_proofs_cannot_be_omitted",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_modifier_proofs_cannot_be_omitted"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "dashboard_proof_validation_omitted",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_dashboard_validation_checks_template_proofs",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_dashboard_validation_checks_template_proofs",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_dashboard_validation_checks_template_proofs"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    },
+    {
+      "name": "handwritten_receipt_generation_id_not_required",
+      "map": "template-mutants.json",
+      "result": "killed",
+      "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_proof_needs_a_generation_identity",
+      "attempts": [
+        {
+          "result": "killed",
+          "test_target": "tests/test_publication_hardening_unit.py::test_handwritten_proof_needs_a_generation_identity",
+          "workers": 0,
+          "failing_tests_reported_by_runner": [
+            "test_handwritten_proof_needs_a_generation_identity"
+          ],
+          "run": "template-mutants-20261022T111850Z"
+        }
+      ]
+    }
+  ]
+}
