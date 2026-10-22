@@ -15,9 +15,8 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 
 ### Prerequisites
 
-- Node.js 20.x or higher
-- npm 11.x or higher
-- Python 3.10+ (for data generation)
+- [Bun](https://bun.sh), which CI uses for the frontend (`bun.lock` is the lockfile), and Node.js 20.9 or later, which Next.js 16 needs to run
+- [uv](https://docs.astral.sh/uv/) and Python 3.13 or later (`requires-python` in `pyproject.toml`), for data generation
 
 ### Installation
 
@@ -29,34 +28,32 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 Run the development server:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-The dashboard will be available at `http://localhost:5173`
+The dashboard is a Next.js app, served at `http://localhost:3000/uk/autumn-budget-2026` by default: `next.config.ts` sets that base path unless `NEXT_PUBLIC_BASE_PATH` is defined. Set `NEXT_PUBLIC_BASE_PATH=` (empty) to serve it at the root.
 
 ### Building for production
 
 ```bash
-npm run build
+bun run build
 ```
 
-Preview the production build:
+The build first checks every file under `public/` against its review list (`scripts/check-public-files.mjs`). Serve the production build:
 
 ```bash
-npm preview
+bun run start
 ```
 
 ## Project structure
 
 ```
 src/
+├── app/                 # Next.js app router: layout.tsx, page.tsx, globals.css
 ├── App.jsx              # Main application controller
-├── App.css              # App-level styles
-├── main.jsx             # Entry point
-├── index.css            # Global styles
 ├── components/          # React components
-│   ├── Sidebar.jsx      # Policy selection & parameter controls
-│   ├── Results.jsx      # Charts & analysis display
+│   ├── PolicySelector.jsx        # Policy selection
+│   ├── BudgetaryImpactChart.jsx  # Budgetary impact chart
 │   └── ...
 └── uk_budget_data/      # Python data generation package
     ├── __init__.py      # Public API exports
@@ -78,6 +75,8 @@ The dashboard displays pre-calculated data from CSV files. The `uk_budget_data` 
 ### Quick start
 
 ```python
+from pathlib import Path
+
 from uk_budget_data import generate_all_data, get_reform, DataConfig
 
 # Generate data for all Autumn Budget 2026 reforms
@@ -97,10 +96,11 @@ generate_all_data(reforms=reforms)
 
 ### CLI usage
 
-- List the available reforms: `uk-budget-data --list-reforms`
-- Generate all data: `uk-budget-data`
-- Generate for specific reforms: `uk-budget-data --reforms two_child_limit fuel_duty_freeze`
-- Choose the years: `uk-budget-data --years 2026 2027`
+- List the available reforms: `uv run uk-budget-data generate --list-reforms`
+- Generate all data: `uv run uk-budget-data generate`
+- Generate for specific reforms: `uv run uk-budget-data generate --reforms two_child_limit fuel_duty_freeze`
+- Choose the years: `uv run uk-budget-data generate --years 2026 2027`
+- See every command: `uv run uk-budget-data --help`
 
 ### Disclosure control
 
@@ -121,7 +121,7 @@ shasum -a 256 public/data/budgetary_impact.csv
 Results by area go through the disclosure layer only. The legacy constituency calculators take direct means with no disclosure control. They run only with `--legacy-geography`, and write to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, which must be outside any git repository:
 
 ```bash
-UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026 uk-budget-data generate --legacy-geography
+UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026 uv run uk-budget-data generate --legacy-geography
 ```
 
 ### Custom baseline scenarios
@@ -160,9 +160,9 @@ generate_all_data(config=config)
 
 ### Running tests
 
-- Run all tests: `pytest`
-- Run on four worker processes, as CI does: `pytest -n 4 --dist loadgroup --no-loadscope-reorder`
-- Run with coverage: `pytest --cov=uk_budget_data`
+- Run all tests: `uv run pytest`
+- Run on four worker processes, as CI does: `uv run pytest -n 4 --dist loadgroup --no-loadscope-reorder`
+- Run with coverage: `uv run pytest --cov=uk_budget_data`
 
 Mark any test that takes minutes with `@pytest.mark.slow`; under xdist
 such tests are collected first. With the command above, the first four slow
@@ -188,12 +188,13 @@ The dashboard analyses these November 2025 Autumn Budget policies:
 
 ## Technology stack
 
-- **Frontend**: React 18.3 with Vite
+- **Frontend**: Next.js 16 with React 19
 - **Charts**: Recharts 2.15 (built on D3)
-- **Data generation**: Python 3.10+, PolicyEngine UK
+- **Data generation**: Python 3.13+, PolicyEngine UK through policyengine.py
 - **State management**: React hooks (useState, useEffect, useMemo)
-- **Styling**: Custom CSS inspired by PolicyEngine UK
-- **Build tool**: Vite 5.4
+- **Styling**: Tailwind CSS 4 with `@policyengine/ui-kit`'s theme, plus component CSS
+- **Tests**: Vitest for the frontend, pytest for the Python package
+- **Build tool**: Next.js, run with Bun
 
 ## Design system
 
@@ -225,8 +226,8 @@ When contributing to this project:
 
 1. Follow the guidelines in `.claude/CLAUDE.md`
 2. Run `make format` before committing Python code
-3. Run `npm run lint -- --fix` before committing JavaScript
-4. Ensure tests pass with `pytest`
+3. Run `bun run lint --fix` before committing JavaScript
+4. Ensure tests pass with `uv run pytest`
 
 ## Licence
 
