@@ -7,11 +7,14 @@ so a missing or rejected credential fails at once with an actionable message
 instead of surfacing as a download error ten minutes into the test run, or as
 a silent skip.
 
-The check reads only metadata: it never downloads a dataset. For every UK
-artifact pinned in the installed bundle, and every overlay dataset named with
-``--also``, it confirms that the token can see the file at the pinned
-revision and that the file's LFS SHA-256 equals the hash in the bundle
-manifest.
+For every UK artifact pinned in the installed bundle, and every overlay
+dataset named with ``--also``, it confirms that the token can see the file at
+the pinned revision and that the file's SHA-256 equals the hash in the bundle
+manifest. A file stored in LFS is checked from its metadata, which carries the
+SHA-256, so no dataset is downloaded. A small file stored in plain git (a
+release's certification or diagnostics JSON) has no SHA-256 in its metadata,
+so it is downloaded to a temporary directory and hashed, up to
+``MAX_GIT_FILE_BYTES``.
 
 Usage::
 
@@ -25,8 +28,10 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 from dataclasses import dataclass
 from importlib import resources
+from pathlib import Path
 from typing import Optional
 
 TOKEN_ENV = "HUGGING_FACE_TOKEN"
@@ -43,6 +48,12 @@ ACCESS_HINT = (
     "among that secret's selected repositories. Changing either is an "
     "organisation admin's call."
 )
+
+
+# The largest file stored in plain git, not LFS, that the check downloads
+# to hash. policyengine 6.10.0's largest is 9.9 MB (Microcosm's calibration
+# diagnostics); anything bigger belongs in LFS.
+MAX_GIT_FILE_BYTES = 32 * 1024 * 1024
 
 
 class CertifiedDataAccessError(RuntimeError):
@@ -211,7 +222,11 @@ def check_access(
                     f"(bundle dataset {artifact.name})."
                 )
             lfs = getattr(info, "lfs", None)
-            remote_sha = getattr(lfs, "sha256", None)
+            if lfs is not None:
+                remote_sha, how = getattr(lfs, "sha256", None), ""
+            else:
+                remote_sha = _git_file_sha256(api, artifact, info, token)
+                how = " (git file, downloaded and hashed)"
             if remote_sha != artifact.sha256:
                 raise CertifiedDataAccessError(
                     f"{repo_id}@{revision}/{artifact.path} has SHA-256 "
@@ -220,9 +235,59 @@ def check_access(
                 )
             lines.append(
                 f"OK {artifact.name}: {repo_id}@{revision}/{artifact.path} "
-                f"sha256={artifact.sha256[:12]}"
+                f"sha256={artifact.sha256[:12]}{how}"
             )
     return lines
+
+
+def _git_file_sha256(api, artifact: Artifact, info, token: str) -> str:
+    """The SHA-256 of a file stored in plain git, whose metadata carry none:
+    downloaded to a temporary directory and hashed. A refused or failed
+    download is an access error, never a hash."""
+    from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
+
+    where = f"{artifact.repo_id}@{artifact.revision}/{artifact.path}"
+    size = getattr(info, "size", None)
+    if (
+        not isinstance(size, int)
+        or isinstance(size, bool)
+        or size > MAX_GIT_FILE_BYTES
+    ):
+        raise CertifiedDataAccessError(
+            f"{where} is stored in plain git, not LFS, so its metadata carry "
+            f"no SHA-256, and at {size} bytes it is not downloaded to check "
+            f"it (the limit is {MAX_GIT_FILE_BYTES}; dataset "
+            f"{artifact.name})."
+        )
+    with tempfile.TemporaryDirectory() as directory:
+        try:
+            path = api.hf_hub_download(
+                repo_id=artifact.repo_id,
+                filename=artifact.path,
+                revision=artifact.revision,
+                repo_type=artifact.repo_type,
+                token=token,
+                local_dir=directory,
+            )
+        except (HfHubHTTPError, LocalEntryNotFoundError) as error:
+            # huggingface_hub reports a plain 403, a server error or a
+            # network failure as LocalEntryNotFoundError, with the HTTP or
+            # connection error as its cause, which says what happened.
+            # (force_download is not passed: with it, the library turns
+            # these into a bare ValueError. Whatever bytes are hashed must
+            # equal the pin, so a cached copy that matches is the file.)
+            cause = error
+            if isinstance(error, LocalEntryNotFoundError) and error.__cause__:
+                cause = error.__cause__
+            raise CertifiedDataAccessError(
+                f"Could not download {where}: {_reason(cause)}. "
+                f"{ACCESS_HINT}"
+            ) from error
+        digest = hashlib.sha256()
+        with open(Path(path), "rb") as handle:
+            for block in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(block)
+        return digest.hexdigest()
 
 
 def main(argv: Optional[list[str]] = None) -> int:

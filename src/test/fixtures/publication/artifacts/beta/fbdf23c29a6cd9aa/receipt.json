@@ -14,6 +14,8 @@
     },
     "composition": null,
     "config_baseline": null,
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
       2025,
@@ -26,9 +28,9 @@
       2032
     ],
     "digests": {
-      "execution_identity_sha256": "723d46a44accd914b51d24503fc22627fdc8ec969847dbeb0b32d4a30bd78d9f",
+      "execution_identity_sha256": "c031b1130e45c9222a4d3b72377b669931d107838ab97cf5332898b6f778fe04",
       "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
-      "receipt_sha256": "b91175d9f118013e0a6dd40a9a31dcc3dd674b577da856b799aa2db958f91507"
+      "receipt_sha256": "5163f5335f721683afa6e2ff515038e09516b644627f24045bfb6d4307f72ae9"
     },
     "files": {
       "budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
@@ -38,7 +40,7 @@
       "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
       "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
     },
-    "generated_at": "2026-10-16T02:51:30.451834+00:00",
+    "generated_at": "2026-10-21T23:02:30.985445+00:00",
     "generator_argv": [
       "test"
     ],
@@ -49,9 +51,11 @@
     ],
     "member_outputs_sha256": null,
     "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "70c0e6fa3edb0b7a77de1c11e465cf908c30b65ef53d37161ee3f9500be36fda",
     "publishable": true,
     "reasons": [],
-    "receipt_source": "policyengine==6.5.0",
+    "receipt_source": "policyengine==6.6.0",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -64,8 +68,8 @@
       "name": "beta baseline"
     },
     "certificate": {
-      "bundle_version": "6.5.0",
-      "certificate_sha256": "a2ab1d009b70fb2d91eaa1a5005dbb9d387d2661d2c1a8d730c47f8c26124bfd",
+      "bundle_version": "6.6.0",
+      "certificate_sha256": "e60c472272eaeb5a5d71d0856c7e51ad4677b61fc3e017936137b73dd5f219d0",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
@@ -129,7 +133,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.5.0"
+      "version": "6.6.0"
     },
     "years": [
       2032,

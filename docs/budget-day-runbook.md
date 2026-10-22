@@ -130,8 +130,9 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - where the limitation sentence appears on the page (the methodology section, the measure's own entry, or both).
 
 **A measure on the SDLT higher rates, or on non-residential purchases, is published as not computable on current data, never as a figure** (#51).
-- **Once #51 merges.** #51 is a draft, to merge before the rehearsal. Nothing below is on `main` until then, and nothing stops such a measure: hold it by hand.
+- **On `main` since #51.** Generation records the limit, and the gate and the page refuse a figure for it, as below.
 - **Why:** policyengine-uk #2241 (merged 15 Oct, fixing issue #2238) makes `additional_residential_property_purchased` and `non_residential_property_purchased` inputs, nil unless a dataset imputes them. The certified dataset (uk-data 1.58.1, sha256 `056e80fd…`) holds only the property stocks, not those columns. So these rates apply to nothing; before #2241, to a buyer's whole stock of other property. On Microcosm, see "The data line changed" below: 6.10.0's data has no purchases either, and its policyengine-uk (2.132.6) predates #2241, so the whole-stock case applies.
+- **Partly computable measures publish with a figure** (#51's scope since its round 3). A measure that changes a total including these purchases, such as SDLT `abolish` or LBTT's main residential scale, records no limit. Its figure includes the purchases as the model and data give them: a buyer's whole stock of other property before policyengine-uk #2241 (as in 6.10.0's 2.132.6), and nothing after it until certified data impute purchases. Say so wherever such a figure appears.
 - **Which parameters:** `uk_budget_data.data_limits` lists them:
   - SDLT `gov.hmrc.stamp_duty.residential.purchase.additional` (the higher rates for additional dwellings) and `gov.hmrc.stamp_duty.non_residential.purchase`;
   - the LBTT additional dwelling supplement and non-residential rates;
@@ -155,6 +156,10 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **Before #2241 is in a certified bundle,** a higher-rates figure from the engine charges whole stocks, so it is wrong as well as uncertain. The limit applies from now.
 - **Every measure published on the day comes from the templates, unless it passes the human check below** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
+    - **Held by default** (coordinator's ruling on #51, 21 October, after round 18): "While a data limit is active, any hand-written modifier that touches a limited tax's variables, parameters or inputs is held not computable by hand, whatever the detector records. That includes the SDLT, LBTT and LTT trees and their purchase, value and property_purchased ingredients, by any route: parameter changes, update_variable metadata (`end`, `defined_for`), gov.abolitions, set_input on either side, or a derived product. It is released only if the human data-limits check records, in the receipt, why the modifier cannot change how purchases are priced, and a second person agrees."
+      - **Why the default flips:** eighteen rounds showed that no detector is complete against hand-written plain-Python modifiers. Round 18 found four routes it can't see (#55): variable metadata and abolitions, one-sided `set_input`, purchases recomputed from their ingredients, and a helper module's memo. The detector's job is the templates and accidental routes, and there it holds. A deliberately hand-written pricing change is the human gate's, and it holds unless released, because "it changes pricing" is exactly what those routes hide.
+      - **Hold it by hand:** nothing in the code enforces this hold yet (the hardening PR after #51 puts it in the gate). The Integrator stages nothing for such a measure. The Reconciler lists it as not computable in the coverage ledger, with this rule as the reason, and checks before G4 that nothing in the manifest contradicts the ledger. The gate can't stage it as not computable itself unless its receipt records a data limit. A combined run that includes it is refused automatically, since a member missing from the manifest blocks it.
+      - **The release has nowhere to go yet:** the receipt is written by the generator and has no field for a human's reason or a second person's agreement. Until one is added, such a measure stays held.
     - **Reject the modifier if its own code uses any of these** (coordinator's ruling on #51, 19 Oct). The detector isn't required to see through them, so #55 lists what they can hide:
       1. **another simulation or system:** building or holding a simulation or tax-benefit system other than the one it's given (a clone, or a branch with a cloned system), or that simulation's parameters, entities, populations or holders;
       2. **state changed mid-run:** changing state its formulas hold (a dict, a list, an object's fields) while the simulations run;
@@ -169,6 +174,9 @@ Every published measure is receipted, and the receipt can only bind a measure wr
     - the changed variable was calculated before the run was watched, so its cached value is used without its formula running, or the watch couldn't run: every limit, with an `UnwatchedFormulaWarning` naming the reason;
     - an original wrapped and used only inside a narrow band, or only past an amount the check's moves (quarter-decades of purchase from £100 to £1tn) never reach, or an original that reads a limited rate but no limited input. Only a hand-written modifier can reach these: no template uses its original that way. The coordinator ruled on 18 Oct that they don't block #51;
     - a limited input's name written in a formula that ran, even if it's never read.
+  - **Two more (#51, round 18; #55):**
+    - a hand-written modifier that reads, while the measure is built, a total that includes SDLT (a means test on net income, or a payment tested against tax): every limit, though the same reading done live records none. Clear it by computing the total in the formula as the run calculates. A means test on net income can't be: it is a cycle there, so such a measure is held;
+    - a household situation that sets a limited input: the model's own build reads it (`build_from_situation`), so every measure on that household records `build:<input>`, templates included. Generation and the pipeline build certified microsimulations, where these inputs are never stored, so this reaches tests and probes, not published measures. Use a household that doesn't set them.
   - (The source forms listed here until #51's round 13 are no longer false positives, since reads are now watched as the run calculates: lambdas and callable wrappers, results in containers, annotation-only statements, unreadable state, and names built at run time.)
   - **To clear one:** there is no override. Rewrite the measure in a form whose reads the watch sees: a template, or a call to the original used for its result. Make sure nothing calculates the changed variable before the run, and don't write a limited input's name in code that runs. Then regenerate, and record the reason in the measure's PR.
 
@@ -186,7 +194,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
-**A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October).
+**A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October). The model-limit guard (#73, `uk_budget_data.model_limits`) enforces this.
 - **Why:** additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by prices, not with the full rates. Prices are the statutory floor (Social Security Administration Act 1992 ss. 150 and 151A), and the Up-rating Orders give September CPI.
   - The 2026 Order (SI 2026/148, articles 4(3)(a) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates (articles 4(2) and 6(1)).
   - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So anything that moves the full rates moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
@@ -200,18 +208,26 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **The check, in G0's commands for the adopted pair and again before a State Pension measure is staged:**
 
   ```sh
-  uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
+  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
   ```
 
-  `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once #2336 is released, the first policyengine-uk version with it can be checked instead.
-- **Which measures:** any change that moves either full rate in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
+  - **What it prints:** `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`.
+  - **How it decides:** this is the guard's own check. It parses the installed `additional_state_pension` and requires every formula to read the index as an attribute, so a comment or a string naming it doesn't count.
+  - **The CI cross-check:** a test compares this check with the model's behaviour: whether the add-on moves when either full rate rises, for a new State Pension recipient and for a basic one. So a release that fools the code check, or fixes only one pension's add-on, fails CI instead of lifting the guard.
+- **Which measures:** any change that moves either full rate, or September CPI, in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
   - `gov.dwp.state_pension.basic_state_pension.amount` or `gov.dwp.state_pension.new_state_pension.amount`;
   - anything under `gov.dwp.state_pension.triple_lock`;
   - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). Setting the 2026 earnings input to 10% (from 3.9%) moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset);
-  - a macro scenario on `gov.economic_assumptions.yoy_growth.obr.average_earnings` or `consumer_price_index`, which moves those inputs in years not yet published.
-- **If the check prints `False`:** stage the measure provisional, not approved.
-  - **Nothing in the code enforces this yet.** `approve` has no State Pension gate on `main`: hold it by hand. A guard that records the limit in the receipt and refuses approval is W5's next PR.
-  - **The reason has nowhere on the page to go.** `publish stage` takes no reason, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record the reason in the coverage ledger and in the measure's PR: "the installed model raises additional State Pension and protected payments with the full rates (policyengine-uk #1941), so this measure is overstated; the fix, #2336, is not in this pair". **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
+  - a macro scenario on `gov.economic_assumptions.yoy_growth.obr.average_earnings` or `consumer_price_index`, which moves those inputs in years not yet published;
+  - a change to September CPI, `gov.economic_assumptions.indices.september_cpi_uprating`, even one the triple lock doesn't pass on. Without the fix the add-on ignores CPI, so such a change mis-costs it.
+- **If the check prints `False`,** such a measure is staged provisional at most. The guard does this by itself:
+  - **Generation:** it records `state_pension_add_on_uprating` in the measure's receipt, with the reason, whenever the measure's two simulations differ under a covered parameter and the model lacks the fix.
+  - **Staging and approval:** `publish stage --provisional` accepts the measure; `publish approve` refuses it ("held at provisional, not approved", with the reason).
+  - **The page,** once #20's modules are wired in after #3, shows such a measure as provisional and refuses to show it as approved, even from a manifest edited by hand, because its receipt records the limit. The loader already does.
+  - **The templates** warn (`ModelLimitedWarning`) when a measure is built on one of the guard's own parameters: either full rate, the triple lock or the September CPI index. A template change elsewhere that moves them, such as to the statutory uprating inputs, doesn't warn, but generation still records it.
+  - **The flat pipeline** prints "MIS-COSTED BY THIS MODEL".
+  - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, with the other tests that assume the limit is active, so the limit and those tests are removed there.
+  - **The page doesn't show the reason.** It is in the receipt, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record it in the coverage ledger too. **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
 - **With the fix,** a measure that also raises the add-on itself, above prices, needs a change to `additional_state_pension`. A rate change alone no longer reaches it, and no template covers it. That makes it a hand-written modifier, which needs the named human data-limits check above.
@@ -284,7 +300,7 @@ mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
   --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
-uv run python -c "from importlib.resources import files; print('september_cpi_uprating' in files('policyengine_uk').joinpath('variables/gov/dwp/additional_state_pension.py').read_text(encoding='utf-8'))"
+uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
 curl -s "$HOUSEHOLD_API/api/version"
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
@@ -338,6 +354,7 @@ uv run uk-budget-data publish check
 ```
 
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
+- **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
@@ -403,6 +420,9 @@ uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
+- **Results by area** (`uk-budget-data geography`): leave out of `--reforms` any measure that is not computable, or held by hand under "Held by default" above, and any package including it.
+  - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
+  - **What it doesn't:** it reads no receipts, holds or ledger, so the Reconciler still checks the list. A measure held only by hand records no data limit. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
@@ -458,7 +478,14 @@ An approval or an exception carries over only where the outputs are byte-identic
 ## A model upgrade during the day (no freeze)
 
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
-- **Regenerate before merging.** Regenerate every published measure and the combined run on the new release, then stage the first with `--adopt-execution`. Every other entry becomes stale until it is re-staged. Reconcile, approve, redeploy the household API and re-run the household checks.
+- **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
+  - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
+  - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
+- **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
+- **Approve once the household checks pass on the new release.**
+  - **The alternative:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`), so the Approver can approve on the upgrade branch, before merging.
+  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional (re-stage them with `--provisional` to keep them visible). But it approves figures before any household check has run on the new release.
+  - **Your call** which order to use on the day.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -511,7 +538,7 @@ Exports are built only from approved entries of one manifest revision. A measure
 
 - **Dashboard.**
   1. Use Vercel Instant Rollback to the recorded previous production deployment (dashboard, or `vercel rollback <deployment> --scope policy-engine`).
-  2. `git revert` the bad merge through a pull request, and wait for its deployment to build.
+  2. Revert the bad merge through a pull request, and wait for its deployment to build. This repository merges with merge commits, so use GitHub's Revert button or `git revert -m 1 <merge>`; a plain `git revert` of a merge commit fails.
   3. Run `vercel promote <fixed deployment> --scope policy-engine`. After a rollback, Vercel stops assigning the production domain to new deployments, so the fix does not go live until it is promoted. Promoting also turns automatic assignment back on.
 - **Household API.** Run the "Deploy the household API" workflow (#28) with action `rollback` and the revision to restore (the deploy's log names the one it replaced). The rollback runs as its own Cloud Build pipeline, and only one deploy or rollback runs at a time, however it was started. The pipeline:
   - accepts only a ready revision whose own deploy build succeeded. That build must be of a commit on `main`, and must have pushed the exact image the revision runs (checked against Cloud Build's record, not only the revision's labels);
@@ -531,6 +558,13 @@ Exports are built only from approved entries of one manifest revision. A measure
   ```
 
   Then re-run the household check against the live route.
+- **A model release.** To go back to the previous bundle after an upgrade:
+  1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
+     - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
+     - Check that nothing else merged since depends on what is reverted.
+  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
 
 ## Clock
 

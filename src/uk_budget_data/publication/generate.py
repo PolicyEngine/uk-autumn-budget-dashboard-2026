@@ -20,6 +20,7 @@ from typing import Callable, Optional
 
 from pydantic import ValidationError
 
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -146,6 +147,32 @@ def _default_build(dataset_path: Optional[str], scenario=None):
     return sim
 
 
+def _limits(
+    baseline, reformed, baseline_scenario, reform_scenario, observation=None
+):
+    """The data limits a measure touches: from the two built parameter
+    trees, which show what actually ran (modifiers included, a declared
+    change undone, a respelled path), and from what the code that differs
+    read while the run made the figures (``observation``); from the
+    scenarios' parameter changes only for stand-in simulations with no tree
+    (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return data_limits.limits_touched(baseline, reformed, observation)
+    return data_limits.limits_for_scenarios(baseline_scenario, reform_scenario)
+
+
+def _model_limits(baseline, reformed, baseline_scenario, reform_scenario):
+    """The model limits a measure touches: from the two built parameter
+    trees and the models they run, as :func:`_limits` reads data limits;
+    from the scenarios' parameter changes, against the installed model,
+    only for stand-in simulations with no tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return model_limits.limits_touched(baseline, reformed)
+    return model_limits.limits_for_scenarios(
+        baseline_scenario, reform_scenario
+    )
+
+
 def _scenarios(subject: str, build_them: Callable):
     """Run a step that builds scenarios, refusing the run (not stopping the
     generation) when the configuration cannot build one. Only a Scenario or
@@ -237,9 +264,29 @@ def generate_artifacts(
             key, lambda: baseline_for(reform, uses_config_baseline)
         )
         reform_scenario = _scenarios(key, reform.to_scenario)
-        baseline = build(dataset_path, baseline_scenario)
-        reformed = build(dataset_path, reform_scenario)
-        result = process(reform, config, baseline, reformed, baseline_scenario)
+        # Built under data_limits.building: a modifier that reads a limited
+        # input while its simulation is built carries it past the watch,
+        # so the build is watched too.
+        baseline = data_limits.watched_build(
+            build, dataset_path, baseline_scenario
+        )
+        reformed = data_limits.watched_build(
+            build, dataset_path, reform_scenario
+        )
+        # What the code that differs reads is watched while the run makes
+        # the figures; a measure the data cannot cost is then published as
+        # not computable.
+        with data_limits.observing(baseline, reformed) as observed:
+            result = process(
+                reform, config, baseline, reformed, baseline_scenario
+            )
+        limits = _limits(
+            baseline, reformed, baseline_scenario, reform_scenario, observed
+        )
+        # A measure the installed model mis-costs is held at provisional.
+        held = _model_limits(
+            baseline, reformed, baseline_scenario, reform_scenario
+        )
 
         def build_receipt(file_digests):
             inputs = ReceiptInputs(
@@ -257,6 +304,8 @@ def generate_artifacts(
                 members=members,
                 member_outputs=member_outputs,
                 composition=composition,
+                data_limits=limits,
+                model_limits=held,
             )
             if argv is not None:
                 inputs.generator_argv = argv
