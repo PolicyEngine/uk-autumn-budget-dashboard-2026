@@ -148,7 +148,7 @@ describe("RegionView", () => {
     // No figure anywhere: every published figure is signed or zero.
     expect(container.textContent).not.toMatch(/[+-]£|£0|[+-][\d.]+%|\b0%/);
     expect(
-      screen.queryByRole("button", { name: "Download results by region" }),
+      screen.queryByRole("button", { name: /^Download chart: Results by region/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe("RegionView", () => {
   it("exports the published strings as CSV, with metadata and a byte-order mark", async () => {
     renderView();
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "Download results by region" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Download chart: Results by region/ }));
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     expect(downloadFile).toHaveBeenCalledTimes(1);
@@ -233,7 +233,7 @@ describe("RegionView", () => {
   it("exports the same rows as text", async () => {
     renderView({ selectedPolicies: ["fuel_duty_freeze"] });
     await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: "Download results by region" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Download chart: Results by region/ }));
     fireEvent.click(screen.getByRole("button", { name: "TXT Plain text" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalled());
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];

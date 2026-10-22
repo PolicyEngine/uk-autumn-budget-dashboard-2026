@@ -263,7 +263,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
             gained or lost by households in each decile.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} />
+        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

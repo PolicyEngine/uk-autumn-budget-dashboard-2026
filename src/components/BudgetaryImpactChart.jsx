@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
   ReferenceLine,
   LabelList,
   Customized,
@@ -108,7 +109,7 @@ const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
 
-function BudgetaryImpactChart({ data }) {
+function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -193,7 +194,7 @@ function BudgetaryImpactChart({ data }) {
             the Treasury.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} />
+        <ChartDownloadMenu formats={downloads} chartTitle={CHART_TITLE} />
       </div>
 
       <div ref={chartRef}>
@@ -204,6 +205,17 @@ function BudgetaryImpactChart({ data }) {
             stackOffset="sign"
           >
             <CartesianGrid {...GRID_PROPS} />
+            {/* The year chosen in the title band, shaded behind its bars */}
+            {data.some((point) => point.year === selectedYear) && (
+              <ReferenceArea
+                x1={selectedYear}
+                x2={selectedYear}
+                fill="#319795"
+                fillOpacity={0.08}
+                stroke="none"
+                ifOverflow="extendDomain"
+              />
+            )}
             <XAxis
               dataKey="year"
               tick={TICK_STYLE}

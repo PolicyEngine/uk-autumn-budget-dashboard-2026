@@ -142,7 +142,6 @@ body {
 .card,
 .hero-chart,
 .charts-grid > div,
-.section-year-slider,
 .obr-expandable,
 .policy-details-footer,
 .main-content .geography-methodology {
@@ -195,6 +194,26 @@ body {
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.15;
+}
+
+/* The band's controls: the year control, then the policy selector */
+.title-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* The policy selector on the teal band: translucent white outline, white
@@ -421,6 +440,8 @@ body {
 .main-content .chart-header h2 {
   grid-column: 1;
   grid-row: 1;
+  align-self: center;
+  margin-bottom: 0;
 }
 
 .main-content .chart-header .chart-download {
@@ -431,6 +452,7 @@ body {
 .main-content .chart-header .chart-description {
   grid-column: 1 / -1;
   grid-row: 2;
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {
@@ -555,13 +577,13 @@ body {
    phone or tablet (one column) the cards fall back to normal flow. */
 @media (min-width: 1025px) {
   .charts-grid:has(> div + div) {
-    grid-template-rows: auto auto 1fr;
+    grid-template-rows: repeat(7, auto);
     row-gap: 0;
   }
 
   .charts-grid > div:not(:only-child) {
     display: grid;
-    grid-row: span 3;
+    grid-row: span 7;
     grid-template-rows: subgrid;
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 16px;
@@ -576,10 +598,12 @@ body {
     display: contents;
   }
 
+  /* Row 1: title | Download. Row 2: description. */
   .charts-grid > div:not(:only-child) h2 {
     grid-column: 1;
     grid-row: 1;
-    align-self: start;
+    align-self: center;
+    margin-bottom: 0;
   }
 
   .charts-grid > div:not(:only-child) .chart-download {
@@ -592,11 +616,45 @@ body {
     grid-column: 1 / -1;
     grid-row: 2;
     align-self: start;
+    margin-top: 8px;
   }
 
-  .charts-grid > div:not(:only-child) > div:not(.chart-header):not(.map-header) {
+  /* Rows 3 to 7: controls, plot, legend, logo, footer */
+  .charts-grid > div:not(:only-child) > .chart-controls,
+  .charts-grid > div:not(:only-child) > .chart-plot,
+  .charts-grid > div:not(:only-child) > .chart-legend,
+  .charts-grid > div:not(:only-child) > .chart-logo,
+  .charts-grid > div:not(:only-child) > .chart-footer {
     grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-controls {
     grid-row: 3;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-plot {
+    grid-row: 4;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-legend {
+    grid-row: 5;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-logo {
+    grid-row: 6;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-footer {
+    grid-row: 7;
+  }
+
+  /* A Recharts chart draws its plot, legend and logo in one SVG: it takes
+     rows 3 to 6 together (its pair draws the same parts at the same
+     sizes, so they still line up). */
+  .charts-grid > div:not(:only-child) > div:not([class]) {
+    grid-column: 1 / -1;
+    grid-row: 3 / span 4;
     align-self: start;
     min-width: 0;
   }
@@ -607,25 +665,6 @@ body {
   margin: 0;
 }
 
-.section-year-slider {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 14px var(--card-padding);
-  margin-bottom: 20px;
-}
-
-.section-year-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
-.section-year-note {
-  font-size: 0.8125rem;
-  color: var(--pe-gray-500);
-}
 
 /* Few rules: cards and whitespace separate things. Tables keep only the
    underline beneath their header row. */
@@ -687,6 +726,56 @@ body {
 .main-content .lifecycle-calculator .legend {
   border-top: none;
   padding-top: 0;
+}
+
+/* Card rows for charts drawn outside Recharts (map, scatter template) */
+.chart-controls:empty {
+  min-height: 0;
+}
+
+.chart-legend {
+  padding-top: 12px;
+}
+
+.chart-note {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+  text-align: center;
+}
+
+.chart-logo {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  min-height: 25px;
+}
+
+.chart-logo img {
+  display: block;
+  width: 80px;
+  height: auto;
+}
+
+/* A card's expandable footer (OBR comparison, method note): inside the
+   card, separated from the chart by space only */
+.chart-footer,
+.hero-chart .obr-expandable {
+  margin-top: 16px;
+}
+
+.main-content .chart-footer .geography-methodology,
+.main-content .hero-chart .obr-expandable {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.main-content .hero-chart .obr-expandable {
+  margin-top: 16px;
 }
 
 /* PolicyEngine logo under a table or chart drawn outside Recharts */
@@ -766,7 +855,9 @@ body {
 @media (max-width: 768px) {
   :root {
     --card-padding: 16px;
-    --title-row-height: 52px;
+    /* Two fixed rows on a phone: the title, then the year and policy
+       controls. One height always, so nothing moves on scroll. */
+    --title-row-height: 96px;
   }
 
   .main-content {
@@ -784,9 +875,31 @@ body {
     font-size: 1.125rem;
   }
 
-  .title-row > .policy-selector {
+  .title-row {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 8px;
+  }
+
+  /* The personal tab has no band controls: one row */
+  .title-row:not(:has(> .title-controls)) {
+    height: 52px;
+  }
+
+  .title-row h1 {
+    flex: 1 1 100%;
+  }
+
+  .title-controls {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .title-controls > .policy-selector {
     flex: 0 0 auto;
     position: static;
+    margin-left: auto;
   }
 
   .title-row .policy-selector-toggle {

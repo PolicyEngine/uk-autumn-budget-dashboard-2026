@@ -438,11 +438,20 @@ function App() {
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
           {activeTab === "dashboard" && (
-            <PolicySelector
-              policies={POLICIES}
-              selectedPolicies={selectedPolicies}
-              onPolicyToggle={handlePolicyToggle}
-            />
+            <div className="title-controls">
+              {/* The year applies to every chart below the revenue chart,
+                  which highlights it; it lives in the band so it can be
+                  changed from anywhere on the page. */}
+              <YearSlider
+                selectedYear={distributionalYear}
+                onYearChange={setDistributionalYear}
+              />
+              <PolicySelector
+                policies={POLICIES}
+                selectedPolicies={selectedPolicies}
+                onPolicyToggle={handlePolicyToggle}
+              />
+            </div>
           )}
         </div>
 
@@ -517,63 +526,52 @@ function App() {
                   <>
                     {/* Hero Chart: Revenue Impact */}
                     <section id="revenue" className="report-section hero-chart">
-                      <BudgetaryImpactChart data={displayRows(results.budgetData)} />
-                    </section>
-
-                    {/* OBR Comparison (expandable) */}
-                    <section
-                      id="obr-comparison"
-                      className="report-section obr-expandable"
-                    >
-                      <button
-                        type="button"
-                        className="obr-toggle-button"
-                        aria-expanded={showOBRComparison}
-                        onClick={() => setShowOBRComparison(!showOBRComparison)}
-                      >
-                        Compare with OBR estimates
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                          style={{
-                            transform: showOBRComparison
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-                            transition: "transform 0.2s",
-                          }}
+                      <BudgetaryImpactChart
+                        data={displayRows(results.budgetData)}
+                        selectedYear={distributionalYear}
+                      />
+                      {/* OBR comparison: an expandable row at the foot of the card */}
+                      <div id="obr-comparison" className="obr-expandable">
+                        <button
+                          type="button"
+                          className="obr-toggle-button"
+                          aria-expanded={showOBRComparison}
+                          onClick={() => setShowOBRComparison(!showOBRComparison)}
                         >
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      {showOBRComparison && (
-                        <div className="obr-content">
-                          <OBRComparisonTable selectedPolicies={selectedPolicies} />
-                        </div>
-                      )}
+                          Compare with OBR estimates
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                            style={{
+                              transform: showOBRComparison
+                                ? "rotate(180deg)"
+                                : "rotate(0deg)",
+                              transition: "transform 0.2s",
+                            }}
+                          >
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                          </svg>
+                        </button>
+                        {showOBRComparison && (
+                          <div className="obr-content">
+                            <OBRComparisonTable selectedPolicies={selectedPolicies} />
+                          </div>
+                        )}
+                      </div>
                     </section>
 
-                    {/* Row 1: Absolute and Relative Impact with shared year slider */}
+                    {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
                     <section
                       id="deciles"
                       className="report-section distributional-section"
                     >
-                      <div className="section-year-slider">
-                        <span className="section-year-label">Year</span>
-                        <YearSlider
-                          selectedYear={distributionalYear}
-                          onYearChange={setDistributionalYear}
-                        />
-                        <span className="section-year-note">
-                          Applies to every chart below
-                        </span>
-                      </div>
                       <div className="charts-grid">
                         <WaterfallChart
                           rawData={results.rawWinnersLosers}
@@ -603,10 +601,10 @@ function App() {
                         selectedYear={distributionalYear}
                         policies={POLICIES}
                         showRegionLink={false}
+                        footer={<GeographyMethodology />}
                       />
                       <HouseholdScatterTemplate selectedYear={distributionalYear} />
                     </section>
-                    <GeographyMethodology />
 
                     {/* Row 3: Net Income Analysis Charts */}
                     <section

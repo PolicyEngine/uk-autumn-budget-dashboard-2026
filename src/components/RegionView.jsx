@@ -155,7 +155,7 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
         </div>
         {rows && (
           <ChartDownloadMenu
-            ariaLabel="Download results by region"
+            chartTitle={`${TITLE}, ${yearLabel}`}
             formats={{
               csv: () => exportFile("csv"),
               txt: () => exportFile("txt"),

@@ -271,7 +271,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
             Positive values indicate gains; negative values indicate losses.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} />
+        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

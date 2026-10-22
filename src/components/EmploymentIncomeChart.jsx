@@ -187,7 +187,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
             policy without reforms, Post-Autumn Budget shows impact after selected changes.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} />
+        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

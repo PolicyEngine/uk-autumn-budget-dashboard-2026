@@ -13,8 +13,8 @@ const ORDER = ["csv", "png", "svg", "txt"];
 function DownloadIcon() {
   return (
     <svg
-      width="14"
-      height="14"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -37,18 +37,19 @@ function DownloadIcon() {
  * Escape or a click outside closes the list; Escape returns focus to the
  * button.
  */
-function ChartDownloadMenu({
-  formats,
-  label = "Download",
-  ariaLabel,
-  disabledReason,
-}) {
+function ChartDownloadMenu({ formats, chartTitle, ariaLabel, disabledReason }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const menuId = useId();
   const available = ORDER.filter((format) => typeof formats?.[format] === "function");
+  // An icon-only button: its name says what it downloads, its tooltip the
+  // formats.
+  const name = ariaLabel ?? `Download chart: ${chartTitle ?? "chart"}`;
+  const tooltip = `Download (${available
+    .map((format) => FORMAT_LABELS[format].name)
+    .join(", ")})`;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -79,10 +80,9 @@ function ChartDownloadMenu({
           className="chart-download-button"
           disabled
           title={disabledReason}
-          aria-label={ariaLabel ? `${ariaLabel}: ${disabledReason}` : undefined}
+          aria-label={`${name}: ${disabledReason}`}
         >
           <DownloadIcon />
-          {label}
         </button>
       </div>
     );
@@ -110,11 +110,11 @@ function ChartDownloadMenu({
         className="chart-download-button"
         aria-expanded={open}
         aria-controls={menuId}
-        aria-label={ariaLabel}
+        aria-label={name}
+        title={tooltip}
         onClick={() => setOpen((value) => !value)}
       >
         <DownloadIcon />
-        {label}
       </button>
       {open && (
         <ul className="chart-download-menu" id={menuId}>

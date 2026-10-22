@@ -18,3 +18,32 @@
   border-radius: 8px;
   white-space: nowrap;
 }
+
+/* Colour and size key, centred like the chart legends */
+.scatter-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.scatter-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scatter-key-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.scatter-key-size {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--pe-gray-400);
+  border-radius: 50%;
+}

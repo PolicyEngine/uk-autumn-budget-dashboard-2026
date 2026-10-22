@@ -197,7 +197,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             primary earner contributes £10,000 annually to their pension.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} />
+        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

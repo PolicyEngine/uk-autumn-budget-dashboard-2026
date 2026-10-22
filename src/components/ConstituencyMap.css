@@ -457,3 +457,27 @@
   transform: none;
   width: auto;
 }
+
+/* The template plot matches the scatter beside it */
+.map-template-svg {
+  max-height: 380px;
+}
+
+/* Colour scale without values */
+.map-scale-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.map-scale-swatch {
+  width: 28px;
+  height: 10px;
+}
+
+.map-scale-end {
+  padding: 0 6px;
+}

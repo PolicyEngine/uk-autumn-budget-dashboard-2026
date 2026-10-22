@@ -203,7 +203,7 @@ describe("ConstituencyMap", () => {
     expect(logo.getAttribute("y")).toBe("575");
 
     // The file shows the drawing area alone, with the legend in its corner.
-    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
@@ -446,7 +446,7 @@ describe("ConstituencyMap", () => {
   it("downloads every constituency's published row as CSV", async () => {
     await renderMap();
     vi.mocked(downloadFile).mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
@@ -465,7 +465,7 @@ describe("ConstituencyMap", () => {
   it("exports the hatch, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
-    fireEvent.click(screen.getByRole("button", { name: "Download map" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];

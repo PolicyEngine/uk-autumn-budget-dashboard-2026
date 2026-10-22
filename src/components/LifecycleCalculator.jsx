@@ -1415,7 +1415,7 @@ function LifecycleCalculator() {
 
             {/* PolicyEngine logo and downloads */}
             <div className="lifecycle-chart-footer">
-              <ChartDownloadMenu formats={downloads} ariaLabel="Download lifetime impact" />
+              <ChartDownloadMenu formats={downloads} chartTitle="Lifetime policy impact" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
             </div>
