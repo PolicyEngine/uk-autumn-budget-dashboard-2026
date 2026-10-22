@@ -1,6 +1,7 @@
 /**
- * An index of results by area: one row per level, area, reform, year and
- * outcome. Lookups return the published row or null, never a stand-in.
+ * An index of results by area or group: one row per level, area, reform,
+ * year and outcome. Lookups return the published row or null, never a
+ * stand-in.
  */
 
 function keyOf(level, areaCode, reform, year, outcome) {
@@ -8,15 +9,17 @@ function keyOf(level, areaCode, reform, year, outcome) {
 }
 
 /**
- * Index parsed rows of one level.
+ * Index parsed rows of one level or several.
  *
+ * @param {string|Array<string>} levels
  * @throws {Error} when two rows share a key.
  */
-export function indexRows(level, rows) {
+export function indexRows(levels, rows) {
+  const levelList = Object.freeze([levels].flat());
   const byKey = new Map();
   const byReform = new Map();
   rows.forEach((row, position) => {
-    const key = keyOf(level, row.areaCode, row.reform, row.year, row.outcome);
+    const key = keyOf(row.level, row.areaCode, row.reform, row.year, row.outcome);
     if (byKey.has(key)) {
       throw new Error(
         `row ${position + 1}: a second row for ${row.areaCode}, ` +
@@ -28,7 +31,9 @@ export function indexRows(level, rows) {
     byReform.get(row.reform).push(row);
   });
   return Object.freeze({
-    level,
+    // The file's one level, or null for a file of several
+    level: levelList.length === 1 ? levelList[0] : null,
+    levels: levelList,
     rows: Object.freeze(rows),
     byKey,
     byReform,
@@ -36,12 +41,17 @@ export function indexRows(level, rows) {
   });
 }
 
-/** The row for one area, reform, year and outcome, or null. */
-export function lookupRow(table, { areaCode, reform, year, outcome }) {
+/**
+ * The row for one area, reform, year and outcome, or null. `level` is the
+ * table's own unless given (a file of several levels needs it).
+ */
+export function lookupRow(
+  table,
+  { level = table?.level, areaCode, reform, year, outcome },
+) {
   if (!table) return null;
   return (
-    table.byKey.get(keyOf(table.level, areaCode, reform, year, outcome)) ??
-    null
+    table.byKey.get(keyOf(level, areaCode, reform, year, outcome)) ?? null
   );
 }
 
@@ -49,14 +59,19 @@ export function lookupRow(table, { areaCode, reform, year, outcome }) {
 export const hasReform = (table, reform) =>
   Boolean(table) && table.byReform.has(reform);
 
-/** The rows for one reform, year and outcome, in file order. */
-export function rowsFor(table, { reform, year, outcome }) {
+/**
+ * The rows for one reform, year and outcome (every outcome when it is not
+ * given), of one level when `level` is given, in file order.
+ */
+export function rowsFor(table, { reform, year, outcome, level }) {
   if (!table || !table.byReform.has(reform)) return [];
   return table.byReform
     .get(reform)
     .filter(
       (row) =>
-        row.year === year && (outcome === undefined || row.outcome === outcome),
+        row.year === year &&
+        (outcome === undefined || row.outcome === outcome) &&
+        (level === undefined || row.level === level),
     );
 }
 

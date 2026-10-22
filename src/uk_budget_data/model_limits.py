@@ -18,6 +18,7 @@ own: once the model has the fix, nothing is recorded, and
 import ast
 import hashlib
 import json
+import math
 import types
 from dataclasses import dataclass
 from importlib.resources import files
@@ -38,6 +39,8 @@ class ModelLimit:
     # model does (read from its source, for the templates and stand-ins).
     fixed: Callable[[object], bool]
     installed_fixed: Callable[[], bool]
+    # Compare effective values only from this fiscal year, if specified.
+    from_year: int | None = None
 
 
 # policyengine-uk #2336 makes additional_state_pension rise by this index.
@@ -108,6 +111,163 @@ def _installed_cpi_add_on() -> bool:
     return False
 
 
+# Both installed models fill unpublished statutory inputs with forecasts.
+# Read the raw input as well as behaviour, or a forecast would count as an
+# outturn. The benefit index is rounded to five decimal places by the engine.
+_BENEFIT_INDEX = "gov.benefit_uprating_cpi"
+_SEPTEMBER_CPI_INPUT = (
+    "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+)
+_SEPTEMBER_CPI_INDEX = (
+    "gov.economic_assumptions.indices.september_cpi_uprating"
+)
+
+
+def _benefit_september_cpi(system) -> bool:
+    """Whether both steps of #2533 are present, including actual uprating.
+
+    The raw September 2026 input must be published, and the benefit index
+    must follow September CPI in metadata and in its April 2027 step. A
+    forecast filled into a null input, or repointing metadata without
+    rebuilding the index, is insufficient. A reform to an individual
+    benefit amount does not change whether its model has the fix.
+    """
+    if not hasattr(system, "parameters"):
+        return False
+    try:
+        raw = getattr(system, "_raw_parameters", None)
+        if raw is None:
+            from policyengine_uk.tax_benefit_system import statutory_parameters
+
+            raw = statutory_parameters()
+        published = raw.get_child(_SEPTEMBER_CPI_INPUT)("2026-09-01")
+        if published is None:
+            return False
+        index = system.parameters.get_child(_BENEFIT_INDEX)
+        if index.metadata.get("uprating") != _SEPTEMBER_CPI_INDEX:
+            return False
+        september = system.parameters.get_child(_SEPTEMBER_CPI_INDEX)
+        outturn = system.parameters.get_child(_SEPTEMBER_CPI_INPUT)(
+            "2026-09-01"
+        )
+        growth = index("2027-04-30") / index("2026-04-30")
+        september_growth = september("2027-04-30") / september("2026-04-30")
+        return math.isclose(
+            growth, september_growth, rel_tol=0, abs_tol=1e-5
+        ) and math.isclose(growth, 1 + outturn, rel_tol=0, abs_tol=1e-5)
+    except (
+        AttributeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        ZeroDivisionError,
+    ):
+        return False
+
+
+def _installed_benefit_september_cpi() -> bool:
+    """Read the installed engine with the same behavioural check."""
+    from policyengine_uk.system import system
+
+    return _benefit_september_cpi(system)
+
+
+# Topmost prefixes whose uprating metadata names gov.benefit_uprating_cpi,
+# including the UC standard allowance's parent (which propagates to all
+# four leaves). Kept static for reproducible receipts; metadata drift in
+# either installed engine fails test_september_cpi_model_limit.py.
+_BENEFIT_CPI_PARAMETERS = (
+    "gov.dfe.childcare_funding_rate",
+    "gov.dwp.JSA.income.amount_18_24",
+    "gov.dwp.JSA.income.amount_over_25",
+    "gov.dwp.JSA.income.couple",
+    "gov.dwp.attendance_allowance.higher",
+    "gov.dwp.attendance_allowance.lower",
+    "gov.dwp.carer_premium.single",
+    "gov.dwp.carers_allowance.rate",
+    "gov.dwp.constant_attendance_allowance.exceptional_rate",
+    "gov.dwp.constant_attendance_allowance.full_day_rate",
+    "gov.dwp.constant_attendance_allowance.intermediate_rate",
+    "gov.dwp.constant_attendance_allowance.part_day_rate",
+    "gov.dwp.disability_premia.disability_couple",
+    "gov.dwp.disability_premia.disability_single",
+    "gov.dwp.disability_premia.enhanced_couple",
+    "gov.dwp.disability_premia.enhanced_single",
+    "gov.dwp.disability_premia.severe_couple",
+    "gov.dwp.disability_premia.severe_single",
+    "gov.dwp.dla.mobility.higher",
+    "gov.dwp.dla.mobility.lower",
+    "gov.dwp.dla.self_care.higher",
+    "gov.dwp.dla.self_care.lower",
+    "gov.dwp.dla.self_care.middle",
+    "gov.dwp.housing_benefit.allowances.couple.aged",
+    "gov.dwp.housing_benefit.allowances.couple.older",
+    "gov.dwp.housing_benefit.allowances.couple.younger",
+    "gov.dwp.housing_benefit.allowances.lone_parent.aged",
+    "gov.dwp.housing_benefit.allowances.lone_parent.older",
+    "gov.dwp.housing_benefit.allowances.lone_parent.younger",
+    "gov.dwp.housing_benefit.allowances.single.aged",
+    "gov.dwp.housing_benefit.allowances.single.older",
+    "gov.dwp.housing_benefit.allowances.single.younger",
+    "gov.dwp.housing_benefit.non_dep_deduction.amount",
+    "gov.dwp.income_support.amounts.amount_16_24",
+    "gov.dwp.income_support.amounts.amount_couples_16_17",
+    "gov.dwp.income_support.amounts.amount_couples_age_gap",
+    "gov.dwp.income_support.amounts.amount_couples_over_18",
+    "gov.dwp.income_support.amounts.amount_lone_16_17",
+    "gov.dwp.income_support.amounts.amount_lone_over_18",
+    "gov.dwp.income_support.amounts.amount_over_25",
+    "gov.dwp.pension_credit.guarantee_credit.carer.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.disability.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.disability.severe.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.first.addition",
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.COUPLE",
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE",
+    "gov.dwp.pension_credit.guarantee_credit.severe_disability.addition",
+    "gov.dwp.pension_credit.savings_credit.threshold",
+    "gov.dwp.pip.daily_living.enhanced",
+    "gov.dwp.pip.daily_living.standard",
+    "gov.dwp.pip.mobility.enhanced",
+    "gov.dwp.pip.mobility.standard",
+    "gov.dwp.sda.maximum",
+    "gov.dwp.tax_credits.child_tax_credit.elements.child_element",
+    "gov.dwp.tax_credits.child_tax_credit.elements.dis_child_element",
+    "gov.dwp.tax_credits.child_tax_credit.elements.severe_dis_child_element",
+    "gov.dwp.tax_credits.means_test.income_threshold",
+    "gov.dwp.tax_credits.means_test.income_threshold_CTC_only",
+    "gov.dwp.tax_credits.working_tax_credit.elements.basic",
+    "gov.dwp.tax_credits.working_tax_credit.elements.couple",
+    "gov.dwp.tax_credits.working_tax_credit.elements.disabled",
+    "gov.dwp.tax_credits.working_tax_credit.elements.lone_parent",
+    "gov.dwp.tax_credits.working_tax_credit.elements.severely_disabled",
+    "gov.dwp.tax_credits.working_tax_credit.elements.worker",
+    "gov.dwp.universal_credit.elements.carer.amount",
+    "gov.dwp.universal_credit.elements.child.amount",
+    "gov.dwp.universal_credit.elements.child.disabled.amount",
+    "gov.dwp.universal_credit.elements.child.first.higher_amount",
+    "gov.dwp.universal_credit.elements.child.severely_disabled.amount",
+    "gov.dwp.universal_credit.elements.childcare.cap",
+    "gov.dwp.universal_credit.elements.disabled.amount",
+    "gov.dwp.universal_credit.elements.housing.non_dep_deduction.amount",
+    "gov.dwp.universal_credit.means_test.work_allowance",
+    "gov.dwp.universal_credit.standard_allowance.amount",
+    "gov.hmrc.child_benefit.amount.additional",
+    "gov.hmrc.child_benefit.amount.eldest",
+    "gov.hmrc.council_tax.high_value_surcharge.amount",
+    "gov.social_security_scotland.carer_support_payment.rate",
+)
+
+# Parameters outside the benefit index whose 2027 amount is still computed
+# from the September 2026 CPI input. The UC protected health element is null
+# from April 2027, so policyengine-uk's uc_reform takes the UC Act 2025 s. 4
+# floor, which reads statutory_uprating_inputs.cpi_september for the
+# previous September (review of #85).
+_SEPTEMBER_INPUT_READERS = (
+    "gov.dwp.universal_credit.rebalancing.protected_health_element",
+)
+
+
 MODEL_LIMITS = (
     ModelLimit(
         key="state_pension_add_on_uprating",
@@ -135,6 +295,27 @@ MODEL_LIMITS = (
         fixed=_cpi_add_on,
         installed_fixed=_installed_cpi_add_on,
     ),
+    ModelLimit(
+        key="benefit_uprating_september_cpi",
+        parameters=_BENEFIT_CPI_PARAMETERS + _SEPTEMBER_INPUT_READERS,
+        fixed_by="policyengine-uk #2533",
+        reason=(
+            "The installed benefit uprating index follows lagged calendar-year "
+            "CPI: the parameters uprated by it, the UC standard allowance "
+            "among them, step by 2.3% in April 2027 against September 2026 "
+            "CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC "
+            "protected health element's 2027 amount also reads the "
+            "September 2026 input, which is still a forecast. The 2026-27 "
+            "rates are hard-coded and unaffected. policyengine-uk #2533 must "
+            "both enter the September outturn and repoint the benefit index "
+            "to September CPI. Until both steps are in the model, measures "
+            "touching these benefit levels from 2027 are held at "
+            "provisional."
+        ),
+        fixed=_benefit_september_cpi,
+        installed_fixed=_installed_benefit_september_cpi,
+        from_year=2027,
+    ),
 )
 
 
@@ -143,7 +324,13 @@ MODEL_LIMITS = (
 REGISTRY_SHA256 = hashlib.sha256(
     json.dumps(
         [
-            [limit.key, list(limit.parameters), limit.fixed_by, limit.reason]
+            [
+                limit.key,
+                list(limit.parameters),
+                limit.fixed_by,
+                limit.reason,
+                limit.from_year,
+            ]
             for limit in MODEL_LIMITS
         ],
         separators=(",", ":"),
@@ -183,7 +370,9 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     differ by position and effective value, or only what formulas read
     there differs, or a node on the way is not the one formulas reach by
     attribute (a node rebound by assignment; recorded as the limit's own
-    prefix, failing closed).
+    prefix, failing closed). A dated limit ignores earlier effective
+    values, but retains earlier changes still in force from its first year.
+    Rebound nodes fail closed even if their dates cannot be established.
     """
     base_system = sim_baseline.tax_benefit_system
     reform_system = sim_reform.tax_benefit_system
@@ -214,12 +403,24 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
                     path
                     for path in before.keys() | after.keys()
                     if not data_limits._same_effect(
-                        before.get(path), after.get(path)
+                        before.get(path),
+                        after.get(path),
+                        from_year=limit.from_year,
                     )
                 ]
                 if not found and not data_limits._equal(
-                    data_limits._views(base_system, prefix, behaviour),
-                    data_limits._views(reform_system, prefix, behaviour),
+                    data_limits._views(
+                        base_system,
+                        prefix,
+                        behaviour,
+                        from_year=limit.from_year,
+                    ),
+                    data_limits._views(
+                        reform_system,
+                        prefix,
+                        behaviour,
+                        from_year=limit.from_year,
+                    ),
                 ):
                     found = [prefix]
                 differing += found
@@ -249,26 +450,45 @@ def limits_for_scenarios(baseline_scenario, reform_scenario) -> list[dict]:
     changes, against the installed model. Only for simulations with no
     parameter tree to compare (stand-ins): :func:`limits_touched` decides
     wherever the trees exist."""
-    base = data_limits._changes(baseline_scenario)
-    reform = data_limits._changes(reform_scenario)
-    differing = [
-        p for p in base.keys() | reform.keys() if base.get(p) != reform.get(p)
-    ]
-    return [
-        record(
-            limit,
-            [
-                path
-                for path in differing
-                if any(
-                    data_limits._under(path, prefix)
-                    for prefix in limit.parameters
-                )
-            ],
-        )
-        for limit in limits_for_paths(differing)
-        if not limit.installed_fixed()
-    ]
+    touched = []
+    for limit in MODEL_LIMITS:
+        base = _changes_from_year(baseline_scenario, limit.from_year)
+        reform = _changes_from_year(reform_scenario, limit.from_year)
+        differing = [
+            path
+            for path in base.keys() | reform.keys()
+            if base.get(path) != reform.get(path)
+            and any(
+                data_limits._under(path, prefix) for prefix in limit.parameters
+            )
+        ]
+        if differing and not limit.installed_fixed():
+            touched.append(record(limit, differing))
+    return touched
+
+
+def _changes_from_year(scenario, from_year):
+    """Ignore earlier bare fiscal-year assignments in a stand-in scenario.
+
+    Scalar changes and unrecognised dated syntax are conservatively kept;
+    only the built trees can establish their effective dates reliably.
+    """
+    changes = data_limits._changes(scenario)
+    if from_year is None:
+        return changes
+    found = {}
+    for path, value in changes.items():
+        if isinstance(value, dict):
+            value = {
+                key: amount
+                for key, amount in value.items()
+                if not (str(key).isdigit() and len(str(key)) == 4)
+                or int(key) >= from_year
+            }
+            if not value:
+                continue
+        found[path] = value
+    return found
 
 
 def record_problems(records) -> list[str]:

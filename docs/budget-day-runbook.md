@@ -58,7 +58,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures | **No.** Removed by #26 (15 October), which also tests that no static page names another year's Budget | Done. The briefing export (#22) writes this year's from an approved manifest |
   | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | Last year's results: all four last changed on 8 December 2025 and are byte-identical to `ec29ebd`. (`household_scatter.csv` was withdrawn from every public path by #30, 15 October.) | **Yes**: `main`'s main route (`App.jsx`) fetches them and charts them under the 2026 heading once a policy is selected. For example, `?policies=two_child_limit` shows −£2.95bn for 2026 and −£3.72bn for 2030 (#26 review, 15 October). Served at `uk-autumn-budget-2026.vercel.app`, which deploys `main` | #3 regenerates them. Until it merges, the production URL shows last year's numbers; whether to hide them meanwhile is your call |
   | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
-  | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
+  | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | No: removed with the lifecycle calculator, front end and back end. The Personal impact tab now asks about a household and calculates its net income in a chosen policy year (`PersonalImpactTab.jsx`, `household_impact`) | Nothing left to do |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
   | `policyConfig.js` in #3, and the flat `public/data/*.csv` | A policy named "Autumn Budget 2025 (combined)" (id `autumn_budget_2025_combined`), with last year's rows | In #3, only through an old shared URL | #3 keeps it for old links: **your call** whether a 2026 page should still answer them |
   | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imports them, on `main`, in #3 or in the drills | Left alone. Delete them, or fix them before wiring them back |
@@ -115,6 +115,12 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **`parameter_changes`**, wherever the measure can be expressed that way.
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
+
+**Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
+
+**Wealth-tax templates refuse `gov.contrib.ubi_center.wealth_tax`** (UK hub, `budget-triage/JUDGED.md` S4). The engine taxes gross wealth, including private pensions, with no debts netted, so an announcement on net assets would use the wrong base. A hand-written wealth-tax modifier is held not computable by hand for the same reason.
+
+**An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and deflates by the same GDP-per-capita or OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
 
 **A measure on pension tax relief, the annual allowance, its taper or the MPAA is expected to fail the Treasury reconciliation. By default it is held for the 07:00 briefing pending review** (Vahid and María to confirm).
 - **Why:** the UK hub's rebuild of policyengine-uk #2240 replays the Spring Budget 2023 pension changes at about −£12.9bn over four years against the OBR's −£1.55bn, roughly 8 times over. The remaining causes are mostly data: the imputation of pension inputs, defined-benefit accrual, the taper's income measure and carry-forward. A pensions decomposition is queued; revisit this row when it reports.
@@ -195,7 +201,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Found by the UK hub.** Its engine-side fix is policyengine-uk #2428 (below), merged on 16 October. Re-check this row on the first certified pair that carries it.
 - **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:
   - the dashboard's 2030-31 UC figures rise, and so does any measure's 2030-31 effect that runs through UC. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
-  - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
+  - `UC_REBALANCED_YEARS` now follows `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS` automatically, with `range(2026, 2030)` as the fallback for engines without the export. policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6) extends the rebalancing to 2032 and exports those years, so UC health measures for 2026–2032 then go through `uc_health_element_change`. #47's engine table (`tests/test_uc_health_template.py`) still checks the actual award edges against the template's years, including on the fallback: extending the rebalancing without exporting its years must fail that check.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
 **A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October). The model-limit guard (#73, `uk_budget_data.model_limits`) enforces this.
@@ -205,7 +211,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. As of 21 October it is open; the UK hub expects it to land shortly.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
   - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
-  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
+  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over 2026-27 to 2030-31;
   - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
   So without the fix, a 10% rise's net cost is overstated by about £0.85bn to £1.06bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
@@ -237,11 +243,25 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **With the fix,** a measure that also raises the add-on itself, above prices, needs a change to `additional_state_pension`. A rate change alone no longer reaches it, and no template covers it. That makes it a hand-written modifier, which needs the named human data-limits check above.
 - **The adoption PR that brings #2336 must update a test.** `tests/test_measure_templates.py::test_native_pension_responds_to_rates_without_total_income_override` asserts that the add-on moves with the full rates, the behaviour #2336 removes. With #2336's formula, #71's review found two of its four cases fail (new and basic State Pension at £20,000). Update it there to expect the add-on to stay with prices, as the UC row asks of #47's table.
 
+**A measure on 2027-28 benefit levels needs policyengine-uk #2533 in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (coordinator, 22 October, from the UK hub's triage).
+- **Why:** the benefit uprating index follows lagged calendar-year CPI, so the parameters on it rise by 2.3% in April 2027, against September 2026 CPI of 3.5% (ONS D7G7, published 21 October). That covers most CPI-linked benefits, the UC standard allowance among them.
+  - **The September 2026 statutory input is still null,** so it's a forecast. The UC protected health element's 2027 amount is the UC Act 2025 s. 4 floor, which reads that input, so it's off too.
+  - **The 2026-27 rates** are hard-coded and unaffected.
+  - **The Pension Credit minimum guarantee** is on the index too, but in law it has risen with earnings. With #2533 it would rise 3.5% against earnings of 3.9%, so it stays under-uprated after the fix. Whether it needs a limit of its own is a question for the UK hub.
+- **Which measures:** changes from 2027 onwards, on either side of the measure, to:
+  - any parameter whose uprating metadata names the benefit uprating index (79 prefixes, the UC standard allowance among them);
+  - or the UC protected health element.
+
+  The registry pins those prefixes, and a test compares the pin with the installed engine's metadata.
+  - **Not held:** a structural measure that changes no covered parameter, such as repealing the two-child limit. The 2027 benefit levels it interacts with are still about 1.2% low.
+- **What the guard does:** generation records `benefit_uprating_september_cpi` and its reason in the receipt. Provisional staging is allowed; approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such measures stay out of the first cut and briefing, which take approved entries only; a combined run including one is provisional at most.
+- **When it lifts:** the adopted pair must include both steps of #2533: enter the September 2026 outturn (`0.035`) in `statutory_uprating_inputs.cpi_september`, and make the benefit uprating index follow the September CPI index. The guard checks the input and the resulting April 2026 to April 2027 uprating; entering the outturn alone does not lift it. The UK hub will name the release. Its adoption PR removes this limit when the tripwire test finds the fix in the adopted model.
+
 **Dated changes: key every year by its bare fiscal year.**
 
 | Key | What it means | Use it? |
 |---|---|---|
-| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2030. |
+| `"2027": 0.21` | The whole UK fiscal year 2027-28, 6 April 2027 to 5 April 2028. The national run and the household calculator both read it. | **Yes.** List every year the change applies, through 2031 (the last year in `POLICY_YEARS`, `budget_years.json`). |
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where #3's household calculator showed no change. |
 
@@ -257,7 +277,17 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Before the scenario is used, probe the adopted pair.** Put the scenario's own change in `CHANGES`, and in `INPUT` the statutory input it should move (`cpi_september`, or `awe_total_pay_may_july` for earnings). The probe prints the instants that moved: `['2026-09-01']` for the example below.
   - **Earnings move on 1 July.** With `awe_total_pay_may_july`, a 2027 earnings change prints `['2027-07-01']` on both models.
   - **`[]` means that year is already published,** not that the key is wrong. May to July 2026 is published (3.9%), so a 2026 earnings change prints `[]`. A published year never moves (see "Which measures" above). Don't fall back to a bare year: on 2.130.1 it silently moves the next year instead.
-- **A registered measure can't carry a macro path today.** `Reform.to_scenario` never applies a change before the data loads, and `tests/test_measure_keys.py` refuses any key that isn't a bare year. A macro scenario is a separate run, through `Scenario(applied_before_data_load=True)`.
+- **A change to an uprating input projects the data, however the measure is written** (UK hub's OBR-growth routes report, 22 October).
+  - **Since policyengine-uk 2.132.3 (#2405),** a scenario's dated parameter changes that alter a dataset-uprating input are applied before the data is built, so incomes follow, exactly as with `Scenario(applied_before_data_load=True)`.
+  - **Which inputs count:** the paths `uprating_input_paths()` returns in the installed policyengine-uk, 23 on 2.132.6. They include `yoy_growth.obr.average_earnings` and `consumer_price_index`. The statutory uprating inputs aren't on the list, because they feed the triple lock, not the data. Neither are several growth series, such as `rpi`. The list grows in later releases.
+  - **Registered measures are included, on either side:** `Reform.to_scenario` returns `Scenario(parameter_changes=…)`, and `baseline_parameter_changes` take the same route. On 6.10.0 (policyengine-uk 2.132.6), `average_earnings {"2026": 0.10}` grew each household's employment income 10.00% in 2026, against 3.40% under current law. That was on a 1-in-40 subsample of the Microcosm cut, through the dashboard's own `managed_microsimulation` route.
+  - **So such a measure is a macro scenario.** A registered measure can only use bare-year keys and the after-load route, not the calendar-range keys and before-load route that the macro-path rules above ask for. On 6.10.0 the two come out the same: a bare year names the calendar year (#2404), and the after-load route re-uprates the data (#2405). Still run the probe above on the adopted pair.
+  - **Check that no registered measure changes an uprating input by accident.** On 2.132.6 none of the ten does, on either side (#87's review). The list widens in later releases, so check again on each adopted pair.
+  - **With a modifier as well,** the parameter changes still move before the build and the modifier runs after. That is read from policyengine-uk's code, not run.
+- **Only on the dashboard's route.** The data follow only when policyengine-uk gets a single-year dataset, as `pe.uk.managed_microsimulation` gives it for this cut.
+  - **policyengine.py's own `Simulation(policy=…)`** projects its year files under current law and passes a multi-year dataset, which no route re-uprates. It moves the parameters only, which is an inconsistent scenario: on the subsample, employment income was identical with and without the change.
+  - **Read from code, not run:** the same holds for `dynamic=`, and for any route on a multi-year dataset.
+  - **So keep the dashboard on `managed_microsimulation`** with a single-year dataset.
 
 ```sh
 uv run python - <<'EOF'
@@ -353,18 +383,25 @@ For each coded measure:
 ## G2: provisional numbers (13:15)
 
 ```sh
-uv run uk-budget-data generate --artifacts --reforms <ids> \
-  --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --artifacts --reforms <ids>
 uv run uk-budget-data publish reconcile public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<digest>/
 uv run uk-budget-data publish check
 ```
 
+- **Years.** `--years` defaults to every policy year in `budget_years.json`, 2026-27 to 2031-32. Pass it only to run fewer.
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
-- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
+- **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
+- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **out of the repository**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
+  - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
+  - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
+  - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+  - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: **an open question for the coordinator, to settle before the rehearsal.**
+  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. Whether such artifacts are deleted before the helper runs is with the coordinator.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -404,7 +441,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   - a quantified explanation;
   - the reviewer's name;
   - the artifact's `outputs_sha256`;
-  - the failed row's `comparator.sha256` from `reconciliation.json`, as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
+  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved out of the repository, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
   Then reconcile again.
 - **Approve:**
@@ -420,19 +457,25 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 ## G4: combined run and publish (14:50)
 
 ```sh
-uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
+uv run uk-budget-data generate --combined <all coded ids>
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 uv run uk-budget-data publish check
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
-- **Results by area** (`uk-budget-data geography`): leave out of `--reforms` any measure that is not computable, or held by hand under "Held by default" above, and any package including it.
+- **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
   - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
-  - **What it doesn't:** it reads no receipts, holds or ledger, so the Reconciler still checks the list. A measure held only by hand records no data limit. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
+  - **What it doesn't:** the manifest records publication approval, but the command does not read the holds ledger. The Reconciler still checks that measures held by hand have not been approved. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
+  - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). The page doesn't show the label yet: a caveat on the area views is a change to the public page, so it's Vahid's and María's call (the coordinator has it), and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
+- **Results by group** (`uk-budget-data demographics`): the same rules for which ids it runs as the results by area, from the same manifest. It writes `demographics.csv` (the average change in household net income of the people in each age group, age band and group of 18 to 24-year-olds in or not in work or education, through the disclosure layer) and `poverty_by_age.csv` (absolute poverty rates before housing costs by age group, without and with each reform; rates only) to `--out-dir`, default `public/data`, and the layer's audit to the private directory (`UK_BUDGET_DISCLOSURE_AUDIT_DIR`).
+  - **Employment status is left out** unless `--employment-reviewer "<name>"` names who accepts the layer's `unchecked_overlap` finding: employment groups overlap the age groups, so the layer can't check what a reader recovers by subtracting one from the other.
+  - **Review rows:** both files need rows in `data_inputs/public_data_review.csv`, as every public file does: `demographics.csv` as a disclosure table, `poverty_by_age.csv` as a national table.
+  - **On the page:** the "Who is affected" section says "not yet published" until the files exist, and offers employment status only when `demographics.csv` has it. Ages and statuses are the data year's in every year (no ageing; see "Projected years have no ageing" below), and the cards say so.
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
+- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 
@@ -483,7 +526,7 @@ uv run uk-budget-data publish check
 2. **Regenerate it.** This writes a new artifact; the old one is untouched.
 3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
 4. **Regenerate the combined run**, stage it, and approve both.
-5. **Publish through a pull request.**
+5. **Write the review rows, as at G2, and publish through a pull request.**
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
@@ -497,7 +540,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
-  2. regenerate, stage, reconcile and approve on the branch;
+  2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
   3. merge with a merge commit (`gh pr merge --merge`), since `git revert -m 1` needs one, and open its revert PR as a draft;
   4. redeploy the household API;
   5. run the household check, and the "Read API memory" workflow on the new revision.
@@ -562,7 +605,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
   - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. Green means every check passes, the Publication gate included, though it isn't a required check. A revert is then the merge of a green PR, not a wait in the runner queue.
   - **Keep it current.** Checks don't require a branch to be up to date. So if anything merges to `main` after the revert PR's CI ran, update the revert PR and let its CI run again.
-  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
+  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, write the review rows, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
   - **Then, to revert:**
     1. mark the revert PR ready (a draft can't be merged), and merge it;
     2. run the API `rollback` to the recorded revision;
@@ -577,7 +620,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). If its dispatch is late, W5 dispatches the adoption by hand. The workflow opens draft PRs only. Each re-cut's PR merges on its gates, after approval on the branch.
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
-  - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
+  - **The regenerated artifacts and the manifest go in the upgrade PR,** with their review rows (`publish review-rows`, as at G2). `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
   - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
 - **Approve on the upgrade branch, before merging, for re-cuts and the final cut** (coordinator, 22 October; see "Rolling re-cuts" above).
@@ -675,7 +718,7 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
      - Check that nothing else merged since depends on what is reverted.
-  2. **Regenerate on the revert branch, before merging, if anything was published after the upgrade.** With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, and approve, as for a re-cut. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+  2. **Regenerate on the revert branch, before merging, if anything was published after the upgrade.** With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, approve, and write the review rows (as at G2), as for a re-cut. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
      - **A clean revert needs no regeneration.** If nothing was published after the upgrade, the revert brings back the previous lock with its manifest, artifacts and approvals together, and `publish check` passes.
   3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "Adopting a release (each re-cut)"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
   4. **Run the household checks.** After a clean revert, the previous cut's approvals are already back, with its manifest.

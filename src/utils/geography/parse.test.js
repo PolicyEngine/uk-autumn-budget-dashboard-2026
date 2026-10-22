@@ -3,6 +3,7 @@ import { COLUMNS } from "./columns";
 import { GeographyTableError, parseGeographyTable } from "./parse";
 import { hasReform, lookupRow, rowsFor, yearsFor } from "./rows";
 import { geographyFixture } from "../../test/geographyFixture";
+import { demographicsCsv } from "../../test/demographicsFixture";
 
 const REPORTED = {
   level: "region",
@@ -287,5 +288,92 @@ describe("parseGeographyTable", () => {
       }),
     ).toHaveLength(11);
     expect(yearsFor(table, "autumn_budget_2026_combined")).toEqual([2029, 2030]);
+  });
+});
+
+describe("a file of several levels", () => {
+  const LEVELS = ["age_group", "age_band", "young_people", "employment"];
+  const parseGroups = (text) => parseGeographyTable(text, { levels: LEVELS });
+  const GROUP = {
+    ...REPORTED,
+    level: "age_band",
+    area_code: "AGE_25_34",
+    area_name: "25 to 34",
+  };
+
+  function groupRejection(rows, levels = LEVELS) {
+    try {
+      parseGeographyTable(csv(rows), { levels });
+    } catch (error) {
+      expect(error).toBeInstanceOf(GeographyTableError);
+      return error.message;
+    }
+    throw new Error("the table was accepted");
+  }
+
+  it("reads every level in the file, and indexes each one", () => {
+    const table = parseGroups(demographicsCsv());
+    expect(table.levels).toEqual(LEVELS);
+    expect(new Set(table.rows.map((row) => row.level))).toEqual(new Set(LEVELS));
+    const key = {
+      level: "age_group",
+      areaCode: "child",
+      reform: "two_child_limit",
+      year: 2029,
+      outcome: "average_change",
+    };
+    expect(lookupRow(table, key).value).toBe("410.0");
+    // The same group code in another level is another row
+    expect(
+      lookupRow(table, { ...key, level: "age_band", areaCode: "AGE_0_17" }).areaName,
+    ).toBe("0 to 17");
+    expect(
+      rowsFor(table, {
+        level: "age_band",
+        reform: "two_child_limit",
+        year: 2029,
+        outcome: "relative_change",
+      }).map((row) => row.areaCode),
+    ).toEqual([
+      "AGE_0_17",
+      "AGE_18_24",
+      "AGE_25_34",
+      "AGE_35_49",
+      "AGE_50_64",
+      "AGE_65_79",
+      "AGE_80_PLUS",
+    ]);
+  });
+
+  it("accepts only each level's own group codes", () => {
+    expect(groupRejection([{ ...GROUP, area_code: "AGE_25_39" }])).toMatch(
+      /row 1: area_code .* is not an age_band group/,
+    );
+    expect(
+      groupRejection([{ ...GROUP, level: "age_group", area_name: "Children (under 18)" }]),
+    ).toMatch(/is not an age_group group/);
+    // An ONS code is an area, not a group
+    expect(groupRejection([{ ...GROUP, area_code: "E12000001" }])).toMatch(
+      /is not an age_band group/,
+    );
+  });
+
+  it("requires each group's published name", () => {
+    expect(groupRejection([{ ...GROUP, area_name: "Twenty-five to 34" }])).toMatch(
+      /row 1: area_name is not the group's name/,
+    );
+  });
+
+  it("rejects a level the file does not carry", () => {
+    expect(groupRejection([GROUP], ["age_group"])).toMatch(
+      /level "age_band" is not "age_group"/,
+    );
+    expect(groupRejection([{ ...REPORTED }])).toMatch(/level "region" is not/);
+  });
+
+  it("still requires ONS codes in a file of areas", () => {
+    expect(rejection([{ ...REPORTED, area_code: "child" }])).toMatch(
+      /area_code is not an ONS code/,
+    );
   });
 });

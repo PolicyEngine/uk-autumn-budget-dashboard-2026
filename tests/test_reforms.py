@@ -3,6 +3,8 @@
 import pytest
 from policyengine_uk.system import system
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 
 class TestPreAutumnBudgetBaseline:
     """Tests for pre-Autumn Budget baseline calculation."""
@@ -241,39 +243,52 @@ class TestDividendTaxIncrease:
         assert reform is not None
         assert reform.id == "dividend_tax_increase_2pp"
 
-    def test_reform_uses_custom_baseline(self):
-        """Reform uses pre-budget baseline rates via simulation modifier."""
+    def test_reform_states_pre_budget_rates_as_parameter_changes(self):
+        """The pre-Budget rates are parameter changes for every scored year
+        from 2027-28, not a modifier, so policyengine.py's household
+        calculation and the receipts can take them."""
+        from uk_budget_data.budget_years import POLICY_YEARS
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("dividend_tax_increase_2pp")
 
-        # Reform uses custom baseline (simulation_modifier for ParameterScale)
         assert reform.has_custom_baseline()
-        assert reform.baseline_simulation_modifier is not None
-
+        assert reform.baseline_simulation_modifier is None
         # Reform parameter_changes is empty (uses new rates from policyengine-uk)
         assert reform.parameter_changes == {}
+        years = [str(year) for year in POLICY_YEARS if year >= 2027]
+        assert reform.baseline_parameter_changes == {
+            "gov.hmrc.income_tax.rates.dividends[0].rate": {
+                year: 0.0875 for year in years
+            },
+            "gov.hmrc.income_tax.rates.dividends[1].rate": {
+                year: 0.3375 for year in years
+            },
+        }
 
-    @pytest.mark.certified_data
-    def test_baseline_modifier_sets_pre_budget_rates(self):
-        """Baseline simulation modifier correctly sets pre-budget rates."""
-        from uk_budget_data.pipeline import build_microsimulation
+    def test_baseline_sets_pre_budget_rates(self):
+        """The baseline's parameters hold the pre-Budget rates (8.75% basic,
+        33.75% higher) in every scored year from 2027-28."""
+        from policyengine_uk import Simulation
+
+        from uk_budget_data.budget_years import POLICY_YEARS
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("dividend_tax_increase_2pp")
-
-        # Build through policyengine.py so the dataset comes from the pinned
-        # release bundle; policyengine-uk no longer has an implicit default.
-        sim = build_microsimulation(None)
-        reform.baseline_simulation_modifier(sim)
-
-        div = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates
-        div = div.dividends
-
-        # Check pre-budget rates are set for 2027 (8.75% basic, 33.75% higher)
-        # The modifier replaces the 2026-04-06 entry so rates persist
-        assert div.brackets[0].rate("2027-04-06") == 0.0875
-        assert div.brackets[1].rate("2027-04-06") == 0.3375
+        sim = Simulation(
+            situation={
+                "people": {"p": {"age": {2027: 50}}},
+                "benunits": {"b": {"members": ["p"]}},
+                "households": {"h": {"members": ["p"]}},
+            },
+            scenario=reform.to_baseline_scenario(),
+        )
+        for year in (year for year in POLICY_YEARS if year >= 2027):
+            dividends = sim.tax_benefit_system.parameters(
+                f"{year}-06-01"
+            ).gov.hmrc.income_tax.rates.dividends
+            assert dividends.rates[0] == pytest.approx(0.0875)
+            assert dividends.rates[1] == pytest.approx(0.3375)
 
 
 class TestSavingsTaxIncrease:
@@ -382,8 +397,7 @@ class TestRailFaresFreeze:
         """Rail fare increase rates are defined for all budget years."""
         from uk_budget_data.reforms import RAIL_FARE_INCREASES
 
-        expected_years = [2026, 2027, 2028, 2029, 2030]
-        for year in expected_years:
+        for year in POLICY_YEARS:
             assert year in RAIL_FARE_INCREASES, f"Missing rate for {year}"
             assert (
                 RAIL_FARE_INCREASES[year] > 0
@@ -399,8 +413,7 @@ class TestRailFaresFreeze:
         """Rail freeze costs match Treasury estimates."""
         from uk_budget_data.reforms import RAIL_FREEZE_COSTS
 
-        expected_years = [2026, 2027, 2028, 2029, 2030]
-        for year in expected_years:
+        for year in POLICY_YEARS:
             assert year in RAIL_FREEZE_COSTS, f"Missing cost for {year}"
             assert (
                 RAIL_FREEZE_COSTS[year] > 0
@@ -433,6 +446,7 @@ class TestStructuralReforms:
         # Baseline has infinity (no cap)
         assert math.isinf(reform.baseline_parameter_changes[cap_key]["2029"])
         assert math.isinf(reform.baseline_parameter_changes[cap_key]["2030"])
+        assert math.isinf(reform.baseline_parameter_changes[cap_key]["2031"])
         # Reform uses current law (pe-uk with cap baked in)
         assert reform.parameter_changes == {}
 
@@ -456,104 +470,104 @@ class TestGetReform:
         assert reform is None
 
 
-class TestForecastYearRange:
-    """Tests for 2026-2030 forecast year range (5 years to 2030-31)."""
+class TestPolicyYearRange:
+    """Every measure states its pre-Budget values through the last policy
+    year in budget_years.json (2031, fiscal year 2031-32)."""
 
-    def test_default_years_includes_2030(self):
-        """DEFAULT_YEARS should include 2030 for 2030-31 fiscal year."""
+    LAST = str(max(POLICY_YEARS))
+
+    def test_default_years_are_the_policy_years(self):
         from uk_budget_data.reforms import DEFAULT_YEARS
 
-        assert 2030 in DEFAULT_YEARS
-        assert DEFAULT_YEARS == [2026, 2027, 2028, 2029, 2030]
+        assert DEFAULT_YEARS == POLICY_YEARS
+        assert 2031 in DEFAULT_YEARS
 
-    def test_pre_autumn_budget_baseline_includes_2030(self):
-        """Pre-AB baseline should have values for 2030."""
+    def test_pre_autumn_budget_baseline_reaches_the_last_policy_year(self):
         from uk_budget_data.reforms import get_pre_autumn_budget_baseline
 
         baseline = get_pre_autumn_budget_baseline()
-
-        # Income tax thresholds should have 2030 value
         pa_key = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
-        assert "2030" in baseline[pa_key]
-
         threshold_key = "gov.hmrc.income_tax.rates.uk[1].threshold"
-        assert "2030" in baseline[threshold_key]
-
-        # Fuel duty should have 2030 value
         fuel_key = "gov.hmrc.fuel_duty.petrol_and_diesel"
-        assert "2030-04-01" in baseline[fuel_key]
+        assert self.LAST in baseline[pa_key]
+        assert self.LAST in baseline[threshold_key]
+        assert f"{self.LAST}-04-01" in baseline[fuel_key]
+        # Thresholds keep rising with CPI after the freeze would have ended
+        assert baseline[pa_key][self.LAST] > baseline[pa_key]["2030"]
 
-    def test_fuel_duty_freeze_baseline_includes_2030(self):
-        """Fuel duty freeze baseline should have 2030 rate."""
+    def test_fuel_duty_freeze_baseline_keeps_rising(self):
         from uk_budget_data.reforms import get_reform
 
-        reform = get_reform("fuel_duty_freeze")
-        baseline = reform.baseline_parameter_changes
+        baseline = get_reform("fuel_duty_freeze").baseline_parameter_changes
+        rates = baseline["gov.hmrc.fuel_duty.petrol_and_diesel"]
+        assert rates[self.LAST] > rates["2030"] > rates["2029"]
 
-        fuel_key = "gov.hmrc.fuel_duty.petrol_and_diesel"
-        assert "2030" in baseline[fuel_key]
-        # 2030 should be higher than 2029 (continued RPI uprating)
-        assert baseline[fuel_key]["2030"] > baseline[fuel_key]["2029"]
-
-    def test_savings_tax_baseline_includes_2030(self):
-        """Savings tax baseline should have 2030 rates."""
+    @pytest.mark.parametrize(
+        "reform_id, key",
+        [
+            (
+                "savings_tax_increase_2pp",
+                "gov.hmrc.income_tax.rates.savings.basic",
+            ),
+            (
+                "property_tax_increase_2pp",
+                "gov.hmrc.income_tax.rates.property.basic",
+            ),
+        ],
+    )
+    def test_pre_budget_rates_hold_in_the_last_policy_year(
+        self, reform_id, key
+    ):
         from uk_budget_data.reforms import get_reform
 
-        reform = get_reform("savings_tax_increase_2pp")
-        baseline = reform.baseline_parameter_changes
+        baseline = get_reform(reform_id).baseline_parameter_changes
+        assert baseline[key][self.LAST] == 0.20  # Pre-budget rate
 
-        basic_key = "gov.hmrc.income_tax.rates.savings.basic"
-        assert "2030" in baseline[basic_key]
-        assert baseline[basic_key]["2030"] == 0.20  # Pre-budget rate
-
-    def test_property_tax_baseline_includes_2030(self):
-        """Property tax baseline should have 2030 rates."""
-        from uk_budget_data.reforms import get_reform
-
-        reform = get_reform("property_tax_increase_2pp")
-        baseline = reform.baseline_parameter_changes
-
-        basic_key = "gov.hmrc.income_tax.rates.property.basic"
-        assert "2030" in baseline[basic_key]
-        assert baseline[basic_key]["2030"] == 0.20  # Pre-budget rate
-
-    def test_rail_fare_costs_includes_2030(self):
-        """Rail fare freeze costs should include 2030."""
+    def test_rail_tables_cover_every_policy_year(self):
         from uk_budget_data.reforms import (
             RAIL_FARE_INCREASES,
             RAIL_FREEZE_COSTS,
         )
 
-        assert 2030 in RAIL_FARE_INCREASES
-        assert 2030 in RAIL_FREEZE_COSTS
-        assert RAIL_FREEZE_COSTS[2030] > 0
+        assert set(POLICY_YEARS) <= set(RAIL_FARE_INCREASES)
+        assert set(POLICY_YEARS) <= set(RAIL_FREEZE_COSTS)
+        assert all(RAIL_FREEZE_COSTS[year] > 0 for year in POLICY_YEARS)
 
-    def test_student_loan_baseline_includes_2030(self):
-        """Student loan threshold baseline should include 2030."""
+    def test_student_loan_baseline_reaches_the_last_policy_year(self):
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("freeze_student_loan_thresholds")
-        baseline = reform.baseline_parameter_changes
+        thresholds = reform.baseline_parameter_changes[
+            "gov.hmrc.student_loans.thresholds.plan_2"
+        ]
+        assert thresholds[self.LAST] > thresholds["2030"]
 
-        slr_key = "gov.hmrc.student_loans.thresholds.plan_2"
-        assert "2030" in baseline[slr_key]
-
-    def test_two_child_limit_applies_to_2030(self):
-        """Two child limit reform baseline should apply to 2030.
-
-        Since annual calculations use Jan 1 reference dates, we use year keys
-        like "2026" instead of dated entries like "2026-04-06".
-        """
+    def test_two_child_limit_applies_in_every_policy_year(self):
+        """Annual calculations read bare year keys ("2026"), not dated
+        entries like "2026-04-06"."""
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("two_child_limit")
+        for key in (
+            "gov.dwp.tax_credits.child_tax_credit.limit.child_count",
+            "gov.dwp.universal_credit.elements.child.limit.child_count",
+        ):
+            assert reform.baseline_parameter_changes[key] == {
+                str(year): 2 for year in POLICY_YEARS
+            }
 
-        tc_key = "gov.dwp.tax_credits.child_tax_credit.limit.child_count"
-        uc_key = "gov.dwp.universal_credit.elements.child.limit.child_count"
+    def test_every_year_table_that_reaches_2030_reaches_the_last_policy_year(
+        self,
+    ):
+        """A measure that states pre-Budget values to 2030-31 states them
+        for 2031-32 too, on both sides, the combined measure included."""
+        from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-        # Should have all years 2026-2030 in baseline with limit=2
-        assert "2030" in reform.baseline_parameter_changes[tc_key]
-        assert "2030" in reform.baseline_parameter_changes[uc_key]
-        assert "2026" in reform.baseline_parameter_changes[tc_key]
-        assert reform.baseline_parameter_changes[tc_key]["2030"] == 2
-        assert reform.baseline_parameter_changes[uc_key]["2030"] == 2
+        stopping = []
+        for reform in get_autumn_budget_2026_reforms():
+            for side in ("baseline_parameter_changes", "parameter_changes"):
+                for path, values in (getattr(reform, side) or {}).items():
+                    if isinstance(values, dict) and "2030" in values:
+                        if self.LAST not in values:
+                            stopping.append(f"{reform.id} {side} {path}")
+        assert stopping == []

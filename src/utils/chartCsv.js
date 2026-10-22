@@ -143,48 +143,6 @@ export function householdChangeCsv(data, { year }) {
   });
 }
 
-const LIFECYCLE_COLUMNS = [
-  "age",
-  "year",
-  "gross_income",
-  "income_tax",
-  "national_insurance",
-  "student_loan_payment",
-  "student_loan_debt_remaining",
-  "baseline_net_income",
-  "impact_rail_fare_freeze",
-  "impact_fuel_duty_freeze",
-  "impact_threshold_freeze",
-  "impact_unearned_income_tax",
-  "impact_salary_sacrifice_cap",
-  "impact_sl_threshold_freeze",
-  "impact_two_child_limit",
-  "net_policy_impact",
-];
-
-/**
- * The lifetime calculator's year-by-year results: the columns the
- * calculator's CSV has always had, with the net impact summed over
- * `reformKeys`.
- */
-export function lifecycleCsv(data, reformKeys, { real }) {
-  return buildChartCsv({
-    title: "Lifetime policy impact, year by year",
-    units: real
-      ? "£ per year in 2026 prices (age and year are plain numbers)"
-      : "£ per year in cash terms (age and year are plain numbers)",
-    columns: LIFECYCLE_COLUMNS.map((key) => ({
-      key,
-      label: key,
-      decimals: key === "age" || key === "year" ? 0 : 2,
-    })),
-    rows: data.map((row) => ({
-      ...row,
-      net_policy_impact: reformKeys.reduce((sum, key) => sum + (row[key] || 0), 0),
-    })),
-  });
-}
-
 /**
  * A year-specific chart's CSV for a year not yet published: the title,
  * units and header, then a "# Not yet published" line, and no rows.

@@ -50,7 +50,7 @@ uk-budget-api = "uk_budget_data.api:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-uk_budget_data = ["budget_years.json"]
+uk_budget_data = ["budget_years.json", "demographic_groups.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

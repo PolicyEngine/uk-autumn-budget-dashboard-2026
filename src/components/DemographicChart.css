@@ -1,0 +1,92 @@
+/* Results by demographic group, and the poverty card beside it (which
+   shares the controls row, the "Showing" label and the loading note). */
+
+.demographic-controls,
+.poverty-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.demographic-showing {
+  margin: 0;
+  padding: 6px 10px;
+  background: #f0fdfa;
+  border-left: 3px solid #319795;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.demographic-showing-label {
+  color: #4b5563;
+}
+
+.demographic-showing-name {
+  color: #0f766e;
+  font-weight: 600;
+}
+
+.demographic-loading {
+  margin: 0;
+  padding: 24px 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+  text-align: center;
+  /* Shown only if loading takes more than 300ms, to avoid a flash. */
+  opacity: 0;
+  animation: demographic-loading-in 0s linear 300ms forwards;
+}
+
+@keyframes demographic-loading-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.demographic-notes {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.demographic-notes p {
+  margin: 8px 0 0;
+}
+
+.demographic-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demographic-key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demographic-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #319795;
+}
+
+.demographic-swatch-approximate {
+  opacity: 0.45;
+}
+
+/* A line of explanation in a tooltip (a withheld or approximate group) */
+.chart-tooltip-note {
+  max-width: 240px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #4b5563;
+}

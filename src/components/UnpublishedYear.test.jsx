@@ -31,7 +31,7 @@ describe("a year not yet published", () => {
       <WaterfallChart
         rawData={rows}
         selectedPolicies={["two_child_limit"]}
-        selectedYear={2031}
+        initialYear={2031}
       />,
     );
     expect(
@@ -46,7 +46,7 @@ describe("a year not yet published", () => {
       { year: 2030, "2 child limit repeal": -3, "Rail fares freeze": -1, netImpact: -4 },
       { year: 2031, unpublished: true, netImpact: null },
     ];
-    const { container } = render(<BudgetaryImpactChart data={data} selectedYear={2029} />);
+    const { container } = render(<BudgetaryImpactChart data={data} />);
     expect(container.textContent).toContain("Not yet published");
     expect(container.textContent).not.toContain("£0.0bn");
   });

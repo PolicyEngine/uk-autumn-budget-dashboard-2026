@@ -1,0 +1,121 @@
+name: Deploy the household impact app
+
+# Deploys the Personal impact view's household calculation
+# (src/uk_budget_data/modal_household.py) to Modal, workspace policyengine,
+# as the app uk-budget-2026-household-impact. Its containers restore from a
+# memory snapshot taken with the models loaded, scale to zero when idle and
+# out under load. The image installs exactly what uv.lock pins.
+#
+# By hand only, from main, and only a commit on main. The Modal credentials
+# (the organisation secrets MODAL_TOKEN_ID and MODAL_TOKEN_SECRET) reach the
+# deploy step and no other. After the deploy, the checker
+# (uk_budget_data.household_impact_smoke) asks the deployed URL for /health
+# and one household.
+#
+# Once deployed, set the printed URL as HOUSEHOLD_IMPACT_API_URL in the
+# Vercel project (Production and Preview), for the Next.js route
+# /api/household-impact.
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "The full commit on main to deploy (default: main's head)"
+        required: false
+        default: ""
+      modal_environment:
+        description: "The Modal environment to deploy into"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+# One deploy at a time
+concurrency:
+  group: uk-budget-2026-household-impact-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy a commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      INPUT_COMMIT: ${{ inputs.commit }}
+      INPUT_MODAL_ENVIRONMENT: ${{ inputs.modal_environment }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Choose the commit
+        id: commit
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Deploys run from main, not $GITHUB_REF"
+            exit 1
+          fi
+          commit="${INPUT_COMMIT:-$GITHUB_SHA}"
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Name the full 40-character commit"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::$commit is not on main"
+            exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the commit
+        env:
+          COMMIT: ${{ steps.commit.outputs.commit }}
+        run: git checkout --detach "$COMMIT"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install the locked environment
+        run: uv sync --locked
+
+      - name: Deploy to Modal
+        id: deploy
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          GIT_SHA: ${{ steps.commit.outputs.commit }}
+        run: |
+          set -o pipefail
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "::error::The MODAL_TOKEN_ID and MODAL_TOKEN_SECRET secrets are not available to this repository"
+            exit 1
+          fi
+          uv run --with modal==1.6.2 modal deploy \
+            --env "$INPUT_MODAL_ENVIRONMENT" \
+            src/uk_budget_data/modal_household.py | tee deploy.log
+          url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.modal\.run' deploy.log | tail -n 1)"
+          if [ -z "$url" ]; then
+            echo "::error::The deploy printed no web URL"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check the deployed app
+        env:
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: uv run python -m uk_budget_data.household_impact_smoke --base-url "$BASE_URL"
+
+      - name: Summary
+        if: always()
+        env:
+          COMMIT: ${{ steps.commit.outputs.commit }}
+          BASE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            echo "### Household impact app"
+            echo "- Commit: \`${COMMIT:-none}\`"
+            echo "- Modal environment: \`$INPUT_MODAL_ENVIRONMENT\`"
+            echo "- URL: ${BASE_URL:-not deployed}"
+            echo "- Set this URL as HOUSEHOLD_IMPACT_API_URL in the Vercel project."
+          } >> "$GITHUB_STEP_SUMMARY"

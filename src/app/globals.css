@@ -168,12 +168,12 @@ body {
   top: 0;
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
-  /* One row on a wide screen: the title, then the year, view and policy
-     pills at the right (the year first; without it the others keep their
-     places). Narrower screens use two fixed rows (below). */
+  /* One row on a wide screen: the title, then the view and policy pills
+     at the right. Each chart has its own year control. Narrower screens
+     use two fixed rows (below). */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  grid-template-areas: "title year view policy";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "title view policy";
   align-items: center;
   column-gap: 16px;
   row-gap: 8px;
@@ -206,10 +206,6 @@ body {
 }
 
 /* The band's controls */
-.band-year {
-  grid-area: year;
-}
-
 .band-policy {
   grid-area: policy;
 }
@@ -415,7 +411,9 @@ body {
     .employment-income-chart,
     .employment-income-diff-chart,
     .constituency-map-wrapper,
-    .region-view
+    .region-view,
+    .demographic-chart,
+    .poverty-by-age-chart
   ) {
   box-shadow: none;
   animation: none;
@@ -437,7 +435,9 @@ body {
     .employment-income-diff-chart,
     .region-view,
     .map-header,
-    .household-scatter-template
+    .household-scatter-template,
+    .demographic-chart,
+    .poverty-by-age-chart
   )
   h3 {
   font-size: 1.125rem;
@@ -676,11 +676,11 @@ body {
   }
 
   /* A Recharts chart draws its plot, legend and logo in one SVG: it takes
-     rows 3 to 6 together (its pair draws the same parts at the same
-     sizes, so they still line up). */
+     rows 4 to 6 together, under its year control in row 3 (its pair
+     draws the same parts at the same sizes, so they still line up). */
   .charts-grid > div:not(:only-child) > div:not([class]) {
     grid-column: 1 / -1;
-    grid-row: 3 / span 4;
+    grid-row: 4 / span 3;
     align-self: start;
     min-width: 0;
   }
@@ -735,23 +735,14 @@ body {
 
 /* Stacking: the sticky title band (z-index 1100) stays above every chart.
    Chart tooltips sit just below it (a component stylesheet sets them to
-   9999 globally); the lifetime calculator's modal sits above it. */
+   9999 globally). */
 .main-content .recharts-tooltip-wrapper {
   z-index: 1000 !important;
-}
-
-.main-content .modal-overlay {
-  z-index: 1200;
 }
 
 /* A fiscal year in a title never breaks at its hyphen */
 .nowrap {
   white-space: nowrap;
-}
-
-.main-content .lifecycle-calculator .legend {
-  border-top: none;
-  padding-top: 0;
 }
 
 /* A chart's plot for a year not yet published */
@@ -902,7 +893,7 @@ body {
 }
 
 /* Below 900px the band has two fixed rows: the title and the policy
-   pill, then the view and year pills. One height, stuck or not. */
+   pill, then the view pill. One height, stuck or not. */
 @media (max-width: 899px) {
   :root {
     --title-row-height: 104px;
@@ -912,16 +903,12 @@ body {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title policy"
-      "year view";
+      "view view";
     align-content: center;
   }
 
-  .band-year {
-    justify-self: start;
-  }
-
   .band-view {
-    justify-self: end;
+    justify-self: start;
   }
 }
 
@@ -943,18 +930,8 @@ body {
     font-size: 1.125rem;
   }
 
-  .band-year .year-picker-toggle {
-    gap: 4px;
-    padding: 0 10px 0 4px;
-  }
-
-  .band-year .year-picker-badge {
-    padding: 0 7px;
-  }
-
   /* The pills' lists span the band */
   .band-policy .policy-selector,
-  .band-year .year-picker,
   .band-view .pill-select {
     position: static;
   }
