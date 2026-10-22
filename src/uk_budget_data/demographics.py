@@ -12,9 +12,9 @@ across groups.
 
 The age levels nest (age groups in the nation, age bands in the age groups,
 18 to 24-year-olds in their band), so the layer checks every subtraction
-between them. Employment status cuts across ages: the layer can't check
-subtraction between it and the age levels (``unchecked_overlap``), a
-finding only a reviewer may accept. So employment groups are published only
+between them. Employment groups overlap the age groups: the layer can't
+check subtraction between them and the age levels (``unchecked_overlap``),
+a finding only a reviewer may accept. So employment groups are published only
 when a named reviewer accepts that finding (``employment_reviewer``), in the
 same release, where the layer still runs every check it can; without one
 they are left out.
