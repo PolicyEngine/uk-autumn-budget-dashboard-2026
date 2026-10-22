@@ -1375,10 +1375,11 @@
 }
 
 /* About this model: policies | assumptions, proper lists */
+/* One column: policies modelled, then assumptions, then the note */
 .about-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0 40px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .methodology-content h4 {

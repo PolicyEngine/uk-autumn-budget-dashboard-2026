@@ -575,11 +575,19 @@ export function createGroupedLegend(items, areaWidth) {
   const blockWidth =
     columns.reduce((sum, column) => sum + column.width, 0) +
     columnGap * Math.max(0, columns.length - 1);
-  const columnsHeight =
-    headingHeight + Math.max(0, ...columns.map((column) => column.items.length)) * rowHeight;
+  // Side by side only if the columns fit the width; otherwise stacked
+  const stacked = blockWidth > areaWidth;
+  const columnsHeight = stacked
+    ? columns.reduce(
+        (sum, column) => sum + headingHeight + column.items.length * rowHeight + 8,
+        0,
+      )
+    : headingHeight + Math.max(0, ...columns.map((column) => column.items.length)) * rowHeight;
 
   const group = createSvgGroup({ className: "exported-legend" });
-  let x = (areaWidth - blockWidth) / 2;
+  const stackedWidth = Math.max(0, ...columns.map((column) => column.width));
+  let x = stacked ? Math.max(0, (areaWidth - stackedWidth) / 2) : (areaWidth - blockWidth) / 2;
+  let top = 0;
   const drawItem = (item, itemX, itemY) => {
     if (item.type === "line") {
       group.appendChild(
@@ -617,16 +625,17 @@ export function createGroupedLegend(items, areaWidth) {
     group.appendChild(
       createSvgText(column.heading, {
         x,
-        y: 11,
+        y: top + 11,
         fontSize: 11,
         fontWeight: "600",
         fill: "#6B7280",
       }),
     );
     column.items.forEach((item, index) => {
-      drawItem(item, x, headingHeight + rowHeight * index + rowHeight / 2);
+      drawItem(item, x, top + headingHeight + rowHeight * index + rowHeight / 2);
     });
-    x += column.width + columnGap;
+    if (stacked) top += headingHeight + column.items.length * rowHeight + 8;
+    else x += column.width + columnGap;
   });
   let height = columnsHeight;
   rest.forEach((item) => {

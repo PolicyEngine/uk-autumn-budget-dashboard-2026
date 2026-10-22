@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import "./GroupedLegend.css";
 
-// Below this width the groups stack; above it they sit side by side
-const STACK_BELOW = 420;
-// A group with more items than this splits into two sub-columns
+// A group with more items than this may split into two sub-columns
 const SPLIT_ABOVE = 5;
+// Gaps, as in GroupedLegend.css
+const COLUMN_GAP = 32;
+const SUB_GAP = 24;
 
 /**
  * Split legend items into the two groups, "Raise revenue" then "Cost
@@ -39,23 +40,68 @@ function GroupedLegend({ names, items, netLabel }) {
   const all = items ?? policyItems(names ?? []);
   const groups = legendGroups(all);
   const ref = useRef(null);
-  const [stacked, setStacked] = useState(false);
+  const measureRef = useRef(null);
+  // "split": the first group in two sub-columns beside the others;
+  // "columns": one column per group, side by side; "stacked": groups
+  // one under another. Chosen from the measured widths, on every resize.
+  const [layout, setLayout] = useState("stacked");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = ref.current;
-    if (!node || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(([entry]) =>
-      setStacked(entry.contentRect.width < STACK_BELOW),
-    );
+    const measure = measureRef.current;
+    if (!node || !measure) return undefined;
+    const decide = () => {
+      const available = node.clientWidth;
+      const widths = [...measure.querySelectorAll("[data-group]")].map((group) =>
+        Math.max(
+          0,
+          ...[...group.querySelectorAll("[data-measure]")].map(
+            (item) => item.getBoundingClientRect().width,
+          ),
+        ),
+      );
+      const counts = groups.map(([, groupItems]) => groupItems.length);
+      const columnsWidth =
+        widths.reduce((sum, width) => sum + width, 0) + COLUMN_GAP * (widths.length - 1);
+      const splitWidth =
+        columnsWidth + widths.reduce(
+          (sum, width, index) => sum + (counts[index] > SPLIT_ABOVE ? width + SUB_GAP : 0),
+          0,
+        );
+      const next =
+        counts.some((count) => count > SPLIT_ABOVE) && splitWidth <= available
+          ? "split"
+          : columnsWidth <= available
+            ? "columns"
+            : "stacked";
+      setLayout((current) => (current === next ? current : next));
+    };
+    decide();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(decide);
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  });
 
   return (
-    <div ref={ref} className={`grouped-legend ${stacked ? "is-stacked" : ""}`}>
+    <div ref={ref} className={`grouped-legend is-${layout}`}>
+      {/* Off-screen copy, one line per item, to measure natural widths */}
+      <div ref={measureRef} className="grouped-legend-measure" aria-hidden="true">
+        {groups.map(([heading, groupItems]) => (
+          <div key={heading} data-group>
+            <span data-measure className="grouped-legend-heading">{heading}</span>
+            {groupItems.map((item) => (
+              <span key={item.label} data-measure className="grouped-legend-measure-item">
+                <span className="grouped-legend-swatch" />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
       <div className="grouped-legend-groups">
         {groups.map(([heading, groupItems]) => {
-          const split = !stacked && groupItems.length > SPLIT_ABOVE;
+          const split = layout === "split" && groupItems.length > SPLIT_ABOVE;
           return (
             <div key={heading} className="grouped-legend-group">
               <p className="grouped-legend-heading">{heading}</p>
@@ -67,7 +113,7 @@ function GroupedLegend({ names, items, netLabel }) {
                       style={{ background: item.color }}
                       aria-hidden="true"
                     />
-                    {item.label}
+                    <span className="grouped-legend-label">{item.label}</span>
                   </li>
                 ))}
               </ul>

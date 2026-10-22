@@ -1,31 +1,56 @@
-/* Legend: group columns side by side, net line centred under them */
+/* Legend: never wider than its container; the layout (split / columns /
+   stacked) is chosen from measured widths in GroupedLegend.jsx */
 .grouped-legend {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: 12.5px;
   line-height: 1.35;
   color: var(--pe-gray-700);
+}
+
+.grouped-legend-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+}
+
+.grouped-legend-measure [data-measure] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .grouped-legend-groups {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 32px;
+  gap: 12px 32px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .grouped-legend.is-stacked .grouped-legend-groups {
   flex-direction: column;
-  gap: 12px;
+  align-items: flex-start;
 }
 
 .grouped-legend-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .grouped-legend-heading {
@@ -38,28 +63,37 @@
 
 .grouped-legend-items {
   display: grid;
-  grid-template-columns: max-content;
+  grid-template-columns: minmax(0, max-content);
   gap: 6px 24px;
   margin: 0;
   padding: 0;
   list-style: none;
   text-align: left;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .grouped-legend-items.is-split {
-  grid-template-columns: repeat(2, max-content);
+  grid-template-columns: repeat(2, minmax(0, max-content));
 }
 
 .grouped-legend-items li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+  min-width: 0;
+}
+
+.grouped-legend-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .grouped-legend-swatch {
   width: 10px;
   height: 10px;
   flex: 0 0 auto;
+  margin-top: 3px;
 }
 
 .grouped-legend-net {
