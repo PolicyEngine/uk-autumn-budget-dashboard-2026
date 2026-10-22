@@ -411,7 +411,9 @@ body {
     .employment-income-chart,
     .employment-income-diff-chart,
     .constituency-map-wrapper,
-    .region-view
+    .region-view,
+    .demographic-chart,
+    .poverty-by-age-chart
   ) {
   box-shadow: none;
   animation: none;
@@ -433,7 +435,9 @@ body {
     .employment-income-diff-chart,
     .region-view,
     .map-header,
-    .household-scatter-template
+    .household-scatter-template,
+    .demographic-chart,
+    .poverty-by-age-chart
   )
   h3 {
   font-size: 1.125rem;

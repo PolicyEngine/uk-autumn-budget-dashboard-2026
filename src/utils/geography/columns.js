@@ -1,11 +1,15 @@
 /**
  * The public format of results by area, as the disclosure layer writes it.
  *
- * public/data/regional.csv (level `region`) and public/data/constituency.csv
- * (level `constituency`) share it: one row per level, area, reform, year and
- * outcome. Every value has passed disclosure control before it is written;
- * a withheld row carries no figure at all.
+ * public/data/regional.csv (level `region`), public/data/constituency.csv
+ * (level `constituency`) and public/data/demographics.csv (one level per
+ * way of grouping people, with a group's code where an area's would be)
+ * share it: one row per level, area or group, reform, year and outcome.
+ * Every value has passed disclosure control before it is written; a
+ * withheld row carries no figure at all.
  */
+
+import { DEMOGRAPHIC_LEVELS } from "../demographics/groups";
 
 /** The columns, in the order the layer writes them. */
 export const COLUMNS = Object.freeze([
@@ -26,12 +30,22 @@ export const COLUMNS = Object.freeze([
   "estimator",
 ]);
 
-/** The published files, and the level each one carries. */
+/** The levels whose rows are areas, with ONS codes. */
+export const AREA_LEVELS = Object.freeze(["region", "constituency"]);
+
+/** The published files, and the levels each one carries. */
 export const FILES = Object.freeze({
-  regional: Object.freeze({ file: "regional.csv", level: "region" }),
+  regional: Object.freeze({
+    file: "regional.csv",
+    levels: Object.freeze(["region"]),
+  }),
   constituency: Object.freeze({
     file: "constituency.csv",
-    level: "constituency",
+    levels: Object.freeze(["constituency"]),
+  }),
+  demographics: Object.freeze({
+    file: "demographics.csv",
+    levels: DEMOGRAPHIC_LEVELS,
   }),
 });
 

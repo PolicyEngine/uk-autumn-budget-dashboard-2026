@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
+import DemographicChart from "./components/DemographicChart";
+import PovertyByAgeChart from "./components/PovertyByAgeChart";
 import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
@@ -508,7 +510,27 @@ function App() {
                       <HouseholdScatterTemplate />
                     </section>
 
-                    {/* Row 3: Net Income Analysis Charts */}
+                    {/* Row 3: results by demographic group beside poverty
+                        by age group, each with its own year */}
+                    <SectionHeading
+                      title="Who is affected"
+                      subtitle="The average change for people grouped by age and circumstances, and poverty rates by age group."
+                    />
+                    <section
+                      id="demographics"
+                      className="report-section charts-grid charts-row-demographics"
+                    >
+                      <DemographicChart
+                        selectedPolicies={selectedPolicies}
+                        policies={POLICIES}
+                      />
+                      <PovertyByAgeChart
+                        selectedPolicies={selectedPolicies}
+                        policies={POLICIES}
+                      />
+                    </section>
+
+                    {/* Row 4: Net Income Analysis Charts */}
                     <SectionHeading
                       title="Example household"
                       subtitle="Two adults aged 40 and three children aged 7, 5 and 3. The main earner pays £10,000 a year into a pension."

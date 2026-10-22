@@ -50,6 +50,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from importlib.resources import files
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
@@ -131,37 +132,16 @@ WORKING = frozenset(
 )
 NOT_IN_EDUCATION = "NOT_IN_EDUCATION"
 
-AGE_GROUP_NAMES = {
-    "child": "Children (under 18)",
-    "adult": "Working age (18 to 64)",
-    "senior": "Pensioners (65 and over)",
-}
+# Each level's groups, in display order, with their published names: the
+# page reads the same file (src/utils/demographics/groups.js) and checks
+# every published row against it.
 GROUP_NAMES = {
-    AGE_BAND: {
-        "AGE_0_17": "0 to 17",
-        "AGE_18_24": "18 to 24",
-        "AGE_25_34": "25 to 34",
-        "AGE_35_49": "35 to 49",
-        "AGE_50_64": "50 to 64",
-        "AGE_65_79": "65 to 79",
-        "AGE_80_PLUS": "80 and over",
-    },
-    AGE_GROUP: {group: AGE_GROUP_NAMES[group] for group in AGE_GROUPS},
-    EMPLOYMENT: {
-        "EMPLOYEE": "Employees",
-        "SELF_EMPLOYED": "Self-employed",
-        "UNEMPLOYED": "Unemployed",
-        "RETIRED": "Retired",
-        "STUDENT": "Students",
-        "CARER": "Carers",
-        "SICK_OR_DISABLED": "Sick or disabled",
-        "OTHER_INACTIVE": "Other not working",
-        "CHILD": "Dependent children",
-    },
-    YOUNG_PEOPLE: {
-        "NOT_IN_WORK_OR_EDUCATION": "Not in work or education",
-        "IN_WORK_OR_EDUCATION": "In work or education",
-    },
+    level: {group["code"]: group["name"] for group in groups}
+    for level, groups in json.loads(
+        files("uk_budget_data")
+        .joinpath("demographic_groups.json")
+        .read_text(encoding="utf-8")
+    ).items()
 }
 
 POVERTY_COLUMNS = [

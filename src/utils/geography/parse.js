@@ -1,5 +1,6 @@
 /**
- * A strict reader for results by area (regional.csv, constituency.csv).
+ * A strict reader for results by area (regional.csv, constituency.csv) and
+ * by demographic group (demographics.csv).
  *
  * The page shows these figures only as the disclosure layer published them,
  * so it accepts a file only when every row keeps the format's rules, and
@@ -24,6 +25,7 @@ import {
   TIERS,
 } from "./columns";
 import { compareDecimal, isDecimal, signOf } from "./decimal";
+import { groupName, isDemographicLevel } from "../demographics/groups";
 import { isRegionCode } from "./regions";
 import { indexRows } from "./rows";
 
@@ -37,13 +39,13 @@ export class GeographyTableError extends Error {
 
 // An ONS GSS code: a letter and eight digits.
 const AREA_CODE = /^[A-Z]\d{8}$/;
-const REFORM = /^[A-Za-z0-9_][A-Za-z0-9_.+-]*$/;
-const YEAR = /^\d{4}$/;
+export const REFORM = /^[A-Za-z0-9_][A-Za-z0-9_.+-]*$/;
+export const YEAR = /^\d{4}$/;
 
 // A message may quote a word from the file, shortened, but nothing with a
 // digit in it: in a malformed file a figure can sit in any column, even
 // the header.
-const quoted = (text) =>
+export const quoted = (text) =>
   /\d/.test(String(text))
     ? "(a cell with digits)"
     : JSON.stringify(String(text).slice(0, 40));
@@ -105,28 +107,48 @@ function checkFigures(cells, where) {
   }
 }
 
-function readRow(line, number, level) {
-  const where = `row ${number}`;
-  const cells = Object.fromEntries(
-    COLUMNS.map((column) => [column, line[column]]),
-  );
-
-  if (cells.level !== level) {
-    throw new GeographyTableError(
-      `${where}: level ${quoted(cells.level)} is not ${quoted(level)}`,
-    );
+// A demographic level's rows carry one of its group codes, with the
+// group's published name; every other level's carry an ONS code.
+function checkArea(cells, where) {
+  const { level, area_code: code } = cells;
+  if (isDemographicLevel(level)) {
+    const name = groupName(level, code);
+    if (name === null) {
+      const article = /^[aeiou]/.test(level) ? "an" : "a";
+      throw new GeographyTableError(
+        `${where}: area_code ${quoted(code)} is not ${article} ${level} group`,
+      );
+    }
+    if (cells.area_name !== name) {
+      throw new GeographyTableError(`${where}: area_name is not the group's name`);
+    }
+    return;
   }
-  if (!AREA_CODE.test(cells.area_code)) {
+  if (!AREA_CODE.test(code)) {
     throw new GeographyTableError(`${where}: area_code is not an ONS code`);
   }
-  if (level === "region" && !isRegionCode(cells.area_code)) {
+  if (level === "region" && !isRegionCode(code)) {
     throw new GeographyTableError(
-      `${where}: area_code ${quoted(cells.area_code)} is not a UK region`,
+      `${where}: area_code ${quoted(code)} is not a UK region`,
     );
   }
   if (cells.area_name.trim() === "") {
     throw new GeographyTableError(`${where}: area_name is blank`);
   }
+}
+
+function readRow(line, number, levels) {
+  const where = `row ${number}`;
+  const cells = Object.fromEntries(
+    COLUMNS.map((column) => [column, line[column]]),
+  );
+
+  if (!levels.includes(cells.level)) {
+    throw new GeographyTableError(
+      `${where}: level ${quoted(cells.level)} is not ${levels.map(quoted).join(" or ")}`,
+    );
+  }
+  checkArea(cells, where);
   if (!REFORM.test(cells.reform)) {
     throw new GeographyTableError(`${where}: reform is not an identifier`);
   }
@@ -192,17 +214,18 @@ function readRow(line, number, level) {
 }
 
 /**
- * Parse one file of results by area.
+ * Parse one file of results by area or by group.
  *
  * @param {string} text - The file's text (UTF-8, RFC 4180).
- * @param {{level: "region"|"constituency"}} options - The level the file
- *   must carry on every row.
- * @returns {{level: string, rows: Array<Object>, byKey: Map,
- *   byReform: Map, reforms: Array<string>}} The rows, each with its
- *   published strings in `cells`, and an index (see rows.js).
+ * @param {{level?: string, levels?: Array<string>}} options - The level
+ *   every row must carry, or the levels a row may carry.
+ * @returns {{level: string|null, levels: Array<string>, rows: Array<Object>,
+ *   byKey: Map, byReform: Map, reforms: Array<string>}} The rows, each with
+ *   its published strings in `cells`, and an index (see rows.js); `level`
+ *   is the file's one level, or null for a file of several.
  * @throws {GeographyTableError} naming the first rule a row breaks.
  */
-export function parseGeographyTable(text, { level }) {
+export function parseGeographyTable(text, { level, levels = [level] }) {
   let records;
   try {
     records = parseCsv(text);
@@ -221,10 +244,10 @@ export function parseGeographyTable(text, { level }) {
     const line = Object.fromEntries(
       header.map((column, index) => [column, cells[index]]),
     );
-    return readRow(line, number, level);
+    return readRow(line, number, levels);
   });
   try {
-    return indexRows(level, rows);
+    return indexRows(levels, rows);
   } catch (error) {
     throw new GeographyTableError(error.message);
   }

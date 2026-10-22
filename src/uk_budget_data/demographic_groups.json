@@ -1,0 +1,31 @@
+{
+  "age_group": [
+    {"code": "child", "name": "Children (under 18)"},
+    {"code": "adult", "name": "Working age (18 to 64)"},
+    {"code": "senior", "name": "Pensioners (65 and over)"}
+  ],
+  "age_band": [
+    {"code": "AGE_0_17", "name": "0 to 17"},
+    {"code": "AGE_18_24", "name": "18 to 24"},
+    {"code": "AGE_25_34", "name": "25 to 34"},
+    {"code": "AGE_35_49", "name": "35 to 49"},
+    {"code": "AGE_50_64", "name": "50 to 64"},
+    {"code": "AGE_65_79", "name": "65 to 79"},
+    {"code": "AGE_80_PLUS", "name": "80 and over"}
+  ],
+  "young_people": [
+    {"code": "NOT_IN_WORK_OR_EDUCATION", "name": "Not in work or education"},
+    {"code": "IN_WORK_OR_EDUCATION", "name": "In work or education"}
+  ],
+  "employment": [
+    {"code": "EMPLOYEE", "name": "Employees"},
+    {"code": "SELF_EMPLOYED", "name": "Self-employed"},
+    {"code": "UNEMPLOYED", "name": "Unemployed"},
+    {"code": "RETIRED", "name": "Retired"},
+    {"code": "STUDENT", "name": "Students"},
+    {"code": "CARER", "name": "Carers"},
+    {"code": "SICK_OR_DISABLED", "name": "Sick or disabled"},
+    {"code": "OTHER_INACTIVE", "name": "Other not working"},
+    {"code": "CHILD", "name": "Dependent children"}
+  ]
+}

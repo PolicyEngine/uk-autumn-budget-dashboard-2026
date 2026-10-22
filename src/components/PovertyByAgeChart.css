@@ -1,0 +1,35 @@
+/* Poverty by age group: the rates, without and with the measure, under
+   the chart. Controls and loading styles are in DemographicChart.css. */
+
+.poverty-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: #374151;
+}
+
+.poverty-table caption {
+  padding-bottom: 6px;
+  font-size: 0.8125rem;
+  text-align: left;
+  color: #4b5563;
+}
+
+.poverty-table th,
+.poverty-table td {
+  padding: 6px 8px;
+  text-align: right;
+}
+
+.poverty-table th[scope="row"],
+.poverty-table thead th:first-child {
+  padding-left: 0;
+  text-align: left;
+  font-weight: 500;
+}
+
+.poverty-table thead th {
+  font-weight: 600;
+  border-bottom: 1px solid var(--card-border, #e5e7eb);
+}
