@@ -1,6 +1,15 @@
 # W5 handover: the publication pipeline for 28 October
 
-W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026, 16:00Z. A move to a Claude Code cloud session was tried that day, at Max's request, but no cloud environment was available, so W5 continues in a local session. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
+W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026, about 17:40Z. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
+
+## Two W5 sessions
+- **A Claude Code cloud session has run W5 since about 12:50Z,** at Max's request. Its takeover note is on #88. It pushes from one branch, so its PRs come one at a time, starting with #90.
+- **The local session carries on alongside it.** Its own move to a cloud session was refused.
+- **The split,** proposed on #90 at 16:38Z, holds until the coordinator or Max says otherwise:
+  - **Cloud:** #90, option (d), the rehearsal's regeneration time and the hub's model-gap figures.
+  - **Local:** #91, #92, #93 and the Subfleet builds. The local session has also offered to take the VAT model limit (below).
+  - Whichever PR lands second merges `main` in and re-runs its tests.
+- **The two sessions talk** through comments on #90, and Fleet ops relays.
 
 ## Where things stand
 - **`main` runs policyengine 6.10.0** (policyengine-uk 2.132.6, Microcosm data 0.1.0), from #72.
@@ -29,22 +38,25 @@ Each is a draft with an independent review in progress or done. The audit commen
 
 | PR | What | State |
 |---|---|---|
+| #90 | Model limits: the Pension Credit minimum guarantee follows earnings; the add-on after #2336 (cloud) | AGREE at `05a2ed0`; CI queued |
 | #91 | Data-limit hardening (families 1 and 2), the automatic hold for hand-written modifiers while a data limit is active, and release attestations | Reviewed. The round-1 changes are building on the local Subfleet daemon (`20261022-104658-w5-hardening-r1`, waiting for a lane) |
 | #92 | Generation refuses the engine's two wealth-tax scales, in `parameter_changes` or in what the built simulations run; runbook corrections after #89; this refresh | Round 2 under review |
 | #93 | Vercel builds with `bun run build`, as CI does; `.env.example` drops `VITE_API_URL` | Waiting on CI and the Vercel preview |
 
 ## Subfleet builds
-A hand-off of the two W5 builds to the UK hub was tried but never delivered, so W5 kept them: the templates build landed as #89, and the hardening build as #91. Codex-lane builds return their commits as a git bundle in the build's worktree, because their sandbox can't write the shared repository. A local session imports the bundle, fixes the commit trailer (it names the model actually used), pushes and opens or updates the PR. Briefs and outputs are in W5's local drafts folder, under `builds/`.
+The local session's hand-off of its two builds to the UK hub never reached the hub, so the local session kept them: the templates build landed as #89, and the hardening build as #91. Separately, the hub salvaged the hardening build to `hub/w5-hardening-v2-salvage`. #91 contains all of it: merged into #91 file by file, it adds nothing. So #91 supersedes the branch. Codex-lane builds return their commits as a git bundle in the build's worktree, because their sandbox can't write the shared repository. A local session imports the bundle, fixes the commit trailer (it names the model actually used), pushes and opens or updates the PR. Briefs and outputs are in W5's local drafts folder, under `builds/`.
 
 ## Decisions and questions with the coordinator
-- **Not-computable artifacts (#86).** A not-computable entry's artifact must stay in `public/data` for `publish check`. But it isn't displayed, so `publish review-rows` writes it no row, and the Frontend build then fails on it. Options:
-  - a row for it;
-  - an exemption in María's check;
-  - keep not-computable entries out of the manifest until the day.
-- **The page caveat for area results** on Microcosm: Vahid's and María's call. #83 (merged) labels the command output and the private audit only.
-- **Regeneration time (A in the schedule):** measure it at Friday's rehearsal and report it. The coordinator sets the final build's start from A, B and C.
-- **The hub's report figures** for the model-gap list: fill them in when the report exists.
+The coordinator answered this file's open questions on #88 (12:03Z):
+- **Not-computable artifacts: option (d).** A not-computable entry's directory holds exactly `receipt.json`, and its review row reads "not computable, staged by <stager>". The cloud session builds it after #90. Until it lands, the rehearsal keeps not-computable measures out of the manifest (option (b)).
+- **The area-results caveat.** Show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement.
+- **Regeneration time (A in the schedule).** Time step 5 (regenerate, stage, reconcile) at Friday's rehearsal and post it on #88. The coordinator then sets the final-cut times (#81's formula). The cloud session has no HuggingFace token, so whoever runs the regeneration times it, unless Max approves access.
+- **The hub's figures.** The hub posts its re-measured aggregates on GitHub, and the cloud session adds them to the model-gap list.
 - **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
+
+Still open:
+- **Which session drives the next bundle's adoption PR.** The coordinator decides.
+- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The local session has offered to take it once #90 merges.
 
 ## Known follow-ups (not blocking)
 - Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.
