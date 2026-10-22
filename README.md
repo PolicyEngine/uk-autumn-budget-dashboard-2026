@@ -21,13 +21,8 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 
 ### Installation
 
-```bash
-# Install frontend dependencies
-npm install
-
-# Install Python package for data generation
-pip install -e ".[dev]"
-```
+- Install the frontend dependencies: `bun install --frozen-lockfile`
+- Install the Python package for data generation: `uv sync --locked --extra dev`
 
 ### Development
 
@@ -102,19 +97,10 @@ generate_all_data(reforms=reforms)
 
 ### CLI usage
 
-```bash
-# List available reforms
-uk-budget-data --list-reforms
-
-# Generate all data
-uk-budget-data
-
-# Generate for specific reforms
-uk-budget-data --reforms two_child_limit fuel_duty_freeze
-
-# Custom years
-uk-budget-data --years 2026 2027
-```
+- List the available reforms: `uk-budget-data --list-reforms`
+- Generate all data: `uk-budget-data`
+- Generate for specific reforms: `uk-budget-data --reforms two_child_limit fuel_duty_freeze`
+- Choose the years: `uk-budget-data --years 2026 2027`
 
 ### Disclosure control
 
@@ -174,21 +160,15 @@ generate_all_data(config=config)
 
 ### Running tests
 
-```bash
-# Run all tests
-pytest
-
-# Run on four worker processes, as CI does
-pytest -n 4 --dist loadgroup --no-loadscope-reorder
-
-# Run with coverage
-pytest --cov=uk_budget_data
-```
+- Run all tests: `pytest`
+- Run on four worker processes, as CI does: `pytest -n 4 --dist loadgroup --no-loadscope-reorder`
+- Run with coverage: `pytest --cov=uk_budget_data`
 
 Mark any test that takes minutes with `@pytest.mark.slow`; under xdist
-such tests are collected first. With the command above, the four slow units
-(the two tests that share one £50,000 household count as one) start on
-separate workers. A fifth would have to share a worker and lengthen the run.
+such tests are collected first. With the command above, the first four slow
+units start on separate workers, and the rest follow as each worker's next
+unit (tests that share one household, through an `xdist_group`, count as one
+unit). Each slow unit added lengthens the run.
 
 ## Available reforms
 

@@ -247,10 +247,13 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 
 `"2026-01-01"` and `"2026-01-01.2026-12-31"` both moved the September 2026 input on both models (W5, 21 October).
 - **The cause is policyengine-uk #2404, first in 2.131.1.** Since then, a bare year on the economic growth rates names the calendar year, as intended. Before it, a bare year named the fiscal year from 6 April, and so moved the next year: 2.131.1's changelog gives a 2027 earnings growth rate that moved the 2028 index and the April 2029 triple lock.
-- **So anything generated on 6.6.0 (policyengine-uk 2.130.1) with bare-year growth keys is off by a year.** Regenerate it on the adopted pair.
+- **So anything generated on 6.6.0 (policyengine-uk 2.130.1, `main`'s pin before #72) with bare-year growth keys is off by a year.** Regenerate it on the adopted pair.
 - **Key a macro path by its calendar year,** `"YYYY-01-01.YYYY-12-31"`, whatever the model.
 - **Apply it only through `Scenario(applied_before_data_load=True)`.** That is the PolicyEngine-wide rule for macro paths.
 - **Before the scenario is used, probe the adopted pair.** Put the scenario's own change in `CHANGES`, and in `INPUT` the statutory input it should move (`cpi_september`, or `awe_total_pay_may_july` for earnings). The probe prints the instants that moved: `['2026-09-01']` for the example below.
+  - **Earnings move on 1 July.** With `awe_total_pay_may_july`, a 2027 earnings change prints `['2027-07-01']` on both models.
+  - **`[]` means that year is already published,** not that the key is wrong. May to July 2026 is published (3.9%), so a 2026 earnings change prints `[]`. A published year never moves (see "Which measures" above). Don't fall back to a bare year: on 2.130.1 it silently moves the next year instead.
+- **A registered measure can't carry a macro path today.** `Reform.to_scenario` never applies a change before the data loads, and `tests/test_measure_keys.py` refuses any key that isn't a bare year. A macro scenario is a separate run, through `Scenario(applied_before_data_load=True)`.
 
 ```sh
 uv run python - <<'EOF'
@@ -317,9 +320,9 @@ What they check:
 - the certified-data tests, which fail rather than skip here;
 - the State Pension check: whether the model has policyengine-uk #2336;
 - `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
-- `publish check`: every gate over the committed manifest (#19); `publish status` lists its entries.
+- `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
 
-The shell blocks in this runbook carry no comments, so they paste into zsh as they are.
+The shell blocks in this runbook carry no comments, so they paste into zsh as they are, once any `<placeholder>` in them is filled in.
 
 Record in the clock table:
 - the start SHA;
@@ -433,10 +436,15 @@ uv run uk-budget-data publish check
   curl -s https://policyengine.org/uk/autumn-budget-2026/data/manifest.json | head -5
   ```
 
-  Until policyengine-app-v2#1249 is live, and at the rehearsal, read the Vercel deployment instead, then run the household check:
+  Until policyengine-app-v2#1249 is live, and at the rehearsal, read the Vercel deployment instead:
 
   ```sh
   curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5
+  ```
+
+  Either way, then run the household check:
+
+  ```sh
   uv run python -m uk_budget_data.household_route --base-url "$HOUSEHOLD_API" \
     --fixtures data_inputs/household_fixtures --manifest public/data/manifest.json
   ```
