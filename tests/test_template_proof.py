@@ -12,17 +12,24 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests import template_measures
-from tests.attestation_measures import template_helper_modifier
+from tests.attestation_measures import (
+    subscript_attribute_modifier,
+    subscript_call_modifier,
+    template_helper_modifier,
+)
 from tests.publication_support import World, make_household_rows, make_tables
 from tests.unbindable_template_measures import partial_payment_modifier
 from uk_budget_data import measure_templates
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import combine, generate
 from uk_budget_data.publication.artifacts import read_receipt
+from uk_budget_data.publication.manifest import Manifest
+from uk_budget_data.publication.publish import PublishError, stage
 from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptInputs,
     dashboard_problems,
+    scenario_identity,
 )
 from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
@@ -169,6 +176,39 @@ def test_each_one_statement_mutation_is_hand_written(source):
 def test_template_helpers_and_unfixed_modules_are_hand_written(source):
     with loaded(source) as module:
         assert pure_templates(module.modifier, REVISION) is None
+
+
+@pytest.mark.parametrize(
+    "modifier", [subscript_call_modifier, subscript_attribute_modifier]
+)
+def test_calls_and_attributes_in_subscripts_are_hand_written_and_held(modifier):
+    world = World()
+    reform = Reform(
+        id="subscript", name="Subscript", simulation_modifier=modifier
+    )
+    config = DataConfig(years=[2027])
+    try:
+        proof = measure_templates_proof(reform, config, world.revision())
+        assert proof == {"baseline": [], "reform": [None]}
+        reference = world.ready(
+            reform.id,
+            {2027: -1.0},
+            reform_identity=scenario_identity(
+                reform.to_scenario(), name=reform.id, revision=world.revision()
+            ),
+            modifier_templates=proof,
+        )
+        with pytest.raises(
+            PublishError, match="held: a hand-written modifier"
+        ):
+            stage(
+                Manifest(),
+                reference.path,
+                data_root=world.data_root,
+                inputs=world.inputs,
+            )
+    finally:
+        world.close()
 
 
 def test_import_aliases_and_module_template_calls_are_pure():
