@@ -7,10 +7,6 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.geography import add_geography_parser, run_geography
-from uk_budget_data.lifetime_impact import (
-    GRADUATE_STARTING_INCOME,
-    calculate_lifetime_impact,
-)
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import generate_all_data
 from uk_budget_data.private_outputs import (
@@ -124,98 +120,6 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
 
-    # Lifetime impact command
-    lifetime_parser = subparsers.add_parser(
-        "lifetime",
-        help="Calculate lifetime impact of budget policies on a graduate",
-    )
-
-    lifetime_parser.add_argument(
-        "--income",
-        type=str,
-        choices=["p25", "p50", "p75", "p90"],
-        default="p50",
-        help=f"Graduate income percentile: p25=£{GRADUATE_STARTING_INCOME['p25']:,}, "
-        f"p50=£{GRADUATE_STARTING_INCOME['p50']:,}, p75=£{GRADUATE_STARTING_INCOME['p75']:,}, "
-        f"p90=£{GRADUATE_STARTING_INCOME['p90']:,} (default: p50)",
-    )
-
-    lifetime_parser.add_argument(
-        "--marriage-age",
-        type=int,
-        default=31,
-        help="Age of marriage (default: 31, use 0 for never married)",
-    )
-
-    lifetime_parser.add_argument(
-        "--children",
-        type=int,
-        default=2,
-        help="Number of children (default: 2, born every 2 years after marriage)",
-    )
-
-    lifetime_parser.add_argument(
-        "--student-loan",
-        type=float,
-        default=45000,
-        help="Student loan balance at graduation (default: £45,000)",
-    )
-
-    lifetime_parser.add_argument(
-        "--salary-sacrifice",
-        type=float,
-        default=0,
-        help="Annual salary sacrifice pension contributions (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--rail-spending",
-        type=float,
-        default=1500,
-        help="Annual rail spending (default: £1,500)",
-    )
-
-    lifetime_parser.add_argument(
-        "--fuel-spending",
-        type=float,
-        default=1200,
-        help="Annual fuel spending (default: £1,200)",
-    )
-
-    lifetime_parser.add_argument(
-        "--dividend-income",
-        type=float,
-        default=0,
-        help="Annual dividend income (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--savings-interest",
-        type=float,
-        default=500,
-        help="Annual savings interest (default: £500)",
-    )
-
-    lifetime_parser.add_argument(
-        "--property-income",
-        type=float,
-        default=0,
-        help="Annual property income (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Output CSV file (default: print summary only)",
-    )
-
-    lifetime_parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress progress output",
-    )
-
     return parser.parse_args(args)
 
 
@@ -328,33 +232,6 @@ def run_generate(parsed: argparse.Namespace) -> int:
         raise
 
 
-def run_lifetime(parsed: argparse.Namespace) -> int:
-    """Run the lifetime impact command."""
-    marriage_age = parsed.marriage_age if parsed.marriage_age > 0 else None
-
-    df = calculate_lifetime_impact(
-        income_percentile=parsed.income,
-        marriage_age=marriage_age,
-        num_children=parsed.children,
-        student_loan_balance=parsed.student_loan,
-        salary_sacrifice=parsed.salary_sacrifice,
-        rail_spending=parsed.rail_spending,
-        fuel_spending=parsed.fuel_spending,
-        dividend_income=parsed.dividend_income,
-        savings_interest=parsed.savings_interest,
-        property_income=parsed.property_income,
-        verbose=not parsed.quiet,
-    )
-
-    if parsed.output:
-        df.to_csv(parsed.output, index=False)
-        console.print(
-            f"\n[green]Saved {len(df)} years to {parsed.output}[/green]"
-        )
-
-    return 0
-
-
 def main(args: list[str] = None) -> int:
     """Main entry point for CLI.
 
@@ -368,8 +245,6 @@ def main(args: list[str] = None) -> int:
 
     if parsed.command == "generate":
         return run_generate(parsed)
-    elif parsed.command == "lifetime":
-        return run_lifetime(parsed)
     elif parsed.command == "publish":
         return run_publish(parsed)
     elif parsed.command == "geography":
@@ -381,7 +256,6 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  generate  - Generate dashboard data from microsimulation"
         )
-        console.print("  lifetime  - Calculate lifetime impact on a graduate")
         console.print(
             "  publish   - Reconcile, stage, approve and check publications"
         )

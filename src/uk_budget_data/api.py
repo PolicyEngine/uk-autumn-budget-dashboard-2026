@@ -18,10 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
-from uk_budget_data.lifecycle_calculator import (
-    LifecycleInputs,
-    run_lifecycle_model,
-)
 from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
@@ -279,90 +275,6 @@ async def health_check():
 async def version():
     """Report this build's identity for deployed-route household checks."""
     return runtime_identity()
-
-
-class APILifecycleInput(BaseModel):
-    """API request model for lifecycle calculator inputs."""
-
-    current_age: int = Field(
-        default=30, ge=18, le=80, description="Current age"
-    )
-    current_salary: float = Field(
-        default=40_000, ge=0, description="Current annual salary in 2026 (GBP)"
-    )
-    retirement_age: int = Field(
-        default=67, ge=55, le=100, description="Retirement age"
-    )
-    life_expectancy: int = Field(
-        default=85, ge=60, le=100, description="Life expectancy"
-    )
-    student_loan_debt: float = Field(
-        default=50_000, ge=0, description="Student loan debt at graduation"
-    )
-    salary_sacrifice_per_year: float = Field(
-        default=5_000,
-        ge=0,
-        description="Annual salary sacrifice pension contribution",
-    )
-    rail_spending_per_year: float = Field(
-        default=2_000, ge=0, description="Annual rail spending"
-    )
-    petrol_spending_per_year: float = Field(
-        default=1_500, ge=0, description="Annual petrol spending"
-    )
-    dividends_per_year: float = Field(
-        default=2_000, ge=0, description="Annual dividend income"
-    )
-    savings_interest_per_year: float = Field(
-        default=1_500, ge=0, description="Annual savings interest income"
-    )
-    property_income_per_year: float = Field(
-        default=3_000, ge=0, description="Annual property income"
-    )
-    children_ages: list[int] = Field(
-        default_factory=list, description="Ages of children in 2026"
-    )
-
-    @field_validator("children_ages")
-    @classmethod
-    def validate_children_ages(cls, v):
-        """Validate that children ages are reasonable."""
-        if len(v) > 10:
-            raise ValueError("Maximum 10 children supported")
-        for age in v:
-            if age < 0 or age > 20:
-                raise ValueError("Children ages must be between 0 and 20")
-        return v
-
-
-@app.post("/api/lifecycle/calculate")
-async def calculate_lifecycle_impact(data: APILifecycleInput):
-    """Calculate lifetime policy impact for an individual.
-
-    Returns year-by-year impact breakdown for policies affecting income,
-    taxes, student loans, and benefits over a full working life.
-    """
-    try:
-        inputs = LifecycleInputs(
-            current_age=data.current_age,
-            current_salary=data.current_salary,
-            retirement_age=data.retirement_age,
-            life_expectancy=data.life_expectancy,
-            student_loan_debt=data.student_loan_debt,
-            salary_sacrifice_per_year=data.salary_sacrifice_per_year,
-            rail_spending_per_year=data.rail_spending_per_year,
-            petrol_spending_per_year=data.petrol_spending_per_year,
-            dividends_per_year=data.dividends_per_year,
-            savings_interest_per_year=data.savings_interest_per_year,
-            property_income_per_year=data.property_income_per_year,
-            children_ages=data.children_ages,
-        )
-        results = run_lifecycle_model(inputs)
-        return {"data": results}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
 
 
 def main():

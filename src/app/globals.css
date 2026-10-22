@@ -731,23 +731,14 @@ body {
 
 /* Stacking: the sticky title band (z-index 1100) stays above every chart.
    Chart tooltips sit just below it (a component stylesheet sets them to
-   9999 globally); the lifetime calculator's modal sits above it. */
+   9999 globally). */
 .main-content .recharts-tooltip-wrapper {
   z-index: 1000 !important;
-}
-
-.main-content .modal-overlay {
-  z-index: 1200;
 }
 
 /* A fiscal year in a title never breaks at its hyphen */
 .nowrap {
   white-space: nowrap;
-}
-
-.main-content .lifecycle-calculator .legend {
-  border-top: none;
-  padding-top: 0;
 }
 
 /* A chart's plot for a year not yet published */
