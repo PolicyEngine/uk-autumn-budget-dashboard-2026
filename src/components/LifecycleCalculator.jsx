@@ -7,7 +7,8 @@ import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { lifecycleCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import "./GroupedLegend.css";
+import GroupedLegend from "./GroupedLegend";
+import { lifecycleSelection, lifecycleTotals } from "../utils/lifecycleSelection";
 import PillSelect from "./PillSelect";
 import "./LifecycleCalculator.css";
 
@@ -109,6 +110,10 @@ const FIELD_HINTS = {
 // The form's last state, kept for the session so switching tabs keeps it
 const savedWizard = { inputs: null, step: 0, maxStep: 0 };
 
+// The price base for "real terms": this dashboard's year
+const PRICE_BASE_YEAR = 2026;
+const PRICE_LABEL = `${PRICE_BASE_YEAR} £`;
+
 const SLIDER_CONFIGS = [
   {
     id: "current_age",
@@ -126,7 +131,7 @@ const SLIDER_CONFIGS = [
     step: 1000,
     format: (v) => `£${d3.format(",.0f")(v)}`,
     tooltip:
-      "Starting salary in graduation year. Grows with age-based earnings trajectory.",
+      "Your salary in 2026. Grows with age-based earnings trajectory.",
   },
   {
     id: "retirement_age",
@@ -215,13 +220,23 @@ const SLIDER_CONFIGS = [
   },
 ];
 
-function LifecycleCalculator() {
+function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
   const [inputs, setInputs] = useState(() => savedWizard.inputs ?? DEFAULT_INPUTS);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRealTerms, setShowRealTerms] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
+  // The lifetime series for the policies selected in the title band
+  const selectionKey = selectedPolicies.join(",");
+  const selection = useMemo(
+    () => lifecycleSelection(selectionKey ? selectionKey.split(",") : [], policies),
+    [selectionKey, policies],
+  );
+  const activeReforms = selection.reforms;
+  // Results show only with data and at least one modelled policy; never £0
+  const noPolicies = activeReforms.length === 0;
+  const showResults = data.length > 0 && !noPolicies;
   // The form's step; kept between tab switches for the session
   const [step, setStep] = useState(() => savedWizard.step);
   const [maxStep, setMaxStep] = useState(() => savedWizard.maxStep);
@@ -235,18 +250,19 @@ function LifecycleCalculator() {
   const previousDataRef = useRef([]);
   const modalBodyRef = useRef(null);
 
-  // Calculate cumulative inflation from 2025 to target year
+  // Cumulative CPI inflation from the price base (2026) to a year, on the
+  // model's own CPI series
   const getCumulativeInflation = useCallback((targetYear) => {
-    if (targetYear <= 2025) return 1.0;
+    if (targetYear <= PRICE_BASE_YEAR) return 1.0;
     let factor = 1.0;
-    for (let y = 2025; y < targetYear; y++) {
+    for (let y = PRICE_BASE_YEAR; y < targetYear; y++) {
       const rate = CPI_FORECASTS[y] || CPI_LONG_TERM;
       factor *= 1 + rate;
     }
     return factor;
   }, []);
 
-  // Convert nominal value to 2025 real terms
+  // Convert nominal value to 2026 prices
   const toRealTerms = useCallback(
     (value, year) => {
       if (!showRealTerms) return value;
@@ -276,19 +292,11 @@ function LifecycleCalculator() {
     });
   }, [data, showRealTerms, getCumulativeInflation]);
 
-  // Calculate summary stats
-  const summaryStats = useMemo(() => {
-    if (!displayData.length) return { netTotal: 0, avgPerYear: 0 };
-    const netTotal = displayData.reduce((sum, row) => {
-      return (
-        sum + REFORMS.reduce((reformSum, r) => reformSum + (row[r.key] || 0), 0)
-      );
-    }, 0);
-    return {
-      netTotal,
-      avgPerYear: netTotal / displayData.length,
-    };
-  }, [displayData]);
+  // Summary over the selected series only
+  const summaryStats = useMemo(
+    () => lifecycleTotals(displayData, activeReforms),
+    [displayData, activeReforms],
+  );
 
   // Parse children ages from string
   const parseChildrenAges = (value) => {
@@ -377,7 +385,7 @@ function LifecycleCalculator() {
 
   // Get terms suffix for display
   const getTermsSuffix = useCallback(() => {
-    return showRealTerms ? " (2025 £)" : "";
+    return showRealTerms ? ` (${PRICE_LABEL})` : "";
   }, [showRealTerms]);
 
   // Show modal for a specific age
@@ -442,6 +450,10 @@ function LifecycleCalculator() {
   // Render D3 chart with smooth transitions on update
   useEffect(() => {
     if (!displayData.length || !chartRef.current) return;
+    if (!activeReforms.length) {
+      d3.select(chartRef.current).selectAll("*").remove();
+      return;
+    }
 
     const container = chartRef.current;
     const existingSvg = d3.select(container).select("svg");
@@ -455,7 +467,7 @@ function LifecycleCalculator() {
     const stackedData = displayData.map((d) => {
       let posY = 0,
         negY = 0;
-      const bars = REFORMS.map((r) => {
+      const bars = activeReforms.map((r) => {
         const value = d[r.key] || 0;
         const bar = { key: r.key, value, age: d.age, year: d.year };
         if (value >= 0) {
@@ -652,7 +664,11 @@ function LifecycleCalculator() {
       // Update rects in all groups (both existing and new)
       chartG.selectAll(".age-group").each(function (groupData) {
         const group = d3.select(this);
-        const rects = group.selectAll("rect").data(groupData.bars);
+        // Keyed by series, so changing the selected policies adds and
+        // removes the right bars and recolours none
+        const rects = group.selectAll("rect").data(groupData.bars, (d) => d.key);
+
+        rects.exit().remove();
 
         rects
           .enter()
@@ -687,7 +703,7 @@ function LifecycleCalculator() {
       // The unit follows the Prices choice
       svg
         .select(".chart-unit-label")
-        .text(`Change in take-home pay (${showRealTerms ? "2025 £" : "£"} a year)`);
+        .text(`Change in take-home pay (${showRealTerms ? PRICE_LABEL : "£"} a year)`);
 
       // Update net impact line
       chartG
@@ -724,7 +740,7 @@ function LifecycleCalculator() {
         .attr("font-size", 12)
         .attr("font-weight", 500)
         .attr("fill", "#4B5563")
-        .text(`Change in take-home pay (${showRealTerms ? "2025 £" : "£"} a year)`);
+        .text(`Change in take-home pay (${showRealTerms ? PRICE_LABEL : "£"} a year)`);
 
       chartG = svg
         .append("g")
@@ -817,19 +833,24 @@ function LifecycleCalculator() {
 
     // Store current data for next comparison
     previousDataRef.current = displayData;
-  }, [displayData, formatSignedCurrency, showModal, showRealTerms]);
+  }, [displayData, formatSignedCurrency, showModal, showRealTerms, activeReforms]);
 
-  // Downloads: the year-by-year figures as shown (cash or 2025 prices) as
+  // Downloads: the year-by-year figures as shown (cash or 2026 prices) as
   // CSV, and the chart with its title, legend and logo as SVG or PNG.
   const downloads = useMemo(() => {
     const exportOptions = {
       title: "Lifetime change in take-home pay, by age",
       description: `The change in net income from each policy, year by year over a working life, ${
-        showRealTerms ? "in 2025 prices" : "in cash terms"
+        showRealTerms ? `in ${PRICE_BASE_YEAR} prices` : "in cash terms"
       }.`,
       legendItems: [
-        ...REFORMS.map((r) => ({ color: r.color, label: r.label, type: "rect" })),
-        { color: "#000000", label: "Net impact", type: "rect" },
+        ...activeReforms.map((r) => ({
+          color: r.color,
+          label: r.label,
+          type: "rect",
+          group: RAISER_KEYS.has(r.key) ? "raise" : "cost",
+        })),
+        { color: "#000000", label: "Net impact", type: "line" },
       ],
       logo: CHART_LOGO,
       svgSelector: "svg",
@@ -841,7 +862,7 @@ function LifecycleCalculator() {
             downloadFile(
               lifecycleCsv(
                 displayData,
-                REFORMS.map((r) => r.key),
+                activeReforms.map((r) => r.key),
                 { real: showRealTerms },
               ),
               "lifetime-policy-impact.csv",
@@ -858,7 +879,7 @@ function LifecycleCalculator() {
           },
         }
       : {};
-  }, [data.length, displayData, showRealTerms]);
+  }, [data.length, displayData, showRealTerms, activeReforms]);
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
@@ -937,7 +958,7 @@ function LifecycleCalculator() {
       `;
     });
 
-    const netImpact = REFORMS.reduce((sum, r) => sum + (displayRow[r.key] || 0), 0);
+    const netImpact = activeReforms.reduce((sum, r) => sum + (displayRow[r.key] || 0), 0);
     summaryHtml += `
       <div class="calc-section">
         <div class="calc-title">Net impact at age ${modalAge}</div>
@@ -1388,13 +1409,15 @@ function LifecycleCalculator() {
         </p>
 
         <nav className="wizard-steps" aria-label="Steps">
-          <ol>
+          <ol style={{ "--step-progress": step / (WIZARD_STEPS.length - 1) }}>
             {WIZARD_STEPS.map((wizardStep, index) => (
               <li
                 key={wizardStep.title}
                 className={`${index < step ? "is-done" : ""} ${
                   index === step ? "is-current-item" : ""
                 }`}
+                // Circles evenly spaced, the first and last at the edges
+                style={{ "--step-position": index / (WIZARD_STEPS.length - 1) }}
               >
                 <button
                   type="button"
@@ -1424,9 +1447,34 @@ function LifecycleCalculator() {
         </nav>
 
         <section className="wizard-step" aria-labelledby="wizard-step-heading">
-          <h3 id="wizard-step-heading" ref={stepHeadingRef} tabIndex={-1}>
-            {WIZARD_STEPS[step].title}
-          </h3>
+          <div className={`wizard-step-header ${isResults ? "is-results" : ""}`}>
+            <h3 id="wizard-step-heading" ref={stepHeadingRef} tabIndex={-1}>
+              {WIZARD_STEPS[step].title}
+            </h3>
+            {isResults && (
+              <div className="wizard-results-controls">
+                <button
+                  type="button"
+                  className="light-pill-button"
+                  onClick={() => goToStep(0)}
+                >
+                  Edit details
+                </button>
+                <PillSelect
+                  variant="light"
+                  name="Prices"
+                  prefix="Prices"
+                  value={showRealTerms ? "real" : "nominal"}
+                  onChange={(value) => setShowRealTerms(value === "real")}
+                  options={[
+                    { value: "nominal", label: "Nominal" },
+                    { value: "real", label: PRICE_LABEL },
+                  ]}
+                />
+              </div>
+            )}
+            {isResults && <p className="wizard-summary">{inputSummary}</p>}
+          </div>
 
           {!isResults && (
             <div className="wizard-fields">
@@ -1458,7 +1506,7 @@ function LifecycleCalculator() {
                         </span>
                       </div>
                       <p className="field-hint" id="hint-children_ages">
-                        Ages in 2025, separated by commas. Leave blank if none.
+                        Ages in 2026, separated by commas. Leave blank if none.
                       </p>
                     </div>
                   );
@@ -1492,27 +1540,18 @@ function LifecycleCalculator() {
 
           {isResults && (
             <div className="wizard-results">
-              <p className="wizard-summary">{inputSummary}</p>
-                {/* Prices: the light in-card pill, like every in-card switch */}
-                <div className="toggle-row">
-                  <PillSelect
-                    variant="light"
-                    name="Prices"
-                    prefix="Prices"
-                    value={showRealTerms ? "real" : "nominal"}
-                    onChange={(value) => setShowRealTerms(value === "real")}
-                    options={[
-                      { value: "nominal", label: "Nominal" },
-                      { value: "real", label: "2025 £" },
-                    ]}
-                  />
-                </div>
+                {noPolicies && (
+                  <p className="lifecycle-empty" role="status">
+                    Select at least one policy in the bar above to see your
+                    lifetime impact.
+                  </p>
+                )}
 
                 {/* Summary cards: only with results, never as £0 */}
-                <div className="lifecycle-summary" hidden={!data.length}>
+                <div className="lifecycle-summary" hidden={!showResults}>
                   <div className="summary-item highlighted">
                     <div className="summary-label">
-                      Net lifetime impact{showRealTerms ? " (2025 £)" : ""}
+                      Net lifetime impact{showRealTerms ? ` (${PRICE_LABEL})` : ""}
                     </div>
                     <div className="summary-value">
                       {formatTileCurrency(summaryStats.netTotal)}
@@ -1520,7 +1559,7 @@ function LifecycleCalculator() {
                   </div>
                   <div className="summary-item">
                     <div className="summary-label">
-                      Average per year{showRealTerms ? " (2025 £)" : ""}
+                      Average per year{showRealTerms ? ` (${PRICE_LABEL})` : ""}
                     </div>
                     <div className="summary-value">
                       {formatTileCurrency(summaryStats.avgPerYear)}
@@ -1528,9 +1567,22 @@ function LifecycleCalculator() {
                   </div>
                 </div>
 
+                {showResults && selection.partialCombined && (
+                  <p className="lifecycle-note">
+                    The lifetime model costs the dividend, savings and property
+                    income tax increases together, so they are shown only when
+                    all three are selected.
+                  </p>
+                )}
+                {showResults && selection.unmodelled.length > 0 && (
+                  <p className="lifecycle-note">
+                    Not in the lifetime model: {selection.unmodelled.join(", ")}.
+                  </p>
+                )}
+
                 {/* Chart */}
-                <div className="chart-container">
-                  {data.length > 0 && (
+                <div className="chart-container" hidden={noPolicies}>
+                  {showResults && (
                     <div className="chart-header lifecycle-chart-header">
                       <h4>Lifetime change in take-home pay, by age</h4>
                       <ChartDownloadMenu
@@ -1548,41 +1600,23 @@ function LifecycleCalculator() {
                   )}
                   <div
                     ref={chartRef}
-                    className={`chart ${data.length ? "" : "chart-empty"}`}
+                    className={`chart ${showResults ? "" : "chart-empty"}`}
                   ></div>
 
                   {/* Legend: the dashboard's two groups, then the net line */}
-                  <div className="lifecycle-legend" hidden={!data.length}>
-                    {[
-                      ["Raise revenue", REFORMS.filter((r) => RAISER_KEYS.has(r.key))],
-                      ["Cost revenue", REFORMS.filter((r) => !RAISER_KEYS.has(r.key))],
-                    ].map(([heading, items]) => (
-                      <div className="grouped-legend-group" key={heading}>
-                        <p className="grouped-legend-heading">{heading}</p>
-                        <ul className="grouped-legend-items">
-                          {items.map((r) => (
-                            <li key={r.key}>
-                              <span
-                                className="grouped-legend-swatch"
-                                style={{ background: r.color }}
-                                aria-hidden="true"
-                              />
-                              {r.label}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                    <ul className="grouped-legend-items">
-                      <li>
-                        <span className="grouped-legend-line" aria-hidden="true" />
-                        Net impact
-                      </li>
-                    </ul>
+                  <div className="lifecycle-legend" hidden={!showResults}>
+                    <GroupedLegend
+                      items={activeReforms.map((r) => ({
+                        label: r.label,
+                        color: r.color,
+                        raises: RAISER_KEYS.has(r.key),
+                      }))}
+                      netLabel="Net impact"
+                    />
                   </div>
 
                   {/* PolicyEngine logo, bottom right */}
-                  <div className="lifecycle-chart-footer" hidden={!data.length}>
+                  <div className="lifecycle-chart-footer" hidden={!showResults}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
                   </div>
@@ -1676,12 +1710,8 @@ function LifecycleCalculator() {
           )}
         </section>
 
+        {!isResults && (
         <div className="wizard-actions">
-          {isResults ? (
-            <button type="button" className="light-pill-button" onClick={() => goToStep(0)}>
-              Edit details
-            </button>
-          ) : (
             <>
               <button
                 type="button"
@@ -1699,8 +1729,8 @@ function LifecycleCalculator() {
                 {step === WIZARD_STEPS.length - 2 ? "See results" : "Next"}
               </button>
             </>
-          )}
         </div>
+        )}
       </div>
 
       {/* Tooltip */}

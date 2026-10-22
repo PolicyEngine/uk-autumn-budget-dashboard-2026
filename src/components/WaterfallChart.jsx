@@ -18,11 +18,12 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { ALL_POLICY_NAMES, POLICY_COLORS } from "../utils/policyConfig";
+import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import "./WaterfallChart.css";
 import "./ChartExport.css";
 import {
@@ -34,7 +35,6 @@ import {
   chartMargin,
   legendWrapperStyle,
   legendLabelStyle,
-  TOOLTIP_CONTENT_STYLE,
   axisWidth,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
@@ -209,6 +209,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
+      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
       ? [{ color: "#000000", label: "Net change", type: "line" }]
@@ -315,19 +316,29 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
                 })()}
               />
               <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+
               <Tooltip
-                formatter={(value, name) => [
-                  formatCurrency(value),
-                  name === "netChange" ? "Net change" : name,
-                ]}
-                labelFormatter={(label) => `Decile: ${label}`}
-                contentStyle={TOOLTIP_CONTENT_STYLE}
-                wrapperStyle={{
-                  top: "-120px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                }}
-                cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
+
+                {...TOOLTIP_PROPS}
+
+                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+
+                content={
+
+                  <ChartTooltip
+
+                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
+
+                    labelFormat={(label) => `Income decile ${label}`}
+
+                    netKey="netChange"
+
+                    netLabel="Net change"
+
+                  />
+
+                }
+
               />
               <Legend
                 wrapperStyle={legendWrapperStyle(narrow)}

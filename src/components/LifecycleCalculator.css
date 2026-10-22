@@ -1174,3 +1174,195 @@
   outline-offset: 4px;
   border-radius: 6px;
 }
+
+/* ---------- Round 8: full-width card, edge-aligned stepper ---------- */
+.wizard {
+  max-width: none;
+}
+
+/* The stepper: circles at fixed positions from the left edge to the
+   right edge; one line behind them, teal up to the current step */
+.wizard-steps ol {
+  position: relative;
+  display: block;
+  height: 52px;
+}
+
+.wizard-steps ol::before,
+.wizard-steps ol::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  height: 2px;
+}
+
+.wizard-steps ol::before {
+  right: 14px;
+  background: var(--pe-gray-200);
+}
+
+.wizard-steps ol::after {
+  width: calc((100% - 28px) * var(--step-progress, 0));
+  background: #285e61;
+}
+
+.wizard-steps li {
+  position: absolute;
+  top: 0;
+  left: calc((100% - 28px) * var(--step-position));
+  width: 28px;
+  flex: none;
+  min-width: 0;
+}
+
+.wizard-steps li + li::before {
+  content: none;
+}
+
+.wizard-step-tab,
+.wizard-step-tab.is-reachable,
+.wizard-step-tab.is-current {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  align-items: center;
+}
+
+/* Labels centred under their circle; the first and last keep to the edges */
+.wizard-step-name {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: none;
+  overflow: visible;
+}
+
+.wizard-steps li:first-child .wizard-step-name {
+  left: 0;
+  transform: none;
+  text-align: left;
+}
+
+.wizard-steps li:last-child .wizard-step-name {
+  left: auto;
+  right: 0;
+  transform: none;
+  text-align: right;
+}
+
+/* Results header: "Results" left; Edit details and Prices right, centred
+   with the heading; the summary on its own line below */
+.wizard-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wizard-step-header h3 {
+  margin: 0;
+}
+
+.wizard-step:not(:has(.wizard-step-header.is-results)) .wizard-step-header {
+  margin-bottom: 16px;
+}
+
+.wizard-results-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wizard-results .wizard-summary {
+  margin: 12px 0 20px;
+}
+
+.lifecycle-note,
+.lifecycle-empty {
+  margin: -4px 0 16px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+.lifecycle-empty {
+  margin: 0 0 16px;
+  padding: 16px;
+  font-size: 0.875rem;
+  color: var(--pe-gray-700);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.chart-container[hidden] {
+  display: none;
+}
+
+/* One left edge: plot, legend and expanders start at the content edge */
+.wizard-results .chart-container,
+.wizard-results .methodology {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.wizard-results .lifecycle-legend {
+  align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .wizard-step-header.is-results {
+    flex-wrap: wrap;
+  }
+
+  .wizard-results-controls {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .wizard-results-controls > * {
+    flex: 1 1 0;
+  }
+
+  .wizard-results-controls .pill-select-toggle,
+  .wizard-results-controls .light-pill-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wizard-step-header.is-results + .wizard-results .wizard-summary,
+  .wizard-results .wizard-summary {
+    margin-top: 12px;
+  }
+}
+
+/* Results header rows: heading and controls, then the summary */
+.wizard-step-header.is-results {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.wizard-step-header.is-results .wizard-summary {
+  order: 3;
+  flex: 1 1 100%;
+  margin: 12px 0 20px;
+}
+
+@media (max-width: 768px) {
+  .wizard-step-header.is-results .wizard-summary {
+    order: 2;
+    margin: 12px 0 12px;
+  }
+
+  .wizard-results-controls {
+    margin-bottom: 20px;
+  }
+}
+
+/* Lifetime chart tooltip: dark text, sign carries direction */
+.tooltip-value.positive,
+.tooltip-value.negative {
+  color: var(--pe-gray-900);
+}

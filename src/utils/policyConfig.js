@@ -137,3 +137,23 @@ export const PERSONAL_IMPACT_POLICY_ORDER = [
 export function getPolicyColor(key) {
   return POLICY_COLORS_BY_KEY[key] || POLICY_COLORS[key] || "#9CA3AF";
 }
+
+// Which lifecycle (Personal impact) series each population policy maps to.
+// The lifecycle model costs the dividend, savings and property income tax
+// increases as one series, so it needs all three.
+export const LIFECYCLE_KEY_BY_POLICY = {
+  two_child_limit: "impact_two_child_limit",
+  fuel_duty_freeze: "impact_fuel_duty_freeze",
+  rail_fares_freeze: "impact_rail_fare_freeze",
+  threshold_freeze_extension: "impact_threshold_freeze",
+  freeze_student_loan_thresholds: "impact_sl_threshold_freeze",
+  salary_sacrifice_cap: "impact_salary_sacrifice_cap",
+};
+export const LIFECYCLE_COMBINED = {
+  key: "impact_unearned_income_tax",
+  policies: [
+    "dividend_tax_increase_2pp",
+    "savings_tax_increase_2pp",
+    "property_tax_increase_2pp",
+  ],
+};

@@ -1129,3 +1129,70 @@ body {
     margin: 0;
   }
 }
+
+/* About selected policies: grouped two-column list, no boxes */
+.policy-details-content {
+  padding: 4px 0 20px;
+}
+
+.policy-group + .policy-group {
+  margin-top: 20px;
+}
+
+.policy-group-heading {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pe-gray-500);
+}
+
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 32px;
+}
+
+.main-content .policy-detail {
+  padding: 0;
+  border: none;
+}
+
+.policy-detail-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.policy-detail-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+
+.policy-detail-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+.policy-sources {
+  margin: 20px 0 0;
+  font-size: 0.8125rem;
+  color: var(--pe-gray-500);
+}
+
+.policy-sources a {
+  color: var(--pe-teal-700);
+}
+
+@media (max-width: 768px) {
+  .policy-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

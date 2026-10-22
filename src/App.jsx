@@ -15,6 +15,11 @@ import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
 import YearSlider from "./components/YearSlider";
 import PillSelect from "./components/PillSelect";
 import ReplicationLine from "./components/ReplicationLine";
+import {
+  ALL_POLICY_NAMES,
+  POLICY_COLORS,
+  REVENUE_RAISING_NAMES,
+} from "./utils/policyConfig";
 import { DISPLAY_YEARS } from "./utils/displayYears";
 
 // Autumn Budget 2026 policy provisions
@@ -24,28 +29,28 @@ const POLICIES = [
     name: "2 child limit repeal",
     description: "Repeal the two-child limit on benefits",
     explanation:
-      'The two-child limit restricts Universal Credit and Child Tax Credit payments to a maximum number of children per family. Removing this limit allows families to claim child-related benefit payments for all children without a cap. The Government estimates this will reduce child poverty by 450,000 by 2029-30. See our <a href="https://policyengine.org/uk/research/uk-two-child-limit" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+      "Removes the two-child limit in Universal Credit from April 2026, so families receive the child element for every child. The Government estimates this reduces child poverty by 450,000 by 2029-30.",
   },
   {
     id: "fuel_duty_freeze",
     name: "Fuel duty freeze extension",
     description: "Freeze fuel duty rates until September 2026",
     explanation:
-      'The baseline assumes the 5p cut ends on 22 March 2026, returning the rate to 57.95p, followed by RPI uprating from April 2026. The announced policy (reform) maintains the freeze at 52.95p until September 2026, then implements a staggered reversal with increases of 1p, 2p, and 2p over three-month periods, reaching 57.95p by March 2027. Both then apply annual RPI uprating. See our <a href="https://policyengine.org/uk/research/fuel-duty-freeze-2025" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+      "Keeps fuel duty at 52.95p a litre until September 2026, then returns it to 57.95p in three steps (1p, 2p, 2p) by March 2027, with RPI uprating after that. Without the policy the 5p cut would end on 22 March 2026.",
   },
   {
     id: "rail_fares_freeze",
     name: "Rail fares freeze",
     description: "Freeze regulated rail fares for one year from March 2026",
     explanation:
-      'Freezes regulated rail fares in England for one year from March 2026 - the first freeze in 30 years. Without the freeze, fares would have increased by 5.8% under the RPI formula. The Government estimates this will save passengers £600 million in 2026-27, with commuters on expensive routes saving over £300 per year. See our <a href="https://policyengine.org/uk/research/rail-fares-freeze-2025" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+      "Freezes regulated rail fares in England for a year from March 2026, instead of a 5.8% RPI-linked rise. The Government estimates passengers pay £600 million less in 2026-27.",
   },
   {
     id: "threshold_freeze_extension",
     name: "Threshold freeze extension",
     description: "Extend the freeze on income tax thresholds to 2030-31",
     explanation:
-      "This policy extends the freeze on income tax thresholds from 2027-28 to 2030-31. The personal allowance remains frozen at £12,570, the higher-rate threshold at £50,270, and the additional-rate threshold at £125,140. The NICs secondary threshold is also frozen. By 2030-31, the OBR estimates this will bring 5.2 million additional individuals into paying income tax.",
+      "Keeps the personal allowance (£12,570), the higher-rate threshold (£50,270), the additional-rate threshold (£125,140) and the NICs secondary threshold frozen from 2027-28 to 2030-31. The OBR estimates 5.2 million more people pay income tax by 2030-31.",
   },
   {
     id: "dividend_tax_increase_2pp",
@@ -53,7 +58,7 @@ const POLICIES = [
     description:
       "Increase dividend tax rates by 2 percentage points from April 2026",
     explanation:
-      "Increases dividend tax rates by 2 percentage points from April 2026. Basic rate: 8.75% → 10.75%, Higher rate: 33.75% → 35.75%. The additional rate remains at 39.35%. OBR estimates this will raise £1.0-1.1bn annually from 2027-28.",
+      "Raises the basic and higher dividend tax rates by 2 points from April 2026 (8.75% → 10.75% and 33.75% → 35.75%); the additional rate stays at 39.35%. The OBR estimates £1.0–1.1bn a year from 2027-28.",
   },
   {
     id: "savings_tax_increase_2pp",
@@ -61,7 +66,7 @@ const POLICIES = [
     description:
       "Increase savings income tax rates by 2 percentage points from April 2027",
     explanation:
-      "Increases savings income tax rates by 2 percentage points from April 2027. Basic: 20% → 22%, Higher: 40% → 42%, Additional: 45% → 47%. OBR estimates this will raise £0.5bn annually from 2028-29. Note: FRS data may underreport savings income.",
+      "Raises savings income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.5bn a year from 2028-29. Survey data under-record savings income.",
   },
   {
     id: "property_tax_increase_2pp",
@@ -69,7 +74,7 @@ const POLICIES = [
     description:
       "Increase property income tax rates by 2 percentage points from April 2027",
     explanation:
-      "Increases property income tax rates by 2 percentage points from April 2027. Basic: 20% → 22%, Higher: 40% → 42%, Additional: 45% → 47%. OBR estimates this will raise £0.4-0.6bn annually from 2028-29. Note: Property income may not be fully captured in FRS.",
+      "Raises property income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.4–0.6bn a year from 2028-29. Survey data may not capture all property income.",
   },
   {
     id: "freeze_student_loan_thresholds",
@@ -77,14 +82,14 @@ const POLICIES = [
     description:
       "Freeze Plan 2 repayment thresholds from 2027-28 to 2029-30",
     explanation:
-      "Freezes the Plan 2 student loan repayment threshold at £29,385 for three years from April 2027, instead of allowing RPI uprating. This means graduates start repaying at a lower real income level, increasing repayments. OBR estimates this raises £255-355m annually from 2027-30. Note: The OBR figure for 2026-27 (£5.9bn) is significantly higher because it includes a one-off student loan revaluation that year, where the Government revalued existing student loan balances. Our microsimulation focuses only on the threshold freeze starting in 2027.",
+      "Freezes the Plan 2 repayment threshold at £29,385 for three years from April 2027, instead of uprating it with RPI. The OBR estimates £255–355m a year in 2027-28 to 2029-30; its larger 2026-27 figure includes a one-off revaluation of loan balances, which this model leaves out.",
   },
   {
     id: "salary_sacrifice_cap",
     name: "Salary sacrifice cap",
     description: "Cap NI-free salary sacrifice pension contributions at £2,000",
     explanation:
-      'Caps National Insurance-free salary sacrifice pension contributions at £2,000 per year from April 2029. Contributions above this threshold become subject to employee and employer NICs. PolicyEngine estimates this will raise £3.3bn in 2029-30, assuming employers spread costs and employees maintain pension contributions. The OBR estimates £4.9bn (static) or £4.7bn (post-behavioural). See our <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">research report</a> for details.',
+      "Caps National Insurance-free salary sacrifice pension contributions at £2,000 a year from April 2029; contributions above the cap pay employee and employer NICs. The model assumes employers spread the cost and employees keep their contributions. Compare PolicyEngine and OBR estimates in the Public finances section.",
   },
 ];
 
@@ -476,18 +481,12 @@ function App() {
               />
             </div>
           )}
-          {/* The policy pill stays on the Personal view, disabled, so the
-              band does not change shape */}
+          {/* The policy pill applies to both views */}
           <div className="band-policy">
             <PolicySelector
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
-              disabledReason={
-                activeTab === "personal"
-                  ? "The personal calculator models all policies"
-                  : undefined
-              }
             />
           </div>
         </div>
@@ -499,7 +498,7 @@ function App() {
             aria-label="Personal impact"
             className="tab-panel"
           >
-            <PersonalImpactTab />
+            <PersonalImpactTab selectedPolicies={selectedPolicies} policies={POLICIES} />
           </div>
         ) : (
           <div
@@ -719,18 +718,51 @@ function App() {
                       </button>
                       {showPolicyDetails && (
                         <div className="policy-details-content">
-                          {POLICIES.filter((policy) =>
-                            selectedPolicies.includes(policy.id),
-                          ).map((policy) => (
-                            <div key={policy.id} className="policy-detail">
-                              <strong>{policy.name}:</strong>{" "}
-                              <span
-                                dangerouslySetInnerHTML={{
-                                  __html: policy.explanation,
-                                }}
-                              />
-                            </div>
-                          ))}
+                          {[
+                            ["Raise revenue", true],
+                            ["Cost revenue", false],
+                          ].map(([heading, raises]) => {
+                            const items = ALL_POLICY_NAMES.map((name) =>
+                              POLICIES.find((policy) => policy.name === name),
+                            ).filter(
+                              (policy) =>
+                                policy &&
+                                selectedPolicies.includes(policy.id) &&
+                                REVENUE_RAISING_NAMES.has(policy.name) === raises,
+                            );
+                            if (!items.length) return null;
+                            return (
+                              <div key={heading} className="policy-group">
+                                <h3 className="policy-group-heading">{heading}</h3>
+                                <div className="policy-grid">
+                                  {items.map((policy) => (
+                                    <div key={policy.id} className="policy-detail">
+                                      <p className="policy-detail-name">
+                                        <span
+                                          className="policy-detail-swatch"
+                                          style={{ background: POLICY_COLORS[policy.name] }}
+                                          aria-hidden="true"
+                                        />
+                                        {policy.name}
+                                      </p>
+                                      <p className="policy-detail-text">{policy.explanation}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <p className="policy-sources">
+                            Methods and sources: our research on the{" "}
+                            <a href="https://policyengine.org/uk/research/uk-two-child-limit" target="_blank" rel="noopener noreferrer">two-child limit</a>
+                            ,{" "}
+                            <a href="https://policyengine.org/uk/research/fuel-duty-freeze-2025" target="_blank" rel="noopener noreferrer">fuel duty freeze</a>
+                            ,{" "}
+                            <a href="https://policyengine.org/uk/research/rail-fares-freeze-2025" target="_blank" rel="noopener noreferrer">rail fares freeze</a>{" "}
+                            and{" "}
+                            <a href="https://policyengine.org/uk/research/uk-salary-sacrifice-cap" target="_blank" rel="noopener noreferrer">salary sacrifice cap</a>
+                            .
+                          </p>
                         </div>
                       )}
                     </section>

@@ -20,9 +20,10 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
-import { POLICY_COLORS, ALL_POLICY_NAMES } from "../utils/policyConfig";
+import { POLICY_COLORS, ALL_POLICY_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -32,7 +33,6 @@ import {
   chartMargin,
   legendWrapperStyle,
   legendLabelStyle,
-  TOOLTIP_CONTENT_STYLE,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
@@ -184,6 +184,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
       color: POLICY_COLORS[name],
       label: name,
       type: "rect",
+      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
       ? [{ color: "#000000", label: "Net impact", type: "line" }]
@@ -277,19 +278,27 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 return ticks.sort((a, b) => a - b);
               })()}
             />
+
             <Tooltip
-              formatter={(value, name) => [
-                formatCurrencyTooltip(value),
-                name === "netImpact" ? "Net impact" : name,
-              ]}
-              labelFormatter={fiscalYearTick}
-              contentStyle={TOOLTIP_CONTENT_STYLE}
-              wrapperStyle={{
-                top: "-120px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-              cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
+
+              {...TOOLTIP_PROPS}
+
+              cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+
+              content={
+
+                <ChartTooltip
+
+                  format={(value) => `£${value.toFixed(1)}bn`}
+
+                  labelFormat={fiscalYearTick}
+
+                  netKey="netImpact"
+
+                />
+
+              }
+
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}

@@ -16,6 +16,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { householdChangeCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -27,7 +28,6 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
-  TOOLTIP_CONTENT_STYLE,
   axisWidth,
 } from "../utils/chartTheme";
 
@@ -249,16 +249,25 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
                 width={axisWidth([-yMax, yMax], formatCurrency)}
                 domain={[-yMax, yMax]}
               />
+
               <Tooltip
-                formatter={(value, name) => [
-                  formatCurrency(value),
-                  "Income change",
-                ]}
-                labelFormatter={(label) =>
-                  `Employment income: ${formatCurrency(label)}`
+
+                {...TOOLTIP_PROPS}
+
+                content={
+
+                  <ChartTooltip
+
+                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
+
+                    labelFormat={(label) => `Main earner's pay £${Math.round(label).toLocaleString("en-GB")}`}
+
+                    single={{ key: "difference", label: "Change in net income", color: "#319795" }}
+
+                  />
+
                 }
-                contentStyle={TOOLTIP_CONTENT_STYLE}
-                labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
+
               />
               <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
               {hasPositive && (

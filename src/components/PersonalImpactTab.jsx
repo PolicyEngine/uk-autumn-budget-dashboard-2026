@@ -1,10 +1,10 @@
 import LifecycleCalculator from "./LifecycleCalculator";
 import "./PersonalImpactTab.css";
 
-function PersonalImpactTab() {
+function PersonalImpactTab({ selectedPolicies, policies }) {
   return (
     <div className="personal-impact-tab">
-      <LifecycleCalculator />
+      <LifecycleCalculator selectedPolicies={selectedPolicies} policies={policies} />
     </div>
   );
 }

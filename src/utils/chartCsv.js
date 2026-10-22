@@ -171,7 +171,7 @@ export function lifecycleCsv(data, reformKeys, { real }) {
   return buildChartCsv({
     title: "Lifetime policy impact, year by year",
     units: real
-      ? "£ per year in 2025 prices (age and year are plain numbers)"
+      ? "£ per year in 2026 prices (age and year are plain numbers)"
       : "£ per year in cash terms (age and year are plain numbers)",
     columns: LIFECYCLE_COLUMNS.map((key) => ({
       key,

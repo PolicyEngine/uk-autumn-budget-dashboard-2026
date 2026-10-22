@@ -121,7 +121,7 @@ describe("chart CSV downloads", () => {
       { real: true },
     );
     const [, units, header, row] = lines(text);
-    expect(units).toMatch(/2025 prices/);
+    expect(units).toMatch(/2026 prices/);
     expect(header.split(",")[0]).toBe("age");
     expect(header.split(",").at(-1)).toBe("net_policy_impact");
     expect(row.split(",")[0]).toBe("22");

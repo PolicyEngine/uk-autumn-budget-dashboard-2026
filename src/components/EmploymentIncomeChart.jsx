@@ -16,6 +16,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { householdIncomeCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -29,7 +30,6 @@ import {
   AXIS_TITLE_STYLE,
   legendWrapperStyle,
   legendLabelStyle,
-  TOOLTIP_CONTENT_STYLE,
   axisWidth,
 } from "../utils/chartTheme";
 
@@ -234,13 +234,25 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
                 ticks={[0, 20000, 40000, 60000, 80000]}
                 domain={[0, 80000]}
               />
+
               <Tooltip
-                formatter={(value) => formatCurrency(value)}
-                labelFormatter={(label) =>
-                  `Employment income: ${formatCurrency(label)}`
+
+                {...TOOLTIP_PROPS}
+
+                content={
+
+                  <ChartTooltip
+
+                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
+
+                    labelFormat={(label) => `Main earner's pay £${Math.round(label).toLocaleString("en-GB")}`}
+
+                    grouped={false}
+
+                  />
+
                 }
-                contentStyle={TOOLTIP_CONTENT_STYLE}
-                labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
+
               />
               <Legend
                 wrapperStyle={legendWrapperStyle(narrow)}
