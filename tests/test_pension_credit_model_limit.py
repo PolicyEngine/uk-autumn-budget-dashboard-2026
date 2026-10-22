@@ -188,6 +188,16 @@ def test_the_fix_is_an_earnings_rule_for_both_rates(kwargs, fixed):
     assert LIMIT.fixed(stand_in(**kwargs).tax_benefit_system) is fixed
 
 
+def test_the_benefit_index_never_counts_even_at_earnings():
+    """The rule must leave the benefit index: if CPI ever reached earnings,
+    the guarantee would still not follow earnings in law."""
+    system = stand_in(index=BENEFIT_INDEX).tax_benefit_system
+    for tree in (system.parameters, system.parameters.children["baseline"]):
+        index = tree.get_child(BENEFIT_INDEX)
+        _update(tree, BENEFIT_INDEX, "2027-04-01", index("2026-04-30") * 1.05)
+    assert LIMIT.fixed(system) is False
+
+
 def test_a_measure_cannot_make_its_own_model_count_as_fixed():
     """The check reads the tree as the model built it: a scenario that
     sets earnings-level 2027 rates, or a modifier that repoints the rule

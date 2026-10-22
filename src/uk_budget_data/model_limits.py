@@ -206,13 +206,16 @@ def _minimum_guarantee_earnings(system) -> bool:
     The check reads the uprating rule, from the tree as the model built it,
     not the amounts, so a measure that sets the guarantee can't make its
     own simulation count as fixed, and 2027-28 rates typed in over a CPI
-    rule don't count either: both rates
-    must be uprated by an index other than the benefit index, whose April
-    2026 to April 2027 step reaches the May to July 2026 earnings growth.
-    That figure is read from the raw input, so a forecast can't count. The
-    pension-age Housing Benefit allowances and the savings credit
-    threshold, which the same fix covers, have no statutory floor to test,
-    so the guarantee stands for them.
+    rule don't count either. Both rates must be uprated by an index other
+    than the benefit index, whose April 2026 to April 2027 step reaches the
+    May to July 2026 earnings growth. That figure is read from the raw
+    input, so a forecast can't count. The pension-age Housing Benefit
+    allowances and the savings credit threshold, which the same fix covers,
+    have no statutory floor to test, so the guarantee stands for them.
+
+    A modifier that reloads and reprocesses the parameters builds the tree
+    it is read from, so one that repoints the rule on both sides counts as
+    installing the fix: review it as a change to the model, not a measure.
     """
     if not hasattr(system, "parameters"):
         return False
@@ -420,9 +423,10 @@ MODEL_LIMITS = (
             "triple lock's CPI leg and the September CPI index, by which "
             "additional State Pension and new State Pension protected "
             "payments rise once policyengine-uk #2336 is in the model. The "
-            "2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September "
-            "outturn and repoint the benefit index to September CPI. Until "
-            "both steps are in the model, measures "
+            "2026-27 rates are hard-coded and unaffected. policyengine-uk "
+            "#2533 must both enter the September outturn and repoint the "
+            "benefit index to September CPI. Until both steps are in the "
+            "model, measures "
             "touching these benefit levels from 2027 are held at "
             "provisional."
         ),

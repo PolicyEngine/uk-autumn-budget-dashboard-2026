@@ -58,7 +58,10 @@ try:
     # rates before policyengine-uk #2336): its receipt records the model
     # limit, so it is shown as provisional and can never be approved.
     full_rate = model_limits.record(
-        model_limits.MODEL_LIMITS[0],
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "state_pension_add_on_uprating"
+        ),
         ["gov.dwp.state_pension.new_state_pension.amount"],
     )
     world.expect("zeta", "positive", IN)

@@ -47,8 +47,9 @@ from uk_budget_data.publication.receipt import dashboard_problems
 
 
 def limit_by_key(key):
-    """A registered limit by key, so removing another limit at adoption
-    breaks only the tests about that limit."""
+    """A registered limit by key, not by position, so removing a limit at
+    adoption fails loudly at that limit's own lookups instead of quietly
+    pointing a test at another limit."""
     return {limit.key: limit for limit in MODEL_LIMITS}[key]
 
 
@@ -166,10 +167,16 @@ def test_a_state_pension_measure_without_the_fix_records_the_limit(
     changes, recorded
 ):
     """The triple lock's CPI leg also reads the September 2026 input, so
-    the September CPI limit holds the triple-lock change as well."""
-    assert limits_touched(simulation(), simulation(changes))[0] == record(
-        LIMIT, recorded
-    )
+    the September CPI limit holds a triple-lock change as well; a change to
+    the full rates alone records only this limit."""
+    touched = limits_touched(simulation(), simulation(changes))
+    if TRIPLE_LOCK_MINIMUM in changes:
+        assert [item["key"] for item in touched] == [
+            LIMIT.key,
+            BENEFIT_LIMIT.key,
+        ]
+        touched = touched[:1]
+    assert touched == [record(LIMIT, recorded)]
 
 
 UPRATING_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs"
