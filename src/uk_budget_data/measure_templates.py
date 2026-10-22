@@ -104,19 +104,47 @@ def _warn_if_model_limited(path: str) -> None:
 WEALTH_TAX = "gov.contrib.ubi_center.wealth_tax"
 
 
+def is_wealth_tax_path(path) -> bool:
+    """Whether ``path`` is the engine's wealth-tax scale or a part of it."""
+    return isinstance(path, str) and (
+        path == WEALTH_TAX
+        or path.startswith((WEALTH_TAX + ".", WEALTH_TAX + "["))
+    )
+
+
+def wealth_tax_paths(*scenarios) -> list:
+    """The paths under the wealth-tax scale that ``scenarios`` (either may
+    be None) change in their ``parameter_changes``, sorted."""
+    return sorted(
+        {
+            path
+            for scenario in scenarios
+            for path in (getattr(scenario, "parameter_changes", None) or {})
+            if is_wealth_tax_path(path)
+        }
+    )
+
+
+def wealth_tax_refusal(*paths: str) -> str:
+    """Why a change to ``paths``, under the wealth-tax scale, is refused.
+
+    The templates refuse such a path, and generation refuses a measure
+    that writes one as plain ``parameter_changes``."""
+    verb = "is" if len(paths) == 1 else "are"
+    return (
+        f"{', '.join(paths)} {verb} under {WEALTH_TAX}, which the engine's "
+        "wealth_tax applies to total_wealth: gross wealth (property, "
+        "corporate, private pension and savings) with no debts netted. A "
+        "wealth tax on net assets would be scored on the wrong base (the UK "
+        "hub's budget-triage/JUDGED.md, S4)."
+    )
+
+
 def _refuse_wealth_tax(path: str) -> None:
     """Refuse the engine's wealth-tax scale: it taxes the wrong base for a
     wealth tax announced on net assets (the UK hub's Budget triage, S4)."""
-    if path == WEALTH_TAX or path.startswith(
-        (WEALTH_TAX + ".", WEALTH_TAX + "[")
-    ):
-        raise ValueError(
-            f"{path} is under {WEALTH_TAX}, which the engine's wealth_tax "
-            "applies to total_wealth: gross wealth (property, corporate, "
-            "private pension and savings) with no debts netted. A wealth tax "
-            "on net assets would be scored on the wrong base (the UK hub's "
-            "budget-triage/JUDGED.md, S4)."
-        )
+    if is_wealth_tax_path(path):
+        raise ValueError(wealth_tax_refusal(path))
 
 
 def _validate_parameter_path(path: str) -> None:
@@ -757,11 +785,11 @@ def apply_age_conditioned_allowance(
     return sim
 
 
-# The indices a native property surcharge deflates values by, as the names
-# its compiled code reads: up to policyengine-uk 2.139.0 the High Value
-# Council Tax Surcharge reads indices.obr.per_capita.gdp, and from 2.139.1
-# indices.obr.house_prices, comparing against bands it projects in the
-# values' stored precision (high_value_council_tax_surcharge.py).
+# The indices a native property surcharge uses, as the names its compiled
+# code reads: up to policyengine-uk 2.139.0 the High Value Council Tax
+# Surcharge deflates values by indices.obr.per_capita.gdp, and from 2.139.1
+# it projects its bands by indices.obr.house_prices, in the values' stored
+# precision (high_value_council_tax_surcharge.py).
 _PROPERTY_INDICES = {
     "gdp_per_capita": frozenset({"indices", "per_capita", "gdp"}),
     "house_prices": frozenset({"indices", "house_prices"}),
@@ -802,12 +830,12 @@ def _wrapped_native(formula):
 
 
 def _property_band_index(native, year) -> str:
-    """The index the native channel's formula for ``year`` deflates by.
+    """The index the native channel's formula for ``year`` uses.
 
     A band wrapped by this template earlier is followed to the formula it
     wraps: its own code names both indices, since it reads whichever that
     formula does. Refuse a formula that reads neither or both, so that a
-    band never deflates by another index than the native bands do.
+    band never uses another index than the native bands do.
     """
     formula = native.get_formula(str(year))
     wrapped = _wrapped_native(formula)
@@ -824,8 +852,8 @@ def _property_band_index(native, year) -> str:
         raise ValueError(
             f"Property surcharge channel {native.name} in {year} must read "
             "exactly one of the OBR GDP per capita and house price indices: "
-            "a band deflates property values by the index the native "
-            "formula reads, so that it meets the native bands exactly. Its "
+            "a band uses the index the native formula reads, so that it "
+            "meets the native bands exactly. Its "
             f"formula reads {'both' if found else 'neither'}."
         )
     return found[0]

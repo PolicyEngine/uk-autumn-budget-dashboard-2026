@@ -7,9 +7,9 @@ own write-once directory. A combined set is one simulation of all its
 members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
-still written. One that leaves out a scored year of an uprated amount is
-refused the same way, before any simulation is built
-(``uk_budget_data.scored_years``).
+still written. One that leaves out a scored year of an uprated amount
+(``uk_budget_data.scored_years``), or changes the engine's wealth-tax scale,
+is refused the same way, before any simulation is built.
 """
 
 import atexit
@@ -23,6 +23,10 @@ from typing import Callable, Optional
 from pydantic import ValidationError
 
 from uk_budget_data import data_limits, model_limits
+from uk_budget_data.measure_templates import (
+    wealth_tax_paths,
+    wealth_tax_refusal,
+)
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -210,6 +214,18 @@ def _refuse_unscored_years(
         raise ReceiptUnavailable(subject, " ".join(gap.reason for gap in gaps))
 
 
+def _refuse_wealth_tax_base(
+    subject: str, baseline_scenario, reform_scenario
+) -> None:
+    """Refuse a run whose either side changes the engine's wealth-tax
+    scale: it taxes gross wealth, the wrong base for a wealth tax on net
+    assets (the UK hub's budget-triage/JUDGED.md, S4). The templates refuse
+    the path; this refuses it written as plain ``parameter_changes``."""
+    paths = wealth_tax_paths(baseline_scenario, reform_scenario)
+    if paths:
+        raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
 def generate_artifacts(
     reforms: list[Reform],
     config: DataConfig,
@@ -285,6 +301,7 @@ def generate_artifacts(
             key, lambda: baseline_for(reform, uses_config_baseline)
         )
         reform_scenario = _scenarios(key, reform.to_scenario)
+        _refuse_wealth_tax_base(key, baseline_scenario, reform_scenario)
         _refuse_unscored_years(
             key, baseline_scenario, reform_scenario, config.years
         )
@@ -384,6 +401,11 @@ def generate_artifacts(
         def prepare():
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
+            _refuse_wealth_tax_base(
+                key,
+                baseline_for(combined, uses_config),
+                combined.to_scenario(),
+            )
             _refuse_unscored_years(
                 key,
                 baseline_for(combined, uses_config),

@@ -28,6 +28,10 @@ from uk_budget_data.calculators import (
     MetricsCalculator,
     WinnersLosersCalculator,
 )
+from uk_budget_data.measure_templates import (
+    wealth_tax_paths,
+    wealth_tax_refusal,
+)
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
@@ -325,6 +329,15 @@ class DataPipeline:
                     console.print(
                         f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
                         f"{escape(gap.reason)} Generation refuses it."
+                    )
+                wealth_tax = wealth_tax_paths(
+                    baseline_scenario, reform_scenario
+                )
+                if wealth_tax:
+                    console.print(
+                        f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
+                        f"{escape(wealth_tax_refusal(*wealth_tax))} "
+                        "Generation refuses it."
                     )
 
                 # Built under data_limits.building, so a modifier that
