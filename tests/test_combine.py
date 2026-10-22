@@ -152,7 +152,6 @@ def test_generic_combination_reproduces_the_hand_built_2025_reform():
     # Lists in member order (by id), so a dropped or repeated modifier
     # shows.
     assert [m.__name__ for m in sides["baseline"]["modifiers"]] == [
-        "_set_pre_budget_dividend_rates",
         "_connect_student_loan_variables",
     ]
     assert [m.__name__ for m in sides["reform"]["modifiers"]] == [
@@ -161,22 +160,23 @@ def test_generic_combination_reproduces_the_hand_built_2025_reform():
     ]
 
 
-def test_the_engine_and_the_combiner_agree_on_changes_beside_a_modifier():
-    """Differential: a hand-written scenario and the combiner's give the
-    same parameters.
+def test_the_engine_and_the_combiner_agree_on_two_members_changes():
+    """Differential: a hand-written scenario holding both members' baseline
+    parameter changes and the combiner's give the same parameters.
 
-    On policyengine-uk 2.125.1 a scenario's modifier ran first, and the
-    parameter rebuild then wiped the dividend baseline's rates (the engine
-    alone gave 0.1075). From 2.126.12 the engine applies the changes first,
-    so the modifier's rates survive beside the savings baseline's changes.
+    The dividend baseline's pre-Budget rates were a modifier until they
+    became parameter changes; either way they must survive beside the
+    savings baseline's changes.
     """
     dividend = get_reform("dividend_tax_increase_2pp")
     savings = get_reform("savings_tax_increase_2pp")
     instants = ["2027-04-06", "2028-04-30"]
     engine = parameter_snapshot(
         Scenario(
-            simulation_modifier=dividend.baseline_simulation_modifier,
-            parameter_changes=savings.baseline_parameter_changes,
+            parameter_changes={
+                **dividend.baseline_parameter_changes,
+                **savings.baseline_parameter_changes,
+            },
         ),
         instants,
         "engine",
@@ -244,7 +244,7 @@ def test_a_member_gives_the_same_household_result_combined_as_alone():
     assert combined.simulation_modifier is not None
 
 
-def test_combination_keeps_a_modifiers_parameters_and_is_consistent():
+def test_combination_keeps_each_members_parameters_and_is_consistent():
     dividend = get_reform("dividend_tax_increase_2pp")
     savings = get_reform("savings_tax_increase_2pp")
     combined = combine_measures([dividend, savings], CONFIG)
