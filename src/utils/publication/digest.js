@@ -109,8 +109,9 @@ function sameSet(left, right) {
  * Every way a receipt is not the artifact a manifest entry names: its
  * digest, its key, its recorded digests, its years and unsupported years
  * (which decide what may be shown), for a combined run its members and
- * their output snapshot, and any data limit it records (which means no
- * figure may be shown). Empty when it is.
+ * their output snapshot, any data limit it records (which means no
+ * figure may be shown), and any model limit it records (which means its
+ * figures may be shown as provisional only). Empty when it is.
  */
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
@@ -170,6 +171,29 @@ export async function receiptProblems(receipt, key, entry) {
     problems.push(
       "the receipt records data limits: not computable on current data, " +
         "so its figures cannot be shown",
+    );
+  }
+  // A measure the installed model mis-costs records its model limits in its
+  // receipt; it is held at provisional, so it is never shown as approved,
+  // whatever the manifest says. The registry is bound as the data limits'
+  // is.
+  if (
+    dashboard.model_limits_registry_sha256 !==
+    contract.model_limits_registry_sha256
+  ) {
+    problems.push(
+      "the receipt was generated against another model-limit registry",
+    );
+  }
+  if (!Array.isArray(dashboard.model_limits)) {
+    problems.push("the receipt does not record its model limits");
+  } else if (
+    dashboard.model_limits.length > 0 &&
+    entry.status !== "provisional"
+  ) {
+    problems.push(
+      "the receipt records model limits: held at provisional, so it " +
+        "cannot be shown as approved",
     );
   }
   return problems;

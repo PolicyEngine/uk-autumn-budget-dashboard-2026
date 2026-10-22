@@ -212,8 +212,8 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 
   - **What it prints:** `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`.
   - **How it decides:** this is the guard's own check. It parses the installed `additional_state_pension` and requires every formula to read the index as an attribute, so a comment or a string naming it doesn't count.
-  - **The CI cross-check:** a test compares this check with the model's behaviour, whether the add-on moves when the full rate rises. So a release that fools the code check fails CI instead of lifting the guard.
-- **Which measures:** any change that moves either full rate in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
+  - **The CI cross-check:** a test compares this check with the model's behaviour: whether the add-on moves when either full rate rises, for a new State Pension recipient and for a basic one. So a release that fools the code check, or fixes only one pension's add-on, fails CI instead of lifting the guard.
+- **Which measures:** any change that moves either full rate, or September CPI, in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
   - `gov.dwp.state_pension.basic_state_pension.amount` or `gov.dwp.state_pension.new_state_pension.amount`;
   - anything under `gov.dwp.state_pension.triple_lock`;
   - the statutory uprating inputs the triple lock is built from, `gov.economic_assumptions.statutory_uprating_inputs` (May to July earnings, September CPI). Setting the 2026 earnings input to 10% (from 3.9%) moved a basic pensioner's 2027 add-on from £1,797.57 to £1,903.11 on both models (#71's review, a one-person in-memory dataset);
@@ -222,9 +222,10 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **If the check prints `False`,** such a measure is staged provisional at most. The guard does this by itself:
   - **Generation:** it records `state_pension_add_on_uprating` in the measure's receipt, with the reason, whenever the measure's two simulations differ under a covered parameter and the model lacks the fix.
   - **Staging and approval:** `publish stage --provisional` accepts the measure; `publish approve` refuses it ("held at provisional, not approved", with the reason).
-  - **The templates** warn (`ModelLimitedWarning`) as such a measure is written.
-  - **The flat pipeline** prints "OVERSTATED BY THIS MODEL".
-  - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, so the limit is removed there.
+  - **The page,** once #20's modules are wired in after #3, shows such a measure as provisional and refuses to show it as approved, even from a manifest edited by hand, because its receipt records the limit. The loader already does.
+  - **The templates** warn (`ModelLimitedWarning`) when a measure is built on one of the guard's own parameters: either full rate, the triple lock or the September CPI index. A template change elsewhere that moves them, such as to the statutory uprating inputs, doesn't warn, but generation still records it.
+  - **The flat pipeline** prints "MIS-COSTED BY THIS MODEL".
+  - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, with the other tests that assume the limit is active, so the limit and those tests are removed there.
   - **The page doesn't show the reason.** It is in the receipt, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record it in the coverage ledger too. **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.

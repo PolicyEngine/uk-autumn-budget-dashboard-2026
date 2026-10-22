@@ -1,4 +1,4 @@
-"""The model-limit guard: a measure the installed model overstates until a
+"""The model-limit guard: a measure the installed model mis-costs until a
 known fix lands is held at provisional, never approved.
 
 The one limit today is the State Pension's: up to policyengine-uk #2336,
@@ -509,11 +509,11 @@ def test_generation_records_nothing_for_a_measure_off_the_state_pension(
 # --- the flat pipeline -------------------------------------------------------
 
 
-def test_the_flat_pipeline_says_when_this_model_overstates_a_measure(
+def test_the_flat_pipeline_says_when_this_model_mis_costs_a_measure(
     monkeypatch, capsys
 ):
     """The flat CSV path has no publication gate; it says loudly that the
-    model overstates a State Pension measure, and stays quiet for the
+    model mis-costs a State Pension measure, and stays quiet for the
     others."""
     from uk_budget_data import pipeline
 
@@ -546,7 +546,7 @@ def test_the_flat_pipeline_says_when_this_model_overstates_a_measure(
         skip_input_check=True
     )
     out = " ".join(capsys.readouterr().out.split())
-    assert out.count("OVERSTATED BY THIS MODEL") == 1
+    assert out.count("MIS-COSTED BY THIS MODEL") == 1
     assert "Pension rise: The installed model" in out
     assert "Income: The installed model" not in out
 
@@ -830,28 +830,42 @@ def test_a_combined_run_with_its_own_model_limit_is_never_approved(world):
 # --- review of #73, round 2 ----------------------------------------------------
 
 
-def pensioner(year):
+def pensioner(year, age):
     return {
         "people": {
-            "p": {"age": {year: 70}, "state_pension_reported": {year: 20_000}}
+            "p": {"age": {year: age}, "state_pension_reported": {year: 20_000}}
         },
         "benunits": {"b": {"members": ["p"]}},
         "households": {"h": {"members": ["p"]}},
     }
 
 
-def test_both_checks_for_the_fix_agree_with_what_the_model_does():
+@pytest.mark.parametrize(
+    "age, pension, rate, raised_to",
+    [(70, "NEW", NEW_PENSION, 260.0), (85, "BASIC", BASIC_PENSION, 200.0)],
+    ids=["new State Pension", "basic State Pension"],
+)
+def test_both_checks_for_the_fix_agree_with_what_the_model_does(
+    age, pension, rate, raised_to
+):
     """The checks read code; this tripwire reads behaviour. Without #2336
     the add-on rises with the full rate, so raising the full rate moves it;
     with #2336 it is uprated by September CPI and shouldn't move. If a
     release fools the code checks, or #2336 lands in a form that still moves
-    the add-on, this fails, and the limit is revisited in that PR."""
+    the add-on, this fails, and the limit is revisited in that PR.
+
+    Both pensions are tested: a release that fixes the new State Pension's
+    add-on but not the basic's (review of #73, round 3) passes the code
+    checks, since every formula reads the index, and fails here."""
     year = 2028
-    baseline = Simulation(situation=pensioner(year))
+    baseline = Simulation(situation=pensioner(year, age))
     raised = Simulation(
-        situation=pensioner(year),
-        scenario=Scenario(parameter_changes={NEW_PENSION: {str(year): 260.0}}),
+        situation=pensioner(year, age),
+        scenario=Scenario(parameter_changes={rate: {str(year): raised_to}}),
     )
+    # Each case stays the pension it is named for, so the basic case can't
+    # quietly become a second new State Pension case.
+    assert baseline.calculate("state_pension_type", year)[0] == pension
     before = baseline.calculate("additional_state_pension", year)[0]
     after = raised.calculate("additional_state_pension", year)[0]
     assert before > 0
@@ -903,8 +917,8 @@ def test_a_formula_without_compiled_code_counts_as_unfixed():
 
 
 def test_the_installed_check_ignores_a_bare_name(monkeypatch, tmp_path):
-    """Only reading the index as an attribute of the parameters counts: a
-    global or local of the same name is not the index."""
+    """Only reading the index as an attribute counts: a global or local of
+    the same name is not the index."""
     installed_source(
         monkeypatch,
         tmp_path,
@@ -914,3 +928,27 @@ def test_the_installed_check_ignores_a_bare_name(monkeypatch, tmp_path):
         "        return person('age', period) * september_cpi_uprating\n",
     )
     assert LIMIT.installed_fixed() is False
+
+
+@pytest.mark.parametrize("missing", ["data_limits", "model_limits"])
+def test_a_receipt_cannot_be_built_without_its_limits(missing):
+    """Review of #73, round 3: with a default of no limits, a caller that
+    forgot them would record that the measure touches none. Both are
+    required."""
+    from uk_budget_data.publication.receipt import ReceiptInputs
+
+    fields = dict(
+        key="alpha",
+        measure_ids=["alpha"],
+        years=[2027],
+        baseline_identity=None,
+        reform_identity=None,
+        file_digests={},
+        basis={},
+        revision=None,
+        data_limits=[],
+        model_limits=[],
+    )
+    del fields[missing]
+    with pytest.raises(TypeError, match=missing):
+        ReceiptInputs(**fields)

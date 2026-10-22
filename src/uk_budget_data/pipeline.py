@@ -342,7 +342,7 @@ class DataPipeline:
                     )
                 for limit in model_limits.limits_touched(baseline, reformed):
                     console.print(
-                        f"[bold red]OVERSTATED BY THIS MODEL[/bold red] "
+                        f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
                         f"{reform.name}: {limit['reason']} Publish it through "
                         "the gated path, which holds it at provisional."
                     )

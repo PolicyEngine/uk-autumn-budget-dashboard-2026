@@ -28,9 +28,9 @@
       2032
     ],
     "digests": {
-      "execution_identity_sha256": "723d46a44accd914b51d24503fc22627fdc8ec969847dbeb0b32d4a30bd78d9f",
+      "execution_identity_sha256": "c031b1130e45c9222a4d3b72377b669931d107838ab97cf5332898b6f778fe04",
       "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
-      "receipt_sha256": "4401d215c1bd3e9e7109f98a64584a09274fcb7bdb2394af127c0e12462213bc"
+      "receipt_sha256": "e026ca494723261c965992a5f85a3773b62692bf263b9dfd6479f2068efd2b9f"
     },
     "files": {
       "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
@@ -40,7 +40,7 @@
       "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
       "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
     },
-    "generated_at": "2026-10-16T04:46:22.171885+00:00",
+    "generated_at": "2026-10-21T23:02:31.026928+00:00",
     "generator_argv": [
       "test"
     ],
@@ -51,9 +51,11 @@
     ],
     "member_outputs_sha256": null,
     "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "70c0e6fa3edb0b7a77de1c11e465cf908c30b65ef53d37161ee3f9500be36fda",
     "publishable": true,
     "reasons": [],
-    "receipt_source": "policyengine==6.5.0",
+    "receipt_source": "policyengine==6.6.0",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -66,8 +68,8 @@
       "name": "delta baseline"
     },
     "certificate": {
-      "bundle_version": "6.5.0",
-      "certificate_sha256": "a2ab1d009b70fb2d91eaa1a5005dbb9d387d2661d2c1a8d730c47f8c26124bfd",
+      "bundle_version": "6.6.0",
+      "certificate_sha256": "e60c472272eaeb5a5d71d0856c7e51ad4677b61fc3e017936137b73dd5f219d0",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
@@ -131,7 +133,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.5.0"
+      "version": "6.6.0"
     },
     "years": [
       2032,

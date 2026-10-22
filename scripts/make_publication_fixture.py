@@ -13,6 +13,7 @@ dataset (see tests/publication_support.py), so it is test data only.
 import json, shutil, sys
 from pathlib import Path
 from tests.publication_support import PROJECTION_END, World
+from uk_budget_data import model_limits
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
@@ -53,6 +54,19 @@ try:
         "epsilon", {IN: 0.0, BEYOND: 0.0}, rate=0.26, data_limits=[surcharge]
     )
     stage(manifest, refs["epsilon"].path, **args)
+    # A measure the installed model mis-costs (the State Pension's full
+    # rates before policyengine-uk #2336): its receipt records the model
+    # limit, so it is shown as provisional and can never be approved.
+    full_rate = model_limits.record(
+        model_limits.MODEL_LIMITS[0],
+        ["gov.dwp.state_pension.new_state_pension.amount"],
+    )
+    world.expect("zeta", "positive", IN)
+    refs["zeta"] = world.write(
+        "zeta", {IN: 0.9, BEYOND: 1.0}, rate=0.27, model_limits=[full_rate]
+    )
+    world.reconcile(refs["zeta"])
+    stage(manifest, refs["zeta"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]
