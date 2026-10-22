@@ -16,12 +16,12 @@ frontend:
 
 # Install dependencies
 install:
-	uv sync
+	uv sync --locked --extra dev
 	bun install --frozen-lockfile
 
 # Format code
 format:
-	uv run ruff format src/ tests/
+	uv run black src/ tests/
 	uv run ruff check --fix src/ tests/
 
 # Run tests

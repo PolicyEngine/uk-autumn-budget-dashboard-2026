@@ -15,7 +15,7 @@ A web application for analysing the impact of UK Autumn Budget 2026 policies on 
 
 ### Prerequisites
 
-- [Bun](https://bun.sh), which CI uses for the frontend (`bun.lock` is the lockfile)
+- [Bun](https://bun.sh), which CI uses for the frontend (`bun.lock` is the lockfile), and Node.js 20.9 or later, which Next.js 16 needs to run
 - [uv](https://docs.astral.sh/uv/) and Python 3.13 or later (`requires-python` in `pyproject.toml`), for data generation
 
 ### Installation
@@ -31,7 +31,7 @@ Run the development server:
 bun run dev
 ```
 
-The dashboard is a Next.js app, served at `http://localhost:3000` by default.
+The dashboard is a Next.js app, served at `http://localhost:3000/uk/autumn-budget-2026` by default: `next.config.ts` sets that base path unless `NEXT_PUBLIC_BASE_PATH` is defined. Set `NEXT_PUBLIC_BASE_PATH=` (empty) to serve it at the root.
 
 ### Building for production
 
@@ -52,8 +52,8 @@ src/
 ├── app/                 # Next.js app router: layout.tsx, page.tsx, globals.css
 ├── App.jsx              # Main application controller
 ├── components/          # React components
-│   ├── Sidebar.jsx      # Policy selection & parameter controls
-│   ├── Results.jsx      # Charts & analysis display
+│   ├── PolicySelector.jsx        # Policy selection
+│   ├── BudgetaryImpactChart.jsx  # Budgetary impact chart
 │   └── ...
 └── uk_budget_data/      # Python data generation package
     ├── __init__.py      # Public API exports
@@ -75,6 +75,8 @@ The dashboard displays pre-calculated data from CSV files. The `uk_budget_data` 
 ### Quick start
 
 ```python
+from pathlib import Path
+
 from uk_budget_data import generate_all_data, get_reform, DataConfig
 
 # Generate data for all Autumn Budget 2026 reforms
@@ -94,10 +96,11 @@ generate_all_data(reforms=reforms)
 
 ### CLI usage
 
-- List the available reforms: `uv run uk-budget-data --list-reforms`
-- Generate all data: `uv run uk-budget-data`
-- Generate for specific reforms: `uv run uk-budget-data --reforms two_child_limit fuel_duty_freeze`
-- Choose the years: `uv run uk-budget-data --years 2026 2027`
+- List the available reforms: `uv run uk-budget-data generate --list-reforms`
+- Generate all data: `uv run uk-budget-data generate`
+- Generate for specific reforms: `uv run uk-budget-data generate --reforms two_child_limit fuel_duty_freeze`
+- Choose the years: `uv run uk-budget-data generate --years 2026 2027`
+- See every command: `uv run uk-budget-data --help`
 
 ### Disclosure control
 
@@ -189,7 +192,8 @@ The dashboard analyses these November 2025 Autumn Budget policies:
 - **Charts**: Recharts 2.15 (built on D3)
 - **Data generation**: Python 3.13+, PolicyEngine UK through policyengine.py
 - **State management**: React hooks (useState, useEffect, useMemo)
-- **Styling**: Custom CSS inspired by PolicyEngine UK
+- **Styling**: Tailwind CSS 4 with `@policyengine/ui-kit`'s theme, plus component CSS
+- **Tests**: Vitest for the frontend, pytest for the Python package
 - **Build tool**: Next.js, run with Bun
 
 ## Design system
