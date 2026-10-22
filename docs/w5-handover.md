@@ -1,15 +1,18 @@
 # W5 handover: the publication pipeline for 28 October
 
-W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026, about 17:40Z. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
+W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026, about 17:35Z. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
 
 ## Two W5 sessions
 - **A Claude Code cloud session has run W5 since about 12:50Z,** at Max's request. Its takeover note is on #88. It pushes from one branch, so its PRs come one at a time, starting with #90.
 - **The local session carries on alongside it.** Its own move to a cloud session was refused.
-- **The split,** proposed on #90 at 16:38Z, holds until the coordinator or Max says otherwise:
-  - **Cloud:** #90, option (d), the rehearsal's regeneration time and the hub's model-gap figures.
-  - **Local:** #91, #92, #93 and the Subfleet builds. The local session has also offered to take the VAT model limit (below).
-  - Whichever PR lands second merges `main` in and re-runs its tests.
-- **The two sessions talk** through comments on #90, and Fleet ops relays.
+- **The split,** confirmed by the coordinator on #90 (17:26Z), with one writer per PR:
+  - **Cloud:** #90, option (d), the model limits (including the VAT limit below), the hub's model-gap figures and Friday's step-5 timing report.
+  - **Local:** #91, #92, #93, the Subfleet builds and **every bundle adoption**: dispatching the adopt workflow, regenerating and staging measures on certified data, merging, deploying the household API, the memory read, and keeping the revert PR green. The local session has the credentials, Subfleet and compute that adoption needs.
+- **Merge order where they overlap:** #90 → #91 → (d) → #92 and #93.
+  - (d) rebases on #91, because both touch `publish.py`, `review_rows.py`, `generate.py` and `receipt.py`.
+  - Whichever lands second merges `main` in (a merge, never a rebase) and re-runs CI. Neither session pushes to the other's branch.
+- **The next bundle's adoption** (the rehearsal or fallback cut, or any re-cut) waits until #90 is on `main`. Any pair with #2336 but without #2557 needs its CPI and State Pension limits.
+- **The two sessions talk** through comments on #90 and #88, and Fleet ops relays.
 
 ## Where things stand
 - **`main` runs policyengine 6.10.0** (policyengine-uk 2.132.6, Microcosm data 0.1.0), from #72.
@@ -54,9 +57,7 @@ The coordinator answered this file's open questions on #88 (12:03Z):
 - **The hub's figures.** The hub posts its re-measured aggregates on GitHub, and the cloud session adds them to the model-gap list.
 - **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
-Still open:
-- **Which session drives the next bundle's adoption PR.** The coordinator decides.
-- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The local session has offered to take it once #90 merges.
+- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The cloud session owns it.
 
 ## Known follow-ups (not blocking)
 - Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.
