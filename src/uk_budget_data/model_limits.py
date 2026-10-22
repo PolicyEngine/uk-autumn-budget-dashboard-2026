@@ -5,14 +5,16 @@ known fix is in the installed model. A measure that changes one of them
 gets a figure, but not one to approve: it is staged provisional at most,
 with the reason, and never approved (``publication.publish``).
 
-Each limit names the parameters it covers, the fix and a test of the
-model for it. A measure touches a limit when its two built simulations'
-parameters differ under one of those parameters, compared as
+Each limit names the parameters it covers, any variables it covers, the
+fix and a test of the model for it. A measure touches a limit when the
+model either simulation runs lacks the fix and its two built simulations
+differ under one of those parameters, compared as
 ``uk_budget_data.data_limits`` compares them (the stored trees by position
-and effective value, and what formulas read at each year's start), and
-the model either simulation runs lacks the fix. A limit expires on its
-own: once the model has the fix, nothing is recorded, and
-``tests/test_model_limits.py``'s tripwire fails so the limit is removed.
+and effective value, and what formulas read at each year's start), or in
+one of those variables: its formulas or what decides how they run, or the
+values stored for it as inputs (recorded as ``variable:<name>``). A limit
+expires on its own: once the model has the fix, nothing is recorded, and
+its tripwire test fails so the limit is removed.
 """
 
 import ast
@@ -24,12 +26,15 @@ from dataclasses import dataclass
 from importlib.resources import files
 from typing import Callable, Iterable
 
+import numpy
+
 from uk_budget_data import data_limits
 
 
 @dataclass(frozen=True)
 class ModelLimit:
-    """Parameters the installed model mis-costs until ``fixed_by`` lands."""
+    """Parameters, and variables, the installed model mis-costs until
+    ``fixed_by`` lands."""
 
     key: str
     parameters: tuple[str, ...]
@@ -41,6 +46,18 @@ class ModelLimit:
     installed_fixed: Callable[[], bool]
     # Compare effective values only from this fiscal year, if specified.
     from_year: int | None = None
+    # Variables a measure can change the limit through without changing a
+    # covered parameter: a replaced formula, or an input set on one side.
+    variables: tuple[str, ...] = ()
+
+
+# How a receipt records a covered variable that differs.
+VARIABLE_PATH = "variable:"
+
+
+def variable_path(name: str) -> str:
+    """A covered variable as a limit's record names it."""
+    return f"{VARIABLE_PATH}{name}"
 
 
 # policyengine-uk #2336 makes additional_state_pension rise by this index.
@@ -382,6 +399,138 @@ _SEPTEMBER_INPUT_READERS = (
 )
 
 
+# policyengine-uk #2187 grosses household VAT up to receipts by these two
+# factors, in place of microdata_vat_coverage alone, through this helper.
+_VAT_FACTORS = (
+    "gov.simulation.vat.survey_consumption_coverage",
+    "gov.simulation.vat.household_share_of_receipts",
+)
+_VAT_GROSSING = "vat_grossing_factor"
+# The classes that gross VAT up, in the installed source. vat_change is
+# their difference, so both must have the fix.
+_VAT_FILES = (
+    ("vat", "variables/gov/hmrc/vat.py"),
+    ("baseline_vat", "variables/gov/hmrc/baseline_vat.py"),
+)
+
+
+def _vat_grossing_factors(system) -> bool:
+    """Whether the system grosses household VAT up by survey consumption
+    coverage and the household share of receipts (policyengine-uk #2187):
+    both factors are leaves of the tree as the model built it.
+
+    Read from that tree, not from the formulas or the tree a measure
+    changes, so a measure can't make its own model count as fixed, nor a
+    fixed one as unfixed: the VAT base template replaces the ``vat``
+    formula on the reform side, and a modifier that added the factors would
+    add them to the tree it changes. As for the minimum guarantee, one that
+    adds them to the tree as built changes the model: review it as such.
+    """
+    if not hasattr(system, "parameters"):
+        return False
+    try:
+        tree = _unreformed(system.parameters)
+        return all(
+            hasattr(tree.get_child(path), "values_list")
+            for path in _VAT_FACTORS
+        )
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return False
+
+
+def _calls(function: ast.FunctionDef, name: str) -> bool:
+    """Whether a parsed function calls ``name``, by its own name or as an
+    attribute. A comment, docstring or string naming it doesn't count."""
+    return any(
+        isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == name)
+            or (
+                isinstance(node.func, ast.Attribute) and node.func.attr == name
+            )
+        )
+        for node in ast.walk(function)
+    )
+
+
+def _installed_formulas_call(path: str, variable: str, name: str) -> bool:
+    """Whether every formula of the ``variable`` class in the installed
+    policyengine-uk's source file ``path`` calls ``name``."""
+    try:
+        source = (
+            files("policyengine_uk").joinpath(path).read_text(encoding="utf-8")
+        )
+        tree = ast.parse(source)
+    except (OSError, ModuleNotFoundError, SyntaxError, ValueError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == variable:
+            formulas = [
+                item
+                for item in node.body
+                if isinstance(item, ast.FunctionDef)
+                and item.name.startswith("formula")
+            ]
+            return bool(formulas) and all(
+                _calls(formula, name) for formula in formulas
+            )
+    return False
+
+
+def _installed_vat_grossing_factors() -> bool:
+    """Read the installed engine with the same check, and its source: every
+    formula of its ``vat`` and ``baseline_vat`` classes divides by the
+    grossing factor #2187 adds (parsed, as for the State Pension add-on)."""
+    from policyengine_uk.system import system
+
+    return _vat_grossing_factors(system) and all(
+        _installed_formulas_call(path, variable, _VAT_GROSSING)
+        for variable, path in _VAT_FILES
+    )
+
+
+# consumption's categories, which it adds (COICOP), as policyengine-uk
+# 2.132.6 lists them. Kept static for reproducible receipts;
+# test_vat_model_limit.py fails if the installed model adds others.
+_CONSUMPTION_CATEGORIES = (
+    "food_and_non_alcoholic_beverages_consumption",
+    "alcohol_and_tobacco_consumption",
+    "clothing_and_footwear_consumption",
+    "housing_water_and_electricity_consumption",
+    "household_furnishings_consumption",
+    "health_consumption",
+    "transport_consumption",
+    "communication_consumption",
+    "recreation_consumption",
+    "education_consumption",
+    "restaurants_and_hotels_consumption",
+    "miscellaneous_consumption",
+)
+
+# consumption's categories rise by this index in years after the data's, so
+# a CPI path moves VAT without changing a VAT parameter or a stored input;
+# test_vat_model_limit.py fails if the installed model uprates them by
+# another.
+_CONSUMPTION_UPRATING = (
+    "gov.economic_assumptions.indices.obr.consumer_price_index"
+)
+
+# What household VAT is built from: the two grossed liabilities, their
+# difference, the two consumption bases and what they are built from. A
+# measure on any of them moves VAT without changing a VAT parameter: the VAT
+# base template replaces vat's formula, and a modifier can set consumption.
+_VAT_VARIABLES = (
+    "vat",
+    "baseline_vat",
+    "vat_change",
+    "full_rate_vat_consumption",
+    "reduced_rate_vat_consumption",
+    "full_rate_vat_expenditure_rate",
+    "consumption",
+    *_CONSUMPTION_CATEGORIES,
+)
+
+
 MODEL_LIMITS = (
     ModelLimit(
         key="state_pension_add_on_uprating",
@@ -458,6 +607,30 @@ MODEL_LIMITS = (
         installed_fixed=_installed_minimum_guarantee_earnings,
         from_year=2027,
     ),
+    ModelLimit(
+        key="vat_consumption_coverage",
+        parameters=(
+            "gov.hmrc.vat",
+            "gov.simulation.microdata_vat_coverage",
+            _CONSUMPTION_UPRATING,
+        ),
+        variables=_VAT_VARIABLES,
+        fixed_by="policyengine-uk #2187",
+        reason=(
+            "The installed model grosses household VAT up to receipts by a "
+            "single factor of 0.38 (gov.simulation.microdata_vat_coverage). "
+            "policyengine-uk #2187 divides instead by survey consumption "
+            "coverage times the household share of VAT receipts, 0.67 × 0.7 "
+            "= 0.469, so this model's VAT is about 23% higher (the UK hub "
+            "measured about 24% on Microcosm, 22 October 2026), and a "
+            "measure that moves a VAT rate, the VAT base or the consumption "
+            "VAT is charged on can be overstated by as much. #2187 is not "
+            "in this model. Until a pair with it is adopted, such measures "
+            "are held at provisional."
+        ),
+        fixed=_vat_grossing_factors,
+        installed_fixed=_installed_vat_grossing_factors,
+    ),
 )
 
 
@@ -469,6 +642,7 @@ REGISTRY_SHA256 = hashlib.sha256(
             [
                 limit.key,
                 list(limit.parameters),
+                list(limit.variables),
                 limit.fixed_by,
                 limit.reason,
                 limit.from_year,
@@ -480,23 +654,29 @@ REGISTRY_SHA256 = hashlib.sha256(
 ).hexdigest()
 
 
+def _covers(limit: ModelLimit, path: str) -> bool:
+    """Whether a recorded path is under a limit: a parameter path under one
+    of its prefixes, or ``variable:<name>`` for a variable it covers."""
+    if path.startswith(VARIABLE_PATH):
+        return path[len(VARIABLE_PATH) :] in limit.variables
+    return any(data_limits._under(path, prefix) for prefix in limit.parameters)
+
+
 def limits_for_paths(paths: Iterable[str]) -> list[ModelLimit]:
-    """The limits any of these parameter paths fall under, in registry
-    order, whether or not the installed model has the fix."""
+    """The limits any of these paths fall under (parameter paths, or
+    ``variable:<name>``), in registry order, whether or not the installed
+    model has the fix."""
     paths = list(paths)
     return [
         limit
         for limit in MODEL_LIMITS
-        if any(
-            data_limits._under(path, prefix)
-            for path in paths
-            for prefix in limit.parameters
-        )
+        if any(_covers(limit, path) for path in paths)
     ]
 
 
 def record(limit: ModelLimit, parameters: Iterable[str]) -> dict:
-    """A limit as the receipt records it."""
+    """A limit as the receipt records it: its parameter paths and covered
+    variables (``variable:<name>``) that differ, under ``parameters``."""
     return {
         "key": limit.key,
         "reason": limit.reason,
@@ -515,6 +695,8 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
     prefix, failing closed). A dated limit ignores earlier effective
     values, but retains earlier changes still in force from its first year.
     Rebound nodes fail closed even if their dates cannot be established.
+    A limit is touched too when one of its variables differs between the
+    two simulations (:func:`_variables_differing`), in any year.
     """
     base_system = sim_baseline.tax_benefit_system
     reform_system = sim_reform.tax_benefit_system
@@ -566,9 +748,114 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
                 ):
                     found = [prefix]
                 differing += found
+            differing += _variables_differing(
+                sim_baseline, sim_reform, limit.variables, behaviour
+            )
             if differing:
                 touched.append(record(limit, differing))
     return touched
+
+
+# What, beside its formulas and what the fingerprint reads, decides how a
+# variable is calculated: the date its formulas stop, the variable masking
+# them, carrying an input forward, and how an input is spread over periods.
+_VARIABLE_METADATA = ("end", "defined_for", "uprating", "set_input")
+
+
+def _variables_differing(sim_baseline, sim_reform, names, behaviour):
+    """The covered variables that differ between two simulations, as a
+    record names them (``variable:<name>``).
+
+    A variable differs when it is in one system only, or its behaviour
+    differs: each dated formula by content (its code's fingerprint, as
+    ``uk_budget_data.data_limits`` reads it, with its defaults, the values
+    it closes over and the globals it looks up, so a template applied with
+    other arguments shows), whether it is neutralised, what it adds and
+    subtracts, its default and :data:`_VARIABLE_METADATA`; or when the
+    values stored for it as inputs differ (:func:`_inputs`). What can't be
+    read counts as different.
+    """
+    systems = (sim_baseline.tax_benefit_system, sim_reform.tax_benefit_system)
+    found = []
+    for name in names:
+        pair = [
+            (getattr(system, "variables", None) or {}).get(name)
+            for system in systems
+        ]
+        if pair[0] is None and pair[1] is None:
+            continue
+        try:
+            same_inputs = _same_inputs(
+                _inputs(sim_baseline, name), _inputs(sim_reform, name)
+            )
+        except Exception:  # noqa: BLE001 - unreadable means different
+            same_inputs = False
+        if _behaves_differently(*pair, behaviour) or not same_inputs:
+            found.append(variable_path(name))
+    return found
+
+
+def _behaves_differently(base, reform, behaviour) -> bool:
+    if base is None or reform is None:
+        return True
+    try:
+        return any(
+            behaviour.of(getattr(base, field, None))
+            != behaviour.of(getattr(reform, field, None))
+            for field in _VARIABLE_METADATA
+        ) or behaviour.of(base) != behaviour.of(reform)
+    except Exception:  # noqa: BLE001 - unreadable means different
+        return True
+
+
+def _inputs(sim, name):
+    """The values ``sim`` stores for ``name`` as inputs, by branch and
+    period; None for a simulation without the engine's holders (a
+    stand-in), which is not compared.
+
+    Detection runs after the figures are made, so holders also keep what
+    the engine calculated: only the values the engine records as inputs
+    are compared. An engine that records none is read whole.
+    """
+    get_holder = getattr(sim, "get_holder", None)
+    if get_holder is None:
+        return None
+    if name not in sim.tax_benefit_system.variables:
+        return {}
+    holder = get_holder(name)
+    keys = getattr(sim, "_user_input_keys", None)
+    if keys is None:
+        slots = holder.get_known_branch_periods()
+    else:
+        slots = [
+            (branch, period)
+            for variable, branch, period in keys
+            if variable == name
+        ]
+    return {
+        (branch, str(period)): holder.get_array(period, branch)
+        for branch, period in slots
+    }
+
+
+def _same_inputs(base, reform) -> bool:
+    """Whether two simulations store the same inputs (NaN equal to NaN);
+    true where either can't be read."""
+    if base is None or reform is None:
+        return True
+    return base.keys() == reform.keys() and all(
+        _same_array(base[slot], reform[slot]) for slot in base
+    )
+
+
+def _same_array(a, b) -> bool:
+    if a is None or b is None:
+        return a is b
+    a, b = numpy.asarray(a), numpy.asarray(b)
+    try:
+        return bool(numpy.array_equal(a, b, equal_nan=True))
+    except TypeError:  # no NaN in this dtype (text, say)
+        return bool(numpy.array_equal(a, b))
 
 
 def _rebound(system, prefix: str) -> bool:

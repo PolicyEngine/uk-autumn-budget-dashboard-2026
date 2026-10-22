@@ -29,30 +29,30 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "abcb0bf409161a9fdba979d9fc254c5f95aedbf99846b0fd53ce5514008c5417",
-      "receipt_sha256": "c8a67fea78b4c0cbc0692a092993818c56ff7c933fcb4e4f5a4ef52a0043eb81"
+      "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
+      "receipt_sha256": "a9416413504b058050c390b57840ceabfdd752efb6e7cdde9e0114b34c0d4cf4"
     },
     "files": {
-      "budgetary_impact.csv": "a8540037193cb4045f536fa9e2916565265f4c7516780f0f3092c39f5b56847a",
-      "distributional_impact.csv": "b6718d684ce2219ba4f32e38303e557a15b9fdd0c27812939ffd76a81cf5e1c3",
-      "household_scatter_binned.csv": "5e531e6d09c6fd3dc94f193e674275f28216c6fcb6610ded996ec85d0a505234",
-      "income_curve.csv": "8c6fb85ade4a11de3d21c7fc00d1ba483b9a1e0c2e56153054231d81a8d4b773",
-      "metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
-      "winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733"
+      "budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
+      "distributional_impact.csv": "a3481d4a2b347b4aeb7bca68cc92f8858da5e0798388c42aa3fdb84a6fe7288b",
+      "household_scatter_binned.csv": "43b04c8663220e9553d23a17776c86f9ee38bb828c20ef62e9c3cdea2b2e2628",
+      "income_curve.csv": "c80a11732088b4d7b2f9765e7e3781deb098377783e8c29e8a6c38e7972df7d3",
+      "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
+      "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
     },
-    "generated_at": "2026-10-22T14:50:33.833740+00:00",
+    "generated_at": "2026-10-22T17:58:07.192130+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "gamma",
+    "key": "beta",
     "measure_ids": [
-      "gamma"
+      "beta"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
-    "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
+    "model_limits_registry_sha256": "5c1c9c93fa876b9454e99505c432eb0ebfbb3236d3acc89399aa1efeca86f4eb",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -65,7 +65,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "gamma baseline"
+      "name": "beta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -105,13 +105,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "abcb0bf409161a9fdba979d9fc254c5f95aedbf99846b0fd53ce5514008c5417",
+    "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "gamma",
-      "reform_sha256": "7c1c5ceafaa678dcedab02064eebda65cf2c513cca9329c2bcc9a981d8ea7f5c",
+      "name": "beta",
+      "reform_sha256": "d91c1ce71511f3c4ca55ff993e3e25a31befafe6556c7297296d0690cf90a0ad",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

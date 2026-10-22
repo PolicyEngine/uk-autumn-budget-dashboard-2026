@@ -29,30 +29,38 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
-      "receipt_sha256": "14fad67ea13be970500d975b9f2f9e440d741476ef4cd24285c2fb883ea96424"
+      "outputs_sha256": "8a7dcfbf1bd18119bc6b918b9747b30a5c8ad796c7539b4f333867cda6143afd",
+      "receipt_sha256": "d52cd34a3297abf23f3d9483bb6cb374c2b6d0058e8094c7141cef2f896cb305"
     },
     "files": {
-      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
-      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
-      "household_scatter_binned.csv": "d9b4a255b8b19ecfb4ec10e0664df4a0ec1dd90e5357597b71edd9b8b2974a90",
-      "income_curve.csv": "a271e3e7d6bc97cf626b9f0f7dccb86c4c204c4d0a9c8924a7a18e59900b1c69",
-      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
-      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
+      "budgetary_impact.csv": "3232247c23f75c3d2c8d1b7086c36d1738928ecc93811c0c9419ba8627475c7a",
+      "distributional_impact.csv": "08e9f78a74ed06a222b635fd33f5f2e9e2561ea53f44e4767e15d6f5d18c6d69",
+      "household_scatter_binned.csv": "f138628fa84e1aaa8dfd6c9a9d96bb7bf8a823d4d494ae514ff01ee14583d290",
+      "income_curve.csv": "38524bff2275af68fc27e83773d6cf2afe1d8b74a4d8ff673d29716d35217dba",
+      "metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
+      "winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30"
     },
-    "generated_at": "2026-10-22T14:50:33.568735+00:00",
+    "generated_at": "2026-10-22T17:58:07.807293+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "delta",
+    "key": "zeta",
     "measure_ids": [
-      "delta"
+      "zeta"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [],
-    "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
+    "model_limits": [
+      {
+        "key": "state_pension_add_on_uprating",
+        "parameters": [
+          "gov.dwp.state_pension.new_state_pension.amount"
+        ],
+        "reason": "The installed model raises additional State Pension and new State Pension protected payments with the full rates, not with prices, so anything that moves the full rates moves them too, and a change to September CPI misses them. They rise by prices: the statutory floor, which the Up-rating Orders give as September CPI (SI 2026/148 articles 4(3)(a) and 6(3)(b)). So this measure is mis-costed: on uk-data 1.58.1, a 10% rise in the full rates overstates its net cost by about \u00a30.85bn to \u00a31.06bn a year over 2026-27 to 2030-31. policyengine-uk #2336 fixes it; it is not in this model. Held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "5c1c9c93fa876b9454e99505c432eb0ebfbb3236d3acc89399aa1efeca86f4eb",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -65,7 +73,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "delta baseline"
+      "name": "zeta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -105,13 +113,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "0c940af160cb217d05fda0640b2d574bdb9b6b12afd9a82841fed2b70fa62d6f",
+    "outputs_sha256": "8a7dcfbf1bd18119bc6b918b9747b30a5c8ad796c7539b4f333867cda6143afd",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "delta",
-      "reform_sha256": "fedd36d4624a231b098739785efd96a369842e03e22aa5a502ff66e07177f404",
+      "name": "zeta",
+      "reform_sha256": "529ecf42be6c27a32a43bb700409a37d95f28b99ba77e7c96cfd55f70a5e0e7a",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

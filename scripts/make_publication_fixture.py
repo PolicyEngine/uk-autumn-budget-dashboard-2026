@@ -100,6 +100,22 @@ try:
     )
     world.reconcile(refs["theta"])
     stage(manifest, refs["theta"].path, provisional=True, **args)
+    # An energy VAT measure built with the VAT base template, held until
+    # policyengine-uk #2187: a fourth limit, recorded by the variable whose
+    # formula the template replaces, honoured like the others.
+    vat = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "vat_consumption_coverage"
+        ),
+        [model_limits.variable_path("vat")],
+    )
+    world.expect("iota", "positive", IN)
+    refs["iota"] = world.write(
+        "iota", {IN: 1.5, BEYOND: 1.6}, rate=0.31, model_limits=[vat]
+    )
+    world.reconcile(refs["iota"])
+    stage(manifest, refs["iota"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]
