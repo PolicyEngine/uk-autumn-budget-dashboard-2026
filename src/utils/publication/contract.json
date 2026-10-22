@@ -97,7 +97,7 @@
   ],
   "manifest_file": "manifest.json",
   "manifest_schema": "uk-budget-dashboard/publication-manifest/v1",
-  "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+  "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
   "receipt_file": "receipt.json",
   "scatter_bins": {
     "change_band_width": 100.0,
