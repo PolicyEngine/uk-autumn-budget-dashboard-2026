@@ -124,7 +124,6 @@ body {
 }
 
 .app {
-  min-height: 100vh;
   background: var(--page-bg);
   font-family: var(--pe-font-family);
   /* The full-bleed title band is 100vw wide; never let it add a sideways
@@ -1013,10 +1012,41 @@ body {
   }
 }
 
+/* The page fills the window without overshooting it: the shell's main
+   grows to the window, the app grows inside it, and the replication line
+   sits at the bottom of the content column, just above the footer. */
+.min-h-screen.flex.flex-col > main {
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.app > .main-content {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: 20px;
+}
+
+.app > .main-content > * {
+  flex-shrink: 0;
+}
+
+/* At least 40px between the last section and the replication line */
+.app > .main-content > :nth-last-child(2) {
+  margin-bottom: 40px;
+}
+
 /* Replication line above the footer: a thin rule across the column,
    small muted centred text */
 .replication-line {
-  margin: 40px 0 0;
+  margin: auto 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--card-border);
   font-size: 0.8125rem;
