@@ -3,7 +3,7 @@ import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
 import "./GroupedLegend.css";
 
 // Below this width the groups stack; above it they sit side by side
-const STACK_BELOW = 520;
+const STACK_BELOW = 420;
 // A group with more items than this splits into two sub-columns
 const SPLIT_ABOVE = 5;
 

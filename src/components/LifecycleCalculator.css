@@ -1366,3 +1366,10 @@
 .tooltip-value.negative {
   color: var(--pe-gray-900);
 }
+
+@media (max-width: 768px) {
+  /* Phone: "Step N of 7" and the progress bar replace the circles */
+  .wizard-steps ol {
+    display: none;
+  }
+}
