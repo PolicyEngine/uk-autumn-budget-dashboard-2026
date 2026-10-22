@@ -40,7 +40,7 @@
       "metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
       "winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733"
     },
-    "generated_at": "2026-10-22T11:32:15.982656+00:00",
+    "generated_at": "2026-10-22T13:01:43.020925+00:00",
     "generator_argv": [
       "test"
     ],
@@ -52,7 +52,7 @@
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
-    "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+    "model_limits_registry_sha256": "0a6af61874632cf96be81bc671d03df183bb20423ebc751e6cf5a707d6a15edb",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -115,8 +115,8 @@
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
-      "platform": "darwin",
-      "python_version": "3.13.9"
+      "platform": "linux",
+      "python_version": "3.13.16"
     },
     "schema_version": 1,
     "supported_years": [

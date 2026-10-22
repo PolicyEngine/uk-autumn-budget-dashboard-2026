@@ -13,7 +13,12 @@ from policyengine_core.periods import instant
 from policyengine_uk.system import system as installed_system
 from policyengine_uk.tax_benefit_system import statutory_parameters
 
-from tests.test_model_limits import INCOME_TAX, scenario, simulation
+from tests.test_model_limits import (
+    INCOME_TAX,
+    fixed,
+    scenario,
+    simulation,
+)
 from uk_budget_data import data_limits
 from uk_budget_data.model_limits import (
     MODEL_LIMITS,
@@ -22,7 +27,9 @@ from uk_budget_data.model_limits import (
     record,
 )
 
+STATE_PENSION_LIMIT = MODEL_LIMITS[0]
 LIMIT = MODEL_LIMITS[1]
+PENSION_CREDIT_LIMIT = MODEL_LIMITS[2]
 BENEFIT_INDEX = "gov.benefit_uprating_cpi"
 SEPTEMBER_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
@@ -58,7 +65,10 @@ def test_the_pinned_prefixes_equal_the_installed_uprating_metadata():
         )
     }
     assert len(prefixes) == 79
-    assert set(LIMIT.parameters) == prefixes | {PROTECTED_HEALTH}
+    assert set(LIMIT.parameters) == prefixes | {
+        PROTECTED_HEALTH,
+        SEPTEMBER_INDEX,
+    }
     assert "gov.dwp.universal_credit.standard_allowance.amount" in prefixes
     assert PENSION_CREDIT in prefixes
 
@@ -169,11 +179,50 @@ def test_a_2027_protected_health_element_measure_records_the_limit():
     ) == [record(LIMIT, [PROTECTED_HEALTH])]
 
 
-@pytest.mark.parametrize("parameter", [PIP, UC, PENSION_CREDIT])
+@pytest.mark.parametrize("parameter", [PIP, UC])
 def test_a_2027_benefit_measure_records_the_limit(parameter):
     assert limits_touched(
         simulation(), simulation({parameter: {"2027": 900.0}})
     ) == [record(LIMIT, [parameter])]
+
+
+def test_a_2027_minimum_guarantee_measure_records_both_its_limits():
+    """The guarantee is on the benefit index and must rise with earnings,
+    so it stays held after #2533's fix until the earnings fix lands."""
+    assert limits_touched(
+        simulation(), simulation({PENSION_CREDIT: {"2027": 900.0}})
+    ) == [
+        record(LIMIT, [PENSION_CREDIT]),
+        record(PENSION_CREDIT_LIMIT, [PENSION_CREDIT]),
+    ]
+
+
+def test_a_2027_september_cpi_change_records_the_limit():
+    """Without #2336 the State Pension limit holds it as well."""
+    assert limits_touched(
+        simulation(), simulation({SEPTEMBER_INDEX: {"2027": 1.7}})
+    ) == [
+        record(STATE_PENSION_LIMIT, [SEPTEMBER_INDEX]),
+        record(LIMIT, [SEPTEMBER_INDEX]),
+    ]
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {SEPTEMBER_INDEX: {"2027": 1.7}},
+        {CPI_INPUT: {"2026-09-01.2027-08-31": 0.035}},
+    ],
+    ids=["the index", "the September 2026 input"],
+)
+def test_with_2336_but_not_2533_the_add_on_is_held_by_this_limit(changes):
+    """A pair with #2336 but without #2557 raises additional State Pension
+    by the September CPI index, whose April 2027 step is still a forecast.
+    The State Pension limit lifts with #2336; this one holds a measure
+    that moves the index until #2533's fix (coordinator, 22 October)."""
+    assert limits_touched(fixed(), fixed(changes)) == [
+        record(LIMIT, [SEPTEMBER_INDEX])
+    ]
 
 
 def test_a_measure_confined_to_2026_does_not_record_the_limit():

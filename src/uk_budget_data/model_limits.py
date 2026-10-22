@@ -172,6 +172,75 @@ def _installed_benefit_september_cpi() -> bool:
     return _benefit_september_cpi(system)
 
 
+_MINIMUM_GUARANTEE = (
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
+)
+_EARNINGS_INPUT = (
+    "gov.economic_assumptions.statutory_uprating_inputs.awe_total_pay_may_july"
+)
+# One 5p step of a weekly rate: the Up-rating Orders round the guarantee to
+# 5p, and lagged CPI falls short of earnings by pounds a week.
+_GUARANTEE_ROUNDING = 0.05
+
+
+def _minimum_guarantee_earnings(system) -> bool:
+    """Whether the standard minimum guarantee rises with earnings.
+
+    Social Security Administration Act 1992 s. 150A(2) requires the April
+    2027 rise to be at least the May to July 2026 earnings growth. The
+    earnings figure is read from the raw input, so a forecast filled into
+    an unpublished year can't count, and both the single and the couple
+    rate must reach it in the built tree. The pension-age Housing Benefit
+    allowances and the savings credit threshold, which the same fix covers,
+    have no statutory floor to test, so the guarantee stands for them.
+    """
+    if not hasattr(system, "parameters"):
+        return False
+    try:
+        raw = getattr(system, "_raw_parameters", None)
+        if raw is None:
+            from policyengine_uk.tax_benefit_system import statutory_parameters
+
+            raw = statutory_parameters()
+        earnings = raw.get_child(_EARNINGS_INPUT)("2026-07-01")
+        if earnings is None:
+            return False
+        guarantee = system.parameters.get_child(_MINIMUM_GUARANTEE)
+        for name in ("SINGLE", "COUPLE"):
+            amount = guarantee.get_child(name)
+            floor = amount("2026-04-30") * (1 + earnings)
+            if amount("2027-04-30") < floor - _GUARANTEE_ROUNDING:
+                return False
+        return True
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return False
+
+
+def _installed_minimum_guarantee_earnings() -> bool:
+    """Read the installed engine with the same behavioural check."""
+    from policyengine_uk.system import system
+
+    return _minimum_guarantee_earnings(system)
+
+
+# What the UK hub's earnings fix for the guarantee covers (coordinator, 22
+# October): the guarantee, the pension-age Housing Benefit allowances and
+# the savings credit threshold. policyengine-uk after 2.132.6 splits each
+# pension-age allowance in two (aged, and aged_from_cutoff, six in all);
+# test_pension_credit_model_limit.py fails until every one is listed here.
+# The earnings input is covered too: without the fix the guarantee ignores
+# it, so a change to it misses them, as a change to September CPI misses
+# the State Pension add-on without #2336.
+_PENSION_AGE_EARNINGS_PARAMETERS = (
+    _MINIMUM_GUARANTEE,
+    "gov.dwp.pension_credit.savings_credit.threshold",
+    "gov.dwp.housing_benefit.allowances.couple.aged",
+    "gov.dwp.housing_benefit.allowances.lone_parent.aged",
+    "gov.dwp.housing_benefit.allowances.single.aged",
+    _EARNINGS_INPUT,
+)
+
+
 # Topmost prefixes whose uprating metadata names gov.benefit_uprating_cpi,
 # including the UC standard allowance's parent (which propagates to all
 # four leaves). Kept static for reproducible receipts; metadata drift in
@@ -262,9 +331,15 @@ _BENEFIT_CPI_PARAMETERS = (
 # from the September 2026 CPI input. The UC protected health element is null
 # from April 2027, so policyengine-uk's uc_reform takes the UC Act 2025 s. 4
 # floor, which reads statutory_uprating_inputs.cpi_september for the
-# previous September (review of #85).
+# previous September (review of #85). The September CPI index is built from
+# the same input, and from policyengine-uk #2336 additional State Pension and
+# new State Pension protected payments rise by it, so a pair with #2336 but
+# without #2533's fix gives them a forecast for their April 2027 rise
+# (coordinator, 22 October). Any route that moves the index (the input, a
+# CPI growth path or its forecast gap) changes its stored values.
 _SEPTEMBER_INPUT_READERS = (
     "gov.dwp.universal_credit.rebalancing.protected_health_element",
+    _SEPTEMBER_CPI_INDEX,
 )
 
 
@@ -305,15 +380,42 @@ MODEL_LIMITS = (
             "among them, step by 2.3% in April 2027 against September 2026 "
             "CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC "
             "protected health element's 2027 amount also reads the "
-            "September 2026 input, which is still a forecast. The 2026-27 "
-            "rates are hard-coded and unaffected. policyengine-uk #2533 must "
-            "both enter the September outturn and repoint the benefit index "
-            "to September CPI. Until both steps are in the model, measures "
+            "September 2026 input, which is still a forecast, and so does "
+            "the September CPI index, by which additional State Pension and "
+            "new State Pension protected payments rise once policyengine-uk "
+            "#2336 is in the model. The 2026-27 rates are hard-coded and "
+            "unaffected. policyengine-uk #2533 must both enter the September "
+            "outturn and repoint the benefit index to September CPI. Until "
+            "both steps are in the model, measures "
             "touching these benefit levels from 2027 are held at "
             "provisional."
         ),
         fixed=_benefit_september_cpi,
         installed_fixed=_installed_benefit_september_cpi,
+        from_year=2027,
+    ),
+    ModelLimit(
+        key="pc_minimum_guarantee_uprating",
+        parameters=_PENSION_AGE_EARNINGS_PARAMETERS,
+        fixed_by=(
+            "the UK hub's earnings uprating of the minimum guarantee, "
+            "stacked on policyengine-uk #2557"
+        ),
+        reason=(
+            "The installed model raises the Pension Credit standard minimum "
+            "guarantee by lagged calendar-year CPI, 2.3% in April 2027, but "
+            "the law requires at least the growth in earnings, 3.9% in May "
+            "to July 2026 (Social Security Administration Act 1992 s. "
+            "150A(2)). So the guarantee is too low from 2027, and so are "
+            "the pension-age Housing Benefit allowances and the savings "
+            "credit threshold, which the same fix covers; a change to the "
+            "earnings input misses them. policyengine-uk #2557, the fix for "
+            "#2533, keeps the guarantee on lagged CPI. Until a fix that "
+            "uprates it by earnings is in the model, measures touching these "
+            "from 2027 are held at provisional."
+        ),
+        fixed=_minimum_guarantee_earnings,
+        installed_fixed=_installed_minimum_guarantee_earnings,
         from_year=2027,
     ),
 )
@@ -521,7 +623,7 @@ def record_problems(records) -> list[str]:
             or paths != sorted(set(paths))
             or any(
                 not isinstance(path, str)
-                or limits_for_paths([path]) != [limit]
+                or limit not in limits_for_paths([path])
                 for path in paths
             )
         ):

@@ -29,38 +29,30 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "8a7dcfbf1bd18119bc6b918b9747b30a5c8ad796c7539b4f333867cda6143afd",
-      "receipt_sha256": "d52cd34a3297abf23f3d9483bb6cb374c2b6d0058e8094c7141cef2f896cb305"
+      "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
+      "receipt_sha256": "a9416413504b058050c390b57840ceabfdd752efb6e7cdde9e0114b34c0d4cf4"
     },
     "files": {
-      "budgetary_impact.csv": "3232247c23f75c3d2c8d1b7086c36d1738928ecc93811c0c9419ba8627475c7a",
-      "distributional_impact.csv": "08e9f78a74ed06a222b635fd33f5f2e9e2561ea53f44e4767e15d6f5d18c6d69",
-      "household_scatter_binned.csv": "f138628fa84e1aaa8dfd6c9a9d96bb7bf8a823d4d494ae514ff01ee14583d290",
-      "income_curve.csv": "38524bff2275af68fc27e83773d6cf2afe1d8b74a4d8ff673d29716d35217dba",
-      "metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
-      "winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30"
+      "budgetary_impact.csv": "be377cf015258af52ce44af881300b1dafbc1d80b382a06757356187c981060c",
+      "distributional_impact.csv": "a3481d4a2b347b4aeb7bca68cc92f8858da5e0798388c42aa3fdb84a6fe7288b",
+      "household_scatter_binned.csv": "43b04c8663220e9553d23a17776c86f9ee38bb828c20ef62e9c3cdea2b2e2628",
+      "income_curve.csv": "c80a11732088b4d7b2f9765e7e3781deb098377783e8c29e8a6c38e7972df7d3",
+      "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
+      "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
     },
-    "generated_at": "2026-10-22T11:32:16.112476+00:00",
+    "generated_at": "2026-10-22T13:01:42.615065+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "zeta",
+    "key": "beta",
     "measure_ids": [
-      "zeta"
+      "beta"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [
-      {
-        "key": "state_pension_add_on_uprating",
-        "parameters": [
-          "gov.dwp.state_pension.new_state_pension.amount"
-        ],
-        "reason": "The installed model raises additional State Pension and new State Pension protected payments with the full rates, not with prices, so anything that moves the full rates moves them too, and a change to September CPI misses them. They rise by prices: the statutory floor, which the Up-rating Orders give as September CPI (SI 2026/148 articles 4(3)(a) and 6(3)(b)). So this measure is mis-costed: on uk-data 1.58.1, a 10% rise in the full rates overstates its net cost by about \u00a30.85bn to \u00a31.06bn a year over 2026-27 to 2030-31. policyengine-uk #2336 fixes it; it is not in this model. Held at provisional."
-      }
-    ],
-    "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+    "model_limits": [],
+    "model_limits_registry_sha256": "0a6af61874632cf96be81bc671d03df183bb20423ebc751e6cf5a707d6a15edb",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -73,7 +65,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "zeta baseline"
+      "name": "beta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -113,18 +105,18 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "8a7dcfbf1bd18119bc6b918b9747b30a5c8ad796c7539b4f333867cda6143afd",
+    "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "zeta",
-      "reform_sha256": "529ecf42be6c27a32a43bb700409a37d95f28b99ba77e7c96cfd55f70a5e0e7a",
+      "name": "beta",
+      "reform_sha256": "d91c1ce71511f3c4ca55ff993e3e25a31befafe6556c7297296d0690cf90a0ad",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
-      "platform": "darwin",
-      "python_version": "3.13.9"
+      "platform": "linux",
+      "python_version": "3.13.16"
     },
     "schema_version": 1,
     "supported_years": [
