@@ -1373,3 +1373,86 @@
     display: none;
   }
 }
+
+/* About this model: policies | assumptions, proper lists */
+.about-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 40px;
+}
+
+.methodology-content h4 {
+  margin: 16px 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.about-group + .about-group {
+  margin-top: 10px;
+}
+
+.about-group-heading {
+  margin: 0 0 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  color: var(--pe-gray-500) !important;
+}
+
+.methodology-content .about-policies,
+.methodology-content .about-bullets {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+.about-policies li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.about-swatch {
+  width: 10px;
+  height: 10px;
+}
+
+.about-policies strong {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* Small teal round bullets with a hanging indent */
+.about-bullets li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.about-bullets li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pe-teal-500);
+}
+
+.methodology-content .about-note {
+  margin: 16px 0 0;
+  font-size: 0.875rem;
+  color: var(--pe-gray-600);
+}
+
+@media (max-width: 768px) {
+  .about-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

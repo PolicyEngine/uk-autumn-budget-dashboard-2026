@@ -85,6 +85,18 @@ const RAISER_KEYS = new Set([
   "impact_sl_threshold_freeze",
 ]);
 
+// "About this model": what the lifetime model does for each policy (its
+// own values, from uk_budget_data/lifecycle_calculator.py)
+const ABOUT_POLICIES = [
+  { key: "impact_threshold_freeze", text: "income tax thresholds frozen until 2030-31." },
+  { key: "impact_unearned_income_tax", text: "tax on that income up 5%." },
+  { key: "impact_salary_sacrifice_cap", text: "£2,000 a year, from 2029." },
+  { key: "impact_sl_threshold_freeze", text: "Plan 2 frozen at £27,295, 2027-28 to 2029-30." },
+  { key: "impact_two_child_limit", text: "removed from 2026." },
+  { key: "impact_fuel_duty_freeze", text: "the 5p cut kept longer, then phased rises." },
+  { key: "impact_rail_fare_freeze", text: "regulated fares held for one year in 2026." },
+];
+
 // The form's steps: the inputs each one asks for, then the results
 const WIZARD_STEPS = [
   { title: "About you", fields: ["current_age", "retirement_age", "life_expectancy"] },
@@ -1656,49 +1668,49 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
                           repayments.
                         </p>
 
-                        <h4>Policies modelled</h4>
-                      <ul>
-                        <li>
-                          <strong>Threshold freeze extension</strong>: income tax
-                          thresholds frozen until 2030-31.
-                        </li>
-                        <li>
-                          <strong>Dividend, savings and property income tax
-                          increase</strong>: tax on that income up 5%.
-                        </li>
-                        <li>
-                          <strong>Salary sacrifice cap</strong>: £2,000 a year, from
-                          2029.
-                        </li>
-                        <li>
-                          <strong>Freeze student loan repayment thresholds</strong>:
-                          Plan 2 frozen at £27,295, 2027-28 to 2029-30.
-                        </li>
-                        <li>
-                          <strong>2 child limit repeal</strong>: removed from 2026.
-                        </li>
-                        <li>
-                          <strong>Fuel duty freeze extension</strong>: the 5p cut
-                          kept longer, then phased rises.
-                        </li>
-                        <li>
-                          <strong>Rail fares freeze</strong>: regulated fares held
-                          for one year in 2026.
-                        </li>
-                      </ul>
-
-                      <h4>Assumptions</h4>
-                        <ul>
-                          <li>Work starts at 22 on the chosen salary.</li>
-                          <li>
-                            Earnings rise with age to 2.2 times the starting salary by
-                            50.
-                          </li>
-                          <li>
-                            CPI and RPI follow the OBR forecast, then 2% and 2.39%.
-                          </li>
-                        </ul>
-                        <p>
+                        <div className="about-columns">
+                          <div>
+                            <h4>Policies modelled</h4>
+                            {[
+                              ["Raise revenue", ABOUT_POLICIES.filter((item) => RAISER_KEYS.has(item.key))],
+                              ["Cost revenue", ABOUT_POLICIES.filter((item) => !RAISER_KEYS.has(item.key))],
+                            ].map(([heading, items]) => (
+                              <div key={heading} className="about-group">
+                                <p className="about-group-heading">{heading}</p>
+                                <ul className="about-policies">
+                                  {items.map((item) => (
+                                    <li key={item.key}>
+                                      <span
+                                        className="about-swatch"
+                                        style={{ background: REFORMS.find((r) => r.key === item.key)?.color }}
+                                        aria-hidden="true"
+                                      />
+                                      <span>
+                                        <strong>{REFORMS.find((r) => r.key === item.key)?.label}</strong>
+                                        : {item.text}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                          <div>
+                            <h4>Assumptions</h4>
+                            <ul className="about-bullets">
+                              <li>Work starts at 22 on the chosen salary.</li>
+                              <li>
+                                Earnings rise with age to 2.2 times the starting
+                                salary by 50.
+                              </li>
+                              <li>
+                                CPI and RPI follow the OBR forecast, then 2% and
+                                2.39%.
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                        <p className="about-note">
                           Positive values mean higher net income under the policies;
                           negative values mean lower.
                         </p>

@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Customized,
+  Legend,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
@@ -29,6 +30,8 @@ import {
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   axisWidth,
+  legendWrapperStyle,
+  legendLabelStyle,
 } from "../utils/chartTheme";
 
 // Format year for display (e.g., 2026 -> "2026-27")
@@ -41,8 +44,8 @@ const getChartDescription = () =>
 
 // Legend items for export
 const LEGEND_ITEMS = [
-  { color: "#319795", label: "Gain", type: "rect" },
-  { color: "#D97706", label: "Loss", type: "rect" },
+  { color: "#319795", label: "Higher net income", type: "rect" },
+  { color: "#D97706", label: "Lower net income", type: "rect" },
 ];
 
 function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
@@ -217,10 +220,8 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
               data={data}
               margin={
                 narrow
-                  ? { top: 24, right: 16, left: 0, bottom: 34 }
-                  : // Bottom space matches the legend (and logo row) of the
-                    // chart beside it, so the two x-axes line up.
-                    { top: 24, right: 16, left: 0, bottom: 68 }
+                  ? { top: 24, right: 16, left: 0, bottom: 0 }
+                  : { top: 24, right: 16, left: 0, bottom: 0 }
               }
             >
               <CartesianGrid {...GRID_PROPS} />
@@ -268,6 +269,22 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
 
                 }
 
+              />
+              {/* The same legend row as the chart beside it, so the pair
+                  lines up */}
+              <Legend
+                wrapperStyle={legendWrapperStyle(narrow)}
+                iconSize={18}
+                verticalAlign="bottom"
+                align="center"
+                payload={LEGEND_ITEMS.map((item) => ({
+                  value: item.label,
+                  type: "rect",
+                  color: item.color,
+                }))}
+                formatter={(value) => (
+                  <span style={legendLabelStyle(narrow)}>{value}</span>
+                )}
               />
               <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
               {hasPositive && (

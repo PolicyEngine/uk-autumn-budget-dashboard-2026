@@ -168,11 +168,12 @@ body {
   top: 0;
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
-  /* One row on a wide screen: the title, then the view, year and policy
-     pills at the right. Narrower screens use two fixed rows (below). */
+  /* One row on a wide screen: the title, then the year, view and policy
+     pills at the right (the year first; without it the others keep their
+     places). Narrower screens use two fixed rows (below). */
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
-  grid-template-areas: "title view year policy";
+  grid-template-areas: "title year view policy";
   align-items: center;
   column-gap: 16px;
   row-gap: 8px;
@@ -911,12 +912,16 @@ body {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title policy"
-      "view year";
+      "year view";
     align-content: center;
   }
 
-  .band-view {
+  .band-year {
     justify-self: start;
+  }
+
+  .band-view {
+    justify-self: end;
   }
 }
 
@@ -1130,7 +1135,7 @@ body {
   }
 }
 
-/* About selected policies: grouped two-column list, no boxes */
+/* About selected policies: one grouped list, no boxes */
 .policy-details-content {
   padding: 4px 0 20px;
 }
@@ -1147,10 +1152,11 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* One list: each policy's name, then its description */
 .policy-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 32px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
 }
 
 .main-content .policy-detail {
@@ -1175,6 +1181,7 @@ body {
 }
 
 .policy-detail-text {
+  max-width: 90ch;
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.55;

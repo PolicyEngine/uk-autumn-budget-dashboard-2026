@@ -455,6 +455,18 @@ function App() {
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
 
+          {/* The year applies to every chart on the Population view, and
+              the revenue chart highlights it; it lives in the band so it can
+              be changed from anywhere. The Personal view has its own inputs. */}
+          {activeTab === "dashboard" && (
+            <div className="band-year">
+              <YearSlider
+                selectedYear={distributionalYear}
+                onYearChange={setDistributionalYear}
+              />
+            </div>
+          )}
+
           {/* The view (Population or Personal impact): a pill like the
               year and policy pills, switching the tab panel below */}
           <div className="band-view">
@@ -469,18 +481,6 @@ function App() {
               ]}
             />
           </div>
-
-          {/* The year applies to every chart on the Population view, and
-              the revenue chart highlights it; it lives in the band so it can
-              be changed from anywhere. The Personal view has its own inputs. */}
-          {activeTab === "dashboard" && (
-            <div className="band-year">
-              <YearSlider
-                selectedYear={distributionalYear}
-                onYearChange={setDistributionalYear}
-              />
-            </div>
-          )}
           {/* The policy pill applies to both views */}
           <div className="band-policy">
             <PolicySelector
