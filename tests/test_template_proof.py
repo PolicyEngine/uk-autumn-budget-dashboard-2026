@@ -181,7 +181,9 @@ def test_template_helpers_and_unfixed_modules_are_hand_written(source):
 @pytest.mark.parametrize(
     "modifier", [subscript_call_modifier, subscript_attribute_modifier]
 )
-def test_calls_and_attributes_in_subscripts_are_hand_written_and_held(modifier):
+def test_calls_and_attributes_in_subscripts_are_hand_written_and_held(
+    modifier,
+):
     world = World()
     reform = Reform(
         id="subscript", name="Subscript", simulation_modifier=modifier
