@@ -68,6 +68,9 @@ export async function loadArtifact(
   entry,
   { fetchImpl = fetch, signal, tables = DEFAULT_TABLES } = {},
 ) {
+  if (!isDisplayable(entry)) {
+    throw new Error(`${key} is ${entry?.status}: its figures are not shown`);
+  }
   const base = `${basePath}/data/${entry.artifact}`;
   const receipt = await (
     await fetchOk(fetchImpl, `${base}/${RECEIPT_FILE}`, { signal })
@@ -103,7 +106,20 @@ export async function loadArtifact(
 }
 
 /**
- * Load everything the page may show for a selection.
+ * The members of a combined run that did not load. A combined run's figures
+ * stand only with its members': if any member's artifact failed
+ * verification (its receipt records a data limit, say), the combined run is
+ * not shown either, whatever the manifest says. Membership is by own key,
+ * so a member id such as `constructor` is never found on a prototype.
+ */
+export function unverifiedMembers(memberIds, tablesByKey) {
+  return memberIds.filter((id) => !Object.hasOwn(tablesByKey, id));
+}
+
+/**
+ * Load everything the page may show for a selection. Its tables and
+ * failures are keyed by measure id with no prototype, so no id reads an
+ * inherited property.
  *
  * @returns {Promise<{status: "ready"|"no-manifest", manifest: Object|null,
  *   tablesByKey: Object, failures: Object, selection: Array<string>}>}
@@ -130,8 +146,8 @@ export async function loadPublication(basePath, selectedIds, options = {}) {
   const combined = combinedEntryFor(manifest, selection);
   if (combined) wanted.set(combined.key, combined.entry);
 
-  const tablesByKey = {};
-  const failures = {};
+  const tablesByKey = Object.create(null);
+  const failures = Object.create(null);
   await Promise.all(
     [...wanted].map(async ([key, entry]) => {
       try {
@@ -142,5 +158,18 @@ export async function loadPublication(basePath, selectedIds, options = {}) {
       }
     }),
   );
+  if (
+    combined &&
+    !combined.single &&
+    Object.hasOwn(tablesByKey, combined.key)
+  ) {
+    const failed = unverifiedMembers(combined.entry.measures, tablesByKey);
+    if (failed.length > 0) {
+      delete tablesByKey[combined.key];
+      failures[combined.key] =
+        `its member ${failed.join(", ")} did not verify: ` +
+        failed.map((id) => failures[id] ?? "not loaded").join("; ");
+    }
+  }
   return { status: "ready", manifest, tablesByKey, failures, selection };
 }

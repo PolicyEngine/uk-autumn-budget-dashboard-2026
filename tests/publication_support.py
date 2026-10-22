@@ -15,6 +15,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import policyengine.provenance.certification as certification
+import pytest
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.certified_data import load_bundle_manifest
@@ -23,6 +24,47 @@ from uk_budget_data.publication.artifacts import write_artifact
 from uk_budget_data.publication.receipt import projection_end_year
 from uk_budget_data.publication.reconcile import reconcile_artifact
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
+
+# The installed bundle's certified default dataset. Read from the bundle, so
+# the fixtures follow its data line (policyengine-uk-data's enhanced FRS
+# until 6.10.0, Microcosm since).
+_UK_RELEASE = load_bundle_manifest()["data_releases"]["uk"]
+DATASET_NAME = _UK_RELEASE["default_dataset"]
+
+# A small dataset the bundle pins but does not certify, for real runs whose
+# receipts must stay uncertified: policyengine-uk-data's tiny enhanced FRS.
+# Until 6.10.0 it is one of the release's datasets; from 6.10.0 it is an
+# overlay, still in policyengine-uk-data-private, so the certified-data job's
+# token must read that repository too. CI's access check names it with
+# --also, and test_certified_data keeps the two in step.
+SMALL_DATASET_NAME = "enhanced_frs_2024_25_tiny"
+
+
+def other_dataset_name() -> str:
+    """Another dataset the bundle names beside its certified default.
+
+    A receipt for it is uncertified, which is how the tests check that only
+    the default publishes. Only an ``.h5`` variant of the default's name
+    counts (``enhanced_frs_2024_25_tiny`` until 6.10.0,
+    ``microcosm_uk_2024_25_dense`` since): weights, calibration and
+    diagnostics files are not datasets. A bundle without one fails the tests
+    that need it, not every test that imports this module.
+    """
+    names = sorted(
+        name
+        for name, entry in _UK_RELEASE["datasets"].items()
+        if name != DATASET_NAME
+        and name.startswith(DATASET_NAME)
+        and entry["path"].endswith(".h5")
+    )
+    if not names:
+        pytest.fail(
+            f"the installed bundle names no .h5 variant of its default "
+            f"dataset {DATASET_NAME!r}; choose another stand-in for an "
+            "uncertified dataset"
+        )
+    return names[0]
+
 
 BASIS = {
     "forecast": {"status": "pre_budget", "source": "test", "vintage": "v1"},
@@ -124,7 +166,7 @@ class World:
         self._expected: list[str] = []
         self._write_inputs()
 
-        self._dataset = self.root / "enhanced_frs_2024_25.h5"
+        self._dataset = self.root / f"{DATASET_NAME}.h5"
         self._dataset.write_bytes(b"dummy certified dataset")
         self.bundle = self._bundle_for(self._dataset)
         (self.root / "manifest.json").write_text(json.dumps(self.bundle))
@@ -159,7 +201,7 @@ class World:
         bundle = copy.deepcopy(load_bundle_manifest())
         release = bundle["data_releases"]["uk"]
         release["certified_data_artifact"]["sha256"] = digest
-        release["datasets"]["enhanced_frs_2024_25"]["sha256"] = digest
+        release["datasets"][DATASET_NAME]["sha256"] = digest
         return bundle
 
     # --- simulations and receipts ------------------------------------
@@ -168,7 +210,7 @@ class World:
         self,
         dataset: Path = None,
         years=DATASET_YEARS,
-        dataset_name: str = "enhanced_frs_2024_25",
+        dataset_name: str = DATASET_NAME,
     ):
         """A stand-in simulation carrying what the receipt builder reads.
 
@@ -206,9 +248,11 @@ class World:
         measure_ids=None,
         tables=None,
         member_outputs=None,
-        dataset_name: str = "enhanced_frs_2024_25",
+        dataset_name: str = DATASET_NAME,
         reform_identity=None,
         config_baseline=None,
+        data_limits=(),
+        model_limits=(),
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -252,6 +296,8 @@ class World:
             member_outputs=member_outputs,
             composition=composition,
             config_baseline_identity=config_baseline,
+            data_limits=list(data_limits),
+            model_limits=list(model_limits),
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)
