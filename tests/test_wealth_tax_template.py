@@ -319,6 +319,12 @@ def raise_the_wealth_tax(sim):
     )
 
 
+def raise_the_wealth_tax_in_2027_only(sim):
+    sim.tax_benefit_system.parameters.get_child(WEALTH_RATE).update(
+        start=instant("2027-01-01"), stop=instant("2027-12-31"), value=0.02
+    )
+
+
 def raise_the_npr_wealth_tax(sim):
     sim.tax_benefit_system.parameters.get_child(NPR_RATE).update(
         start=instant("2027-01-01"), stop=instant("2028-12-31"), value=0.01
@@ -373,6 +379,7 @@ def built(world, modifier, side):
     "modifier, paths",
     [
         (raise_the_wealth_tax, [WEALTH_RATE]),
+        (raise_the_wealth_tax_in_2027_only, [WEALTH_RATE]),
         (raise_the_npr_wealth_tax, [NPR_RATE]),
         (set_the_wealth_tax_in_place, [WEALTH_RATE]),
         (rebind_the_wealth_tax, [WEALTH_TAX]),
@@ -442,6 +449,86 @@ def test_built_simulations_that_agree_on_the_scales_are_written(
     )
     assert report.refused == {}
     assert [reference.key for reference in report.written] == ["good"]
+
+
+def _caches(systems):
+    """Every cache the comparison could fill: each system's, its root's,
+    and each scale's (views are built at a scale whose stored trees
+    match)."""
+    return [
+        (
+            set(system._parameters_at_instant_cache),
+            set(system.parameters._at_instant_cache),
+            *(
+                set(
+                    getattr(
+                        system.parameters.get_child(scale),
+                        "_at_instant_cache",
+                        {},
+                    )
+                )
+                for scale in SCALES
+            ),
+        )
+        for system in systems
+    ]
+
+
+@pytest.mark.parametrize(
+    "modifier, expected",
+    [(raise_the_basic_rate, []), (raise_the_wealth_tax, [WEALTH_RATE])],
+    ids=["scales agree", "a scale differs"],
+)
+def test_the_comparison_leaves_the_parameter_caches_as_it_found_them(
+    modifier, expected
+):
+    baseline = Simulation(situation=HOUSEHOLD)
+    reformed = Simulation(
+        situation=HOUSEHOLD, scenario=Scenario(simulation_modifier=modifier)
+    )
+    systems = [baseline.tax_benefit_system, reformed.tax_benefit_system]
+    before = _caches(systems)
+    assert wealth_tax_paths_differing(baseline, reformed) == expected
+    assert _caches(systems) == before
+
+
+# Generated from a capital gains projection: the engine refuses a direct
+# change and takes CapitalGainsProjection(...) instead, so no measure's
+# parameter_changes moves it.
+GENERATED_SERIES = {"gov.economic_assumptions.yoy_growth.capital_gains"}
+
+
+def test_moving_every_growth_series_leaves_both_scales_unchanged():
+    """Tripwire: neither scale is projected by an economic assumption on
+    this engine, so a measure that moves the macro path is not refused as a
+    wealth tax. If the engine starts indexing a scale, this fails and a
+    person decides how the built-tree check should treat it."""
+    series = data_limits._structure(
+        system.parameters, "gov.economic_assumptions.yoy_growth"
+    )
+    assert len(series) > 20
+    changes = {}
+    for path, leaf in series.items():
+        if path in GENERATED_SERIES:
+            continue
+        values = {}
+        for year in ("2027", "2028"):
+            current = leaf(f"{year}-01-01")
+            values[year] = (
+                float(current) + 0.02
+                if isinstance(current, (int, float))
+                else 0.03
+            )
+        changes[path] = values
+    scenario = Scenario(parameter_changes=changes)
+    assert wealth_tax_paths(None, scenario) == []
+    baseline = Simulation(situation=HOUSEHOLD)
+    moved = Simulation(situation=HOUSEHOLD, scenario=scenario)
+    cpi = "gov.economic_assumptions.yoy_growth.obr.consumer_price_index"
+    assert moved.tax_benefit_system.parameters.get_child(cpi)(
+        "2027-01-01"
+    ) == pytest.approx(changes[cpi]["2027"])
+    assert wealth_tax_paths_differing(baseline, moved) == []
 
 
 @pytest.mark.parametrize(

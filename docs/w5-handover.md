@@ -55,9 +55,10 @@ The coordinator answered this file's open questions on #88 (12:03Z):
 - **The area-results caveat.** Show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement.
 - **Regeneration time (A in the schedule).** Time step 5 (regenerate, stage, reconcile) at Friday's rehearsal and post it on #88. The coordinator then sets the final-cut times (#81's formula). The cloud session has no HuggingFace token, so whoever runs the regeneration times it, unless Max approves access.
 - **The hub's figures.** The hub posts its re-measured aggregates on GitHub, and the cloud session adds them to the model-gap list.
-- **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
+Other items:
 - **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The cloud session owns it.
+- **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
 ## Known follow-ups (not blocking)
 - Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.

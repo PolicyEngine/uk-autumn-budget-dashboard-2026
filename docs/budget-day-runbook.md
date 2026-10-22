@@ -126,11 +126,11 @@ Both count in `household_tax` and `gov_tax`.
 - **The templates refuse any path under either scale.**
 - **Generation refuses a measure that changes either scale,** before any figure is made, with `REFUSED <id>: <path> is under <scale>, …`. The other measures are still written. It looks in two places:
   - the measure's `parameter_changes`, on either side and in the configured baseline, before any simulation is built;
-  - its two built simulations, compared as the model limits compare theirs. This catches a hand-written modifier that edits a scale's brackets, or rebinds it, with no `parameter_changes`.
+  - its two built simulations, compared with each other as the model limits compare theirs. This catches a hand-written modifier that edits a scale's brackets or rebinds it, with no `parameter_changes`, on one side or differently on the two sides. The same edit made on both sides leaves the two simulations agreeing, so it isn't caught; written as `parameter_changes`, it is.
 - **The flat pipeline warns instead.**
 - **Registering such a measure fails CI** (`tests/test_wealth_tax_template.py`).
 - **A hand-written modifier that taxes a base it reads directly from `wealth_tax`, `non_primary_residence_wealth_tax` or `total_wealth`** is held not computable by hand, for the same reason. Nothing in the code catches one, since the scales are unchanged.
-- **A modifier that taxes `net_wealth`** (total wealth less mortgage, consumer and student-loan debt) is on the net base, so this reason doesn't apply to it. Review it like any other hand-written modifier.
+- **A modifier that taxes `net_wealth`** (total wealth less mortgage, consumer and student-loan debt) is on the net base, so this reason doesn't apply to it, but give it a scale of its own. Generation refuses any change to either engine scale, even from a modifier that re-points the engine's formula at `net_wealth`, and the refusal then names the engine's gross base. Review it like any other hand-written modifier.
 
 **An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and uses the same index, as the engine does: it deflates property values by OBR GDP per capita, or projects the band's bounds by the OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
 
