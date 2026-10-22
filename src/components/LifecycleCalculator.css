@@ -1035,3 +1035,142 @@
 .lifecycle-chart-footer[hidden] {
   display: none;
 }
+
+/* Lifetime chart: title row with the Download icon, grouped legend, logo
+   bottom right */
+.lifecycle-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lifecycle-chart-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.lifecycle-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--pe-gray-700);
+}
+
+.lifecycle-legend[hidden] {
+  display: none;
+}
+
+.lifecycle-chart-footer {
+  justify-content: flex-end;
+}
+
+/* Tiles: one text colour; the sign carries the direction */
+.wizard-results .summary-value {
+  color: var(--pe-gray-900);
+}
+
+/* ---------- Connected stepper ---------- */
+.wizard {
+  max-width: 880px;
+}
+
+.wizard-steps ol {
+  flex-wrap: nowrap;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.wizard-steps li {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The line joining each step to the next */
+.wizard-steps li + li::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  right: calc(50% + 16px);
+  left: calc(-50% + 16px);
+  height: 2px;
+  background: var(--pe-gray-200);
+}
+
+.wizard-steps li.is-done + li::before,
+.wizard-steps li.is-done + li.is-current-item::before {
+  background: #285e61;
+}
+
+.wizard-step-tab,
+.wizard-step-tab.is-reachable,
+.wizard-step-tab.is-current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--pe-gray-500);
+}
+
+.wizard-step-tab.is-reachable {
+  color: var(--pe-gray-700);
+}
+
+.wizard-step-tab.is-current {
+  color: #285e61;
+  font-weight: 600;
+}
+
+.wizard-step-number {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  font-size: 0.8125rem;
+  color: var(--pe-gray-500);
+  background: var(--pe-surface);
+  border: 2px solid var(--pe-gray-300);
+}
+
+.wizard-step-tab.is-done .wizard-step-number {
+  color: #ffffff;
+  background: #285e61;
+  border-color: #285e61;
+}
+
+.wizard-step-tab.is-current .wizard-step-number {
+  color: #ffffff;
+  background: #285e61;
+  border-color: #285e61;
+  box-shadow: 0 0 0 3px var(--pe-teal-100);
+}
+
+.wizard-step-name {
+  max-width: 100%;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wizard-step-tab:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 4px;
+  border-radius: 6px;
+}

@@ -7,6 +7,7 @@ import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { lifecycleCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import "./GroupedLegend.css";
 import PillSelect from "./PillSelect";
 import "./LifecycleCalculator.css";
 
@@ -74,6 +75,15 @@ const DEFAULT_INPUTS = {
 };
 
 // Slider configurations
+// Lifetime chart items that raise revenue (the rest cost revenue), for the
+// legend's two groups, as on the population charts
+const RAISER_KEYS = new Set([
+  "impact_threshold_freeze",
+  "impact_unearned_income_tax",
+  "impact_salary_sacrifice_cap",
+  "impact_sl_threshold_freeze",
+]);
+
 // The form's steps: the inputs each one asks for, then the results
 const WIZARD_STEPS = [
   { title: "About you", fields: ["current_age", "retirement_age", "life_expectancy"] },
@@ -345,6 +355,12 @@ function LifecycleCalculator() {
   };
 
   // Format signed currency
+  // Tiles: one text colour; the sign is a true minus or a plus
+  const formatTileCurrency = (v) => {
+    const absVal = d3.format(",.0f")(Math.abs(v));
+    return v < 0 ? `\u2212£${absVal}` : `+£${absVal}`;
+  };
+
   const formatSignedCurrency = (v) => {
     const absVal = d3.format(",.0f")(Math.abs(v));
     return v >= 0 ? `+£${absVal}` : `-£${absVal}`;
@@ -431,7 +447,7 @@ function LifecycleCalculator() {
     const existingSvg = d3.select(container).select("svg");
     const isUpdate = existingSvg.size() > 0;
 
-    const margin = { top: 20, right: 8, bottom: 40, left: 56 };
+    const margin = { top: 30, right: 8, bottom: 40, left: 56 };
     const width = container.clientWidth - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -487,7 +503,8 @@ function LifecycleCalculator() {
       .line()
       .x((d) => x(d.age) + x.bandwidth() / 2)
       .y((d) => y(d.netImpact))
-      .curve(d3.curveMonotoneX);
+      // Straight segments: one point per year of age, no smoothing overshoot
+      .curve(d3.curveLinear);
 
     const tooltip = d3.select(tooltipRef.current);
 
@@ -667,6 +684,11 @@ function LifecycleCalculator() {
             ),
         );
 
+      // The unit follows the Prices choice
+      svg
+        .select(".chart-unit-label")
+        .text(`Change in take-home pay (${showRealTerms ? "2025 £" : "£"} a year)`);
+
       // Update net impact line
       chartG
         .select(".net-line")
@@ -692,6 +714,17 @@ function LifecycleCalculator() {
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
+
+      // The unit, above the plot at its left edge (also in the downloads)
+      svg
+        .append("text")
+        .attr("class", "chart-unit-label")
+        .attr("x", 0)
+        .attr("y", 12)
+        .attr("font-size", 12)
+        .attr("font-weight", 500)
+        .attr("fill", "#4B5563")
+        .text(`Change in take-home pay (${showRealTerms ? "2025 £" : "£"} a year)`);
 
       chartG = svg
         .append("g")
@@ -784,13 +817,13 @@ function LifecycleCalculator() {
 
     // Store current data for next comparison
     previousDataRef.current = displayData;
-  }, [displayData, formatSignedCurrency, showModal]);
+  }, [displayData, formatSignedCurrency, showModal, showRealTerms]);
 
   // Downloads: the year-by-year figures as shown (cash or 2025 prices) as
   // CSV, and the chart with its title, legend and logo as SVG or PNG.
   const downloads = useMemo(() => {
     const exportOptions = {
-      title: "Lifetime policy impact",
+      title: "Lifetime change in take-home pay, by age",
       description: `The change in net income from each policy, year by year over a working life, ${
         showRealTerms ? "in 2025 prices" : "in cash terms"
       }.`,
@@ -1357,17 +1390,25 @@ function LifecycleCalculator() {
         <nav className="wizard-steps" aria-label="Steps">
           <ol>
             {WIZARD_STEPS.map((wizardStep, index) => (
-              <li key={wizardStep.title}>
+              <li
+                key={wizardStep.title}
+                className={`${index < step ? "is-done" : ""} ${
+                  index === step ? "is-current-item" : ""
+                }`}
+              >
                 <button
                   type="button"
                   className={`wizard-step-tab ${index === step ? "is-current" : ""} ${
-                    index < step || index <= maxStep ? "is-reachable" : ""
-                  }`}
+                    index < step ? "is-done" : ""
+                  } ${index <= maxStep ? "is-reachable" : ""}`}
                   aria-current={index === step ? "step" : undefined}
                   disabled={index > maxStep}
                   onClick={() => goToStep(index)}
                 >
-                  <span className="wizard-step-number">{index + 1}</span>
+                  <span className="wizard-step-number" aria-hidden="true">
+                    {index < step ? "✓" : index + 1}
+                  </span>
+                  <span className="visually-hidden">Step {index + 1}: </span>
                   <span className="wizard-step-name">{wizardStep.title}</span>
                 </button>
               </li>
@@ -1474,23 +1515,30 @@ function LifecycleCalculator() {
                       Net lifetime impact{showRealTerms ? " (2025 £)" : ""}
                     </div>
                     <div className="summary-value">
-                      {formatSignedCurrency(summaryStats.netTotal)}
+                      {formatTileCurrency(summaryStats.netTotal)}
                     </div>
                   </div>
                   <div className="summary-item">
                     <div className="summary-label">
                       Average per year{showRealTerms ? " (2025 £)" : ""}
                     </div>
-                    <div
-                      className={`summary-value ${summaryStats.avgPerYear >= 0 ? "positive" : "negative"}`}
-                    >
-                      {formatSignedCurrency(summaryStats.avgPerYear)}
+                    <div className="summary-value">
+                      {formatTileCurrency(summaryStats.avgPerYear)}
                     </div>
                   </div>
                 </div>
 
                 {/* Chart */}
                 <div className="chart-container">
+                  {data.length > 0 && (
+                    <div className="chart-header lifecycle-chart-header">
+                      <h4>Lifetime change in take-home pay, by age</h4>
+                      <ChartDownloadMenu
+                        formats={downloads}
+                        chartTitle="Lifetime change in take-home pay, by age"
+                      />
+                    </div>
+                  )}
                   {loading && <div className="loading">Loading...</div>}
                   {error && (
                     <div className="lifecycle-error" role="status">
@@ -1503,29 +1551,38 @@ function LifecycleCalculator() {
                     className={`chart ${data.length ? "" : "chart-empty"}`}
                   ></div>
 
-                  {/* Legend */}
-                  <div className="legend" hidden={!data.length}>
-                    {REFORMS.map((r) => (
-                      <div className="legend-item" key={r.key}>
-                        <div
-                          className="legend-color"
-                          style={{ background: r.color }}
-                        ></div>
-                        <span>{r.label}</span>
+                  {/* Legend: the dashboard's two groups, then the net line */}
+                  <div className="lifecycle-legend" hidden={!data.length}>
+                    {[
+                      ["Raise revenue", REFORMS.filter((r) => RAISER_KEYS.has(r.key))],
+                      ["Cost revenue", REFORMS.filter((r) => !RAISER_KEYS.has(r.key))],
+                    ].map(([heading, items]) => (
+                      <div className="grouped-legend-group" key={heading}>
+                        <p className="grouped-legend-heading">{heading}</p>
+                        <ul className="grouped-legend-items">
+                          {items.map((r) => (
+                            <li key={r.key}>
+                              <span
+                                className="grouped-legend-swatch"
+                                style={{ background: r.color }}
+                                aria-hidden="true"
+                              />
+                              {r.label}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
-                    <div className="legend-item">
-                      <div
-                        className="legend-color"
-                        style={{ background: "#000000" }}
-                      ></div>
-                      <span>Net impact</span>
-                    </div>
+                    <ul className="grouped-legend-items">
+                      <li>
+                        <span className="grouped-legend-line" aria-hidden="true" />
+                        Net impact
+                      </li>
+                    </ul>
                   </div>
 
-                  {/* PolicyEngine logo and downloads (the chart's own) */}
+                  {/* PolicyEngine logo, bottom right */}
                   <div className="lifecycle-chart-footer" hidden={!data.length}>
-                    <ChartDownloadMenu formats={downloads} chartTitle="Lifetime policy impact" />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
                   </div>
