@@ -28,6 +28,11 @@ from uk_budget_data.calculators import (
     MetricsCalculator,
     WinnersLosersCalculator,
 )
+from uk_budget_data.measure_templates import (
+    wealth_tax_paths,
+    wealth_tax_paths_differing,
+    wealth_tax_refusal,
+)
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
@@ -313,19 +318,29 @@ class DataPipeline:
                 # Create simulations
                 baseline_scenario = reform.baseline_scenario_for(self.config)
                 reform_scenario = reform.to_scenario()
-                # Generation refuses a measure that leaves out a scored
-                # year of an uprated amount; this flat path has no gate, so
-                # it says so loudly and runs it.
+
+                # Generation refuses a measure that changes a wealth-tax
+                # scale or leaves out a scored year of an uprated amount;
+                # this flat path has no gate, so it says so loudly, in the
+                # same order, and runs it.
+                def warn(reason):
+                    console.print(
+                        f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
+                        f"{escape(reason)} Generation refuses it."
+                    )
+
+                wealth_tax = wealth_tax_paths(
+                    baseline_scenario, reform_scenario
+                )
+                if wealth_tax:
+                    warn(wealth_tax_refusal(*wealth_tax))
                 for gap in missing_scored_years(
                     getattr(baseline_scenario, "parameter_changes", None),
                     reform_scenario.parameter_changes,
                     self.config.years,
                     system,
                 ):
-                    console.print(
-                        f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
-                        f"{escape(gap.reason)} Generation refuses it."
-                    )
+                    warn(gap.reason)
 
                 # Built under data_limits.building, so a modifier that
                 # reads a limited input while its simulation is built
@@ -336,6 +351,15 @@ class DataPipeline:
                 reformed = data_limits.watched_build(
                     build_microsimulation, dataset_path, reform_scenario
                 )
+                # A modifier that edits a wealth-tax scale, which the built
+                # simulations show and generation refuses.
+                if not wealth_tax and all(
+                    hasattr(sim, "tax_benefit_system")
+                    for sim in (baseline, reformed)
+                ):
+                    built = wealth_tax_paths_differing(baseline, reformed)
+                    if built:
+                        warn(wealth_tax_refusal(*built))
 
                 # Process reform, watching what code that differs between
                 # the two reads while it runs (data_limits.observing).
