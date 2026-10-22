@@ -118,10 +118,18 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 **Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
 
-**The engine's wealth-tax scale is refused** (UK hub, `budget-triage/JUDGED.md` S4). `wealth_tax` applies `gov.contrib.ubi_center.wealth_tax` to `total_wealth`: gross wealth, including private pensions, with no debts netted. So an announcement on net assets would use the wrong base.
-- **The templates refuse any path under the scale.**
-- **Generation refuses a measure that changes it as plain `parameter_changes`,** on either side, with `REFUSED <id>: <path> is under gov.contrib.ubi_center.wealth_tax, …` The other measures are still written. The flat pipeline warns instead.
-- **A hand-written modifier that reads `wealth_tax` or `total_wealth`** is held not computable by hand, for the same reason. Nothing in the code catches one.
+**The engine's wealth-tax scales are refused** (UK hub, `budget-triage/JUDGED.md` S4). Both tax a gross base, so an announcement on net assets would use the wrong one:
+- `wealth_tax` applies `gov.contrib.ubi_center.wealth_tax` to `total_wealth`: gross wealth, including private pensions, with no debts netted (S4).
+- `non_primary_residence_wealth_tax` applies `gov.contrib.cec.non_primary_residence_wealth_tax` to `total_wealth` less `main_residence_value`: the same gross wealth, less the main home's full value rather than its equity. S4 names only the first; this one was read in policyengine-uk 2.132.6.
+
+Both count in `household_tax` and `gov_tax`.
+- **The templates refuse any path under either scale.**
+- **Generation refuses a measure that changes either scale,** before any figure is made, with `REFUSED <id>: <path> is under <scale>, …`. The other measures are still written. It looks in two places:
+  - the measure's `parameter_changes`, on either side and in the configured baseline, before any simulation is built;
+  - its two built simulations, compared as the model limits compare theirs. This catches a hand-written modifier that edits a scale's brackets, or rebinds it, with no `parameter_changes`.
+- **The flat pipeline warns instead.**
+- **Registering such a measure fails CI** (`tests/test_wealth_tax_template.py`).
+- **A hand-written modifier that taxes a base it reads directly from `wealth_tax`, `non_primary_residence_wealth_tax` or `total_wealth`** is held not computable by hand, for the same reason. Nothing in the code catches one, since the scales are unchanged.
 - **A modifier that taxes `net_wealth`** (total wealth less mortgage, consumer and student-loan debt) is on the net base, so this reason doesn't apply to it. Review it like any other hand-written modifier.
 
 **An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and uses the same index, as the engine does: it deflates property values by OBR GDP per capita, or projects the band's bounds by the OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
@@ -133,7 +141,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   > "The model overstates the pension annual allowance charge: for 2024-25 it finds 262,000 people with pension savings above their allowance, against 30,440 in HMRC's provisional self-assessment statistics for the same year, and £2.7 billion of annual allowance charge against HMRC's provisional estimate of £0.3 billion, so pension tax relief and annual allowance measures are not published on Budget day without review."
 
   - **Sources, all tax year 2024-25:** HMRC private pension statistics (July 2026), Table 7, row "2024 to 2025 [provisional]": 30,440 individuals reporting contributions above their allowance through self assessment. Table 6, column "2024 to 2025 tax year [provisional]": £300m of annual allowance charges. The model's 262,304 people and £2.699bn are model year 2024 (tax year 2024-25), from uk-data 1.58.1 with policyengine-uk #2240's charge formulas: counts and aggregates only.
-  - **Cause:** the hub's research report (`~/reviews/uk-hub/jobs/research-sb2023-aa-gap/REPORT-full.md`) attributes it mostly to the imputation of employer pension contributions, tracked as uk-data#606, which lands after the Budget.
+  - **Cause:** the UK hub's internal research report attributes it mostly to the imputation of employer pension contributions, tracked as uk-data#606, which lands after the Budget.
 - **What the gate does:** approval needs the reconciliation to pass or carry an accepted exception, and the briefing exports take approved entries only. So such a measure stays out of the briefing unless someone approves an exception. The default is to hold it, not to approve a named-reviewer exception on the day.
 - **Still open, for Vahid and María:**
   - whether it is shown on the page meanwhile: staging it as provisional does not need the reconciliation, and the page labels it provisional;
@@ -200,7 +208,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
 These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabled.amount` in those years therefore scores £0: on policyengine-uk 2.130.1, £600 a month on it moved no claimant's element in 2026 or 2029, while £600 on the claimant's rebalancing amount gave £7,200 a year. In 2025 and 2030 it is the other way round: only the element's own amount moves the element.
 - **Switching `rebalancing.active` off is not the law before the Universal Credit Act 2025 either:** the 2026 element amount is already the new claimants' rate, so every claimant would get it.
-- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), in the years in `UC_REBALANCED_YEARS` (2026–29 on policyengine-uk 2.132.6). The templates refuse the element's amount in those years, and `rebalancing.active` in any year.
+- **Build the measure with `uc_health_element_change(protected=..., new_claimant=...)`** (#47), in the years in `UC_REBALANCED_YEARS` (2026-29 on policyengine-uk 2.132.6). The templates refuse the element's amount in those years, and `rebalancing.active` in any year.
 - **After the last rebalanced year (from 2030 on 2.132.6), change the element's own amount** with `rate_change(UC_LCWRA_AMOUNT, ...)`. The rebalancing has stopped, so every claimant, protected or not, gets that amount (next bullet).
 - **Found by the UK hub.** Its engine-side fix is policyengine-uk #2428 (below), merged on 16 October. Re-check this row on the first certified pair that carries it.
 - **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:

@@ -97,24 +97,53 @@ def _warn_if_model_limited(path: str) -> None:
             )
 
 
-# The engine's wealth_tax applies this scale to total_wealth, which adds
-# property, corporate, private pension and savings wealth and nets no debts
-# (variables/contrib/ubi_center/wealth_tax.py and
-# variables/household/wealth/total_wealth.py); net_wealth does the netting.
+# The engine's two wealth-tax scales, and the base each is applied to. Both
+# bases start from total_wealth, which adds property, corporate, private
+# pension and savings wealth and nets no debts
+# (variables/household/wealth/total_wealth.py; net_wealth does the
+# netting): wealth_tax applies its scale to total_wealth
+# (variables/contrib/ubi_center/wealth_tax.py), and
+# non_primary_residence_wealth_tax to total_wealth less
+# main_residence_value (variables/contrib/cec/
+# non_primary_residence_wealth_tax.py). Both count in household_tax and
+# gov_tax.
 WEALTH_TAX = "gov.contrib.ubi_center.wealth_tax"
+NON_PRIMARY_RESIDENCE_WEALTH_TAX = (
+    "gov.contrib.cec.non_primary_residence_wealth_tax"
+)
+_GROSS = (
+    "gross wealth (property, corporate, private pension and savings) with "
+    "no debts netted"
+)
+WEALTH_TAX_SCALES = {
+    WEALTH_TAX: f"the engine's wealth_tax applies to total_wealth: {_GROSS}",
+    NON_PRIMARY_RESIDENCE_WEALTH_TAX: (
+        "the engine's non_primary_residence_wealth_tax applies to "
+        f"total_wealth less main_residence_value: {_GROSS}, less the main "
+        "home's full value rather than its equity"
+    ),
+}
+
+
+def _wealth_tax_scale(path):
+    """The wealth-tax scale ``path`` is or is a part of, or None."""
+    if not isinstance(path, str):
+        return None
+    for scale in WEALTH_TAX_SCALES:
+        if path == scale or path.startswith((scale + ".", scale + "[")):
+            return scale
+    return None
 
 
 def is_wealth_tax_path(path) -> bool:
-    """Whether ``path`` is the engine's wealth-tax scale or a part of it."""
-    return isinstance(path, str) and (
-        path == WEALTH_TAX
-        or path.startswith((WEALTH_TAX + ".", WEALTH_TAX + "["))
-    )
+    """Whether ``path`` is one of the engine's wealth-tax scales or a part
+    of one."""
+    return _wealth_tax_scale(path) is not None
 
 
 def wealth_tax_paths(*scenarios) -> list:
-    """The paths under the wealth-tax scale that ``scenarios`` (either may
-    be None) change in their ``parameter_changes``, sorted."""
+    """The paths under a wealth-tax scale that ``scenarios`` (either may be
+    None) change in their ``parameter_changes``, sorted."""
     return sorted(
         {
             path
@@ -125,23 +154,39 @@ def wealth_tax_paths(*scenarios) -> list:
     )
 
 
-def wealth_tax_refusal(*paths: str) -> str:
-    """Why a change to ``paths``, under the wealth-tax scale, is refused.
+def wealth_tax_paths_differing(sim_baseline, sim_reform) -> list:
+    """The paths under a wealth-tax scale where two built simulations'
+    parameters differ, compared as model limits compare theirs: a modifier
+    that edits a scale with no ``parameter_changes`` shows here."""
+    from uk_budget_data.model_limits import parameters_differing
 
-    The templates refuse such a path, and generation refuses a measure
-    that writes one as plain ``parameter_changes``."""
-    verb = "is" if len(paths) == 1 else "are"
-    return (
-        f"{', '.join(paths)} {verb} under {WEALTH_TAX}, which the engine's "
-        "wealth_tax applies to total_wealth: gross wealth (property, "
-        "corporate, private pension and savings) with no debts netted. A "
-        "wealth tax on net assets would be scored on the wrong base (the UK "
-        "hub's budget-triage/JUDGED.md, S4)."
+    return parameters_differing(sim_baseline, sim_reform, WEALTH_TAX_SCALES)
+
+
+def wealth_tax_refusal(*paths: str) -> str:
+    """Why a change to ``paths``, each under a wealth-tax scale, is refused.
+
+    The templates refuse such a path. Generation refuses a measure that
+    changes one, in its ``parameter_changes`` or in what its built
+    simulations run."""
+    by_scale: dict = {}
+    for path in paths:
+        by_scale.setdefault(_wealth_tax_scale(path), []).append(path)
+    return " ".join(
+        [
+            f"{', '.join(found)} {'is' if len(found) == 1 else 'are'} under "
+            f"{scale}, which {WEALTH_TAX_SCALES[scale]}."
+            for scale, found in by_scale.items()
+        ]
+        + [
+            "A wealth tax on net assets would be scored on the wrong base "
+            "(the UK hub's budget-triage/JUDGED.md, S4)."
+        ]
     )
 
 
 def _refuse_wealth_tax(path: str) -> None:
-    """Refuse the engine's wealth-tax scale: it taxes the wrong base for a
+    """Refuse the engine's wealth-tax scales: they tax the wrong base for a
     wealth tax announced on net assets (the UK hub's Budget triage, S4)."""
     if is_wealth_tax_path(path):
         raise ValueError(wealth_tax_refusal(path))
