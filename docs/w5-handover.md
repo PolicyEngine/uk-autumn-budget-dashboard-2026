@@ -51,7 +51,6 @@ Their briefs and outputs are in W5's local drafts folder, under `builds/`.
 
 ## Known follow-ups (not blocking)
 - Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.
-- `vercel.json` still builds with the old package manager's build script, and `.env.example` still names `VITE_API_URL`.
 - The runbook has one private path, from an earlier PR, in the section on pension tax relief, the annual allowance, its taper and the MPAA.
 - #59 (María's Microcosm area runs) will need to rebase onto #83. #83's body lists the integration points: always compose packages (replacing #59's `build_package`), `--package` through approval, and the `microcosm-national` kind with the label.
 
