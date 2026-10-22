@@ -1,6 +1,6 @@
 """Universal Credit health measures: what scores, and what is refused.
 
-In 2026-29 the engine's UC rebalancing (policyengine_uk/scenarios/
+In its exported years the engine's UC rebalancing (policyengine_uk/scenarios/
 uc_reform.py) overwrites each claimant's health (LCWRA) element: pre-2026
 claimants get rebalancing.protected_health_element (or the UC Act 2025
 s. 4 floor), new claimants rebalancing.new_claimant_health_element. A
@@ -8,16 +8,20 @@ measure on the element's own amount therefore scores £0 in those years,
 and switching rebalancing off pays everyone the new claimants' rate (UK
 hub, 15 October). The templates refuse both and build UC health measures
 on the rebalancing amounts. Outside those years the element's own amount
-is what scores: before 2026, and from 2030, when the installed engine's
+is what scores: before 2026, and after the installed engine's
 rebalancing has stopped (policyengine-uk issue #2282). The engine table
 below pins both edges.
 """
 
+import runpy
+from types import SimpleNamespace
+
 import pytest
-from policyengine_uk import Simulation
+from policyengine_uk import Simulation, scenarios
+from policyengine_uk.scenarios import uc_reform
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data import personal_impact
+from uk_budget_data import measure_templates, personal_impact
 from uk_budget_data.measure_templates import (
     UC_LCWRA_AMOUNT,
     UC_NEW_CLAIMANT_HEALTH,
@@ -34,6 +38,35 @@ from uk_budget_data.models import DataConfig, Reform
 FIRST = min(UC_REBALANCED_YEARS)
 LAST = max(UC_REBALANCED_YEARS)
 MONTHLY = 600
+
+
+@pytest.mark.parametrize("years", [range(2026, 2033), list(range(2026, 2033))])
+def test_the_rebalanced_years_follow_the_engine_export(monkeypatch, years):
+    """The export present in policyengine-uk 2.145.0 extends the builders."""
+    monkeypatch.setattr(uc_reform, "REBALANCING_YEARS", years, raising=False)
+    loaded = runpy.run_path(measure_templates.__file__)
+    assert list(loaded["UC_REBALANCED_YEARS"]) == list(years)
+    with pytest.raises(ValueError, match="in 2032 is not"):
+        loaded["rate_change"](UC_LCWRA_AMOUNT, {2032: MONTHLY})
+    assert loaded["uc_health_element_change"](
+        new_claimant={2032: MONTHLY}
+    ) == {UC_NEW_CLAIMANT_HEALTH: {"2032": float(MONTHLY)}}
+
+
+def test_the_rebalanced_years_fall_back_for_older_engines(monkeypatch):
+    """The installed older engines have no REBALANCING_YEARS export."""
+    monkeypatch.delattr(uc_reform, "REBALANCING_YEARS", raising=False)
+    loaded = runpy.run_path(measure_templates.__file__)
+    assert loaded["UC_REBALANCED_YEARS"] == range(2026, 2030)
+
+
+@pytest.mark.parametrize("years", [[], [2026, 2028]])
+def test_the_rebalanced_years_refuse_an_invalid_engine_export(
+    monkeypatch, years
+):
+    monkeypatch.setattr(uc_reform, "REBALANCING_YEARS", years, raising=False)
+    with pytest.raises(ValueError, match="must be consecutive years"):
+        measure_templates._uc_rebalanced_years()
 
 
 def uprated(path, values):
@@ -131,9 +164,9 @@ CHANGES = {
 }
 
 
-def scores(change, year, new_claimant):
+def scores(change, year, new_claimant, rebalanced_years):
     """Which change the templates take to move this claimant's element."""
-    if year not in UC_REBALANCED_YEARS:
+    if year not in rebalanced_years:
         return change == "amount"
     return change == ("new_claimant" if new_claimant else "protected")
 
@@ -150,17 +183,57 @@ def test_the_engine_pays_the_element_from_what_the_templates_build(
     only the one the templates use for that claimant and year moves the
     element. In the rebalanced years that is the claimant's rebalancing
     amount and the element's own amount scores nothing; outside them it is
-    the element's own amount. A bundle that extends the rebalancing fails
-    here (from LAST + 1 the element's amount stops scoring) until
-    UC_REBALANCED_YEARS follows it."""
+    the element's own amount. An engine that extends the rebalancing without
+    exporting its years fails here: from LAST + 1 the element's amount
+    stops scoring."""
+    assert_engine_matches_template(year, new_claimant, UC_REBALANCED_YEARS)
+
+
+def assert_engine_matches_template(year, new_claimant, rebalanced_years):
+    """Compare all three parameter routes with actual engine awards."""
     situation = claimant(year, new_claimant)
     base = element(situation, year)
     assert abs(base - MONTHLY * 12) > 1
     for change, path in CHANGES.items():
         changed = element(situation, year, {path: {str(year): MONTHLY}})
-        moved = scores(change, year, new_claimant)
+        moved = scores(change, year, new_claimant, rebalanced_years)
         expected = MONTHLY * 12 if moved else base
         assert changed == pytest.approx(expected, abs=0.01), change
+
+
+def test_the_edge_check_catches_extended_rebalancing_without_an_export(
+    monkeypatch,
+):
+    """An engine with changed awards and no export cannot pass by fallback."""
+    monkeypatch.setattr(scenarios, "uc_reform", SimpleNamespace())
+    fallback = measure_templates._uc_rebalanced_years()
+    assert fallback == range(2026, 2030)
+    year = fallback.stop
+    native_modifier = (
+        scenarios.universal_credit_july_2025_reform.simulation_modifier
+    )
+
+    def extended_rebalancing(sim):
+        """Model an additional rebalanced year for a new claimant."""
+        native_modifier(sim)
+        parameters = sim.tax_benefit_system.parameters
+        amount = (
+            parameters.gov.dwp.universal_credit.rebalancing.new_claimant_health_element(
+                year
+            )
+            * 12
+        )
+        current = sim.calculate("uc_LCWRA_element", year).copy()
+        current[current > 0] = amount
+        sim.set_input("uc_LCWRA_element", year, current)
+
+    monkeypatch.setattr(
+        scenarios.universal_credit_july_2025_reform,
+        "simulation_modifier",
+        extended_rebalancing,
+    )
+    with pytest.raises(AssertionError, match="amount"):
+        assert_engine_matches_template(year, True, fallback)
 
 
 def household_matches_national(situation, measure, year):
@@ -209,7 +282,7 @@ def test_a_uc_health_measure_moves_national_and_household_results(
 def test_an_element_amount_measure_after_the_rebalancing_moves_both_routes(
     new_claimant,
 ):
-    """From 2030 every claimant, protected or not, gets the element's own
+    """After rebalancing every claimant, protected or not, gets the element's own
     amount, so a measure built on it scores on both routes."""
     year = LAST + 1
     measure = Reform(
