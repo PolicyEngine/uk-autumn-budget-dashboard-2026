@@ -59,10 +59,10 @@ from policyengine.disclosure.schema import (
     UNCHECKED_OVERLAP,
     WITHHELD,
 )
+from policyengine.provenance.manifest import get_release_manifest
 from rich.console import Console
 
 from uk_budget_data import data_limits
-from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.private_outputs import (
@@ -70,6 +70,7 @@ from uk_budget_data.private_outputs import (
     PrivateOutputError,
     private_directory,
 )
+from uk_budget_data.publication import combine
 from uk_budget_data.publication import manifest as publication_manifest
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.reforms import (
@@ -1921,7 +1922,8 @@ def add_geography_parser(subparsers) -> None:
         "--dataset",
         type=Path,
         default=None,
-        help="A local dataset (.h5); default: the bundle's dataset",
+        help="A local dataset (.h5) or bundle dataset name; "
+        "default: the bundle's dataset",
     )
     parser.add_argument(
         "--dataset-kind",
@@ -1947,8 +1949,7 @@ def add_geography_parser(subparsers) -> None:
         "--seat-reforms",
         nargs="+",
         default=None,
-        help="Reforms published by constituency (default: chosen packages, "
-        "or the chosen single measures when no package is chosen)",
+        help="Reforms published by constituency (default: chosen packages)",
     )
     parser.add_argument(
         "--manifest",
@@ -1960,8 +1961,8 @@ def add_geography_parser(subparsers) -> None:
         "--reforms",
         nargs="+",
         default=None,
-        help="Approved reform IDs (default: approved single measures in "
-        "the publication manifest)",
+        help="Approved reform IDs (default: approved measures and packages "
+        "in the publication manifest)",
     )
     parser.add_argument(
         "--years",
@@ -2042,7 +2043,8 @@ def approved_reforms(
 
     Package aliases map to the publication generator's combined key for
     their exact members; an approved single entry with that alias is not
-    approval of a combined run. Defaults keep the manifest's measure order.
+    approval of a combined run. Defaults keep the manifest's measure order,
+    followed by each approved package whose exact members are all approved.
     """
     approved = [
         key
@@ -2050,7 +2052,18 @@ def approved_reforms(
         if entry.status == publication_manifest.APPROVED
         and key not in PACKAGES
     ]
-    ids = list(dict.fromkeys(requested if requested is not None else approved))
+    defaults = list(approved)
+    for package, components in PACKAGES.items():
+        members = sorted(components)
+        entry = manifest.combined.get(combined_key(members))
+        if (
+            entry is not None
+            and entry.status == publication_manifest.APPROVED
+            and sorted(entry.measures or []) == members
+            and set(members) <= set(approved)
+        ):
+            defaults.append(package)
+    ids = list(dict.fromkeys(requested if requested is not None else defaults))
     refused = []
     for reform_id in ids:
         if reform_id in PACKAGES:
@@ -2070,6 +2083,18 @@ def approved_reforms(
             refused.append(
                 f"{reform_id} ({key}): combined members do not match"
             )
+        elif reform_id in PACKAGES:
+            for member in members:
+                if member not in approved:
+                    member_entry = manifest.measures.get(member)
+                    status = (
+                        member_entry.status
+                        if member_entry is not None
+                        else "absent from the manifest"
+                    )
+                    refused.append(
+                        f"{reform_id}: {member}: {status.replace('_', ' ')}"
+                    )
     if refused:
         message = "Unapproved reforms: " + "; ".join(refused)
         if not approved:
@@ -2083,15 +2108,23 @@ def approved_reforms(
     return ids
 
 
-def _bundle_dataset() -> tuple[str, str]:
-    """The installed UK default's name and repository, without loading data."""
-    release = load_bundle_manifest()["data_releases"]["uk"]
-    name = release["default_dataset"]
-    dataset = release["datasets"][name]
-    repository = dataset.get("repo_id") or release.get("data_package", {}).get(
-        "repo_id", ""
-    )
+def _bundle_dataset(name: Optional[str] = None) -> tuple[str, str]:
+    """Resolve a UK bundle name, including overlays, without loading data."""
+    release = get_release_manifest("uk")
+    name = name if name is not None else release.default_dataset
+    dataset = release.datasets.get(name)
+    if dataset is None:
+        raise ValueError(f"The installed bundle has no UK dataset {name!r}")
+    repository = dataset.repo_id or release.data_package.repo_id
     return name, repository
+
+
+def _local_dataset(dataset: Optional[Path]) -> Optional[Path]:
+    """Find a local file; the engine gives bundle names precedence."""
+    if dataset is None or str(dataset) in get_release_manifest("uk").datasets:
+        return None
+    local = dataset.expanduser()
+    return local if local.is_file() else None
 
 
 def _plan(parsed: argparse.Namespace) -> _Plan:
@@ -2102,9 +2135,8 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     if kind == MICROCOSM and parsed.seat_weights is not None:
         raise ValueError("--seat-weights is for the eFRS only")
     # Read from the file, never inferred from the kind: the ids check it too.
-    microcosm_export = kind == MICROCOSM and is_microcosm_export(
-        parsed.dataset
-    )
+    local = _local_dataset(parsed.dataset)
+    microcosm_export = local is not None and is_microcosm_export(local)
     if kind == MICROCOSM and not microcosm_export:
         raise ValueError(
             "--dataset-kind microcosm needs a Microcosm export; a file "
@@ -2121,18 +2153,40 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     ids = approved_reforms(manifest, parsed.reforms)
     if parsed.seat_reforms is not None:
         approved_reforms(manifest, parsed.seat_reforms)
-    if kind == EFRS and parsed.dataset is None:
-        name, repository = _bundle_dataset()
-        if not (
-            name.startswith("enhanced_frs_")
-            and repository == "policyengine/policyengine-uk-data-private"
-        ):
+    if kind == EFRS:
+        if microcosm_export:
             raise ValueError(
-                f"--dataset-kind efrs needs policyengine-uk-data's enhanced "
-                f"FRS, but the installed bundle defaults to {name}. Do not "
+                "--dataset-kind efrs refuses a Microcosm export. Do not "
                 "mix it with eFRS seat weights; see PR #59 for Microcosm "
                 "area runs."
             )
+        if local is None:
+            name, repository = (
+                _bundle_dataset()
+                if parsed.dataset is None
+                else _bundle_dataset(str(parsed.dataset))
+            )
+            if not (
+                name.startswith("enhanced_frs_")
+                and repository
+                in (
+                    "policyengine/policyengine-uk-data",
+                    "policyengine/policyengine-uk-data-private",
+                )
+            ):
+                selection = (
+                    f"defaults to {name}"
+                    if parsed.dataset is None
+                    else f"resolves {parsed.dataset} to {name}"
+                )
+                raise ValueError(
+                    "--dataset-kind efrs needs enhanced FRS from "
+                    "policyengine/policyengine-uk-data or "
+                    "policyengine/policyengine-uk-data-private, but the "
+                    f"installed bundle {selection} from {repository}. Do "
+                    "not mix it with eFRS seat weights; see PR #59 for "
+                    "Microcosm area runs."
+                )
     unknown = [i for i in ids if get_reform(i) is None]
     if unknown:
         raise ValueError(f"Unknown reforms: {unknown}")
@@ -2146,11 +2200,14 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     levels = list(dict.fromkeys(parsed.levels))
     seat_reforms = []
     if CONSTITUENCY in levels:
-        seat_reforms = (
-            parsed.seat_reforms
-            or [p for p in PACKAGES if p in chosen]
-            or chosen
-        )
+        seat_reforms = parsed.seat_reforms or [
+            p for p in PACKAGES if p in chosen
+        ]
+        if not seat_reforms and parsed.seat_reforms is None:
+            raise ValueError(
+                "No approved package is chosen: constituency results need "
+                "--seat-reforms naming chosen reforms"
+            )
         if not seat_reforms or set(seat_reforms) - set(chosen):
             raise ValueError("--seat-reforms must name chosen reforms")
     inputs = parsed.data_inputs_dir
@@ -2198,16 +2255,44 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     )
 
 
+def _reform_scenarios(reform: Reform, years, *, check_composition=False):
+    """The generator's scenarios, composing a package's approved members.
+
+    The registered package supplies its alias only. Its members supply both
+    scenarios and their modifiers, including whether the configured baseline
+    applies when the composed baseline is empty.
+    """
+    config = DataConfig(years=list(years))
+    uses_config = not reform.has_custom_baseline()
+    if reform.id in PACKAGES:
+        members = combine.member_order(
+            [get_reform(member) for member in PACKAGES[reform.id]]
+        )
+        combined = combine.combine_measures(members, config)
+        if check_composition:
+            combine.check_consistency(combined, members, config, list(years))
+        uses_config = any(
+            not member.has_custom_baseline() for member in members
+        )
+        reform = combined.model_copy(update={"id": reform.id})
+    return (
+        reform.baseline_scenario_for(config, uses_config),
+        reform.to_scenario(),
+    )
+
+
 def simulate_reform(reform: Reform, dataset: Optional[str], years) -> tuple:
     """A reform's baseline and reformed microsimulations, built under the
     data-limit build watch (``data_limits.watched_build``), as the
     publication generator builds them."""
-    config = DataConfig(years=list(years))
+    baseline_scenario, reform_scenario = _reform_scenarios(
+        reform, years, check_composition=True
+    )
     baseline = data_limits.watched_build(
-        build_microsimulation, dataset, reform.baseline_scenario_for(config)
+        build_microsimulation, dataset, baseline_scenario
     )
     reformed = data_limits.watched_build(
-        build_microsimulation, dataset, reform.to_scenario()
+        build_microsimulation, dataset, reform_scenario
     )
     return baseline, reformed
 
@@ -2222,18 +2307,12 @@ def reform_data_limits(
     tree (tests)."""
     if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
         return data_limits.limits_touched(baseline, reformed, observation)
-    config = DataConfig(years=list(years))
-    return data_limits.limits_for_scenarios(
-        reform.baseline_scenario_for(config), reform.to_scenario()
-    )
+    return data_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
     """Run the ``geography`` command. Prints labels only."""
-    microcosm = parsed.dataset_kind == MICROCOSM or (
-        parsed.dataset is None
-        and _bundle_dataset()[0].startswith("microcosm_")
-    )
+    microcosm = _uses_microcosm(parsed)
     reason = MICROCOSM_UNCERTIFIED if microcosm else None
     if reason:
         console.print(reason)
@@ -2242,6 +2321,29 @@ def run_geography(parsed: argparse.Namespace) -> int:
     finally:
         if reason:
             console.print(reason)
+
+
+def _uses_microcosm(parsed: argparse.Namespace) -> bool:
+    """Identify Microcosm by kind, local export marker or bundle metadata."""
+    if parsed.dataset_kind.startswith(MICROCOSM):
+        return True
+    try:
+        local = _local_dataset(parsed.dataset)
+        if local is not None:
+            return is_microcosm_export(local)
+        name, repository = (
+            _bundle_dataset()
+            if parsed.dataset is None
+            else _bundle_dataset(str(parsed.dataset))
+        )
+    except (ValueError, OSError):
+        # Planning reports invalid datasets inside the normal command error
+        # handling; an unresolved name does not identify Microcosm data.
+        return False
+    return name.startswith("microcosm_") or repository in (
+        "policyengine/populace-uk",
+        "policyengine/populace-uk-private",
+    )
 
 
 def _run_geography(

@@ -5,6 +5,7 @@ gates, with certified receipts over World's dummy dataset. No area dataset
 is downloaded or simulated here.
 """
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import h5py
@@ -17,6 +18,7 @@ from uk_budget_data import geography as g
 from uk_budget_data import model_limits
 from uk_budget_data.cli import main, parse_args
 from uk_budget_data.data_limits import DATA_LIMITS, record
+from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.private_outputs import AUDIT_DIR_ENV
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
@@ -208,8 +210,7 @@ def package(monkeypatch):
 def test_package_uses_approved_combined_key(publication, package):
     _, manifest = publication
     assert g.approved_reforms(manifest, [PACKAGE]) == [PACKAGE]
-    # Approval of a combined run does not make it a default single measure.
-    assert g.approved_reforms(manifest) == ["beta", "alpha"]
+    assert g.approved_reforms(manifest) == ["beta", "alpha", PACKAGE]
 
 
 @pytest.mark.parametrize("status", STATUSES[1:])
@@ -220,6 +221,7 @@ def test_package_refuses_each_unapproved_combined_status(
     manifest = original.model_copy(deep=True)
     key = combined_key(list(MEMBERS))
     manifest.combined[key] = with_status(manifest.combined[key], status)
+    assert g.approved_reforms(manifest) == ["beta", "alpha"]
     with pytest.raises(ValueError) as raised:
         g.approved_reforms(manifest, [PACKAGE])
     assert PACKAGE in str(raised.value)
@@ -245,9 +247,203 @@ def test_package_combined_entry_must_name_exact_members(publication, package):
     manifest = original.model_copy(deep=True)
     key = combined_key(list(MEMBERS))
     manifest.combined[key].measures = ["alpha", "another_measure"]
+    assert g.approved_reforms(manifest) == ["beta", "alpha"]
     with pytest.raises(ValueError) as raised:
         g.approved_reforms(manifest, [PACKAGE])
     assert PACKAGE in str(raised.value)
+
+
+@pytest.mark.parametrize("status", STATUSES[1:])
+def test_a_package_needs_each_member_approved(publication, package, status):
+    """Combined approval cannot authorise a member the page withholds."""
+    _, original = publication
+    manifest = original.model_copy(deep=True)
+    manifest.measures["alpha"] = with_status(
+        manifest.measures["alpha"], status
+    )
+    assert g.approved_reforms(manifest) == ["beta"]
+    with pytest.raises(ValueError) as raised:
+        g.approved_reforms(manifest, [PACKAGE])
+    assert "alpha" in str(raised.value)
+    assert status.replace("_", " ") in str(raised.value)
+
+
+@pytest.fixture
+def package_plan(publication, package, tmp_path, monkeypatch):
+    """Plan approved package runs without loading survey data."""
+    _, manifest = publication
+    inputs = Path(__file__).resolve().parents[1] / "data_inputs"
+    (tmp_path / g.SEAT_WEIGHTS_FILE).touch()
+    (tmp_path / g.SEATS_FILE).write_bytes((inputs / g.SEATS_FILE).read_bytes())
+    monkeypatch.setattr(
+        g,
+        "_bundle_dataset",
+        lambda: (
+            "enhanced_frs_2024_25",
+            "policyengine/policyengine-uk-data-private",
+        ),
+    )
+    reforms = {key: Reform(id=key, name=key) for key in (*MEMBERS, PACKAGE)}
+    monkeypatch.setattr(g, "get_reform", reforms.get)
+
+    def plan(chosen_manifest=manifest, *arguments):
+        path = tmp_path / "publication.json"
+        path.write_text(chosen_manifest.model_dump_json(by_alias=True))
+        return g._plan(
+            parse_args(
+                [
+                    "geography",
+                    "--manifest",
+                    str(path),
+                    "--years",
+                    "2027",
+                    "--data-dir",
+                    str(tmp_path),
+                    "--data-inputs-dir",
+                    str(inputs),
+                    *arguments,
+                ]
+            )
+        )
+
+    return plan
+
+
+def test_default_includes_approved_package_and_publishes_only_it_by_seat(
+    package_plan,
+):
+    plan = package_plan()
+    assert [reform.id for reform in plan.reforms] == ["beta", "alpha", PACKAGE]
+    assert plan.packages == {PACKAGE: MEMBERS}
+    assert plan.seat_reforms == [PACKAGE]
+
+
+def test_constituencies_without_a_package_require_explicit_seat_reforms(
+    publication, package_plan
+):
+    _, original = publication
+    manifest = original.model_copy(deep=True)
+    manifest.combined = {}
+    with pytest.raises(
+        ValueError, match="No approved package.*--seat-reforms"
+    ):
+        package_plan(manifest)
+    plan = package_plan(manifest, "--seat-reforms", "alpha")
+    assert plan.seat_reforms == ["alpha"]
+    assert plan.packages == {}
+
+
+@pytest.mark.parametrize("alias_body", ["parameters", "modifier"])
+def test_package_simulates_the_approved_composition(
+    package_plan, monkeypatch, alias_body
+):
+    """A divergent registered alias never supplies either simulated side."""
+    events = []
+
+    def modifier(label):
+        def apply(sim):
+            events.append(label)
+            return sim
+
+        return apply
+
+    reforms = {
+        "alpha": Reform(
+            id="alpha",
+            name="Alpha",
+            parameter_changes={"alpha.reform": {"2027": 1}},
+            baseline_parameter_changes={"alpha.baseline": {"2027": 2}},
+            simulation_modifier=modifier("alpha reform"),
+            baseline_simulation_modifier=modifier("alpha baseline"),
+        ),
+        "beta": Reform(
+            id="beta",
+            name="Beta",
+            parameter_changes={"beta.reform": {"2027": 3}},
+            simulation_modifier=modifier("beta reform"),
+        ),
+    }
+    alias = Reform(
+        id=PACKAGE,
+        name="Outdated package",
+        parameter_changes=(
+            {"outdated.reform": {"2027": 99}}
+            if alias_body == "parameters"
+            else None
+        ),
+        baseline_parameter_changes={"outdated.baseline": {"2027": 99}},
+        simulation_modifier=(
+            modifier("outdated reform") if alias_body == "modifier" else None
+        ),
+        baseline_simulation_modifier=modifier("outdated baseline"),
+    )
+    reforms[PACKAGE] = alias
+    config = DataConfig(
+        years=[2027], baseline_parameter_changes={"configured": {"2027": 4}}
+    )
+    monkeypatch.setattr(g, "DataConfig", lambda **kwargs: config)
+    monkeypatch.setattr(g, "get_reform", reforms.get)
+    plan = package_plan()
+    checks = []
+    monkeypatch.setattr(
+        g.combine,
+        "check_consistency",
+        lambda combined, members, checked_config, years: checks.append(
+            (combined, members, checked_config, years)
+        ),
+    )
+    builds = []
+
+    def build(dataset, scenario=None):
+        builds.append((dataset, scenario))
+        if scenario.simulation_modifier is not None:
+            scenario.simulation_modifier(None)
+        return SimpleNamespace()
+
+    monkeypatch.setattr(g, "build_microsimulation", build)
+    package = next(reform for reform in plan.reforms if reform.id == PACKAGE)
+    assert package is alias
+    g.simulate_reform(package, "approved.h5", plan.years)
+    assert [dataset for dataset, _ in builds] == ["approved.h5"] * 2
+    assert builds[0][1].parameter_changes == {
+        "alpha.baseline": {"2027": 2},
+        "configured": {"2027": 4},
+    }
+    assert builds[1][1].parameter_changes == {
+        "alpha.reform": {"2027": 1},
+        "beta.reform": {"2027": 3},
+    }
+    assert events == ["alpha baseline", "alpha reform", "beta reform"]
+    assert len(checks) == 1
+    combined, members, checked_config, years = checks[0]
+    assert combined.id == combined_key(list(MEMBERS))
+    assert [member.id for member in members] == ["alpha", "beta"]
+    assert checked_config is config
+    assert years == [2027]
+
+
+def test_empty_custom_package_baselines_do_not_use_the_configured_baseline(
+    package, monkeypatch
+):
+    """All-custom empty baselines stay current law, as in the generator."""
+    reforms = {
+        key: Reform(id=key, name=key, baseline_parameter_changes={})
+        for key in MEMBERS
+    }
+    monkeypatch.setattr(g, "get_reform", reforms.get)
+    config = DataConfig(
+        years=[2027], baseline_parameter_changes={"configured": {"2027": 4}}
+    )
+    monkeypatch.setattr(g, "DataConfig", lambda **kwargs: config)
+    monkeypatch.setattr(g.combine, "check_consistency", lambda *args: None)
+    builds = []
+    monkeypatch.setattr(
+        g,
+        "build_microsimulation",
+        lambda dataset, scenario=None: builds.append(scenario),
+    )
+    g.simulate_reform(Reform(id=PACKAGE, name=PACKAGE), None, [2027])
+    assert builds[0] is None
 
 
 def test_refused_microcosm_command_has_banners_and_builds_nothing(
