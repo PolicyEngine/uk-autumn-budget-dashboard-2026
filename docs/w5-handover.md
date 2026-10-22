@@ -5,12 +5,13 @@ W5 is the workstream for the dashboard's deploy and rollback, receipts, reconcil
 ## Where things stand
 - **`main` runs policyengine 6.10.0** (policyengine-uk 2.132.6, Microcosm data 0.1.0), from #72.
 - **The household API** serves `uk-budget-api-2026-00020-pal` (`ff217d3`), and the rollback target is `00018-xuv` (6.6.0). Timings and memory are in the runbook.
-- **Merged since 21 October,** each on an independent review at the exact head, with green CI and an audit comment:
+- **Merged since #51 (21 October),** each with green CI and an audit comment, and each on an independent review. The review was at the exact head, except for #51 and #80: they were reviewed one commit earlier, and their final heads only merge `main` in, with the PR's diff unchanged.
   - #51, data limits: a measure the data can't cost is published as not computable;
   - #74, the access check hashes plain-git files;
   - #72, 6.10.0;
   - #73 and #80, the State Pension model limit, browser-held too;
   - #76, results by area gated on data limits;
+  - #83, results by area: approved ids only, packages as the approved composition, UNCERTIFIED on Microcosm;
   - #75, the zsh-safe runbook and macro keys;
   - #78, the runbook after #51;
   - #79, the upgrade order and rollback steps;
@@ -23,14 +24,13 @@ Each is a draft with an independent review in progress or done. The audit commen
 
 | PR | What | State at hand-over |
 |---|---|---|
-| #83 | Results by area: approved ids only, packages as the approved composition, UNCERTIFIED on Microcosm, `efrs` refuses Microcosm data | Round 1 fixes in at `bd1293f`; round 2 review running; CI green |
 | #85 | Model limit for policyengine-uk #2533: 2027-28 benefit levels need the September 2026 CPI outturn | Review running |
 | #86 | `publish review-rows`: public-file review rows for the gated publication (coordinator's option (c)) | Review running. Its builder stopped before reporting, so the review is the verification |
 | #87 | Runbook: a change to an uprating input projects the data on 6.10.0 (pe-uk #2405) | AGREE at `9e1fe45`; waiting on CI |
 
 ## Builds handed to the UK hub
 These two Subfleet builds were still running on the local Subfleet daemon at hand-over. Codex-lane builds return their commits as a git bundle in the build's worktree, because their sandbox can't write the shared repository. Each needs a local session to import the bundle, fix the commit trailer (it names the model actually used), push and open a PR.
-- **`w5-templates-hub`** (`20261022-000716-w5-templates-hub`) covers four template fixes:
+- **`w5-templates-hub`** (`20261022-000716-w5-templates-hub`; attempts 1 and 2 exited with an error, and attempt 3 was running) covers four template fixes:
   - `UC_REBALANCED_YEARS` follows the engine's export;
   - the HVCTS template follows the engine's index, or refuses;
   - generation refuses a measure that leaves a scored year unset on an uprated amount (pe-uk #2430);
@@ -44,16 +44,16 @@ Their briefs and outputs are in W5's local drafts folder, under `builds/`.
   - a row for it;
   - an exemption in María's check;
   - keep not-computable entries out of the manifest until the day.
-- **The page caveat for area results** on Microcosm: Vahid's and María's call. #83 labels the command output and the private audit only.
+- **The page caveat for area results** on Microcosm: Vahid's and María's call. #83 (merged) labels the command output and the private audit only.
 - **Regeneration time (A in the schedule):** measure it at Friday's rehearsal and report it. The coordinator sets the final build's start from A, B and C.
 - **The hub's report figures** for the model-gap list: fill them in when the report exists.
 - **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
 ## Known follow-ups (not blocking)
-- Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which changes the manifest schema.
+- Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.
 - `vercel.json` still builds with the old package manager's build script, and `.env.example` still names `VITE_API_URL`.
-- The runbook has one private path, from an earlier PR, in the State Pension annual allowance section.
-- #59 (María's Microcosm area runs) will need to rebase onto #83. #83's round 1 review lists the integration points: `--package` through approval, the `microcosm-national` kind with the banner, and one seat default.
+- The runbook has one private path, from an earlier PR, in the section on pension tax relief, the annual allowance, its taper and the MPAA.
+- #59 (María's Microcosm area runs) will need to rebase onto #83. #83's body lists the integration points: always compose packages (replacing #59's `build_package`), `--package` through approval, and the `microcosm-national` kind with the label.
 
 ## How W5 works
 - **Every PR:**
