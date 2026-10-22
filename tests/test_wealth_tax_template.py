@@ -126,7 +126,15 @@ def test_generation_refuses_a_plain_wealth_tax_change_and_writes_the_others(
     assert f"bad: REFUSED: {REASON}" in progress
 
 
-def test_a_combined_set_cannot_carry_a_wealth_tax_change(world):
+def test_a_combined_set_cannot_carry_a_wealth_tax_change(world, monkeypatch):
+    from uk_budget_data.publication import combine
+
+    # Refused before the consistency check builds its parameter snapshots.
+    monkeypatch.setattr(
+        combine,
+        "check_consistency",
+        lambda *args: pytest.fail("a refused set is not checked"),
+    )
     bad = Reform(id="bad", name="Bad", parameter_changes=PLAIN)
     other = Reform(
         id="other",
@@ -246,6 +254,20 @@ def test_the_templates_and_generation_refuse_the_same_paths(path):
     except ReceiptUnavailable:
         generation_refuses = True
     assert template_refuses == generation_refuses == is_wealth_tax_path(path)
+
+
+@settings(max_examples=200, deadline=None)
+@given(st.lists(NEAR_PATHS, max_size=8), st.lists(NEAR_PATHS, max_size=8))
+def test_the_named_paths_are_both_sides_wealth_tax_paths_sorted(left, right):
+    """Deterministic: the refusal names each wealth-tax path once, in sorted
+    order, whatever the order of the changes or the hash seed."""
+    named = wealth_tax_paths(
+        SimpleNamespace(parameter_changes=dict.fromkeys(left)),
+        SimpleNamespace(parameter_changes=dict.fromkeys(reversed(right))),
+    )
+    assert named == sorted(
+        {path for path in left + right if is_wealth_tax_path(path)}
+    )
 
 
 @given(st.one_of(st.none(), st.integers(), st.binary(), st.tuples()))
