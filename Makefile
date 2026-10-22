@@ -2,9 +2,9 @@
 
 # Run both frontend and backend for local development
 dev:
-	@echo "Starting backend (Docker) and frontend (npm)..."
+	@echo "Starting backend (Docker) and frontend (bun)..."
 	docker compose up -d
-	npm run dev
+	bun run dev
 
 # Run just the API in Docker
 api:
@@ -12,16 +12,16 @@ api:
 
 # Run just the frontend
 frontend:
-	npm run dev
+	bun run dev
 
 # Install dependencies
 install:
-	uv sync
-	npm install
+	uv sync --locked --extra dev
+	bun install --frozen-lockfile
 
 # Format code
 format:
-	uv run ruff format src/ tests/
+	uv run black src/ tests/
 	uv run ruff check --fix src/ tests/
 
 # Run tests
