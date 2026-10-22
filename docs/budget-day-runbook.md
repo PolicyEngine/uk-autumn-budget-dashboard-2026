@@ -257,7 +257,15 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Before the scenario is used, probe the adopted pair.** Put the scenario's own change in `CHANGES`, and in `INPUT` the statutory input it should move (`cpi_september`, or `awe_total_pay_may_july` for earnings). The probe prints the instants that moved: `['2026-09-01']` for the example below.
   - **Earnings move on 1 July.** With `awe_total_pay_may_july`, a 2027 earnings change prints `['2027-07-01']` on both models.
   - **`[]` means that year is already published,** not that the key is wrong. May to July 2026 is published (3.9%), so a 2026 earnings change prints `[]`. A published year never moves (see "Which measures" above). Don't fall back to a bare year: on 2.130.1 it silently moves the next year instead.
-- **A registered measure can't carry a macro path today.** `Reform.to_scenario` never applies a change before the data loads, and `tests/test_measure_keys.py` refuses any key that isn't a bare year. A macro scenario is a separate run, through `Scenario(applied_before_data_load=True)`.
+- **A change to an uprating input projects the data, however the measure is written** (UK hub's OBR-growth routes report, 22 October).
+  - **Since policyengine-uk 2.132.3 (#2405),** a scenario's dated parameter changes that alter a dataset-uprating input are applied before the data is built, so incomes follow, exactly as with `Scenario(applied_before_data_load=True)`. Uprating inputs include the `yoy_growth.obr.*` growth series and the statutory uprating inputs. Bare-year, `year:` and interval keys all count, as do a growth series' 1 January keys.
+  - **That includes registered measures:** `Reform.to_scenario` returns `Scenario(parameter_changes=…)` (`models.py`). On 6.10.0 (policyengine-uk 2.132.6), `average_earnings {"2026": 0.10}` grew employment income 10.00% in 2026, against 3.40% under current law. That was on a 1-in-40 subsample of the Microcosm cut, through the dashboard's own `managed_microsimulation` route.
+  - **So such a measure is a macro scenario, not a parameter-only one:** the macro-path rules above apply to it. A single-day or single-month key (other than a growth series' 1 January) stays an after-load override and doesn't reach the data.
+  - **With a modifier as well,** the parameter changes still move before the build and the modifier runs after. That is read from policyengine-uk's code, not run.
+- **Only on the dashboard's route.** The data follow only when policyengine-uk gets a single-year dataset, as `pe.uk.managed_microsimulation` gives it for this cut.
+  - **policyengine.py's own `Simulation(policy=…)`** (and `dynamic=`) projects its year files under current law and passes a multi-year dataset, which no route re-uprates. It moves the parameters only, which is an inconsistent scenario: on the subsample, employment income was identical with and without the change.
+  - **Any route on a multi-year dataset** does the same.
+  - **So keep the dashboard on `managed_microsimulation`** with a single-year dataset.
 
 ```sh
 uv run python - <<'EOF'
