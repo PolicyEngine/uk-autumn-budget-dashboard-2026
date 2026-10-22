@@ -44,7 +44,13 @@ national figures. These groups hold millions of people each; their rates
 are published as rates only, without counts.
 """
 
+import argparse
+import contextlib
+import json
+import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
 import numpy as np
@@ -66,6 +72,8 @@ from policyengine.disclosure.schema import (
 )
 from policyengine.outputs import AGE_GROUPS
 
+from uk_budget_data import data_limits, geography
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.geography import (
     FAMILY_OUTCOME,
     NATIONAL,
@@ -75,6 +83,12 @@ from uk_budget_data.geography import (
     national_prior,
     survey_household_ids,
 )
+from uk_budget_data.private_outputs import (
+    AUDIT_DIR_ENV,
+    PrivateOutputError,
+    private_directory,
+)
+from uk_budget_data.publication import manifest as publication_manifest
 
 AGE_BAND = "age_band"
 AGE_GROUP = "age_group"
@@ -793,3 +807,291 @@ def poverty_by_age(collector: DemographicCollector) -> pd.DataFrame:
                     }
                 )
     return pd.DataFrame(rows, columns=POVERTY_COLUMNS)
+
+
+# -- command line ------------------------------------------------------------
+
+TABLE_FILE = "demographics.csv"
+POVERTY_FILE = "poverty_by_age.csv"
+console = geography.console
+
+
+def add_demographics_parser(subparsers) -> None:
+    """The ``demographics`` command: results by demographic group."""
+    parser = subparsers.add_parser(
+        "demographics",
+        help="Write disclosure-controlled results by demographic group",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=None,
+        help="A local dataset (.h5) or bundle dataset name; "
+        "default: the bundle's dataset",
+    )
+    parser.add_argument(
+        "--dataset-kind",
+        choices=geography.DATASET_KINDS,
+        default=geography.EFRS,
+        help="efrs (the national dataset) or microcosm (a Microcosm export)",
+    )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=publication_manifest.manifest_path(),
+        help="Publication manifest (default: public/data/manifest.json)",
+    )
+    parser.add_argument(
+        "--reforms",
+        nargs="+",
+        default=None,
+        help="Approved reform IDs, a package or its measures, not both "
+        "(default: the approved packages, else the approved measures)",
+    )
+    parser.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=list(POLICY_YEARS),
+        help=(
+            "Years (default: the policy years in budget_years.json, "
+            f"{POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+        ),
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("./public/data"),
+        help=f"Where {TABLE_FILE} and {POVERTY_FILE} go (default: ./public/data)",
+    )
+    parser.add_argument(
+        "--employment-reviewer",
+        default=None,
+        help=(
+            "Publish employment groups too: the reviewer who accepts the "
+            "disclosure layer's unchecked overlap between them and the age "
+            "groups (default: employment groups are left out)"
+        ),
+    )
+
+
+@dataclass
+class _Plan:
+    """A demographics run, checked before any simulation."""
+
+    reforms: list
+    years: list[int]
+    microcosm_export: bool
+
+
+def _plan(parsed: argparse.Namespace) -> _Plan:
+    """Check a demographics run's options, with the checks the results by
+    area make (``geography._plan``). Raises ValueError with labels."""
+    kind = parsed.dataset_kind
+    if kind == geography.MICROCOSM and parsed.dataset is None:
+        raise ValueError("--dataset-kind microcosm needs --dataset")
+    # Read from the file, never inferred from the kind: the ids check it too.
+    local = geography._local_dataset(parsed.dataset)
+    microcosm_export = local is not None and geography.is_microcosm_export(
+        local
+    )
+    if kind == geography.MICROCOSM and not microcosm_export:
+        raise ValueError(
+            "--dataset-kind microcosm needs a Microcosm export; a file "
+            "built by policyengine-uk-data goes through --dataset-kind efrs"
+        )
+    if kind == geography.EFRS and microcosm_export:
+        raise ValueError("--dataset-kind efrs refuses a Microcosm export")
+    if kind == geography.EFRS and local is None:
+        name, repository = (
+            geography._bundle_dataset()
+            if parsed.dataset is None
+            else geography._bundle_dataset(str(parsed.dataset))
+        )
+        if not name.startswith("enhanced_frs_"):
+            raise ValueError(
+                f"--dataset-kind efrs needs enhanced FRS, but the installed "
+                f"bundle gives {name} from {repository}: pass a Microcosm "
+                "export with --dataset-kind microcosm --dataset"
+            )
+    if not parsed.manifest.is_file():
+        raise ValueError(
+            f"No publication manifest at {parsed.manifest}: there is "
+            "nothing the national page may publish yet."
+        )
+    manifest = publication_manifest.parse_manifest(
+        parsed.manifest.read_bytes(), str(parsed.manifest)
+    )
+    ids = geography.approved_reforms(manifest, parsed.reforms)
+    if parsed.reforms is None:
+        ids = [i for i in ids if i in geography.PACKAGES] or ids
+    unknown = [i for i in ids if geography.get_reform(i) is None]
+    if unknown:
+        raise ValueError(f"Unknown reforms: {unknown}")
+    reforms = [geography.get_reform(i) for i in dict.fromkeys(ids)]
+    chosen = {reform.id for reform in reforms}
+    for package, components in geography.PACKAGES.items():
+        together = sorted(chosen & set(components))
+        if package in chosen and together:
+            raise ValueError(
+                f"Publish a package or its measures, not both: {package} "
+                f"with {', '.join(together)}"
+            )
+    return _Plan(
+        reforms=reforms,
+        years=sorted(set(parsed.years)),
+        microcosm_export=microcosm_export,
+    )
+
+
+def write_private_audit(
+    built: DemographicRelease,
+    *,
+    subdirectory: str,
+    reforms: Sequence[str],
+    years: Sequence[int],
+    certification_reason: Optional[str] = None,
+) -> Path:
+    """Write the layer's audit and a summary (labels only) to a private
+    directory under ``$UK_BUDGET_DISCLOSURE_AUDIT_DIR``, outside any git
+    repository."""
+    directory = private_directory(subdirectory=subdirectory)
+    built.release.write_audit(directory)
+    summary = {
+        "levels": list(built.levels),
+        "reforms": list(reforms),
+        "years": [int(year) for year in years],
+        "employment_reviewer": built.employment_reviewer,
+        "certified": certification_reason is None,
+        "certification_reason": certification_reason,
+    }
+    path = directory / "summary.json"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w") as handle:
+        json.dump(summary, handle, indent=2, sort_keys=True)
+    os.chmod(path, 0o600)
+    return directory
+
+
+def write_public_tables(
+    built: DemographicRelease, collector: DemographicCollector, out_dir: Path
+) -> list[Path]:
+    """Write demographics.csv once the layer validates it, then the
+    poverty rates by age group."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    table = geography._write_validated(
+        public_table(built), out_dir / TABLE_FILE
+    )
+    rates = out_dir / POVERTY_FILE
+    poverty_by_age(collector).to_csv(rates, index=False, lineterminator="\n")
+    os.chmod(rates, 0o644)
+    return [table, rates]
+
+
+def run_demographics(parsed: argparse.Namespace) -> int:
+    """Run the ``demographics`` command. Prints labels only."""
+    reason = (
+        geography.MICROCOSM_UNCERTIFIED
+        if geography._uses_microcosm(parsed)
+        else None
+    )
+    if reason:
+        console.print(reason)
+    try:
+        return _run_demographics(parsed, certification_reason=reason)
+    finally:
+        if reason:
+            console.print(reason)
+
+
+def _run_demographics(
+    parsed: argparse.Namespace, *, certification_reason: Optional[str]
+) -> int:
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    subdirectory = f"demographics/{run_id}/{parsed.dataset_kind}"
+    try:
+        private_directory(subdirectory=subdirectory)
+    except PrivateOutputError as error:
+        console.print(f"[red]Error: {error}[/red]")
+        return 1
+    try:
+        plan = _plan(parsed)
+    except (ValueError, OSError) as error:
+        console.print(f"[red]Error: {error}[/red]")
+        return 1
+    dataset = str(parsed.dataset) if parsed.dataset else None
+    ids = [reform.id for reform in plan.reforms]
+    console.print(
+        f"Demographics: {parsed.dataset_kind}, reforms {' '.join(ids)}, "
+        f"years {' '.join(map(str, plan.years))}"
+    )
+    try:
+        collector = None
+        limited = {}
+        for reform in plan.reforms:
+            console.print(f"Simulating {reform.id}")
+            baseline, reformed = geography.simulate_reform(
+                reform, dataset, plan.years
+            )
+            if collector is None:
+                collector = DemographicCollector.from_simulation(
+                    baseline,
+                    kind=parsed.dataset_kind,
+                    microcosm_export=plan.microcosm_export,
+                )
+            # As the results by area do: a measure the data can't cost has
+            # no figure by group either.
+            watch = (
+                data_limits.observing(baseline, reformed)
+                if data_limits.DATA_LIMITS
+                else contextlib.nullcontext()
+            )
+            with watch as observed:
+                for year in plan.years:
+                    collector.collect(reform.id, year, baseline, reformed)
+            if data_limits.DATA_LIMITS:
+                touched = geography.reform_data_limits(
+                    reform, baseline, reformed, observed, plan.years
+                )
+                if touched:
+                    limited[reform.id] = touched
+            del baseline, reformed, observed
+        if limited:
+            for reform_id, touched in limited.items():
+                reasons = " ".join(item["reason"] for item in touched)
+                console.print(
+                    f"[red]Not computable on current data: {reform_id}: "
+                    f"{reasons}[/red]"
+                )
+            console.print(
+                f"[red]Error: {len(limited)} reform(s) touch a data limit, "
+                "so no tables were written.[/red]"
+            )
+            return 1
+        console.print("Estimating and checking")
+        built = build_release(
+            collector, employment_reviewer=parsed.employment_reviewer
+        )
+        audit = write_private_audit(
+            built,
+            subdirectory=subdirectory,
+            reforms=ids,
+            years=plan.years,
+            certification_reason=certification_reason,
+        )
+        written = write_public_tables(built, collector, parsed.out_dir)
+    except (
+        DemographicsError,
+        geography.GeographyError,
+        KeyError,
+        PrivateOutputError,
+        TypeError,
+        ValueError,
+    ) as error:
+        console.print(f"[red]Error: {error}[/red]")
+        return 1
+    for path in written:
+        console.print(f"[green]Wrote {path}[/green]")
+    console.print(f"Private audit: {audit} (${AUDIT_DIR_ENV})")
+    return 0

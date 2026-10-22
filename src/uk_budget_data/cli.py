@@ -7,6 +7,10 @@ from rich.console import Console
 from rich.table import Table
 
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.demographics import (
+    add_demographics_parser,
+    run_demographics,
+)
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import generate_all_data
@@ -123,6 +127,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
     add_generate_arguments(generate_parser)
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_demographics_parser(subparsers)
 
     return parser.parse_args(args)
 
@@ -253,6 +258,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "demographics":
+        return run_demographics(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -265,6 +272,10 @@ def main(args: list[str] = None) -> int:
         )
         console.print(
             "  geography - Results by region and constituency, disclosure "
+            "controlled"
+        )
+        console.print(
+            "  demographics - Results by age and other groups, disclosure "
             "controlled"
         )
         console.print(
