@@ -58,7 +58,6 @@ async function renderMap(props = {}) {
   const utils = render(
     <ConstituencyMap
       selectedPolicies={ALL}
-      selectedYear={2029}
       policies={POLICIES}
       {...props}
     />,
@@ -338,11 +337,10 @@ describe("ConstituencyMap", () => {
     expect(tooltip(container)).toHaveTextContent("90% interval: -£610 to -£350");
   });
 
-  it("follows the year, keeping hatched seats hatched", async () => {
-    const { container, rerender } = await renderMap();
-    rerender(
-      <ConstituencyMap selectedPolicies={ALL} selectedYear={2030} policies={POLICIES} />,
-    );
+  it("follows its own year control, keeping hatched seats hatched", async () => {
+    const { container } = await renderMap();
+    fireEvent.click(screen.getByRole("button", { name: "Year, 2029-30" }));
+    fireEvent.click(screen.getByRole("option", { name: "2030-31" }));
     await waitFor(() =>
       expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
         CATEGORY_COLOURS.small_gain,
@@ -357,7 +355,6 @@ describe("ConstituencyMap", () => {
     const { container } = render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
-        selectedYear={2029}
         policies={POLICIES}
       />,
     );
@@ -381,7 +378,6 @@ describe("ConstituencyMap", () => {
     render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze"]}
-        selectedYear={2029}
         policies={POLICIES}
       />,
     );
@@ -397,7 +393,6 @@ describe("ConstituencyMap", () => {
     render(
       <ConstituencyMap
         selectedPolicies={["rail_fares_freeze"]}
-        selectedYear={2029}
         policies={POLICIES}
       />,
     );
@@ -416,7 +411,7 @@ describe("ConstituencyMap", () => {
       }),
     );
     const { container, unmount } = render(
-      <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+      <ConstituencyMap selectedPolicies={ALL} policies={POLICIES} />,
     );
     expect(
       await screen.findByText("Results by constituency are not yet published."),
@@ -434,7 +429,7 @@ describe("ConstituencyMap", () => {
     resetGeographyCache();
     vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": 404 }));
     render(
-      <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+      <ConstituencyMap selectedPolicies={ALL} policies={POLICIES} />,
     );
     expect(
       await screen.findByText("Results by constituency are not yet published."),
