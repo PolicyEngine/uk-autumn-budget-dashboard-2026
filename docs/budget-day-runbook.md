@@ -322,6 +322,7 @@ uv run uk-budget-data publish check
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
+- **Review rows.** Before opening the pull request, the Reconciler moves each `reconciliation.json` out of `public/` (the gates recompute reconciliation and never read it), runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`, and commits `data_inputs/public_data_review.csv` with the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes. Rows go only to the displayed entries' files and the manifest, and the command refuses, writing nothing, if any byte differs from what the gate bound. It lists any file under `public/data` it left with no row, a staged or not-computable entry's, and the build fails on those.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -390,6 +391,7 @@ uv run uk-budget-data publish check
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
+- **Review rows.** As at G2, before opening the pull request: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed, and commit the review list with the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 
