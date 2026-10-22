@@ -9,15 +9,15 @@ request carries their rows. The Reconciler writes them with
 
     uv run uk-budget-data publish review-rows --reviewer NAME
 
-and commits the review list with the artifacts. Each row is the Reconciler's
-attestation that they reviewed those bytes.
+and the review list is committed with the artifacts. Each row is the
+Reconciler's attestation that they reviewed those bytes.
 
 Rows are written only for what the page displays, and only for bytes the gate
 bound:
 
 - each file of each displayed entry (approved or provisional): its
   ``receipt.json``, which the entry names by its artifact digest, and each
-  file the receipt lists, by the digest it records;
+  file the receipt lists, by the digest the receipt records;
 - ``manifest.json`` itself.
 
 Nothing else gets a row. A not-computable entry is listed on the page with
@@ -25,10 +25,16 @@ its reason, which the manifest's row covers, and the page fetches nothing
 from its artifact (``src/utils/publication/load.js``). A staged, stale or
 withdrawn entry is not shown at all.
 
-The run refuses, and writes nothing, if any displayed file is not the bytes
-the gate bound, or if a displayed artifact holds a file its receipt does not
-bind (``reconciliation.json``, say, which the gates recompute and never
-read): a row can only attest bytes the gate approved.
+The artifact digest covers a receipt's content except the two fields that
+describe its generation run (``receipt.VOLATILE_DASHBOARD_FIELDS``), so a
+receipt must also hold nothing beyond what that digest covers, in the form
+publication writes, with those two fields shaped as a time and a command
+line. Their values are the only bytes in a row that the gate did not bind.
+
+The run refuses, and writes nothing, if any displayed file is not what the
+gate bound, if a displayed artifact holds a file its receipt does not bind
+(``reconciliation.json``, say, which the gates recompute and never read), or
+if a symbolic link lies on any path it would review.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -50,10 +56,15 @@ from pathlib import Path
 from typing import Optional
 
 from policyengine.disclosure.schema import PUBLIC_COLUMNS
+from pydantic import ValidationError
 
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
-from uk_budget_data.publication.receipt import artifact_sha256, receipt_api
+from uk_budget_data.publication.receipt import (
+    VOLATILE_DASHBOARD_FIELDS,
+    artifact_sha256,
+    receipt_api,
+)
 from uk_budget_data.publication.tables import sha256_bytes
 
 REVIEW_CSV = Path("data_inputs/public_data_review.csv")
@@ -69,6 +80,9 @@ REVIEW_COLUMNS = (
 )
 PUBLIC = "public"
 ARTIFACTS_DIR = "artifacts"
+# A receipt's top-level fields: what build_receipt_document writes, and all
+# that receipt.artifact_sha256 digests.
+RECEIPT_FIELDS = {"schema", "execution_receipt", "dashboard"}
 
 NATIONAL_TABLE = "national_table"
 SYNTHETIC_HOUSEHOLD = "synthetic_household"
@@ -87,8 +101,10 @@ TABLE_KINDS = {
     "household_scatter_binned.csv": NATIONAL_TABLE,
     "income_curve.csv": SYNTHETIC_HOUSEHOLD,
 }
-# A receipt and the manifest hold provenance, digests and statuses: no
-# figures, so they are reviewed as files with no data.
+# A receipt holds provenance and digests, and the manifest entries, their
+# statuses and digests, and any household check receipt, which concerns
+# hypothetical households: no figure from the survey, so both are reviewed
+# as files with no data.
 RECEIPT_KIND = STATIC_ASSET
 MANIFEST_KIND = STATIC_ASSET
 # Tables an artifact may list (publication.tables.TABLES) that no review row
@@ -163,12 +179,33 @@ def _name(value: Optional[str]) -> str:
     return " ".join((value or "").split())
 
 
-def _relative(path: Path, root: Path) -> str:
-    return path.relative_to(root).as_posix()
-
-
 def _absolute(path: Path) -> Path:
     return Path(os.path.normpath(os.path.abspath(path)))
+
+
+def _within(root: Path, path: Path) -> Optional[Path]:
+    """``path`` relative to the resolved ``root``, however it is spelled.
+
+    The first ancestor of ``path`` that resolves to ``root`` is taken as the
+    root, so a parent reached through a link (macOS's ``/var``, say) still
+    matches, while the components below it are kept as given and a link
+    among them can be refused.
+    """
+    path = _absolute(path)
+    for ancestor in (path, *path.parents):
+        if Path(os.path.realpath(ancestor)) == root:
+            return path.relative_to(ancestor)
+    return None
+
+
+def _first_link(root: Path, relative: Path) -> Optional[str]:
+    """The first component of ``root / relative`` that is a symbolic link."""
+    path = root
+    for part in relative.parts:
+        path = path / part
+        if path.is_symlink():
+            return path.relative_to(root).as_posix()
+    return None
 
 
 def _review_date(on: Optional[str]) -> str:
@@ -194,18 +231,21 @@ def _is_layer_shaped(name: str, data: bytes) -> bool:
 
 
 def _no_kind_problems(where: str, data: bytes) -> list[str]:
-    """Rules of the disclosure checks that a row of these kinds would fail."""
-    if b"\0" in data[:8192]:
-        return []
+    """Rules of the disclosure checks that a row of these kinds would fail.
+
+    As in scripts/check_public_data.py, the content rules skip binary files
+    and the disclosure-table rule does not.
+    """
+    binary = b"\0" in data[:8192]
     problems = []
-    if RECORD_LEVEL.search(data):
+    if not binary and RECORD_LEVEL.search(data):
         problems.append(f"{where}: carries record-level identifiers")
     if _is_layer_shaped(where, data):
         problems.append(
             f"{where}: shaped as a disclosure-layer table, which is reviewed "
             "through the layer, not by this helper"
         )
-    elif len(set(AREA_CODE.findall(data))) > MAX_AREA_CODES:
+    elif not binary and len(set(AREA_CODE.findall(data))) > MAX_AREA_CODES:
         problems.append(
             f"{where}: carries more than {MAX_AREA_CODES} area codes"
         )
@@ -227,13 +267,48 @@ def receipt_bytes(document) -> bytes:
     return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
 
 
+def _is_time(value) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_command_line(value) -> bool:
+    return isinstance(value, list) and all(isinstance(a, str) for a in value)
+
+
+# The shape each field left out of the artifact digest must have. A field
+# added to VOLATILE_DASHBOARD_FIELDS without a shape here is refused.
+VOLATILE_SHAPES = {
+    "generated_at": _is_time,
+    "generator_argv": _is_command_line,
+}
+
+
 def _receipt_problems(
     key: str, entry: m.Entry, document, data: bytes, where: str
 ) -> list[str]:
     """Ways a receipt is not the one the entry names."""
-    if not isinstance(document, dict):
+    if not isinstance(document, dict) or not isinstance(
+        document.get("dashboard"), dict
+    ):
         return [f"{where}: not a receipt"]
+    dashboard = document["dashboard"]
     problems = []
+    if set(document) != RECEIPT_FIELDS:
+        problems.append(
+            f"{where}: holds fields its artifact digest does not cover"
+        )
+    for name in VOLATILE_DASHBOARD_FIELDS:
+        shape = VOLATILE_SHAPES.get(name)
+        if shape is None or not shape(dashboard.get(name)):
+            problems.append(
+                f"{where}: its {name} is not shaped as publication writes it"
+            )
     if receipt_bytes(document) != data:
         problems.append(f"{where}: not in the form publication writes")
     if artifact_sha256(document) != entry.artifact_sha256:
@@ -241,18 +316,19 @@ def _receipt_problems(
             f"{where}: not the receipt {key}'s entry names (its artifact "
             "digest differs)"
         )
-    dashboard = document.get("dashboard")
-    if not isinstance(dashboard, dict):
-        return problems + [f"{where}: has no dashboard block"]
     if dashboard.get("key") != key:
         problems.append(f"{where}: is not {key}'s receipt")
-    files = dashboard.get("files")
-    if not isinstance(files, dict) or not files:
-        return problems + [f"{where}: lists no files"]
+    files, digests = dashboard.get("files"), dashboard.get("digests")
+    if (
+        not isinstance(files, dict)
+        or not files
+        or not isinstance(digests, dict)
+    ):
+        return problems + [f"{where}: does not record its files and digests"]
     api, _ = receipt_api()
-    if api.content_sha256(files) != entry.outputs_sha256 or (
-        (dashboard.get("digests") or {}).get("outputs_sha256")
-        != entry.outputs_sha256
+    if (
+        api.content_sha256(files) != entry.outputs_sha256
+        or digests.get("outputs_sha256") != entry.outputs_sha256
     ):
         problems.append(
             f"{where}: does not list the files {key}'s entry names"
@@ -275,8 +351,13 @@ def _entry_rows(
     Each file is read once: the bytes checked are the bytes the row names.
     """
     directory = data_root / entry.artifact
-    where = _relative(directory, root)
-    if directory.is_symlink() or not directory.is_dir():
+    relative = directory.relative_to(root)
+    where = relative.as_posix()
+    link = _first_link(root, relative)
+    if link is not None:
+        problems.append(f"{link}: a symbolic link")
+        return []
+    if not directory.is_dir():
         problems.append(f"{where}: {key}'s artifact directory is missing")
         return []
     if entry.status == m.APPROVED and (
@@ -313,12 +394,7 @@ def _entry_rows(
         problems.extend(found)
         return []
     rows = [
-        Row(
-            f"{where}/{RECEIPT_FILE}",
-            RECEIPT_KIND,
-            sha256_bytes(data),
-            receipt_basis,
-        )
+        Row(receipt_where, RECEIPT_KIND, sha256_bytes(data), receipt_basis)
     ]
     problems.extend(_no_kind_problems(receipt_where, data))
 
@@ -356,36 +432,50 @@ def _entry_rows(
     return rows
 
 
+def _parse_manifest(raw: bytes, where: str) -> m.Manifest:
+    """The manifest, or a refusal naming where it is invalid (no values)."""
+    try:
+        return m.parse_manifest(raw, where)
+    except ValidationError as error:
+        raise ReviewRowsError(
+            [
+                f"{where}: {'.'.join(str(p) for p in item['loc'])}: "
+                f"{item['msg']}"
+                for item in error.errors()
+            ]
+        ) from None
+    except ValueError as error:
+        raise ReviewRowsError([f"{where}: {error}"]) from None
+
+
 def planned_rows(
     *,
     staged_by: Optional[str] = None,
     data_root: Path = m.DATA_ROOT,
     root: Path = Path("."),
-) -> tuple[list[Row], m.Manifest]:
-    """Every row the manifest's displayed entries need, and the manifest.
+) -> tuple[list[Row], m.Manifest, Path]:
+    """Every row the displayed entries need, the manifest and the data root.
 
-    Raises ReviewRowsError, naming every problem, if any row cannot be
-    written.
+    The data root is returned as found under the resolved ``root``. Raises
+    ReviewRowsError, naming every problem, if any row cannot be written.
     """
-    data_root, root = _absolute(data_root), _absolute(root)
-    try:
-        relative = data_root.relative_to(root)
-    except ValueError:
-        relative = None
+    root = Path(os.path.realpath(_absolute(root)))
+    relative = _within(root, data_root)
     if relative is None or relative.parts[:1] != (PUBLIC,):
         raise ReviewRowsError(
             [f"the data root {data_root} is not under {root / PUBLIC}"]
         )
+    link = _first_link(root, relative)
+    if link is not None:
+        raise ReviewRowsError([f"{link}: a symbolic link"])
+    data_root = root / relative
     path = m.manifest_path(data_root)
-    where = _relative(path, root)
+    where = path.relative_to(root).as_posix()
     problems: list[str] = []
     raw = _read_file(path, where, problems)
     if raw is None:
         raise ReviewRowsError(problems)
-    try:
-        manifest = m.parse_manifest(raw, where)
-    except ValueError as error:
-        raise ReviewRowsError([f"{where}: {error}"]) from None
+    manifest = _parse_manifest(raw, where)
 
     displayed = {
         key: entry
@@ -438,20 +528,21 @@ def planned_rows(
         )
     if problems:
         raise ReviewRowsError(problems)
-    return rows, manifest
+    return rows, manifest, data_root
 
 
 def read_review(path: Path) -> tuple[str, list[_Record]]:
     """The review list's header and records, each with its exact text.
 
-    Records are split by the same reader the CI check uses, so a quoted
-    field holding a line break stays in its record.
+    Records are split by the reader the CI check uses, so a quoted field
+    holding a line break stays in its record; malformed quoting, which that
+    reader would accept by guessing, is refused.
     """
     if not path.is_file():
         raise ReviewRowsError([f"{path}: no review list"])
     with path.open(newline="", encoding="utf-8") as handle:
         lines = list(handle)
-    reader = csv.reader(iter(lines))
+    reader = csv.reader(iter(lines), strict=True)
     try:
         header = next(reader, None)
         if tuple(header or ()) != REVIEW_COLUMNS:
@@ -466,7 +557,9 @@ def read_review(path: Path) -> tuple[str, list[_Record]]:
             consumed = reader.line_num
             records.append(_Record(raw, values[0] if values else None))
     except csv.Error as error:
-        raise ReviewRowsError([f"{path}: cannot be read ({error})"]) from None
+        raise ReviewRowsError(
+            [f"{path}: cannot be read (line {reader.line_num}: {error})"]
+        ) from None
     paths = [record.path for record in records if record.path is not None]
     twice = sorted({p for p in paths if paths.count(p) > 1})
     if twice:
@@ -563,7 +656,7 @@ def _unreviewed(
     for directory, _, names in os.walk(data_root):
         for name in names:
             path = Path(directory) / name
-            relative = _relative(path, root)
+            relative = path.relative_to(root).as_posix()
             if relative in reviewed:
                 continue
             artifact = Path(directory).relative_to(data_root).as_posix()
@@ -593,14 +686,13 @@ def review_rows(
         raise ReviewRowsError(["--reviewer must name a person"])
     reviewed_on = _review_date(on)
     review_csv = _absolute(review_csv)
-    root = review_csv.parent.parent
-    data_root = _absolute(data_root)
+    root = Path(os.path.realpath(review_csv.parent.parent))
     header, records = read_review(review_csv)
-    rows, manifest = planned_rows(
+    rows, manifest, data_root = planned_rows(
         staged_by=staged_by, data_root=data_root, root=root
     )
 
-    prefix = _relative(data_root / ARTIFACTS_DIR, root) + "/"
+    prefix = (data_root / ARTIFACTS_DIR).relative_to(root).as_posix() + "/"
 
     def removable(path: str) -> bool:
         return path.startswith(prefix) and not os.path.lexists(root / path)

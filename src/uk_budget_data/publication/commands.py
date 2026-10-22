@@ -268,8 +268,8 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
     out(
         f"review rows for manifest revision {report.revision}: "
         f"{len(report.added)} added, {len(report.replaced)} replaced "
-        f"({report.unchanged} unchanged), {len(report.removed)} removed, "
-        f"in {report.elapsed:.2f} s"
+        f"({report.unchanged} unchanged), {len(report.removed)} removed; "
+        f"took {report.elapsed:.2f} s after start-up"
     )
     if report.unreviewed:
         out(

@@ -28,6 +28,7 @@ from tests.publication_support import World
 from uk_budget_data.cli import main
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.publication import manifest as m
+from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication import review_rows as rr
 from uk_budget_data.publication.artifacts import (
     RECONCILIATION_FILE,
@@ -646,13 +647,25 @@ def rejected_by_the_checks(name: str, data: bytes) -> bool:
     )
 
 
+LAYER_HEADER = ",".join(check_public_data.PUBLIC_COLUMNS)
+
+
 @settings(max_examples=200, deadline=None)
 @given(
+    header=st.sampled_from(
+        [
+            "",
+            LAYER_HEADER + "\n",
+            LAYER_HEADER + ",area_name\n",
+            LAYER_HEADER + ",\0\n",
+            "\0" + LAYER_HEADER + "\n",
+        ]
+    ),
     fragments=FRAGMENTS,
     name=st.sampled_from(["public/data/x.csv", "public/data/x.json"]),
 )
-def test_the_guards_agree_with_the_ci_check(fragments, name):
-    data = ",".join(fragments).encode()
+def test_the_guards_agree_with_the_ci_check(header, fragments, name):
+    data = (header + ",".join(fragments)).encode()
     assert bool(rr._no_kind_problems(name, data)) == rejected_by_the_checks(
         name, data
     )
@@ -820,6 +833,83 @@ def test_a_receipt_written_in_another_form_refuses(base):
     ]
 
 
+def canonical(document: dict) -> bytes:
+    return (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+
+
+def edit_document(change):
+    def edit(data: bytes) -> bytes:
+        document = json.loads(data)
+        change(document)
+        return canonical(document)
+
+    return edit
+
+
+def test_a_receipt_with_fields_its_digest_does_not_cover_refuses(base):
+    """Fields outside the artifact digest could carry anything, figures
+    included, past the gate."""
+    with repository(base) as (root, manifest):
+        where = edit_receipt(
+            root,
+            manifest,
+            "alpha",
+            edit_document(lambda doc: doc.update(notes={"x": 1.5})),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [
+        f"{where}: holds fields its artifact digest does not cover"
+    ]
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("generated_at", {"x": 1.5}),
+        ("generated_at", "not a time"),
+        ("generator_argv", ["generate", 1.5]),
+        ("generator_argv", "generate"),
+    ],
+)
+def test_a_generation_run_field_of_another_shape_refuses(base, field, value):
+    with repository(base) as (root, manifest):
+        where = edit_receipt(
+            root,
+            manifest,
+            "alpha",
+            edit_document(lambda doc: doc["dashboard"].update({field: value})),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [
+        f"{where}: its {field} is not shaped as publication writes it"
+    ]
+
+
+def test_every_field_left_out_of_the_digest_has_a_shape():
+    assert set(rr.VOLATILE_SHAPES) == set(
+        receipt_module.VOLATILE_DASHBOARD_FIELDS
+    )
+
+
+def test_a_malformed_receipt_refuses_rather_than_failing(base):
+    with repository(base) as (root, manifest):
+        where = edit_receipt(
+            root,
+            manifest,
+            "alpha",
+            edit_document(lambda doc: doc["dashboard"].update(digests=["x"])),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [
+        f"{where}: not the receipt alpha's entry names (its artifact digest "
+        "differs)",
+        f"{where}: does not record its files and digests",
+    ]
+
+
 def test_a_receipts_generation_time_is_not_bound_intended(base):
     """Intended: the gate binds a receipt without the fields describing its
     generation run (receipt.VOLATILE_DASHBOARD_FIELDS), so a changed time is
@@ -876,6 +966,51 @@ def test_a_symbolic_link_refuses(base, tmp_path):
     ]
 
 
+def test_a_linked_artifact_directory_refuses(base, tmp_path):
+    with repository(base) as (root, manifest):
+        key_dir = (root / DATA / manifest.measures["alpha"].artifact).parent
+        shutil.copytree(
+            key_dir, tmp_path / "alpha", copy_function=link_or_copy
+        )
+        shutil.rmtree(key_dir)
+        key_dir.symlink_to(tmp_path / "alpha")
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [f"{ARTIFACTS}alpha: a symbolic link"]
+
+
+def test_a_linked_data_root_refuses(base):
+    with repository(base) as (root, _):
+        (root / DATA).rename(root / "public" / "real")
+        (root / DATA).symlink_to(root / "public" / "real")
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [f"{DATA}: a symbolic link"]
+
+
+def test_a_repository_reached_through_a_link_is_still_found(base, tmp_path):
+    """As macOS's /var is /private/var: the repository may be spelled
+    through a link above it."""
+    with repository(base) as (root, _):
+        alias = tmp_path / "alias"
+        alias.symlink_to(root)
+        rr.review_rows(
+            reviewer="María",
+            staged_by="Vahid",
+            data_root=alias / DATA,
+            review_csv=root / "data_inputs" / "public_data_review.csv",
+        )
+        rr.review_rows(
+            reviewer="María",
+            staged_by="Vahid",
+            data_root=root / DATA,
+            review_csv=alias / "data_inputs" / "public_data_review.csv",
+        )
+        rows = rows_by_path(root)
+    assert MANIFEST in rows
+    assert all(path.startswith("public/") for path in rows)
+
+
 def test_record_level_identifiers_in_the_manifest_refuse(base):
     with repository(
         base,
@@ -905,6 +1040,11 @@ def test_the_guards_name_each_rule():
         "public/a.json: carries record-level identifiers"
     ]
     assert rr._no_kind_problems("public/a.png", b"\0household_id") == []
+    # The disclosure-table rule holds for binary files too, as in CI.
+    assert rr._no_kind_problems("public/a.csv", layer + b"\0") == [
+        "public/a.csv: shaped as a disclosure-layer table, which is reviewed "
+        "through the layer, not by this helper"
+    ]
 
 
 def test_rows_already_listed_twice_refuse(base):
@@ -916,6 +1056,19 @@ def test_rows_already_listed_twice_refuse(base):
         f"{root / 'data_inputs' / 'public_data_review.csv'}: {MANIFEST} is "
         "listed twice"
     ]
+
+
+def test_an_unterminated_quote_refuses(base):
+    """A lenient reader would take every row after it as part of one field,
+    and so would both checks."""
+    review = HEADER + 'public/zz.png,static_asset,"unterminated\n'
+    with repository(base, review=review) as (root, _):
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        assert review_bytes(root) == review.encode()
+    assert refused.value.problems[0].endswith(
+        "cannot be read (line 2: unexpected end of data)"
+    )
 
 
 def test_a_review_list_with_other_columns_refuses(base):
@@ -959,6 +1112,20 @@ def test_no_manifest_refuses(base):
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
     assert refused.value.problems == [f"{MANIFEST}: missing"]
+
+
+def test_an_invalid_manifest_refuses_naming_where_not_what(base):
+    with repository(base) as (root, _):
+        path = root / MANIFEST
+        document = json.loads(path.read_bytes())
+        document["measures"]["alpha"]["approval"]["by"] = 12345
+        path.write_text(json.dumps(document))
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [
+        f"{MANIFEST}: measures.alpha.approval.by: Input should be a valid "
+        "string"
+    ]
 
 
 @pytest.mark.parametrize(
@@ -1023,7 +1190,7 @@ def test_the_command_prints_paths_and_counts_never_values(base, capsys):
     assert code == 0
     assert re.search(
         r"^review rows for manifest revision \d+: 29 added, 0 replaced "
-        r"\(0 unchanged\), 0 removed, in \d+\.\d\d s$",
+        r"\(0 unchanged\), 0 removed; took \d+\.\d\d s after start-up$",
         output,
         re.MULTILINE,
     )
@@ -1036,6 +1203,7 @@ def test_the_command_prints_paths_and_counts_never_values(base, capsys):
 
 def test_the_data_root_may_follow_the_action(base, capsys, monkeypatch):
     with repository(base) as (root, _):
+        (root / DATA).rename(root / "public" / "published")
         monkeypatch.chdir(root)
         code = main(
             [
@@ -1046,12 +1214,12 @@ def test_the_data_root_may_follow_the_action(base, capsys, monkeypatch):
                 "--staged-by",
                 "Vahid",
                 "--data-root",
-                DATA,
+                "public/published",
             ]
         )
         monkeypatch.undo()
         assert code == 0
-        assert MANIFEST in rows_by_path(root)
+        assert "public/published/manifest.json" in rows_by_path(root)
 
 
 def test_the_command_refuses_with_a_reason(base, capsys):
@@ -1088,10 +1256,14 @@ def displayed_only(root: Path, manifest: m.Manifest) -> None:
 
 
 def build_check(root: Path) -> list[str]:
+    """The build check's problems, checked against its exit code."""
     result = subprocess.run(
         [node, str(BUILD_CHECK), str(root)], capture_output=True, text=True
     )
-    return result.stdout.splitlines()[:-1]
+    *problems, summary = result.stdout.splitlines()
+    assert summary == f"{len(problems)} problem(s) in public/."
+    assert result.returncode == (1 if problems else 0), result.stderr
+    return problems
 
 
 LEGACY = (

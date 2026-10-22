@@ -322,7 +322,9 @@ uv run uk-budget-data publish check
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
-- **Review rows.** Before opening the pull request, the Reconciler moves each `reconciliation.json` out of `public/` (the gates recompute reconciliation and never read it), runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`, and commits `data_inputs/public_data_review.csv` with the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes. Rows go only to the displayed entries' files and the manifest, and the command refuses, writing nothing, if any byte differs from what the gate bound. It lists any file under `public/data` it left with no row, a staged or not-computable entry's, and the build fails on those.
+- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` out of `public/` (the gates recompute reconciliation and never read it) and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`. `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+  - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: an open question for the coordinator.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -391,7 +393,7 @@ uv run uk-budget-data publish check
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
-- **Review rows.** As at G2, before opening the pull request: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed, and commit the review list with the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 
@@ -433,7 +435,7 @@ uv run uk-budget-data publish check
 2. **Regenerate it.** This writes a new artifact; the old one is untouched.
 3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
 4. **Regenerate the combined run**, stage it, and approve both.
-5. **Publish through a pull request.**
+5. **Write the review rows, as at G2, and publish through a pull request.**
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
@@ -441,7 +443,7 @@ An approval or an exception carries over only where the outputs are byte-identic
 
 - **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
-  - **The regenerated artifacts and the manifest go in the upgrade PR.** `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
+  - **The regenerated artifacts and the manifest go in the upgrade PR,** with their review rows (`publish review-rows`, as at G2). `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
   - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
 - **Approve once the household checks pass on the new release.**
@@ -524,7 +526,7 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
      - Check that nothing else merged since depends on what is reverted.
-  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, and write the review rows (as at G2). A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
   3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
   4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
 
