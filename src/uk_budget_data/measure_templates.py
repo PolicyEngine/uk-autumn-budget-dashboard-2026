@@ -788,6 +788,19 @@ def _code_names(code) -> set:
     return names
 
 
+def _wrapped_native(formula):
+    """The native variable a band formula wraps, read from its closure.
+
+    Read, never stored on the formula: a template stores nothing on an
+    object it doesn't bind (the template guard in tests/test_data_limits.py).
+    """
+    code = getattr(formula, "__code__", None)
+    closure = getattr(formula, "__closure__", None) or ()
+    if code is None or "native" not in code.co_freevars:
+        return None
+    return closure[code.co_freevars.index("native")].cell_contents
+
+
 def _property_band_index(native, year) -> str:
     """The index the native channel's formula for ``year`` deflates by.
 
@@ -797,7 +810,7 @@ def _property_band_index(native, year) -> str:
     band never deflates by another index than the native bands do.
     """
     formula = native.get_formula(str(year))
-    wrapped = getattr(formula, "_property_band_native", None)
+    wrapped = _wrapped_native(formula)
     if wrapped is not None and any(
         getattr(formula, "__code__", None) is const
         for const in apply_property_band_surcharge.__code__.co_consts
@@ -905,6 +918,5 @@ def apply_property_band_surcharge(
         )
         return current + in_band * amount
 
-    formula._property_band_native = native
     _replace_formula(sim, channel, formula)
     return sim
