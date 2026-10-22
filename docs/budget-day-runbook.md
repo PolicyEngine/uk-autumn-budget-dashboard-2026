@@ -211,7 +211,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. As of 21 October it is open; the UK hub expects it to land shortly.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
   - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
-  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
+  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over 2026-27 to 2030-31;
   - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
   So without the fix, a 10% rise's net cost is overstated by about £0.85bn to £1.06bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
@@ -392,7 +392,7 @@ uv run uk-budget-data publish check
 
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
-- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
+- **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
 - **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **out of the repository**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.

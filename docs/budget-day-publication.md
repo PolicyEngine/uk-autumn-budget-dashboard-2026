@@ -69,7 +69,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
   - reads affected population, poverty and Gini from the first selected measure for 2026.
 
   #20's modules fix all three once they are wired in after #3. The metrics bar also labels the poverty change "relative AHC", but the national calculator uses policyengine-uk's `in_poverty_bhc`, which is absolute poverty before housing costs.
-- **Years past the dataset's projection.** policyengine-uk projects datasets only to 2030. Years beyond the dataset's projected years are marked **unsupported** and shown as unavailable, not as final figures.
+- **Years past the dataset's projection.** On policyengine 6.10.0 (policyengine-uk 2.132.6), the pinned Microcosm UK 2024-25 data are projected to 2032, so every policy year in `budget_years.json`, to 2031-32, is supported, and every default year list in the pipeline is those policy years. Past the OBR's March 2026 forecast (to 2030-31) the projection follows policyengine-uk's long-run assumptions (`yoy_growth.yaml`: CPI at the 2% target from 2031; RPI, CPIH and earnings converging to steady state by 2035–36). Years beyond the dataset's projected years are marked **unsupported** and shown as unavailable, not as final figures.
 
 ## Production setup (as created)
 
