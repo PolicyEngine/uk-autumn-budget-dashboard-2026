@@ -348,7 +348,7 @@ describe("ConstituencyMap", () => {
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
     expect(seat(container, "Z14000003").getAttribute("fill")).toBe(WITHHELD_FILL);
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2030-31");
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
   it("never sums: several measures but not all draws no map and no figures", async () => {

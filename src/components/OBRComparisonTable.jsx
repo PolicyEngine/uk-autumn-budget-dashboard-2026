@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
-import { displayYears } from "../utils/displayYears";
+import { DISPLAY_YEARS } from "../utils/displayYears";
 
 function OBRComparisonTable({ selectedPolicies }) {
   const [comparisonData, setComparisonData] = useState(null);
@@ -91,13 +91,16 @@ function OBRComparisonTable({ selectedPolicies }) {
     };
   });
 
-  const years = displayYears([2026, 2027, 2028, 2029, 2030]);
+  // Every year shown; a year the file does not cover reads "—"
+  const years = DISPLAY_YEARS;
   const policies = Object.entries(policiesMap);
 
+  // Signed with a true minus; a value that rounds to zero reads "£0.0bn"
   const formatValue = (value) => {
     if (value === null || value === undefined || isNaN(value)) return "—";
-    const sign = value >= 0 ? "" : "-";
-    return `${sign}£${Math.abs(value).toFixed(1)}bn`;
+    const rounded = Math.abs(value).toFixed(1);
+    const sign = value < 0 && rounded !== "0.0" ? "\u2212" : "";
+    return `${sign}£${rounded}bn`;
   };
 
   const getDifferenceClass = (pe, obr) => {
@@ -121,28 +124,37 @@ function OBRComparisonTable({ selectedPolicies }) {
 
   return (
     <div className="obr-comparison-section">
-      <h2>PolicyEngine vs OBR comparison</h2>
       <p className="comparison-description">
-        This table compares PolicyEngine's microsimulation estimates with the
-        OBR's official costings from the November 2025 Economic and Fiscal
-        Outlook. Values show annual budgetary impact in billions of pounds.
-        Positive values indicate revenue for the Government; negative values
-        indicate costs.
+        PolicyEngine's static estimates against the OBR's costings from the
+        November 2025{" "}
+        <a
+          href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Economic and Fiscal Outlook
+        </a>
+        , in £ billion a year. Positive values raise revenue or reduce
+        spending; negative values do the opposite.
       </p>
 
       {hasBothTypes && (
         <div className="obr-toggle-container">
-          <span className="toggle-label">
-            Compare PolicyEngine (static) with OBR:
+          <span className="toggle-label" id="obr-basis-label">
+            OBR basis
           </span>
-          <div className="toggle-buttons">
+          <div className="toggle-buttons" role="group" aria-labelledby="obr-basis-label">
             <button
+              type="button"
+              aria-pressed={!showBehavioural}
               className={`toggle-btn ${!showBehavioural ? "active" : ""}`}
               onClick={() => setShowBehavioural(false)}
             >
               Static
             </button>
             <button
+              type="button"
+              aria-pressed={showBehavioural}
               className={`toggle-btn ${showBehavioural ? "active" : ""}`}
               onClick={() => setShowBehavioural(true)}
             >
@@ -187,9 +199,7 @@ function OBRComparisonTable({ selectedPolicies }) {
                       >
                         {formatValue(pe)}
                       </td>
-                      <td
-                        className={`value-cell obr ${getDifferenceClass(pe, obr)}`}
-                      >
+                      <td className="value-cell obr">
                         {formatValue(obr)}
                       </td>
                     </React.Fragment>
@@ -201,37 +211,25 @@ function OBRComparisonTable({ selectedPolicies }) {
         </table>
       </div>
 
-      <div className="comparison-legend">
+      <p className="comparison-legend">
+        Difference from OBR:{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-small"></span>
-          Difference &lt; £0.5bn
-        </span>
+          <span className="legend-dot diff-small" aria-hidden="true"></span>
+          under £0.5bn
+        </span>{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-medium"></span>
-          Difference £0.5-2bn
-        </span>
+          <span className="legend-dot diff-medium" aria-hidden="true"></span>
+          £0.5–2bn
+        </span>{" "}
         <span className="legend-item">
-          <span className="legend-dot diff-large"></span>
-          Difference &gt; £2bn
+          <span className="legend-dot diff-large" aria-hidden="true"></span>
+          over £2bn
         </span>
-      </div>
+      </p>
 
       <p className="comparison-note">
-        <strong>Note:</strong> PolicyEngine produces static microsimulation
-        estimates that do not include behavioural responses. The OBR provides
-        both static and post-behavioural costings.{" "}
-        {showBehavioural
-          ? "Post-behavioural costings include effects like tax avoidance, reduced consumption, and price pass-through."
-          : "Static costings assume no change in taxpayer behaviour."}{" "}
-        See{" "}
-        <a
-          href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          OBR EFO November 2025
-        </a>{" "}
-        for full methodology.
+        PolicyEngine estimates are static: they leave out behavioural
+        responses, which the OBR's post-behavioural costings include.
       </p>
     </div>
   );

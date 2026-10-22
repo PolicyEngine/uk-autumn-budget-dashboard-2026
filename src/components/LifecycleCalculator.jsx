@@ -185,6 +185,7 @@ function LifecycleCalculator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRealTerms, setShowRealTerms] = useState(true);
+  const [showAbout, setShowAbout] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAge, setModalAge] = useState(null);
   const [modalActiveTab, setModalActiveTab] = useState("summary");
@@ -1419,73 +1420,94 @@ function LifecycleCalculator() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
             </div>
+            {/* About this model: an expandable row, collapsed by default. The
+                values below are the lifecycle model's own
+                (uk_budget_data/lifecycle_calculator.py). */}
+            <div className="methodology">
+              <button
+                type="button"
+                className="methodology-toggle"
+                aria-expanded={showAbout}
+                aria-controls="lifecycle-about"
+                onClick={() => setShowAbout((value) => !value)}
+              >
+                About this model
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  style={{ transform: showAbout ? "rotate(180deg)" : "none" }}
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              {showAbout && (
+                <div id="lifecycle-about" className="methodology-content">
+                  <p>
+                    Estimates the lifetime change in take-home pay for a graduate
+                    who starts work at 22, from the selected policies, allowing
+                    for earnings growth, tax thresholds and student loan
+                    repayments.
+                  </p>
+
+                  <h4>Policies modelled</h4>
+                  <ul>
+                    <li>
+                      <strong>Rail fare freeze</strong>: regulated fares held for
+                      one year in 2026.
+                    </li>
+                    <li>
+                      <strong>Fuel duty</strong>: the 5p cut kept longer, then
+                      phased rises.
+                    </li>
+                    <li>
+                      <strong>Threshold freeze</strong>: income tax thresholds
+                      frozen until 2030-31.
+                    </li>
+                    <li>
+                      <strong>Unearned income tax</strong>: tax on dividends,
+                      savings and property income up 5%.
+                    </li>
+                    <li>
+                      <strong>Salary sacrifice cap</strong>: £2,000 a year, from
+                      2029.
+                    </li>
+                    <li>
+                      <strong>Student loan threshold</strong>: Plan 2 frozen at
+                      £27,295, 2027-28 to 2029-30.
+                    </li>
+                    <li>
+                      <strong>Two-child limit</strong>: removed from 2026.
+                    </li>
+                  </ul>
+
+                  <h4>Assumptions</h4>
+                  <ul>
+                    <li>Work starts at 22 on the chosen salary.</li>
+                    <li>
+                      Earnings rise with age to 2.2 times the starting salary by
+                      50.
+                    </li>
+                    <li>
+                      CPI and RPI follow the OBR forecast, then 2% and 2.39%.
+                    </li>
+                  </ul>
+                  <p>
+                    Positive values mean higher net income under the policies;
+                    negative values mean lower.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Methodology section */}
-          <div className="methodology">
-            <h3>About this model</h3>
-            <p>
-              This tool estimates the lifetime financial impact of recent UK
-              budget policy changes on a graduate entering the workforce. It
-              models how various reforms affect take-home pay from age 22 until
-              retirement, accounting for earnings growth, tax thresholds, and
-              student loan repayments.
-            </p>
-
-            <h4>Policy reforms modelled</h4>
-            <ul>
-              <li>
-                <strong>Rail fare freeze</strong> — One-year freeze on rail
-                fares in 2026, saving commuters the RPI increase they would
-                otherwise have paid.
-              </li>
-              <li>
-                <strong>Fuel duty reform</strong> — The 5p cut extended to
-                August 2026, then phased increases.
-              </li>
-              <li>
-                <strong>Income tax threshold freeze</strong> — Extension of the
-                freeze on personal allowance (£12,570) and basic rate threshold
-                (£50,270) until 2030.
-              </li>
-              <li>
-                <strong>Unearned income tax increase</strong> — 5% increase in
-                tax on dividends, savings interest, and property income.
-              </li>
-              <li>
-                <strong>Salary sacrifice cap</strong> — £2,000 annual cap on
-                salary sacrifice for pensions from April 2029.
-              </li>
-              <li>
-                <strong>Student loan threshold freeze</strong> — Plan 2
-                repayment threshold frozen at £27,295 from 2027-2030.
-              </li>
-              <li>
-                <strong>Two-child limit abolition</strong> — Removal of the
-                two-child benefit limit from April 2026.
-              </li>
-            </ul>
-
-            <h4>Assumptions</h4>
-            <ul>
-              <li>
-                Graduate starts work at age 22 with the specified starting
-                salary.
-              </li>
-              <li>
-                Earnings grow with age following typical career progression,
-                plateauing at 2.2x starting salary from age 50.
-              </li>
-              <li>
-                CPI inflation follows OBR forecasts then 2% long-term; RPI
-                follows OBR forecasts then 2.39% long-term.
-              </li>
-              <li>
-                Positive values (green) indicate the reform makes you better
-                off; negative (red) means worse off.
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
 

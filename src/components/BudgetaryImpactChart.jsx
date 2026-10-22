@@ -36,7 +36,11 @@ import {
 } from "../utils/chartTheme";
 import "./BudgetaryImpactChart.css";
 import "./ChartExport.css";
-import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
+import {
+  FIRST_DISPLAY_YEAR,
+  LAST_DISPLAY_YEAR,
+  NOT_YET_PUBLISHED,
+} from "../utils/displayYears";
 
 // Net impact labels, one per year, as on the 2025 dashboard: the signed
 // total in a small white tag. A tag sits just above the year's stack of
@@ -49,7 +53,7 @@ const formatNetLabel = (value) =>
 function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!show || !xAxis?.scale || !yAxis?.scale) return null;
+  if (!xAxis?.scale || !yAxis?.scale) return null;
   const fontSize = narrow ? 11 : 12;
   const gap = 6;
   const tagHeight = fontSize + 8;
@@ -66,11 +70,22 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
           0,
         );
         const net = point.netImpact;
-        const text = formatNetLabel(net);
-        const width = Math.ceil(text.length * fontSize * 0.6) + 10;
+        const unpublished = point.unpublished || net === null || net === undefined;
+        // Net tags show with two or more measures; a not-yet-published tag
+        // always shows, so the empty year is never read as zero.
+        if (!show && !unpublished) return null;
+        const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
+        // On a phone the not-yet-published tag takes two lines to fit its band
+        const lines =
+          unpublished && narrow ? ["Not yet", "published"] : [text];
+        const longest = Math.max(...lines.map((line) => line.length));
+        const width = Math.ceil(longest * fontSize * 0.6) + 10;
+        const height = tagHeight + (lines.length - 1) * (fontSize + 2);
         const x = xAxis.scale(point.year) + band / 2;
-        const top =
-          net >= 0
+        // A year not yet published has no bars: its tag sits on the zero line
+        const top = unpublished
+          ? yAxis.scale(0) - height / 2
+          : net >= 0
             ? yAxis.scale(gains) - gap - tagHeight
             : yAxis.scale(costs) + gap;
         return (
@@ -79,23 +94,27 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
               x={x - width / 2}
               y={top}
               width={width}
-              height={tagHeight}
+              height={height}
               rx={4}
               ry={4}
-              fill="#ffffff"
+              fill={unpublished ? "#F9FAFB" : "#ffffff"}
               stroke="#D1D5DB"
               strokeWidth={1}
             />
             <text
               x={x}
-              y={top + tagHeight / 2}
-              fill="#111827"
+              y={top + height / 2 - ((lines.length - 1) * (fontSize + 2)) / 2}
+              fill={unpublished ? "#6B7280" : "#111827"}
               fontSize={fontSize}
-              fontWeight={600}
+              fontWeight={unpublished ? 500 : 600}
               textAnchor="middle"
               dominantBaseline="central"
             >
-              {text}
+              {lines.map((line, index) => (
+                <tspan key={line} x={x} dy={index === 0 ? 0 : fontSize + 2}>
+                  {line}
+                </tspan>
+              ))}
             </text>
           </g>
         );
@@ -184,7 +203,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     <div className="budgetary-impact-chart">
       <div className="chart-header">
         <div>
-          <h2>Revenue impact</h2>
+          <h3>Revenue impact</h3>
           <p className="chart-description">
             This chart shows the annual budgetary impact from{" "}
             {fiscalYearTick(FIRST_DISPLAY_YEAR)} to{" "}

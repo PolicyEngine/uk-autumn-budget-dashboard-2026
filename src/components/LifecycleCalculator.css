@@ -244,12 +244,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Gains teal, losses amber, as across the dashboard */
 .summary-value.positive {
-  color: #15803d;
+  color: var(--pe-teal-700);
 }
 
 .summary-value.negative {
-  color: #b91c1c;
+  color: #b45309;
 }
 
 /* Chart container */
@@ -423,11 +424,11 @@
 }
 
 .tooltip-value.positive {
-  color: #22c55e;
+  color: var(--pe-teal-700);
 }
 
 .tooltip-value.negative {
-  color: #ef4444;
+  color: #b45309;
 }
 
 .tooltip-total {
@@ -676,11 +677,11 @@
 }
 
 .calc-result.positive {
-  color: #16a34a;
+  color: var(--pe-teal-700);
 }
 
 .calc-result.negative {
-  color: #dc2626;
+  color: #b45309;
 }
 
 /* Modal responsive */
@@ -726,4 +727,43 @@
   width: 80px;
   height: auto;
   margin-left: auto;
+}
+
+/* About this model: an in-card expander, with the one rule above it */
+.chart-container .methodology {
+  margin-top: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--card-border);
+  border-radius: 0;
+}
+
+.methodology-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.methodology-toggle:hover {
+  color: var(--pe-teal-700);
+}
+
+.methodology-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.methodology-content {
+  padding: 0 0 20px;
 }

@@ -16,6 +16,7 @@ describe("YearSlider", () => {
       "2028-29",
       "2029-30",
       "2030-31",
+      "2031-32",
     ]);
     expect(options[2]).toHaveAttribute("aria-selected", "true");
   });

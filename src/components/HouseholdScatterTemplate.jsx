@@ -58,9 +58,9 @@ function HouseholdScatterTemplate({ selectedYear = 2029 }) {
     <div className="household-scatter-template">
       <div className="chart-header">
         <div>
-          <h2>
+          <h3>
             <NoBreakYear text={chartTitle} />
-          </h2>
+          </h3>
           <p className="chart-description">
             Each bubble is a group of households with similar baseline incomes
             and income changes; its size shows how many.

@@ -8,6 +8,7 @@ import {
   householdIncomeCsv,
   lifecycleCsv,
   revenueCsv,
+  unpublishedCsv,
 } from "./chartCsv";
 
 /** Lines of a CSV, without the byte-order mark and final line break. */
@@ -125,5 +126,32 @@ describe("chart CSV downloads", () => {
     expect(header.split(",").at(-1)).toBe("net_policy_impact");
     expect(row.split(",")[0]).toBe("22");
     expect(row.split(",").at(-1)).toBe("8.25");
+  });
+});
+
+describe("years not yet published", () => {
+  it("are a note in the revenue CSV, never a row of zeros", () => {
+    const data = [
+      { year: 2030, "Measure A": 1.5, netImpact: 1.5 },
+      { year: 2031, unpublished: true, netImpact: null },
+    ];
+    const rows = lines(revenueCsv(data, ["Measure A"]));
+    expect(rows.slice(2)).toEqual([
+      "Fiscal year,Measure A,Net impact",
+      "2030-31,1.5,1.5",
+      "# 2031-32: Not yet published",
+    ]);
+  });
+
+  it("give a year-specific CSV its header and a not-published line", () => {
+    const text = unpublishedCsv(
+      decileCsv([{ decile: "1st", netChange: 0 }], [], { kind: "absolute", year: 2031 }),
+    );
+    expect(lines(text)).toEqual([
+      '"# Absolute impact by income decile, 2031-32"',
+      expect.stringMatching(/^"# Units: /),
+      "Income decile,Net change",
+      "# Not yet published",
+    ]);
   });
 });

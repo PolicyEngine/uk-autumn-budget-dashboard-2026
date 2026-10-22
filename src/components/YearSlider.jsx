@@ -132,20 +132,14 @@ function YearSlider({ selectedYear, onYearChange }) {
         }
         onClick={handleToggle}
       >
-        {isPlaying ? (
-          <>
-            <span className="year-picker-value">▶ {label(selectedYear)}</span>
-            <span className="year-picker-pause">❚❚ Pause</span>
-          </>
-        ) : (
-          <>
-            <span className="year-picker-label">Year</span>
-            <span className="year-picker-value">{label(selectedYear)}</span>
-            <span className="policy-selector-icon" aria-hidden="true">
-              {open ? "▲" : "▼"}
-            </span>
-          </>
-        )}
+        {/* The same parts as the policy pill: badge, label, chevron */}
+        <span className="policy-selector-count year-picker-badge">
+          {label(selectedYear)}
+        </span>
+        <span className="policy-selector-label">{isPlaying ? "playing" : "year"}</span>
+        <span className="policy-selector-icon" aria-hidden="true">
+          {isPlaying ? "❚❚" : open ? "▲" : "▼"}
+        </span>
       </button>
 
       {open && (

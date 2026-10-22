@@ -14,8 +14,9 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
 import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { householdChangeCsv } from "../utils/chartCsv";
+import { householdChangeCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import "./EmploymentIncomeDiffChart.css";
 import "./ChartExport.css";
@@ -50,6 +51,8 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
 
   const chartTitle = `Net income change, ${formatYearRange(selectedYear)}`;
 
+  // The income curve file covers this year only if it has rows for it
+  const published = data.length > 0;
   const exportName = `net-income-change-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -64,7 +67,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
   const downloads = {
     csv: () =>
       downloadFile(
-        householdChangeCsv(data, { year: selectedYear }),
+        published
+          ? householdChangeCsv(data, { year: selectedYear })
+          : unpublishedCsv(householdChangeCsv(data, { year: selectedYear })),
         `${exportName}.csv`,
         "text/csv;charset=utf-8",
       ),
@@ -72,6 +77,11 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
       downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
     svg: handleExportSvg,
   };
+  // A year not yet published has only its (empty) CSV to download
+  if (!published) {
+    delete downloads.png;
+    delete downloads.svg;
+  }
 
   useEffect(() => {
     // Load income curve data from CSV
@@ -161,9 +171,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
   if (loading) {
     return (
       <div className="employment-income-diff-chart">
-        <h2>
+        <h3>
             <NoBreakYear text={chartTitle} />
-          </h2>
+          </h3>
         <p className="chart-description">
           This chart shows the change in household net income for a household
           with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
@@ -188,9 +198,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
     <div className="employment-income-diff-chart">
       <div className="chart-header">
         <div>
-          <h2>
+          <h3>
             <NoBreakYear text={chartTitle} />
-          </h2>
+          </h3>
           <p className="chart-description">
             This chart shows the change in household net income for a household
             with 2 adults (both age 40) and 3 children (ages 7, 5, and 3). The
@@ -201,97 +211,104 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 380 : 430}>
-          <AreaChart
-            data={data}
-            margin={
-              narrow
-                ? { top: 12, right: 20, left: 0, bottom: 34 }
-                : // Bottom space matches the legend (and logo row) of the
-                  // chart beside it, so the two x-axes line up.
-                  { top: 16, right: 24, left: 8, bottom: 76 }
-            }
-          >
-            <CartesianGrid {...GRID_PROPS} />
-            <XAxis
-              dataKey="employment"
-              type="number"
-              axisLine={AXIS_LINE}
-              tickLine={false}
-              label={{
-                value: "Household head employment income",
-                position: "insideBottom",
-                offset: 4,
-                style: AXIS_TITLE_STYLE,
-              }}
-              tickFormatter={formatCurrency}
-              tick={TICK_STYLE}
-              height={48}
-              ticks={[0, 20000, 40000, 60000, 80000, 100000]}
-              domain={[0, 100000]}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              label={
+        {published ? (
+          <ResponsiveContainer width="100%" height={narrow ? 380 : 430}>
+            <AreaChart
+              data={data}
+              margin={
                 narrow
-                  ? undefined
-                  : {
-                      value: "Change in net income",
-                      angle: -90,
-                      position: "insideLeft",
-                      dx: 6,
-                      style: AXIS_TITLE_STYLE,
-                    }
+                  ? { top: 12, right: 20, left: 0, bottom: 34 }
+                  : // Bottom space matches the legend (and logo row) of the
+                    // chart beside it, so the two x-axes line up.
+                    { top: 16, right: 24, left: 8, bottom: 76 }
               }
-              tickFormatter={formatCurrency}
-              tick={TICK_STYLE}
-              width={narrow ? 52 : 76}
-              domain={[-yMax, yMax]}
-            />
-            <Tooltip
-              formatter={(value, name) => [
-                formatCurrency(value),
-                "Income change",
-              ]}
-              labelFormatter={(label) =>
-                `Employment income: ${formatCurrency(label)}`
-              }
-              contentStyle={TOOLTIP_CONTENT_STYLE}
-              labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
-            />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
-            {hasPositive && (
-              <Area
-                type="monotone"
-                dataKey="positive"
-                stroke="#319795"
-                strokeWidth={2}
-                fill="#319795"
-                fillOpacity={0.6}
-                baseValue={0}
-                connectNulls={false}
-                animationDuration={500}
-                animationBegin={0}
+            >
+              <CartesianGrid {...GRID_PROPS} />
+              <XAxis
+                dataKey="employment"
+                type="number"
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                label={{
+                  value: "Household head employment income",
+                  position: "insideBottom",
+                  offset: 4,
+                  style: AXIS_TITLE_STYLE,
+                }}
+                tickFormatter={formatCurrency}
+                tick={TICK_STYLE}
+                height={48}
+                ticks={[0, 20000, 40000, 60000, 80000, 100000]}
+                domain={[0, 100000]}
               />
-            )}
-            {hasNegative && (
-              <Area
-                type="monotone"
-                dataKey="negative"
-                stroke="#D97706"
-                strokeWidth={2}
-                fill="#D97706"
-                fillOpacity={0.6}
-                baseValue={0}
-                connectNulls={false}
-                animationDuration={500}
-                animationBegin={0}
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                label={
+                  narrow
+                    ? undefined
+                    : {
+                        value: "Change in net income",
+                        angle: -90,
+                        position: "insideLeft",
+                        dx: 6,
+                        style: AXIS_TITLE_STYLE,
+                      }
+                }
+                tickFormatter={formatCurrency}
+                tick={TICK_STYLE}
+                width={narrow ? 52 : 76}
+                domain={[-yMax, yMax]}
               />
-            )}
-            <Customized component={PolicyEngineLogo} />
-          </AreaChart>
-        </ResponsiveContainer>
+              <Tooltip
+                formatter={(value, name) => [
+                  formatCurrency(value),
+                  "Income change",
+                ]}
+                labelFormatter={(label) =>
+                  `Employment income: ${formatCurrency(label)}`
+                }
+                contentStyle={TOOLTIP_CONTENT_STYLE}
+                labelStyle={{ fontWeight: 600, marginBottom: "4px" }}
+              />
+              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              {hasPositive && (
+                <Area
+                  type="monotone"
+                  dataKey="positive"
+                  stroke="#319795"
+                  strokeWidth={2}
+                  fill="#319795"
+                  fillOpacity={0.6}
+                  baseValue={0}
+                  connectNulls={false}
+                  animationDuration={500}
+                  animationBegin={0}
+                />
+              )}
+              {hasNegative && (
+                <Area
+                  type="monotone"
+                  dataKey="negative"
+                  stroke="#D97706"
+                  strokeWidth={2}
+                  fill="#D97706"
+                  fillOpacity={0.6}
+                  baseValue={0}
+                  connectNulls={false}
+                  animationDuration={500}
+                  animationBegin={0}
+                />
+              )}
+              <Customized component={PolicyEngineLogo} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <UnpublishedPlot
+            height={narrow ? 380 : 430}
+            yearLabel={formatYearRange(selectedYear)}
+          />
+        )}
       </div>
     </div>
   );

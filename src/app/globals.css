@@ -169,10 +169,14 @@ body {
   top: 0;
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
-  display: flex;
-  justify-content: space-between;
+  /* One row on a wide screen: title, tabs, then the year and policy pills
+     at the right. Narrower screens use two fixed rows (below). */
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "title tabs . year policy";
   align-items: center;
-  gap: var(--pe-space-md);
+  column-gap: 16px;
+  row-gap: 8px;
   height: var(--title-row-height);
   /* Full-bleed with real edges: the band spans the window, and its padding
      lines its content up with the page column. */
@@ -187,6 +191,11 @@ body {
 }
 
 .title-row h1 {
+  grid-area: title;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--pe-font-family);
   font-size: 1.5rem;
   font-weight: 700;
@@ -196,12 +205,60 @@ body {
   line-height: 1.15;
 }
 
-/* The band's controls: the year control, then the policy selector */
-.title-controls {
+/* The band's controls */
+.band-year {
+  grid-area: year;
+}
+
+.band-policy {
+  grid-area: policy;
+}
+
+/* The two tabs: a segmented pill like the other band controls; the active
+   one white with teal text */
+.band-tabs {
+  grid-area: tabs;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.band-tab {
+  flex: 1 1 auto;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.band-tab + .band-tab {
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.band-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.band-tab.active {
+  color: #285e61;
+  background: #ffffff;
+  font-weight: 600;
+}
+
+.band-tab:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: -4px;
+}
+
+.tab-panel {
+  padding-top: 24px;
 }
 
 .visually-hidden {
@@ -250,7 +307,8 @@ body {
   height: 24px;
   font-size: 0.8125rem;
   background: #ffffff;
-  color: var(--pe-teal-800);
+  color: #285e61;
+  font-weight: 600;
 }
 
 .title-row .policy-selector-label {
@@ -261,41 +319,6 @@ body {
   font-size: 0.625rem;
 }
 
-/* Tabs under the title */
-.page-header {
-  margin: 16px 0 28px;
-}
-
-.tab-navigation {
-  display: flex;
-  gap: 24px;
-}
-
-.tab-button {
-  padding: 10px 0;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--pe-gray-500);
-  cursor: pointer;
-  transition: color var(--pe-transition-fast),
-    border-color var(--pe-transition-fast);
-}
-
-.tab-button:hover {
-  color: var(--pe-gray-800);
-}
-
-.tab-button.active {
-  color: var(--pe-teal-700);
-  border-bottom-color: var(--pe-teal-500);
-  font-weight: 600;
-}
-
-.tab-button:focus-visible,
 .obr-toggle-button:focus-visible,
 .policy-details-toggle:focus-visible {
   outline: 2px solid var(--pe-teal-500);
@@ -307,7 +330,7 @@ body {
   font-size: 1.0625rem;
   color: var(--pe-gray-600);
   line-height: 1.6;
-  margin: 0 0 24px 0;
+  margin: 0;
 }
 
 .dashboard-intro a {
@@ -360,6 +383,27 @@ body {
   background: var(--pe-teal-800);
 }
 
+/* Section headings: a title and a subtitle on the page, above the
+   section's cards */
+.section-heading {
+  margin: 48px 0 16px;
+}
+
+.section-heading h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--pe-gray-800);
+}
+
+.section-heading p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
 /* Sections */
 .report-section {
   scroll-margin-top: calc(var(--title-row-height) + 16px);
@@ -367,7 +411,7 @@ body {
 
 .hero-chart {
   padding: var(--card-padding);
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .charts-grid > div {
@@ -407,7 +451,7 @@ body {
     .map-header,
     .household-scatter-template
   )
-  h2 {
+  h3 {
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.35;
@@ -437,7 +481,7 @@ body {
   display: contents;
 }
 
-.main-content .chart-header h2 {
+.main-content .chart-header h3 {
   grid-column: 1;
   grid-row: 1;
   align-self: center;
@@ -474,7 +518,7 @@ body {
 .obr-expandable,
 .policy-details-footer,
 .main-content .geography-methodology {
-  margin: 0 0 20px;
+  margin: 0;
   padding: 0 var(--card-padding);
 }
 
@@ -555,7 +599,7 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: stretch;
-  margin: 0 0 20px;
+  margin: 0;
 }
 
 .charts-grid > div {
@@ -599,7 +643,7 @@ body {
   }
 
   /* Row 1: title | Download. Row 2: description. */
-  .charts-grid > div:not(:only-child) h2 {
+  .charts-grid > div:not(:only-child) h3 {
     grid-column: 1;
     grid-row: 1;
     align-self: center;
@@ -728,6 +772,26 @@ body {
   padding-top: 0;
 }
 
+/* A chart's plot for a year not yet published */
+.unpublished-plot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pe-gray-50);
+  border-radius: 8px;
+}
+
+.unpublished-plot p {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
 /* Card rows for charts drawn outside Recharts (map, scatter template) */
 .chart-controls:empty {
   min-height: 0;
@@ -774,8 +838,11 @@ body {
   border-radius: 0;
 }
 
-.main-content .hero-chart .obr-expandable {
+/* The only rules inside cards: one above each in-card expander */
+.main-content .hero-chart .obr-expandable,
+.main-content .chart-footer {
   margin-top: 16px;
+  border-top: 1px solid var(--card-border);
 }
 
 /* PolicyEngine logo under a table or chart drawn outside Recharts */
@@ -852,12 +919,26 @@ body {
   }
 }
 
+/* Below 1100px the band has two fixed rows: the title and the pills, then
+   the tabs across the width. One height, stuck or not. */
+@media (max-width: 1099px) {
+  :root {
+    --title-row-height: 112px;
+  }
+
+  .title-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "title year policy"
+      "tabs tabs tabs";
+    align-content: center;
+  }
+}
+
 @media (max-width: 768px) {
   :root {
     --card-padding: 16px;
-    /* Two fixed rows on a phone: the title, then the year and policy
-       controls. One height always, so nothing moves on scroll. */
-    --title-row-height: 96px;
+    --title-row-height: 100px;
   }
 
   .main-content {
@@ -868,38 +949,50 @@ body {
     padding-inline: 16px;
   }
 
-  /* One compact row on a phone: the title, and the selector reduced to
-     its count (its accessible name stays "Select policies"), with its list
-     spanning the row. */
+  /* Two fixed rows on a phone: the title and the policy pill, then the
+     tabs and the year pill. */
+  .title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title policy"
+      "tabs year";
+    column-gap: 8px;
+  }
+
   .title-row h1 {
     font-size: 1.125rem;
   }
 
-  .title-row {
-    flex-wrap: wrap;
-    align-content: center;
-    row-gap: 8px;
+  .band-tabs {
+    height: 36px;
   }
 
-  /* The personal tab has no band controls: one row */
-  .title-row:not(:has(> .title-controls)) {
-    height: 52px;
+  .band-tabs {
+    min-width: 0;
   }
 
-  .title-row h1 {
-    flex: 1 1 100%;
+  .band-tab {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    overflow: hidden;
   }
 
-  .title-controls {
-    flex: 1 1 100%;
-    justify-content: flex-start;
-    gap: 8px;
+  .band-year .year-picker-toggle {
+    gap: 4px;
+    padding: 0 10px 0 4px;
   }
 
-  .title-controls > .policy-selector {
-    flex: 0 0 auto;
+  .band-year .year-picker-badge {
+    padding: 0 7px;
+  }
+
+  /* The pills' lists span the band */
+  .band-policy .policy-selector,
+  .band-year .year-picker {
     position: static;
-    margin-left: auto;
   }
 
   .title-row .policy-selector-toggle {
@@ -908,13 +1001,6 @@ body {
     height: 34px;
     gap: 6px;
     padding: 0 12px 0 5px;
-  }
-
-  .title-row h1 {
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .title-row .policy-selector-label {
@@ -960,6 +1046,23 @@ body {
   .preset-button {
     width: 100%;
   }
+}
+
+/* Replication line above the footer: a thin rule across the column,
+   small muted centred text */
+.replication-line {
+  margin: 40px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+  text-align: center;
+}
+
+.replication-line a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
 }
 
 /* Compact site footer (see SiteFooter.jsx): one row on desktop, in place of

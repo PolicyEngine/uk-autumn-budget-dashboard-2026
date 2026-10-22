@@ -13,7 +13,8 @@ import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
 import YearSlider from "./components/YearSlider";
-import { displayRows } from "./utils/displayYears";
+import ReplicationLine from "./components/ReplicationLine";
+import { DISPLAY_YEARS } from "./utils/displayYears";
 
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
@@ -99,6 +100,16 @@ const PRESETS = [
 // scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
+
+/** A section's title and one-line subtitle, on the page above its cards. */
+function SectionHeading({ title, subtitle }) {
+  return (
+    <div className="section-heading">
+      <h2>{title}</h2>
+      <p>{subtitle}</p>
+    </div>
+  );
+}
 
 function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
@@ -437,53 +448,78 @@ function App() {
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
+
+          {/* The two tabs, as a segmented control in the band */}
+          <div
+            className="band-tabs"
+            role="tablist"
+            aria-label="Dashboard views"
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              const next = activeTab === "dashboard" ? "personal" : "dashboard";
+              handleTabChange(next);
+              document.getElementById(`tab-${next}`)?.focus();
+            }}
+          >
+            {[
+              ["dashboard", "Population impact"],
+              ["personal", "Personal impact"],
+            ].map(([tab, name]) => (
+              <button
+                key={tab}
+                id={`tab-${tab}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab}
+                aria-controls={`panel-${tab}`}
+                tabIndex={activeTab === tab ? 0 : -1}
+                className={`band-tab ${activeTab === tab ? "active" : ""}`}
+                onClick={() => handleTabChange(tab)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+
           {activeTab === "dashboard" && (
-            <div className="title-controls">
+            <>
               {/* The year applies to every chart below the revenue chart,
                   which highlights it; it lives in the band so it can be
                   changed from anywhere on the page. */}
-              <YearSlider
-                selectedYear={distributionalYear}
-                onYearChange={setDistributionalYear}
-              />
-              <PolicySelector
-                policies={POLICIES}
-                selectedPolicies={selectedPolicies}
-                onPolicyToggle={handlePolicyToggle}
-              />
-            </div>
+              <div className="band-year">
+                <YearSlider
+                  selectedYear={distributionalYear}
+                  onYearChange={setDistributionalYear}
+                />
+              </div>
+              <div className="band-policy">
+                <PolicySelector
+                  policies={POLICIES}
+                  selectedPolicies={selectedPolicies}
+                  onPolicyToggle={handlePolicyToggle}
+                />
+              </div>
+            </>
           )}
         </div>
 
-        <header className="page-header">
-
-          {/* Tab navigation */}
-          <div className="tab-navigation" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "dashboard"}
-              className={`tab-button ${activeTab === "dashboard" ? "active" : ""}`}
-              onClick={() => handleTabChange("dashboard")}
-            >
-              Population impact
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "personal"}
-              className={`tab-button ${activeTab === "personal" ? "active" : ""}`}
-              onClick={() => handleTabChange("personal")}
-            >
-              Personal impact
-            </button>
-          </div>
-        </header>
-
         {activeTab === "personal" ? (
-          <PersonalImpactTab />
+          <div
+            id="panel-personal"
+            role="tabpanel"
+            aria-labelledby="tab-personal"
+            className="tab-panel"
+          >
+            <PersonalImpactTab />
+          </div>
         ) : (
-          <>
+          <div
+            id="panel-dashboard"
+            role="tabpanel"
+            aria-labelledby="tab-dashboard"
+            className="tab-panel"
+          >
             {/* Dashboard description */}
             <p className="dashboard-intro">
               Explore the fiscal and distributional impacts of potential UK
@@ -525,9 +561,21 @@ function App() {
                 {results && (
                   <>
                     {/* Hero Chart: Revenue Impact */}
+                    <SectionHeading
+                      title="Public finances"
+                      subtitle="Net effect of the selected policies on government revenue and spending, by year."
+                    />
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
-                        data={displayRows(results.budgetData)}
+                        data={DISPLAY_YEARS.map(
+                          (year) =>
+                            results.budgetData.find((point) => point.year === year) ?? {
+                              // In the config, not yet in the published files
+                              year,
+                              netImpact: null,
+                              unpublished: true,
+                            },
+                        )}
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the card */}
@@ -568,6 +616,10 @@ function App() {
                     </section>
 
                     {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
+                    <SectionHeading
+                      title="Households by income"
+                      subtitle="How net income changes across the income distribution in the selected year."
+                    />
                     <section
                       id="deciles"
                       className="report-section distributional-section"
@@ -592,6 +644,10 @@ function App() {
                         scatter stays withdrawn, as it showed survey
                         households one by one. Results by region are hidden
                         for now (RegionView is kept, not rendered). */}
+                    <SectionHeading
+                      title="Where and who"
+                      subtitle="Average change by constituency, and how changes vary between households."
+                    />
                     <section
                       id="constituencies"
                       className="report-section charts-grid charts-row-2"
@@ -607,6 +663,10 @@ function App() {
                     </section>
 
                     {/* Row 3: Net Income Analysis Charts */}
+                    <SectionHeading
+                      title="Example household"
+                      subtitle="A family with two adults and three children, across a range of earnings."
+                    />
                     <section
                       id="household"
                       className="report-section charts-grid charts-row-3"
@@ -622,6 +682,10 @@ function App() {
                     </section>
 
                     {/* Policy Details Footer */}
+                    <SectionHeading
+                      title="Policies"
+                      subtitle="What each selected policy does and how it is modelled."
+                    />
                     <section
                       id="policy-details"
                       className="report-section policy-details-footer"
@@ -674,8 +738,9 @@ function App() {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
+        <ReplicationLine />
       </main>
     </div>
   );

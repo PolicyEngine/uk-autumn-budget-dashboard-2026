@@ -33,35 +33,42 @@
   font-weight: 500;
 }
 
+/* OBR basis: a compact segmented control */
 .toggle-buttons {
   display: flex;
-  border: 1px solid #d1d5db;
+  height: 32px;
+  border: 1px solid var(--pe-gray-300);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .toggle-btn {
-  padding: 6px 14px;
+  padding: 0 12px;
+  font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
-  background: white;
+  background: var(--pe-surface);
   border: none;
-  color: #6b7280;
+  color: var(--pe-gray-600);
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .toggle-btn:first-child {
-  border-right: 1px solid #d1d5db;
+  border-right: 1px solid var(--pe-gray-300);
 }
 
 .toggle-btn:hover:not(.active) {
-  background: #f3f4f6;
+  background: var(--pe-gray-50);
 }
 
 .toggle-btn.active {
-  background: #319795;
-  color: white;
+  background: var(--pe-teal-700);
+  color: #ffffff;
+}
+
+.toggle-btn:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
 }
 
 .comparison-table-wrapper {
@@ -258,4 +265,15 @@
 /* The PE header opens its row, so the first-column rule must not left-align it */
 .comparison-table th.source-header {
   text-align: right;
+}
+
+/* The difference key, one inline line */
+.comparison-legend {
+  display: block;
+  margin: 0 0 8px;
+}
+
+.comparison-legend .legend-item {
+  display: inline-flex;
+  margin-right: 10px;
 }

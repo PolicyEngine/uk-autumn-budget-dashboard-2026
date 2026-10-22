@@ -31,7 +31,14 @@ export function formatCsvNumber(value, decimals = 4) {
  * @param {Array<Object>} spec.rows - One object per row, keyed by column key
  * @returns {string}
  */
-export function buildChartCsv({ title, units, source = CSV_SOURCE, columns, rows }) {
+export function buildChartCsv({
+  title,
+  units,
+  source = CSV_SOURCE,
+  columns,
+  rows,
+  notes = [],
+}) {
   const cell = (column, row) => {
     const value = row[column.key];
     if (column.decimals !== undefined) return formatCsvNumber(value, column.decimals);
@@ -42,6 +49,7 @@ export function buildChartCsv({ title, units, source = CSV_SOURCE, columns, rows
     csvField(`# Units: ${units} | Source: ${source}`),
     columns.map((column) => csvField(column.label)).join(","),
     ...rows.map((row) => columns.map((column) => cell(column, row)).join(",")),
+    ...notes.map((note) => csvField(`# ${note}`)),
   ];
   return `﻿${lines.join("\r\n")}\r\n`;
 }
@@ -67,7 +75,13 @@ export function revenueCsv(data, policyNames) {
       ...policyNames.map((name) => ({ key: name, label: name, decimals: 4 })),
       { key: "netImpact", label: "Net impact", decimals: 4 },
     ],
-    rows: data.map((point) => ({ ...point, fiscal_year: fiscalYear(point.year) })),
+    // A year not yet published is a note, never a row of zeros
+    rows: data
+      .filter((point) => !point.unpublished)
+      .map((point) => ({ ...point, fiscal_year: fiscalYear(point.year) })),
+    notes: data
+      .filter((point) => point.unpublished)
+      .map((point) => `${fiscalYear(point.year)}: Not yet published`),
   });
 }
 
@@ -169,4 +183,14 @@ export function lifecycleCsv(data, reformKeys, { real }) {
       net_policy_impact: reformKeys.reduce((sum, key) => sum + (row[key] || 0), 0),
     })),
   });
+}
+
+/**
+ * A year-specific chart's CSV for a year not yet published: the title,
+ * units and header, then a "# Not yet published" line, and no rows.
+ */
+export function unpublishedCsv(csvText) {
+  const lines = csvText.replace(/\r\n$/, "").split("\r\n");
+  const header = lines.slice(0, 3);
+  return `${[...header, "# Not yet published"].join("\r\n")}\r\n`;
 }

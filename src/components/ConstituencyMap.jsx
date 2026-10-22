@@ -591,9 +591,9 @@ export default function ConstituencyMap({
       <div className="map-header">
         <div className="chart-header">
           <div>
-            <h2>
+            <h3>
               {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
-            </h2>
+            </h3>
             <p className="chart-description">
               The average change in household net income in each constituency.
               Each one is coloured by the size of its change when its 90%

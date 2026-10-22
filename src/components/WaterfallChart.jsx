@@ -16,8 +16,9 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
 import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { decileCsv } from "../utils/chartCsv";
+import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { POLICY_COLORS } from "../utils/policyConfig";
 import "./WaterfallChart.css";
@@ -174,7 +175,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   if (!rawData || rawData.length === 0) {
     return (
       <div className="waterfall-chart">
-        <h2>Absolute impact by income decile</h2>
+        <h3>Absolute impact by income decile</h3>
         <p className="chart-description">
           This chart shows the absolute change in net income by decile, measured
           in pounds per year.
@@ -224,6 +225,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
 
   const chartTitle = `Absolute impact by income decile, ${formatYearRange(selectedYear)}`;
 
+  const published = (rawData ?? []).some(
+    (row) => parseInt(row.year) === selectedYear,
+  );
   const exportName = `absolute-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -241,7 +245,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const downloads = {
     csv: () =>
       downloadFile(
-        decileCsv(data, selectedPolicyNames, { kind: "absolute", year: selectedYear }),
+        published
+          ? decileCsv(data, selectedPolicyNames, { kind: "absolute", year: selectedYear })
+          : unpublishedCsv(decileCsv(data, selectedPolicyNames, { kind: "absolute", year: selectedYear })),
         `${exportName}.csv`,
         "text/csv;charset=utf-8",
       ),
@@ -249,14 +255,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
     svg: handleExportSvg,
   };
+  // A year not yet published has only its (empty) CSV to download
+  if (!published) {
+    delete downloads.png;
+    delete downloads.svg;
+  }
 
   return (
     <div className="waterfall-chart">
       <div className="chart-header">
         <div>
-          <h2>
+          <h3>
             <NoBreakYear text={chartTitle} />
-          </h2>
+          </h3>
           <p className="chart-description">
             This chart shows the absolute change in net income by decile,
             measured in pounds per year. This represents the actual cash amount
@@ -267,125 +278,132 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
-          <ComposedChart
-            data={data}
-            margin={chartMargin(narrow, { left: 64 })}
-            stackOffset="sign"
-          >
-            <CartesianGrid {...GRID_PROPS} />
-            <XAxis
-              dataKey="decile"
-              tick={TICK_STYLE}
-              axisLine={AXIS_LINE}
-              tickLine={false}
-              interval={0}
-              height={44}
-              label={{
-                value: "Income decile",
-                position: "insideBottom",
-                offset: 2,
-                style: AXIS_TITLE_STYLE,
-              }}
-            />
-            <YAxis
-              domain={yAxisDomain}
-              tickFormatter={formatCurrency}
-              tick={TICK_STYLE}
-              width={narrow ? 52 : 60}
-              axisLine={false}
-              tickLine={false}
-              label={
-                narrow
-                  ? undefined
-                  : {
-                      value: "Average change per household (£)",
-                      angle: -90,
-                      position: "insideLeft",
-                      dx: -16,
-                      style: AXIS_TITLE_STYLE,
-                    }
-              }
-              ticks={(() => {
-                const [min, max] = yAxisDomain;
-                const range = max - min;
-                let interval = 100;
-                if (range > 1000) interval = 250;
-                if (range > 2000) interval = 500;
-                if (range > 5000) interval = 1000;
-                const ticks = [];
-                for (let i = min; i <= max + 0.001; i += interval) {
-                  ticks.push(Math.round(i));
-                }
-                if (!ticks.includes(0)) ticks.push(0);
-                return ticks.sort((a, b) => a - b);
-              })()}
-            />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
-            <Tooltip
-              formatter={(value, name) => [
-                formatCurrency(value),
-                name === "netChange" ? "Net change" : name,
-              ]}
-              labelFormatter={(label) => `Decile: ${label}`}
-              contentStyle={TOOLTIP_CONTENT_STYLE}
-              wrapperStyle={{
-                top: "-120px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-              cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
-            />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              align="center"
-              iconType="rect"
-              iconSize={10}
-              formatter={(value) => (
-                <span style={legendLabelStyle(narrow)}>{value}</span>
-              )}
-              payload={[
-                ...activePolicies.map((name) => ({
-                  value: name,
-                  type: "rect",
-                  color: POLICY_COLORS[name],
-                })),
-                ...(activePolicies.length > 1
-                  ? [
-                      {
-                        value: "Net change",
-                        type: "line",
-                        color: "#000000",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-            {ALL_POLICY_NAMES.map((policyName) => (
-              <Bar
-                key={policyName}
-                dataKey={policyName}
-                fill={POLICY_COLORS[policyName]}
-                name={policyName}
-                stackId="stack"
-                animationDuration={500}
-                animationBegin={0}
-                hide={!hasNonZeroValues(policyName)}
+        {published ? (
+          <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
+            <ComposedChart
+              data={data}
+              margin={chartMargin(narrow, { left: 64 })}
+              stackOffset="sign"
+            >
+              <CartesianGrid {...GRID_PROPS} />
+              <XAxis
+                dataKey="decile"
+                tick={TICK_STYLE}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                interval={0}
+                height={44}
+                label={{
+                  value: "Income decile",
+                  position: "insideBottom",
+                  offset: 2,
+                  style: AXIS_TITLE_STYLE,
+                }}
               />
-            ))}
-            <Line
-              type="monotone"
-              dataKey="netChange"
-              stroke="#000000"
-              strokeWidth={2}
-              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
-              name="netChange"
-              animationDuration={500}
-              hide={activePolicies.length <= 1}
-            />
-            <Customized component={PolicyEngineLogo} />
-          </ComposedChart>
-        </ResponsiveContainer>
+              <YAxis
+                domain={yAxisDomain}
+                tickFormatter={formatCurrency}
+                tick={TICK_STYLE}
+                width={narrow ? 52 : 60}
+                axisLine={false}
+                tickLine={false}
+                label={
+                  narrow
+                    ? undefined
+                    : {
+                        value: "Average change per household (£)",
+                        angle: -90,
+                        position: "insideLeft",
+                        dx: -16,
+                        style: AXIS_TITLE_STYLE,
+                      }
+                }
+                ticks={(() => {
+                  const [min, max] = yAxisDomain;
+                  const range = max - min;
+                  let interval = 100;
+                  if (range > 1000) interval = 250;
+                  if (range > 2000) interval = 500;
+                  if (range > 5000) interval = 1000;
+                  const ticks = [];
+                  for (let i = min; i <= max + 0.001; i += interval) {
+                    ticks.push(Math.round(i));
+                  }
+                  if (!ticks.includes(0)) ticks.push(0);
+                  return ticks.sort((a, b) => a - b);
+                })()}
+              />
+              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <Tooltip
+                formatter={(value, name) => [
+                  formatCurrency(value),
+                  name === "netChange" ? "Net change" : name,
+                ]}
+                labelFormatter={(label) => `Decile: ${label}`}
+                contentStyle={TOOLTIP_CONTENT_STYLE}
+                wrapperStyle={{
+                  top: "-120px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+                cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
+              />
+              <Legend
+                wrapperStyle={legendWrapperStyle(narrow)}
+                align="center"
+                iconType="rect"
+                iconSize={10}
+                formatter={(value) => (
+                  <span style={legendLabelStyle(narrow)}>{value}</span>
+                )}
+                payload={[
+                  ...activePolicies.map((name) => ({
+                    value: name,
+                    type: "rect",
+                    color: POLICY_COLORS[name],
+                  })),
+                  ...(activePolicies.length > 1
+                    ? [
+                        {
+                          value: "Net change",
+                          type: "line",
+                          color: "#000000",
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+              {ALL_POLICY_NAMES.map((policyName) => (
+                <Bar
+                  key={policyName}
+                  dataKey={policyName}
+                  fill={POLICY_COLORS[policyName]}
+                  name={policyName}
+                  stackId="stack"
+                  animationDuration={500}
+                  animationBegin={0}
+                  hide={!hasNonZeroValues(policyName)}
+                />
+              ))}
+              <Line
+                type="monotone"
+                dataKey="netChange"
+                stroke="#000000"
+                strokeWidth={2}
+                dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
+                name="netChange"
+                animationDuration={500}
+                hide={activePolicies.length <= 1}
+              />
+              <Customized component={PolicyEngineLogo} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          <UnpublishedPlot
+            height={narrow ? 620 : 480}
+            yearLabel={formatYearRange(selectedYear)}
+          />
+        )}
       </div>
     </div>
   );

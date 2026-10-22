@@ -16,8 +16,9 @@ import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
 import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { decileCsv } from "../utils/chartCsv";
+import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { POLICY_COLORS } from "../utils/policyConfig";
 import "./DistributionalChart.css";
@@ -189,7 +190,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   if (!rawData || rawData.length === 0) {
     return (
       <div className="distributional-chart">
-        <h2>Relative impact by income decile</h2>
+        <h3>Relative impact by income decile</h3>
         <p className="chart-description">
           This chart shows the percentage change in net income by decile,
           displaying the proportional impact relative to baseline income.
@@ -232,6 +233,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
 
   const chartTitle = `Relative impact by income decile, ${formatYearRange(selectedYear)}`;
 
+  const published = (rawData ?? []).some(
+    (row) => parseInt(row.year) === selectedYear,
+  );
   const exportName = `relative-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -249,7 +253,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   const downloads = {
     csv: () =>
       downloadFile(
-        decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear }),
+        published
+          ? decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear })
+          : unpublishedCsv(decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear })),
         `${exportName}.csv`,
         "text/csv;charset=utf-8",
       ),
@@ -257,14 +263,19 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
     svg: handleExportSvg,
   };
+  // A year not yet published has only its (empty) CSV to download
+  if (!published) {
+    delete downloads.png;
+    delete downloads.svg;
+  }
 
   return (
     <div className="distributional-chart">
       <div className="chart-header">
         <div>
-          <h2>
+          <h3>
             <NoBreakYear text={chartTitle} />
-          </h2>
+          </h3>
           <p className="chart-description">
             This chart shows the percentage change in net income by decile,
             displaying the proportional impact relative to baseline income.
@@ -275,125 +286,132 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
-          <ComposedChart
-            data={data}
-            margin={chartMargin(narrow, { left: 64 })}
-            stackOffset="sign"
-          >
-            <CartesianGrid {...GRID_PROPS} />
-            <XAxis
-              dataKey="decile"
-              tickFormatter={formatDecile}
-              tick={TICK_STYLE}
-              axisLine={AXIS_LINE}
-              tickLine={false}
-              interval={0}
-              height={44}
-              label={{
-                value: "Income decile",
-                position: "insideBottom",
-                offset: 2,
-                style: AXIS_TITLE_STYLE,
-              }}
-            />
-            <YAxis
-              domain={yAxisDomain}
-              width={narrow ? 52 : 60}
-              axisLine={false}
-              tickLine={false}
-              label={
-                narrow
-                  ? undefined
-                  : {
-                      value: "Percentage change in net income (%)",
-                      angle: -90,
-                      position: "insideLeft",
-                      dx: -16,
-                      style: AXIS_TITLE_STYLE,
-                    }
-              }
-              tickFormatter={formatPercent}
-              tick={TICK_STYLE}
-              ticks={(() => {
-                const [min, max] = yAxisDomain;
-                const range = max - min;
-                let interval = 0.5;
-                if (range > 4) interval = 1;
-                if (range > 10) interval = 2;
-                const ticks = [];
-                for (let i = min; i <= max + 0.001; i += interval) {
-                  ticks.push(Math.round(i * 10) / 10);
-                }
-                if (!ticks.includes(0)) ticks.push(0);
-                return ticks.sort((a, b) => a - b);
-              })()}
-            />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
-            <Tooltip
-              formatter={(value, name) => [
-                formatPercent(value),
-                name === "netChange" ? "Net change" : name,
-              ]}
-              labelFormatter={(label) => `${label} decile`}
-              contentStyle={TOOLTIP_CONTENT_STYLE}
-              wrapperStyle={{
-                top: "-120px",
-                left: "50%",
-                transform: "translateX(-50%)",
-              }}
-              cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
-            />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              align="center"
-              iconType="rect"
-              iconSize={10}
-              formatter={(value) => (
-                <span style={legendLabelStyle(narrow)}>{value}</span>
-              )}
-              payload={[
-                ...activePolicies.map((name) => ({
-                  value: name,
-                  type: "rect",
-                  color: POLICY_COLORS[name],
-                })),
-                ...(activePolicies.length > 1
-                  ? [
-                      {
-                        value: "Net change",
-                        type: "line",
-                        color: "#000000",
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-            {ALL_POLICY_NAMES.map((policyName) => (
-              <Bar
-                key={policyName}
-                dataKey={policyName}
-                fill={POLICY_COLORS[policyName]}
-                name={policyName}
-                stackId="stack"
-                animationDuration={500}
-                animationBegin={0}
-                hide={!hasNonZeroValues(policyName)}
+        {published ? (
+          <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
+            <ComposedChart
+              data={data}
+              margin={chartMargin(narrow, { left: 64 })}
+              stackOffset="sign"
+            >
+              <CartesianGrid {...GRID_PROPS} />
+              <XAxis
+                dataKey="decile"
+                tickFormatter={formatDecile}
+                tick={TICK_STYLE}
+                axisLine={AXIS_LINE}
+                tickLine={false}
+                interval={0}
+                height={44}
+                label={{
+                  value: "Income decile",
+                  position: "insideBottom",
+                  offset: 2,
+                  style: AXIS_TITLE_STYLE,
+                }}
               />
-            ))}
-            <Line
-              type="monotone"
-              dataKey="netChange"
-              stroke="#000000"
-              strokeWidth={2}
-              dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
-              name="netChange"
-              animationDuration={500}
-              hide={activePolicies.length <= 1}
-            />
-            <Customized component={PolicyEngineLogo} />
-          </ComposedChart>
-        </ResponsiveContainer>
+              <YAxis
+                domain={yAxisDomain}
+                width={narrow ? 52 : 60}
+                axisLine={false}
+                tickLine={false}
+                label={
+                  narrow
+                    ? undefined
+                    : {
+                        value: "Percentage change in net income (%)",
+                        angle: -90,
+                        position: "insideLeft",
+                        dx: -16,
+                        style: AXIS_TITLE_STYLE,
+                      }
+                }
+                tickFormatter={formatPercent}
+                tick={TICK_STYLE}
+                ticks={(() => {
+                  const [min, max] = yAxisDomain;
+                  const range = max - min;
+                  let interval = 0.5;
+                  if (range > 4) interval = 1;
+                  if (range > 10) interval = 2;
+                  const ticks = [];
+                  for (let i = min; i <= max + 0.001; i += interval) {
+                    ticks.push(Math.round(i * 10) / 10);
+                  }
+                  if (!ticks.includes(0)) ticks.push(0);
+                  return ticks.sort((a, b) => a - b);
+                })()}
+              />
+              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <Tooltip
+                formatter={(value, name) => [
+                  formatPercent(value),
+                  name === "netChange" ? "Net change" : name,
+                ]}
+                labelFormatter={(label) => `${label} decile`}
+                contentStyle={TOOLTIP_CONTENT_STYLE}
+                wrapperStyle={{
+                  top: "-120px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                }}
+                cursor={{ fill: "rgba(49, 151, 149, 0.1)" }}
+              />
+              <Legend
+                wrapperStyle={legendWrapperStyle(narrow)}
+                align="center"
+                iconType="rect"
+                iconSize={10}
+                formatter={(value) => (
+                  <span style={legendLabelStyle(narrow)}>{value}</span>
+                )}
+                payload={[
+                  ...activePolicies.map((name) => ({
+                    value: name,
+                    type: "rect",
+                    color: POLICY_COLORS[name],
+                  })),
+                  ...(activePolicies.length > 1
+                    ? [
+                        {
+                          value: "Net change",
+                          type: "line",
+                          color: "#000000",
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+              {ALL_POLICY_NAMES.map((policyName) => (
+                <Bar
+                  key={policyName}
+                  dataKey={policyName}
+                  fill={POLICY_COLORS[policyName]}
+                  name={policyName}
+                  stackId="stack"
+                  animationDuration={500}
+                  animationBegin={0}
+                  hide={!hasNonZeroValues(policyName)}
+                />
+              ))}
+              <Line
+                type="monotone"
+                dataKey="netChange"
+                stroke="#000000"
+                strokeWidth={2}
+                dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
+                name="netChange"
+                animationDuration={500}
+                hide={activePolicies.length <= 1}
+              />
+              <Customized component={PolicyEngineLogo} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          <UnpublishedPlot
+            height={narrow ? 620 : 480}
+            yearLabel={formatYearRange(selectedYear)}
+          />
+        )}
       </div>
     </div>
   );

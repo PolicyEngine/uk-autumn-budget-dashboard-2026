@@ -143,9 +143,9 @@ function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] 
     >
       <div className="chart-header">
         <div>
-          <h2 id={titleId}>
+          <h3 id={titleId}>
             {TITLE}, <span className="nowrap">{yearLabel}</span>
-          </h2>
+          </h3>
           <p className="chart-description">
             The average change in household net income in each region and
             nation, with its 90% interval. Figures are rounded to the precision

@@ -9,23 +9,10 @@
   min-width: 0;
 }
 
-.year-picker-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-.year-picker-value {
-  font-size: 0.875rem;
-  font-weight: 600;
+/* The year in the badge: the policy pill's count badge, widened */
+.year-picker-badge {
+  padding: 0 10px;
   font-variant-numeric: tabular-nums;
-}
-
-.year-picker-pause {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding-left: 8px;
-  border-left: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .year-picker-dropdown {
@@ -104,10 +91,6 @@
 }
 
 @media (max-width: 768px) {
-  .year-picker-label {
-    display: none;
-  }
-
   .year-picker-dropdown {
     right: auto;
     left: 0;
