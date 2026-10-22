@@ -64,6 +64,30 @@ def modifier_artifact(world, modifier=module_level_modifier, **kwargs):
     )
 
 
+def combined_artifact(world, manifest, references):
+    records = []
+    for reference in references:
+        execution = read_receipt(reference.path)["execution_receipt"]
+        records.append(
+            {
+                "id": reference.key,
+                "baseline": execution["baseline"],
+                "reform": execution["reform"],
+            }
+        )
+    return world.write(
+        "combined--alpha+beta",
+        {2027: -2, 2028: -4},
+        members=records,
+        measure_ids=["alpha", "beta"],
+        member_outputs={
+            key: entry.outputs_sha256
+            for key, entry in manifest.measures.items()
+        },
+        modifier_templates={"baseline": [], "reform": [None]},
+    )
+
+
 def record_for(document, **updates):
     record = {
         "measure_id": document["dashboard"]["key"],
@@ -236,6 +260,35 @@ def test_an_empty_limit_registry_releases_all_modifiers(world, monkeypatch):
     approve(manifest, "alpha", "Approver", **args(world))
 
 
+def test_check_rejects_an_unreleased_manifest_receipt_without_a_hold(
+    world, monkeypatch
+):
+    released = modifier_artifact(world)
+    release = attest(released)
+    current = modifier_artifact(world)
+    monkeypatch.setattr(data_limits, "DATA_LIMITS", ())
+    assert not a.requires_attestation(read_receipt(current.path))
+    assert release.receipt_sha256 != a.receipt_document_sha256(
+        read_receipt(current.path)
+    )
+    manifest = m.Manifest()
+    stage(manifest, current.path, provisional=True, **args(world))
+    assert check(manifest, **args(world)) == []
+    m.save_manifest(manifest, world.data_root)
+
+    # Hand-editing the manifest must not claim these two people released
+    # the current generation when they only released its predecessor.
+    path = world.data_root / m.MANIFEST_FILE
+    document = json.loads(path.read_text())
+    document["measures"]["alpha"]["attestation"] = release.model_dump()
+    path.write_text(json.dumps(document))
+    edited = m.load_manifest(world.data_root)
+    assert check(edited, **args(world)) == [
+        "alpha: the entry's attestation is invalid: "
+        "attestation does not match the current receipt"
+    ]
+
+
 def test_revoking_or_changing_a_release_invalidates_the_manifest(world):
     reference = modifier_artifact(world)
     attest(reference)
@@ -258,27 +311,7 @@ def test_a_combined_run_with_a_handwritten_member_is_held(world):
     manifest = m.Manifest()
     for reference in (alpha, beta):
         stage(manifest, reference.path, **args(world))
-    records = []
-    for reference in (alpha, beta):
-        execution = read_receipt(reference.path)["execution_receipt"]
-        records.append(
-            {
-                "id": reference.key,
-                "baseline": execution["baseline"],
-                "reform": execution["reform"],
-            }
-        )
-    combined = world.write(
-        "combined--alpha+beta",
-        {2027: -2, 2028: -4},
-        members=records,
-        measure_ids=["alpha", "beta"],
-        member_outputs={
-            key: entry.outputs_sha256
-            for key, entry in manifest.measures.items()
-        },
-        modifier_templates={"baseline": [], "reform": [None]},
-    )
+    combined = combined_artifact(world, manifest, (alpha, beta))
     with pytest.raises(PublishError, match="attestations/combined--alpha"):
         stage(manifest, combined.path, **args(world))
     attest(combined)
@@ -286,6 +319,30 @@ def test_a_combined_run_with_a_handwritten_member_is_held(world):
     (a.ATTESTATIONS_ROOT / "alpha.json").unlink()
     with pytest.raises(PublishError, match="member alpha: held"):
         stage(manifest, combined.path, **args(world))
+
+
+def test_a_combined_run_rechecks_members_current_committed_attestations(world):
+    alpha = modifier_artifact(world)
+    original_release = attest(alpha)
+    beta = world.ready("beta", VALUES)
+    manifest = m.Manifest()
+    for reference in (alpha, beta):
+        stage(manifest, reference.path, **args(world))
+    combined = combined_artifact(world, manifest, (alpha, beta))
+    attest(combined)
+    stage(manifest, combined.path, **args(world))
+
+    updated_release = attest(alpha, second="Another reviewer")
+    assert updated_release != original_release
+    assert manifest.measures["alpha"].attestation == original_release
+    with pytest.raises(
+        PublishError, match="member alpha's attestation changed; restage it"
+    ):
+        stage(manifest, combined.path, **args(world))
+
+    stage(manifest, alpha.path, **args(world))
+    assert manifest.measures["alpha"].attestation == updated_release
+    stage(manifest, combined.path, **args(world))
 
 
 names = st.text(alphabet="aAbB ßSΣςéÉ", min_size=1, max_size=15).filter(
