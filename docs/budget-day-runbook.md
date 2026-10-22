@@ -606,7 +606,7 @@ policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK defaul
 
 Until a row is re-measured, don't quote its figures.
 
-## Data limitations: say these wherever a measure depends on them
+## Data and model limitations: say these wherever a measure depends on them
 
 The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`), and a third, on capital gains tax, on uk-data 1.59.1 (below). The data line has since changed (see "The data line changed" above): once they are re-measured on the adopted Microcosm build, state the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
 
@@ -624,7 +624,22 @@ W5 re-measured on the same file for 2025:
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
-**Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
+**Model gaps the UK hub found (22 October).** These are from the UK hub's Budget-relevance triage of 22 October, relayed by the coordinator. Most are limits of the model; #1911, #1912 and #547 also need data the survey doesn't hold. They apply on any adopted pair until a fix lands. **Say each one wherever a figure depends on it.** Figures come from the hub's report once it's written; don't quote any until then.
+- **AHC absolute poverty runs high.** From 2025-26 both absolute poverty lines rise by headline OBR CPI. HBAI's after-housing-costs deflator is CPI excluding housing, which the model carries but doesn't use for the poverty lines. Headline CPI is above that series in every year to 2030, so the AHC absolute line, and AHC absolute poverty with it, runs high. Disclose this wherever AHC absolute poverty appears.
+- **Capital gains tax runs above the OBR's receipts** in 2026-27 (policyengine-uk #2272). It inflates the leading CGT measure, aligning CGT rates with income tax rates.
+- **The CGT behavioural response adds nothing back to income tax** (policyengine-uk #1982).
+  - **At an elasticity of 1,** the total is netted, but the split between CGT and income tax is wrong.
+  - **At an elasticity that assumes an income tax offset,** such as the OBR's 3.6, the offset is missed, so the total is wrong as well as the split.
+  - **On 6.10.0,** policyengine-uk 2.132.6 costs statically by default: its elasticities are 0 (its separate BADR elasticity applies only when switched on). So the gap appears only when a response is switched on. An elasticity of 1 is the default from #2419.
+  - **Disclose it with the elasticity used.**
+- **Projected years have no ageing** (policyengine-uk #1929). They copy the data year, with one population factor growing every weight. So State Pension spending grows more slowly than DWP projects over 2025-26 to 2030-31, which understates the State Pension baseline and the later-year costs of `pension_uprating` measures.
+- **The High Value Council Tax Surcharge covers owner-occupied main homes only:** let properties, second homes and company-held homes aren't charged (policyengine-uk #2171). There's no deferral or support scheme either (#2492).
+- **Housing Benefit for supported and temporary accommodation isn't modelled** (policyengine-uk #1911).
+- **Universal Credit has no transitional element for managed migrants** (policyengine-uk #1912).
+- **Universal Credit doesn't exclude full-time students** (policyengine-uk #2346).
+- **Children aged 9 to 11 months get no working-parent childcare hours** (policyengine-uk-data #547): the data store whole-year ages.
+
+**Where they go:** the data limitations describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The model gaps can also reach a household answer wherever the household has the circumstance, for example a full-time student claiming UC. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
 ## Briefing (overnight, by 07:00)
 
