@@ -44,7 +44,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 | Every public file checked for disclosure; the household scatter withdrawn from public paths | #30 | **Merged** 15 October (María, UK-24) |
 | Results by region and constituency, through the disclosure layer | #48 | **Merged** 16 October (María, UK-24) |
 | Results by area on the Microcosm data pair | #59 | Draft, opened 19 October (María) |
-| Measures the certified data cannot cost (the SDLT higher rates, non-residential purchases) published as not computable, never as £0 | #51 | Draft, in independent review. To merge on the gates before the rehearsal |
+| Measures the certified data cannot cost (the SDLT higher rates, non-residential purchases) published as not computable, never as £0 | #51 | **Merged** 21 October |
 | Production Vercel project | Created 12 October | Deploys `main` at every merge (below) |
 | `policyengine.org/uk/autumn-budget-2026` | PolicyEngine/policyengine-app-v2#1249 | Draft until the page shows real, gated 2026 numbers |
 | Runbook | [`budget-day-runbook.md`](budget-day-runbook.md) | Draft, yours to rewrite |
@@ -118,19 +118,23 @@ public/data/
     budgetary_impact.csv  distributional_impact.csv  winners_losers.csv
     metrics.csv  income_curve.csv  household_scatter_binned.csv
     receipt.json  reconciliation.json
+    (a not-computable artifact: receipt.json alone)
 ```
 
 - **No household rows.** #30 (15 October) withdrew the household scatter from every public path: one row per survey household, with its id and weight, is unit-record data under the UK Data Service licence. An artifact carries the scatter binned only, in `household_scatter_binned.csv`: the weighted number of households in each £5,000 baseline income band × £100 income change band, outer bands open-ended, cells with fewer than 10 survey households left out, counts rounded to the nearest 1,000. The sampler reads and writes only in the private directory.
 - **Results by area** come from the disclosure layer (#48), not from the artifacts.
+- **Not computable.** A measure the certified data cannot cost (#51), or a combined run including one, is written as `receipt.json` alone: its receipt lists no files, so no figure is published, even as a file. Its entry is listed with its reason, and its name comes from the receipt.
 - **Generation.** `uk-budget-data generate` writes a new, immutable artifact directory for each measure it runs, and for each combined set it is asked for. It never touches existing directories, so a single-measure run cannot overwrite or erase another measure's numbers.
+- **Clearing up.** `publish review-rows` deletes everything under `public/data/artifacts/` that no current manifest entry names, with its review rows, before it writes the new ones. So stage an artifact before writing the review rows, or it goes, and don't write them while a `generate` is running.
 - **Publishing.** `uk-budget-data publish` is the only command that writes `manifest.json`. It validates first, then replaces the file in one step. Each deploy is one git commit, so the public page switches all at once.
 - **Entry status:**
   - `staged`: recorded in the manifest, not shown;
   - `approved`;
   - `provisional`: statement figures only, labelled on the page;
   - `stale`: set automatically, for example when a member of a combined run changes;
-  - `withdrawn`.
-- **Corrections.** A correction stages a complete new run. The superseded entry stays in the manifest for audit, as in drill 3.
+  - `withdrawn`;
+  - `not_computable`: listed with its reason, never with a figure, and never approved.
+- **Corrections.** A correction stages a complete new run. The superseded entry stays in the manifest for audit, as in drill 3. Its artifact is deleted from `public/` the next time the review rows are written.
 
 ## Receipts
 
@@ -150,6 +154,7 @@ Every digest is computed over RFC 8785 canonical JSON, so Python and the browser
 
 **2. Dashboard fields:**
 - measure IDs, and for a combined run each member's reform and baseline digests;
+- the name the page shows, which the entry and any tables must also carry;
 - per-file hashes;
 - the git commit, and whether the working tree was clean;
 - the command that produced it;

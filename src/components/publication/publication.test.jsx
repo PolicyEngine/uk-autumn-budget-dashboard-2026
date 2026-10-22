@@ -14,9 +14,11 @@ import {
 } from "../../test/publicationFixture";
 
 const manifest = parseManifest(fixtureJson("manifest.json"));
+// A not-computable entry's artifact is its receipt alone: it has no tables.
 const tablesByKey = Object.fromEntries(
-  Object.entries({ ...manifest.measures, ...manifest.combined }).map(
-    ([key, entry]) => [
+  Object.entries({ ...manifest.measures, ...manifest.combined })
+    .filter(([, entry]) => entry.status !== "not_computable")
+    .map(([key, entry]) => [
       key,
       Object.fromEntries(
         ["budgetary_impact", "metrics"].map((table) => [
@@ -24,8 +26,7 @@ const tablesByKey = Object.fromEntries(
           parseTable(table, fixtureText(`${entry.artifact}/${table}.csv`)),
         ]),
       ),
-    ],
-  ),
+    ]),
 );
 const names = {
   alpha: "Alpha",
@@ -158,10 +159,25 @@ describe("FiscalSummary", () => {
 });
 
 describe("FiscalSummary with a measure the data cannot cost", () => {
-  it("shows a dash and the reason, never £0, though its tables hold zeros", () => {
+  it("shows a dash and the reason, never £0, even given tables of zeros", () => {
+    // Its artifact holds no tables; zeros are supplied here, as an older
+    // artifact held them, to show the page never reads them.
+    const zeros = (rows) =>
+      rows.map((row) => ({
+        ...row,
+        reform_id: "epsilon",
+        reform_name: "Epsilon",
+        value: 0,
+      }));
+    const withZeros = {
+      ...tablesByKey,
+      epsilon: {
+        budgetary_impact: zeros(tablesByKey.alpha.budgetary_impact),
+      },
+    };
     const series = fiscalSeries({
       manifest,
-      tablesByKey,
+      tablesByKey: withZeros,
       selectedIds: ["alpha", "epsilon"],
       years: [IN_DATA],
     });
@@ -176,7 +192,7 @@ describe("FiscalSummary with a measure the data cannot cost", () => {
     expect(screen.getByLabelText(reason)).toHaveTextContent("—");
     expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();
     expect(
-      tablesByKey.epsilon.budgetary_impact.every((row) => row.value === 0),
+      withZeros.epsilon.budgetary_impact.every((row) => row.value === 0),
     ).toBe(true);
   });
 });

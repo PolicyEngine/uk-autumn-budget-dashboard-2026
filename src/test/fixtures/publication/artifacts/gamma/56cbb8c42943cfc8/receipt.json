@@ -40,7 +40,7 @@
       "metrics.csv": "9c6021e1356909ceddb210d0c6de4545f0859c2d2a6d0d457ca3dee4e892b45a",
       "winners_losers.csv": "fab2ab07de228b1eaa89a06470e29789f68d5c917a63d54fbb0ca759dba68733"
     },
-    "generated_at": "2026-10-22T14:50:33.833740+00:00",
+    "generated_at": "2026-10-22T15:08:13.288584+00:00",
     "generator_argv": [
       "test"
     ],
@@ -53,6 +53,7 @@
     "members": null,
     "model_limits": [],
     "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
+    "name": "Gamma",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",

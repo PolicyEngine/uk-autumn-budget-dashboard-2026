@@ -12,18 +12,22 @@ request carries their rows. The Reconciler writes them with
 and the review list is committed with the artifacts. Each row is the
 Reconciler's attestation that they reviewed those bytes.
 
-Rows are written only for what the page displays, and only for bytes the gate
+Rows are written only for what the page lists, and only for bytes the gate
 bound:
 
 - each file of each displayed entry (approved or provisional): its
   ``receipt.json``, which the entry names by its artifact digest, and each
   file the receipt lists, by the digest the receipt records;
+- the ``receipt.json`` of each not-computable entry, which is all its
+  artifact holds: its receipt lists no files, so it binds no figures. The
+  page lists it with its reason and fetches nothing from it
+  (``src/utils/publication/load.js``), but ``publish check`` reads it, so
+  it stays in ``public/`` and needs a row;
 - ``manifest.json`` itself.
 
-Nothing else gets a row. A not-computable entry is listed on the page with
-its reason, which the manifest's row covers, and the page fetches nothing
-from its artifact (``src/utils/publication/load.js``). A staged, stale or
-withdrawn entry is not shown at all.
+Nothing else gets a row. A staged, stale or withdrawn entry is not shown at
+all. The manifest does not record who staged an entry, so ``--staged-by``
+names them whenever a provisional or not-computable entry is listed.
 
 The artifact digest covers a receipt's content except the two fields that
 describe its generation run (``receipt.VOLATILE_DASHBOARD_FIELDS``), so a
@@ -31,10 +35,19 @@ receipt must also hold nothing beyond what that digest covers, in the form
 publication writes, with those two fields shaped as a time and a command
 line. Their values are the only bytes in a row that the gate did not bind.
 
-The run refuses, and writes nothing, if any displayed file is not what the
-gate bound, if a displayed artifact holds a file its receipt does not bind
-(``reconciliation.json``, say, which the gates recompute and never read), or
-if a symbolic link lies on any path it would review.
+The run refuses, and writes and deletes nothing, if any listed file is not
+what the gate bound, if a displayed artifact holds a file its receipt does
+not bind (``reconciliation.json``, say, which the gates recompute and never
+read), if a not-computable artifact holds anything but its receipt, or if a
+symbolic link lies on any path it would review.
+
+Once nothing is refused, it deletes every path under the data root's
+``artifacts/`` that is not inside an artifact directory a current manifest
+entry names, whatever that entry's status: generated runs never staged, and
+the artifacts of superseded entries, which the manifest keeps for audit but
+no longer names, after a correction or a re-cut. Directories left empty go
+too. It never follows a symbolic link and never deletes anything outside
+``artifacts/``. Stage everything to be kept before running it.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -47,6 +60,7 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import tempfile
 import time
@@ -161,6 +175,9 @@ class Report:
     replaced: list[str] = field(default_factory=list)
     unchanged: int = 0
     removed: list[str] = field(default_factory=list)
+    # Paths under the data root's artifacts/ that no manifest entry names,
+    # deleted from disk (directories end in "/").
+    deleted: list[str] = field(default_factory=list)
     # Files under the data root left with no row: (path, why).
     unreviewed: list[tuple[str, str]] = field(default_factory=list)
     elapsed: float = 0.0
@@ -319,11 +336,20 @@ def _receipt_problems(
     if dashboard.get("key") != key:
         problems.append(f"{where}: is not {key}'s receipt")
     files, digests = dashboard.get("files"), dashboard.get("digests")
-    if (
-        not isinstance(files, dict)
-        or not files
-        or not isinstance(digests, dict)
-    ):
+    if not isinstance(files, dict) or not isinstance(digests, dict):
+        return problems + [f"{where}: does not record its files and digests"]
+    if entry.status == m.NOT_COMPUTABLE:
+        if files:
+            problems.append(
+                f"{where}: lists files, but a not-computable artifact binds "
+                "no figures"
+            )
+        if not dashboard.get("data_limits"):
+            problems.append(
+                f"{where}: records no data limit, so it is not 'not "
+                "computable'"
+            )
+    elif not files:
         return problems + [f"{where}: does not record its files and digests"]
     api, _ = receipt_api()
     if (
@@ -346,9 +372,11 @@ def _entry_rows(
     revision: int,
     problems: list[str],
 ) -> list[Row]:
-    """The rows for one displayed entry, checked against what the gate bound.
+    """The rows for one listed entry, checked against what the gate bound.
 
-    Each file is read once: the bytes checked are the bytes the row names.
+    A displayed entry gets a row for its receipt and each file it lists; a
+    not-computable one, for its receipt, which is all it may hold. Each
+    file is read once: the bytes checked are the bytes the row names.
     """
     directory = data_root / entry.artifact
     relative = directory.relative_to(root)
@@ -366,11 +394,11 @@ def _entry_rows(
         or entry.approval.outputs_sha256 != entry.outputs_sha256
     ):
         problems.append(f"{key}: its approval is not for this artifact")
-    phrase = (
-        f"approved by {responsible}"
-        if entry.status == m.APPROVED
-        else f"provisional, staged by {responsible}"
-    )
+    phrase = {
+        m.APPROVED: f"approved by {responsible}",
+        m.PROVISIONAL: f"provisional, staged by {responsible}",
+        m.NOT_COMPUTABLE: f"not computable, staged by {responsible}",
+    }[entry.status]
     tables_basis = (
         f"Gated publication: {phrase} (manifest revision {revision}); "
         "bytes bound by the receipt"
@@ -397,6 +425,16 @@ def _entry_rows(
         Row(receipt_where, RECEIPT_KIND, sha256_bytes(data), receipt_basis)
     ]
     problems.extend(_no_kind_problems(receipt_where, data))
+
+    if entry.status == m.NOT_COMPUTABLE:
+        for name in sorted(os.listdir(directory)):
+            if name != RECEIPT_FILE:
+                problems.append(
+                    f"{where}/{name}: in a not-computable artifact, which "
+                    f"holds only its {RECEIPT_FILE}; move it out of the "
+                    "repository (the gates refuse it there)"
+                )
+        return rows
 
     listed = document["dashboard"]["files"]
     for name, digest in sorted(listed.items()):
@@ -455,7 +493,7 @@ def planned_rows(
     data_root: Path = m.DATA_ROOT,
     root: Path = Path("."),
 ) -> tuple[list[Row], m.Manifest, Path]:
-    """Every row the displayed entries need, the manifest and the data root.
+    """Every row the listed entries need, the manifest and the data root.
 
     The data root is returned as found under the resolved ``root``. Raises
     ReviewRowsError, naming every problem, if any row cannot be written.
@@ -466,7 +504,9 @@ def planned_rows(
         raise ReviewRowsError(
             [f"the data root {data_root} is not under {root / PUBLIC}"]
         )
-    link = _first_link(root, relative)
+    # The artifacts directory too: the run deletes under it, and never
+    # through a link.
+    link = _first_link(root, relative / ARTIFACTS_DIR)
     if link is not None:
         raise ReviewRowsError([f"{link}: a symbolic link"])
     data_root = root / relative
@@ -478,26 +518,14 @@ def planned_rows(
         raise ReviewRowsError(problems)
     manifest = _parse_manifest(raw, where)
 
-    displayed = {
+    listed = {
         key: entry
         for key, entry in sorted(manifest.entries().items())
-        if entry.status in m.DISPLAYABLE
+        if entry.status in m.LISTED
     }
-    provisional = [
-        key
-        for key, entry in displayed.items()
-        if entry.status == m.PROVISIONAL
-    ]
     stager = _name(staged_by)
-    if provisional and not stager:
-        raise ReviewRowsError(
-            [
-                "provisional entries are displayed ("
-                + ", ".join(provisional)
-                + "); name who staged them with --staged-by (the manifest "
-                "does not record it)"
-            ]
-        )
+    if not stager:
+        _need_stager(listed)
 
     rows = [
         Row(
@@ -509,7 +537,7 @@ def planned_rows(
         )
     ]
     problems.extend(_no_kind_problems(where, raw))
-    for key, entry in displayed.items():
+    for key, entry in listed.items():
         if entry.status == m.APPROVED:
             responsible = _name(entry.approval.by if entry.approval else "")
             if not responsible:
@@ -530,6 +558,96 @@ def planned_rows(
     if problems:
         raise ReviewRowsError(problems)
     return rows, manifest, data_root
+
+
+def _need_stager(listed: dict[str, m.Entry]) -> None:
+    """Refuse when a listed entry's row must name who staged it."""
+    groups = [
+        f"{label} ({', '.join(keys)})"
+        for label, keys in (
+            (
+                "provisional entries are displayed",
+                [k for k, e in listed.items() if e.status == m.PROVISIONAL],
+            ),
+            (
+                "not-computable entries are listed",
+                [k for k, e in listed.items() if e.status == m.NOT_COMPUTABLE],
+            ),
+        )
+        if keys
+    ]
+    if groups:
+        raise ReviewRowsError(
+            [
+                " and ".join(groups) + "; name who staged them with "
+                "--staged-by (the manifest does not record it)"
+            ]
+        )
+
+
+def _unreferenced(data_root: Path, manifest: m.Manifest) -> list[Path]:
+    """Every path under ``data_root/artifacts`` outside the artifact
+    directories the manifest's current entries name, outermost first.
+
+    A path inside a named directory is kept, and so is any path on the
+    way to one, which is descended only if it is a directory and not a
+    link; anything else is returned, and a directory returned is not
+    descended. Symbolic links are never followed. Superseded entries do not
+    count: the manifest keeps them for audit, not on disk.
+    """
+    artifacts = data_root / ARTIFACTS_DIR
+    named = {
+        Path(entry.artifact).parts for entry in manifest.entries().values()
+    }
+    on_the_way = {parts[:n] for parts in named for n in range(len(parts))}
+    found = []
+
+    def visit(directory: Path) -> None:
+        for name in sorted(os.listdir(directory)):
+            path = directory / name
+            parts = path.relative_to(data_root).parts
+            if any(parts[: len(kept)] == kept for kept in named):
+                continue
+            if parts in on_the_way:
+                if path.is_dir() and not path.is_symlink():
+                    visit(path)
+                continue
+            found.append(path)
+
+    if artifacts.is_dir() and not artifacts.is_symlink():
+        visit(artifacts)
+    return found
+
+
+def _delete(paths: list[Path], data_root: Path, root: Path) -> list[str]:
+    """Delete each path, never following a link, and then every
+    directory under ``artifacts/`` the deletions left empty. Returns what
+    was deleted, by repository path, directories ending in "/"."""
+    artifacts = data_root / ARTIFACTS_DIR
+    deleted = []
+
+    def where(path: Path, directory: bool) -> str:
+        text = path.relative_to(root).as_posix()
+        return text + "/" if directory else text
+
+    for path in paths:
+        if path.is_symlink() or not path.is_dir():
+            path.unlink()
+            deleted.append(where(path, False))
+            continue
+        for directory, names, files in os.walk(path, topdown=False):
+            for name in files + names:
+                file = Path(directory) / name
+                if file.is_symlink() or not file.is_dir():
+                    deleted.append(where(file, False))
+            deleted.append(where(Path(directory), True))
+        shutil.rmtree(path)
+    for path in {p.parent for p in paths}:
+        while path != artifacts and path.is_dir() and not os.listdir(path):
+            path.rmdir()
+            deleted.append(where(path, True))
+            path = path.parent
+    return sorted(deleted)
 
 
 def read_review(path: Path) -> tuple[str, list[_Record]]:
@@ -673,13 +791,14 @@ def review_rows(
     data_root: Path = m.DATA_ROOT,
     review_csv: Path = REVIEW_CSV,
 ) -> Report:
-    """Write the review rows the manifest's displayed entries need.
+    """Write the review rows the manifest's listed entries need, after
+    deleting the artifacts no current entry names.
 
     The repository root is the review list's grandparent
     (``<root>/data_inputs/public_data_review.csv``, where both disclosure
     checks read it), and the data root must be under its ``public/``.
-    Raises ReviewRowsError, and writes nothing, if any row cannot be
-    written.
+    Raises ReviewRowsError, and writes and deletes nothing, if any row
+    cannot be written.
     """
     started = time.perf_counter()
     name = _name(reviewer)
@@ -692,13 +811,17 @@ def review_rows(
     rows, manifest, data_root = planned_rows(
         staged_by=staged_by, data_root=data_root, root=root
     )
+    report = Report(revision=manifest.revision)
+    # Only once every row is planned: a refusal deletes nothing.
+    report.deleted = _delete(
+        _unreferenced(data_root, manifest), data_root, root
+    )
 
     prefix = (data_root / ARTIFACTS_DIR).relative_to(root).as_posix() + "/"
 
     def removable(path: str) -> bool:
         return path.startswith(prefix) and not os.path.lexists(root / path)
 
-    report = Report(revision=manifest.revision)
     text = merge(
         header,
         records,
