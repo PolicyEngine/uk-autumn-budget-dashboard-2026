@@ -107,6 +107,40 @@ def test_employment_groups_take_every_status_and_name_children():
         d.employment_labels(["UNKNOWN_STATUS"])
 
 
+GROUPS_FILE = REPO / "src" / "uk_budget_data" / "demographic_groups.json"
+
+
+def test_the_pipeline_and_the_page_read_one_list_of_groups():
+    """demographic_groups.json lists each level's groups, in display order,
+    with their names: the pipeline writes those names into demographics.csv,
+    and the page checks every row against the same list."""
+    groups = json.loads(GROUPS_FILE.read_text())
+    assert list(groups) == [*d.AGE_LEVELS, d.EMPLOYMENT]
+    assert d.GROUP_NAMES == {
+        level: {group["code"]: group["name"] for group in entries}
+        for level, entries in groups.items()
+    }
+    codes = {
+        level: [group["code"] for group in entries]
+        for level, entries in groups.items()
+    }
+    assert codes[d.AGE_GROUP] == list(AGE_GROUPS)
+    assert codes[d.AGE_BAND] == [code for code, _, _ in d.AGE_BANDS]
+    assert codes[d.EMPLOYMENT] == list(
+        dict.fromkeys(d.EMPLOYMENT_GROUPS.values())
+    )
+    assert set(codes[d.YOUNG_PEOPLE]) == set(
+        d.young_people_labels(
+            [20, 20],
+            ["UNEMPLOYED", "STUDENT"],
+            ["NOT_IN_EDUCATION", "TERTIARY"],
+            [False, False],
+        )
+    )
+    package_data = (REPO / "pyproject.toml").read_text()
+    assert "demographic_groups.json" in package_data
+
+
 @pytest.mark.parametrize(
     "age, status, education, training, label",
     [
