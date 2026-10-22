@@ -534,6 +534,16 @@ W5 re-measured on the same file for 2025:
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
+**Model gaps the UK hub found (22 October).** These are from the hub's Budget-relevance triage (`~/reviews/uk-hub/budget-triage/JUDGED.md`), relayed by the coordinator. They are limits of the model, not the data, and apply on any adopted pair until a fix lands. **Say each one wherever a figure depends on it.** Figures come from the hub's report once it's written; don't quote any until then.
+- **AHC absolute poverty runs high** (S5). From 2025-26 both absolute poverty lines rise by headline OBR CPI. HBAI's after-housing-costs deflator is CPI excluding housing, which the model carries but doesn't use. Headline CPI is above that series in every year to 2030, so the AHC absolute line, and AHC absolute poverty with it, runs high. Disclose this wherever AHC absolute poverty appears.
+- **Capital gains tax runs above the OBR's receipts** in 2026-27 (policyengine-uk #2272). It inflates any CGT measure that is aligned to the OBR.
+- **Projected years have no ageing** (policyengine-uk #1929). They copy the data year, with one population factor growing every weight. So State Pension spending grows more slowly than DWP projects over 2025-26 to 2030-31, which understates the State Pension baseline and the later-year costs of `pension_uprating` measures.
+- **The High Value Council Tax Surcharge covers owner-occupied main homes only:** let properties, second homes and company-held homes aren't charged (policyengine-uk #2171). There's no deferral or support scheme either (#2492).
+- **Housing Benefit for supported and temporary accommodation isn't modelled** (policyengine-uk #1911).
+- **Universal Credit has no transitional element for managed migrants** (policyengine-uk #1912).
+- **Universal Credit doesn't exclude full-time students** (policyengine-uk #2346).
+- **Children aged 9 to 11 months get no working-parent childcare hours** (policyengine-uk-data #547): the data store whole-year ages.
+
 **Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
 ## Briefing (overnight, by 07:00)
