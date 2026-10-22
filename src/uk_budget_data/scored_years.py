@@ -25,6 +25,7 @@ from inspect import signature
 from typing import Mapping, Optional
 
 from policyengine_core.periods import Instant, instant
+from policyengine_uk.tax_benefit_system import projected_timelines
 from policyengine_uk.utils.dated_reforms import read_parameter_changes
 
 # policyengine-uk 2.132.6 (policyengine 6.10.0) reads a bare year on a
@@ -132,6 +133,12 @@ def _missing(path: str, values, scored: list[int], system, reading) -> tuple:
         ),
         None,
     )
+    if scored and path not in projected_timelines():
+        # policyengine-uk before 2.131.1 (#2404) keeps prior law's projected
+        # path for gov parameters only, so a change outside gov leaves no
+        # year from the last stated value on prior law: every scored year
+        # must be written (review of #89).
+        first = min(scored)
     if first is None:
         return ()
     return tuple(

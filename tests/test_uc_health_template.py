@@ -14,7 +14,6 @@ below pins both edges.
 """
 
 import runpy
-import warnings
 from types import SimpleNamespace
 
 import pytest
@@ -45,27 +44,26 @@ MONTHLY = 600
 def test_the_rebalanced_years_follow_the_engine_export(monkeypatch, years):
     """The export present in policyengine-uk 2.145.0 extends the builders.
 
-    Warnings from the copy are suppressed: their classes live in a module
-    named ``<run_path>``, which xdist's controller can't import to report
-    them, and they aren't what this test checks."""
+    The copy runs under the module's own name, so a warning class it raises
+    is importable where xdist's controller reports it."""
     monkeypatch.setattr(uc_reform, "REBALANCING_YEARS", years, raising=False)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        loaded = runpy.run_path(measure_templates.__file__)
-        assert list(loaded["UC_REBALANCED_YEARS"]) == list(years)
-        with pytest.raises(ValueError, match="in 2032 is not"):
-            loaded["rate_change"](UC_LCWRA_AMOUNT, {2032: MONTHLY})
-        assert loaded["uc_health_element_change"](
-            new_claimant={2032: MONTHLY}
-        ) == {UC_NEW_CLAIMANT_HEALTH: {"2032": float(MONTHLY)}}
+    loaded = runpy.run_path(
+        measure_templates.__file__, run_name=measure_templates.__name__
+    )
+    assert list(loaded["UC_REBALANCED_YEARS"]) == list(years)
+    with pytest.raises(ValueError, match="in 2032 is not"):
+        loaded["rate_change"](UC_LCWRA_AMOUNT, {2032: MONTHLY})
+    assert loaded["uc_health_element_change"](
+        new_claimant={2032: MONTHLY}
+    ) == {UC_NEW_CLAIMANT_HEALTH: {"2032": float(MONTHLY)}}
 
 
 def test_the_rebalanced_years_fall_back_for_older_engines(monkeypatch):
     """The installed older engines have no REBALANCING_YEARS export."""
     monkeypatch.delattr(uc_reform, "REBALANCING_YEARS", raising=False)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        loaded = runpy.run_path(measure_templates.__file__)
+    loaded = runpy.run_path(
+        measure_templates.__file__, run_name=measure_templates.__name__
+    )
     assert loaded["UC_REBALANCED_YEARS"] == range(2026, 2030)
 
 

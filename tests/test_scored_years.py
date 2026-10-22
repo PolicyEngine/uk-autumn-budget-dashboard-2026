@@ -276,7 +276,9 @@ def test_a_parameter_outside_gov_is_read_at_1_january():
     if scored_years.parameter_reads_calendar_years is not None:
         assert gaps == [ScoredYearGap("reform", CARBON, (2028, 2029))]
     else:
-        assert gaps == [ScoredYearGap("reform", CARBON, (2029,))]
+        # Before #2404 the engine keeps prior law's path for gov parameters
+        # only, so every scored year of a change outside gov must be written.
+        assert gaps == [ScoredYearGap("reform", CARBON, (2027, 2029))]
     assert (
         missing_scored_years(
             None, {CARBON: {"2027-01-01.2029-12-31": 1}}, [2027, 2029], system
