@@ -539,8 +539,8 @@ W5 re-measured on the same file for 2025:
 - **Capital gains tax runs above the OBR's receipts** in 2026-27 (policyengine-uk #2272). It inflates the leading CGT measure, aligning CGT rates with income tax rates.
 - **The CGT behavioural response adds nothing back to income tax** (policyengine-uk #1982).
   - **At an elasticity of 1,** the total is netted, but the split between CGT and income tax is wrong.
-  - **At other elasticities,** such as the OBR's 3.6, the offset is missed too, so the total is wrong as well as the split.
-  - **On 6.10.0,** policyengine-uk 2.132.6 costs statically by default: its elasticities are 0. So the gap appears only when a response is switched on. An elasticity of 1 is the default from #2419.
+  - **At an elasticity that assumes an income tax offset,** such as the OBR's 3.6, the offset is missed, so the total is wrong as well as the split.
+  - **On 6.10.0,** policyengine-uk 2.132.6 costs statically by default: its elasticities are 0 (its separate BADR elasticity applies only when switched on). So the gap appears only when a response is switched on. An elasticity of 1 is the default from #2419.
   - **Disclose it with the elasticity used.**
 - **Projected years have no ageing** (policyengine-uk #1929). They copy the data year, with one population factor growing every weight. So State Pension spending grows more slowly than DWP projects over 2025-26 to 2030-31, which understates the State Pension baseline and the later-year costs of `pension_uprating` measures.
 - **The High Value Council Tax Surcharge covers owner-occupied main homes only:** let properties, second homes and company-held homes aren't charged (policyengine-uk #2171). There's no deferral or support scheme either (#2492).
