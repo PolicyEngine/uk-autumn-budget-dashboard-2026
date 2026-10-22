@@ -400,6 +400,35 @@ def test_generation_refuses_a_modifier_that_edits_a_scale(
     assert processed == []  # refused before any figure is made
 
 
+def raise_every_wealth_tax_leaf(sim):
+    """Edits every leaf of both scales: eight paths, named in sorted order."""
+    for scale in SCALES:
+        for leaf in data_limits._structure(
+            sim.tax_benefit_system.parameters, scale
+        ).values():
+            leaf.update(
+                start=instant("2027-01-01"),
+                stop=instant("2028-12-31"),
+                value=1e6 if leaf.name.endswith("threshold") else 0.01,
+            )
+
+
+def test_every_leaf_a_modifier_changes_is_named_once_in_sorted_order():
+    leaves = sorted(
+        path
+        for scale in SCALES
+        for path in data_limits._structure(system.parameters, scale)
+    )
+    assert len(leaves) == 8
+    baseline = Simulation(situation=HOUSEHOLD)
+    reformed = Simulation(
+        situation=HOUSEHOLD,
+        scenario=Scenario(simulation_modifier=raise_every_wealth_tax_leaf),
+    )
+    assert wealth_tax_paths_differing(baseline, reformed) == leaves
+    assert wealth_tax_paths_differing(reformed, baseline) == leaves
+
+
 @pytest.mark.parametrize("modifier", [None, raise_the_basic_rate])
 def test_built_simulations_that_agree_on_the_scales_are_written(
     world, modifier
