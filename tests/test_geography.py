@@ -2085,6 +2085,20 @@ def test_a_release_manifest_without_artifacts_is_refused(tmp_path, content):
         g._plan(parse_args(args))
 
 
+def test_a_release_manifest_nested_too_deeply_to_read_is_refused(
+    monkeypatch, tmp_path, capsys
+):
+    # json.loads raises RecursionError, not ValueError, for nesting deeper
+    # than the interpreter's recursion limit. The command must still refuse
+    # the manifest with its one-line error instead of a traceback.
+    from uk_budget_data.cli import parse_args
+
+    args = role_plan_args(tmp_path, "microcosm-national")
+    (tmp_path / "release_manifest.json").write_text("[" * 100_000)
+    with pytest.raises(ValueError, match="release manifest.*is not JSON"):
+        g._plan(parse_args(args))
+
+
 def test_a_release_manifest_is_for_a_microcosm_file(tmp_path):
     from uk_budget_data.cli import parse_args
 
