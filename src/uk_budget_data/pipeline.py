@@ -11,8 +11,10 @@ import h5py
 import pandas as pd
 import policyengine as pe
 from policyengine_uk import Microsimulation
+from policyengine_uk.system import system
 from policyengine_uk.utils.scenario import Scenario
 from rich.console import Console
+from rich.markup import escape
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from uk_budget_data import data_limits, model_limits
@@ -29,6 +31,7 @@ from uk_budget_data.calculators import (
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+from uk_budget_data.scored_years import missing_scored_years
 
 console = Console()
 
@@ -310,6 +313,19 @@ class DataPipeline:
                 # Create simulations
                 baseline_scenario = reform.baseline_scenario_for(self.config)
                 reform_scenario = reform.to_scenario()
+                # Generation refuses a measure that leaves out a scored
+                # year of an uprated amount; this flat path has no gate, so
+                # it says so loudly and runs it.
+                for gap in missing_scored_years(
+                    getattr(baseline_scenario, "parameter_changes", None),
+                    reform_scenario.parameter_changes,
+                    self.config.years,
+                    system,
+                ):
+                    console.print(
+                        f"[bold red]WARNING[/bold red] {escape(reform.id)}: "
+                        f"{escape(gap.reason)} Generation refuses it."
+                    )
 
                 # Built under data_limits.building, so a modifier that
                 # reads a limited input while its simulation is built
