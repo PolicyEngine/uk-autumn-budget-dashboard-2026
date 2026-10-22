@@ -22,8 +22,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Last production deployment ID, the rollback target: record before every merge on the day.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
-  - Serving revision and image: record after the last deploy before the day. On 19 October it is `uk-budget-api-2026-00018-xuv` (git `5324080`; policyengine 6.6.0, policyengine-uk 2.130.1, core 3.33.0), deployed on 16 October.
-  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 177 s on `00018-xuv`. So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures.
+  - Serving revision and image: record after the last deploy before the day. On 22 October it is `uk-budget-api-2026-00020-pal` (git `ff217d3`; policyengine 6.10.0, policyengine-uk 2.132.6, core 3.33.3), deployed on 22 October after #72. Each re-cut redeploys it (see "Rolling re-cuts" below).
+  - **How long one household answer takes.** One full `/api/personal-impact` request covers six years and eight measures. Cloud Run serves it on 2 CPUs with a 300 s request timeout, and the deploy's smoke test makes the same request. Timings on Cloud Run are under "Deploy and roll back once" below: 77 to 183 s on `00020-pal` (6.10.0), as on `00018-xuv` (6.6.0). So every visitor waits more than a minute for a household answer on the day, and a route that gets slower fails the smoke test and never takes traffic. Don't loosen the smoke test or raise the timeout to get a deploy through. Time #3's route against these figures.
   - **Deploy through GitHub Actions**, not from a laptop: the "Deploy the household API" workflow (#28), action `deploy`, on `main`. It needs no one's gcloud login: it authenticates through Workload Identity Federation, with the grants made on 15 October (Max, d1538). It runs the same Cloud Build pipeline as the command below, waits for it, and checks that the live `/api/version` names the commit. Push deploys stay off until the repository variable `API_DEPLOY_ON_PUSH` is `true` (your call: `main`'s household route has passed the smoke test since 15 October).
   - **Fallback only**, if Actions is down: the same deploy from a laptop, as an exact archive of a commit already pushed to `main`. It needs a gcloud login that can re-authenticate, which failed twice in the week of 12 October. Run it from an up-to-date checkout of `main`, and submit **that checkout's** `cloudbuild.yaml`, never the archive's own. An older commit's copy lacks the one-deploy-at-a-time lock and the traffic check. To deploy an older commit, change `commit` and keep the config:
 
@@ -86,24 +86,25 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | 15 October, `759c0a6` | 38765842833 | `00014-coj`, replacing `00012-ruy` | #46: each request spread over the instance's vCPUs |
     | 16 October, `5482ca6` | 38867243746 | `00016-tes`, replacing `00014-coj` | #49: workers stopped for certain; policyengine 6.5.0 |
     | 16 October, `5324080` | 38960332978 | `00018-xuv`, replacing `00016-tes` | policyengine 6.6.0 (#56) |
+    | 22 October, `ff217d3` | 39698257053 | `00020-pal`, replacing `00018-xuv` | policyengine 6.10.0 (#72): Microcosm data 0.1.0, policyengine-uk 2.132.6 |
 
-  - **Live and rollback target, 19 October:** `00018-xuv` is live. The rollback target is `00016-tes`, the revision it replaced, which passed the smoke test when it was deployed.
+  - **Live and rollback target, 22 October:** `00020-pal` is live. The rollback target is `00018-xuv` (policyengine 6.6.0), the revision it replaced, which passed the smoke test when it was deployed.
   - **The household route can exceed 2 GiB.** Cloud Run killed two instances for exceeding the 2 GiB limit. Those are the only two such kills since 12 October, from the coordinator's read of the logs:
     - `00004-fur` at 12:40:03Z (2050 MiB), which gave step 2's 503;
     - `00003-jic` at 10:09:59Z (2054 MiB), during the first deploy's smoke test, so that 504 may have been memory as well as the 300 s limit.
 
     One full request, or a later request on an instance that has already run some (policyengine-core keeps what each build registers), could pass 2 GiB then. A smoke test or a rollback can therefore fail on memory, and retrying is not a fix. The memory setting is in the capacity decision going to Max.
-  - **Memory since #49:** the `read-api-memory.yml` workflow (#54) read a peak of 0.62 of 2 GiB on `00016-tes` and 0.65 on `00018-xuv` (p99 per minute, over the timing runs below), with no out-of-memory kills.
+  - **Memory since #49:** the `read-api-memory.yml` workflow (#54) read a peak of 0.62 of 2 GiB on `00016-tes`, 0.65 on `00018-xuv` and 0.59 on `00020-pal` (about 1,208 MiB; run 39705395549), as p99 per minute over the timing runs below, with no out-of-memory lines.
   - **Cold start:** 32.6 s to the first response from an idle revision (`/api/version`).
   - **How long one household answer takes on Cloud Run, one request at a time:**
 
-    | Request | `00004-fur`, 15 October | `00016-tes`, 16 October | `00018-xuv`, 16 October |
-    |---|---|---|---|
-    | £30,000 earner | 142.5 s | 85.0 s | 77.5 s |
-    | Couple on £40,000 and £20,000, children 3, 6, 9 and 12 | not timed | 94.4 s | 87.1 s |
-    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s |
+    | Request | `00004-fur`, 15 October | `00016-tes`, 16 October | `00018-xuv`, 16 October | `00020-pal`, 22 October (6.10.0) |
+    |---|---|---|---|---|
+    | £30,000 earner | 142.5 s | 85.0 s | 77.5 s | 83.8 s |
+    | Couple on £40,000 and £20,000, children 3, 6, 9 and 12 | not timed | 94.4 s | 87.1 s | 77.5 s |
+    | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s | 182.6 s, then 167.2 s |
 
-    The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes` and `00018-xuv`, after #46. The 16 October timings are sequential `curl` requests to the live URL; each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
+    The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes`, `00018-xuv` and `00020-pal`, after #46. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
   - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
 
@@ -157,6 +158,9 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **Every measure published on the day comes from the templates, unless it passes the human check below** (`uk_budget_data.measure_templates`, bound from a fixed-shape module like `tests/template_measures.py`; coordinator's ruling on d1625, 16 Oct). The detector watches what changed formulas read as the run calculates, but no check of this kind can be proven against arbitrary code. Issue #55 lists what it can't see.
   - **A hand-written modifier needs a named human check of its data limits before it publishes.** The reviewer confirms whether it changes how additional-dwelling or non-residential purchases are priced. They record their name and finding in the measure's PR. If the detector marks it not computable, either convert it to a template or accept that it's withheld; don't try to defeat the probe (coordinator, 18 Oct).
     - **Held by default** (coordinator's ruling on #51, 21 October, after round 18): "While a data limit is active, any hand-written modifier that touches a limited tax's variables, parameters or inputs is held not computable by hand, whatever the detector records. That includes the SDLT, LBTT and LTT trees and their purchase, value and property_purchased ingredients, by any route: parameter changes, update_variable metadata (`end`, `defined_for`), gov.abolitions, set_input on either side, or a derived product. It is released only if the human data-limits check records, in the receipt, why the modifier cannot change how purchases are priced, and a second person agrees."
+      - **What "touches" means** (coordinator, 21 October, on round 19's F4): it means *changes*. That covers a limited tax's variables, parameters or inputs, or a purchase price or purchase-based charge computed from them, directly or through ingredients. So a modifier that derives purchases from value × `property_purchased` is held.
+        - **Not touching:** reading a property stock value to tax the stock, such as council tax bands or an annual property-value levy.
+        - **Scope:** this bounds what the human check may release. The automatic hold in code is unchanged.
       - **Why the default flips:** eighteen rounds showed that no detector is complete against hand-written plain-Python modifiers. Round 18 found four routes it can't see (#55): variable metadata and abolitions, one-sided `set_input`, purchases recomputed from their ingredients, and a helper module's memo. The detector's job is the templates and accidental routes, and there it holds. A deliberately hand-written pricing change is the human gate's, and it holds unless released, because "it changes pricing" is exactly what those routes hide.
       - **Hold it by hand:** nothing in the code enforces this hold yet (the hardening PR after #51 puts it in the gate). The Integrator stages nothing for such a measure. The Reconciler lists it as not computable in the coverage ledger, with this rule as the reason, and checks before G4 that nothing in the manifest contradicts the ledger. The gate can't stage it as not computable itself unless its receipt records a data limit. A combined run that includes it is refused automatically, since a member missing from the manifest blocks it.
       - **The release has nowhere to go yet:** the receipt is written by the generator and has no field for a human's reason or a second person's agreement. Until one is added, such a measure stays held.
@@ -241,6 +245,36 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 | `"2027-04-06": 0.21` | That one day only. Depending on the parameter, the year's figure either does not move at all (the personal allowance; tested in #23) or moves by about one day's share of the change. Fuel duty, for example, moved by 0.27% of the change in 2027-28 (probe, 14 October, policyengine-uk 2.126.12). | **Never.** |
 | `"2027-04-06.2100-12-31": 0.21` | In the national run, on policyengine-uk 2.126.12: every year from 2027-28 on, held flat. In the household calculator: on `main` since #32 (15 October), as the national run reads it; in #3, 2027 only, because it keeps a key for the year its first four characters name (`annual_reform_parameters`). | **No.** The national figure would move in years where #3's household calculator showed no change. |
 
+**A macro path is the exception: never key it by a bare year** (coordinator, 21 October). The OBR growth series under `gov.economic_assumptions.yoy_growth.obr` are stored at 1 January of each calendar year, and the statutory uprating inputs read them from there. Which year a bare-year key reaches has changed between models. With `Scenario(applied_before_data_load=True)`, a change of `"2026": 0.10` to `consumer_price_index` moved:
+- on policyengine-uk 2.130.1, the September **2027** CPI input;
+- on policyengine-uk 2.132.6, the September **2026** input.
+
+`"2026-01-01"` and `"2026-01-01.2026-12-31"` both moved the September 2026 input on both models (W5, 21 October).
+- **The cause is policyengine-uk #2404, first in 2.131.1.** Since then, a bare year on the economic growth rates names the calendar year, as intended. Before it, a bare year named the fiscal year from 6 April, and so moved the next year: 2.131.1's changelog gives a 2027 earnings growth rate that moved the 2028 index and the April 2029 triple lock.
+- **So anything generated on 6.6.0 (policyengine-uk 2.130.1, `main`'s pin before #72) with bare-year growth keys is off by a year.** Regenerate it on the adopted pair.
+- **Key a macro path by its calendar year,** `"YYYY-01-01.YYYY-12-31"`, whatever the model.
+- **Apply it only through `Scenario(applied_before_data_load=True)`.** That is the PolicyEngine-wide rule for macro paths.
+- **Before the scenario is used, probe the adopted pair.** Put the scenario's own change in `CHANGES`, and in `INPUT` the statutory input it should move (`cpi_september`, or `awe_total_pay_may_july` for earnings). The probe prints the instants that moved: `['2026-09-01']` for the example below.
+  - **Earnings move on 1 July.** With `awe_total_pay_may_july`, a 2027 earnings change prints `['2027-07-01']` on both models.
+  - **`[]` means that year is already published,** not that the key is wrong. May to July 2026 is published (3.9%), so a 2026 earnings change prints `[]`. A published year never moves (see "Which measures" above). Don't fall back to a bare year: on 2.130.1 it silently moves the next year instead.
+- **A registered measure can't carry a macro path today.** `Reform.to_scenario` never applies a change before the data loads, and `tests/test_measure_keys.py` refuses any key that isn't a bare year. A macro scenario is a separate run, through `Scenario(applied_before_data_load=True)`.
+
+```sh
+uv run python - <<'EOF'
+from policyengine_uk import Simulation
+from policyengine_uk.utils.scenario import Scenario
+INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+CHANGES = {"gov.economic_assumptions.yoy_growth.obr.consumer_price_index": {"2026-01-01.2026-12-31": 0.10}}
+H = {"people": {"p": {"age": {2026: 70}}}, "benunits": {"b": {"members": ["p"]}}, "households": {"h": {"members": ["p"]}}}
+def stored(changes=None):
+    scenario = Scenario(parameter_changes=changes, applied_before_data_load=True) if changes else None
+    leaf = Simulation(situation=H, scenario=scenario).tax_benefit_system.parameters.get_child(INPUT)
+    return {v.instant_str: v.value for v in leaf.values_list}
+base, changed = stored(), stored(CHANGES)
+print(sorted(k for k in base.keys() | changed.keys() if base.get(k) != changed.get(k)))
+EOF
+```
+
 **#3's household calculator moves less than the national figure for some measures** (probed 15 October). #3's calculator (`calculate_personal_net_income`) writes a change on 1 January only, while the national run applies it to the whole fiscal year before policyengine-uk derives its other parameters. `main`'s did the same until #32 (15 October; issue #33). One earner on £50,000, 2027:
 
 | Change | Household calculator | National |
@@ -271,19 +305,28 @@ git switch main && git pull
 uv sync --locked --extra dev
 mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
-  --also enhanced_frs_2024_25_tiny                         # the bundle's data and the tests' small file, by hash (#12, #70)
+  --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
 uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
-curl -s "$HOUSEHOLD_API/api/version"                       # must match the bundle (#15)
+curl -s "$HOUSEHOLD_API/api/version"
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
   --expect-model-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-uk"))')" \
   --expect-core-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine-core"))')" \
   --expect-wrapper-version "$(uv run python -c 'import importlib.metadata as m; print(m.version("policyengine"))')" \
   --out receipts/g0-households.json
-uv run uk-budget-data publish check                        # (#19)
+uv run uk-budget-data publish check
 uv run uk-budget-data publish status
 ```
+
+What they check:
+- `certified_data`: the token reads the bundle's data and the tests' small dataset, each file by its pinned hash (#12, #70);
+- the certified-data tests, which fail rather than skip here;
+- the State Pension check: whether the model has policyengine-uk #2336;
+- `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
+- `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
+
+The shell blocks in this runbook carry no comments, so they paste into zsh as they are, once any `<placeholder>` in them is filled in.
 
 Record in the clock table:
 - the start SHA;
@@ -348,10 +391,10 @@ uv run uk-budget-data publish check
 uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   --source-id AB2026-T4.1 --document "Autumn Budget 2026" \
   --out data_inputs/treasury/sources/AB2026-T4.1.csv \
-  --static-template data_inputs/treasury/sources/AB2026-static.csv      # (#16)
+  --static-template data_inputs/treasury/sources/AB2026-static.csv
 ```
 
-- **Totals check.** The importer checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
+- **Totals check.** The importer (#16) checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
 
@@ -399,8 +442,17 @@ uv run uk-budget-data publish check
 
   ```sh
   curl -s https://policyengine.org/uk/autumn-budget-2026/data/manifest.json | head -5
-  # Until policyengine-app-v2#1249 is live (and at the rehearsal):
+  ```
+
+  Until policyengine-app-v2#1249 is live, and at the rehearsal, read the Vercel deployment instead:
+
+  ```sh
   curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5
+  ```
+
+  Either way, then run the household check:
+
+  ```sh
   uv run python -m uk_budget_data.household_route --base-url "$HOUSEHOLD_API" \
     --fixtures data_inputs/household_fixtures --manifest public/data/manifest.json
   ```
@@ -439,17 +491,103 @@ uv run uk-budget-data publish check
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
-## A model upgrade during the day (no freeze)
+## Rolling re-cuts, and the 07:00 go/no-go (Max, 22 October)
 
-- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). The workflow opens draft PRs only; merging an upgrade on the day stays your call.
+Max, relayed by the UK hub and the coordinator on 22 October: "i think we should keep improving the model as much as we can as long as we can". So there is no single lock. The dashboard adopts each certified re-cut, under d1152 ("latest certified release"). UK time equals UTC from Sunday 25 October.
+
+- **The cuts:**
+  - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
+  - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
+  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
+- **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
+  1. the draft PR, and its CI;
+  2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
+  3. merge with a merge commit (`gh pr merge --merge`), since `git revert -m 1` needs one, and open its revert PR as a draft;
+  4. redeploy the household API;
+  5. run the household check, and the "Read API memory" workflow on the new revision.
+- **Approval for re-cuts and the final cut: on the adoption branch, before the merge** (coordinator, 22 October). It's an ordering change, not a lower bar. Use the same order for the rehearsal cut, so that the rehearsal exercises it.
+  - **Who:** the named approvers approve on the branch, on the new release's figures.
+  - **Right after the merge and the API deploy,** run the household check.
+  - **If it fails,** merge the prepared revert PR and roll the API back to the previous revision (see "The fast revert" below).
+  - **Why this order:** the approvals then live in the adoption PR, which is what keeps the revert clean.
+- **The 07:00Z go/no-go, Wednesday 28:**
+  - **Go** with the final cut only if every gate is green and its change against the previous cut is attributed (d1682).
+  - **Otherwise go back to the previous cut.** By then the final cut is merged and deployed, so going back means the fast revert below.
+  - **After 07:00Z,** only an emergency revert to the previous cut. G0's start receipt at 11:30 pins whatever is live.
+- **How long one adoption takes** (measured 19 to 22 October, with the runner queue as it was):
+
+  | Step | Quiet runners | 21–22 October's queue |
+  |---|---|---|
+  | The release reaches the dashboard (policyengine.py's dispatch, or W5's by hand) | a few minutes | 40 min |
+  | Adoption workflow to draft PR | 10–21 min | 80 min |
+  | CI on the lock change | 20 min | 46–105 min |
+  | Review of a lock-only PR | 15 min | 15 min |
+  | Regenerate, stage, reconcile and approve every published measure and the combined run | **not yet measured** | **not yet measured** |
+  | CI again, with the regenerated artifacts and manifest | 20 min | 46–105 min |
+  | Merge, then deploy the household API (smoke test included) | 6–7 min | 10 min |
+  | Household timings and memory read | 15 min | 15 min |
+  | The revert PR's CI, alongside the deploy and the checks | 20 min | 46–105 min |
+
+  - **The critical path:**
+    1. dispatch;
+    2. the adoption workflow;
+    3. the longer of the lock's CI and regeneration, which run side by side, with the review alongside;
+    4. CI with the artifacts;
+    5. merge;
+    6. the longer of the deploy plus checks and the revert PR's CI.
+
+    Approval on the branch needs no CI run of its own.
+  - **Totals:**
+    - **Quiet runners:** about 1 h 20 min, plus any regeneration beyond 20 min.
+    - **At 21–22 October's queue:** about 7 h 15 min, plus any regeneration beyond about 1 h 45 min.
+  - **Where CI time goes:** each CI run's ten jobs queue separately for runners. In #72's run the work took about 16 minutes; the rest was queueing.
+  - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table.
+  - **To fit the overnight window:**
+    - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
+    - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
+    - approve on the adoption branch, as above. That also saves the separate approval PR's CI run.
+  - **The schedule, worked back from 06:00Z** (coordinator, 22 October), on busy-queue figures:
+    - **A:** adoption plus regeneration. That's W5's figure: the table above, plus regeneration measured at Friday's rehearsal.
+    - **B:** the Microcosm build. The UK hub's build runbook gives it.
+    - **C:** certification plus release: the policyengine.py PR's CI, then `push.yaml`. Measured for 6.10.0:
+      - **The PR's CI:** about 1 h 15 min at #685's final head (run 39588831360).
+      - **`push.yaml`:** about 3 h 10 min from merge to PyPI (#685 merged at 13:30Z, and was on PyPI at 16:41:14Z), about 2 hours of it waiting for runners.
+      - **In all,** about 4 h 25 min.
+      - **The dispatch:** policyengine.py's consumer dispatch then waited 40 min for a runner. W5 avoids that by dispatching by hand promptly.
+    - **A margin of 1 hour.**
+    - **So:** the final release must be out by 06:00Z − A − 1 h, and the final build must start by 06:00Z − A − 1 h − C − B.
+    - **Placeholders:** 16:00Z and 22:00Z stand until A, B and C are measured. After the rehearsal the coordinator sets the real times and tells W5 and the hub.
+    - **If the computed start falls before 08:00Z on Tuesday,** the final cut is effectively Monday's re-cut, and the coordinator says so.
+    - **For scale:**
+      - At 21–22 October's queue, A is at least about 7 h 15 min. So with the hour's margin, the release must be out by about 21:45Z, even if regeneration takes under 1 h 45 min.
+      - Every minute of regeneration beyond that moves the release earlier, minute for minute.
+      - So report the regeneration time measured at Friday's rehearsal.
+- **The fast revert to the previous cut:**
+  - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
+  - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. Green means every check passes, the Publication gate included, though it isn't a required check. A revert is then the merge of a green PR, not a wait in the runner queue.
+  - **Keep it current.** Checks don't require a branch to be up to date. So if anything merges to `main` after the revert PR's CI ran, update the revert PR and let its CI run again.
+  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
+  - **Then, to revert:**
+    1. mark the revert PR ready (a draft can't be merged), and merge it;
+    2. run the API `rollback` to the recorded revision;
+    3. run the household check.
+
+    The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
+  - **The 14 October cut, only if a release ever falls back to it** (UK hub, S6, 22 October). That cut predates Microcosm's weight-index fix (0f0bb869), so it carries a +0.72% calibration-year weight skew. No dashboard release has used it: 6.10.0's cut has the fix, and so do later re-cuts. So a revert to the dashboard's previous cut doesn't carry it.
+
+## Adopting a release (each re-cut)
+
+**On 28 October no upgrade is adopted after the 07:00Z go/no-go.** Only an emergency revert to the previous cut is allowed (see "Rolling re-cuts" above). The steps below are how each re-cut is adopted before then.
+
+- **Upgrade PR.** When policyengine.py releases a qualified bundle, a draft upgrade pull request opens automatically (#18). If its dispatch is late, W5 dispatches the adoption by hand. The workflow opens draft PRs only. Each re-cut's PR merges on its gates, after approval on the branch.
 - **Regenerate on the upgrade branch, before merging.** With the new release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, and reconcile. Every other entry becomes stale until it is re-staged.
   - **The regenerated artifacts and the manifest go in the upgrade PR,** with their review rows (`publish review-rows`, as at G2). `publish check`, which CI runs as the Publication gate, re-checks the certificate of every displayed entry against the installed release ("the certificate is for policyengine X, but Y is installed"). So once anything is displayed, a PR that changes only the lock fails.
   - **So does whatever the new release's tests demand,** for example removing a lifted data limit, setting `UC_REBALANCED_YEARS`, or updating the State Pension test for #2336 (each above).
 - **Merge, then redeploy the household API by hand.** The deploy builds only a commit on `main` ("Choose the commit" in `deploy-api.yml`, and the ancestry check in `cloudbuild.yaml`), and merging doesn't start it: deploys on push stay off while the repository variable `API_DEPLOY_ON_PUSH` is unset. So after the merge, run the "Deploy the household API" workflow with action `deploy`, then run the household checks. Until the deploy has run, G0's household check fails on the version mismatch, as designed.
-- **Approve once the household checks pass on the new release.**
-  - **The alternative:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`), so the Approver can approve on the upgrade branch, before merging.
-  - **The trade-off:** approving first avoids a gap, since from the merge until approval, figures that were approved show at most as provisional (re-stage them with `--provisional` to keep them visible). But it approves figures before any household check has run on the new release.
-  - **Your call** which order to use on the day.
+- **Approve on the upgrade branch, before merging, for re-cuts and the final cut** (coordinator, 22 October; see "Rolling re-cuts" above).
+  - **Why it's possible:** approval doesn't require a household receipt today (`REQUIRE_HOUSEHOLD_CHECKS` is `False` in `publish.py`).
+  - **What it avoids:** a gap. If approval came after the merge, figures that were approved would show at most as provisional from the merge until approval (re-staging them with `--provisional` keeps them visible).
+  - **The cost:** the figures are approved before any household check has run on the new release. So run the household check immediately after the merge and the deploy, and revert if it fails.
 - **Fallback.** If that cannot finish before a deadline, stay on the current release. `publish check` refuses a manifest that mixes releases.
 
 ## The data line changed: Microcosm (21 October)
@@ -467,12 +605,12 @@ policyengine.py#685 (merged 21 October) makes Microcosm UK 2024-25 the UK defaul
 - the 2030-31 UC note, and the UC health row's "from 2030" advice: policyengine-uk 2.132.6 lacks #2428, which extends the rebalancing to 2032, while the Budget-day pair's model has it, so the advice flips there;
 - the SDLT "Why" row: the certified dataset it names is uk-data 1.58.1. The tripwire re-checks it when new data are adopted;
 - the State Pension row's figures: #2336's reports ran on uk-data 1.58.1;
-- the household API timings and memory, after the redeploy on the new pair;
+- the household API timings and memory: re-measured on 6.10.0 (`00020-pal`, 22 October, above). Re-measure after each re-cut's redeploy;
 - results by area: Microcosm's local-area cut is not yet certified (policyengine.py#685).
 
 Until a row is re-measured, don't quote its figures.
 
-## Data limitations: say these wherever a measure depends on them
+## Data and model limitations: say these wherever a measure depends on them
 
 The UK hub measured two limitations of the data on uk-data 1.58.1 (`enhanced_frs_2024_25.h5`, SHA-256 `056e80fd…`), and a third, on capital gains tax, on uk-data 1.59.1 (below). The data line has since changed (see "The data line changed" above): once they are re-measured on the adopted Microcosm build, state the first two wherever a measure's figures depend on very old ages or the highest incomes: in the dashboard's methodology, and in the 07:00 briefing's limitations section. You may reword them for the briefing.
 
@@ -490,7 +628,22 @@ W5 re-measured on the same file for 2025:
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
-**Where they go:** they describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
+**Model gaps the UK hub found (22 October).** These are from the UK hub's Budget-relevance triage of 22 October, relayed by the coordinator. Most are limits of the model; #1911, #1912 and #547 also need data the survey doesn't hold. They apply on any adopted pair until a fix lands. **Say each one wherever a figure depends on it.** Figures come from the hub's report once it's written; don't quote any until then.
+- **AHC absolute poverty runs high.** From 2025-26 both absolute poverty lines rise by headline OBR CPI. HBAI's after-housing-costs deflator is CPI excluding housing, which the model carries but doesn't use for the poverty lines. Headline CPI is above that series in every year to 2030, so the AHC absolute line, and AHC absolute poverty with it, runs high. Disclose this wherever AHC absolute poverty appears.
+- **Capital gains tax runs above the OBR's receipts** in 2026-27 (policyengine-uk #2272). It inflates the leading CGT measure, aligning CGT rates with income tax rates.
+- **The CGT behavioural response adds nothing back to income tax** (policyengine-uk #1982).
+  - **At an elasticity of 1,** the total is netted, but the split between CGT and income tax is wrong.
+  - **At an elasticity that assumes an income tax offset,** such as the OBR's 3.6, the offset is missed, so the total is wrong as well as the split.
+  - **On 6.10.0,** policyengine-uk 2.132.6 costs statically by default: its elasticities are 0 (its separate BADR elasticity applies only when switched on). So the gap appears only when a response is switched on. An elasticity of 1 is the default from #2419.
+  - **Disclose it with the elasticity used.**
+- **Projected years have no ageing** (policyengine-uk #1929). They copy the data year, with one population factor growing every weight. So State Pension spending grows more slowly than DWP projects over 2025-26 to 2030-31, which understates the State Pension baseline and the later-year costs of `pension_uprating` measures.
+- **The High Value Council Tax Surcharge covers owner-occupied main homes only:** let properties, second homes and company-held homes aren't charged (policyengine-uk #2171). There's no deferral or support scheme either (#2492).
+- **Housing Benefit for supported and temporary accommodation isn't modelled** (policyengine-uk #1911).
+- **Universal Credit has no transitional element for managed migrants** (policyengine-uk #1912).
+- **Universal Credit doesn't exclude full-time students** (policyengine-uk #2346).
+- **Children aged 9 to 11 months get no working-parent childcare hours** (policyengine-uk-data #547): the data store whole-year ages.
+
+**Where they go:** the data limitations describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The model gaps can also reach a household answer wherever the household has the circumstance, for example a full-time student claiming UC. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
 ## Briefing (overnight, by 07:00)
 
@@ -526,14 +679,17 @@ Exports are built only from approved entries of one manifest revision. A measure
   1. **Revert the upgrade's merge** through a pull request, as for the dashboard (GitHub's Revert button or `git revert -m 1 <merge>`). That undoes the upgrade PR's whole net change: the lock, and anything it carried, such as regenerated artifacts, the manifest, and test or registry changes.
      - **If anything was staged or approved since the upgrade,** the revert conflicts on the manifest, and the Revert button can't resolve that. Revert locally and keep `main`'s publication files (`git checkout HEAD -- public/data data_inputs/public_data_review.csv`), so the revert undoes only the lock and code. Step 2 then marks the newer release's entries stale.
      - Check that nothing else merged since depends on what is reverted.
-  2. **Regenerate on the revert branch, before merging,** as for an upgrade. With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, and write the review rows (as at G2). A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
-  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "A model upgrade during the day"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
-  4. **Run the household checks, and approve,** in whichever order was chosen for upgrades.
+  2. **Regenerate on the revert branch, before merging, if anything was published after the upgrade.** With the previous release installed, regenerate every published measure and the combined run, stage the first with `--adopt-execution`, reconcile, approve, and write the review rows (as at G2), as for a re-cut. A revert that leaves any displayed entry certified on the newer release fails its own Publication gate.
+     - **A clean revert needs no regeneration.** If nothing was published after the upgrade, the revert brings back the previous lock with its manifest, artifacts and approvals together, and `publish check` passes.
+  3. **Merge, then roll the household API back:** the workflow's `rollback` to the last revision on the previous release, or `deploy` on the reverted `main`. Merging doesn't redeploy it (see "Adopting a release (each re-cut)"). A rollback's smoke test takes the versions it expects from the target revision's own image, so a revision on the previous release passes it while `main` is still on the new one.
+  4. **Run the household checks.** After a clean revert, the previous cut's approvals are already back, with its manifest.
 
 ## Clock
 
 | Event | Time | SHA | Manifest revision | Notes |
 |---|---|---|---|---|
+| Final cut adopted (by 06:00) | | | | Regeneration time; API revision; rollback target |
+| Go/no-go (07:00) | | | | Final cut or previous; the change's attribution (d1682) |
 | G0 | | | | |
 | G1 | | | | |
 | G2 published | | | | |
