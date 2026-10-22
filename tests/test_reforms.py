@@ -241,39 +241,52 @@ class TestDividendTaxIncrease:
         assert reform is not None
         assert reform.id == "dividend_tax_increase_2pp"
 
-    def test_reform_uses_custom_baseline(self):
-        """Reform uses pre-budget baseline rates via simulation modifier."""
+    def test_reform_states_pre_budget_rates_as_parameter_changes(self):
+        """The pre-Budget rates are parameter changes for every scored year
+        from 2027-28, not a modifier, so policyengine.py's household
+        calculation and the receipts can take them."""
+        from uk_budget_data.budget_years import POLICY_YEARS
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("dividend_tax_increase_2pp")
 
-        # Reform uses custom baseline (simulation_modifier for ParameterScale)
         assert reform.has_custom_baseline()
-        assert reform.baseline_simulation_modifier is not None
-
+        assert reform.baseline_simulation_modifier is None
         # Reform parameter_changes is empty (uses new rates from policyengine-uk)
         assert reform.parameter_changes == {}
+        years = [str(year) for year in POLICY_YEARS if year >= 2027]
+        assert reform.baseline_parameter_changes == {
+            "gov.hmrc.income_tax.rates.dividends[0].rate": {
+                year: 0.0875 for year in years
+            },
+            "gov.hmrc.income_tax.rates.dividends[1].rate": {
+                year: 0.3375 for year in years
+            },
+        }
 
-    @pytest.mark.certified_data
-    def test_baseline_modifier_sets_pre_budget_rates(self):
-        """Baseline simulation modifier correctly sets pre-budget rates."""
-        from uk_budget_data.pipeline import build_microsimulation
+    def test_baseline_sets_pre_budget_rates(self):
+        """The baseline's parameters hold the pre-Budget rates (8.75% basic,
+        33.75% higher) in every scored year from 2027-28."""
+        from policyengine_uk import Simulation
+
+        from uk_budget_data.budget_years import POLICY_YEARS
         from uk_budget_data.reforms import get_reform
 
         reform = get_reform("dividend_tax_increase_2pp")
-
-        # Build through policyengine.py so the dataset comes from the pinned
-        # release bundle; policyengine-uk no longer has an implicit default.
-        sim = build_microsimulation(None)
-        reform.baseline_simulation_modifier(sim)
-
-        div = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates
-        div = div.dividends
-
-        # Check pre-budget rates are set for 2027 (8.75% basic, 33.75% higher)
-        # The modifier replaces the 2026-04-06 entry so rates persist
-        assert div.brackets[0].rate("2027-04-06") == 0.0875
-        assert div.brackets[1].rate("2027-04-06") == 0.3375
+        sim = Simulation(
+            situation={
+                "people": {"p": {"age": {2027: 50}}},
+                "benunits": {"b": {"members": ["p"]}},
+                "households": {"h": {"members": ["p"]}},
+            },
+            scenario=reform.to_baseline_scenario(),
+        )
+        for year in (year for year in POLICY_YEARS if year >= 2027):
+            dividends = sim.tax_benefit_system.parameters(
+                f"{year}-06-01"
+            ).gov.hmrc.income_tax.rates.dividends
+            assert dividends.rates[0] == pytest.approx(0.0875)
+            assert dividends.rates[1] == pytest.approx(0.3375)
 
 
 class TestSavingsTaxIncrease:

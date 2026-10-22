@@ -9,28 +9,45 @@ ran first and the rebuild discarded its edits. ``publication.combine``
 relies on the new order: a combined scenario carries its members' merged
 parameter changes itself, and its modifier runs only their modifiers.
 
-The dividend measure's baseline sets the pre-Budget dividend rates with a
-modifier (``reforms._set_pre_budget_dividend_rates``), because those rates
-sit in a parameter scale. Here the engine alone keeps them beside other
-parameter changes.
+The dividend measure's baseline used to set the pre-Budget dividend rates
+with a modifier, because those rates sit in a parameter scale. It now
+states them as parameter changes, which policyengine.py's household
+calculation and the receipts can take; a copy of the modifier stays here
+as the reference they are checked against.
 """
 
 import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data.reforms import _set_pre_budget_dividend_rates, get_reform
+from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.reforms import get_reform
 
 ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 
 
-def _situation():
+def _reference_pre_budget_dividend_rates(sim):
+    """The modifier the dividend measure's baseline used before it stated
+    its pre-Budget rates as parameter changes: every annualised dividend
+    rate from 2027 set to its pre-Budget value. Kept as the reference the
+    parameter changes are checked against."""
+    dividends = sim.tax_benefit_system.parameters.gov.hmrc.income_tax.rates.dividends
+    for entry in dividends.brackets[0].rate.values_list:
+        if entry.instant_str >= "2027":
+            entry.value = 0.0875
+    for entry in dividends.brackets[1].rate.values_list:
+        if entry.instant_str >= "2027":
+            entry.value = 0.3375
+    return sim
+
+
+def _situation(year=2027):
     return {
         "people": {
-            "p": {"age": {2027: 50}, "dividend_income": {2027: 60_000}}
+            "p": {"age": {year: 50}, "dividend_income": {year: 60_000}}
         },
         "benunits": {"b": {"members": ["p"]}},
-        "households": {"h": {"members": ["p"], "region": {2027: "LONDON"}}},
+        "households": {"h": {"members": ["p"], "region": {year: "LONDON"}}},
     }
 
 
@@ -39,7 +56,7 @@ def test_the_engine_keeps_the_dividend_baseline_beside_parameter_changes(
     before_data_load,
 ):
     scenario = Scenario(
-        simulation_modifier=_set_pre_budget_dividend_rates,
+        simulation_modifier=_reference_pre_budget_dividend_rates,
         parameter_changes={ALLOWANCE: {"2027": 13_000}},
     )
     scenario.applied_before_data_load = before_data_load
@@ -68,7 +85,7 @@ def test_the_modifier_gives_exactly_the_tax_of_the_same_rates_as_changes():
     by_modifier = Simulation(
         situation=_situation(),
         scenario=Scenario(
-            simulation_modifier=_set_pre_budget_dividend_rates,
+            simulation_modifier=_reference_pre_budget_dividend_rates,
             parameter_changes={ALLOWANCE: {"2027": 13_000}},
         ),
     )
@@ -102,7 +119,7 @@ def test_the_modifier_changes_the_tax_the_engine_computes():
     with_rates = Simulation(
         situation=_situation(),
         scenario=Scenario(
-            simulation_modifier=_set_pre_budget_dividend_rates,
+            simulation_modifier=_reference_pre_budget_dividend_rates,
             parameter_changes={ALLOWANCE: {"2027": 13_000}},
         ),
     )
@@ -114,4 +131,27 @@ def test_the_modifier_changes_the_tax_the_engine_computes():
     assert (
         with_rates.calculate("income_tax", 2027)[0]
         < without.calculate("income_tax", 2027)[0]
+    )
+
+
+@pytest.mark.parametrize(
+    "year", [year for year in POLICY_YEARS if year >= 2027]
+)
+def test_the_dividend_measure_gives_the_tax_the_old_modifier_gave(year):
+    """Differential: the measure's pre-Budget rates, now parameter changes,
+    give to the penny the income tax the modifier they replace gave, in
+    every scored year from 2027-28."""
+    measure = get_reform("dividend_tax_increase_2pp")
+    assert measure.baseline_simulation_modifier is None
+    by_modifier = Simulation(
+        situation=_situation(year),
+        scenario=Scenario(
+            simulation_modifier=_reference_pre_budget_dividend_rates
+        ),
+    )
+    by_measure = Simulation(
+        situation=_situation(year), scenario=measure.to_baseline_scenario()
+    )
+    assert by_measure.calculate("income_tax", year)[0] == pytest.approx(
+        by_modifier.calculate("income_tax", year)[0], abs=0.01
     )
