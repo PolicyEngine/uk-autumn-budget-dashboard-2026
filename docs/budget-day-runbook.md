@@ -446,7 +446,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - **The cuts:**
   - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
-  - **The final cut, Tuesday 27:** the build starts by 16:00Z, and the release is out by about 22:00Z. Adoption, regeneration and smoke tests run overnight and finish by **06:00Z on Wednesday 28**.
+  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch;
@@ -474,18 +474,38 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   | CI again, with the regenerated artifacts and manifest | 20 min | 46–105 min |
   | Merge, then deploy the household API (smoke test included) | 6–7 min | 10 min |
   | Household timings and memory read | 15 min | 15 min |
+  | The revert PR's CI, alongside the deploy and the checks | 20 min | 46–105 min |
 
-  - **Totals,** leaving out regeneration: about 1 h 30 min to 1 h 45 min with quiet runners, and up to about 6 h 10 min at 21–22 October's queue. Approval on the branch needs no CI run of its own.
+  - **The critical path:**
+    1. dispatch;
+    2. the adoption workflow;
+    3. the longer of the lock's CI and regeneration, which run side by side, with the review alongside;
+    4. CI with the artifacts;
+    5. merge;
+    6. the longer of the deploy plus checks and the revert PR's CI.
+
+    Approval on the branch needs no CI run of its own.
+  - **Totals:**
+    - **Quiet runners:** about 1 h 20 min, plus any regeneration beyond 20 min.
+    - **At 21–22 October's queue:** about 7 h 15 min, plus any regeneration beyond about 1 h 45 min.
   - **Where CI time goes:** each CI run's ten jobs queue separately for runners. In #72's run the work took about 16 minutes; the rest was queueing.
   - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table.
   - **To fit the overnight window:**
     - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
     - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
     - approve on the adoption branch, as above. That also saves the separate approval PR's CI run.
-  - **The window, and moving the build earlier:**
-    - From the final release (about 22:00Z) to 06:00Z is 8 hours. At 21–22 October's queue, adoption without regeneration takes up to about 6 h 10 min, which leaves about 1 h 50 min for regeneration.
-    - The coordinator moves the final build's start earlier, to Tuesday morning, and tells the UK hub, if the time doesn't fit. Its stated threshold is about 12 hours for adoption plus regeneration on a busy queue, and what that span starts from is being confirmed with it.
-    - So report the regeneration time measured at Friday's rehearsal.
+  - **The schedule, worked back from 06:00Z** (coordinator, 22 October), on busy-queue figures:
+    - **A:** adoption plus regeneration. That's W5's figure: the table above, plus regeneration measured at Friday's rehearsal.
+    - **B:** the Microcosm build. The UK hub's build runbook gives it.
+    - **C:** certification plus release: the policyengine.py PR's CI and `push.yaml`, which has queued for up to about 2.5 hours. The hub's figure.
+    - **A margin of 1 hour.**
+    - **So:** the final release must be out by 06:00Z − A − 1 h, and the final build must start by 06:00Z − A − 1 h − C − B.
+    - **Placeholders:** 16:00Z and 22:00Z stand until A, B and C are measured. After the rehearsal the coordinator sets the real times and tells W5 and the hub.
+    - **If the computed start falls before 08:00Z on Tuesday,** the final cut is effectively Monday's re-cut, and the coordinator says so.
+    - **For scale:**
+      - At 21–22 October's queue, A is at least about 7 h 15 min. So with the hour's margin, the release must be out by about 21:45Z, even if regeneration takes under 1 h 45 min.
+      - Every minute of regeneration beyond that moves the release earlier, minute for minute.
+      - So report the regeneration time measured at Friday's rehearsal.
 - **The fast revert to the previous cut:**
   - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
   - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. Green means every check passes, the Publication gate included, though it isn't a required check. A revert is then the merge of a green PR, not a wait in the runner queue.
