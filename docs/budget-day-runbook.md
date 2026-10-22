@@ -238,8 +238,16 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **The adoption PR that brings #2336 must update a test.** `tests/test_measure_templates.py::test_native_pension_responds_to_rates_without_total_income_override` asserts that the add-on moves with the full rates, the behaviour #2336 removes. With #2336's formula, #71's review found two of its four cases fail (new and basic State Pension at £20,000). Update it there to expect the add-on to stay with prices, as the UC row asks of #47's table.
 
 **A measure on 2027-28 benefit levels needs policyengine-uk #2533 in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (coordinator, 22 October, from the UK hub's triage).
-- **Why:** the benefit uprating index follows lagged calendar-year CPI, so the parameters on it (most CPI-linked benefits, including the Pension Credit minimum guarantee) and the UC standard allowance rise by 2.3% in April 2027, against September 2026 CPI of 3.5% (ONS D7G7, published 21 October). The September 2026 statutory input is still null. The 2026-27 rates are hard-coded and unaffected.
-- **Which measures:** changes from 2027 onwards to any parameter whose uprating metadata names the benefit uprating index, or to the UC standard allowance, on either side of the measure. The registry pins those parameter prefixes, and a test compares the pin with the installed engine's metadata.
+- **Why:** the benefit uprating index follows lagged calendar-year CPI, so the parameters on it rise by 2.3% in April 2027, against September 2026 CPI of 3.5% (ONS D7G7, published 21 October). That covers most CPI-linked benefits, the UC standard allowance among them.
+  - **The September 2026 statutory input is still null,** so it's a forecast. The UC protected health element's 2027 amount is the UC Act 2025 s. 4 floor, which reads that input, so it's off too.
+  - **The 2026-27 rates** are hard-coded and unaffected.
+  - **The Pension Credit minimum guarantee** is on the index too, but in law it has risen with earnings. With #2533 it would rise 3.5% against earnings of 3.9%, so it stays under-uprated after the fix. Whether it needs a limit of its own is a question for the UK hub.
+- **Which measures:** changes from 2027 onwards, on either side of the measure, to:
+  - any parameter whose uprating metadata names the benefit uprating index (79 prefixes, the UC standard allowance among them);
+  - or the UC protected health element.
+
+  The registry pins those prefixes, and a test compares the pin with the installed engine's metadata.
+  - **Not held:** a structural measure that changes no covered parameter, such as repealing the two-child limit. The 2027 benefit levels it interacts with are still about 1.2% low.
 - **What the guard does:** generation records `benefit_uprating_september_cpi` and its reason in the receipt. Provisional staging is allowed; approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such measures stay out of the first cut and briefing, which take approved entries only; a combined run including one is provisional at most.
 - **When it lifts:** the adopted pair must include both steps of #2533: enter the September 2026 outturn (`0.035`) in `statutory_uprating_inputs.cpi_september`, and make the benefit uprating index follow the September CPI index. The guard checks the input and the resulting April 2026 to April 2027 uprating; entering the outturn alone does not lift it. The UK hub will name the release. Its adoption PR removes this limit when the tripwire test finds the fix in the adopted model.
 

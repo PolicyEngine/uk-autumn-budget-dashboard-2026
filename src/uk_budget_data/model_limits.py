@@ -258,6 +258,15 @@ _BENEFIT_CPI_PARAMETERS = (
     "gov.social_security_scotland.carer_support_payment.rate",
 )
 
+# Parameters outside the benefit index whose 2027 amount is still computed
+# from the September 2026 CPI input. The UC protected health element is null
+# from April 2027, so policyengine-uk's uc_reform takes the UC Act 2025 s. 4
+# floor, which reads statutory_uprating_inputs.cpi_september for the
+# previous September (review of #85).
+_SEPTEMBER_INPUT_READERS = (
+    "gov.dwp.universal_credit.rebalancing.protected_health_element",
+)
+
 
 MODEL_LIMITS = (
     ModelLimit(
@@ -288,18 +297,20 @@ MODEL_LIMITS = (
     ),
     ModelLimit(
         key="benefit_uprating_september_cpi",
-        parameters=_BENEFIT_CPI_PARAMETERS,
+        parameters=_BENEFIT_CPI_PARAMETERS + _SEPTEMBER_INPUT_READERS,
         fixed_by="policyengine-uk #2533",
         reason=(
             "The installed benefit uprating index follows lagged calendar-year "
-            "CPI: the parameters uprated by it, including the Pension Credit "
-            "minimum guarantee and UC standard allowance, step by 2.3% in "
-            "April 2027 against September 2026 CPI of 3.5% (ONS D7G7, "
-            "published 21 October 2026). The 2026-27 rates are hard-coded "
-            "and unaffected. policyengine-uk #2533 must both enter the "
-            "September outturn and repoint the benefit index to September "
-            "CPI. Until both steps are in the model, measures touching "
-            "these benefit levels from 2027 are held at provisional."
+            "CPI: the parameters uprated by it, the UC standard allowance "
+            "among them, step by 2.3% in April 2027 against September 2026 "
+            "CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC "
+            "protected health element's 2027 amount also reads the "
+            "September 2026 input, which is still a forecast. The 2026-27 "
+            "rates are hard-coded and unaffected. policyengine-uk #2533 must "
+            "both enter the September outturn and repoint the benefit index "
+            "to September CPI. Until both steps are in the model, measures "
+            "touching these benefit levels from 2027 are held at "
+            "provisional."
         ),
         fixed=_benefit_september_cpi,
         installed_fixed=_installed_benefit_september_cpi,

@@ -27,6 +27,9 @@ BENEFIT_INDEX = "gov.benefit_uprating_cpi"
 SEPTEMBER_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
 REPRESENTATIVE = "gov.dwp.attendance_allowance.lower"
+PROTECTED_HEALTH = (
+    "gov.dwp.universal_credit.rebalancing.protected_health_element"
+)
 PIP = "gov.dwp.pip.daily_living.standard"
 UC = "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD"
 PENSION_CREDIT = (
@@ -55,7 +58,7 @@ def test_the_pinned_prefixes_equal_the_installed_uprating_metadata():
         )
     }
     assert len(prefixes) == 79
-    assert set(LIMIT.parameters) == prefixes
+    assert set(LIMIT.parameters) == prefixes | {PROTECTED_HEALTH}
     assert "gov.dwp.universal_credit.standard_allowance.amount" in prefixes
     assert PENSION_CREDIT in prefixes
 
@@ -133,20 +136,37 @@ def test_the_installed_check_sees_a_model_with_both_steps(monkeypatch):
     assert LIMIT.installed_fixed() is True
 
 
-def test_both_fix_checks_agree_with_the_installed_benefit_uprating():
+def test_the_installed_model_still_lacks_both_steps():
     """Adoption tripwire: remove the limit when #2533 enters the pair.
 
-    The lower Attendance Allowance rate is a representative on the index;
-    its April 2027 rise is currently 2.3%, against the 3.5% September outturn.
+    It fails only when both steps are in the installed model, not when the
+    OBR's CPI forecast is refreshed or one step lands alone.
+    """
+    assert (
+        not LIMIT.installed_fixed()
+    ), f"{LIMIT.fixed_by} is in the installed model: remove {LIMIT.key}"
+
+
+def test_both_fix_checks_agree_with_the_installed_benefit_uprating():
+    """Differential: the checks agree with what the model does.
+
+    The lower Attendance Allowance rate is a representative on the index.
+    Its April 2027 rise equals the September 2026 outturn (3.5%) exactly
+    when the model has both steps of #2533 (review of #85).
     """
     parameter = installed_system.parameters.get_child(REPRESENTATIVE)
     rise = parameter("2027-04-01") / parameter("2026-04-01") - 1
-    assert rise == pytest.approx(0.023, abs=0.00001)
-    assert rise != pytest.approx(0.035, abs=0.00001)
-    assert not LIMIT.fixed(
-        installed_system
-    ), f"{LIMIT.fixed_by} is in the installed model: remove {LIMIT.key}"
-    assert LIMIT.installed_fixed() == LIMIT.fixed(installed_system)
+    at_outturn = rise == pytest.approx(0.035, abs=0.00001)
+    assert at_outturn is LIMIT.fixed(installed_system)
+    assert at_outturn is LIMIT.installed_fixed()
+
+
+def test_a_2027_protected_health_element_measure_records_the_limit():
+    """Its 2027 amount is the s. 4 floor, which reads the September 2026
+    input, so a measure on it from 2027 is held (review of #85)."""
+    assert limits_touched(
+        simulation(), simulation({PROTECTED_HEALTH: {"2027": 450.0}})
+    ) == [record(LIMIT, [PROTECTED_HEALTH])]
 
 
 @pytest.mark.parametrize("parameter", [PIP, UC, PENSION_CREDIT])
