@@ -42,6 +42,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
         const peLines = peCsvText.trim().split("\n");
         const peHeaders = peLines[0].split(",");
         const reformIdIdx = peHeaders.indexOf("reform_id");
+        const reformNameIdx = peHeaders.indexOf("reform_name");
         const yearIdx = peHeaders.indexOf("year");
         const valueIdx = peHeaders.indexOf("value");
 
@@ -52,9 +53,18 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
           const pe_value = parseFloat(values[valueIdx]);
           const key = `${reform_id}_${year}`;
 
-          if (obrData[key]) {
-            obrData[key].policyengine_value = pe_value;
+          // A year the OBR didn't cost (2031-32): PolicyEngine's figure,
+          // with the OBR's left blank ("—")
+          if (!obrData[key]) {
+            obrData[key] = {
+              reform_id,
+              reform_name: values[reformNameIdx],
+              year,
+              obr_static: null,
+              obr_behavioural: null,
+            };
           }
+          obrData[key].policyengine_value = pe_value;
         }
 
         // Convert to array

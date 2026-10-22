@@ -6,6 +6,8 @@ from typing import Any, Callable, Optional
 from policyengine_uk.utils.scenario import Scenario
 from pydantic import BaseModel, Field
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 
 class Reform(BaseModel):
     """Definition of a policy reform.
@@ -139,8 +141,11 @@ class DataConfig(BaseModel):
     """Configuration for the data generation pipeline."""
 
     years: list[int] = Field(
-        default=[2026, 2027, 2028, 2029, 2030],
-        description="Years to calculate metrics for",
+        default_factory=lambda: list(POLICY_YEARS),
+        description=(
+            "Years to calculate metrics for: the policy years in "
+            "budget_years.json"
+        ),
     )
     output_dir: Path = Field(
         default=Path("./public/data"),

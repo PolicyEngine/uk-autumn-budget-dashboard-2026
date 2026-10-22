@@ -22,14 +22,20 @@ from policyengine_uk import Simulation
 
 from uk_budget_data.models import Reform
 
-# Default years for parameter changes
-DEFAULT_YEARS = [2026, 2027, 2028, 2029, 2030]
+# Default years for parameter changes: the policy years in
+# budget_years.json, which the page reads too (2026-27 to 2031-32)
+DEFAULT_YEARS = list(POLICY_YEARS)
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
     """Create a {year: value} dict for parameter changes."""
     years = years or DEFAULT_YEARS
     return {str(y): value for y in years}
+
+
+def _years_from(first_year: int, value) -> dict[str, any]:
+    """A {year: value} dict for every policy year from ``first_year``."""
+    return _years_dict(value, [y for y in POLICY_YEARS if y >= first_year])
 
 
 # =============================================================================
@@ -66,39 +72,64 @@ def _calculate_pre_autumn_budget_baseline() -> dict:
     threshold_2027 = 37700  # Basic rate threshold frozen until Apr 2028
 
     cpi_2027 = cpi_index("2027-04-01")
-    cpi_2028 = cpi_index("2028-04-01")
-    cpi_2029 = cpi_index("2029-04-01")
-    cpi_2030 = cpi_index("2030-04-01")
+    # Every policy year from 2028-29. Past the OBR's March 2026 forecast
+    # (to 2030-31) the indices follow policyengine-uk's long-run
+    # assumptions (yoy_growth.yaml), which give 2031-32.
+    threshold_years = [year for year in POLICY_YEARS if year >= 2028]
 
     # Fuel duty - 5p cut would end March 2026, then RPI uprating
     fuel_duty_base = 0.5795  # Rate after 5p cut ends (per Spring Budget 2025)
     rpi_2026 = rpi_index("2026-04-01")
-    rpi_2027 = rpi_index("2027-04-01")
-    rpi_2028 = rpi_index("2028-04-01")
-    rpi_2029 = rpi_index("2029-04-01")
-    rpi_2030 = rpi_index("2030-04-01")
+    fuel_years = [year for year in POLICY_YEARS if year >= 2027]
 
     return {
         # Income tax thresholds - CPI indexed from April 2028
         "gov.hmrc.income_tax.allowances.personal_allowance.amount": {
-            "2028": round(pa_2027 * cpi_2028 / cpi_2027),
-            "2029": round(pa_2027 * cpi_2029 / cpi_2027),
-            "2030": round(pa_2027 * cpi_2030 / cpi_2027),
+            str(year): round(pa_2027 * cpi_index(f"{year}-04-01") / cpi_2027)
+            for year in threshold_years
         },
         "gov.hmrc.income_tax.rates.uk[1].threshold": {
-            "2028": round(threshold_2027 * cpi_2028 / cpi_2027),
-            "2029": round(threshold_2027 * cpi_2029 / cpi_2027),
-            "2030": round(threshold_2027 * cpi_2030 / cpi_2027),
+            str(year): round(
+                threshold_2027 * cpi_index(f"{year}-04-01") / cpi_2027
+            )
+            for year in threshold_years
         },
         # Fuel duty - 5p cut ends March 2026, then RPI uprating
         "gov.hmrc.fuel_duty.petrol_and_diesel": {
             "2026-03-22": fuel_duty_base,  # 5p cut ends
-            "2027-04-01": round(fuel_duty_base * rpi_2027 / rpi_2026, 4),
-            "2028-04-01": round(fuel_duty_base * rpi_2028 / rpi_2026, 4),
-            "2029-04-01": round(fuel_duty_base * rpi_2029 / rpi_2026, 4),
-            "2030-04-01": round(fuel_duty_base * rpi_2030 / rpi_2026, 4),
+            **{
+                f"{year}-04-01": round(
+                    fuel_duty_base * rpi_index(f"{year}-04-01") / rpi_2026, 4
+                )
+                for year in fuel_years
+            },
         },
     }
+
+
+def _pre_budget_fuel_duty_rates() -> dict:
+    """Pre-Budget fuel duty by year: the 5p cut ends in March 2026
+    (57.95p, rounded), then RPI uprating. The rates to 2030-31 follow
+    the blog post's methodology (policy 95147); later policy years carry
+    on from 2030-31 by policyengine-uk's RPI index."""
+    from policyengine_uk.system import system
+
+    rates = {
+        "2026": 0.58,  # 5p cut ends, returns to 57.95p rounded
+        "2027": 0.61,  # RPI uprating
+        "2028": 0.63,
+        "2029": 0.64,
+        "2030": 0.66,  # Continued RPI uprating
+    }
+    rpi_index = system.parameters.gov.economic_assumptions.indices.obr.rpi
+    for year in (year for year in POLICY_YEARS if year > 2030):
+        rates[str(year)] = round(
+            rates["2030"]
+            * rpi_index(f"{year}-04-01")
+            / rpi_index("2030-04-01"),
+            2,
+        )
+    return rates
 
 
 # Cache for lazy-loaded baseline
@@ -185,13 +216,7 @@ def _create_fuel_duty_freeze() -> Reform:
     # Baseline: What would have happened without Autumn Budget
     # 5p cut ends March 2026 → 57.95p, then RPI uprating
     # Uses same methodology as blog post policy 95147
-    baseline_rates = {
-        "2026": 0.58,  # 5p cut ends, returns to 57.95p rounded
-        "2027": 0.61,  # RPI uprating
-        "2028": 0.63,
-        "2029": 0.64,
-        "2030": 0.66,  # Continued RPI uprating
-    }
+    baseline_rates = _pre_budget_fuel_duty_rates()
 
     return Reform(
         id="fuel_duty_freeze",
@@ -337,21 +362,13 @@ def _create_savings_tax_increase() -> Reform:
         baseline_parameter_changes={
             # Pre-budget rates (20% basic, 40% higher, 45% additional)
             # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-            "gov.hmrc.income_tax.rates.savings.basic": {
-                "2028": 0.20,
-                "2029": 0.20,
-                "2030": 0.20,
-            },
-            "gov.hmrc.income_tax.rates.savings.higher": {
-                "2028": 0.40,
-                "2029": 0.40,
-                "2030": 0.40,
-            },
-            "gov.hmrc.income_tax.rates.savings.additional": {
-                "2028": 0.45,
-                "2029": 0.45,
-                "2030": 0.45,
-            },
+            "gov.hmrc.income_tax.rates.savings.basic": _years_from(2028, 0.20),
+            "gov.hmrc.income_tax.rates.savings.higher": _years_from(
+                2028, 0.40
+            ),
+            "gov.hmrc.income_tax.rates.savings.additional": _years_from(
+                2028, 0.45
+            ),
         },
         parameter_changes={},  # Uses new rates from policyengine-uk v2.60+
     )
@@ -381,21 +398,15 @@ def _create_property_tax_increase() -> Reform:
         baseline_parameter_changes={
             # Pre-budget rates (20% basic, 40% higher, 45% additional)
             # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-            "gov.hmrc.income_tax.rates.property.basic": {
-                "2028": 0.20,
-                "2029": 0.20,
-                "2030": 0.20,
-            },
-            "gov.hmrc.income_tax.rates.property.higher": {
-                "2028": 0.40,
-                "2029": 0.40,
-                "2030": 0.40,
-            },
-            "gov.hmrc.income_tax.rates.property.additional": {
-                "2028": 0.45,
-                "2029": 0.45,
-                "2030": 0.45,
-            },
+            "gov.hmrc.income_tax.rates.property.basic": _years_from(
+                2028, 0.20
+            ),
+            "gov.hmrc.income_tax.rates.property.higher": _years_from(
+                2028, 0.40
+            ),
+            "gov.hmrc.income_tax.rates.property.additional": _years_from(
+                2028, 0.45
+            ),
         },
         parameter_changes={},  # Uses new rates from policyengine-uk v2.60+
     )
@@ -457,19 +468,14 @@ def _calculate_pre_freeze_thresholds() -> dict:
     base_2026 = 29385
 
     rpi_2026 = rpi_index("2026-04-06")
-    rpi_2027 = rpi_index("2027-04-06")
-    rpi_2028 = rpi_index("2028-04-06")
-    rpi_2029 = rpi_index("2029-04-06")
-    rpi_2030 = rpi_index("2030-04-06")
 
     return {
-        # Baseline: Continue RPI uprating from 2027 (no freeze)
-        # Use year-only format for parameter changes
+        # Baseline: Continue RPI uprating from 2027 (no freeze), in every
+        # policy year. Use year-only format for parameter changes
         "gov.hmrc.student_loans.thresholds.plan_2": {
-            "2027": round(base_2026 * rpi_2027 / rpi_2026),
-            "2028": round(base_2026 * rpi_2028 / rpi_2026),
-            "2029": round(base_2026 * rpi_2029 / rpi_2026),
-            "2030": round(base_2026 * rpi_2030 / rpi_2026),
+            str(year): round(base_2026 * rpi_index(f"{year}-04-06") / rpi_2026)
+            for year in POLICY_YEARS
+            if year >= 2027
         },
     }
 
@@ -539,6 +545,7 @@ RAIL_FARE_INCREASES = {
     2028: 0.039,  # 3.9%
     2029: 0.039,  # 3.9%
     2030: 0.039,  # Assumed same as 2029
+    2031: 0.039,  # Assumed same as 2029
 }
 
 # Treasury cost estimates for rail fare freeze (£bn)
@@ -549,6 +556,9 @@ RAIL_FREEZE_COSTS = {
     2028: 0.160,  # Estimated from total
     2029: 0.165,  # Estimated from total
     2030: 0.150,  # Remaining from £775m total
+    # No Treasury figure past 2030-31: 2031-32 holds 2030-31's cost
+    # (an assumption, flagged for review)
+    2031: 0.150,
 }
 
 
@@ -569,7 +579,7 @@ def _rail_fares_freeze_modifier(sim: Simulation) -> Simulation:
     - Add Treasury-estimated cost distributed proportionally by rail usage
     - Adjust for household weights when setting sample values
     """
-    for year in [2026, 2027, 2028, 2029, 2030]:
+    for year in POLICY_YEARS:
         # Get current rail subsidy values and weights
         current_rail = sim.calculate(
             "rail_subsidy_spending", year, map_to="household"
@@ -673,10 +683,9 @@ def create_salary_sacrifice_cap_reform() -> Reform:
         ),
         # Baseline: Pre-budget (no cap)
         baseline_parameter_changes={
-            "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": {
-                "2029": float("inf"),
-                "2030": float("inf"),
-            },
+            "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": _years_from(
+                2029, float("inf")
+            ),
         },
         # Reform: Use current law (pe-uk with cap)
         parameter_changes={},
@@ -727,13 +736,7 @@ def _create_combined_autumn_budget_reform() -> Reform:
 
     # Fuel duty baseline: 5p cut ends March 2026, then RPI uprating
     # (hardcoded because policyengine-uk 2.60.0+ has post-budget values)
-    fuel_duty_baseline = {
-        "2026": 0.58,
-        "2027": 0.61,
-        "2028": 0.63,
-        "2029": 0.64,
-        "2030": 0.66,
-    }
+    fuel_duty_baseline = _pre_budget_fuel_duty_rates()
 
     # Combine all baseline parameter changes
     combined_baseline_params = {
@@ -754,44 +757,23 @@ def _create_combined_autumn_budget_reform() -> Reform:
             2
         ),
         # Salary sacrifice pension cap baseline (pre-budget: no cap)
-        "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": {
-            "2029": float("inf"),
-            "2030": float("inf"),
-        },
+        "gov.hmrc.national_insurance.salary_sacrifice_pension_cap": _years_from(
+            2029, float("inf")
+        ),
         # Savings tax baseline (pre-budget rates)
         # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-        "gov.hmrc.income_tax.rates.savings.basic": {
-            "2028": 0.20,
-            "2029": 0.20,
-            "2030": 0.20,
-        },
-        "gov.hmrc.income_tax.rates.savings.higher": {
-            "2028": 0.40,
-            "2029": 0.40,
-            "2030": 0.40,
-        },
-        "gov.hmrc.income_tax.rates.savings.additional": {
-            "2028": 0.45,
-            "2029": 0.45,
-            "2030": 0.45,
-        },
+        "gov.hmrc.income_tax.rates.savings.basic": _years_from(2028, 0.20),
+        "gov.hmrc.income_tax.rates.savings.higher": _years_from(2028, 0.40),
+        "gov.hmrc.income_tax.rates.savings.additional": _years_from(
+            2028, 0.45
+        ),
         # Property tax baseline (pre-budget rates)
         # Start from 2028 to match OBR fiscal year timing (policy starts April 2027)
-        "gov.hmrc.income_tax.rates.property.basic": {
-            "2028": 0.20,
-            "2029": 0.20,
-            "2030": 0.20,
-        },
-        "gov.hmrc.income_tax.rates.property.higher": {
-            "2028": 0.40,
-            "2029": 0.40,
-            "2030": 0.40,
-        },
-        "gov.hmrc.income_tax.rates.property.additional": {
-            "2028": 0.45,
-            "2029": 0.45,
-            "2030": 0.45,
-        },
+        "gov.hmrc.income_tax.rates.property.basic": _years_from(2028, 0.20),
+        "gov.hmrc.income_tax.rates.property.higher": _years_from(2028, 0.40),
+        "gov.hmrc.income_tax.rates.property.additional": _years_from(
+            2028, 0.45
+        ),
     }
 
     # Combined baseline simulation modifier for dividend rates and student loans

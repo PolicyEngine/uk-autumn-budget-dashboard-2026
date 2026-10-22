@@ -6,6 +6,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.lifetime_impact import (
     GRADUATE_STARTING_INCOME,
@@ -99,8 +100,11 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--years",
         nargs="+",
         type=int,
-        default=[2026, 2027, 2028, 2029, 2030],
-        help="Years to calculate (default: 2026 2027 2028 2029 2030)",
+        default=list(POLICY_YEARS),
+        help=(
+            "Years to calculate (default: the policy years in "
+            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+        ),
     )
 
     generate_parser.add_argument(

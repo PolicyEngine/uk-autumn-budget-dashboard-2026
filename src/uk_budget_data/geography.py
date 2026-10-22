@@ -1969,7 +1969,10 @@ def add_geography_parser(subparsers) -> None:
         nargs="+",
         type=int,
         default=list(DEFAULT_YEARS),
-        help="Years (default: 2026 to 2030)",
+        help=(
+            "Years (default: the policy years in budget_years.json, "
+            f"{DEFAULT_YEARS[0]} to {DEFAULT_YEARS[-1]})"
+        ),
     )
     parser.add_argument(
         "--out-dir",
