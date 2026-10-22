@@ -154,38 +154,48 @@ describe("binding a receipt to its manifest entry", () => {
     );
   });
 
-  it("shows a model-limited receipt as provisional, never as approved", async () => {
-    // zeta's receipt records the State Pension's model limit. As staged,
-    // provisional, it binds; relabelled approved by hand, it is refused.
-    const entry = structuredClone(entries.zeta);
-    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
-    expect(receipt.dashboard.model_limits).toHaveLength(1);
-    expect(entry.status).toBe("provisional");
-    expect(await receiptProblems(receipt, "zeta", entry)).toEqual([]);
-    entry.status = "approved";
-    expect(await receiptProblems(receipt, "zeta", entry)).toEqual([
-      "the receipt records model limits: held at provisional, so it " +
-        "cannot be shown as approved",
-    ]);
-  });
+  it.each([
+    ["zeta", "state_pension_add_on_uprating"],
+    ["eta", "benefit_uprating_september_cpi"],
+  ])(
+    "shows %s's model-limited receipt as provisional, never as approved",
+    async (key, limit) => {
+      // Real receipts for each registered limit bind as provisional;
+      // relabelled approved by hand, each is refused.
+      const entry = structuredClone(entries[key]);
+      const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+      expect(receipt.dashboard.model_limits).toHaveLength(1);
+      expect(receipt.dashboard.model_limits[0].key).toBe(limit);
+      expect(entry.status).toBe("provisional");
+      expect(await receiptProblems(receipt, key, entry)).toEqual([]);
+      entry.status = "approved";
+      expect(await receiptProblems(receipt, key, entry)).toEqual([
+        "the receipt records model limits: held at provisional, so it " +
+          "cannot be shown as approved",
+      ]);
+    },
+  );
 
-  it("refuses a combined run whose own receipt records a model limit, as approved", async () => {
-    // A combined run's own receipt can record a limit no member records
-    // (the combination touches it); it is held at provisional like any
-    // measure. The edited receipt no longer matches its digest either.
-    const key = "combined--alpha+beta";
-    const entry = entries[key];
-    expect(entry.status).toBe("approved");
-    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
-    receipt.dashboard.model_limits = [
-      fixtureJson(`${entries.zeta.artifact}/receipt.json`).dashboard
-        .model_limits[0],
-    ];
-    expect(await receiptProblems(receipt, key, entry)).toContain(
-      "the receipt records model limits: held at provisional, so it " +
-        "cannot be shown as approved",
-    );
-  });
+  it.each(["zeta", "eta"])(
+    "refuses an approved combined run recording %s's model limit",
+    async (limitedKey) => {
+      // A combined run's own receipt can record a limit no member records
+      // (the combination touches it); it is held at provisional like any
+      // measure. The edited receipt no longer matches its digest either.
+      const key = "combined--alpha+beta";
+      const entry = entries[key];
+      expect(entry.status).toBe("approved");
+      const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+      receipt.dashboard.model_limits = [
+        fixtureJson(`${entries[limitedKey].artifact}/receipt.json`).dashboard
+          .model_limits[0],
+      ];
+      expect(await receiptProblems(receipt, key, entry)).toContain(
+        "the receipt records model limits: held at provisional, so it " +
+          "cannot be shown as approved",
+      );
+    },
+  );
 
   it("refuses a combined entry relabelled with other members", async () => {
     // Review case: relabel alpha+beta as alpha+gamma, with a matching

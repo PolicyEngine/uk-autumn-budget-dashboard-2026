@@ -67,6 +67,21 @@ try:
     )
     world.reconcile(refs["zeta"])
     stage(manifest, refs["zeta"].path, provisional=True, **args)
+    # A 2027 benefit-level measure held until policyengine-uk #2533: the
+    # browser must honour this limit independently of the State Pension one.
+    september_cpi = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "benefit_uprating_september_cpi"
+        ),
+        ["gov.hmrc.child_benefit.amount.eldest"],
+    )
+    world.expect("eta", "positive", IN)
+    refs["eta"] = world.write(
+        "eta", {IN: 1.1, BEYOND: 1.2}, rate=0.28, model_limits=[september_cpi]
+    )
+    world.reconcile(refs["eta"])
+    stage(manifest, refs["eta"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]

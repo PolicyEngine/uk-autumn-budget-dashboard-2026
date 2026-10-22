@@ -2,7 +2,8 @@
 
 ``uk-budget-data generate --artifacts`` writes receipted artifacts, and
 ``uk-budget-data publish ...`` reconciles, stages, approves, withdraws and
-checks manifest entries.
+checks manifest entries, and writes the public-file review rows for the
+entries the page displays.
 """
 
 import argparse
@@ -23,6 +24,11 @@ from uk_budget_data.publication.publish import (
 from uk_budget_data.publication.reconcile import (
     ReconciliationInputError,
     reconcile_artifact,
+)
+from uk_budget_data.publication.review_rows import (
+    REVIEW_CSV,
+    ReviewRowsError,
+    review_rows,
 )
 
 
@@ -106,6 +112,40 @@ def add_publish_parser(subparsers) -> None:
     actions.add_parser("check", help="Re-run every gate (used by CI)")
     actions.add_parser("status", help="List manifest entries")
 
+    rows = actions.add_parser(
+        "review-rows",
+        help="Write the public-file review rows for the displayed entries' "
+        "files and the manifest",
+    )
+    rows.add_argument(
+        "--reviewer", required=True, help="Who reviewed these bytes"
+    )
+    rows.add_argument(
+        "--staged-by",
+        default=None,
+        help="Who staged the provisional entries (the manifest does not "
+        "record it); needed when any is displayed",
+    )
+    rows.add_argument(
+        "--on",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="The review date (default: today, UTC)",
+    )
+    # Also accepted after the action, as the runbook writes it.
+    rows.add_argument(
+        "--data-root",
+        type=Path,
+        default=argparse.SUPPRESS,
+        help=f"Published data directory (default: {m.DATA_ROOT})",
+    )
+    rows.add_argument(
+        "--review-csv",
+        type=Path,
+        default=REVIEW_CSV,
+        help=f"The review list (default: {REVIEW_CSV})",
+    )
+
 
 def run_publish(parsed: argparse.Namespace, out=print) -> int:
     """Run a ``publish`` action. Returns the process exit code."""
@@ -143,6 +183,9 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         if not failures:
             out("publication manifest passes every gate")
         return 1 if failures else 0
+
+    if action == "review-rows":
+        return run_review_rows(parsed, out)
 
     manifest = m.load_manifest(data_root)
     if action == "status":
@@ -187,7 +230,7 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         else:
             out(
                 "usage: uk-budget-data publish "
-                "{reconcile,stage,approve,withdraw,check,status}"
+                "{reconcile,stage,approve,withdraw,check,status,review-rows}"
             )
             return 2
     except PublishError as error:
@@ -197,6 +240,44 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         return 1
     m.save_manifest(manifest, data_root)
     out(f"manifest revision {manifest.revision}")
+    return 0
+
+
+def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
+    """Run ``publish review-rows``. Prints paths and counts, never values."""
+    try:
+        report = review_rows(
+            reviewer=parsed.reviewer,
+            staged_by=parsed.staged_by,
+            on=parsed.on,
+            data_root=parsed.data_root,
+            review_csv=parsed.review_csv,
+        )
+    except ReviewRowsError as error:
+        out("REFUSED review rows (nothing written):")
+        for problem in error.problems:
+            out(f"  - {problem}")
+        return 1
+    for label, paths in (
+        ("added", report.added),
+        ("replaced", report.replaced),
+        ("removed", report.removed),
+    ):
+        for path in paths:
+            out(f"{label} {path}")
+    out(
+        f"review rows for manifest revision {report.revision}: "
+        f"{len(report.added)} added, {len(report.replaced)} replaced "
+        f"({report.unchanged} unchanged), {len(report.removed)} removed; "
+        f"took {report.elapsed:.2f} s after start-up"
+    )
+    if report.unreviewed:
+        out(
+            f"{len(report.unreviewed)} files under the data root have no "
+            "review row, so the build check fails on them:"
+        )
+        for path, why in report.unreviewed:
+            out(f"  - {path} ({why})")
     return 0
 
 

@@ -7,7 +7,9 @@ own write-once directory. A combined set is one simulation of all its
 members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
-still written.
+still written. One that leaves out a scored year of an uprated amount is
+refused the same way, before any simulation is built
+(``uk_budget_data.scored_years``).
 """
 
 import atexit
@@ -43,6 +45,7 @@ from uk_budget_data.publication.receipt import (
     scenario_identity,
 )
 from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.scored_years import missing_scored_years
 
 
 @dataclass
@@ -189,6 +192,24 @@ def _scenarios(subject: str, build_them: Callable):
         ) from error
 
 
+def _refuse_unscored_years(
+    subject: str, baseline_scenario, reform_scenario, years: list[int]
+) -> None:
+    """Refuse a run whose either side leaves out a scored year of an
+    uprated amount: after a bounded change the engine returns it to the
+    old path (policyengine-uk #2430)."""
+    from policyengine_uk.system import system
+
+    gaps = missing_scored_years(
+        getattr(baseline_scenario, "parameter_changes", None),
+        getattr(reform_scenario, "parameter_changes", None),
+        years,
+        system,
+    )
+    if gaps:
+        raise ReceiptUnavailable(subject, " ".join(gap.reason for gap in gaps))
+
+
 def generate_artifacts(
     reforms: list[Reform],
     config: DataConfig,
@@ -264,6 +285,9 @@ def generate_artifacts(
             key, lambda: baseline_for(reform, uses_config_baseline)
         )
         reform_scenario = _scenarios(key, reform.to_scenario)
+        _refuse_unscored_years(
+            key, baseline_scenario, reform_scenario, config.years
+        )
         # Built under data_limits.building: a modifier that reads a limited
         # input while its simulation is built carries it past the watch,
         # so the build is watched too.
@@ -359,6 +383,13 @@ def generate_artifacts(
 
         def prepare():
             combined = combine.combine_measures(ordered, config)
+            # Before the consistency check builds its parameter snapshots.
+            _refuse_unscored_years(
+                key,
+                baseline_for(combined, uses_config),
+                combined.to_scenario(),
+                config.years,
+            )
             combine.check_consistency(
                 combined, ordered, config, list(config.years)
             )
