@@ -278,3 +278,32 @@
   display: inline-flex;
   margin-right: 10px;
 }
+
+/* The table sits behind a toggle under the dumbbell chart */
+.obr-table-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pe-teal-700);
+  background: white;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.obr-table-toggle:hover {
+  background: var(--pe-gray-100);
+}
+
+.obr-table-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.comparison-table-wrapper[hidden],
+.comparison-legend[hidden] {
+  display: none;
+}
