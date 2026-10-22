@@ -33,6 +33,7 @@ import {
   legendLabelStyle,
   TOOLTIP_CONTENT_STYLE,
 } from "../utils/chartTheme";
+import { DISPLAY_YEARS } from "../utils/displayYears";
 
 // Order for distributional chart: good for households first, then bad
 const ALL_POLICY_NAMES = [
@@ -134,7 +135,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
 
   // Calculate y-axis domain across ALL years, symmetrical around zero
   const calculateYAxisDomain = () => {
-    const allYears = [2026, 2027, 2028, 2029, 2030];
+    const allYears = DISPLAY_YEARS;
     let minValue = 0;
     let maxValue = 0;
 
@@ -345,7 +346,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
-              align="left"
+              align="center"
               iconType="rect"
               iconSize={10}
               formatter={(value) => (

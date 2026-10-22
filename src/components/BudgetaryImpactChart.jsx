@@ -35,11 +35,78 @@ import {
 } from "../utils/chartTheme";
 import "./BudgetaryImpactChart.css";
 import "./ChartExport.css";
+import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
+
+// Net impact labels, one per year, as on the 2025 dashboard: the signed
+// total in a small white tag. A tag sits just above the year's stack of
+// gains when the net is positive, and just below its stack of costs when
+// negative, so it never covers a bar or the net line. They are part of the
+// chart's SVG, so the SVG and PNG downloads carry them too.
+const formatNetLabel = (value) =>
+  value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!show || !xAxis?.scale || !yAxis?.scale) return null;
+  const fontSize = narrow ? 11 : 12;
+  const gap = 6;
+  const tagHeight = fontSize + 8;
+  const band = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
+  return (
+    <g className="net-impact-labels">
+      {data.map((point) => {
+        const gains = ALL_POLICY_NAMES.reduce(
+          (sum, name) => sum + Math.max(0, point[name] || 0),
+          0,
+        );
+        const costs = ALL_POLICY_NAMES.reduce(
+          (sum, name) => sum + Math.min(0, point[name] || 0),
+          0,
+        );
+        const net = point.netImpact;
+        const text = formatNetLabel(net);
+        const width = Math.ceil(text.length * fontSize * 0.6) + 10;
+        const x = xAxis.scale(point.year) + band / 2;
+        const top =
+          net >= 0
+            ? yAxis.scale(gains) - gap - tagHeight
+            : yAxis.scale(costs) + gap;
+        return (
+          <g key={point.year}>
+            <rect
+              x={x - width / 2}
+              y={top}
+              width={width}
+              height={tagHeight}
+              rx={4}
+              ry={4}
+              fill="#ffffff"
+              stroke="#D1D5DB"
+              strokeWidth={1}
+            />
+            <text
+              x={x}
+              y={top + tagHeight / 2}
+              fill="#111827"
+              fontSize={fontSize}
+              fontWeight={600}
+              textAnchor="middle"
+              dominantBaseline="central"
+            >
+              {text}
+            </text>
+          </g>
+        );
+      })}
+    </g>
+  );
+}
 
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  "This chart shows the annual budgetary impact from 2026-27 to 2030-31, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.";
+  `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
 
 function BudgetaryImpactChart({ data }) {
   const chartRef = useRef(null);
@@ -71,9 +138,10 @@ function BudgetaryImpactChart({ data }) {
         }, 0),
       ),
     );
+  // £1.5bn of headroom leaves room for the net impact tags.
   const yAxisDomain = [
-    -Math.max(10, Math.ceil(stackExtent(-1) / 5) * 5),
-    Math.max(10, Math.ceil(stackExtent(1) / 5) * 5),
+    -Math.max(10, Math.ceil((stackExtent(-1) + 1.5) / 5) * 5),
+    Math.max(10, Math.ceil((stackExtent(1) + 1.5) / 5) * 5),
   ];
 
   // Legend items for export: the measures the chart draws, as on screen
@@ -117,7 +185,9 @@ function BudgetaryImpactChart({ data }) {
         <div>
           <h2>Revenue impact</h2>
           <p className="chart-description">
-            This chart shows the annual budgetary impact from 2026-27 to 2030-31,
+            This chart shows the annual budgetary impact from{" "}
+            {fiscalYearTick(FIRST_DISPLAY_YEAR)} to{" "}
+            {fiscalYearTick(LAST_DISPLAY_YEAR)},
             measured in billions of pounds. Positive values indicate revenue
             gains for the Government, whilst negative values indicate costs to
             the Treasury.
@@ -130,7 +200,7 @@ function BudgetaryImpactChart({ data }) {
         <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
           <ComposedChart
             data={data}
-            margin={chartMargin(narrow, { left: 60 })}
+            margin={chartMargin(narrow, { left: 60, top: 32 })}
             stackOffset="sign"
           >
             <CartesianGrid {...GRID_PROPS} />
@@ -189,7 +259,7 @@ function BudgetaryImpactChart({ data }) {
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
-              align="left"
+              align="center"
               iconType="rect"
               iconSize={10}
               formatter={(value) => (
@@ -237,6 +307,15 @@ function BudgetaryImpactChart({ data }) {
               hide={activePolicies.length <= 1}
             />
             <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <Customized
+              component={
+                <NetImpactLabels
+                  data={data}
+                  narrow={narrow}
+                  show={activePolicies.length > 1}
+                />
+              }
+            />
             <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>

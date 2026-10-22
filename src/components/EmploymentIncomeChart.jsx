@@ -254,7 +254,7 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
                 <span style={legendLabelStyle(narrow)}>{value}</span>
               )}
               verticalAlign="bottom"
-              align="left"
+              align="center"
             />
             <Line
               type="monotone"

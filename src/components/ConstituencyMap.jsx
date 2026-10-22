@@ -28,7 +28,10 @@ import {
   drawMapLegend,
   placeMapLegend,
 } from "../utils/geography/legend";
-import { DIRECTION_TEXT_COLOURS } from "../utils/geography/palette";
+import {
+  CATEGORY_COLOURS,
+  DIRECTION_TEXT_COLOURS,
+} from "../utils/geography/palette";
 import { hasReform, rowsFor } from "../utils/geography/rows";
 import {
   describeSeat,
@@ -188,10 +191,84 @@ function TooltipLines({ lines }) {
  * light grey when too uncertain to classify, and drawn as no data when
  * there is no row. Nothing is summed across measures.
  */
+/**
+ * The map's layout before its results are published: every constituency
+ * drawn in neutral grey from the boundaries the site ships, a disabled
+ * search box, the colour scale without values, and the notice over the
+ * map. Without the boundaries, the notice alone. The notice keeps one place
+ * in the tree either way, so it is not remounted when the boundaries load.
+ */
+function MapTemplate({ features, children }) {
+  const paths = useMemo(() => {
+    if (!features?.length) return null;
+    const path = d3.geoPath().projection(gridProjection(features));
+    return features.map((feature) => ({ code: seatCode(feature), d: path(feature) }));
+  }, [features]);
+  const scale = [
+    CATEGORY_COLOURS.large_loss,
+    CATEGORY_COLOURS.small_loss,
+    CATEGORY_COLOURS.little_change,
+    CATEGORY_COLOURS.small_gain,
+    CATEGORY_COLOURS.large_gain,
+  ];
+  return (
+    <div className={`map-template ${paths ? "" : "map-template-empty"}`}>
+      {paths && (
+        <div className="map-top-bar">
+          <div className="map-search-section">
+            <label className="map-search-label" htmlFor="constituency-search-template">
+              Search constituency
+            </label>
+            <div className="search-container">
+              <input
+                id="constituency-search-template"
+                type="text"
+                placeholder="Type to search..."
+                className="constituency-search"
+                disabled
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="map-template-canvas">
+        {paths && (
+          <svg
+            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden="true"
+            className="map-template-svg"
+          >
+            {paths.map(({ code, d }) => (
+              <path key={code} d={d} fill="#D1D5DB" stroke="#FFFFFF" strokeWidth={0.4} />
+            ))}
+            <g className="map-template-scale" transform="translate(16, 16)">
+              {scale.map((fill, index) => (
+                <rect key={fill} x={index * 22} y={0} width={20} height={10} fill={fill} />
+              ))}
+            </g>
+            <image
+              href={CHART_LOGO.href}
+              x={WIDTH - CHART_LOGO.width - CHART_LOGO.padding}
+              y={HEIGHT - CHART_LOGO.height - CHART_LOGO.padding}
+              width={CHART_LOGO.width}
+              height={CHART_LOGO.height}
+            />
+          </svg>
+        )}
+        <div className="map-template-overlay">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function ConstituencyMap({
   selectedPolicies = [],
   selectedYear = 2029,
   policies = [],
+  // Whether the page shows the results by region, so a notice can link
+  // to them.
+  showRegionLink = true,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -537,11 +614,19 @@ export default function ConstituencyMap({
               search for one, to see its figure and interval.
             </p>
           </div>
-          {view.kind === "rows" && (
+          {view.kind === "rows" ? (
             <ChartDownloadMenu formats={downloads} ariaLabel="Download map" />
+          ) : (
+            <ChartDownloadMenu
+              formats={{}}
+              ariaLabel="Download map"
+              disabledReason="Available when results are published"
+            />
           )}
         </div>
       </div>
+
+      <div className="chart-body">
 
       {label && (
         <div className="map-policy-indicator">
@@ -555,14 +640,16 @@ export default function ConstituencyMap({
       )}
 
       {view.kind === "notice" && (
-        <UnavailableNotice reason={view.reason}>
-          {view.detail && <p>{view.detail}</p>}
-          {regionalHasChoice && (
-            <p>
-              <a href={`#${REGION_VIEW_ID}`}>See the results by region.</a>
-            </p>
-          )}
-        </UnavailableNotice>
+        <MapTemplate features={boundaries.status === "ready" ? features : null}>
+          <UnavailableNotice reason={view.reason}>
+            {view.detail && <p>{view.detail}</p>}
+            {regionalHasChoice && showRegionLink && (
+              <p>
+                <a href={`#${REGION_VIEW_ID}`}>See the results by region.</a>
+              </p>
+            )}
+          </UnavailableNotice>
+        </MapTemplate>
       )}
 
       {view.kind === "rows" && (
@@ -694,6 +781,7 @@ export default function ConstituencyMap({
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

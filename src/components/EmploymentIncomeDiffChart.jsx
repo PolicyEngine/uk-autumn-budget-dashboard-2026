@@ -207,9 +207,9 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             margin={
               narrow
                 ? { top: 12, right: 20, left: 0, bottom: 34 }
-                : // Bottom space matches the legend of the chart beside it,
-                  // so the two x-axes line up.
-                  { top: 16, right: 24, left: 8, bottom: 47 }
+                : // Bottom space matches the legend (and logo row) of the
+                  // chart beside it, so the two x-axes line up.
+                  { top: 16, right: 24, left: 8, bottom: 76 }
             }
           >
             <CartesianGrid {...GRID_PROPS} />

@@ -417,3 +417,43 @@
     height: 12px;
   }
 }
+
+/* Before results are published: the grey map with the notice over it */
+.map-template-canvas {
+  position: relative;
+  margin-top: 8px;
+}
+
+.map-template-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+}
+
+.map-template-overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(90%, 360px);
+}
+
+.map-template-overlay .publication-unavailable {
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.08);
+}
+
+.map-template .constituency-search:disabled {
+  background: var(--pe-gray-50);
+  cursor: not-allowed;
+}
+
+/* Without the boundaries, the notice sits in flow */
+.map-template-empty .map-template-overlay {
+  position: static;
+  transform: none;
+  width: auto;
+}

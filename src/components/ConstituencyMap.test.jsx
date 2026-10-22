@@ -364,7 +364,14 @@ describe("ConstituencyMap", () => {
         "Results by constituency are shown for one measure at a time, or for all measures together.",
       ),
     ).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
+    // No results map: at most the unpublished template, every seat grey.
+    const drawn = [...container.querySelectorAll("svg path")].filter(
+      (path) => !path.closest(".map-template-svg, .chart-download"),
+    );
+    expect(drawn).toEqual([]);
+    container
+      .querySelectorAll(".map-template-svg path")
+      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
     expect(container.textContent).not.toMatch(/[+-]£|[+-][\d.]+%/);
   });
 
@@ -412,7 +419,14 @@ describe("ConstituencyMap", () => {
     expect(
       await screen.findByText("Results by constituency are not yet published."),
     ).toBeInTheDocument();
-    expect(container.querySelector("svg path")).toBeNull();
+    // No results map: at most the unpublished template, every seat grey.
+    const drawn = [...container.querySelectorAll("svg path")].filter(
+      (path) => !path.closest(".map-template-svg, .chart-download"),
+    );
+    expect(drawn).toEqual([]);
+    container
+      .querySelectorAll(".map-template-svg path")
+      .forEach((path) => expect(path.getAttribute("fill")).toBe("#D1D5DB"));
     unmount();
 
     resetGeographyCache();

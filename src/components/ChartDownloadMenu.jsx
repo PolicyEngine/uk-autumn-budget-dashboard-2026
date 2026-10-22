@@ -10,6 +10,26 @@ const FORMAT_LABELS = {
 
 const ORDER = ["csv", "png", "svg", "txt"];
 
+function DownloadIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 /**
  * One download menu per chart: a disclosure button that shows a short list
  * of format buttons. `formats` maps a format (csv, png, svg, txt) to the
@@ -17,7 +37,12 @@ const ORDER = ["csv", "png", "svg", "txt"];
  * Escape or a click outside closes the list; Escape returns focus to the
  * button.
  */
-function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
+function ChartDownloadMenu({
+  formats,
+  label = "Download",
+  ariaLabel,
+  disabledReason,
+}) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const rootRef = useRef(null);
@@ -44,6 +69,25 @@ function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
     };
   }, [open]);
 
+  // Shown but disabled until there is something to download, so the card's
+  // layout is final before its results are published.
+  if (disabledReason) {
+    return (
+      <div className="chart-download">
+        <button
+          type="button"
+          className="chart-download-button"
+          disabled
+          title={disabledReason}
+          aria-label={ariaLabel ? `${ariaLabel}: ${disabledReason}` : undefined}
+        >
+          <DownloadIcon />
+          {label}
+        </button>
+      </div>
+    );
+  }
+
   if (available.length === 0) return null;
 
   const run = async (format) => {
@@ -69,21 +113,7 @@ function ChartDownloadMenu({ formats, label = "Download", ariaLabel }) {
         aria-label={ariaLabel}
         onClick={() => setOpen((value) => !value)}
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
+        <DownloadIcon />
         {label}
       </button>
       {open && (

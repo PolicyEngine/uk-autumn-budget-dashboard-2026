@@ -11,8 +11,9 @@ import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import GeographyMethodology from "./components/GeographyMethodology";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
-import RegionView from "./components/RegionView";
+import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
 import YearSlider from "./components/YearSlider";
+import { displayRows } from "./utils/displayYears";
 
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
@@ -427,10 +428,6 @@ function App() {
     }, 50);
   };
 
-  // Same sign and format as the chart's former net-impact labels.
-  const formatNetImpact = (value) =>
-    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
-
   return (
     <div className="app">
       <main className="main-content">
@@ -518,31 +515,9 @@ function App() {
               <div className="results-container">
                 {results && (
                   <>
-                    {/* Headline strip: the net figure for each year. It is the
-                        one place these totals are printed; the chart below
-                        draws them as a line. */}
-                    <section
-                      className="headline-strip"
-                      aria-label="Net revenue impact of the selected policies"
-                    >
-                      <p className="headline-strip-label">
-                        Net revenue impact of the selected policies
-                      </p>
-                      <dl className="headline-strip-values">
-                        {results.budgetData.map((point) => (
-                          <div key={point.year} className="headline-value">
-                            <dt>
-                              {point.year}-{(point.year + 1).toString().slice(-2)}
-                            </dt>
-                            <dd>{formatNetImpact(point.netImpact)}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </section>
-
                     {/* Hero Chart: Revenue Impact */}
                     <section id="revenue" className="report-section hero-chart">
-                      <BudgetaryImpactChart data={results.budgetData} />
+                      <BudgetaryImpactChart data={displayRows(results.budgetData)} />
                     </section>
 
                     {/* OBR Comparison (expandable) */}
@@ -613,8 +588,12 @@ function App() {
                       </div>
                     </section>
 
-                    {/* Row 2: Constituency Map. The household scatter is
-                        withdrawn: it showed survey households one by one. */}
+                    {/* Row 2: the constituency map beside the household
+                        scatter. The scatter is a template until binned
+                        household results are published: the per-household
+                        scatter stays withdrawn, as it showed survey
+                        households one by one. Results by region are hidden
+                        for now (RegionView is kept, not rendered). */}
                     <section
                       id="constituencies"
                       className="report-section charts-grid charts-row-2"
@@ -623,20 +602,9 @@ function App() {
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
                         policies={POLICIES}
+                        showRegionLink={false}
                       />
-                    </section>
-
-                    {/* Results by region, as the disclosure layer published
-                        them: one measure, or the whole package, never a sum. */}
-                    <section
-                      id="regions"
-                      className="report-section charts-grid charts-row-regions"
-                    >
-                      <RegionView
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                        policies={POLICIES}
-                      />
+                      <HouseholdScatterTemplate selectedYear={distributionalYear} />
                     </section>
                     <GeographyMethodology />
 

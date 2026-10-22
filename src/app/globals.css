@@ -105,7 +105,7 @@ code {
   --card-border: var(--pe-gray-200);
   --card-radius: 12px;
   --card-padding: 24px;
-  --title-row-height: 68px;
+  --title-row-height: 64px;
 }
 
 body {
@@ -127,6 +127,9 @@ body {
   min-height: 100vh;
   background: var(--page-bg);
   font-family: var(--pe-font-family);
+  /* The full-bleed title band is 100vw wide; never let it add a sideways
+     scroll. clip, unlike hidden, keeps the band sticky. */
+  overflow-x: clip;
 }
 
 .main-content {
@@ -137,7 +140,6 @@ body {
 
 /* Shared card treatment */
 .card,
-.headline-strip,
 .hero-chart,
 .charts-grid > div,
 .section-year-slider,
@@ -149,57 +151,100 @@ body {
   border-radius: var(--card-radius);
 }
 
-/* Sticky title row. It spans the page width with a white background and
-   a thin rule, and tightens once stuck. */
-/* The sentinel is the space above the title: once it scrolls away, the
-   title row is stuck. The row keeps one height in both states, so nothing
-   below it moves when it sticks. */
+/* Title band: the full-width teal band under the site nav that the
+   published UK dashboards use (uk-spring-statement-2026,
+   uk-childcare-100k-threshold, uk-living-standards-outlook .title-row):
+   white Inter 700 title on rgba(40, 94, 97, 0.95). It is the page's only
+   sticky element and keeps one height, so nothing below it moves. The
+   band bleeds to the window edges while its content stays in the column.
+   It looks the same stuck or not: same height, title size and padding, no
+   transitions. The only change once stuck (the sentinel just above it
+   tells App.jsx) is a soft 1px shadow under it. */
 .title-sentinel {
-  height: 16px;
+  height: 1px;
+  margin-bottom: -1px;
 }
 
 .title-row {
   position: sticky;
   top: 0;
-  z-index: 900;
+  /* Above every chart, label, tooltip and card on the page */
+  z-index: 1100;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--pe-space-md);
   height: var(--title-row-height);
-  background: var(--page-bg);
-  box-shadow: 0 0 0 100vmax var(--page-bg);
-  clip-path: inset(0 -100vmax);
+  /* Full-bleed with real edges: the band spans the window, and its padding
+     lines its content up with the page column. */
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  /* Solid PolicyEngine dark teal (rgb 40, 94, 97): no alpha, no blur */
+  background: #285e61;
 }
 
 .title-row.is-stuck {
-  background: var(--pe-surface);
-  box-shadow: 0 0 0 100vmax var(--pe-surface);
-  border-bottom: 1px solid var(--card-border);
-  clip-path: inset(0 -100vmax -1px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .title-row h1 {
-  font-size: 2rem;
+  font-family: var(--pe-font-family);
+  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--pe-gray-900);
+  color: #ffffff;
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.15;
-  transition: font-size var(--pe-transition-fast);
 }
 
-.title-row.is-stuck h1 {
-  font-size: 1.25rem;
+/* The policy selector on the teal band: translucent white outline, white
+   text, a white count badge. Its list stays white. */
+.title-row .policy-selector-toggle {
+  height: 40px;
+  min-width: 0;
+  padding: 0 14px 0 6px;
+  gap: 8px;
+  color: #ffffff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
 }
 
-.title-row.is-stuck .policy-selector-toggle {
-  height: 36px;
+.title-row .policy-selector-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.title-row .policy-selector-toggle:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.title-row .policy-selector-label,
+.title-row .policy-selector-label-short,
+.title-row .policy-selector-icon {
+  color: #ffffff;
+}
+
+.title-row .policy-selector-count {
+  min-width: 24px;
+  height: 24px;
+  font-size: 0.8125rem;
+  background: #ffffff;
+  color: var(--pe-teal-800);
+}
+
+.title-row .policy-selector-label {
+  font-size: 0.875rem;
+}
+
+.title-row .policy-selector-icon {
+  font-size: 0.625rem;
 }
 
 /* Tabs under the title */
 .page-header {
-  margin-bottom: 24px;
+  margin: 16px 0 28px;
 }
 
 .tab-navigation {
@@ -296,43 +341,6 @@ body {
   background: var(--pe-teal-800);
 }
 
-/* Headline strip: one card */
-.headline-strip {
-  padding: 20px var(--card-padding);
-  margin: 0 0 20px;
-}
-
-.headline-strip-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--pe-gray-700);
-  margin-bottom: 8px;
-}
-
-.headline-strip-values {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px 32px;
-}
-
-.headline-value {
-  padding: 4px 0 0;
-}
-
-.headline-value dt {
-  font-size: 0.8125rem;
-  color: var(--pe-gray-500);
-}
-
-.headline-value dd {
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Sections */
 .report-section {
   scroll-margin-top: calc(var(--title-row-height) + 16px);
@@ -377,7 +385,8 @@ body {
     .employment-income-chart,
     .employment-income-diff-chart,
     .region-view,
-    .map-header
+    .map-header,
+    .household-scatter-template
   )
   h2 {
   font-size: 1.125rem;
@@ -394,8 +403,43 @@ body {
   margin: 0 0 12px 0;
 }
 
+/* Every card header: title on the left and the Download button on the
+   right of the first row; the description on its own full-width row
+   below. On a phone the button moves under the description. */
 .main-content .chart-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  align-items: start;
   margin-bottom: 4px;
+}
+
+.main-content .chart-header > div:not(.chart-download) {
+  display: contents;
+}
+
+.main-content .chart-header h2 {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.main-content .chart-header .chart-download {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.main-content .chart-header .chart-description {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+@media (max-width: 768px) {
+  .main-content .chart-header .chart-download {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: start;
+    margin-bottom: 8px;
+  }
 }
 
 .main-content .map-header {
@@ -501,16 +545,60 @@ body {
   grid-column: 1 / -1;
 }
 
-/* Side-by-side charts share a baseline: the header takes any spare height
-   so both plots start and end at the same line. */
+/* Paired cards align row by row. Each pair is one grid with three shared
+   rows (title and Download button / description / chart), and each card
+   takes those rows as a subgrid, so a row is as tall as the taller of the
+   two cards: a title that wraps to two lines in one card pushes both
+   descriptions, plots, axes, legends and logos down together. The chart
+   header and its text wrapper dissolve (display: contents) so the title,
+   description and button are placed on the card's grid directly. On a
+   phone or tablet (one column) the cards fall back to normal flow. */
 @media (min-width: 1025px) {
-  .charts-grid > div:not(:only-child) {
-    display: flex;
-    flex-direction: column;
+  .charts-grid:has(> div + div) {
+    grid-template-rows: auto auto 1fr;
+    row-gap: 0;
   }
 
-  .charts-grid > div:not(:only-child) > .chart-header {
-    flex: 1;
+  .charts-grid > div:not(:only-child) {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    /* No gaps of their own: the shared rows carry the spacing */
+    row-gap: 0;
+    align-content: start;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-header,
+  .charts-grid > div:not(:only-child) > .map-header,
+  .charts-grid > div:not(:only-child) > .map-header > .chart-header {
+    display: contents;
+  }
+
+  .charts-grid > div:not(:only-child) h2 {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) .chart-download {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) .chart-description {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) > div:not(.chart-header):not(.map-header) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    align-self: start;
+    min-width: 0;
   }
 }
 
@@ -564,9 +652,31 @@ body {
   border-top: none;
 }
 
-/* Chart legends: left-aligned; two columns on a phone */
+/* Chart legends: centred under the plot. On desktop the items flow in
+   centred rows with even gaps; on a phone they sit in a centred 2-column
+   grid. The PolicyEngine logo has its own row below, so it never pushes the
+   legend off centre. */
 .main-content .recharts-default-legend {
-  text-align: left !important;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  text-align: center !important;
+}
+
+.main-content .recharts-default-legend .recharts-legend-item {
+  margin-right: 0 !important;
+}
+
+/* Stacking: the sticky title band (z-index 1100) stays above every chart.
+   Chart tooltips sit just below it (a component stylesheet sets them to
+   9999 globally); the lifetime calculator's modal sits above it. */
+.main-content .recharts-tooltip-wrapper {
+  z-index: 1000 !important;
+}
+
+.main-content .modal-overlay {
+  z-index: 1200;
 }
 
 /* A fiscal year in a title never breaks at its hyphen */
@@ -647,23 +757,30 @@ body {
   .main-content {
     padding: 0 24px 48px;
   }
+
+  .title-row {
+    padding-inline: 24px;
+  }
 }
 
 @media (max-width: 768px) {
   :root {
     --card-padding: 16px;
-    --title-row-height: 56px;
+    --title-row-height: 52px;
   }
 
   .main-content {
     padding: 0 16px 48px;
   }
 
+  .title-row {
+    padding-inline: 16px;
+  }
+
   /* One compact row on a phone: the title, and the selector reduced to
      its count (its accessible name stays "Select policies"), with its list
      spanning the row. */
-  .title-row h1,
-  .title-row.is-stuck h1 {
+  .title-row h1 {
     font-size: 1.125rem;
   }
 
@@ -675,9 +792,9 @@ body {
   .title-row .policy-selector-toggle {
     width: auto;
     min-width: 0;
-    height: 40px;
+    height: 34px;
     gap: 6px;
-    padding: 0 10px;
+    padding: 0 12px 0 5px;
   }
 
   .title-row h1 {
@@ -695,13 +812,14 @@ body {
     display: inline;
     font-size: 0.8125rem;
     font-weight: 500;
-    color: var(--pe-gray-700);
   }
 
   .main-content .recharts-default-legend {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px 12px;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    justify-content: center;
+    gap: 4px 16px;
+    text-align: left !important;
   }
 
   .main-content .recharts-default-legend .recharts-legend-item {
@@ -721,22 +839,6 @@ body {
     font-size: 1rem;
   }
 
-  /* Five years as 3 + 2, so no year sits alone on a row */
-  .headline-strip-values {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .headline-strip-values {
-    gap: 12px 16px;
-  }
-
-  .headline-value {
-    padding: 0;
-  }
-
-  .headline-value dd {
-    font-size: 1.1875rem;
-  }
 
   .preset-buttons {
     flex-direction: column;

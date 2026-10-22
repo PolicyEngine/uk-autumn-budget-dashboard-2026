@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import "./YearSlider.css";
+import { DISPLAY_YEARS } from "../utils/displayYears";
 
-const YEARS = [2026, 2027, 2028, 2029, 2030];
+// The years the dashboard shows (from 2027-28; see utils/displayYears.js)
+const YEARS = DISPLAY_YEARS;
 
 function YearSlider({ selectedYear, onYearChange }) {
   const [isPlaying, setIsPlaying] = useState(false);

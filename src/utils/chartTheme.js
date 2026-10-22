@@ -44,23 +44,26 @@ export const AXIS_TITLE_STYLE = {
  * Chart margins. On a phone the y-axis title is dropped (the chart's lead
  * sentence names the unit), so the left margin only needs room for ticks.
  */
-export function chartMargin(narrow, { left = 70, right = 20 } = {}) {
+export function chartMargin(narrow, { left = 70, right = 20, top } = {}) {
   return narrow
-    ? { top: 12, right: 8, left: 4, bottom: 8 }
-    : { top: 16, right, left, bottom: 12 };
+    ? { top: top ?? 12, right: 8, left: 4, bottom: 8 }
+    : { top: top ?? 16, right, left, bottom: 12 };
 }
 
 /**
- * Legend wrapper. On wide screens the legend leaves room on the right for the
- * logo; on a phone it takes the full width and leaves a row below for it.
+ * Legend wrapper: the full chart width, centred, with a row kept free below
+ * it for the PolicyEngine logo (drawn at the bottom right), so the logo
+ * never pushes the legend off centre.
  */
 export function legendWrapperStyle(narrow) {
-  // Span the full chart width, not just the plot area, so items wrap into
-  // as few rows as possible.
-  const base = { left: 0, width: "100%", boxSizing: "border-box" };
-  return narrow
-    ? { ...base, paddingTop: 12, paddingBottom: 30, lineHeight: "20px" }
-    : { ...base, paddingTop: 16, paddingRight: 110, lineHeight: "22px" };
+  return {
+    left: 0,
+    width: "100%",
+    boxSizing: "border-box",
+    paddingTop: narrow ? 12 : 16,
+    paddingBottom: 30,
+    lineHeight: narrow ? "20px" : "22px",
+  };
 }
 
 export function legendLabelStyle(narrow) {

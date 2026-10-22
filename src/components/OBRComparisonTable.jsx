@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
+import { displayYears } from "../utils/displayYears";
 
 function OBRComparisonTable({ selectedPolicies }) {
   const [comparisonData, setComparisonData] = useState(null);
@@ -90,7 +91,7 @@ function OBRComparisonTable({ selectedPolicies }) {
     };
   });
 
-  const years = [2026, 2027, 2028, 2029, 2030];
+  const years = displayYears([2026, 2027, 2028, 2029, 2030]);
   const policies = Object.entries(policiesMap);
 
   const formatValue = (value) => {

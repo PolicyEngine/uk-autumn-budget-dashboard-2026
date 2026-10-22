@@ -505,30 +505,30 @@ export async function buildChartSvg(containerRef, options = {}) {
   // The legend wraps to multiple rows if needed, and the footer height adjusts dynamically
   const footerPadding = 20;
   const logoRightPadding = 10;
-  const legendLogoGap = 20; // Gap between legend area and logo
 
   // Calculate logo dimensions
   const logoWidth = logo?.href ? logo.width : 0;
   const logoHeight = logo?.href ? logo.height : 0;
 
-  // Calculate available width for legend (chart width minus logo space)
-  const legendAreaWidth = logo?.href
-    ? chartWidth - logoWidth - logoRightPadding - legendLogoGap
-    : chartWidth - STYLES.padding * 2;
+  // The legend is centred across the full width; the logo has its own row
+  // below it, at the right, so it never pushes the legend off centre.
+  const legendAreaWidth = chartWidth;
 
   // Pre-calculate legend layout to determine footer height
   let legendResult = null;
   if (legendItems.length > 0) {
     // Create a temporary legend to measure its height
     // Use a smaller max width to ensure wrapping works well
-    const maxLegendWidth = legendAreaWidth - STYLES.padding;
+    const maxLegendWidth = legendAreaWidth - STYLES.padding * 2;
     legendResult = createLegend(legendItems, maxLegendWidth, 0, {
       legendAreaWidth: legendAreaWidth,
     });
   }
 
   const legendHeight = legendResult ? legendResult.height : 0;
-  const footerContentHeight = Math.max(legendHeight, logoHeight);
+  const logoRowGap = 8;
+  const footerContentHeight =
+    legendHeight + (logo?.href ? logoRowGap + logoHeight : 0);
   const footerHeight = footerContentHeight + footerPadding * 2;
 
   // The chart already has legend space built in (originalLegendHeight).
@@ -550,7 +550,7 @@ export async function buildChartSvg(containerRef, options = {}) {
   // Add legend (centered in the legend area, left of logo)
   if (legendItems.length > 0 && legendResult) {
     // Recreate the legend at the correct Y position
-    const maxLegendWidth = legendAreaWidth - STYLES.padding;
+    const maxLegendWidth = legendAreaWidth - STYLES.padding * 2;
     const { element: legendGroup } = createLegend(
       legendItems,
       maxLegendWidth,
@@ -560,9 +560,9 @@ export async function buildChartSvg(containerRef, options = {}) {
     clonedSvg.appendChild(legendGroup);
   }
 
-  // Calculate logo position (anchored to right, vertically centered with legend)
+  // Logo: its own row under the legend, at the right
   const logoX = chartWidth - logoWidth - logoRightPadding;
-  const logoY = footerY + (legendHeight - logoHeight) / 2;
+  const logoY = footerY + legendHeight + logoRowGap;
 
   // Embed logo on the right
   if (logo?.href) {

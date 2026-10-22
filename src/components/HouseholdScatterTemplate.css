@@ -1,0 +1,20 @@
+.household-scatter-template-plot {
+  position: relative;
+}
+
+/* The empty plot's note, centred over the plot area */
+.household-scatter-template-note {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  white-space: nowrap;
+}
