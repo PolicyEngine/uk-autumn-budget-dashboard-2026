@@ -76,7 +76,7 @@ PROPERTY = settings(
 
 
 @pytest.fixture(scope="module")
-def base(tmp_path_factory) -> Path:
+def base(tmp_path_factory):
     """A data root from World with an entry at each status, real receipts.
 
     alpha, beta and their combined run approved, gamma provisional, delta
@@ -151,7 +151,20 @@ def base(tmp_path_factory) -> Path:
         world.close()
     for path in target.rglob(RECONCILIATION_FILE):
         path.unlink()
-    return target
+    before = snapshot(target)
+    yield target
+    # Examples hard-link these files: none may have been written through.
+    assert snapshot(target) == before
+
+
+def snapshot(directory: Path) -> dict[str, str]:
+    return {
+        path.relative_to(directory)
+        .as_posix(): hashlib.sha256(path.read_bytes())
+        .hexdigest()
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    }
 
 
 # --- building a repository layout -----------------------------------------
@@ -185,6 +198,21 @@ def set_status(entry: m.Entry, status: str, approver: str) -> None:
         entry.reason = None
 
 
+def link_or_copy(source, target) -> None:
+    """Hard-link a base file into a test repository (copying across
+    volumes), so each example costs no data copy. A test that changes a file
+    replaces it (``replace``), never writing through the link."""
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copy2(source, target)
+
+
+def replace(path: Path, data: bytes) -> None:
+    path.unlink()
+    path.write_bytes(data)
+
+
 def make_repo(
     root: Path,
     base: Path,
@@ -194,7 +222,7 @@ def make_repo(
 ) -> m.Manifest:
     """A repository layout holding a copy of ``base`` and a review list."""
     data_root = root / DATA
-    shutil.copytree(base, data_root)
+    shutil.copytree(base, data_root, copy_function=link_or_copy)
     manifest = m.parse_manifest((data_root / "manifest.json").read_bytes())
     entries = manifest.entries()
     for key, status in (statuses or {}).items():
@@ -573,7 +601,7 @@ def test_a_tampered_file_refuses_and_writes_nothing(base, data):
         content[offset] = data.draw(
             st.integers(0, 255).filter(lambda b: b != content[offset])
         )
-        files[path].write_bytes(bytes(content))
+        replace(files[path], bytes(content))
         before = review_bytes(root)
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
@@ -757,7 +785,7 @@ def test_an_entry_naming_other_outputs_refuses(base):
 
 def edit_receipt(root: Path, manifest: m.Manifest, key: str, change) -> str:
     path = root / DATA / manifest.entries()[key].artifact / "receipt.json"
-    path.write_bytes(change(path.read_bytes()))
+    replace(path, change(path.read_bytes()))
     return f"{DATA}/{manifest.entries()[key].artifact}/receipt.json"
 
 
@@ -871,6 +899,8 @@ def test_the_guards_name_each_rule():
     assert rr._no_kind_problems("public/a.json", codes) == [
         "public/a.json: carries more than 20 area codes"
     ]
+    # At most 20 codes is allowed, as in the CI check.
+    assert rr._no_kind_problems("public/a.json", codes[:-10]) == []
     assert rr._no_kind_problems("public/a.json", b"person_weight") == [
         "public/a.json: carries record-level identifiers"
     ]
