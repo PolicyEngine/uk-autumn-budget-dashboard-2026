@@ -452,24 +452,11 @@ def test_built_simulations_that_agree_on_the_scales_are_written(
 
 
 def _caches(systems):
-    """Every cache the comparison could fill: each system's, its root's,
-    and each scale's (views are built at a scale whose stored trees
-    match)."""
+    """The keys of every at-instant cache formulas read through, in each
+    system: its own and every parameter node's (``data_limits._caches``,
+    the caches the comparison's restore covers)."""
     return [
-        (
-            set(system._parameters_at_instant_cache),
-            set(system.parameters._at_instant_cache),
-            *(
-                set(
-                    getattr(
-                        system.parameters.get_child(scale),
-                        "_at_instant_cache",
-                        {},
-                    )
-                )
-                for scale in SCALES
-            ),
-        )
+        [set(cache) for cache in data_limits._caches(system)]
         for system in systems
     ]
 
