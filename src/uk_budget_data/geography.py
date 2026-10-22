@@ -606,7 +606,8 @@ def release_manifest_file_role(
     """
     try:
         manifest = json.loads(Path(manifest_path).read_text())
-    except ValueError:
+    # RecursionError: nesting too deep to decode.
+    except (ValueError, RecursionError):
         raise ValueError(
             f"The release manifest {manifest_path} is not JSON"
         ) from None
