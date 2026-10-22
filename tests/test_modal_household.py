@@ -9,12 +9,20 @@ zero when idle and out to a limit under load.
 
 Modal isn't installed for the tests: a stand-in ``modal`` module records
 what the app asks of it.
+
+Modal imports the module twice: on the machine that deploys it, where the
+repository is checked out and the image is defined, and again in every
+container, from /root/modal_household.py, where only the image's files
+exist. Work at import that needs the repository deploys cleanly and then
+stops every container from starting (policyengine-household-api's
+docs/engineering/skills/modal-images.md).
 """
 
 import importlib
+import importlib.util
 import sys
 import types
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from fastapi import FastAPI
@@ -61,10 +69,11 @@ class FakeApp:
         return register
 
 
-def fake_modal():
+def fake_modal(local=True):
     module = types.ModuleType("modal")
     module.Image = FakeImage
     module.App = FakeApp
+    module.is_local = lambda: local
 
     def enter(snap=False):
         def mark(function):
@@ -114,7 +123,6 @@ def test_the_image_installs_exactly_what_uv_lock_pins(modal_household):
     assert Path(uv_sync["args"][0]).resolve() == REPO
     assert (REPO / "uv.lock").exists()
     assert uv_sync.get("frozen", True) is True
-    assert ("add_local_python_source", {"args": ("uk_budget_data",)}) in steps
 
 
 def test_the_image_records_the_commit_it_was_built_from(modal_household):
@@ -150,3 +158,45 @@ def test_the_web_endpoint_is_the_household_app(modal_household):
     assert isinstance(web, FastAPI)
     paths = {route.path for route in web.routes}
     assert {"/health", "/household-impact"} <= paths
+
+
+def test_the_image_ships_the_files_the_package_reads(modal_household):
+    """add_local_python_source copies only .py files unless told otherwise,
+    and the package reads budget_years.json when it is imported."""
+    (source,) = [
+        options
+        for name, options in modal_household.app.image.steps
+        if name == "add_local_python_source"
+    ]
+    assert source["args"] == ("uk_budget_data",)
+    ignore = source.get("ignore")
+    assert ignore is not None, "Modal's default ignores every file but .py"
+    package = REPO / "src" / "uk_budget_data"
+    data_files = [
+        path.relative_to(package).as_posix()
+        for path in package.rglob("*")
+        if path.is_file()
+        and path.suffix != ".py"
+        and "__pycache__" not in path.parts
+    ]
+    assert "budget_years.json" in data_files
+    for name in data_files:
+        assert not any(
+            PurePosixPath(name).full_match(pattern) for pattern in ignore
+        ), name
+
+
+def test_the_module_imports_inside_a_container(monkeypatch, tmp_path):
+    """In a container the module is /root/modal_household.py, with no
+    repository around it, and modal.is_local() is false."""
+    monkeypatch.setitem(sys.modules, "modal", fake_modal(local=False))
+    mounted = tmp_path / "root" / "modal_household.py"
+    mounted.parent.mkdir()
+    mounted.write_text(
+        (REPO / "src" / "uk_budget_data" / "modal_household.py").read_text()
+    )
+    spec = importlib.util.spec_from_file_location("modal_household", mounted)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    options = module.app.classes["HouseholdImpactApi"]
+    assert options["enable_memory_snapshot"] is True
