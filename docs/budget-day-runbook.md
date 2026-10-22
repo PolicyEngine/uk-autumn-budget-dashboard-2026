@@ -497,7 +497,11 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **The schedule, worked back from 06:00Z** (coordinator, 22 October), on busy-queue figures:
     - **A:** adoption plus regeneration. That's W5's figure: the table above, plus regeneration measured at Friday's rehearsal.
     - **B:** the Microcosm build. The UK hub's build runbook gives it.
-    - **C:** certification plus release: the policyengine.py PR's CI and `push.yaml`. Measured for 6.10.0: about 3 h 10 min from merge to PyPI (#685 merged 13:30:51Z, on PyPI 16:41:14Z), about 2 hours of it waiting for runners. policyengine.py's consumer dispatch then waited 40 min for a runner, which W5 avoids by dispatching by hand.
+    - **C:** certification plus release: the policyengine.py PR's CI, then `push.yaml`. Measured for 6.10.0:
+      - **The PR's CI:** about 1 h 15 min at #685's final head (run 39588831360).
+      - **`push.yaml`:** about 3 h 10 min from merge to PyPI (#685 merged at 13:30Z, and was on PyPI at 16:41:14Z), about 2 hours of it waiting for runners.
+      - **In all,** about 4 h 25 min.
+      - **The dispatch:** policyengine.py's consumer dispatch then waited 40 min for a runner. W5 avoids that by dispatching by hand promptly.
     - **A margin of 1 hour.**
     - **So:** the final release must be out by 06:00Z − A − 1 h, and the final build must start by 06:00Z − A − 1 h − C − B.
     - **Placeholders:** 16:00Z and 22:00Z stand until A, B and C are measured. After the rehearsal the coordinator sets the real times and tells W5 and the hub.
@@ -517,7 +521,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
     3. run the household check.
 
     The previous cut's artifacts, manifest and approvals come back with the revert, still certified on its release.
-  - **Know what the previous cut carries** (UK hub, S6, 22 October): the 14 October certified cut predates Microcosm's weight-index fix (0f0bb869), so a fallback to it carries Microcosm's +0.72% calibration-year weight skew. Say so wherever its figures are used.
+  - **The 14 October cut, only if a release ever falls back to it** (UK hub, S6, 22 October). That cut predates Microcosm's weight-index fix (0f0bb869), so it carries a +0.72% calibration-year weight skew. No dashboard release has used it: 6.10.0's cut has the fix, and so do later re-cuts. So a revert to the dashboard's previous cut doesn't carry it.
 
 ## Adopting a release (each re-cut)
 
