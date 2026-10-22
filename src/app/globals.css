@@ -247,6 +247,11 @@ body {
   border-radius: 999px;
 }
 
+.title-row .policy-selector-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .title-row .policy-selector-toggle:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.6);
@@ -303,6 +308,12 @@ body {
 
 .dashboard-intro a:hover {
   text-decoration-color: currentColor;
+}
+
+.showing-line {
+  margin: -28px 0 40px;
+  font-size: 0.875rem;
+  color: var(--pe-gray-500);
 }
 
 /* Empty state */
@@ -450,6 +461,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 16px;
+  row-gap: 0;
   align-items: start;
   margin-bottom: 4px;
 }
@@ -473,17 +485,10 @@ body {
 .main-content .chart-header .chart-description {
   grid-column: 1 / -1;
   grid-row: 2;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
-@media (max-width: 768px) {
-  .main-content .chart-header .chart-download {
-    grid-column: 1;
-    grid-row: 3;
-    justify-self: start;
-    margin-bottom: 8px;
-  }
-}
+
 
 .main-content .map-header {
   padding-bottom: 0;
@@ -637,7 +642,7 @@ body {
     grid-column: 1 / -1;
     grid-row: 2;
     align-self: start;
-    margin-top: 8px;
+    margin-top: 12px;
   }
 
   /* Rows 3 to 7: controls, plot, legend, logo, footer */

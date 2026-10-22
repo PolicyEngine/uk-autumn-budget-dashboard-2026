@@ -86,9 +86,10 @@
 
 /* Phone: 40px targets; the list opens to the right of the button */
 @media (max-width: 768px) {
+  /* Top right of the title row, 32px */
   .chart-download-button {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
 
   .chart-download-item {
@@ -96,7 +97,6 @@
     min-height: 40px;
   }
 
-  .chart-header .chart-download-menu,
   .lifecycle-chart-footer .chart-download-menu {
     right: auto;
     left: 0;

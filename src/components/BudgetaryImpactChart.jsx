@@ -20,6 +20,7 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { POLICY_COLORS, ALL_POLICY_NAMES } from "../utils/policyConfig";
 import {
@@ -83,10 +84,15 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
         const longest = Math.max(...lines.map((line) => line.length));
         const width = Math.ceil(longest * fontSize * 0.6) + 10;
         const height = tagHeight + (lines.length - 1) * (fontSize + 2);
-        const x = xAxis.scale(point.year) + band / 2;
-        // A year not yet published has no bars: its tag sits on the zero line
+        // Kept inside the plot, so a wide tag at either end is not clipped
+        const x = Math.min(
+          Math.max(xAxis.scale(point.year) + band / 2, xAxis.x + width / 2),
+          xAxis.x + xAxis.width - width / 2,
+        );
+        // A year not yet published has no bars: its tag sits just above the
+        // zero line
         const top = unpublished
-          ? yAxis.scale(0) - height / 2
+          ? yAxis.scale(0) - height - gap
           : net >= 0
             ? yAxis.scale(gains) - gap - tagHeight
             : yAxis.scale(costs) + gap;
@@ -160,10 +166,16 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         }, 0),
       ),
     );
-  // £1.5bn of headroom leaves room for the net impact tags.
+  // Fitted to the data with about 5% padding (the net tags use the top
+  // margin),
+  // on round steps; zero is always in range.
+  const gainsTop = stackExtent(1) * 1.05;
+  const costsBottom = stackExtent(-1) * 1.05;
+  const span = Math.max(gainsTop + costsBottom, 1);
+  const tickStep = span <= 4 ? 1 : span <= 10 ? 2 : span <= 40 ? 5 : 10;
   const yAxisDomain = [
-    -Math.max(10, Math.ceil((stackExtent(-1) + 1.5) / 5) * 5),
-    Math.max(10, Math.ceil((stackExtent(1) + 1.5) / 5) * 5),
+    -Math.ceil(costsBottom / tickStep) * tickStep,
+    Math.max(tickStep, Math.ceil(gainsTop / tickStep) * tickStep),
   ];
 
   // Legend items for export: the measures the chart draws, as on screen
@@ -255,7 +267,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               interval={0}
               ticks={(() => {
                 const [min, max] = yAxisDomain;
-                const interval = max <= 20 ? 5 : 10;
+                const interval = tickStep;
                 const ticks = [];
                 for (let i = min; i <= max + 0.001; i += interval) {
                   ticks.push(Math.round(i));
@@ -281,30 +293,12 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             />
             <Legend
               wrapperStyle={legendWrapperStyle(narrow)}
-              align="center"
-              iconType="rect"
-              iconSize={10}
-              formatter={(value) => (
-                <span style={legendLabelStyle(narrow)}>
-                  {value === "netImpact" ? "Net impact" : value}
-                </span>
-              )}
-              payload={[
-                ...activePolicies.map((name) => ({
-                  value: name,
-                  type: "rect",
-                  color: POLICY_COLORS[name],
-                })),
-                ...(activePolicies.length > 1
-                  ? [
-                      {
-                        value: "Net impact",
-                        type: "line",
-                        color: "#000000",
-                      },
-                    ]
-                  : []),
-              ]}
+              content={
+                <GroupedLegend
+                  names={activePolicies}
+                  netLabel={activePolicies.length > 1 ? "Net impact" : undefined}
+                />
+              }
             />
             {ALL_POLICY_NAMES.map((policyName) => (
               <Bar
@@ -334,7 +328,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
-                  show={activePolicies.length > 1}
+                  show
                 />
               }
             />

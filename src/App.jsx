@@ -465,26 +465,31 @@ function App() {
             />
           </div>
 
+          {/* The year applies to every chart on the Population view, and
+              the revenue chart highlights it; it lives in the band so it can
+              be changed from anywhere. The Personal view has its own inputs. */}
           {activeTab === "dashboard" && (
-            <>
-              {/* The year applies to every chart below the revenue chart,
-                  which highlights it; it lives in the band so it can be
-                  changed from anywhere on the page. */}
-              <div className="band-year">
-                <YearSlider
-                  selectedYear={distributionalYear}
-                  onYearChange={setDistributionalYear}
-                />
-              </div>
-              <div className="band-policy">
-                <PolicySelector
-                  policies={POLICIES}
-                  selectedPolicies={selectedPolicies}
-                  onPolicyToggle={handlePolicyToggle}
-                />
-              </div>
-            </>
+            <div className="band-year">
+              <YearSlider
+                selectedYear={distributionalYear}
+                onYearChange={setDistributionalYear}
+              />
+            </div>
           )}
+          {/* The policy pill stays on the Personal view, disabled, so the
+              band does not change shape */}
+          <div className="band-policy">
+            <PolicySelector
+              policies={POLICIES}
+              selectedPolicies={selectedPolicies}
+              onPolicyToggle={handlePolicyToggle}
+              disabledReason={
+                activeTab === "personal"
+                  ? "The personal calculator models all policies"
+                  : undefined
+              }
+            />
+          </div>
         </div>
 
         {activeTab === "personal" ? (
@@ -518,6 +523,17 @@ function App() {
               </a>{" "}
               are at the bottom of the page.
             </p>
+            {/* Which policies every chart below shows, when not all */}
+            {selectedPolicies.length > 0 &&
+              selectedPolicies.length < POLICIES.length && (
+                <p className="showing-line">
+                  {selectedPolicies.length === 1
+                    ? `Showing: ${
+                        POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
+                      }`
+                    : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
+                </p>
+              )}
 
             {selectedPolicies.length === 0 ? (
               <div className="empty-state">

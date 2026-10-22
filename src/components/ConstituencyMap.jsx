@@ -618,12 +618,6 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           logo, then the method note. */}
       <div className="chart-controls">
-        {label && (
-          <div className="map-policy-indicator">
-            <span className="map-policy-label">Showing</span>
-            <span className="map-policy-name">{label}</span>
-          </div>
-        )}
         {view.kind === "rows" ? (
           <div className="map-top-bar">
             <div className="map-search-section">

@@ -1457,37 +1457,37 @@ function LifecycleCalculator() {
                   </p>
 
                   <h4>Policies modelled</h4>
-                  <ul>
-                    <li>
-                      <strong>Rail fare freeze</strong>: regulated fares held for
-                      one year in 2026.
-                    </li>
-                    <li>
-                      <strong>Fuel duty</strong>: the 5p cut kept longer, then
-                      phased rises.
-                    </li>
-                    <li>
-                      <strong>Threshold freeze</strong>: income tax thresholds
-                      frozen until 2030-31.
-                    </li>
-                    <li>
-                      <strong>Unearned income tax</strong>: tax on dividends,
-                      savings and property income up 5%.
-                    </li>
-                    <li>
-                      <strong>Salary sacrifice cap</strong>: £2,000 a year, from
-                      2029.
-                    </li>
-                    <li>
-                      <strong>Student loan threshold</strong>: Plan 2 frozen at
-                      £27,295, 2027-28 to 2029-30.
-                    </li>
-                    <li>
-                      <strong>Two-child limit</strong>: removed from 2026.
-                    </li>
-                  </ul>
+                <ul>
+                  <li>
+                    <strong>Threshold freeze extension</strong>: income tax
+                    thresholds frozen until 2030-31.
+                  </li>
+                  <li>
+                    <strong>Dividend, savings and property income tax
+                    increase</strong>: tax on that income up 5%.
+                  </li>
+                  <li>
+                    <strong>Salary sacrifice cap</strong>: £2,000 a year, from
+                    2029.
+                  </li>
+                  <li>
+                    <strong>Freeze student loan repayment thresholds</strong>:
+                    Plan 2 frozen at £27,295, 2027-28 to 2029-30.
+                  </li>
+                  <li>
+                    <strong>2 child limit repeal</strong>: removed from 2026.
+                  </li>
+                  <li>
+                    <strong>Fuel duty freeze extension</strong>: the 5p cut
+                    kept longer, then phased rises.
+                  </li>
+                  <li>
+                    <strong>Rail fares freeze</strong>: regulated fares held
+                    for one year in 2026.
+                  </li>
+                </ul>
 
-                  <h4>Assumptions</h4>
+                <h4>Assumptions</h4>
                   <ul>
                     <li>Work starts at 22 on the chosen salary.</li>
                     <li>

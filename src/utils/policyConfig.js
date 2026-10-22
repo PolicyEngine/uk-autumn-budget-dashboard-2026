@@ -66,28 +66,32 @@ export const ALL_POLICY_NAMES = [
   "Zero-rate VAT on energy",
 ];
 
+// Measures that raise revenue (the rest of ALL_POLICY_NAMES cost revenue),
+// for the legends' two groups
+export const REVENUE_RAISING_NAMES = new Set([
+  "Threshold freeze extension",
+  "Dividend tax increase (+2pp)",
+  "Savings income tax increase (+2pp)",
+  "Property income tax increase (+2pp)",
+  "Salary sacrifice cap",
+  "Freeze student loan repayment thresholds",
+]);
+
 // Lifecycle calculator reform configuration
 // Note: In lifecycle view, we show impact FROM HOUSEHOLD PERSPECTIVE
 // (positive = good for household, negative = bad)
 export const LIFECYCLE_REFORMS = [
-  {
-    key: "impact_rail_fare_freeze",
-    label: "Rail fare freeze",
-    color: POLICY_COLORS_BY_KEY.impact_rail_fare_freeze,
-  },
-  {
-    key: "impact_fuel_duty_freeze",
-    label: "Fuel duty freeze",
-    color: POLICY_COLORS_BY_KEY.impact_fuel_duty_freeze,
-  },
+  // The dashboard's policy names, in its legend order: raisers, then costs.
+  // The lifecycle model taxes dividends, savings and property income as one
+  // item, so they share one entry.
   {
     key: "impact_threshold_freeze",
-    label: "Threshold freeze",
+    label: "Threshold freeze extension",
     color: POLICY_COLORS_BY_KEY.impact_threshold_freeze,
   },
   {
     key: "impact_unearned_income_tax",
-    label: "Unearned income tax",
+    label: "Dividend, savings and property income tax increase",
     color: POLICY_COLORS_BY_KEY.impact_unearned_income_tax,
   },
   {
@@ -97,13 +101,23 @@ export const LIFECYCLE_REFORMS = [
   },
   {
     key: "impact_sl_threshold_freeze",
-    label: "SL threshold freeze",
+    label: "Freeze student loan repayment thresholds",
     color: POLICY_COLORS_BY_KEY.impact_sl_threshold_freeze,
   },
   {
     key: "impact_two_child_limit",
-    label: "Two-child limit end",
+    label: "2 child limit repeal",
     color: POLICY_COLORS_BY_KEY.impact_two_child_limit,
+  },
+  {
+    key: "impact_fuel_duty_freeze",
+    label: "Fuel duty freeze extension",
+    color: POLICY_COLORS_BY_KEY.impact_fuel_duty_freeze,
+  },
+  {
+    key: "impact_rail_fare_freeze",
+    label: "Rail fares freeze",
+    color: POLICY_COLORS_BY_KEY.impact_rail_fare_freeze,
   },
 ];
 

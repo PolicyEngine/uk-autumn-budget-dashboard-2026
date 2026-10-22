@@ -18,10 +18,11 @@ import { downloadFile } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { ALL_POLICY_NAMES, POLICY_COLORS } from "../utils/policyConfig";
 import "./DistributionalChart.css";
 import "./ChartExport.css";
 import {
@@ -39,19 +40,8 @@ import {
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
 // Order for distributional chart: good for households first, then bad
-const ALL_POLICY_NAMES = [
-  // Good for households (positive, teal/green)
-  "2 child limit repeal",
-  "Fuel duty freeze extension",
-  "Rail fares freeze",
-  // Bad for households (negative, amber)
-  "Threshold freeze extension",
-  "Dividend tax increase (+2pp)",
-  "Savings income tax increase (+2pp)",
-  "Property income tax increase (+2pp)",
-  "Freeze student loan repayment thresholds",
-  "NICs on salary sacrifice (>£2k)",
-];
+// Every legend uses one order, set in policyConfig: revenue raisers, then
+// costs. (A name with no data here is never drawn.)
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -90,7 +80,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       id: "freeze_student_loan_thresholds",
       name: "Freeze student loan repayment thresholds",
     },
-    { id: "salary_sacrifice_cap", name: "NICs on salary sacrifice (>£2k)" },
+    { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
   ];
 
   const decileOrder = [
@@ -349,28 +339,12 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
               />
               <Legend
                 wrapperStyle={legendWrapperStyle(narrow)}
-                align="center"
-                iconType="rect"
-                iconSize={10}
-                formatter={(value) => (
-                  <span style={legendLabelStyle(narrow)}>{value}</span>
-                )}
-                payload={[
-                  ...activePolicies.map((name) => ({
-                    value: name,
-                    type: "rect",
-                    color: POLICY_COLORS[name],
-                  })),
-                  ...(activePolicies.length > 1
-                    ? [
-                        {
-                          value: "Net change",
-                          type: "line",
-                          color: "#000000",
-                        },
-                      ]
-                    : []),
-                ]}
+                content={
+                  <GroupedLegend
+                    names={activePolicies}
+                    netLabel={activePolicies.length > 1 ? "Net change" : undefined}
+                  />
+                }
               />
               {ALL_POLICY_NAMES.map((policyName) => (
                 <Bar
