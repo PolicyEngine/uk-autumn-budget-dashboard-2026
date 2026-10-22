@@ -69,8 +69,8 @@ Totals that contain a limited tax are outside these direct-reader comparisons.
 The detector does not record a limit for neutralising `sdlt_on_transactions`,
 abolishing it through `gov.abolitions`, replacing its formula with zero,
 supplying a one-sided input on it, or setting `sdlt_liable` false. This is the
-accepted "partly computable" scope from round 19's F9 for
-`gov.hmrc.stamp_duty.abolish`. Modifiers that seed the cache or change these totals
+"partly computable" scope accepted for `gov.hmrc.stamp_duty.abolish` in
+#51's review (round 19, finding F9). Modifiers that seed the cache or change these totals
 are both held today as hand-written modifiers while a data limit is active, pending
 the two-person attestation of the exact receipt described in the runbook.
 
