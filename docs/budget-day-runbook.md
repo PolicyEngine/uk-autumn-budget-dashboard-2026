@@ -365,9 +365,13 @@ uv run uk-budget-data publish check
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
-- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` out of `public/` (the gates recompute reconciliation and never read it) and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`. `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **out of the repository**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
+  - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
+  - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
+  - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
   - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
-  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: an open question for the coordinator.
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: **an open question for the coordinator, to settle before the rehearsal.**
+  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. Whether such artifacts are deleted before the helper runs is with the coordinator.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -407,7 +411,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   - a quantified explanation;
   - the reviewer's name;
   - the artifact's `outputs_sha256`;
-  - the failed row's `comparator.sha256` from `reconciliation.json`, as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
+  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved out of the repository, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
   Then reconcile again.
 - **Approve:**
@@ -566,7 +570,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **Keep the previous cut ready.** Its API revision stays in Cloud Run as the rollback target; record it in the clock table. The workflow's `rollback` took about 5 minutes on 15 October.
   - **Prepare the revert at the merge.** Right after an adoption merges, open its revert PR (`git revert -m 1 <merge>`; see "Rollback") as a draft, and let its CI finish. Green means every check passes, the Publication gate included, though it isn't a required check. A revert is then the merge of a green PR, not a wait in the runner queue.
   - **Keep it current.** Checks don't require a branch to be up to date. So if anything merges to `main` after the revert PR's CI ran, update the revert PR and let its CI run again.
-  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
+  - **That stays clean only while nothing is published after the adoption.** That's why approval happens in the adoption PR. After any later publish PR, refresh the revert PR (keeping `main`'s publication files, as "Rollback" says), regenerate on it, write the review rows, and re-run its CI. On 28 October that means the revert stops being fast after G2's first publish PR.
   - **Then, to revert:**
     1. mark the revert PR ready (a draft can't be merged), and merge it;
     2. run the API `rollback` to the recorded revision;

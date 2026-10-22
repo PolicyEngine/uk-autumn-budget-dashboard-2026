@@ -216,9 +216,7 @@ def _review_date(on: Optional[str]) -> str:
             raise ValueError
         return date.fromisoformat(on).isoformat()
     except ValueError:
-        raise ReviewRowsError(
-            [f"--on {on!r} is not a date (YYYY-MM-DD)"]
-        ) from None
+        raise ReviewRowsError([f"--on {on!r} is not a date (YYYY-MM-DD)"]) from None
 
 
 def _is_layer_shaped(name: str, data: bytes) -> bool:
@@ -246,9 +244,7 @@ def _no_kind_problems(where: str, data: bytes) -> list[str]:
             "through the layer, not by this helper"
         )
     elif not binary and len(set(AREA_CODE.findall(data))) > MAX_AREA_CODES:
-        problems.append(
-            f"{where}: carries more than {MAX_AREA_CODES} area codes"
-        )
+        problems.append(f"{where}: carries more than {MAX_AREA_CODES} area codes")
     return problems
 
 
@@ -300,9 +296,7 @@ def _receipt_problems(
     dashboard = document["dashboard"]
     problems = []
     if set(document) != RECEIPT_FIELDS:
-        problems.append(
-            f"{where}: holds fields its artifact digest does not cover"
-        )
+        problems.append(f"{where}: holds fields its artifact digest does not cover")
     for name in VOLATILE_DASHBOARD_FIELDS:
         shape = VOLATILE_SHAPES.get(name)
         if shape is None or not shape(dashboard.get(name)):
@@ -319,20 +313,14 @@ def _receipt_problems(
     if dashboard.get("key") != key:
         problems.append(f"{where}: is not {key}'s receipt")
     files, digests = dashboard.get("files"), dashboard.get("digests")
-    if (
-        not isinstance(files, dict)
-        or not files
-        or not isinstance(digests, dict)
-    ):
+    if not isinstance(files, dict) or not files or not isinstance(digests, dict):
         return problems + [f"{where}: does not record its files and digests"]
     api, _ = receipt_api()
     if (
         api.content_sha256(files) != entry.outputs_sha256
         or digests.get("outputs_sha256") != entry.outputs_sha256
     ):
-        problems.append(
-            f"{where}: does not list the files {key}'s entry names"
-        )
+        problems.append(f"{where}: does not list the files {key}'s entry names")
     return problems
 
 
@@ -393,9 +381,7 @@ def _entry_rows(
     if found:
         problems.extend(found)
         return []
-    rows = [
-        Row(receipt_where, RECEIPT_KIND, sha256_bytes(data), receipt_basis)
-    ]
+    rows = [Row(receipt_where, RECEIPT_KIND, sha256_bytes(data), receipt_basis)]
     problems.extend(_no_kind_problems(receipt_where, data))
 
     listed = document["dashboard"]["files"]
@@ -426,8 +412,9 @@ def _entry_rows(
         if name not in bound:
             problems.append(
                 f"{where}/{name}: in a displayed artifact, but its receipt "
-                "does not bind it; move it out of public/ (the gates never "
-                "read it)"
+                "does not bind it; move it out of the repository (the gates "
+                "never read it, and an untracked file in the tree makes the "
+                "next receipt dirty)"
             )
     return rows
 
@@ -439,8 +426,7 @@ def _parse_manifest(raw: bytes, where: str) -> m.Manifest:
     except ValidationError as error:
         raise ReviewRowsError(
             [
-                f"{where}: {'.'.join(str(p) for p in item['loc'])}: "
-                f"{item['msg']}"
+                f"{where}: {'.'.join(str(p) for p in item['loc'])}: " f"{item['msg']}"
                 for item in error.errors()
             ]
         ) from None
@@ -483,9 +469,7 @@ def planned_rows(
         if entry.status in m.DISPLAYABLE
     }
     provisional = [
-        key
-        for key, entry in displayed.items()
-        if entry.status == m.PROVISIONAL
+        key for key, entry in displayed.items() if entry.status == m.PROVISIONAL
     ]
     stager = _name(staged_by)
     if provisional and not stager:

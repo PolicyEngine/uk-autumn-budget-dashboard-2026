@@ -102,10 +102,7 @@ def base(tmp_path_factory):
         stage(manifest, refs["gamma"].path, provisional=True, **args)
         surcharge = record(
             DATA_LIMITS[0],
-            [
-                "gov.hmrc.stamp_duty.residential.purchase.additional"
-                ".rate[1].rate"
-            ],
+            ["gov.hmrc.stamp_duty.residential.purchase.additional" ".rate[1].rate"],
         )
         refs[LIMITED_KEY] = world.write(
             LIMITED_KEY,
@@ -176,9 +173,7 @@ def entry_files(data_root: Path, entry: m.Entry) -> dict[str, Path]:
     directory = data_root / entry.artifact
     receipt = json.loads((directory / "receipt.json").read_bytes())
     names = ["receipt.json", *receipt["dashboard"]["files"]]
-    return {
-        f"{DATA}/{entry.artifact}/{name}": directory / name for name in names
-    }
+    return {f"{DATA}/{entry.artifact}/{name}": directory / name for name in names}
 
 
 def set_status(entry: m.Entry, status: str, approver: str) -> None:
@@ -230,9 +225,7 @@ def make_repo(
         set_status(entries[key], status, (approvers or {}).get(key, "María"))
     m.save_manifest(manifest, data_root)
     (root / "data_inputs").mkdir()
-    (root / "data_inputs" / "public_data_review.csv").write_bytes(
-        review.encode()
-    )
+    (root / "data_inputs" / "public_data_review.csv").write_bytes(review.encode())
     (root / "scripts").mkdir()
     shutil.copy(COLUMNS_FILE, root / "scripts" / COLUMNS_FILE.name)
     return manifest
@@ -334,9 +327,7 @@ NAMES = st.text(
     max_size=12,
 ).filter(lambda name: name.strip())
 CELL = st.text(
-    alphabet=st.characters(
-        blacklist_categories=("Cs",), blacklist_characters="\x00\r"
-    ),
+    alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\x00\r"),
     max_size=16,
 )
 STYLES = st.sampled_from(
@@ -352,20 +343,14 @@ DATES = st.dates(date(2026, 1, 1), date(2027, 12, 31)).map(date.isoformat)
 @st.composite
 def scenarios(draw, base_entries):
     """Statuses, names, and a review list holding other rows to keep."""
-    statuses = {
-        key: draw(st.sampled_from(FIGURE_STATUSES)) for key in FIGURE_KEYS
-    }
+    statuses = {key: draw(st.sampled_from(FIGURE_STATUSES)) for key in FIGURE_KEYS}
     statuses[LIMITED_KEY] = draw(st.sampled_from(LIMITED_STATUSES))
     approvers = {key: draw(NAMES) for key in FIGURE_KEYS}
     all_files = sorted(
-        path
-        for entry in base_entries.values()
-        for path in entry_files_paths(entry)
+        path for entry in base_entries.values() for path in entry_files_paths(entry)
     )
     paths = draw(
-        st.lists(
-            st.sampled_from([*all_files, MANIFEST]), unique=True, max_size=8
-        )
+        st.lists(st.sampled_from([*all_files, MANIFEST]), unique=True, max_size=8)
     )
     paths += [
         f"public/{folder}/other-{i}.{suffix}"
@@ -394,9 +379,7 @@ def scenarios(draw, base_entries):
     for path in paths:
         quoting, terminator = draw(STYLES)
         buffer = io.StringIO()
-        csv.writer(
-            buffer, quoting=quoting, lineterminator=terminator
-        ).writerow(
+        csv.writer(buffer, quoting=quoting, lineterminator=terminator).writerow(
             [
                 path,
                 draw(st.sampled_from(check_public_data.KINDS)),
@@ -441,9 +424,9 @@ def drawn(base: Path):
 
 def test_every_artifact_lists_the_six_published_tables(base):
     for entry in base_entries(base).values():
-        listed = json.loads(
-            (base / entry.artifact / "receipt.json").read_bytes()
-        )["dashboard"]["files"]
+        listed = json.loads((base / entry.artifact / "receipt.json").read_bytes())[
+            "dashboard"
+        ]["files"]
         assert sorted(listed) == sorted(KINDS_TABLES)
         assert sorted(os.listdir(base / entry.artifact)) == sorted(
             [*KINDS_TABLES, "receipt.json"]
@@ -476,9 +459,7 @@ def test_rows_are_exactly_the_displayed_files_and_the_manifest(base, data):
             and not (root / path).exists()
             and path not in expected
         }
-        assert set(after_paths) == (set(before_paths) - removed) | set(
-            expected
-        )
+        assert set(after_paths) == (set(before_paths) - removed) | set(expected)
         for _, values in after[1:]:
             if values[0] in expected:
                 kind, sha256, basis = expected[values[0]]
@@ -497,9 +478,7 @@ def test_rows_are_exactly_the_displayed_files_and_the_manifest(base, data):
             for raw, values in before[1:]
             if values[0] not in expected and values[0] not in removed
         ]
-        kept_after = [
-            raw for raw, values in after[1:] if values[0] not in expected
-        ]
+        kept_after = [raw for raw, values in after[1:] if values[0] not in expected]
         assert kept_after == kept_before
         # Replaced rows stay where they were among the kept ones.
         order = [p for p in before_paths if p not in removed]
@@ -514,8 +493,7 @@ def test_no_row_is_written_for_an_entry_the_page_does_not_display(base, data):
     scenario = data.draw(drawn(base))
     with apply(base, scenario) as (root, manifest):
         before = {
-            values[0]: raw
-            for raw, values in split_records(scenario["review"])[1:]
+            values[0]: raw for raw, values in split_records(scenario["review"])[1:]
         }
         run(root, staged_by=scenario["staged_by"])
         after = {
@@ -534,9 +512,7 @@ def test_no_row_is_written_for_an_entry_the_page_does_not_display(base, data):
 def test_a_displayed_provisional_entry_needs_its_stager(base, data):
     scenario = data.draw(drawn(base))
     provisional = sorted(
-        key
-        for key, status in scenario["statuses"].items()
-        if status == m.PROVISIONAL
+        key for key, status in scenario["statuses"].items() if status == m.PROVISIONAL
     )
     assume(provisional)
     stager = data.draw(st.sampled_from([None, "", "  \n "]))
@@ -589,11 +565,7 @@ def test_a_tampered_file_refuses_and_writes_nothing(base, data):
         files = entry_files(root / DATA, manifest.entries()[key])
         path = data.draw(st.sampled_from(sorted(files)))
         content = bytearray(files[path].read_bytes())
-        skip = (
-            volatile_spans(content.decode())
-            if path.endswith("receipt.json")
-            else []
-        )
+        skip = volatile_spans(content.decode()) if path.endswith("receipt.json") else []
         offset = data.draw(
             st.integers(0, len(content) - 1).filter(
                 lambda i: not any(i in span for span in skip)
@@ -666,9 +638,7 @@ LAYER_HEADER = ",".join(check_public_data.PUBLIC_COLUMNS)
 )
 def test_the_guards_agree_with_the_ci_check(header, fragments, name):
     data = (header + ",".join(fragments)).encode()
-    assert bool(rr._no_kind_problems(name, data)) == rejected_by_the_checks(
-        name, data
-    )
+    assert bool(rr._no_kind_problems(name, data)) == rejected_by_the_checks(name, data)
 
 
 def test_the_guards_use_the_ci_checks_rules():
@@ -712,8 +682,9 @@ def test_a_receipt_unbound_file_in_a_displayed_artifact_refuses(base):
         assert refused.value.problems == [
             f"{DATA}/{manifest.measures['alpha'].artifact}/"
             "reconciliation.json: in a displayed artifact, but its receipt "
-            "does not bind it; move it out of public/ (the gates never read "
-            "it)"
+            "does not bind it; move it out of the repository (the gates "
+            "never read it, and an untracked file in the tree makes the next "
+            "receipt dirty)"
         ]
         assert review_bytes(root) == before
 
@@ -735,9 +706,9 @@ def test_a_not_computable_entry_gets_no_rows_and_is_reported(base):
         rows = rows_by_path(root)
         epsilon = entry_files(root / DATA, manifest.measures[LIMITED_KEY])
     assert not set(epsilon) & set(rows)
-    assert {
-        (path, f"{LIMITED_KEY} is not_computable") for path in epsilon
-    } <= set(report.unreviewed)
+    assert {(path, f"{LIMITED_KEY} is not_computable") for path in epsilon} <= set(
+        report.unreviewed
+    )
 
 
 def test_an_approval_for_another_artifact_refuses(base):
@@ -746,9 +717,7 @@ def test_an_approval_for_another_artifact_refuses(base):
         m.save_manifest(manifest, root / DATA)
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
-    assert refused.value.problems == [
-        "alpha: its approval is not for this artifact"
-    ]
+    assert refused.value.problems == ["alpha: its approval is not for this artifact"]
 
 
 def test_an_approval_naming_no_one_refuses(base):
@@ -757,9 +726,7 @@ def test_an_approval_naming_no_one_refuses(base):
         m.save_manifest(manifest, root / DATA)
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
-    assert refused.value.problems == [
-        "alpha: approved, but no approver is named"
-    ]
+    assert refused.value.problems == ["alpha: approved, but no approver is named"]
 
 
 def test_an_entry_naming_another_measures_artifact_refuses(base):
@@ -808,15 +775,12 @@ def test_a_receipt_with_another_value_refuses(base):
             root,
             manifest,
             "alpha",
-            lambda data: data.replace(
-                b'"tree_clean": true', b'"tree_clean": false'
-            ),
+            lambda data: data.replace(b'"tree_clean": true', b'"tree_clean": false'),
         )
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
     assert refused.value.problems == [
-        f"{where}: not the receipt alpha's entry names (its artifact digest "
-        "differs)"
+        f"{where}: not the receipt alpha's entry names (its artifact digest " "differs)"
     ]
 
 
@@ -828,9 +792,7 @@ def test_a_receipt_written_in_another_form_refuses(base):
         where = edit_receipt(root, manifest, "alpha", reformat)
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
-    assert refused.value.problems == [
-        f"{where}: not in the form publication writes"
-    ]
+    assert refused.value.problems == [f"{where}: not in the form publication writes"]
 
 
 def canonical(document: dict) -> bytes:
@@ -888,9 +850,7 @@ def test_a_generation_run_field_of_another_shape_refuses(base, field, value):
 
 
 def test_every_field_left_out_of_the_digest_has_a_shape():
-    assert set(rr.VOLATILE_SHAPES) == set(
-        receipt_module.VOLATILE_DASHBOARD_FIELDS
-    )
+    assert set(rr.VOLATILE_SHAPES) == set(receipt_module.VOLATILE_DASHBOARD_FIELDS)
 
 
 def test_a_malformed_receipt_refuses_rather_than_failing(base):
@@ -919,9 +879,7 @@ def test_a_receipts_generation_time_is_not_bound_intended(base):
             root,
             manifest,
             "alpha",
-            lambda data: re.sub(
-                rb'"generated_at": "\d', b'"generated_at": "1', data
-            ),
+            lambda data: re.sub(rb'"generated_at": "\d', b'"generated_at": "1', data),
         )
         run(root)
         data = (root / where).read_bytes()
@@ -934,9 +892,7 @@ def test_a_missing_listed_file_refuses(base):
         (root / DATA / artifact / "metrics.csv").unlink()
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
-    assert refused.value.problems == [
-        f"{DATA}/{artifact}/metrics.csv: missing"
-    ]
+    assert refused.value.problems == [f"{DATA}/{artifact}/metrics.csv: missing"]
 
 
 def test_a_missing_artifact_refuses(base):
@@ -952,9 +908,7 @@ def test_a_missing_artifact_refuses(base):
 
 def test_a_symbolic_link_refuses(base, tmp_path):
     with repository(base) as (root, manifest):
-        file = (
-            root / DATA / manifest.measures["alpha"].artifact / "metrics.csv"
-        )
+        file = root / DATA / manifest.measures["alpha"].artifact / "metrics.csv"
         copy = tmp_path / "metrics.csv"
         shutil.copy(file, copy)
         file.unlink()
@@ -969,9 +923,7 @@ def test_a_symbolic_link_refuses(base, tmp_path):
 def test_a_linked_artifact_directory_refuses(base, tmp_path):
     with repository(base) as (root, manifest):
         key_dir = (root / DATA / manifest.measures["alpha"].artifact).parent
-        shutil.copytree(
-            key_dir, tmp_path / "alpha", copy_function=link_or_copy
-        )
+        shutil.copytree(key_dir, tmp_path / "alpha", copy_function=link_or_copy)
         shutil.rmtree(key_dir)
         key_dir.symlink_to(tmp_path / "alpha")
         with pytest.raises(rr.ReviewRowsError) as refused:
@@ -1019,9 +971,7 @@ def test_record_level_identifiers_in_the_manifest_refuse(base):
     ) as (root, _):
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
-    assert refused.value.problems == [
-        f"{MANIFEST}: carries record-level identifiers"
-    ]
+    assert refused.value.problems == [f"{MANIFEST}: carries record-level identifiers"]
 
 
 def test_the_guards_name_each_rule():
@@ -1123,8 +1073,7 @@ def test_an_invalid_manifest_refuses_naming_where_not_what(base):
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root)
     assert refused.value.problems == [
-        f"{MANIFEST}: measures.alpha.approval.by: Input should be a valid "
-        "string"
+        f"{MANIFEST}: measures.alpha.approval.by: Input should be a valid " "string"
     ]
 
 
@@ -1135,9 +1084,7 @@ def test_a_review_date_must_be_a_date(base, on):
     with repository(base) as (root, _):
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root, on=on)
-    assert refused.value.problems == [
-        f"--on {on!r} is not a date (YYYY-MM-DD)"
-    ]
+    assert refused.value.problems == [f"--on {on!r} is not a date (YYYY-MM-DD)"]
 
 
 def test_the_review_date_defaults_to_today_in_utc(base):
@@ -1295,9 +1242,7 @@ def test_the_ci_check_passes_on_the_helpers_rows(base):
     with repository(base) as (root, manifest):
         displayed_only(root, manifest)
         legacy = with_legacy_file(root)
-        (root / "data_inputs" / "public_data_review.csv").write_text(
-            HEADER + legacy
-        )
+        (root / "data_inputs" / "public_data_review.csv").write_text(HEADER + legacy)
         run(root, on="2026-10-23")
         subprocess.run(["git", "init", "-q"], cwd=root, check=True)
         subprocess.run(["git", "add", "-A"], cwd=root, check=True)
