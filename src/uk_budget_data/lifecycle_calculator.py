@@ -500,11 +500,20 @@ def calculate_scenario(
     }
 
 
+# The year the inputs describe (age, salary, children's ages): this
+# dashboard's year. The first projected year is this year.
+INPUT_YEAR = 2026
+
+
 def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
-    """Run the lifecycle model and return year-by-year results."""
+    """Run the lifecycle model and return year-by-year results.
+
+    The inputs describe INPUT_YEAR; results start in that year at the
+    given age, in cash terms.
+    """
     current_salary = inputs.current_salary
     current_age = inputs.current_age
-    input_year = 2025
+    input_year = INPUT_YEAR
 
     current_age_multiplier = EARNINGS_GROWTH_BY_AGE.get(
         current_age, PEAK_EARNINGS_MULTIPLIER
@@ -517,7 +526,7 @@ def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
     graduation_age = 22
     graduation_year = input_year - (current_age - graduation_age)
 
-    base_year = 2026
+    base_year = INPUT_YEAR
     end_year = input_year + (inputs.life_expectancy - current_age)
     results = []
 

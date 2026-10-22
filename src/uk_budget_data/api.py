@@ -288,7 +288,7 @@ class APILifecycleInput(BaseModel):
         default=30, ge=18, le=80, description="Current age"
     )
     current_salary: float = Field(
-        default=40_000, ge=0, description="Current annual salary in 2025 (GBP)"
+        default=40_000, ge=0, description="Current annual salary in 2026 (GBP)"
     )
     retirement_age: int = Field(
         default=67, ge=55, le=100, description="Retirement age"
@@ -320,7 +320,7 @@ class APILifecycleInput(BaseModel):
         default=3_000, ge=0, description="Annual property income"
     )
     children_ages: list[int] = Field(
-        default_factory=list, description="Ages of children in 2025"
+        default_factory=list, description="Ages of children in 2026"
     )
 
     @field_validator("children_ages")
