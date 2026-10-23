@@ -473,7 +473,8 @@ function App() {
     if (tab !== "young" && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
       window.history.replaceState({}, "", window.location.pathname + window.location.search);
     }
-    tabScrollPending.current = true;
+    // Choosing the open view changes nothing, so there is nothing to keep
+    tabScrollPending.current = tab !== activeTab;
   };
   useLayoutEffect(() => {
     if (!tabScrollPending.current) return;

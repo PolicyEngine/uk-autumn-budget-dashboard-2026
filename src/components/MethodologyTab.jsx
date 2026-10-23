@@ -51,7 +51,7 @@ function MethodologyTab({ onShowTab }) {
       <div id={METHOD_SECTIONS.sources} className="method-section">
         <SectionHeading
           title="Sources and versions"
-          subtitle="Where the methods are written up, and which versions made these figures."
+          subtitle="Where the methods are written up, and where the versions behind these figures are stated."
         />
         <section className="report-section card method-card">
           <p>
