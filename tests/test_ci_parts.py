@@ -100,4 +100,4 @@ def test_the_run_line_takes_its_paths_from_the_part_only():
     )
     assert "${{ matrix.tests }}" in run
     words = run.replace("${{ matrix.tests }}", "").split()
-    assert not [word for word in words if word.startswith("tests")]
+    assert not [word for word in words if "tests" in word]
