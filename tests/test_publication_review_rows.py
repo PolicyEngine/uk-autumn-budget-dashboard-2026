@@ -1302,7 +1302,9 @@ def move_behind_a_link(path: Path, to: Path) -> None:
 
 
 @pytest.mark.parametrize("status", [m.STAGED, m.STALE, m.WITHDRAWN])
-@pytest.mark.parametrize("linked", ["key", "artifact", "file"])
+@pytest.mark.parametrize(
+    "linked", ["key", "artifact", "file", "directory", "nested file"]
+)
 def test_a_link_on_or_in_a_kept_artifact_refuses(base, status, linked):
     """Review of #98: deletion keeps what an entry names by the path the
     manifest spells. Behind a link, an entry the page doesn't list would
@@ -1310,10 +1312,14 @@ def test_a_link_on_or_in_a_kept_artifact_refuses(base, status, linked):
     with repository(base, statuses={"delta": status}) as (root, manifest):
         artifact = root / DATA / manifest.measures["delta"].artifact
         store = root / DATA / "artifacts" / "store"
+        (artifact / "sub").mkdir()
+        (artifact / "sub" / "x.csv").write_text("x\n")
         path = {
             "key": artifact.parent,
             "artifact": artifact,
             "file": artifact / "budgetary_impact.csv",
+            "directory": artifact / "sub",
+            "nested file": artifact / "sub" / "x.csv",
         }[linked]
         move_behind_a_link(path, store / path.name)
         before = snapshot(root / DATA)
@@ -1323,9 +1329,37 @@ def test_a_link_on_or_in_a_kept_artifact_refuses(base, status, linked):
         assert snapshot(root / DATA) == before
         assert review_bytes(root) == review
     where = path.relative_to(root).as_posix()
-    on = "in" if linked == "file" else "on"
+    on = "on" if linked in ("key", "artifact") else "in"
     assert refused.value.problems == [
         f"{where}: a symbolic link {on} delta's artifact"
+    ]
+
+
+def test_a_kept_artifact_that_cannot_be_listed_refuses(base, monkeypatch):
+    """A directory in a kept artifact that cannot be listed could hide a
+    link, so the run refuses rather than miss one."""
+    scandir = os.scandir
+    with repository(base) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        hidden = artifact / "sub"
+        hidden.mkdir()
+
+        def refuse_the_hidden_one(path="."):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return scandir(path)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "scandir", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact cannot be listed"
     ]
 
 

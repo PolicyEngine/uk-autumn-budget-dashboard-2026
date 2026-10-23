@@ -439,7 +439,8 @@ def _vat_grossing_factors(system) -> bool:
     either. The payment template, pointed at ``baseline_vat``, replaces
     its formula with one that reads no grossing factor, so that side
     counts as unfixed (fails safe); the property-surcharge template
-    refuses it, as it reads neither OBR index. A hand-written
+    refuses it, since ``baseline_vat``'s formula reads neither OBR index.
+    A hand-written
     modifier can change both things read: replacing ``baseline_vat`` on one
     side of a model without the fix holds the measure, since the variable
     then differs between the sides (fails safe); adding the factors to the

@@ -49,10 +49,11 @@ the artifacts of superseded entries, which the manifest keeps for audit but
 no longer names, after a correction or a re-cut. Directories left empty go
 too. It never follows a symbolic link and never deletes anything outside
 ``artifacts/``. It keeps what an entry names by the path the manifest
-spells, so it also refuses, deleting nothing, if any current entry's
-artifact is reached through a symbolic link, holds one, or is spelled
-otherwise on disk (as a case-insensitive filesystem allows). Stage
-everything to be kept before running it.
+spells, so it also refuses, writing and deleting nothing, if any current
+entry's artifact is reached through a symbolic link, holds one, holds a
+directory it cannot list, or is spelled otherwise on disk (as a
+case-insensitive filesystem allows). Stage everything to be kept before
+running it.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -603,8 +604,9 @@ def _kept_problems(
     ``_unreferenced`` keeps an artifact by the path its entry spells, so
     a symbolic link on the way to it or inside it, or a spelling the disk
     doesn't use (which a case-insensitive filesystem still resolves),
-    would leave its real files looking unreferenced. Every current entry
-    counts, whatever its status.
+    would leave its real files looking unreferenced. So would a directory
+    inside it that cannot be listed, which could hide such a link. Every
+    current entry counts, whatever its status.
     """
     problems = []
     for key, entry in sorted(manifest.entries().items()):
@@ -626,7 +628,12 @@ def _kept_problems(
                 break
             path = path / part
         else:
-            for directory, names, files in os.walk(path):
+
+            def unlisted(error: OSError, key: str = key) -> None:
+                where = Path(error.filename).relative_to(root).as_posix()
+                problems.append(f"{where}: {key}'s artifact cannot be listed")
+
+            for directory, names, files in os.walk(path, onerror=unlisted):
                 for name in sorted(names + files):
                     inner = Path(directory) / name
                     if inner.is_symlink():
@@ -850,7 +857,8 @@ def review_rows(
     (``<root>/data_inputs/public_data_review.csv``, where both disclosure
     checks read it), and the data root must be under its ``public/``.
     Raises ReviewRowsError, and writes and deletes nothing, if any row
-    cannot be written.
+    cannot be written, or if deleting could reach what a current entry
+    names (``_kept_problems``).
     """
     started = time.perf_counter()
     name = _name(reviewer)
