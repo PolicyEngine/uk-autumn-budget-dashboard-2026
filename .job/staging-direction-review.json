@@ -1,0 +1,22 @@
+{
+  "scope": "Unapplied machine source review for a future scratch-only rehearsal; no human or Treasury sign-off; not approval",
+  "measure": "two_child_limit",
+  "direction": "negative",
+  "years": [
+    2026,
+    2027,
+    2028,
+    2029,
+    2030
+  ],
+  "reviewer": "Codex (scratch registry direction review)",
+  "basis": "Registered spending measure repeals the two-child limit versus a two-child baseline from April 2026; expectation derived from policy, not selected to fit output sign.",
+  "proposed_csv_row": "two_child_limit,negative,2026,2030,Codex (scratch registry direction review),Automated registry review; rehearsal only; no human or Treasury sign-off",
+  "applied_to_staging_inputs": false,
+  "staging_retried": false,
+  "next_window_requirements": [
+    "Review/apply an expected fiscal direction covering every scored year",
+    "Rerun real reconcile and stage --adopt-basis with all normal gates",
+    "Exercise changed-basis adoption and old-entry staleness separately; main currently has no manifest"
+  ]
+}

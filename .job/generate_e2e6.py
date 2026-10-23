@@ -125,6 +125,9 @@ def main(argv=None):
     startup_gate_seconds = common.COUNTERS["gates_s"] - initial_gates
     import_seconds = time.perf_counter() - import_started - startup_gate_seconds
     import_cpu_seconds = time.process_time() - import_cpu_started
+    # A long import can cross a reservation boundary. Recheck before starting
+    # the separate parameter-system/registry preparation phase.
+    preparation_gate_seconds = common.gate(f"generate {args.measure}: registry preparation")
 
     verification_started = time.perf_counter()
     hashes = {"national": digest(NATIONAL), "forecast": digest(FORECAST)}
@@ -367,6 +370,7 @@ def main(argv=None):
             "imports_seconds": import_seconds,
             "imports_process_cpu_seconds": import_cpu_seconds,
             "startup_gate_seconds": startup_gate_seconds,
+            "preparation_gate_seconds": preparation_gate_seconds,
             "verification_seconds": verification_seconds,
             "registry_seconds": registry_seconds,
             "dataset_preparation_seconds": dataset_preparation_seconds,

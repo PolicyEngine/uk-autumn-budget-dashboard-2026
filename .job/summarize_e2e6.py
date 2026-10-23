@@ -262,6 +262,20 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
                            find_phase(phases, "stage_e2e6.py")),
     ]
     staging_component = components[-1]
+    if not staging_component["complete"] and staging is not None:
+        raw_wall = staging_component.get("external_wall_seconds")
+        prerequisite_wait = staging.get("prerequisite_wait_seconds", 0.)
+        if (finite_seconds(raw_wall) and finite_seconds(prerequisite_wait)
+                and prerequisite_wait <= raw_wall):
+            staging_component.update(
+                raw_external_wall_seconds=raw_wall,
+                prerequisite_wait_seconds_excluded_once=prerequisite_wait,
+                wait_adjusted_postgeneration_cost_seconds=raw_wall - prerequisite_wait,
+                diagnostic_failed_attempt_seconds_including_supervisor_gate=(
+                    raw_wall - prerequisite_wait
+                    + staging_component.get("supervisor_gate_seconds", 0.)),
+                diagnostic_note="Measured refusal cost only; successful staging remains unmeasured and is not marked complete.",
+            )
     if staging_component["complete"] and staging is not None:
         prerequisite_wait = staging.get("prerequisite_wait_seconds", 0.)
         raw_wall = staging_component["external_wall_seconds"]
@@ -362,12 +376,30 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
                    if selected["machine_fits"] else
                    "MEASURED MACHINE TIMING DOES NOT FIT the 13:30–15:45 window; original HPI probe also remains failed")
     diagnostic = verification
+    failed_stage_seconds = staging_component.get("diagnostic_failed_attempt_seconds_including_supervisor_gate")
+    partial_budget = None
+    if (all(row["complete"] for row in components[:-1])
+            and finite_seconds(failed_stage_seconds)):
+        recorded = base_seconds + failed_stage_seconds
+        remaining = budget_seconds - recorded
+        partial_budget = {
+            "recorded_work_including_failed_staging_and_acquisition_estimate_seconds": recorded,
+            "remaining_before_unknown_batches_staging_rework_and_human_review_seconds": remaining,
+            "full_route_complete": False,
+            "verified_full_route_margin_seconds": None,
+            "conditional_maximum_full_batch_seconds_by_concurrency": {
+                str(count): remaining / math.ceil(measures / count) for count in (2, 3)
+            },
+            "note": "Budget hurdles only: failed staging is not a successful cost estimate, both batch throughputs are unmeasured, and further staging work and human review still consume this remainder.",
+        }
     return {
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "verdict": verdict, "complete_for_measured_machine_projection": complete,
         "timing_evidence_complete": complete,
         "semantic_route_accepted": False,
         "firm_full_release_claim_supported": False,
+        "operational_decision": "NO: retain the March first cut; a full rebase for 15:45 is not validated.",
+        "partial_timing_budget": partial_budget,
         "remaining_checks": [name for name, passed in checks.items() if not passed],
         "checks": checks, "input_issues": issues,
         "semantic_checks": {
@@ -392,6 +424,15 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "critical_path_components_before_projected_batches": components,
         "known_component_seconds": base_seconds,
         "all_base_components_measured_or_explicitly_estimated": base_complete,
+        "unmeasured_batch_budget_hurdles": ({
+            str(count): {
+                "batches_for_fifteen_additional_measures": math.ceil(measures / count),
+                "maximum_full_launcher_plus_outside_gate_seconds_per_batch":
+                    (budget_seconds - base_seconds) / math.ceil(measures / count),
+                "human_review_allowance_at_this_maximum_seconds": 0,
+                "is_measured_throughput": False,
+            } for count in (2, 3)
+        } if base_complete else None),
         "prepublication_frozen_reference": reference_component,
         "importer_source_verification_and_parameter_copy_seconds_counted_once": diagnostic.get("seconds"),
         "concurrency": concurrency,

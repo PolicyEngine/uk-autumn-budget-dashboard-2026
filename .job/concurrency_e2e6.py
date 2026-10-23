@@ -143,12 +143,12 @@ def run(count):
         if not snapshot["passed"]:
             report["status"] = "skipped_resource_gate"
             report["skip_reason"] = [name for name, passed in snapshot["checks"].items() if not passed]
-            report["simulations_started"] = 0
+            report["worker_processes_started"] = 0
             save_report(report, report_path)
             return 0
         common.gate(f"concurrency-{count} admission", memory_gb=required)
     except Exception as error:
-        report.update(status="stopped_preflight", error=str(error), simulations_started=0)
+        report.update(status="stopped_preflight", error=str(error), worker_processes_started=0)
         save_report(report, report_path)
         return 1
 
@@ -240,7 +240,7 @@ def run(count):
                         stop_reason=partial.get("error"),
                     )
             report["children"].append(child)
-        report["simulations_started"] = len(members)
+        report["worker_processes_started"] = len(members)
         report["status"] = "completed" if all(child["complete"] for child in report["children"]) else "failed"
         save_report(report, report_path)
         return 0 if report["status"] == "completed" else 1
@@ -249,7 +249,7 @@ def run(count):
         report.update(
             status="stopped_batch",
             error=str(error),
-            simulations_started=len(members),
+            worker_processes_started=len(members),
             batch_wall_seconds=time.perf_counter() - batch_started,
             batch_finished_utc=utc_now(),
         )

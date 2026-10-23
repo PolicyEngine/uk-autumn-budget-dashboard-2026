@@ -11,4 +11,5 @@ scratch/importer*/
 basis-adoption-fixture/
 outputs/
 __pycache__/
+seeded-plotly/
 *.pyc

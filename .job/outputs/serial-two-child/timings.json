@@ -1,0 +1,401 @@
+{
+  "measure": "two_child_limit",
+  "basis": {
+    "forecast": {
+      "status": "updated",
+      "source": "UNPUBLISHED SYNTHETIC REHEARSAL: part 1 forecast.json shock on the certified policyengine-uk 2.132.6 March basis; not an October OBR forecast",
+      "vintage": "2026-10-23 synthetic dry run; local March 2026 workbook round trip reviewed separately",
+      "input_files": [
+        {
+          "name": "efo-march-2026-detailed-forecast-tables-economy.xlsx",
+          "sha256": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510"
+        },
+        {
+          "name": "obr_efo_march_2026_receipts.xlsx",
+          "sha256": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28"
+        },
+        {
+          "name": "forecast.json",
+          "sha256": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3"
+        }
+      ],
+      "retained_series": "All paths outside the six-path synthetic dictionary retain their certified pinned assumptions; no calibration change"
+    },
+    "calibration": {
+      "status": "pre_budget",
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "hashes": {
+    "national": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+    "forecast": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3"
+  },
+  "dataset_selection": {
+    "mode": "official_certified_default_bundle_dataset",
+    "dataset_name": "microcosm_uk_2024_25",
+    "canonical_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+    "canonical_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+    "canonical_data_package": "microcosm-data",
+    "manifest_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+    "original_readonly_input": "/Users/maxghenis/PolicyEngine/uk-autumn-budget-dashboard-2026/.claude/worktrees/practical-kapitsa-1b128a/data/microcosm_uk_2024_25.h5",
+    "original_input_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+    "scratch_cache_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/data/microcosm_uk_2024_25.h5",
+    "scratch_cache_is_symlink": true,
+    "scratch_cache_resolved_path": "/Users/maxghenis/PolicyEngine/uk-autumn-budget-dashboard-2026/.claude/worktrees/practical-kapitsa-1b128a/data/microcosm_uk_2024_25.h5",
+    "scratch_cache_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+    "runtime_provenance_modified": false,
+    "receipt_checks_bypassed": false,
+    "build_provenance": [
+      {
+        "runtime_dataset": "microcosm_uk_2024_25",
+        "runtime_dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "runtime_dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "runtime_dataset_data_package": "microcosm-data",
+        "runtime_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "runtime_dataset_source": "data/microcosm_uk_2024_25.h5"
+      },
+      {
+        "runtime_dataset": "microcosm_uk_2024_25",
+        "runtime_dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "runtime_dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "runtime_dataset_data_package": "microcosm-data",
+        "runtime_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "runtime_dataset_source": "data/microcosm_uk_2024_25.h5"
+      }
+    ]
+  },
+  "years": [
+    2026,
+    2027,
+    2028,
+    2029,
+    2030
+  ],
+  "written": {
+    "two_child_limit": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/artifacts/two_child_limit/4beb06da6e6dd92d"
+  },
+  "refused": {},
+  "rows_by_table": {
+    "budgetary_impact": 5,
+    "distributional_impact": 50,
+    "household_scatter_binned": 242,
+    "income_curve": 1005,
+    "metrics": 5,
+    "winners_losers": 55
+  },
+  "years_by_table": {
+    "budgetary_impact": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "distributional_impact": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "household_scatter_binned": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "income_curve": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "metrics": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "winners_losers": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ]
+  },
+  "timings": {
+    "imports_seconds": 280.106385667008,
+    "imports_process_cpu_seconds": 9.129456,
+    "startup_gate_seconds": 0.7531396669946844,
+    "verification_seconds": 1.0931793339987053,
+    "registry_seconds": 34.24442362500122,
+    "dataset_preparation_seconds": 0.835593042007531,
+    "generation_seconds_including_gates": 1193.736355874993,
+    "generation_process_cpu_seconds": 149.75152699999998,
+    "gate_seconds": 12.901282628983608,
+    "construction_seconds_excluding_gates": 1002.4479355830263,
+    "calculation_seconds_excluding_construction_and_gates": 151.05246962197998,
+    "build_copy_and_wrapper_overhead_seconds": 7.045998290006537,
+    "generator_receipt_and_writer_overhead_seconds": 20.288669750996633,
+    "whole_process_seconds_through_validation": 1514.2350992499996
+  },
+  "timing_note": "Generation total overlaps its disjoint gate/construction/calculation/build-overhead/generator-overhead components; constructor and calculator call records are diagnostic detail.",
+  "peak_memory_bytes": 14859632640,
+  "peak_memory_decimal_gb": 14.85963264,
+  "process_cpu_seconds": 161.616373,
+  "instrumentation": {
+    "gate_seconds": 12.901282628983608,
+    "construction_seconds": 1002.4479355830263,
+    "build_seconds_excluding_gates": 218.43940287301666,
+    "build_construction_seconds": 211.39340458301012,
+    "process_seconds_excluding_gates": 942.1070006219961,
+    "process_construction_seconds": 791.0545310000161,
+    "constructors": [
+      {
+        "phase": "build",
+        "depth": 1,
+        "seconds_excluding_gates": 61.58590362500399
+      },
+      {
+        "phase": "build",
+        "depth": 0,
+        "seconds_excluding_gates": 106.2343024580041
+      },
+      {
+        "phase": "build",
+        "depth": 1,
+        "seconds_excluding_gates": 45.35723362500721
+      },
+      {
+        "phase": "build",
+        "depth": 0,
+        "seconds_excluding_gates": 105.15910212500603
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 41.74136762499984
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 91.72282908298075
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 33.00226049999765
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 74.88648954099335
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 31.165032042001258
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 58.85511816700455
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 41.78611712499696
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 69.9350517920102
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 25.047612665992347
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 49.868860582995694
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 45.557705790997716
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 81.15515441702155
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 45.61039908399107
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 99.54257604198938
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 39.82406600000104
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 86.5051436250069
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 43.52465037499496
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 99.25258450100955
+      },
+      {
+        "phase": "process",
+        "depth": 1,
+        "seconds_excluding_gates": 30.104633166003623
+      },
+      {
+        "phase": "process",
+        "depth": 0,
+        "seconds_excluding_gates": 79.33072324900422
+      }
+    ],
+    "builds": [
+      {
+        "seconds_excluding_gates": 108.85684420701
+      },
+      {
+        "seconds_excluding_gates": 109.58255866600666
+      }
+    ],
+    "processes": [
+      {
+        "seconds_excluding_gates": 942.1070006219961
+      }
+    ],
+    "calculators": [
+      {
+        "calculator": "budgetary_calc",
+        "calculation_seconds": 124.29119504200935
+      },
+      {
+        "calculator": "distributional_calc",
+        "calculation_seconds": 2.0310449170065112
+      },
+      {
+        "calculator": "winners_losers_calc",
+        "calculation_seconds": 0.021411583002191037
+      },
+      {
+        "calculator": "metrics_calc",
+        "calculation_seconds": 0.22256395799922757
+      },
+      {
+        "calculator": "income_curve_calc",
+        "calculation_seconds": 3.0475578759942437
+      },
+      {
+        "calculator": "household_scatter_calc",
+        "calculation_seconds": 0.08947791600076016
+      },
+      {
+        "calculator": "distributional_calc",
+        "calculation_seconds": 0.8218730410007993
+      },
+      {
+        "calculator": "winners_losers_calc",
+        "calculation_seconds": 0.01297000001068227
+      },
+      {
+        "calculator": "metrics_calc",
+        "calculation_seconds": 0.3787417920102598
+      },
+      {
+        "calculator": "income_curve_calc",
+        "calculation_seconds": 2.313023124996107
+      },
+      {
+        "calculator": "household_scatter_calc",
+        "calculation_seconds": 0.48340487500536256
+      },
+      {
+        "calculator": "distributional_calc",
+        "calculation_seconds": 1.1642146249942016
+      },
+      {
+        "calculator": "winners_losers_calc",
+        "calculation_seconds": 0.028686292003840208
+      },
+      {
+        "calculator": "metrics_calc",
+        "calculation_seconds": 0.32980520800629165
+      },
+      {
+        "calculator": "income_curve_calc",
+        "calculation_seconds": 6.248955833987566
+      },
+      {
+        "calculator": "household_scatter_calc",
+        "calculation_seconds": 0.09850599999481346
+      },
+      {
+        "calculator": "distributional_calc",
+        "calculation_seconds": 1.307707208005013
+      },
+      {
+        "calculator": "winners_losers_calc",
+        "calculation_seconds": 0.01425954200385604
+      },
+      {
+        "calculator": "metrics_calc",
+        "calculation_seconds": 0.21623229200486094
+      },
+      {
+        "calculator": "income_curve_calc",
+        "calculation_seconds": 3.1397564980143216
+      },
+      {
+        "calculator": "household_scatter_calc",
+        "calculation_seconds": 0.1648160420008935
+      },
+      {
+        "calculator": "distributional_calc",
+        "calculation_seconds": 1.1407162079995032
+      },
+      {
+        "calculator": "winners_losers_calc",
+        "calculation_seconds": 0.08960941700206604
+      },
+      {
+        "calculator": "metrics_calc",
+        "calculation_seconds": 0.20807083300314844
+      },
+      {
+        "calculator": "income_curve_calc",
+        "calculation_seconds": 2.0998438319802517
+      },
+      {
+        "calculator": "household_scatter_calc",
+        "calculation_seconds": 0.10858829200151376
+      }
+    ]
+  }
+}

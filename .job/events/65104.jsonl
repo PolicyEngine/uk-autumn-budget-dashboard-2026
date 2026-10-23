@@ -1,0 +1,2 @@
+{"utc": "2026-10-23T14:24:48.857415+00:00", "pid": 65104, "event": "gate", "label": "serial-two-child", "load1": 103.5029296875, "free_disk_gb": 100.424998912, "free_memory_gb": null, "required_memory_gb": 0.0}
+{"utc": "2026-10-23T14:24:48.901920+00:00", "pid": 65104, "event": "gate_end", "label": "serial-two-child", "seconds": 2.13358204200631, "resource_wait_s": 0.0}

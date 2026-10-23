@@ -1,0 +1,10 @@
+{
+  "status": "ready",
+  "output_dir": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child",
+  "timing_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/timings.json",
+  "started_utc": "2026-10-23T14:46:27.931306+00:00",
+  "prerequisite_wait_seconds": 2485.006324707996,
+  "artifact": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/artifacts/two_child_limit/4beb06da6e6dd92d",
+  "measure": "two_child_limit",
+  "timing_sha256": "1290cb52eff9e104bbbd76a2bbc71b7e75edf2b38c4fb33e58c74c2f7fac5da8"
+}
