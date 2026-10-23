@@ -509,7 +509,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
            )
 
    def process(measure, cfg, baseline, reformed, baseline_scenario):
-       if measure.id == "dividend_tax_increase_2pp":
+       if measure.id in ("dividend_tax_increase_2pp", "autumn_budget_2026_combined"):
            check_dividend_policy_responsiveness(baseline, reformed, cfg.years)
        processor = ReformProcessor(measure, cfg)
        calculate_budget = processor.budgetary_calc.calculate
@@ -678,6 +678,8 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact. The default artifact builder makes a private copy of a local dataset and hashes exactly those bytes, so allow disk space for that copy in addition to the 55 GB reserve. The preceding validation reads the source in place; this receipted production route deliberately uses the dashboard's exact-byte provenance mechanism.
 
+   This complete-registry recipe puts the standalone dividend first, so its effective-rate preflight and full processor must pass before any later artifact is generated. A scenario-binding refusal happens before `process`; the progress callback stops that refusal immediately instead of allowing the generator to continue. The helper also checks the registered `autumn_budget_2026_combined` measure. Explicit combined sets run after standalone measures, so this ordering protects them even when long combined keys are hashed. A custom generation call that omits the standalone dividend must separately complete its preflight before generating a combination containing it; do not infer that protection from a combined key's text.
+
    ```sh
    export DATASET="$NATIONAL_DATASET"
    PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" uv run --no-sync python - <<'PY'
@@ -697,6 +699,16 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    forecast = load_forecast()
    reforms = registered_measures(forecast)
    assert len({m.id for m in reforms}) == len(reforms) == 10
+   dividend_id = "dividend_tax_increase_2pp"
+   reforms.sort(key=lambda measure: measure.id != dividend_id)
+   assert reforms[0].id == dividend_id
+   def progress_or_stop(message):
+       print(message, flush=True)
+       if message.startswith(f"{dividend_id}: REFUSED:"):
+           raise RuntimeError(
+               "Dividend preflight could not run because its scenario was refused; "
+               "stop before generating any other artifact."
+           )
    original_build = pipeline.build_microsimulation
    def guarded_build(dataset_path, scenario=None):
        gate("receipted managed_microsimulation")
@@ -711,7 +723,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
            repo_root=Path.cwd(),
            generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
            process=process,
-           on_progress=print,
+           on_progress=progress_or_stop,
        )
    paths = {reference.key: str(reference.path) for reference in report.written}
    out = Path(os.environ["REBASE_SCRATCH"])
