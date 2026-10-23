@@ -1,0 +1,112 @@
+import { describe, expect, it } from "vitest";
+import {
+  changeBandLabel,
+  incomeBandLabel,
+  parseScatterCsv,
+  scatterCsv,
+  scatterView,
+} from "./householdScatter";
+
+const CSV = [
+  "reform_id,reform_name,year,income_band,change_band,households",
+  "a,Measure A,2029,20000.0,-100.0,151000.0",
+  "a,Measure A,2029,25000.0,0.0,98000.0",
+  "a,Measure A,2030,20000.0,-100.0,140000.0",
+  'all_combined,"All, together",2029,20000.0,-200.0,250000.0',
+].join("\n");
+
+const ready = { status: "ready", rows: parseScatterCsv(CSV), error: null };
+const POLICY_IDS = ["a", "b"];
+
+describe("parseScatterCsv", () => {
+  it("reads the published columns, numbers as numbers", () => {
+    const rows = parseScatterCsv(`﻿${CSV}\n`);
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toEqual({
+      reform_id: "a",
+      reform_name: "Measure A",
+      year: 2029,
+      income_band: 20000,
+      change_band: -100,
+      households: 151000,
+    });
+    expect(rows[3].reform_name).toBe("All, together");
+  });
+
+  it("refuses a file with other columns", () => {
+    expect(() => parseScatterCsv("reform_id,household_id\na,1\n")).toThrow(
+      /unexpected columns/,
+    );
+  });
+
+  it("refuses a value that is not a number", () => {
+    expect(() =>
+      parseScatterCsv(
+        "reform_id,reform_name,year,income_band,change_band,households\na,A,2029,x,0,1\n",
+      ),
+    ).toThrow(/income_band/);
+  });
+});
+
+describe("scatterView", () => {
+  const view = (selectedIds, year = 2029, data = ready) =>
+    scatterView({ data, selectedIds, policyIds: POLICY_IDS, year });
+
+  it("shows one measure's cells for that measure and year, centred in their bands", () => {
+    const result = view(["a"]);
+    expect(result.kind).toBe("points");
+    expect(result.points).toEqual([
+      { income: 22500, change: -50, households: 151000, incomeBand: 20000, changeBand: -100 },
+      { income: 27500, change: 50, households: 98000, incomeBand: 25000, changeBand: 0 },
+    ]);
+  });
+
+  it("shows the package's cells when every measure is selected", () => {
+    const result = view(["a", "b"]);
+    expect(result.kind).toBe("points");
+    expect(result.reform).toBe("all_combined");
+    expect(result.points).toHaveLength(1);
+  });
+
+  it("never adds measures together", () => {
+    const result = scatterView({
+      data: ready,
+      selectedIds: ["a", "b"],
+      policyIds: ["a", "b", "c"],
+      year: 2029,
+    });
+    expect(result.kind).toBe("notice");
+    expect(result.reason).toMatch(/one measure at a time/);
+  });
+
+  it("says when nothing is published", () => {
+    expect(view(["a"], 2029, { status: "unavailable", rows: null }).reason).toBe(
+      "Household results are not yet published.",
+    );
+    expect(view(["b"]).reason).toMatch(/not yet published for this measure/);
+    expect(view(["a"], 2031).reason).toMatch(/2031-32/);
+    expect(view([]).reason).toMatch(/Select a measure/);
+    expect(view(["a"], 2029, { status: "loading", rows: null }).kind).toBe("loading");
+  });
+});
+
+describe("labels and CSV", () => {
+  it("labels bands, with the outer bands open-ended", () => {
+    expect(incomeBandLabel(0)).toBe("under £5,000");
+    expect(incomeBandLabel(145000)).toBe("£145,000 and over");
+    expect(changeBandLabel(-100)).toBe("−£100 to £0");
+    expect(changeBandLabel(-2000)).toBe("under −£1,900");
+  });
+
+  it("writes the cells, not households", () => {
+    const text = scatterCsv(view_points(), { title: "Household income impacts, 2029-30" });
+    expect(text).toContain("Baseline income band,Change band,Households");
+    expect(text).toContain('"£20,000 to £25,000",−£100 to £0,151000');
+    expect(text).not.toMatch(/household_id|household_weight/);
+  });
+});
+
+function view_points() {
+  return scatterView({ data: ready, selectedIds: ["a"], policyIds: POLICY_IDS, year: 2029 })
+    .points;
+}

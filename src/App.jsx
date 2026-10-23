@@ -10,7 +10,7 @@ import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
-import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
+import HouseholdScatter from "./components/HouseholdScatter";
 import YearSlider from "./components/YearSlider";
 import ViewTabs from "./components/ViewTabs";
 import MethodologyTab, { METHOD_SECTIONS } from "./components/MethodologyTab";
@@ -678,11 +678,11 @@ function App() {
                     </section>
 
                     {/* Row 2: the constituency map beside the household
-                        scatter. The scatter is a template until binned
-                        household results are published: the per-household
-                        scatter stays withdrawn, as it showed survey
-                        households one by one. Results by region are hidden
-                        for now (RegionView is kept, not rendered). */}
+                        scatter. The scatter shows binned groups of
+                        households only: the per-household scatter stays
+                        withdrawn, as it showed survey households one by
+                        one. Results by region are hidden for now
+                        (RegionView is kept, not rendered). */}
                     <SectionHeading
                       title="Where and who"
                       subtitle="Average change by constituency, and how changes vary between households."
@@ -710,7 +710,11 @@ function App() {
                           </p>
                         }
                       />
-                      <HouseholdScatterTemplate selectedYear={distributionalYear} />
+                      <HouseholdScatter
+                        selectedPolicies={selectedPolicies}
+                        policies={POLICIES}
+                        selectedYear={distributionalYear}
+                      />
                     </section>
 
                     {/* Row 3: Net Income Analysis Charts */}
