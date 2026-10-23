@@ -63,16 +63,17 @@ function GeographyMethodology() {
           otherwise it is too uncertain to classify.
         </li>
         <li>
-          <strong>Constituencies and regions.</strong> Constituency
-          figures do not add up exactly to the regional ones, and may come
-          from a different dataset.
+          <strong>Constituencies and regions.</strong> Regional figures
+          come from Microcosm&apos;s national dataset and constituency
+          figures from its local dataset, in which each household belongs
+          to one constituency. Both are built from the same survey
+          households but weighted separately, so constituency figures do
+          not add up exactly to the regional ones.
         </li>
         <li>
-          <strong>Later years.</strong> Constituency figures from the
-          national dataset use its constituency weights, which are
-          estimated for 2025. Later years keep each household&apos;s 2025
-          split across constituencies, scaled to that year&apos;s household
-          weights.
+          <strong>Later years.</strong> Each household keeps its
+          constituency in every year; later years use that year&apos;s
+          household weights.
         </li>
       </ul>
       <p>
