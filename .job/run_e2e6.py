@@ -12,12 +12,16 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('label')
     parser.add_argument('--memory-gb',type=float,default=0.)
+    parser.add_argument('--admission-in-child',action='store_true')
     parser.add_argument('command',nargs=argparse.REMAINDER)
     args=parser.parse_args()
     command=args.command
     if command and command[0]=='--':command=command[1:]
     common.configure_environment()
-    gate=common.gate(args.label,memory_gb=args.memory_gb)
+    # The concurrency driver records a no-wait admission snapshot and can
+    # decline a batch. Do not hide that snapshot behind a supervisor wait.
+    gate=(common.reservation(args.label) if args.admission_in_child
+          else common.gate(args.label,memory_gb=args.memory_gb))
     logs=common.JOB/'logs';logs.mkdir(exist_ok=True)
     start=time.perf_counter();utc=dt.datetime.now(dt.timezone.utc).isoformat()
     with (logs/(args.label+'.log')).open('w') as stream:

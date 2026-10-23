@@ -1,7 +1,9 @@
 """Combine recorded external timings without rerunning any model or command.
 
-Missing, failed, or partly written evidence produces an explicit incomplete
-summary. External command walls already contain imports, child gates and their
+Missing or partly written evidence produces an explicit incomplete summary.
+The diagnosed original HPI-check failure is retained as a semantic blocker;
+its completed command can still supply a timing-only measurement. External
+command walls already contain imports, child gates and their
 construction/calculation counters. Only supervisor gates outside those walls
 are added, once per selected phase. Concurrent child walls are never summed.
 """
@@ -9,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -61,15 +64,16 @@ def find_phase(rows, script, argument=None, containing=None):
     return matches[-1] if matches else None
 
 
-def external_component(name, phase):
+def external_component(name, phase, allow_diagnosed_failed_measurement=False):
     result = {"name": name, "source": "phases.jsonl", "complete": False}
     if phase is None:
         result["reason"] = "No completed external phase record"
         return result
     result.update(label=phase.get("label"), exit_code=phase.get("exit_code"),
+                  command_passed=phase.get("exit_code") == 0,
                   external_wall_seconds=phase.get("external_wall_seconds"),
                   supervisor_gate_seconds=phase.get("supervisor_gate_seconds", 0))
-    if phase.get("exit_code") != 0:
+    if phase.get("exit_code") != 0 and not allow_diagnosed_failed_measurement:
         result["reason"] = "Latest matching command did not pass"
     elif not all(finite_seconds(result[key]) for key in
                  ("external_wall_seconds", "supervisor_gate_seconds")):
@@ -77,6 +81,8 @@ def external_component(name, phase):
     else:
         result["complete"] = True
         result["counted_seconds"] = result["external_wall_seconds"] + result["supervisor_gate_seconds"]
+        if phase.get("exit_code") != 0:
+            result["reason"] = "Completed timing measurement retained despite the original failed HPI expectation; separately validated installed-mapping diagnosis does not accept the release semantics"
     return result
 
 
@@ -102,6 +108,78 @@ def finish_clock(seconds):
     start = dt.datetime(2026, 10, 23, 13, 30)
     finish = start + dt.timedelta(seconds=seconds)
     return finish.isoformat(timespec="seconds")
+
+
+def validate_mapping_diagnosis(diagnosis, reference, rebased):
+    """Validate an explanation separately; never change raw probe outcomes."""
+    checks = {}
+    if not diagnosis or not reference or not rebased:
+        return {"valid_for_timing_only_continuation": False,
+                "reason": "Mapping diagnosis or frozen aggregate probes are missing"}
+    mapping = diagnosis.get("runtime_installed_mapping", {})
+    original = diagnosis.get("original_probe_checks", {})
+    prediction = diagnosis.get("version_correct_GDP_prediction", {})
+    comparison = rebased.get("comparison", {})
+    raw_checks = comparison.get("stored_input_checks", []) + comparison.get("statutory_checks", [])
+    failures = comparison.get("failures", [])
+    checks["certified_21326_GDP_mapping_identified"] = (
+        diagnosis.get("classification") == "certified_pin_semantic_mismatch_with_runbook_HPI_expectation"
+        and mapping.get("version") == "2.132.6"
+        and mapping.get("parameter_path") == "gov.economic_assumptions.yoy_growth.obr.per_capita.gdp")
+    checks["original_56_checks_and_eight_HPI_failures_retained"] = (
+        comparison.get("passed") is False and len(raw_checks) == 56
+        and sum(row.get("passed") is True for row in raw_checks) == 48
+        and len(failures) == 8 and failures == original.get("unchanged_failures")
+        and original.get("failed") == 8 and original.get("passed") == 48
+        and original.get("total") == 56
+        and all(row.get("variable") == "main_residence_value"
+                and row.get("year") in (2027, 2028, 2029, 2030)
+                and row.get("passed") is False for row in failures))
+    expected_pairs = {(year, aggregation) for year in YEARS
+                      for aggregation in ("weighted_gbp", "unweighted_gbp")}
+    prediction_rows = prediction.get("checks", [])
+    checks["same_tolerance_distinct_GDP_prediction_has_ten_checks"] = (
+        prediction.get("rtol") == comparison.get("ratio_rtol") == 1e-4
+        and prediction.get("atol") == comparison.get("ratio_atol") == 1e-6
+        and len(prediction_rows) == 10
+        and {(row.get("year"), row.get("aggregation")) for row in prediction_rows} == expected_pairs
+        and all(row.get("passed") is True for row in prediction_rows))
+    before = {row["year"]: row for row in reference.get("rows", [])}
+    after = {row["year"]: row for row in rebased.get("rows", [])}
+    recomputed = True
+    try:
+        for row in prediction_rows:
+            year, aggregation = row["year"], row["aggregation"]
+            ratio = (after[year]["totals"]["main_residence_value"][aggregation]
+                     / before[year]["totals"]["main_residence_value"][aggregation])
+            expected = 1 if year == 2026 else 1.0293 / 1.0323
+            recomputed = (recomputed and math.isclose(ratio, row["observed_ratio"], rel_tol=0, abs_tol=1e-12)
+                          and math.isclose(expected, row["expected_ratio"], rel_tol=0, abs_tol=1e-12)
+                          and abs(ratio - expected) <= 1e-6 + 1e-4 * abs(expected))
+    except (KeyError, ZeroDivisionError, TypeError):
+        recomputed = False
+    checks["GDP_predictions_reproduce_frozen_aggregate_ratios"] = recomputed
+    preserved = diagnosis.get("frozen_files_sha256_before", {})
+    hash_matches = diagnosis.get("originals_preserved") is True
+    for relative in (".job/probes/reference.json", ".job/probes/rebased.json"):
+        path = JOB.parent / relative
+        hash_matches = (hash_matches and path.is_file()
+                        and hashlib.sha256(path.read_bytes()).hexdigest() == preserved.get(relative))
+    checks["frozen_raw_reference_and_failed_probe_hashes_unchanged"] = hash_matches
+    mapping_path = JOB.parent / mapping.get("mapping_file", "missing")
+    checks["installed_mapping_source_hash_matches_diagnosis"] = (
+        mapping_path.is_file()
+        and hashlib.sha256(mapping_path.read_bytes()).hexdigest() == mapping.get("mapping_file_sha256"))
+    return {
+        "valid_for_timing_only_continuation": all(checks.values()),
+        "checks": checks, "raw_probe_passed": comparison.get("passed") is True,
+        "raw_original_passed_checks": sum(row.get("passed") is True for row in raw_checks),
+        "raw_original_failed_checks": len(failures),
+        "raw_original_total_checks": len(raw_checks),
+        "interpretation": diagnosis.get("interpretation"),
+        "continuation_scope": diagnosis.get("continuation_scope"),
+        "semantic_acceptance": False,
+    }
 
 
 def timed_projection(base, batch_wall, count, gate, reference, budget, measures,
@@ -144,6 +222,9 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
     inputs = read_json(JOB / "scratch/reviewed-inputs-certified/input-readiness.json", issues)
     reference = read_json(JOB / "probes/reference.json", issues)
     rebased = read_json(JOB / "probes/rebased.json", issues)
+    diagnosis = read_json(JOB / "probes/mapping-diagnosis.json", issues)
+    mapping_diagnosis = validate_mapping_diagnosis(diagnosis, reference, rebased)
+    diagnosis_valid = mapping_diagnosis["valid_for_timing_only_continuation"]
     serial = read_json(JOB / "outputs/serial-two-child/timings.json", issues)
     staging = read_json(JOB / "staging-results.json", issues)
     batches = {count: read_json(JOB / f"concurrency-{count}.json", issues)
@@ -162,8 +243,10 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
                                 importer.get("certified_module_cli"), importer_gate),
         direct_import_component("reviewed_inputs_machine_only",
                                 importer.get("certified_reviewed_inputs")),
-        external_component("rebased_subset_probe",
-                           find_phase(phases, "probes_e2e6.py", "rebased")),
+        external_component("rebased_subset_probe_original_HPI_gate_failed",
+                           find_phase(phases, "probes_e2e6.py", "rebased"),
+                           allow_diagnosed_failed_measurement=diagnosis_valid and
+                           (find_phase(phases, "probes_e2e6.py", "rebased") or {}).get("exit_code") == 1),
         external_component("one_serial_national_measure",
                            find_phase(phases, "generate_e2e6.py", "two_child_limit",
                                       "serial-two-child")),
@@ -193,11 +276,11 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "reviewed_inputs_command_passed": components[2]["complete"],
         "reviewed_input_readiness_valid": input_pass,
         "frozen_reference_valid": reference_pass,
-        "rebased_subset_comparison_passed": probe_pass,
+        "rebased_subset_measurement_completed_or_failure_separately_diagnosed": probe_pass or diagnosis_valid,
         "serial_measure_six_tables_five_years": serial_pass,
         "authentic_scratch_staging_passed": staging_pass,
         "labelled_real_receipt_basis_fixture_passed": fixture_pass,
-        "all_required_external_phase_records_present_and_passed": all(row["complete"] for row in components),
+        "all_required_external_phase_records_present_for_completed_measurements": all(row["complete"] for row in components),
     }
     base_complete = all(row["complete"] for row in components)
     base_seconds = sum(row.get("counted_seconds", 0) for row in components)
@@ -245,18 +328,32 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
     selected_count = max(successful) if successful else None
     selected = concurrency[str(selected_count)].get("projection") if selected_count else None
     complete = all(checks.values())
-    verdict = "INCOMPLETE: required measured stages have not all passed"
+    verdict = "UNKNOWN: required timing evidence is incomplete; the original HPI probe remains failed"
     if complete and selected:
-        verdict = ("MACHINE ROUTE FITS; acquisition is estimated and human review remains unmeasured"
+        verdict = ("MEASURED MACHINE TIMING FITS; original HPI probe failed and release semantics remain unaccepted"
                    if selected["machine_fits"] else
-                   "MACHINE ROUTE DOES NOT FIT the 13:30–15:45 window")
+                   "MEASURED MACHINE TIMING DOES NOT FIT the 13:30–15:45 window; original HPI probe also remains failed")
     diagnostic = importer.get("source_verification_and_parameter_copy", {})
     return {
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "verdict": verdict, "complete_for_measured_machine_projection": complete,
+        "timing_evidence_complete": complete,
+        "semantic_route_accepted": False,
         "firm_full_release_claim_supported": False,
         "remaining_checks": [name for name, passed in checks.items() if not passed],
         "checks": checks, "input_issues": issues,
+        "semantic_checks": {
+            "original_runbook_probe_passed": probe_pass,
+            "installed_mapping_failure_separately_diagnosed": diagnosis_valid,
+            "reviewed_choice_of_residential_growth_semantics_recorded": False,
+            "human_review_completed_and_timed": False,
+        },
+        "semantic_blockers": [
+            "Original HPI checks remain failed: certified UK2.132.6 maps main_residence_value to GDP/head, whereas the runbook's UK2.145.0 expectation used HPI.",
+            "A reviewed choice about the certified bundle's residential-growth limitation and the intended full forecast refresh remains required.",
+            "Human input review, output review and approval remain unmeasured; timing-only continuation does not accept or approve a release.",
+        ],
+        "mapping_diagnosis": mapping_diagnosis,
         "window": {"start_clock": "13:30:00", "first_cut_clock": "15:45:00",
                    "available_seconds": budget_seconds, "clock_timezone": "Budget-day publication local clock"},
         "planning": {"acquisition_estimate_seconds": acquisition_seconds,
@@ -305,6 +402,7 @@ def markdown(summary):
         margin = f"{projection['machine_margin_seconds'] / 60:.2f} min" if projection else "—"
         lines.append(f"| {count} | {item['status']} | {total} | {margin} |")
     lines.extend(["", "Acquisition is a 10-minute estimate. Human review, approval and rework remain unmeasured and are excluded."])
+    lines.extend(["", "The original HPI probe remains failed (8 of 56 checks). The separately validated GDP/head mapping diagnosis explains the certified bundle's behavior; it does not accept the forecast semantics or approve a release."])
     if summary["remaining_checks"]:
         lines.extend(["", "Incomplete checks: " + ", ".join(summary["remaining_checks"]) + "."])
     return "\n".join(lines) + "\n"
