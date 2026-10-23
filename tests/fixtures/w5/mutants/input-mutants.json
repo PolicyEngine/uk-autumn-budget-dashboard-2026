@@ -1,0 +1,12 @@
+{
+  "attestation_input_accepts_uncommitted_bytes": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        _committed_bytes(path, contents)\n",
+    "        # mutant: accept an uncommitted draft\n"
+  ],
+  "attestation_timestamp_overflow_escapes_validation": [
+    "src/uk_budget_data/publication/attestations.py",
+    "except OverflowError as error:",
+    "except ZeroDivisionError as error:"
+  ]
+}

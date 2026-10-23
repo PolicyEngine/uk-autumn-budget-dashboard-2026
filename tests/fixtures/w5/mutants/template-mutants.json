@@ -1,0 +1,47 @@
+{
+  "template_registry_accepts_missing": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "if not inspect.isfunction(function):",
+    "if False:"
+  ],
+  "template_classifier_skips_runtime_source_check": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "api.scenario_reform_identity(",
+    "(lambda *args, **kwargs: None)("
+  ],
+  "template_classifier_accepts_arbitrary_arguments": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "return _literal(node) or (",
+    "return True or ("
+  ],
+  "template_classifier_allows_extra_pass": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "    for statement in definition.body[:-1]:\n",
+    "    for statement in definition.body[:-1]:\n        if isinstance(statement, ast.Pass):\n            continue\n"
+  ],
+  "template_classifier_accepts_non_template_assignments": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "        if not template_call(value):\n            return None\n",
+    "        if False:\n            return None\n"
+  ],
+  "template_proofs_ignore_modifier_count": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "if len(records) != counts[side]:",
+    "if False:"
+  ],
+  "template_proof_not_required": [
+    "src/uk_budget_data/publication/receipt.py",
+    "modifier_templates: dict[str, list] = field(kw_only=True)",
+    "modifier_templates: dict[str, list] = field(default_factory=dict, kw_only=True)"
+  ],
+  "dashboard_proof_validation_omitted": [
+    "src/uk_budget_data/publication/receipt.py",
+    "    problems += template_proof.record_problems(document)\n",
+    "    problems += []\n"
+  ],
+  "handwritten_receipt_generation_id_not_required": [
+    "src/uk_budget_data/publication/template_proof.py",
+    "    if hand_written:\n",
+    "    if False:\n"
+  ]
+}

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  attestationProblems,
   isDisplayable,
   isSafeArtifactPath,
   ManifestError,
@@ -55,6 +56,8 @@ describe("parseManifest refusals", () => {
     "revision zero": (m) => (m.revision = 0),
     "an unknown status": (m) => (m.measures.alpha.status = "published"),
     "a bad digest": (m) => (m.measures.alpha.outputs_sha256 = "abc"),
+    "a digest with a trailing newline": (m) =>
+      (m.measures.alpha.outputs_sha256 += "\n"),
     "an absolute artifact path": (m) =>
       (m.measures.alpha.artifact = "/etc/passwd"),
     "a parent-directory artifact path": (m) =>
@@ -98,6 +101,80 @@ describe("parseManifest refusals", () => {
         ),
       ),
     ).not.toThrow();
+  });
+});
+
+describe("attestations", () => {
+  function attestation() {
+    return {
+      measure_id: "alpha",
+      receipt_sha256: "a".repeat(64),
+      reason: "The modifier only updates a registered allowance.",
+      checker: "First reviewer",
+      second: "Second reviewer",
+      released_at: "2026-10-22T12:00:00+00:00",
+    };
+  }
+
+  it("accepts the complete audit record", () => {
+    expect(attestationProblems(attestation(), "alpha")).toEqual([]);
+    expect(() =>
+      parseManifest(
+        edited((m) => {
+          m.measures.alpha.attestation = attestation();
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ["a different measure", (a) => (a.measure_id = "beta")],
+    ["a missing receipt digest", (a) => delete a.receipt_sha256],
+    [
+      "a receipt digest with a trailing newline",
+      (a) => (a.receipt_sha256 += "\n"),
+    ],
+    ["an empty reason", (a) => (a.reason = " ")],
+    ["an empty checker", (a) => (a.checker = "\u0085")],
+    ["an empty second", (a) => (a.second = " ")],
+    ["one name twice", (a) => (a.second = " FIRST REVIEWER ")],
+    [
+      "Unicode case-folded names",
+      (a) => {
+        a.checker = "Straße";
+        a.second = "STRASSE";
+      },
+    ],
+    ["a date without a time", (a) => (a.released_at = "2026-10-22")],
+    [
+      "a nonexistent calendar date",
+      (a) => (a.released_at = "2026-02-31T12:00:00Z"),
+    ],
+    ["an invalid hour", (a) => (a.released_at = "2026-10-22T24:00:00Z")],
+    [
+      "a timestamp before Python's UTC range",
+      (a) => (a.released_at = "0001-01-01T00:00:00+23:59"),
+    ],
+    [
+      "a timestamp after Python's UTC range",
+      (a) => (a.released_at = "9999-12-31T23:59:59-23:59"),
+    ],
+    ["a timestamp with a trailing newline", (a) => (a.released_at += "\n")],
+    [
+      "a timestamp without a timezone",
+      (a) => (a.released_at = "2026-10-22T12:00:00"),
+    ],
+    ["an unknown field", (a) => (a.future_field = true)],
+  ])("refuses %s", (_, change) => {
+    expect(() =>
+      parseManifest(
+        edited((m) => {
+          const audit = attestation();
+          change(audit);
+          m.measures.alpha.attestation = audit;
+        }),
+      ),
+    ).toThrow(ManifestError);
   });
 });
 

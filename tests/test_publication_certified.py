@@ -56,6 +56,7 @@ def test_the_certified_dataset_yields_a_certified_receipt():
             data_limits=[],
             model_limits=[],
             name="Current law",
+            modifier_templates={"baseline": [], "reform": []},
         ),
     )
     receipt = document["execution_receipt"]

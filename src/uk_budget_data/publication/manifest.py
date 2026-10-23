@@ -24,6 +24,8 @@ from pydantic import (
     model_validator,
 )
 
+from uk_budget_data.publication.attestations import Attestation
+
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
 MANIFEST_FILE = "manifest.json"
@@ -90,6 +92,9 @@ class Entry(_Strict):
     reconciliation: Optional[ReconciliationSummary] = None
     household_checks: Optional[dict] = None
     approval: Optional[Approval] = None
+    # The two-person release of a held hand-written modifier, bound to
+    # the whole receipt document, including this generation's identity.
+    attestation: Optional[Attestation] = None
     reason: Optional[str] = None
     # The data limits the artifact touches (their keys); its entry can only
     # be not computable.

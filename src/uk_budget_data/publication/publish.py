@@ -55,6 +55,11 @@ from uk_budget_data.publication.artifacts import (
     captured_tables,
     read_receipt,
 )
+from uk_budget_data.publication.attestations import (
+    load_attestation,
+    requires_attestation,
+    validate_attestation,
+)
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
@@ -172,6 +177,11 @@ def binding_problems(
             )
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
+    if entry.attestation is not None:
+        try:
+            validate_attestation(document, entry.attestation.model_dump())
+        except (ValueError, TypeError) as error:
+            problems.append(f"the entry's attestation is invalid: {error}")
     return problems
 
 
@@ -323,7 +333,15 @@ def _members_problems(
                 f"member {member['id']} has different outputs from when "
                 "this combined run was generated"
             )
-        own = read_receipt(artifact_dir(entry, data_root))["execution_receipt"]
+        own_document = read_receipt(artifact_dir(entry, data_root))
+        own = own_document["execution_receipt"]
+        if m.NOT_COMPUTABLE not in need and requires_attestation(own_document):
+            attestation, errors = load_attestation(own_document)
+            problems += [f"member {member['id']}: {error}" for error in errors]
+            if attestation != entry.attestation:
+                problems.append(
+                    f"member {member['id']}'s attestation changed; restage it"
+                )
         for side in ("reform", "baseline"):
             # Kind, representation, digest and binding: everything an
             # identity's meaning depends on (its name is a label).
@@ -428,6 +446,16 @@ def gate_problems(
                 (m.STAGED, m.NOT_COMPUTABLE, *m.DISPLAYABLE),
             )
         return problems, info
+
+    if requires_attestation(document):
+        attestation, errors = load_attestation(document)
+        problems += errors
+        info["attestation"] = attestation
+        if entry is not None and attestation != entry.attestation:
+            problems.append(
+                "the entry's attestation is not the current committed "
+                "release; restage it"
+            )
 
     if level in (m.PROVISIONAL, m.APPROVED):
         if dashboard.get("publishable") is not True:
@@ -657,6 +685,7 @@ def stage(
         years=document["execution_receipt"]["years"],
         unsupported_years=dashboard["unsupported_years"],
         reconciliation=info.get("reconciliation"),
+        attestation=info.get("attestation"),
         data_limits=_limit_keys(dashboard),
         reason=(
             _limit_reason(dashboard) if level == m.NOT_COMPUTABLE else None
