@@ -1,0 +1,2 @@
+{"utc": "2026-10-23T15:02:33.988704+00:00", "pid": 33664, "event": "gate", "label": "serial-certified-default", "load1": 51.17724609375, "free_disk_gb": 100.640505856, "free_memory_gb": null, "required_memory_gb": 0.0}
+{"utc": "2026-10-23T15:02:33.990204+00:00", "pid": 33664, "event": "gate_end", "label": "serial-certified-default", "seconds": 0.11838720898958854, "resource_wait_s": 0.0}

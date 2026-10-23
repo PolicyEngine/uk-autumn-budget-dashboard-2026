@@ -1,0 +1,25 @@
+NO — do not commit a full rebase for 15:45; keep the March first cut on this evidence.
+
+The certified national route produced one verified artifact, but staging refused and neither concurrent throughput trial completed. The reservation check refused UK work at **15:30:17Z**; both admitted workers had already reached its refusal gate and exited by **15:30:18Z**. No further heavy phase or three-worker trial was started. A measured full-route deadline margin is therefore **unavailable**.
+
+Dashboard `origin/main` was frozen at `7f87566cfaecea58f0468618127c8c994d147ccf`, installed with `uv sync --frozen`: Python **3.13.9**, policyengine **6.10.0**, UK **2.132.6**, Core **3.33.3**, no model overlay. Actual imports reported **`exact_build_model_version`**, with a successfully fetched manifest and no fallback. All 3,094 model distribution RECORD files and all five supplied input hashes matched. Inputs remained unchanged. The cached Hugging Face token stayed in memory; the changed-file credential scan passed.
+
+| Step | External wall / outcome |
+|---|---|
+| Local importer | **313.665 s**, passed. UK 2.132.6 contains the full importer; no fallback needed. Imports **299.299 s**, remaining CLI work **14.366 s**. Source verification and parameter copying: another **1.729 s**. |
+| Machine input review | **11.595 s**: value diff, omitted-series retention, statutory decisions and exact dated dictionary. All 32 numerical edits accounted for; human review unmeasured. |
+| Frozen references | **632.621 s**, plus **0.663 s** supervisor gate; prepublication preparation. Imports **529.703 s**, managed construction **81.185 s**, queries **0.783 s**. |
+| Rebased subset probe | **732.562 s**, plus **0.836 s** supervisor gate. Imports **507.167 s**, managed construction **206.962 s**, queries **0.264 s**. **48/56 checks passed; eight HPI checks failed.** |
+| National `two_child_limit` | **1525.832 s**, plus **0.118 s** supervisor gate; six tables, every year 2026–2030, independent schema/finite-value/digest checks passed. Peak **14.860 decimal GB**. |
+| Two workers | **130.136 s batch**, imports only; no model construction or completed throughput. Full-run peaks unavailable. Admission passed: load1 **81.758**, disk **94.582 GB**, memory headroom **57.518 GB** versus **37.2 GB** required. |
+| Scratch staging | Reconcile **0.151 s**; `stage --adopt-basis` **0.371 s**, **refused**: responsiveness undeclared. Imports **223.013 s**. External **2716.588 s** minus **2485.006 s** overlapping prerequisite wait = **231.582 s**, plus **0.416 s** supervisor gate. |
+
+National generation itself took **1193.736 s**, partitioned into **12.901 s** gates, **1002.448 s** root construction, **151.052 s** calculation, **7.046 s** build overhead and **20.289 s** receipt/writing overhead. Imports were **280.106 s** separately within the external command. Nested constructors and all these subcounters are already included in enclosing totals. Resource-gate sleep was zero; numerical pools were capped at four.
+
+Known window accounting is **10.000 minutes acquisition estimate + 5.450 inputs + 12.223 rebased probe + 25.433 national measure + 3.867 staging refusal = 56.972 minutes**. This leaves **78.028 minutes** for **15 additional measures**, successful staging/rework and human review. Eight two-worker batches would need at most **9.753 minutes each**, or five three-worker batches **15.606 minutes each**, before any further review allowance. Neither rate was measured. Acquisition was not timed; direct importer reservation-command overhead was not separately clocked. Setup, frozen references and failed diagnostic attempts are excluded.
+
+The binding release constraint is **human/model-basis review**. Certified UK 2.132.6 uprates residential values by GDP/head; ten separate GDP predictions explain the unchanged eight HPI failures without clearing them. Scratch expected effects are undeclared, Treasury reconciliation awaits its source, and successful basis adoption remains untested. CPU/memory throughput is undetermined; disk and two-worker memory admission passed.
+
+The first local-path generation failed after **2012.027 s** at the strict receipt URI check. The successful retry used the supported default-bundle materializer, reading the same hash-verified national file through a scratch cache, with canonical provenance and every certificate check intact. No real manifest or repository `public/` files changed; no approval or publication occurred.
+
+Both PR #94 runbooks and reproducible aggregate evidence are committed and pushed to `docs/obr-forecast-rebase-dry-run` through a merge-preserving update. Shared Git metadata was read-only, so commits use workspace-local `.job/history.git`; `.job/commits.bundle` provides recovery. Tests: **10 resource/reservation guards + 3 timing-accounting tests passed**, harness syntax passed, and the completed artifact passed independent verification. Detailed evidence is in `.job/summary-e2e6.json`, `.job/phases.jsonl`, `.job/artifact-verification.json` and the preserved probe/staging/concurrency records.

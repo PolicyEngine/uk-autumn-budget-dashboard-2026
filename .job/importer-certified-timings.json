@@ -1,0 +1,104 @@
+{
+  "source_verification_and_parameter_copy": {
+    "seconds": 1.7292782080039615,
+    "source_sha256": {
+      "economy": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+      "receipts": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28",
+      "importer": "fa79cb02513362ea9f8621112aedfb307cbb7dab868cc144f07076158c89cf94"
+    },
+    "importer_present_on_certified_pin": true,
+    "importer_record_hash_verified": true
+  },
+  "certified_module_cli": {
+    "external_seconds": 313.6650414579999,
+    "returncode": 0,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+      "-B",
+      "-m",
+      "policyengine_uk.utils.import_obr_forecasts",
+      "--file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx",
+      "--receipts-file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/obr_efo_march_2026_receipts.xlsx",
+      "--yaml-path",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer-certified/after/gov/economic_assumptions/yoy_growth.yaml",
+      "--release-month",
+      "March",
+      "--release-year",
+      "2026",
+      "--forecast-start-year",
+      "2025",
+      "--forecast-years",
+      "6"
+    ],
+    "pins": {
+      "policyengine": "6.10.0",
+      "policyengine-uk": "2.132.6",
+      "policyengine-core": "3.33.3"
+    },
+    "import_seconds_nonoverlapping_roots": 299.299038,
+    "cli_calculation_and_interpreter_residual_seconds": 14.36600345799991,
+    "importtime_root_modules": [
+      {
+        "module": "_frozen_importlib_external",
+        "cumulative_microseconds": 1490
+      },
+      {
+        "module": "zipimport",
+        "cumulative_microseconds": 12096
+      },
+      {
+        "module": "encodings",
+        "cumulative_microseconds": 2543
+      },
+      {
+        "module": "encodings.utf_8",
+        "cumulative_microseconds": 1264
+      },
+      {
+        "module": "_signal",
+        "cumulative_microseconds": 246
+      },
+      {
+        "module": "io",
+        "cumulative_microseconds": 904
+      },
+      {
+        "module": "site",
+        "cumulative_microseconds": 102317
+      },
+      {
+        "module": "runpy",
+        "cumulative_microseconds": 409798
+      },
+      {
+        "module": "policyengine_uk.utils",
+        "cumulative_microseconds": 298764086
+      },
+      {
+        "module": "encodings.cp437",
+        "cumulative_microseconds": 4294
+      }
+    ],
+    "timing_method": "Exact python-m CLI with PYTHONPROFILEIMPORTTIME=1; only nonnested cumulative import records summed. Residual includes parser/workbook/renderer/calculation and interpreter overhead; it is not a pure calculation clock. Subcounters partition external wall, never add them to it.",
+    "construction_seconds": 0,
+    "resource_gate_wait_seconds": 0,
+    "fallback_required": false
+  },
+  "certified_reviewed_inputs": {
+    "external_seconds": 11.595199750001484,
+    "returncode": 0,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+      "-B",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/review_inputs.py",
+      "--before-parameters",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer-certified/before",
+      "--after-parameters",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer-certified/after",
+      "--output-dir",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/reviewed-inputs-certified"
+    ]
+  }
+}

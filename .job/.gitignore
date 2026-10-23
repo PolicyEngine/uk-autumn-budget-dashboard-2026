@@ -1,0 +1,15 @@
+runtime/
+importer-runtime/
+uv-cache/
+cache/
+hf-cache/
+mpl-cache/
+tmp/
+history.git/
+staging-repo/
+scratch/importer*/
+basis-adoption-fixture/
+outputs/
+__pycache__/
+seeded-plotly/
+*.pyc

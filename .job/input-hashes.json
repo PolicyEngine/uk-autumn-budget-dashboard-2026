@@ -1,0 +1,32 @@
+[
+  {
+    "path": "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx",
+    "sha256": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+    "seconds": 0.01662058300280478,
+    "bytes": 483251
+  },
+  {
+    "path": "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/obr_efo_march_2026_receipts.xlsx",
+    "sha256": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28",
+    "seconds": 0.007318957999814302,
+    "bytes": 187899
+  },
+  {
+    "path": "/Users/maxghenis/reviews/uk-hub/jobs/obr-rebase-dry-run/inputs/forecast.json",
+    "sha256": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3",
+    "seconds": 0.007309417000215035,
+    "bytes": 1372
+  },
+  {
+    "path": "/Users/maxghenis/reviews/uk-hub/jobs/obr-rebase-dry-run/inputs/every40.h5",
+    "sha256": "29a6c3c3c445a5a9edffa85e3f65c69f1693cbe76756efbcfc9a954d2c3a6740",
+    "seconds": 0.28429233399947407,
+    "bytes": 35197515
+  },
+  {
+    "path": "/Users/maxghenis/PolicyEngine/uk-autumn-budget-dashboard-2026/.claude/worktrees/practical-kapitsa-1b128a/data/microcosm_uk_2024_25.h5",
+    "sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+    "seconds": 2.214279625004565,
+    "bytes": 321798995
+  }
+]

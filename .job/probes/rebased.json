@@ -1,0 +1,747 @@
+{
+  "mode": "rebased",
+  "identity": {
+    "dashboard_origin_main_sha": "7f87566cfaecea58f0468618127c8c994d147ccf",
+    "dashboard_python_source_sha256": "5d03e28692ff43afbfd7683ae316394dd014bc0112f827e58c454dd25444c378",
+    "lock_sha256": "d06f3846f24336bb05e563e3d27b9f5fb46e81d99f0c92fac80f8ff24d9b35bf",
+    "probe_code_sha256": "a845b2b93b9d588d6208422dcca7f33f170b1fa4e65680338927c7eaa1cbdd7b",
+    "guard_code_sha256": "db27139d2ae63e79f5632c9f80f6ae0980f5562fdfd4ac5ffc3445b39543c03f",
+    "python": "3.13.9",
+    "versions": {
+      "policyengine": "6.10.0",
+      "policyengine-uk": "2.132.6",
+      "policyengine-core": "3.33.3"
+    },
+    "subset_sha256": "29a6c3c3c445a5a9edffa85e3f65c69f1693cbe76756efbcfc9a954d2c3a6740",
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "stored_input_variables": [
+      "employment_income_before_lsr",
+      "food_and_non_alcoholic_beverages_consumption",
+      "dividend_income",
+      "main_residence_value",
+      "council_tax"
+    ],
+    "ratio_rtol": 0.0001,
+    "ratio_atol": 1e-06
+  },
+  "candidate_forecast_sha256": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3",
+  "scope": "subset stored-input/statutory probes only; not calibrated national estimates",
+  "rows": [
+    {
+      "year": 2026,
+      "totals": {
+        "employment_income_before_lsr": {
+          "weighted_gbp": 27040558709.84354,
+          "unweighted_gbp": 209135789.91317463
+        },
+        "food_and_non_alcoholic_beverages_consumption": {
+          "weighted_gbp": 2869554365.350301,
+          "unweighted_gbp": 8941813.807125092
+        },
+        "dividend_income": {
+          "weighted_gbp": 3464581442.3113728,
+          "unweighted_gbp": 50959187.36758846
+        },
+        "main_residence_value": {
+          "weighted_gbp": 141025090791.6453,
+          "unweighted_gbp": 848699206.4335938
+        },
+        "council_tax": {
+          "weighted_gbp": 1050651703.8483199,
+          "unweighted_gbp": 3865913.799938202
+        }
+      },
+      "parameters": {
+        "previous_september_cpi": 0.038,
+        "previous_may_july_awe": 0.048,
+        "triple_lock": 0.048,
+        "basic_pension_weekly_gbp": 184.9,
+        "new_pension_weekly_gbp": 241.3
+      },
+      "query_seconds": 0.05212158299400471
+    },
+    {
+      "year": 2027,
+      "totals": {
+        "employment_income_before_lsr": {
+          "weighted_gbp": 27656280503.29863,
+          "unweighted_gbp": 213109370.1872015
+        },
+        "food_and_non_alcoholic_beverages_consumption": {
+          "weighted_gbp": 2952176003.3955917,
+          "unweighted_gbp": 9165359.199699402
+        },
+        "dividend_income": {
+          "weighted_gbp": 3579288226.5711365,
+          "unweighted_gbp": 52452291.295045376
+        },
+        "main_residence_value": {
+          "weighted_gbp": 145694206437.2249,
+          "unweighted_gbp": 873566090.3261719
+        },
+        "council_tax": {
+          "weighted_gbp": 1117980160.1949105,
+          "unweighted_gbp": 4097061.31690979
+        }
+      },
+      "parameters": {
+        "previous_september_cpi": 0.035,
+        "previous_may_july_awe": 0.039,
+        "triple_lock": 0.039,
+        "basic_pension_weekly_gbp": 192.11135021679695,
+        "new_pension_weekly_gbp": 250.71102654036292
+      },
+      "query_seconds": 0.06039549999695737
+    },
+    {
+      "year": 2028,
+      "totals": {
+        "employment_income_before_lsr": {
+          "weighted_gbp": 28350010575.907063,
+          "unweighted_gbp": 217584665.8034296
+        },
+        "food_and_non_alcoholic_beverages_consumption": {
+          "weighted_gbp": 3023264417.815621,
+          "unweighted_gbp": 9348666.349617004
+        },
+        "dividend_income": {
+          "weighted_gbp": 3705007186.5034447,
+          "unweighted_gbp": 54078312.11569606
+        },
+        "main_residence_value": {
+          "weighted_gbp": 150811569262.77975,
+          "unweighted_gbp": 900646640.0390625
+        },
+        "council_tax": {
+          "weighted_gbp": 1191001798.883836,
+          "unweighted_gbp": 4345731.65196228
+        }
+      },
+      "parameters": {
+        "previous_september_cpi": 0.02572,
+        "previous_may_july_awe": 0.01927,
+        "triple_lock": 0.026,
+        "basic_pension_weekly_gbp": 197.10649451793756,
+        "new_pension_weekly_gbp": 257.2298384379575
+      },
+      "query_seconds": 0.041669500002171844
+    },
+    {
+      "year": 2029,
+      "totals": {
+        "employment_income_before_lsr": {
+          "weighted_gbp": 29101195322.638145,
+          "unweighted_gbp": 222371529.2313056
+        },
+        "food_and_non_alcoholic_beverages_consumption": {
+          "weighted_gbp": 3097298123.6963606,
+          "unweighted_gbp": 9535639.65926361
+        },
+        "dividend_income": {
+          "weighted_gbp": 3831460046.330035,
+          "unweighted_gbp": 55679031.08740476
+        },
+        "main_residence_value": {
+          "weighted_gbp": 155958804632.067,
+          "unweighted_gbp": 927305780.1777344
+        },
+        "council_tax": {
+          "weighted_gbp": 1263815428.3812048,
+          "unweighted_gbp": 4589937.639732361
+        }
+      },
+      "parameters": {
+        "previous_september_cpi": 0.020300000000000002,
+        "previous_may_july_awe": 0.020790000000000003,
+        "triple_lock": 0.025,
+        "basic_pension_weekly_gbp": 202.03423347786466,
+        "new_pension_weekly_gbp": 263.660684360242
+      },
+      "query_seconds": 0.04033483300008811
+    },
+    {
+      "year": 2030,
+      "totals": {
+        "employment_income_before_lsr": {
+          "weighted_gbp": 29933722206.28413,
+          "unweighted_gbp": 227708445.96158075
+        },
+        "food_and_non_alcoholic_beverages_consumption": {
+          "weighted_gbp": 3173460674.9318814,
+          "unweighted_gbp": 9726352.46352005
+        },
+        "dividend_income": {
+          "weighted_gbp": 3969935782.0691404,
+          "unweighted_gbp": 57432920.520371884
+        },
+        "main_residence_value": {
+          "weighted_gbp": 161595428434.25595,
+          "unweighted_gbp": 956515915.484375
+        },
+        "council_tax": {
+          "weighted_gbp": 1339935114.2302277,
+          "unweighted_gbp": 4843339.689315796
+        }
+      },
+      "parameters": {
+        "previous_september_cpi": 0.02048,
+        "previous_may_july_awe": 0.021849999999999998,
+        "triple_lock": 0.025,
+        "basic_pension_weekly_gbp": 207.0855488966832,
+        "new_pension_weekly_gbp": 270.2528012372615
+      },
+      "query_seconds": 0.047164332994725555
+    }
+  ],
+  "timings": {
+    "runtime_import_wall_including_gates_s": 507.91884620900964,
+    "runtime_import_excluding_gates_s": 507.166897084011,
+    "runtime_import_counters": {
+      "gates_s": 0.7519491249986459,
+      "gate_wait_s": 0.0,
+      "construction_s": 0.0,
+      "constructors": 0
+    },
+    "construction_wall_including_gates_s": 209.70276370800275,
+    "construction_wall_excluding_gates_s": 206.9615668750048,
+    "construction_counters": {
+      "gates_s": 2.7411968329979572,
+      "gate_wait_s": 0.0,
+      "construction_s": 198.43881837499794,
+      "constructors": 1
+    },
+    "queries_wall_including_gates_s": 0.26363287499407306,
+    "queries_wall_excluding_gates_and_construction_s": 0.26363287499407306,
+    "query_counters": {
+      "gates_s": 0.0,
+      "gate_wait_s": 0.0,
+      "construction_s": 0.0,
+      "constructors": 0
+    },
+    "comparison_s": 9.124999633058906e-05,
+    "script_wall_s": 722.2285582920013
+  },
+  "comparison": {
+    "ratio_rtol": 0.0001,
+    "ratio_atol": 1e-06,
+    "stored_input_checks": [
+      {
+        "year": 2026,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0048875838082874,
+        "expected_ratio": 1.004887585532747,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0048875831399744,
+        "expected_ratio": 1.004887585532747,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "dividend_income",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "dividend_income",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "council_tax",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2026,
+        "variable": "council_tax",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9951171875314765,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9951171851758164,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0098135046122128,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0098135084731839,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938707770493,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938726758065,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2027,
+        "variable": "dividend_income",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.997093842329339,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "dividend_income",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938528892296,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "council_tax",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "variable": "council_tax",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9951171902853291,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9951171852578992,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0098135107546056,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0098135050695793,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938684702084,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938673468195,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "dividend_income",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938388436967,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "dividend_income",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938544559682,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "council_tax",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "variable": "council_tax",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9951171899877325,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9951171834784898,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0098135035651814,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0098135013779124,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938700121719,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938648464331,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "dividend_income",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.997093869624257,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "dividend_income",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.997093870237368,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "council_tax",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2029,
+        "variable": "council_tax",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9951171899804079,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "employment_income_before_lsr",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9951171880750005,
+        "expected_ratio": 0.9951171874999999,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0098135012483802,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "food_and_non_alcoholic_beverages_consumption",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.009813505386047,
+        "expected_ratio": 1.0098135050696722,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938630113092,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938688195313,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "dividend_income",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938803113021,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "dividend_income",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.997093874620879,
+        "expected_ratio": 0.9970938680616102,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "council_tax",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      },
+      {
+        "year": 2030,
+        "variable": "council_tax",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 1.0,
+        "expected_ratio": 1,
+        "passed": true
+      }
+    ],
+    "statutory_checks": [
+      {
+        "year": 2027,
+        "parameter": "previous_september_cpi",
+        "measured": 0.035,
+        "expected": 0.035,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "parameter": "previous_may_july_awe",
+        "measured": 0.039,
+        "expected": 0.039,
+        "passed": true
+      },
+      {
+        "year": 2027,
+        "parameter": "triple_lock",
+        "measured": 0.039,
+        "expected": 0.039,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "parameter": "previous_september_cpi",
+        "measured": 0.02572,
+        "expected": 0.02572,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "parameter": "previous_may_july_awe",
+        "measured": 0.01927,
+        "expected": 0.01927,
+        "passed": true
+      },
+      {
+        "year": 2028,
+        "parameter": "triple_lock",
+        "measured": 0.026,
+        "expected": 0.026,
+        "passed": true
+      }
+    ],
+    "failures": [
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938707770493,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938726758065,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938684702084,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938673468195,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938700121719,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938648464331,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938630113092,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938688195313,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      }
+    ],
+    "passed": false
+  }
+}

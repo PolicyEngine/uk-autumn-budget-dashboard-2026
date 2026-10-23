@@ -1,0 +1,55 @@
+{
+  "utc": "2026-10-23T15:31:59.720909+00:00",
+  "raw_report_sha256": "d314fbacc43093527a5efa85b7c6878b0fb806c0f1034faa754cbec4440bf98e",
+  "worker_processes_started": 2,
+  "national_model_constructions_started": 0,
+  "all_workers_exited": true,
+  "throughput_measured": false,
+  "raw_counter_note": "The original launcher field simulations_started counts spawned worker interpreters, not UK Simulation constructors. The raw report remains unchanged.",
+  "children": [
+    {
+      "measure": "two_child_limit",
+      "pid": 69869,
+      "completed_model_constructions": 0,
+      "certification_bases": [
+        "exact_build_model_version"
+      ],
+      "import_seconds": [
+        120.3671713329968
+      ],
+      "stop_events": [
+        {
+          "utc": "2026-10-23T15:30:16.316293+00:00",
+          "pid": 69869,
+          "event": "reservation_refused",
+          "label": "generate two_child_limit: registry preparation",
+          "detail": "held back by route-a-release-rerun-d1811-2026-10-23 (reservation.py status)\n"
+        }
+      ],
+      "peak_memory_decimal_gb": null,
+      "peak_note": "Not saved: worker stopped after imports, before preparation and model construction."
+    },
+    {
+      "measure": "savings_tax_increase_2pp",
+      "pid": 69898,
+      "completed_model_constructions": 0,
+      "certification_bases": [
+        "exact_build_model_version"
+      ],
+      "import_seconds": [
+        120.37844441700145
+      ],
+      "stop_events": [
+        {
+          "utc": "2026-10-23T15:30:16.393289+00:00",
+          "pid": 69898,
+          "event": "reservation_refused",
+          "label": "generate savings_tax_increase_2pp: registry preparation",
+          "detail": "held back by route-a-release-rerun-d1811-2026-10-23 (reservation.py status)\n"
+        }
+      ],
+      "peak_memory_decimal_gb": null,
+      "peak_note": "Not saved: worker stopped after imports, before preparation and model construction."
+    }
+  ]
+}

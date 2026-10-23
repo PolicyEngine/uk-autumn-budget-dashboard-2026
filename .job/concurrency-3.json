@@ -1,0 +1,17 @@
+{
+  "count": 3,
+  "status": "not_started_reservation_refused",
+  "worker_processes_started": 0,
+  "national_model_constructions_started": 0,
+  "batch_wall_seconds": null,
+  "children": [],
+  "reservation_evidence": {
+    "utc": "2026-10-23T15:30:17.148730+00:00",
+    "command": "python3 ~/reviews/fleet-ops/tools/reservation.py allowed uk-hub",
+    "exit_code": 1,
+    "output": "held back by route-a-release-rerun-d1811-2026-10-23 (reservation.py status)\n"
+  },
+  "peak_memory_per_process": null,
+  "throughput_measured": false,
+  "reason": "Two-worker attempt ended at the denied next-phase gate after 15:30Z; no new three-worker phase was started."
+}

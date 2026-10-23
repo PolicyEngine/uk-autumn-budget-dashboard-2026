@@ -1,0 +1,69 @@
+{
+  "artifact": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/public/data/artifacts/two_child_limit/4beb06da6e6dd92d",
+  "staged": false,
+  "reason": "Hidden stage --adopt-basis refused under unchanged gates",
+  "source_dashboard_sha": "7f87566cfaecea58f0468618127c8c994d147ccf",
+  "source_manifest_present": false,
+  "scratch_manifest_present_before": false,
+  "old_execution_identity_sha256": null,
+  "artifact_execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+  "changed_execution": false,
+  "changed_basis": false,
+  "basis_adoption_transition_tested": false,
+  "manifest_before_sha256": null,
+  "manifest_after_sha256": null,
+  "imports_seconds": 223.01338641700568,
+  "startup_gate_seconds": 0.31335583300096914,
+  "prerequisite_wait_seconds": 2485.006324707996,
+  "prerequisite": {
+    "status": "ready",
+    "output_dir": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child",
+    "timing_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/timings.json",
+    "started_utc": "2026-10-23T14:46:27.931306+00:00",
+    "prerequisite_wait_seconds": 2485.006324707996,
+    "artifact": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/artifacts/two_child_limit/4beb06da6e6dd92d",
+    "measure": "two_child_limit",
+    "timing_sha256": "1290cb52eff9e104bbbd76a2bbc71b7e75edf2b38c4fb33e58c74c2f7fac5da8"
+  },
+  "benchmark_schedule_note": "Stage certification/imports may overlap serial generation; prerequisite wait is a separately measured dependency interval. Planning conservatively counts stage imports sequentially and excludes only this explicit wait.",
+  "copy_seconds": 0.15806629099824931,
+  "commands": [
+    {
+      "argv": [
+        "publish",
+        "--data-root",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/public/data",
+        "--inputs",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/data_inputs/treasury",
+        "reconcile",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/public/data/artifacts/two_child_limit/4beb06da6e6dd92d"
+      ],
+      "exit_code": 0,
+      "seconds": 0.15093041700311005,
+      "output": "two_child_limit: reconciliation awaiting_source, responsiveness undeclared\n",
+      "scope": "authentic_source_copy"
+    },
+    {
+      "argv": [
+        "publish",
+        "--data-root",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/public/data",
+        "--inputs",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/data_inputs/treasury",
+        "stage",
+        "--adopt-basis",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/public/data/artifacts/two_child_limit/4beb06da6e6dd92d"
+      ],
+      "exit_code": 1,
+      "seconds": 0.3714020420011366,
+      "output": "REFUSED two_child_limit:\n  - responsiveness is undeclared: the measure does not move as expected\n",
+      "scope": "authentic_source_copy"
+    }
+  ],
+  "timed_commands_seconds": 0.5223324590042466,
+  "labelled_basis_adoption_fixture": null,
+  "fixture_timed_commands_seconds": 0,
+  "whole_process_seconds_through_result": 2712.251508375004,
+  "whole_process_seconds_excluding_prerequisite_wait": 227.2451840420108,
+  "scope": "Scratch hidden staging only; no approval, provisional display, real public write, or execution-identity adoption"
+}

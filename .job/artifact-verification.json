@@ -1,0 +1,234 @@
+{
+  "verified_utc": "2026-10-23T15:28:12.853320+00:00",
+  "scope": "Scratch artifact integrity and aggregate schema only; no release approval",
+  "helper_source_sha256": {
+    "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/src/uk_budget_data/publication/tables.py": "c5b90cb7190e7010910332a3dbafe8f2d6459bdfa748d7ffdf640b1a68aef3bd",
+    "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/src/uk_budget_data/publication/receipt.py": "93b127d8f41d4aa74a8441d593084db7bb57454577615fd2aec86b0fa7bd29ef",
+    "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/lib/python3.13/site-packages/policyengine/provenance/canonical.py": "ebfa0e7c19c46e81fc5ac3ad59ec1c7acc04eced8d3ed93c1d4a5a8bf842a199",
+    "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/lib/python3.13/site-packages/policyengine/provenance/receipt.py": "6a771b9f1a4ec97fe326bc3c3a26efa7048d5bb120b8a01e000f6b1f333c24ac"
+  },
+  "artifacts": [
+    {
+      "timing_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/timings.json",
+      "timing_file_sha256": "1290cb52eff9e104bbbd76a2bbc71b7e75edf2b38c4fb33e58c74c2f7fac5da8",
+      "measure": "two_child_limit",
+      "artifact_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/artifacts/two_child_limit/4beb06da6e6dd92d",
+      "receipt_file_sha256": "3283a76ac8aa619c073e6896a24fc97b11b44d418b4b1171ebc6f3cf08bb3c5f",
+      "receipt_sha256": "459ee2789fa71c279595efbce7abdce40cc4775a63b99afc397911f9c7d09613",
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "outputs_sha256": "be8f12e58a01685d76fe10cc5f24056af745ae6864fd85c8d68398842785dee0",
+      "artifact_sha256": "4beb06da6e6dd92d68e40006664d5cc4e5aaa24bdb093980fcae927ccf4fa429",
+      "tables": {
+        "budgetary_impact": {
+          "sha256": "a74e7490fb7c21032763cb92e74a022835038aa411082caa5dd442c7426d28e2",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "value"
+          ],
+          "row_count": 5,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "value"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        },
+        "distributional_impact": {
+          "sha256": "9e11d18470eb02fca953be177419d1c82711386b6930bfbecd3981580c2224f3",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "decile",
+            "value"
+          ],
+          "row_count": 50,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "value"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        },
+        "household_scatter_binned": {
+          "sha256": "40e5c46a304ae8048d6f355cbf8019f9c1598afb0a9690949b2430792d8c3e4c",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "income_band",
+            "change_band",
+            "households"
+          ],
+          "row_count": 242,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "income_band",
+            "change_band",
+            "households"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        },
+        "income_curve": {
+          "sha256": "bfe2ddfe40d65be75cf568d29105c4442863853824ee5daf1081d1880c3ee4e1",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "employment_income",
+            "baseline_net_income",
+            "reform_net_income"
+          ],
+          "row_count": 1005,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "employment_income",
+            "baseline_net_income",
+            "reform_net_income"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        },
+        "metrics": {
+          "sha256": "c98e15bd13b15f3bd9f36690f504c8d983613e47b9a630c76feba275be3f3784",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "people_affected",
+            "gini_change",
+            "poverty_change_pp",
+            "poverty_change_pct"
+          ],
+          "row_count": 5,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "people_affected",
+            "gini_change",
+            "poverty_change_pp",
+            "poverty_change_pct"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        },
+        "winners_losers": {
+          "sha256": "05b70fcea04ec623e44689476f25474591956258e4b6d9f7d7e298d49505188d",
+          "columns": [
+            "reform_id",
+            "reform_name",
+            "year",
+            "decile",
+            "avg_change"
+          ],
+          "row_count": 55,
+          "years": [
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ],
+          "finite_numeric_columns": [
+            "year",
+            "avg_change"
+          ],
+          "schema_and_canonical_bytes_verified": true
+        }
+      },
+      "recorded_certification_status": "certified",
+      "recorded_certificate_basis": "built_with_model_package",
+      "recorded_certificate": {
+        "bundle_version": "6.10.0",
+        "certificate_sha256": "82000fa5fe409e422b6069491786bd3039a67b4d59422217417038e39c923f59",
+        "certificate_source": "packaged",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "certified_for_core_version": "3.33.3",
+        "certified_for_model_version": "2.132.6",
+        "compatibility_basis": "built_with_model_package",
+        "country_id": "uk",
+        "tro_composition_fingerprint": "ef34471483ee8513d9d75b7430a45198fb99b8f8b051a0120fbf328347910091"
+      },
+      "certificate_cross_field_consistency_verified": true,
+      "certificate_trust_note": "Recorded claim and identity consistency only; publisher certificate verification and release approval remain the normal publication gates.",
+      "runtime_identities": {
+        "wrapper": {
+          "name": "policyengine",
+          "version": "6.10.0"
+        },
+        "model": {
+          "name": "policyengine-uk",
+          "version": "2.132.6"
+        },
+        "core": {
+          "name": "policyengine-core",
+          "version": "3.33.3"
+        },
+        "data": {
+          "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+          "build_model_version": "2.132.6",
+          "data_package": "microcosm-data",
+          "dataset": "microcosm_uk_2024_25",
+          "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+          "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+          "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+          "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+          "release_version": "0.1.0"
+        }
+      },
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ],
+      "supported_years": [
+        2024,
+        2025,
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031,
+        2032
+      ],
+      "git_sha": "7f87566cfaecea58f0468618127c8c994d147ccf",
+      "integrity_and_aggregate_shape_verified": true
+    }
+  ]
+}

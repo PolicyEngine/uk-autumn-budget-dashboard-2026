@@ -2,34 +2,43 @@
 
 Use after the OBR publishes its October 2026 EFO, before releasing results. This is a forecast refresh on the existing Microcosm build: it does not recalibrate the data. Keep outputs in scratch until the normal reconciliation, approval and disclosure gates pass. Fiscal year `2026` means 2026–27; macro keys name calendar years.
 
-The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policyengine-uk 2.145.0 (`ecd531776`), Core 3.33.3 and the national Microcosm UK 2024–25 cut (SHA-256 `810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece`). Dashboard's checked-in `uv.lock` actually installs UK 2.132.6. For this rehearsal only, after `uv sync --frozen`, install the official 2.145.0 wheel with `uv pip install --python .venv/bin/python --no-deps policyengine-uk==2.145.0`, and use `uv run --no-sync` thereafter. Set `REBASE_REHEARSAL=1` before step 1 to apply the overlay immediately after the frozen sync; otherwise the sync restores UK 2.132.6. Do not mistake that local overlay for adoption of a certified production bundle. On Budget day require the reviewed model/data pair and record the actual versions, lock hash and Git SHA before starting.
+**Current certified environment:** use dashboard `origin/main`, `uv sync --frozen --python 3.13`, policyengine **6.10.0**, policyengine-uk **2.132.6** and Core **3.33.3**, with no package overlay. The 23 October part 6 preflight at dashboard `7f87566cfaecea58f0468618127c8c994d147ccf` installed Python **3.13.9**, passed the actual import certification with basis **`exact_build_model_version`**, and verified all **3,094** distribution RECORD files (159 wrapper, 2,733 UK, 202 Core). Lock SHA-256: `d06f3846f24336bb05e563e3d27b9f5fb46e81d99f0c92fac80f8ff24d9b35bf`; fetched data-manifest SHA-256: `49f9fa820db2e6544ff5cdceeb2d868a504843a6a1c1c06b37188621e700066f`; bundled-manifest SHA-256: `c25457692c75d9fd569d3caf6bad0120d5a92ee6aaf3ec5535a114a02a538401`. The national Microcosm UK 2024–25 cut remains SHA-256 `810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece`. Load the existing Hugging Face CLI login token into the child process environment in memory; never print or persist it. Any certification basis other than `exact_build_model_version` stops this route. Record the actual versions, lock hash and Git SHA before starting; changed pins require renewed review and frozen references.
 
-**Rehearsal status:** scripted OBR acquisition returned HTTP 403, but the follow-up rehearsal completed the March round trip from the original cached economy and receipts workbooks. The installed UK 2.145.0 CLI took 107.740 s including cold imports; the identical standalone importer took 5.704 s, and all 24 importer fixture tests passed. The import is not byte-idempotent: 22 small annual-rate precision changes and 10 compensating forecast-gap changes require review. The source workbook's 2030 mortgage-interest cell is blank, so that dated model assumption remains retained. See the acquisition notes below. Resource waits are additional, unbounded time; a successful local import does not establish a simulation completion deadline.
+**Part 6 input preflight:** the full local-workbook importer is present on certified UK **2.132.6**; its source is byte-identical to the historical 2.145.0 importer (SHA-256 `fa79cb02513362ea9f8621112aedfb307cbb7dab868cc144f07076158c89cf94`) and matches its installed RECORD. No fallback or overlay is needed. Its exact module CLI completed in **313.665 s**: **299.299 s** of nonoverlapping import roots plus **14.366 s** parser/workbook/rendering/interpreter residual. Machine-only value diff, omitted-series/statutory decisions and dated-dictionary reconstruction took **11.595 s** externally; source verification and scratch parameter copying took a separate **1.729 s**. The review retained 32 numerical edits (22 annual precision changes and 10 compensating forecast-gap changes) and reproduced the exact six-path, 26-assignment synthetic dictionary. These input stages and the national artifact below completed; human review and multi-measure completion remain unmeasured, so this is not a first-cut feasibility verdict.
 
-**23 October part 3 outcome:** the fully guarded subset and national one-year comparisons passed the synthetic stored-input checks. Both subset registered-measure full processors refused at FY2027 distribution, so neither produced a complete result or artifact. The nonoverlapping observed partial work took **39m31.377s**, or **41m19.117s** including the previously measured local import. The **13:40–14:10 slot does not hold as a deliverable full-rebase release window**; see the historical [part 3 timed evidence](#23-october-timed-simulations). The [part 4 national follow-up](#23-october-national-follow-up) found every national FY2027 decile denominator positive on both bases. National all-measure generation, staging and publication review still have no measured completion deadline.
+**Part 6 subset probe: the original HPI expectation failed and remains failed.** The command completed in **732.562 s** externally (exit 1), with **507.167 s** of imports excluding gates, **206.962 s** of managed construction excluding gates and **0.264 s** of queries. The **198.439 s** root UK constructor is included in managed construction; do not add it again or add any component to the external total. **42/50 stored-input checks and 6/6 statutory checks passed; eight residential HPI checks failed.** The installed UK 2.132.6 `data/uprating_indices.yaml:95,103` explicitly maps `main_residence_value` to `gov.economic_assumptions.yoy_growth.obr.per_capita.gdp`; `variables/input/main_residence_value.py:16` also declares the corresponding GDP/head index. Historical UK 2.145.0 maps that input to house prices instead. A separate diagnostic made **10/10 GDP-prediction checks pass** (two unchanged 2026 controls and eight 2027–2030 weighted/unweighted checks) at the unchanged `rtol=1e-4, atol=1e-6`. It explains the certified pin's behavior; it does not pass the original HPI gate or validate house-price transmission on 2.132.6. The raw probe, original code and original failure remain preserved with `.job/probes/mapping-diagnosis.json`. Subsequent timing on the unchanged certified pair is a performance diagnostic pending an explicit reviewed choice about this residential-growth limitation, not acceptance of a full HPI forecast refresh. One national artifact has since completed below; concurrent throughput was not completed and scratch adoption was refused before the reservation closed.
+
+**Part 6 national serial artifact completed at 15:28Z:** registered measure **`two_child_limit`** produced all **six aggregate tables for 2026–2030**, with no generation refusal, using the official default-bundle materializer and unchanged national SHA-256. Both simulation arms recorded the canonical bundle name, URI, revision, package and input hash without provenance edits; artifact `4beb06da6e6dd92d` contains the execution receipt. External command wall time was **1,525.832 s** (25m25.832s), with a separate **0.118 s** supervisor gate; the interpreter's internal duration through validation was **1,514.235 s**. Imports took **280.106 s** excluding the **0.753 s** startup gate. The **1,193.736 s** generator total partitions into **12.901 s** of constructor gate overhead, **1,002.448 s** of root construction, **151.052 s** of calculations excluding construction/gates, **7.046 s** of build/wrapper overhead and **20.289 s** of receipt/writer overhead. Those components are included in the generator and external totals; nested constructors are included in the root construction counter and must not be added again. Peak process memory was **14.860 decimal GB**. These are one-measure performance measurements on the certified bundle's documented GDP/head residential mapping; the original eight HPI checks remain failed. The earlier **2,012.027 s** local-path attempt and its receipt refusal remain separate failed evidence.
+
+**Final part 6 verdict, 23 October after the 15:30Z reservation refusal: NO — keep the March first cut; a full rebase for 15:45 is not validated.** The two-worker trial passed admission at load1 **81.758**, **94.582 GB** free disk and **57.518 GB** memory headroom after the 5 GB reserve, against **37.2 GB** required. Its workers (`two_child_limit`, `savings_tax_increase_2pp`) passed exact certification but were refused before registry preparation at **15:30:16Z**. Both exited by **15:30:18Z**. The **130.136 s** batch wall covers imports, not completed measure throughput; no national constructors ran, and full-run worker peaks were not saved. The raw launcher's `simulations_started: 2` counts interpreter spawns; `.job/concurrency-2-diagnosis.json` preserves that distinction. No three-worker phase or later heavy phase was started after refusal.
+
+Scratch reconciliation took **0.151 s**, reporting `awaiting_source` and responsiveness `undeclared`; real hidden `stage --adopt-basis` took **0.371 s** and **refused** the missing expected-effect declaration. The copied `expected_effects.csv` is header-only. No reviewer was invented and no staging gate was relaxed. A machine source review proposes a negative 2026–2030 expectation for this spending measure in `.job/staging-direction-review.json`, unapplied and without human/Treasury sign-off. Source main has no tracked publication manifest; neither a changed-basis adoption nor populated-entry staleness was exercised. Stage imports took **223.013 s**. Its raw external wall **2,716.588 s** includes **2,485.006 s** waiting for generation; exclude that overlap once, leaving **231.582 s** plus **0.416 s** supervisor gating as the measured *refusal* cost. Successful staging and the separately labelled adoption fixture remain unmeasured.
+
+The publication-window accounting is **10.000 min acquisition estimate + 5.450 min local input work + 12.223 min rebased probe + 25.433 min national measure + 3.867 min staging refusal = 56.972 min**. This is recorded work through a refusal, not a completed critical path. It leaves **78.028 min** of the 135-minute window for **15 additional measures**, successful staging/rework and human review. Eight two-measure batches would each need to finish within **9.753 min**, or five three-measure batches within **15.606 min**, even before allowing further review/rework. Neither throughput was measured, so **the full-route deadline margin is unavailable**. Acquisition is estimated, not timed; direct importer reservation-command overhead was not separately clocked. Frozen references took **632.621 s** externally plus **0.663 s** supervisor gating and belong before publication. Setup, the historical importer diagnostic and the failed local-URI generation are excluded from this prepared-route accounting. Never add imports or nested constructor/calculator counters to their enclosing external walls.
+
+**Binding release constraint:** reviewed model-basis and expected-effect decisions, with human review duration unmeasured. The residential HPI mismatch and the undeclared responsiveness gate remain unresolved. Memory admitted two workers and disk stayed above its gate; completed concurrent CPU/memory throughput was not obtained, so no machine bottleneck diagnosis is established. See `.job/RESULTS-e2e6.md`, `.job/summary-e2e6.json` and the preserved raw timings. Complete the input/semantic review, both concurrent trials, and a successful unchanged-gate adoption rehearsal in a newly permitted window before offering a full-rebase first-cut deadline.
+
+**Historical 22 October environment and input evidence:** dashboard `8a6b8a6d` used policyengine 6.10.0, UK 2.145.0 (`ecd531776`) and Core 3.33.3 through a local UK overlay. That overlay is historical evidence, not the current certified recipe. Scripted OBR acquisition returned HTTP 403, but the follow-up rehearsal completed the March round trip from the original cached economy and receipts workbooks. The installed UK 2.145.0 CLI took 107.740 s including cold imports; the identical standalone importer took 5.704 s, and all 24 importer fixture tests passed. The import is not byte-idempotent: 22 small annual-rate precision changes and 10 compensating forecast-gap changes require review. The source workbook's 2030 mortgage-interest cell is blank, so that dated model assumption remains retained. See the acquisition notes below. Resource waits are additional, unbounded time; a successful local import does not establish a simulation completion deadline.
+
+**Historical 23 October part 3 outcome (UK 2.145.0 overlay):** the fully guarded subset and national one-year comparisons passed the synthetic stored-input checks. Both subset registered-measure full processors refused at FY2027 distribution, so neither produced a complete result or artifact. The nonoverlapping observed partial work took **39m31.377s**, or **41m19.117s** including the previously measured local import. The **13:40–14:10 slot does not hold as a deliverable full-rebase release window**; see the historical [part 3 timed evidence](#23-october-timed-simulations). The [part 4 national follow-up](#23-october-national-follow-up) found every national FY2027 decile denominator positive on both bases. National all-measure generation, staging and publication review still have no measured completion deadline.
 
 **Working plan (pending Max's confirmation):** use 13:40–14:10 for the [reduced input/statutory route](#reduced-route-working-plan-pending-maxs-confirmation). The recipe below supplies preparation and the full workflow for the later window; the first cut retains March until complete rebased outputs pass.
 
-**Part 4 setup blocker:** a restart at **07:22:35Z on 23 October** failed during the common `policyengine` import: `Data release manifest is not certified for the runtime model version 2.145.0 in country 'uk'.` Preserve the certification guard (`policyengine/provenance/manifest.py:610`). No complete national measure, constructor profile or end-to-end reduced route was obtained. The reduced route remains **unvalidated**; a reviewed setup that passes certification must precede reference precomputation and a fresh timed rehearsal.
+**Historical part 4 setup blocker (UK 2.145.0 overlay):** a restart at **07:22:35Z on 23 October** failed during the common `policyengine` import: `Data release manifest is not certified for the runtime model version 2.145.0 in country 'uk'.` Preserve the certification guard (`policyengine/provenance/manifest.py:610`). No complete national measure, constructor profile or end-to-end reduced route was obtained in that restart. Part 6's current frozen setup now passes certification; the final part 6 evidence above resolves certification but leaves concurrent throughput, successful staging and semantic review incomplete.
 
-1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Do not run concurrent jobs.
+1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Keep independent input probes serial. Concurrent measure generation is permitted only in separately measured, resource-checked two- and three-process trials after a complete serial artifact: freshly require load1 ≤110, free disk ≥55 decimal GB, and memory headroom of at least the larger of 18.6 GB or the measured serial peak per process. Every child still gates all of its constructors and caps its thread pools at four; registry factory refreshes stay process-local.
 
    ```sh
    set -e
-   uv sync --frozen
-   # Only when reproducing this drill: export REBASE_REHEARSAL=1 first.
-   if [ "${REBASE_REHEARSAL:-0}" = 1 ]; then
-     uv pip install --python .venv/bin/python --no-deps policyengine-uk==2.145.0
-     export EXPECTED_UK_VERSION=2.145.0
-   fi
-   # Otherwise set EXPECTED_UK_VERSION to the reviewed Budget-day bundle's pin.
-   : "${EXPECTED_UK_VERSION:?Set the reviewed UK version before generation}"
-   export EXPECTED_UK_VERSION
+   uv sync --frozen --python 3.13
    uv run --no-sync python - <<'PYCODE'
-   import importlib.metadata as m, os
-   names=['policyengine','policyengine-uk','policyengine-core']
-   print({name:m.version(name) for name in names})
-   assert m.version('policyengine-uk') == os.environ['EXPECTED_UK_VERSION']
+   import importlib.metadata as m, sys
+   expected={'policyengine':'6.10.0', 'policyengine-uk':'2.132.6',
+             'policyengine-core':'3.33.3'}
+   actual={name:m.version(name) for name in expected}
+   print({'python':sys.version, 'versions':actual})
+   assert sys.version_info[:2] == (3,13), sys.version
+   assert actual == expected, actual
    PYCODE
    export OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
    export VECLIB_MAXIMUM_THREADS=4 NUMEXPR_NUM_THREADS=4 NUMBA_NUM_THREADS=4
@@ -54,7 +63,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    - [ ] Open the downloaded files to confirm their release and that economy tables 1.6, 1.7 and 1.16 and receipts table 3.19 (including its September-CPI memo) are present. Record the source URLs, download time (`date -u`) and `shasum -a 256` output beside the files. The known March checksums are economy `fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510` and receipts `f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28`; a changed checksum requires review, not an automatic rejection of a revised OBR workbook.
    - [ ] Run the local-path import command below, then inspect the value diff and both statutory gap files. No OBR network request is needed by this command. Keep the source files and checksum log for the Budget-day audit. For October, use the corresponding saved October filenames in `OCTOBER_ECONOMY` and `OCTOBER_RECEIPTS` and follow the horizon check below.
 
-   The importer is `policyengine_uk/utils/import_obr_forecasts.py` (repository CLI `scripts/import_obr_forecasts.py`). Both entry points already support `--file` and `--receipts-file` in UK 2.145.0 and the checked 22 October upstream `main`; no importer patch or separate PR is needed. Copy the parameter tree into scratch so it can update growth and both gap files atomically:
+   The importer is `policyengine_uk/utils/import_obr_forecasts.py` (repository CLI `scripts/import_obr_forecasts.py`). The full importer on certified UK **2.132.6** supports `--file` and `--receipts-file`; its source matches the historical UK 2.145.0 importer exactly. No importer patch, fallback environment or package overlay is needed. Copy the parameter tree into scratch so it can update growth and both gap files atomically:
 
    ```sh
    export PARAMETER_SOURCE="$(uv run --no-sync python - <<'PYCODE'
@@ -176,7 +185,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    September 2026 CPI is **3.5%**, published 21 October ([ONS bulletin](https://www.ons.gov.uk/economy/inflationandpriceindices/bulletins/consumerpriceinflation/september2026)); May–July 2026 total-pay AWE is **3.9%** in the October vintage ([ONS KAC3](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kac3/lms)). Do not add a hypothetical annual shock to a published observation. April 2027 triple lock is `max(3.5%,3.9%,2.5%) = 3.9%`.
 
-   To repeat the synthetic drill, start from the **unchanged installed UK 2.145.0 parameter tree**, not the scratch tree modified by the March round trip. In the builder above set `base=Path(os.environ['PARAMETER_SOURCE'])/'gov/economic_assumptions'` (or use an untouched backup of that exact pin), add `obr.per_capita.gdp` to `paths`, and change only CPI 2026 `.023 → .028`, CPI 2027 `.020 → .025`, earnings 2027 `.024 → .019`, house prices 2027 `.029 → .049`, and nominal GDP/head 2027 `.0323 → .0293`. Other 2026–2031 entries stay fixed. Adopting the 22 round-trip precision changes would alter this isolated shock and invalidate the expected factors below. Keep the published statutory overrides above. The resulting unpublished September 2027 CPI is `.02572`, May–July 2027 AWE `.01927`, rounded to 2.6% and 1.9%; April 2028 triple lock becomes **2.6%**, versus 2.5%. Leave April 2027 triple lock at 3.9%; let parameter processing derive it.
+   To repeat the current certified synthetic drill, start from the **unchanged installed UK 2.132.6 parameter tree**, not the scratch tree modified by the March round trip. In the builder above set `base=Path(os.environ['PARAMETER_SOURCE'])/'gov/economic_assumptions'` (or use an untouched backup of that exact pin), add `obr.per_capita.gdp` to `paths`, and change only CPI 2026 `.023 → .028`, CPI 2027 `.020 → .025`, earnings 2027 `.024 → .019`, house prices 2027 `.029 → .049`, and nominal GDP/head 2027 `.0323 → .0293`. Other 2026–2031 entries stay fixed. Adopting the 22 round-trip precision changes would alter this isolated shock and invalidate the expected factors below. Keep the published statutory overrides above. The resulting unpublished September 2027 CPI is `.02572`, May–July 2027 AWE `.01927`, rounded to 2.6% and 1.9%; April 2028 triple lock becomes **2.6%**, versus 2.5%. Leave April 2027 triple lock at 3.9%; let parameter processing derive it.
 
    For the exact synthetic dictionary, explicitly `export SMOKE_SYNTHETIC_CHECKS=1` before the subset and national commands below. Its default is `0`; the real October dictionary needs its own reviewed benchmarks rather than these synthetic factors.
 
@@ -207,14 +216,17 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    export DATASET="$REBASE_SCRATCH/every40.h5"
    ```
 
-   The command below runs the two subset arms sequentially and saves only aggregates. Each construction has a fresh `uptime`/disk gate. Weighted totals retain the subset's original weights and are **not** calibrated national estimates; unweighted sums isolate changes in stored values. The parameter probes distinguish observed statutory inputs, generated triple-lock rates and basic/new pension amounts. A `reform=` dict on this single-year dataset route re-uprates the data in 2.145.0; policyengine's separate `Simulation(policy=...)` API does not.
+   The command below runs the two subset arms sequentially and saves only aggregates. Each construction has a fresh `uptime`/disk gate. Weighted totals retain the subset's original weights and are **not** calibrated national estimates; unweighted sums isolate changes in stored values. The parameter probes distinguish observed statutory inputs, generated triple-lock rates and basic/new pension amounts. A `reform=` dict on this single-year dataset route re-uprates the data; policyengine's separate `Simulation(policy=...)` API does not. Check the installed input-to-growth mapping before assigning a synthetic housing expectation. The current recipe below verifies the reviewed mapping against both the installed YAML and the variable declaration: certified 2.132.6 uses GDP/head, while historical 2.145.0 used HPI. A GDP check on 2.132.6 tests that pin's existing transmission only; accepting those semantics for an intended house-price refresh remains a separate review decision. This future recipe does not rewrite or relabel the original part 6 failed HPI probe.
 
    ```sh
    cat > "$REBASE_SCRATCH/forecast_smoke.py" <<'PY'
    import gc
+   import hashlib
    import importlib
+   import importlib.metadata as metadata
    import json
    import os
+   import re
    import subprocess
    import time
    from pathlib import Path
@@ -224,10 +236,43 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    import_started=time.perf_counter()
    import numpy as np
    import policyengine as pe
+   import yaml
    simulation_module=importlib.import_module('policyengine_uk.simulation')
    original_framework_simulation=simulation_module.Simulation
    cold_import_seconds=time.perf_counter()-import_started
    print(json.dumps({'cold_import_seconds':cold_import_seconds}),flush=True)
+
+   package=Path(importlib.import_module('policyengine_uk').__file__).parent
+   uk_version=metadata.version('policyengine-uk')
+   mapping_path=package/'data/uprating_indices.yaml'
+   variable_path=package/'variables/input/main_residence_value.py'
+   mapping=yaml.safe_load(mapping_path.read_text())
+   housing_paths=[path for path,names in mapping.items()
+                  if isinstance(names,list) and 'main_residence_value' in names]
+   growth_prefix='gov.economic_assumptions.yoy_growth.obr.'
+   reviewed_housing_paths={
+       '2.132.6':growth_prefix+'per_capita.gdp',
+       '2.145.0':growth_prefix+'house_prices',  # Historical comparison only.
+   }
+   expected_path=reviewed_housing_paths.get(uk_version)
+   if expected_path is None or housing_paths != [expected_path]:
+       raise RuntimeError('Unreviewed installed housing mapping: '
+                          +repr((uk_version,housing_paths)))
+   declaration=re.search(r'^\s+uprating\s*=\s*[\'"]([^\'"]+)[\'"]',
+                         variable_path.read_text(),re.M)
+   expected_index=expected_path.replace('.yoy_growth.','.indices.',1)
+   if declaration is None or declaration.group(1) != expected_index:
+       raise RuntimeError('Housing variable declaration disagrees with reviewed mapping')
+   housing_factor_after_2026=(1.0293/1.0323 if expected_path.endswith('per_capita.gdp')
+                              else 1.049/1.029)
+   housing_mapping={
+       'uk_version':uk_version,'growth_path':expected_path,
+       'variable_uprating':declaration.group(1),
+       'mapping_sha256':hashlib.sha256(mapping_path.read_bytes()).hexdigest(),
+       'variable_sha256':hashlib.sha256(variable_path.read_bytes()).hexdigest(),
+       'HPI_transmission_claimed':expected_path.endswith('house_prices'),
+   }
+   print(json.dumps({'reviewed_installed_housing_mapping':housing_mapping}),flush=True)
 
    gate_wait_seconds=0.0
 
@@ -320,7 +365,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
                'employment_income_before_lsr':1 if year==2026 else 1.019/1.024,
                'food_and_non_alcoholic_beverages_consumption':(
                    1.028/1.023 if year==2026 else (1.028/1.023)*(1.025/1.020)),
-               'main_residence_value':1 if year==2026 else 1.049/1.029,
+               'main_residence_value':1 if year==2026 else housing_factor_after_2026,
                'dividend_income':1 if year==2026 else 1.0293/1.0323,
                'council_tax':1,
            }
@@ -335,6 +380,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
                checks.append(check)
                if not passed: failures.append(check)
        results['synthetic_checks']={'rtol':1e-4,'atol':1e-6,'checks':checks}
+   results['reviewed_installed_housing_mapping']=housing_mapping
    results['timings']={
        'cold_import_seconds':cold_import_seconds,
        'gate_wait_seconds':gate_wait_seconds,
@@ -358,7 +404,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    Gating only the public managed call misses framework-created baselines. In UK 2.145.0 a scenario constructor calls the module-global `policyengine_uk.simulation.Simulation` internally, including a full dataset baseline in the rebased national arm. The temporary patch above gates those recursive constructions while preserving the original class; keep it active during both construction and calculation. The patch changes no installed source and restores the module on exit. The helper below applies the same guard to registered processing and production generation.
 
-   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, residential values `1.049/1.029 - 1 = +1.94363%`, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. The synthetic checks compare **unweighted stored-input sums**, with employment, residential values and dividends unchanged in 2026. Their ratio tolerance is `rtol=1e-4, atol=1e-6`, approximately 0.0101 percentage points around a ratio of one. Residential cumulative HPI indices are rounded to five decimals, so their observed factor can vary slightly across later years; retain the calendar benchmark rather than substituting an observed rounded ratio. Compare weighted aggregates as well; fiscal-year blending and interactions may change fiscal output responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. A failed synthetic assertion, unexpected zero or one-year lag stops the run for investigation before the next phase. With synthetic checks disabled, review the real dictionary's expected input moves explicitly before continuing.
+   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. For residential values, the **current certified 2.132.6 mapping predicts the same GDP/head factor, −0.29061%**, after 2026. The **historical 2.145.0 HPI benchmark remains `1.049/1.029 - 1 = +1.94363%`**; it must not be claimed as transmitted to this stored input on 2.132.6. The synthetic checks compare **unweighted stored-input sums**, with employment, residential values and dividends unchanged in 2026. Their ratio tolerance stays `rtol=1e-4, atol=1e-6`, approximately 0.0101 percentage points around a ratio of one. Under the historical HPI mapping, residential cumulative indices are rounded to five decimals, so their observed factor can vary slightly across later years; retain the calendar benchmark rather than substituting an observed rounded ratio. Freeze the reviewed installed mapping and its hashes beside the reference aggregates; an unknown or changed mapping stops the recipe for review. Compare weighted aggregates as well; fiscal-year blending and interactions may change fiscal output responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. A failed synthetic assertion, unexpected zero or one-year lag stops the run for investigation before the next phase. The part 6 GDP diagnosis allowed only a separately labelled performance continuation; the original eight failed HPI checks remain failed and release semantics remain unaccepted. With synthetic checks disabled, review the real dictionary's expected input moves explicitly before continuing.
 
    Keep one simulation process at a time and all numerical thread pools at four. There is no timeout exception to load1 ≤110 and available disk ≥55 **decimal** GB. Log wait time separately; do not substitute a previous passing gate for the next check. Run each command in the foreground: do not append `&`, start a background retry or leave a scheduled simulation behind. If the gate remains closed, keep observing that foreground session or cancel it with Ctrl-C and record that no constructor ran. Before retrying, confirm the cancelled process has exited; the new invocation must check the gate again. Do not delete unrelated work or shared environments to open the disk gate.
 
@@ -686,13 +732,18 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    Keep `export DATASET="$NATIONAL_DATASET"` for production artifact generation in step 6; a subset cannot produce publishable national receipts.
 
-6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact. The default artifact builder makes a private copy of a local dataset and hashes exactly those bytes, so allow disk space for that copy in addition to the 55 GB reserve. The preceding validation reads the source in place; this receipted production route deliberately uses the dashboard's exact-byte provenance mechanism.
+6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact.
+
+   **Current certified dataset selection:** use the supported default bundle dataset `microcosm_uk_2024_25` for receipted generation on policyengine 6.10.0 / UK 2.132.6. The part 6 `two_child_limit` attempt with an explicit local national path took **2,012.027 s** externally and completed its calculator calls, but receipt construction refused: the simulation recorded a private local-copy URI while the receipt identified the same SHA-256 bytes by their canonical `hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71` URI. No artifact or CSV was written: the artifact writer constructs its receipt before creating its output directory. This failed attempt does not establish successful artifact throughput. The supported default-bundle retry subsequently completed one receipted six-table, five-year artifact in **1,525.832 s** externally, as recorded above; concurrent throughput and the full-route margin remain unvalidated.
+
+   The recipe below leaves the generator's default builder and every receipt/certification check unchanged. It first hashes the original national input, seeds a **scratch** bundle cache with a symlink to those exact read-only input bytes, and sets `cfg.dataset_path=None`. The official materializer checks that cache against the bundle SHA-256 and records its canonical dataset name, URI, revision and package. Run the entire generator call with the scratch cache as its working directory because the official cache defaults to `./data`; preserve the original source repository as an **absolute** `repo_root` so the receipt still reads that repository's committed forecast declaration and code identity. Do not relabel a local simulation's provenance, edit the certificate, change calibration, or bypass the URI check. The preceding direct-input probes and unreceipted national processor retain their original local read-in-place paths.
 
    This complete-registry recipe puts the standalone dividend first, so its effective-rate preflight and full processor must pass before any later artifact is generated. A scenario-binding refusal happens before `process`; the progress callback stops that refusal immediately instead of allowing the generator to continue. The helper also checks the registered `autumn_budget_2026_combined` measure. Explicit combined sets run after standalone measures, so this ordering protects them even when long combined keys are hashed. A custom generation call that omits the standalone dividend must separately complete its preflight before generating a combination containing it; do not infer that protection from a combined key's text.
 
    ```sh
    export DATASET="$NATIONAL_DATASET"
    PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" uv run --no-sync python - <<'PY'
+   import hashlib
    import json
    import os
    import time
@@ -704,8 +755,38 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    )
    from uk_budget_data import pipeline
    from uk_budget_data.publication.generate import generate_artifacts
+   from policyengine.provenance.dataset_materialization import _resolve_bundle_dataset
+   from policyengine.provenance.manifest import get_release_manifest
 
+   source_repo = Path.cwd().resolve()
    cfg = config()
+   cfg = cfg.model_copy(update={"dataset_path": None,
+                                "output_dir": cfg.output_dir.resolve()})
+   cache_root = (Path(os.environ["REBASE_SCRATCH"]) / "bundle-default").resolve()
+   national = Path(os.environ["DATASET"]).resolve()
+   expected_sha = "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+   def file_sha(path):
+       digest = hashlib.sha256()
+       with path.open("rb") as stream:
+           for block in iter(lambda: stream.read(1024 * 1024), b""):
+               digest.update(block)
+       return digest.hexdigest()
+   assert file_sha(national) == expected_sha, "National source hash changed"
+   release = get_release_manifest("uk")
+   assert release.default_dataset == "microcosm_uk_2024_25"
+   spec = _resolve_bundle_dataset("uk", release.default_dataset,
+                                  data_dir=cache_root / "data", manifest=release)
+   assert spec.sha256 == expected_sha, "Default bundle dataset differs from national source"
+   spec.destination.parent.mkdir(parents=True, exist_ok=True)
+   if not spec.destination.exists() and not spec.destination.is_symlink():
+       spec.destination.symlink_to(national)
+   assert spec.destination.is_file() and file_sha(spec.destination) == expected_sha
+   print(json.dumps({"dataset_selection": "official_certified_default_bundle",
+                     "dataset": release.default_dataset,
+                     "canonical_uri": spec.source_uri,
+                     "revision": spec.revision,
+                     "scratch_cache": str(spec.destination),
+                     "sha256": expected_sha}), flush=True)
    forecast = load_forecast()
    reforms = registered_measures(forecast)
    assert len({m.id for m in reforms}) == len(reforms) == 10
@@ -725,16 +806,21 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
        return original_build(dataset_path, scenario)
 
    started = time.perf_counter()
-   with guard_framework_baselines(), \
-        patch.object(pipeline, "build_microsimulation", guarded_build):
-       report = generate_artifacts(
-           reforms, cfg,
-           artifacts_root=cfg.output_dir / "artifacts",
-           repo_root=Path.cwd(),
-           generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
-           process=process,
-           on_progress=progress_or_stop,
-       )
+   previous_cwd = Path.cwd()
+   try:
+       os.chdir(cache_root)
+       with guard_framework_baselines(), \
+            patch.object(pipeline, "build_microsimulation", guarded_build):
+           report = generate_artifacts(
+               reforms, cfg,
+               artifacts_root=cfg.output_dir / "artifacts",
+               repo_root=source_repo,
+               generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
+               process=process,
+               on_progress=progress_or_stop,
+           )
+   finally:
+       os.chdir(previous_cwd)
    paths = {reference.key: str(reference.path) for reference in report.written}
    out = Path(os.environ["REBASE_SCRATCH"])
    (out / "new-artifacts.json").write_text(json.dumps(paths, indent=2) + "\n")

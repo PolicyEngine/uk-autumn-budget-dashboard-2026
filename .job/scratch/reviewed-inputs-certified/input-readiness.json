@@ -1,0 +1,33 @@
+{
+  "scope": "Machine replay of March value diff, documented omitted/statutory retention decisions, and exact part 1 synthetic dictionary; importer external time is separate; October acquisition and human review remain unmeasured",
+  "pins": {
+    "policyengine": "6.10.0",
+    "policyengine-uk": "2.132.6",
+    "policyengine-core": "3.33.3"
+  },
+  "source_sha256": {
+    "economy": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+    "receipts": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28",
+    "forecast": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3"
+  },
+  "forecast_path": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/reviewed-inputs-certified/forecast.json",
+  "forecast_sha256": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3",
+  "numerical_changes": 32,
+  "annual_precision_changes": 22,
+  "compensating_gap_changes": 10,
+  "maximum_annual_change_fraction": 0.0004000000000000045,
+  "omitted_series_families": 15,
+  "forecast_paths": 6,
+  "forecast_assignments": 26,
+  "phases_seconds": {
+    "yaml_import": 1.1179716249971534,
+    "source_pin_and_parameter_hashes": 1.1995288329999312,
+    "value_diff_and_statutory_gap_validation": 3.532785542003694,
+    "omitted_series_retention_ledger": 1.9623374160000822,
+    "statutory_decisions_and_dated_dictionary": 0.07544879199849674,
+    "source_immutability_verification": 0.00381362500047544
+  },
+  "seconds": 7.916314832997159,
+  "machine_only": true,
+  "human_review_seconds": null
+}

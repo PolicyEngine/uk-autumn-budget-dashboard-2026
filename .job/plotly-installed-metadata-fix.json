@@ -1,0 +1,50 @@
+[
+  {
+    "venv": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv",
+    "dist_info_is_real_directory": true,
+    "data_files_relocated": [
+      "etc/jupyter/nbconfig/notebook.d/jupyterlab-plotly.json",
+      "share/jupyter/labextensions/jupyterlab-plotly/package.json",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/133.d03e1dd786ee2967a117.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/423.d0d3e2912c33c7566484.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/478.fdc0539db81116781109.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/478.fdc0539db81116781109.js.LICENSE.txt",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/486.6450efe6168c2f8caddb.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/486.6450efe6168c2f8caddb.js.LICENSE.txt",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/657.d00745f2277e50b85be7.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/855.323c80e7298812d692e7.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/remoteEntry.c6c768d682b3638efd6b.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/style.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/third-party-licenses.json",
+      "share/jupyter/nbextensions/jupyterlab-plotly/extension.js",
+      "share/jupyter/nbextensions/jupyterlab-plotly/index.js",
+      "share/jupyter/nbextensions/jupyterlab-plotly/index.js.LICENSE.txt"
+    ],
+    "record_updated": true,
+    "installer": "uv"
+  },
+  {
+    "venv": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv",
+    "dist_info_is_real_directory": true,
+    "data_files_relocated": [
+      "etc/jupyter/nbconfig/notebook.d/jupyterlab-plotly.json",
+      "share/jupyter/labextensions/jupyterlab-plotly/package.json",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/133.d03e1dd786ee2967a117.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/423.d0d3e2912c33c7566484.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/478.fdc0539db81116781109.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/478.fdc0539db81116781109.js.LICENSE.txt",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/486.6450efe6168c2f8caddb.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/486.6450efe6168c2f8caddb.js.LICENSE.txt",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/657.d00745f2277e50b85be7.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/855.323c80e7298812d692e7.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/remoteEntry.c6c768d682b3638efd6b.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/style.js",
+      "share/jupyter/labextensions/jupyterlab-plotly/static/third-party-licenses.json",
+      "share/jupyter/nbextensions/jupyterlab-plotly/extension.js",
+      "share/jupyter/nbextensions/jupyterlab-plotly/index.js",
+      "share/jupyter/nbextensions/jupyterlab-plotly/index.js.LICENSE.txt"
+    ],
+    "record_updated": true,
+    "installer": "uv"
+  }
+]
