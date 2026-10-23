@@ -117,6 +117,8 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
+**Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, and on an unnamed "duty" or "levy" in one that moves no duty or levy. Second-round and modelling effects don't count: the salary sacrifice cap declares National Insurance alone, though in the model it also raises some people's income tax.
+
 **Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
 
 **Wealth-tax templates refuse `gov.contrib.ubi_center.wealth_tax`** (UK hub, `budget-triage/JUDGED.md` S4). The engine taxes gross wealth, including private pensions, with no debts netted, so an announcement on net assets would use the wrong base. A hand-written wealth-tax modifier is held not computable by hand for the same reason.
@@ -462,8 +464,9 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 For each coded measure:
 1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module, not in `reforms.py` itself (question 6 in `budget-day-publication.md`). Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
-3. **Add one numerical test.**
-4. **Commit.** A receipt from a dirty tree is not publishable.
+3. **Declare the taxes it moves** in `DECLARED` in `tests/test_measure_descriptions.py`, and check that its name and description name only those (see "How a measure must be written" above). Without this, the required Python tests fail on the new id.
+4. **Add one numerical test.**
+5. **Commit.** A receipt from a dirty tree is not publishable.
 
 ## G2: provisional numbers (13:15)
 
