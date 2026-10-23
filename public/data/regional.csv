@@ -1,0 +1,1201 @@
+level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator
+region,E12000001,North East,autumn_budget_2026_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2029,average_change,-150.0,-240.0,-50.0,loss,reported,,30+,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2029,relative_change,-0.0027,-0.0041,-0.0008,loss,reported,,30+,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2030,average_change,-270.0,-360.0,-150.0,loss,reported,,30+,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2030,relative_change,-0.005,-0.007,-0.002,loss,reported,,30+,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2031,average_change,-7.0,-14.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,autumn_budget_2026_combined,2031,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2027,average_change,-7.0,-13.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2027,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2028,average_change,-7.0,-13.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2028,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2029,average_change,-7.0,-13.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2029,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2030,average_change,-7.0,-14.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2030,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2031,average_change,-7.0,-14.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,dividend_tax_increase_2pp,2031,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2030,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2030,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2027,average_change,8.0,7.0,9.0,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2027,relative_change,0.0001,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2028,average_change,9.0,8.0,11.0,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2029,average_change,4.0,4.0,5.0,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2030,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2029,average_change,-8.0,-15.0,-3.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2029,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2030,average_change,-9.0,-15.0,-3.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2030,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2027,average_change,4.0,2.0,6.0,gain,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2028,average_change,4.0,2.0,6.0,gain,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2029,average_change,4.0,2.0,6.0,gain,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2030,average_change,4.0,2.0,5.0,gain,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2029,average_change,-48.0,-59.0,-39.0,loss,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2029,relative_change,-0.0008,-0.001,-0.0007,loss,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2030,average_change,-49.0,-60.0,-39.0,loss,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2030,relative_change,-0.0008,-0.0011,-0.0007,loss,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2028,average_change,-2.0,-4.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2028,relative_change,0.0,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2029,average_change,-2.0,-4.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2029,relative_change,0.0,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2030,average_change,-2.0,-4.0,-1.0,loss,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2030,relative_change,0.0,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2028,average_change,-100.0,-113.0,-87.0,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2028,relative_change,-0.0018,-0.002,-0.0016,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2029,average_change,-210.0,-240.0,-180.0,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2029,relative_change,-0.0036,-0.004,-0.0032,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2030,average_change,-320.0,-370.0,-280.0,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2030,relative_change,-0.0055,-0.0061,-0.005,loss,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,two_child_limit,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2028,average_change,120.0,50.0,220.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000001,North East,two_child_limit,2028,relative_change,0.0022,0.0009,0.0039,gain,approximate,thin_support,10–29,False,direct
+region,E12000001,North East,two_child_limit,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2030,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2030,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000001,North East,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000001,North East,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2027,average_change,100.0,40.0,160.0,gain,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2027,relative_change,0.0016,0.0007,0.0026,gain,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2028,average_change,-30.0,-90.0,40.0,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2028,relative_change,-0.0005,-0.0015,0.0006,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2029,average_change,-230.0,-300.0,-150.0,loss,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2029,relative_change,-0.0037,-0.0048,-0.0025,loss,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2030,average_change,-360.0,-440.0,-270.0,loss,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2030,relative_change,-0.0057,-0.0069,-0.0044,loss,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2031,average_change,-21.0,-32.0,-12.0,loss,reported,,30+,False,direct
+region,E12000002,North West,autumn_budget_2026_combined,2031,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2027,average_change,-20.0,-30.0,-11.0,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2027,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2028,average_change,-20.0,-31.0,-11.0,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2028,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2029,average_change,-20.0,-31.0,-11.0,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2029,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2030,average_change,-21.0,-32.0,-12.0,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2030,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2031,average_change,-21.0,-32.0,-12.0,loss,reported,,30+,False,direct
+region,E12000002,North West,dividend_tax_increase_2pp,2031,relative_change,-0.0003,-0.0005,-0.0001,loss,reported,,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2027,average_change,-4.0,-6.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2028,average_change,-10.0,-13.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2029,average_change,-15.0,-20.0,-10.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2029,relative_change,-0.0002,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2030,average_change,-16.0,-21.0,-11.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2027,average_change,9.0,8.0,10.0,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2027,relative_change,0.0001,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2028,average_change,10.0,9.0,11.0,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2028,average_change,-12.0,-18.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2029,average_change,-12.0,-18.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2030,average_change,-13.0,-19.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2027,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2028,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2029,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2030,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2029,average_change,-76.0,-91.0,-63.0,loss,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2029,relative_change,-0.0012,-0.0015,-0.001,loss,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2030,average_change,-77.0,-93.0,-63.0,loss,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2030,relative_change,-0.0012,-0.0015,-0.001,loss,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2028,average_change,-7.0,-11.0,-4.0,loss,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2029,average_change,-8.0,-11.0,-4.0,loss,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2030,average_change,-8.0,-12.0,-5.0,loss,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2028,average_change,-112.0,-122.0,-102.0,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2028,relative_change,-0.0018,-0.002,-0.0017,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2029,average_change,-230.0,-260.0,-210.0,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2029,relative_change,-0.0037,-0.004,-0.0034,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2030,average_change,-360.0,-400.0,-330.0,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2030,relative_change,-0.0057,-0.0061,-0.0053,loss,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,two_child_limit,2027,average_change,110.0,50.0,170.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2027,relative_change,0.0018,0.0009,0.0028,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2028,average_change,110.0,60.0,180.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2028,relative_change,0.0019,0.001,0.0029,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2029,average_change,120.0,60.0,190.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2029,relative_change,0.002,0.001,0.003,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2030,average_change,130.0,60.0,190.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2030,relative_change,0.002,0.0011,0.0031,gain,approximate,thin_support,10–29,False,direct
+region,E12000002,North West,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000002,North West,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2027,average_change,40.0,0.0,80.0,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2027,relative_change,0.0006,0.0,0.0014,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2028,average_change,-90.0,-140.0,-40.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2028,relative_change,-0.0015,-0.0021,-0.0007,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2029,average_change,-290.0,-370.0,-210.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2029,relative_change,-0.0045,-0.0057,-0.0034,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2030,average_change,-420.0,-500.0,-330.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2030,relative_change,-0.0065,-0.0077,-0.0053,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2031,average_change,-50.0,-80.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,autumn_budget_2026_combined,2031,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2027,average_change,-50.0,-70.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2027,relative_change,-0.0008,-0.0011,-0.0004,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2028,average_change,-50.0,-70.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2028,relative_change,-0.0008,-0.0011,-0.0004,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2029,average_change,-50.0,-70.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2029,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2030,average_change,-50.0,-70.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2030,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2031,average_change,-50.0,-80.0,-30.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,dividend_tax_increase_2pp,2031,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2027,average_change,-6.0,-8.0,-4.0,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2028,average_change,-11.0,-15.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2029,average_change,-17.0,-23.0,-12.0,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2029,relative_change,-0.0003,-0.0004,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2030,average_change,-18.0,-24.0,-13.0,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0004,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2027,average_change,9.0,8.0,11.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2028,average_change,11.0,9.0,12.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2028,average_change,-12.0,-17.0,-7.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2029,average_change,-12.0,-18.0,-7.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2030,average_change,-12.0,-18.0,-7.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2027,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2028,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2029,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2030,average_change,4.0,3.0,5.0,gain,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2029,average_change,-80.0,-130.0,-40.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2029,relative_change,-0.0012,-0.002,-0.0007,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2030,average_change,-80.0,-140.0,-40.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2030,relative_change,-0.0013,-0.0021,-0.0007,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2028,average_change,-5.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2029,average_change,-5.0,-7.0,-3.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2030,average_change,-5.0,-8.0,-3.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2028,average_change,-110.0,-117.0,-102.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2028,relative_change,-0.0018,-0.0019,-0.0016,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2029,average_change,-226.0,-241.0,-211.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2029,relative_change,-0.0036,-0.0038,-0.0033,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2030,average_change,-350.0,-380.0,-320.0,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2030,relative_change,-0.0055,-0.0058,-0.0051,loss,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2027,average_change,80.0,40.0,120.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2027,relative_change,0.0013,0.0007,0.0019,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2028,average_change,80.0,40.0,120.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2028,relative_change,0.0013,0.0007,0.0019,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2029,average_change,90.0,40.0,150.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2029,relative_change,0.0015,0.0008,0.0023,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2030,average_change,90.0,50.0,150.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2030,relative_change,0.0015,0.0008,0.0023,gain,approximate,thin_support,10–29,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000003,Yorkshire and The Humber,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2027,average_change,50.0,10.0,100.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2027,relative_change,0.0009,0.0003,0.0016,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2028,average_change,-70.0,-120.0,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2028,relative_change,-0.0011,-0.0019,-0.0001,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2029,average_change,-250.0,-320.0,-190.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2029,relative_change,-0.0041,-0.005,-0.003,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2030,average_change,-400.0,-470.0,-330.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2030,relative_change,-0.0063,-0.0073,-0.0053,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2031,average_change,-27.0,-43.0,-15.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,autumn_budget_2026_combined,2031,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2027,average_change,-25.0,-38.0,-13.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2027,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2028,average_change,-25.0,-40.0,-14.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2028,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2029,average_change,-26.0,-41.0,-14.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2029,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2030,average_change,-27.0,-42.0,-14.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2030,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2031,average_change,-27.0,-43.0,-15.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,dividend_tax_increase_2pp,2031,relative_change,-0.0004,-0.0007,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2027,average_change,-5.0,-9.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2028,average_change,-11.0,-18.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2029,average_change,-15.0,-26.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2029,relative_change,-0.0002,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2030,average_change,-16.0,-26.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2027,average_change,10.0,9.0,12.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2028,average_change,12.0,10.0,13.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0003,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2029,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2030,average_change,7.0,5.0,8.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2028,average_change,-9.0,-12.0,-5.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2028,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2029,average_change,-9.0,-13.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2029,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2030,average_change,-9.0,-13.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2027,average_change,6.0,3.0,8.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2028,average_change,6.0,3.0,9.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2029,average_change,6.0,3.0,9.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2030,average_change,5.0,3.0,8.0,gain,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2029,average_change,-56.0,-63.0,-49.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2029,relative_change,-0.0009,-0.001,-0.0008,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2030,average_change,-58.0,-66.0,-51.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2030,relative_change,-0.0009,-0.0011,-0.0008,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2028,average_change,-4.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0001,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2029,average_change,-4.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2030,average_change,-5.0,-7.0,-3.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2028,average_change,-121.0,-134.0,-110.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2028,relative_change,-0.002,-0.0022,-0.0018,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2029,average_change,-250.0,-280.0,-220.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2029,relative_change,-0.004,-0.0044,-0.0037,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2030,average_change,-390.0,-430.0,-350.0,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2030,relative_change,-0.0062,-0.0067,-0.0057,loss,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,two_child_limit,2027,average_change,70.0,30.0,110.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2027,relative_change,0.0011,0.0005,0.0018,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2028,average_change,90.0,40.0,150.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2028,relative_change,0.0014,0.0007,0.0024,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2029,average_change,100.0,50.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2029,relative_change,0.0016,0.0009,0.0026,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2030,average_change,100.0,50.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2030,relative_change,0.0016,0.0008,0.0025,gain,approximate,thin_support,10–29,False,direct
+region,E12000004,East Midlands,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000004,East Midlands,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2027,average_change,120.0,30.0,230.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2027,relative_change,0.0019,0.0005,0.0037,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2029,average_change,-100.0,-300.0,100.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2029,relative_change,-0.002,-0.005,0.002,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2030,average_change,-200.0,-400.0,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2030,relative_change,-0.004,-0.007,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2031,average_change,-40.0,-70.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,autumn_budget_2026_combined,2031,relative_change,-0.0006,-0.001,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2027,average_change,-40.0,-60.0,-10.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2027,relative_change,-0.0006,-0.0009,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2028,average_change,-40.0,-60.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2028,relative_change,-0.0006,-0.0009,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2029,average_change,-40.0,-60.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2029,relative_change,-0.0006,-0.0009,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2030,average_change,-40.0,-60.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2030,relative_change,-0.0006,-0.001,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2031,average_change,-40.0,-70.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,dividend_tax_increase_2pp,2031,relative_change,-0.0006,-0.001,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2027,average_change,-6.0,-9.0,-3.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2028,average_change,-11.0,-17.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2029,average_change,-18.0,-26.0,-12.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2029,relative_change,-0.0003,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2030,average_change,-20.0,-28.0,-13.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0005,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2027,average_change,10.0,8.0,11.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2028,average_change,11.0,9.0,12.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2028,average_change,-10.0,-16.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2029,average_change,-11.0,-16.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2030,average_change,-11.0,-17.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2027,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2028,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2029,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2030,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2029,average_change,-62.0,-71.0,-53.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2029,relative_change,-0.001,-0.0011,-0.0008,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2030,average_change,-62.0,-71.0,-53.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2030,relative_change,-0.001,-0.0011,-0.0008,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2028,average_change,-6.0,-10.0,-3.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2029,average_change,-7.0,-11.0,-3.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2030,average_change,-7.0,-11.0,-3.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2028,average_change,-116.0,-126.0,-105.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2028,relative_change,-0.0018,-0.002,-0.0016,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2029,average_change,-240.0,-260.0,-210.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2029,relative_change,-0.0037,-0.004,-0.0034,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2030,average_change,-370.0,-410.0,-330.0,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2030,relative_change,-0.0057,-0.0061,-0.0052,loss,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,two_child_limit,2027,average_change,150.0,60.0,250.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2027,relative_change,0.0024,0.001,0.004,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2028,average_change,220.0,80.0,400.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2028,relative_change,0.003,0.001,0.007,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2029,average_change,240.0,100.0,430.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2029,relative_change,0.004,0.001,0.007,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2030,average_change,300.0,100.0,500.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2030,relative_change,0.004,0.001,0.007,gain,approximate,thin_support,10–29,False,direct
+region,E12000005,West Midlands,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000005,West Midlands,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2027,average_change,60.0,10.0,130.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2027,relative_change,0.0009,0.0001,0.0018,gain,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2028,average_change,-120.0,-180.0,-50.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2028,relative_change,-0.0017,-0.0025,-0.0007,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2029,average_change,-350.0,-420.0,-270.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2029,relative_change,-0.0048,-0.0057,-0.0037,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2030,average_change,-450.0,-560.0,-310.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2030,relative_change,-0.0061,-0.0076,-0.0042,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2031,average_change,-60.0,-80.0,-40.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,autumn_budget_2026_combined,2031,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2027,average_change,-50.0,-80.0,-30.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2027,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2028,average_change,-60.0,-80.0,-30.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2028,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2029,average_change,-60.0,-80.0,-30.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2029,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2030,average_change,-60.0,-80.0,-40.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2030,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2031,average_change,-60.0,-80.0,-40.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,dividend_tax_increase_2pp,2031,relative_change,-0.0008,-0.0011,-0.0005,loss,reported,,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2027,average_change,-3.0,-5.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2027,relative_change,0.0,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2028,average_change,-7.0,-10.0,-4.0,loss,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2029,average_change,-10.0,-15.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2029,relative_change,-0.0001,-0.0003,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2030,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2030,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2027,average_change,11.0,10.0,13.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2028,average_change,13.0,12.0,14.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2029,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2030,average_change,7.0,6.0,8.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2028,average_change,-35.0,-47.0,-24.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2028,relative_change,-0.0005,-0.0007,-0.0003,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2029,average_change,-36.0,-48.0,-25.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2029,relative_change,-0.0005,-0.0007,-0.0003,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2030,average_change,-37.0,-50.0,-26.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2030,relative_change,-0.0005,-0.0007,-0.0003,loss,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2027,average_change,6.0,4.0,9.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2028,average_change,7.0,4.0,9.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2029,average_change,7.0,4.0,9.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2030,average_change,6.0,4.0,8.0,gain,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2029,average_change,-84.0,-98.0,-70.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2029,relative_change,-0.0011,-0.0014,-0.0009,loss,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2030,average_change,-20.0,-100.0,110.0,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2030,relative_change,-0.0003,-0.0013,0.0014,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2028,average_change,-7.0,-12.0,-3.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2029,average_change,-7.0,-13.0,-3.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2030,average_change,-8.0,-14.0,-4.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2028,average_change,-142.0,-154.0,-131.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2028,relative_change,-0.002,-0.0021,-0.0018,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2029,average_change,-290.0,-320.0,-270.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2029,relative_change,-0.004,-0.0043,-0.0037,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2030,average_change,-450.0,-490.0,-410.0,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2030,relative_change,-0.0061,-0.0065,-0.0057,loss,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,two_child_limit,2027,average_change,100.0,50.0,170.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000006,East of England,two_child_limit,2027,relative_change,0.0014,0.0008,0.0023,gain,approximate,thin_support,10–29,False,direct
+region,E12000006,East of England,two_child_limit,2028,average_change,100.0,50.0,170.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000006,East of England,two_child_limit,2028,relative_change,0.0014,0.0008,0.0023,gain,approximate,thin_support,10–29,False,direct
+region,E12000006,East of England,two_child_limit,2029,average_change,120.0,70.0,190.0,gain,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,two_child_limit,2029,relative_change,0.0017,0.0009,0.0026,gain,approximate,thin_support,30+,False,direct
+region,E12000006,East of England,two_child_limit,2030,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000006,East of England,two_child_limit,2030,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000006,East of England,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000006,East of England,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2027,average_change,50.0,10.0,110.0,gain,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2027,relative_change,0.0006,0.0001,0.0012,gain,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2028,average_change,-160.0,-220.0,-90.0,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2028,relative_change,-0.0017,-0.0024,-0.001,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2029,average_change,-510.0,-610.0,-410.0,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2029,relative_change,-0.0054,-0.0064,-0.0045,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2030,average_change,-710.0,-850.0,-590.0,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2030,relative_change,-0.0075,-0.0087,-0.0063,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2031,average_change,-43.0,-60.0,-28.0,loss,reported,,30+,False,direct
+region,E12000007,London,autumn_budget_2026_combined,2031,relative_change,-0.0004,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2027,average_change,-40.0,-56.0,-26.0,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2027,relative_change,-0.0004,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2028,average_change,-41.0,-57.0,-27.0,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2028,relative_change,-0.0004,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2029,average_change,-42.0,-58.0,-27.0,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2029,relative_change,-0.0005,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2030,average_change,-43.0,-59.0,-28.0,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2030,relative_change,-0.0005,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2031,average_change,-43.0,-60.0,-28.0,loss,reported,,30+,False,direct
+region,E12000007,London,dividend_tax_increase_2pp,2031,relative_change,-0.0004,-0.0007,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2029,average_change,-36.0,-46.0,-26.0,loss,approximate,thin_support,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2029,relative_change,-0.0004,-0.0005,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2030,average_change,-36.0,-47.0,-27.0,loss,approximate,thin_support,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2030,relative_change,-0.0004,-0.0005,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2027,average_change,8.0,7.0,9.0,gain,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2028,average_change,9.0,8.0,11.0,gain,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2029,average_change,4.0,3.0,5.0,gain,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2029,relative_change,0.0,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2030,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2028,average_change,-24.0,-30.0,-17.0,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2028,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2029,average_change,-25.0,-31.0,-18.0,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2029,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2030,average_change,-25.0,-32.0,-18.0,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2030,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2027,average_change,7.0,5.0,9.0,gain,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2028,average_change,7.0,5.0,9.0,gain,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2029,average_change,7.0,5.0,10.0,gain,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2030,average_change,6.0,4.0,9.0,gain,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2029,average_change,-150.0,-180.0,-110.0,loss,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2029,relative_change,-0.0016,-0.002,-0.0012,loss,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2030,average_change,-160.0,-200.0,-120.0,loss,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2030,relative_change,-0.0017,-0.0021,-0.0013,loss,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2028,average_change,-17.0,-23.0,-13.0,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2029,average_change,-18.0,-24.0,-13.0,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2030,average_change,-19.0,-26.0,-14.0,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2028,average_change,-160.0,-190.0,-140.0,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2028,relative_change,-0.0018,-0.0021,-0.0015,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2029,average_change,-340.0,-400.0,-290.0,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2029,relative_change,-0.0036,-0.0042,-0.0032,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2030,average_change,-530.0,-610.0,-460.0,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2030,relative_change,-0.0055,-0.0063,-0.0049,loss,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,two_child_limit,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,two_child_limit,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,two_child_limit,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,two_child_limit,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000007,London,two_child_limit,2029,average_change,100.0,50.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000007,London,two_child_limit,2029,relative_change,0.0011,0.0005,0.0017,gain,approximate,thin_support,10–29,False,direct
+region,E12000007,London,two_child_limit,2030,average_change,100.0,50.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000007,London,two_child_limit,2030,relative_change,0.0011,0.0005,0.0017,gain,approximate,thin_support,10–29,False,direct
+region,E12000007,London,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000007,London,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2028,average_change,-180.0,-220.0,-140.0,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2028,relative_change,-0.0024,-0.0029,-0.0018,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2029,average_change,-470.0,-530.0,-420.0,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2029,relative_change,-0.006,-0.0067,-0.0053,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2030,average_change,-650.0,-710.0,-580.0,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2030,relative_change,-0.0081,-0.0089,-0.0073,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2031,average_change,-80.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,autumn_budget_2026_combined,2031,relative_change,-0.0009,-0.0013,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2027,average_change,-70.0,-90.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2027,relative_change,-0.0009,-0.0012,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2028,average_change,-70.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2028,relative_change,-0.0009,-0.0012,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2029,average_change,-70.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2029,relative_change,-0.0009,-0.0012,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2030,average_change,-70.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2030,relative_change,-0.0009,-0.0013,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2031,average_change,-80.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,E12000008,South East,dividend_tax_increase_2pp,2031,relative_change,-0.0009,-0.0013,-0.0006,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2027,average_change,-5.0,-7.0,-3.0,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0001,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2028,average_change,-9.0,-13.0,-6.0,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2029,average_change,-12.0,-17.0,-8.0,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2030,average_change,-13.0,-17.0,-9.0,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2027,average_change,10.0,9.0,11.0,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2027,relative_change,0.0001,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2028,average_change,11.0,10.0,12.0,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2028,relative_change,0.0001,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2029,average_change,5.0,5.0,6.0,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2030,average_change,6.0,6.0,7.0,gain,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2027,average_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2027,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2028,average_change,-25.0,-32.0,-19.0,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2028,relative_change,-0.0003,-0.0005,-0.0002,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2029,average_change,-26.0,-33.0,-20.0,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2029,relative_change,-0.0003,-0.0005,-0.0002,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2030,average_change,-27.0,-34.0,-20.0,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2030,relative_change,-0.0003,-0.0005,-0.0002,loss,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2027,average_change,8.0,6.0,10.0,gain,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2028,average_change,8.0,6.0,11.0,gain,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2029,average_change,8.0,6.0,11.0,gain,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2030,average_change,8.0,6.0,10.0,gain,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2029,average_change,-120.0,-150.0,-100.0,loss,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2029,relative_change,-0.0016,-0.002,-0.0013,loss,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2030,average_change,-130.0,-160.0,-100.0,loss,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2030,relative_change,-0.0016,-0.002,-0.0013,loss,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2028,average_change,-9.0,-12.0,-7.0,loss,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2029,average_change,-10.0,-13.0,-7.0,loss,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2030,average_change,-11.0,-14.0,-8.0,loss,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,-0.0001,loss,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2028,average_change,-151.0,-161.0,-142.0,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2028,relative_change,-0.002,-0.0021,-0.0018,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2029,average_change,-310.0,-330.0,-290.0,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2029,relative_change,-0.004,-0.0042,-0.0037,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2030,average_change,-480.0,-520.0,-450.0,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2030,relative_change,-0.006,-0.0064,-0.0057,loss,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,two_child_limit,2027,average_change,60.0,30.0,90.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000008,South East,two_child_limit,2027,relative_change,0.0008,0.0004,0.0012,gain,approximate,thin_support,10–29,False,direct
+region,E12000008,South East,two_child_limit,2028,average_change,60.0,30.0,90.0,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2028,relative_change,0.0008,0.0005,0.0012,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2029,average_change,70.0,40.0,100.0,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2029,relative_change,0.0009,0.0005,0.0013,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2030,average_change,80.0,40.0,110.0,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2030,relative_change,0.001,0.0005,0.0014,gain,approximate,thin_support,30+,False,direct
+region,E12000008,South East,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000008,South East,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2027,average_change,60.0,0.0,130.0,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2027,relative_change,0.001,0.0,0.0021,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2028,average_change,-90.0,-160.0,-20.0,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2028,relative_change,-0.0015,-0.0025,-0.0004,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2029,average_change,-330.0,-430.0,-210.0,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2029,relative_change,-0.005,-0.007,-0.003,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2030,average_change,-450.0,-580.0,-320.0,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2030,relative_change,-0.007,-0.009,-0.004,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2031,average_change,-38.0,-54.0,-25.0,loss,reported,,30+,False,direct
+region,E12000009,South West,autumn_budget_2026_combined,2031,relative_change,-0.0006,-0.0009,-0.0003,loss,reported,,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2027,average_change,-34.0,-49.0,-22.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2027,relative_change,-0.0005,-0.0008,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2028,average_change,-35.0,-50.0,-23.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2028,relative_change,-0.0006,-0.0008,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2029,average_change,-36.0,-51.0,-23.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2029,relative_change,-0.0006,-0.0009,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2030,average_change,-37.0,-53.0,-24.0,loss,reported,,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2030,relative_change,-0.0006,-0.0009,-0.0003,loss,reported,,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2031,average_change,-38.0,-54.0,-25.0,loss,reported,,30+,False,direct
+region,E12000009,South West,dividend_tax_increase_2pp,2031,relative_change,-0.0006,-0.0009,-0.0003,loss,reported,,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2027,average_change,-7.0,-10.0,-4.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2028,average_change,-13.0,-20.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2029,average_change,-22.0,-32.0,-14.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2029,relative_change,-0.0003,-0.0005,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2030,average_change,-20.0,-29.0,-13.0,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0005,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2027,average_change,11.0,9.0,12.0,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2028,average_change,12.0,11.0,14.0,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0003,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2029,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2030,average_change,7.0,6.0,8.0,gain,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2028,average_change,-18.0,-24.0,-13.0,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2028,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2029,average_change,-19.0,-25.0,-14.0,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2029,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2030,average_change,-20.0,-26.0,-14.0,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2030,relative_change,-0.0003,-0.0004,-0.0002,loss,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2027,average_change,4.0,3.0,5.0,gain,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2028,average_change,4.0,3.0,5.0,gain,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2029,average_change,4.0,3.0,5.0,gain,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2030,average_change,4.0,2.0,5.0,gain,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2029,average_change,-110.0,-160.0,-60.0,loss,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2029,relative_change,-0.0017,-0.0024,-0.001,loss,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2030,average_change,-110.0,-170.0,-70.0,loss,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2030,relative_change,-0.0017,-0.0026,-0.001,loss,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2028,average_change,-9.0,-13.0,-6.0,loss,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2029,average_change,-9.0,-13.0,-6.0,loss,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2030,average_change,-10.0,-14.0,-6.0,loss,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2028,average_change,-125.0,-135.0,-115.0,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2028,relative_change,-0.002,-0.0022,-0.0018,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2029,average_change,-260.0,-280.0,-230.0,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2029,relative_change,-0.004,-0.0043,-0.0037,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2030,average_change,-400.0,-430.0,-370.0,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2030,relative_change,-0.0061,-0.0066,-0.0057,loss,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,two_child_limit,2027,average_change,90.0,30.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2027,relative_change,0.0014,0.0005,0.0025,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2028,average_change,90.0,30.0,160.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2028,relative_change,0.0015,0.0005,0.0025,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2029,average_change,120.0,30.0,210.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2029,relative_change,0.0018,0.0005,0.0033,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2030,average_change,140.0,50.0,250.0,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2030,relative_change,0.0022,0.0007,0.0038,gain,approximate,thin_support,10–29,False,direct
+region,E12000009,South West,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,E12000009,South West,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2027,average_change,50.0,20.0,80.0,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2027,relative_change,0.0008,0.0004,0.0013,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2028,average_change,-60.0,-100.0,-30.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2028,relative_change,-0.0011,-0.0017,-0.0005,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2029,average_change,-240.0,-290.0,-200.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2029,relative_change,-0.0043,-0.005,-0.0036,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2030,average_change,-360.0,-410.0,-310.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2030,relative_change,-0.0062,-0.007,-0.0055,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2031,average_change,-19.0,-30.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,autumn_budget_2026_combined,2031,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2027,average_change,-17.0,-26.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2027,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2028,average_change,-17.0,-27.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2028,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2029,average_change,-18.0,-28.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2029,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2030,average_change,-19.0,-29.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2030,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2031,average_change,-19.0,-30.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,dividend_tax_increase_2pp,2031,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2027,average_change,-3.0,-5.0,-2.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0001,0.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2028,average_change,-7.0,-9.0,-5.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2030,average_change,-13.0,-18.0,-9.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2030,relative_change,-0.0002,-0.0004,-0.0001,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2027,average_change,10.0,9.0,11.0,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2028,average_change,11.0,10.0,12.0,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0003,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2028,average_change,-10.0,-13.0,-6.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2029,average_change,-10.0,-14.0,-6.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2030,average_change,-10.0,-14.0,-7.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2027,average_change,1.0,0.0,1.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2027,relative_change,0.0,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2028,average_change,1.0,0.0,1.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2028,relative_change,0.0,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2029,average_change,1.0,0.0,1.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2029,relative_change,0.0,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2030,average_change,1.0,0.0,1.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2030,relative_change,0.0,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2029,average_change,-70.0,-90.0,-50.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2029,relative_change,-0.0012,-0.0016,-0.0008,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2030,average_change,-70.0,-100.0,-50.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2030,relative_change,-0.0012,-0.0016,-0.0009,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2028,average_change,-4.0,-6.0,-2.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2029,average_change,-4.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2030,average_change,-5.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2028,average_change,-99.0,-104.0,-93.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2028,relative_change,-0.0018,-0.0019,-0.0016,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2029,average_change,-205.0,-216.0,-193.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2029,relative_change,-0.0036,-0.0038,-0.0034,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2030,average_change,-320.0,-340.0,-300.0,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2030,relative_change,-0.0055,-0.0058,-0.0052,loss,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2027,average_change,60.0,30.0,80.0,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2027,relative_change,0.001,0.0006,0.0015,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2028,average_change,60.0,30.0,100.0,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2028,relative_change,0.0011,0.0007,0.0017,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2029,average_change,,,,,withheld,disclosure_control,,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2029,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2030,average_change,70.0,40.0,100.0,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2030,relative_change,0.0012,0.0007,0.0017,gain,approximate,thin_support,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,N92000002,Northern Ireland,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2027,average_change,30.0,0.0,60.0,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2027,relative_change,0.0005,0.0,0.001,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2028,average_change,-50.0,-90.0,-10.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2028,relative_change,-0.0008,-0.0015,-0.0002,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2029,average_change,-220.0,-260.0,-170.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2029,relative_change,-0.0038,-0.0044,-0.003,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2030,average_change,-310.0,-360.0,-260.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2030,relative_change,-0.0052,-0.0059,-0.0045,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2031,average_change,-32.0,-49.0,-16.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,autumn_budget_2026_combined,2031,relative_change,-0.0005,-0.0009,-0.0002,loss,reported,,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2027,average_change,-28.0,-44.0,-14.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2027,relative_change,-0.0005,-0.0008,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2028,average_change,-29.0,-45.0,-15.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2028,relative_change,-0.0005,-0.0008,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2029,average_change,-30.0,-46.0,-15.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2029,relative_change,-0.0005,-0.0009,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2030,average_change,-31.0,-48.0,-15.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2030,relative_change,-0.0005,-0.0009,-0.0002,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2031,average_change,-32.0,-49.0,-16.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,dividend_tax_increase_2pp,2031,relative_change,-0.0005,-0.0009,-0.0002,loss,reported,,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2027,average_change,-4.0,-6.0,-2.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0001,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2028,average_change,-9.0,-12.0,-5.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2029,average_change,-13.0,-19.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2029,relative_change,-0.0002,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2030,average_change,-16.0,-22.0,-10.0,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2027,average_change,10.0,8.0,11.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2028,average_change,11.0,10.0,12.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0003,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2029,average_change,4.0,1.0,8.0,gain,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2030,average_change,5.0,1.0,8.0,gain,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,approximate,thin_support,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2027,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2028,average_change,5.0,3.0,6.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2029,average_change,5.0,3.0,7.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2030,average_change,4.0,3.0,6.0,gain,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2029,average_change,-65.0,-76.0,-54.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2029,relative_change,-0.0011,-0.0013,-0.0009,loss,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2030,average_change,-64.0,-76.0,-54.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2030,relative_change,-0.0011,-0.0013,-0.0009,loss,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2028,average_change,-5.0,-7.0,-3.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2029,average_change,-5.0,-8.0,-3.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2030,average_change,-6.0,-8.0,-3.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2028,average_change,-83.0,-89.0,-77.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2028,relative_change,-0.0015,-0.0016,-0.0014,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2029,average_change,-172.0,-184.0,-159.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2029,relative_change,-0.003,-0.0032,-0.0028,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2030,average_change,-260.0,-280.0,-240.0,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2030,relative_change,-0.0045,-0.0047,-0.0042,loss,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,two_child_limit,2027,average_change,40.0,20.0,70.0,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2027,relative_change,0.0008,0.0004,0.0012,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,S92000003,Scotland,two_child_limit,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,S92000003,Scotland,two_child_limit,2029,average_change,60.0,30.0,90.0,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2029,relative_change,0.001,0.0005,0.0016,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2030,average_change,60.0,30.0,100.0,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2030,relative_change,0.0011,0.0005,0.0016,gain,approximate,thin_support,10–29,False,direct
+region,S92000003,Scotland,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,S92000003,Scotland,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2027,average_change,30.0,-20.0,70.0,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2027,relative_change,0.0005,-0.0003,0.0012,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2028,average_change,-100.0,-140.0,-50.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2028,relative_change,-0.0017,-0.0025,-0.0009,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2029,average_change,-280.0,-340.0,-220.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2029,relative_change,-0.0048,-0.0057,-0.004,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2030,average_change,-400.0,-460.0,-330.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2030,relative_change,-0.0069,-0.0078,-0.0059,loss,reported,,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2031,average_change,-40.0,-80.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,autumn_budget_2026_combined,2031,relative_change,-0.0008,-0.0013,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2027,average_change,-40.0,-70.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2027,relative_change,-0.0007,-0.0012,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2028,average_change,-40.0,-70.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2028,relative_change,-0.0007,-0.0012,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2029,average_change,-40.0,-70.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2029,relative_change,-0.0007,-0.0012,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2030,average_change,-40.0,-80.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2030,relative_change,-0.0007,-0.0013,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2031,average_change,-40.0,-80.0,-20.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,dividend_tax_increase_2pp,2031,relative_change,-0.0008,-0.0013,-0.0003,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2027,average_change,-5.0,-8.0,-3.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2027,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2028,average_change,-10.0,-15.0,-6.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2028,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2029,average_change,-15.0,-22.0,-9.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2029,relative_change,-0.0003,-0.0004,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2030,average_change,-17.0,-24.0,-11.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2030,relative_change,-0.0003,-0.0005,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,freeze_student_loan_thresholds,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2027,average_change,9.0,8.0,10.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2027,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2028,average_change,10.0,9.0,12.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2028,relative_change,0.0002,0.0001,0.0002,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2029,average_change,5.0,4.0,6.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2030,average_change,6.0,5.0,7.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2030,relative_change,0.0001,0.0,0.0002,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,fuel_duty_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2029,average_change,-12.0,-17.0,-7.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2029,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2030,average_change,-12.0,-18.0,-8.0,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2030,relative_change,-0.0002,-0.0003,-0.0001,loss,approximate,thin_support,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,property_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2027,average_change,4.0,2.0,5.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2027,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2028,average_change,4.0,2.0,5.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2028,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2029,average_change,4.0,2.0,6.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2029,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2030,average_change,4.0,2.0,5.0,gain,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2030,relative_change,0.0001,0.0,0.0001,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,rail_fares_freeze,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2028,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2028,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2029,average_change,-51.0,-59.0,-43.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2029,relative_change,-0.0009,-0.0011,-0.0007,loss,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2030,average_change,-51.0,-59.0,-43.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2030,relative_change,-0.0009,-0.0011,-0.0007,loss,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,salary_sacrifice_cap,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2028,average_change,-4.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2028,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2029,average_change,-4.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2029,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2030,average_change,-5.0,-7.0,-2.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2030,relative_change,-0.0001,-0.0002,0.0,too_close_to_call,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,savings_tax_increase_2pp,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2027,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2027,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2028,average_change,-104.0,-114.0,-94.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2028,relative_change,-0.0018,-0.002,-0.0017,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2029,average_change,-220.0,-240.0,-190.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2029,relative_change,-0.0038,-0.0041,-0.0035,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2030,average_change,-340.0,-370.0,-300.0,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2030,relative_change,-0.0058,-0.0062,-0.0054,loss,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,threshold_freeze_extension,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,two_child_limit,2027,average_change,60.0,20.0,90.0,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2027,relative_change,0.001,0.0005,0.0017,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2028,average_change,,,,,withheld,disclosure_control,,False,direct
+region,W92000004,Wales,two_child_limit,2028,relative_change,,,,,withheld,disclosure_control,,False,direct
+region,W92000004,Wales,two_child_limit,2029,average_change,60.0,20.0,100.0,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2029,relative_change,0.001,0.0005,0.0017,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2030,average_change,60.0,30.0,100.0,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2030,relative_change,0.001,0.0005,0.0017,gain,approximate,thin_support,10–29,False,direct
+region,W92000004,Wales,two_child_limit,2031,average_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
+region,W92000004,Wales,two_child_limit,2031,relative_change,0.0,0.0,0.0,no_change,reported,,30+,False,direct
