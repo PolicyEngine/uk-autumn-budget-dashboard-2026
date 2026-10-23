@@ -59,9 +59,10 @@ from policyengine.disclosure.schema import (
     UNCHECKED_OVERLAP,
     WITHHELD,
 )
+from policyengine.provenance.manifest import get_release_manifest
 from rich.console import Console
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.private_outputs import (
@@ -69,11 +70,13 @@ from uk_budget_data.private_outputs import (
     PrivateOutputError,
     private_directory,
 )
+from uk_budget_data.publication import combine
+from uk_budget_data.publication import manifest as publication_manifest
+from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
     DEFAULT_YEARS,
-    get_autumn_budget_2026_reforms,
     get_reform,
 )
 
@@ -103,6 +106,10 @@ PACKAGES = {
 EFRS = "efrs"
 MICROCOSM = "microcosm"
 DATASET_KINDS = (EFRS, MICROCOSM)
+MICROCOSM_UNCERTIFIED = (
+    "UNCERTIFIED: Microcosm's local-area results are not certified "
+    "(policyengine.py#685)"
+)
 # Flags on the copies policyengine-uk-data stacks onto the FRS households to
 # build the enhanced FRS, in the order it stacks them.
 COPY_FLAGS = (
@@ -1874,6 +1881,7 @@ def write_private_audit(
     run_id: str,
     release_name: str,
     root: Optional[Path] = None,
+    certification_reason: Optional[str] = None,
 ) -> Path:
     """Write the layer's audit and a summary to a private directory.
 
@@ -1890,8 +1898,13 @@ def write_private_audit(
     geo.release.write_audit(directory)
     path = directory / "summary.json"
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    summary = release_summary(geo, log)
+    if certification_reason is not None:
+        summary.update(
+            certified=False, certification_reason=certification_reason
+        )
     with os.fdopen(descriptor, "w") as handle:
-        json.dump(release_summary(geo, log), handle, indent=2, sort_keys=True)
+        json.dump(summary, handle, indent=2, sort_keys=True)
     os.chmod(path, 0o600)
     return directory
 
@@ -1909,7 +1922,8 @@ def add_geography_parser(subparsers) -> None:
         "--dataset",
         type=Path,
         default=None,
-        help="A local dataset (.h5); default: the bundle's enhanced FRS",
+        help="A local dataset (.h5) or bundle dataset name; "
+        "default: the bundle's dataset",
     )
     parser.add_argument(
         "--dataset-kind",
@@ -1935,14 +1949,20 @@ def add_geography_parser(subparsers) -> None:
         "--seat-reforms",
         nargs="+",
         default=None,
-        help="Reforms published by constituency (default: the combined "
-        "reform)",
+        help="Reforms published by constituency (default: chosen packages)",
+    )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=publication_manifest.manifest_path(),
+        help="Publication manifest (default: public/data/manifest.json)",
     )
     parser.add_argument(
         "--reforms",
         nargs="+",
         default=None,
-        help="Reform IDs (default: all Autumn Budget reforms)",
+        help="Approved reform IDs (default: approved measures and packages "
+        "in the publication manifest)",
     )
     parser.add_argument(
         "--years",
@@ -2015,6 +2035,98 @@ class _Plan:
     microcosm_export: bool = False
 
 
+def approved_reforms(
+    manifest: publication_manifest.Manifest,
+    requested: Optional[Sequence[str]] = None,
+) -> list[str]:
+    """Select only approved measures and separately approved packages.
+
+    Package aliases map to the publication generator's combined key for
+    their exact members; an approved single entry with that alias is not
+    approval of a combined run. Defaults keep the manifest's measure order,
+    followed by each approved package whose exact members are all approved.
+    """
+    approved = [
+        key
+        for key, entry in manifest.measures.items()
+        if entry.status == publication_manifest.APPROVED
+        and key not in PACKAGES
+    ]
+    defaults = list(approved)
+    for package, components in PACKAGES.items():
+        members = sorted(components)
+        entry = manifest.combined.get(combined_key(members))
+        if (
+            entry is not None
+            and entry.status == publication_manifest.APPROVED
+            and sorted(entry.measures or []) == members
+            and set(members) <= set(approved)
+        ):
+            defaults.append(package)
+    ids = list(dict.fromkeys(requested if requested is not None else defaults))
+    refused = []
+    for reform_id in ids:
+        if reform_id in PACKAGES:
+            members = sorted(PACKAGES[reform_id])
+            key = combined_key(members)
+            entry = manifest.combined.get(key)
+        else:
+            key = reform_id
+            entry = manifest.measures.get(key)
+        status = (
+            entry.status if entry is not None else "absent from the manifest"
+        )
+        if status != publication_manifest.APPROVED:
+            label = f"{reform_id} ({key})" if key != reform_id else reform_id
+            refused.append(f"{label}: {status.replace('_', ' ')}")
+        elif reform_id in PACKAGES and sorted(entry.measures or []) != members:
+            refused.append(
+                f"{reform_id} ({key}): combined members do not match"
+            )
+        elif reform_id in PACKAGES:
+            for member in members:
+                if member not in approved:
+                    member_entry = manifest.measures.get(member)
+                    status = (
+                        member_entry.status
+                        if member_entry is not None
+                        else "absent from the manifest"
+                    )
+                    refused.append(
+                        f"{reform_id}: {member}: {status.replace('_', ' ')}"
+                    )
+    if refused:
+        message = "Unapproved reforms: " + "; ".join(refused)
+        if not approved:
+            message += "; there is nothing the national page may publish yet."
+        raise ValueError(message)
+    if not approved:
+        raise ValueError(
+            "No approved single-measure ids in the manifest: there is "
+            "nothing the national page may publish yet."
+        )
+    return ids
+
+
+def _bundle_dataset(name: Optional[str] = None) -> tuple[str, str]:
+    """Resolve a UK bundle name, including overlays, without loading data."""
+    release = get_release_manifest("uk")
+    name = name if name is not None else release.default_dataset
+    dataset = release.datasets.get(name)
+    if dataset is None:
+        raise ValueError(f"The installed bundle has no UK dataset {name!r}")
+    repository = dataset.repo_id or release.data_package.repo_id
+    return name, repository
+
+
+def _local_dataset(dataset: Optional[Path]) -> Optional[Path]:
+    """Find a local file; the engine gives bundle names precedence."""
+    if dataset is None or str(dataset) in get_release_manifest("uk").datasets:
+        return None
+    local = dataset.expanduser()
+    return local if local.is_file() else None
+
+
 def _plan(parsed: argparse.Namespace) -> _Plan:
     """Check a geography run's options. Raises ValueError with labels."""
     kind = parsed.dataset_kind
@@ -2023,15 +2135,58 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     if kind == MICROCOSM and parsed.seat_weights is not None:
         raise ValueError("--seat-weights is for the eFRS only")
     # Read from the file, never inferred from the kind: the ids check it too.
-    microcosm_export = kind == MICROCOSM and is_microcosm_export(
-        parsed.dataset
-    )
+    local = _local_dataset(parsed.dataset)
+    microcosm_export = local is not None and is_microcosm_export(local)
     if kind == MICROCOSM and not microcosm_export:
         raise ValueError(
             "--dataset-kind microcosm needs a Microcosm export; a file "
             "built by policyengine-uk-data goes through --dataset-kind efrs"
         )
-    ids = parsed.reforms or [r.id for r in get_autumn_budget_2026_reforms()]
+    if not parsed.manifest.is_file():
+        raise ValueError(
+            f"No publication manifest at {parsed.manifest}: there is "
+            "nothing the national page may publish yet."
+        )
+    manifest = publication_manifest.parse_manifest(
+        parsed.manifest.read_bytes(), str(parsed.manifest)
+    )
+    ids = approved_reforms(manifest, parsed.reforms)
+    if parsed.seat_reforms is not None:
+        approved_reforms(manifest, parsed.seat_reforms)
+    if kind == EFRS:
+        if microcosm_export:
+            raise ValueError(
+                "--dataset-kind efrs refuses a Microcosm export. Do not "
+                "mix it with eFRS seat weights; see PR #59 for Microcosm "
+                "area runs."
+            )
+        if local is None:
+            name, repository = (
+                _bundle_dataset()
+                if parsed.dataset is None
+                else _bundle_dataset(str(parsed.dataset))
+            )
+            if not (
+                name.startswith("enhanced_frs_")
+                and repository
+                in (
+                    "policyengine/policyengine-uk-data",
+                    "policyengine/policyengine-uk-data-private",
+                )
+            ):
+                selection = (
+                    f"defaults to {name}"
+                    if parsed.dataset is None
+                    else f"resolves {parsed.dataset} to {name}"
+                )
+                raise ValueError(
+                    "--dataset-kind efrs needs enhanced FRS from "
+                    "policyengine/policyengine-uk-data or "
+                    "policyengine/policyengine-uk-data-private, but the "
+                    f"installed bundle {selection} from {repository}. Do "
+                    "not mix it with eFRS seat weights; see PR #59 for "
+                    "Microcosm area runs."
+                )
     unknown = [i for i in ids if get_reform(i) is None]
     if unknown:
         raise ValueError(f"Unknown reforms: {unknown}")
@@ -2048,6 +2203,11 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_reforms = parsed.seat_reforms or [
             p for p in PACKAGES if p in chosen
         ]
+        if not seat_reforms and parsed.seat_reforms is None:
+            raise ValueError(
+                "No approved package is chosen: constituency results need "
+                "--seat-reforms naming chosen reforms"
+            )
         if not seat_reforms or set(seat_reforms) - set(chosen):
             raise ValueError("--seat-reforms must name chosen reforms")
     inputs = parsed.data_inputs_dir
@@ -2095,16 +2255,44 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     )
 
 
+def _reform_scenarios(reform: Reform, years, *, check_composition=False):
+    """The generator's scenarios, composing a package's approved members.
+
+    The registered package supplies its alias only. Its members supply both
+    scenarios and their modifiers, including whether the configured baseline
+    applies when the composed baseline is empty.
+    """
+    config = DataConfig(years=list(years))
+    uses_config = not reform.has_custom_baseline()
+    if reform.id in PACKAGES:
+        members = combine.member_order(
+            [get_reform(member) for member in PACKAGES[reform.id]]
+        )
+        combined = combine.combine_measures(members, config)
+        if check_composition:
+            combine.check_consistency(combined, members, config, list(years))
+        uses_config = any(
+            not member.has_custom_baseline() for member in members
+        )
+        reform = combined.model_copy(update={"id": reform.id})
+    return (
+        reform.baseline_scenario_for(config, uses_config),
+        reform.to_scenario(),
+    )
+
+
 def simulate_reform(reform: Reform, dataset: Optional[str], years) -> tuple:
     """A reform's baseline and reformed microsimulations, built under the
     data-limit build watch (``data_limits.watched_build``), as the
     publication generator builds them."""
-    config = DataConfig(years=list(years))
+    baseline_scenario, reform_scenario = _reform_scenarios(
+        reform, years, check_composition=True
+    )
     baseline = data_limits.watched_build(
-        build_microsimulation, dataset, reform.baseline_scenario_for(config)
+        build_microsimulation, dataset, baseline_scenario
     )
     reformed = data_limits.watched_build(
-        build_microsimulation, dataset, reform.to_scenario()
+        build_microsimulation, dataset, reform_scenario
     )
     return baseline, reformed
 
@@ -2119,14 +2307,59 @@ def reform_data_limits(
     tree (tests)."""
     if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
         return data_limits.limits_touched(baseline, reformed, observation)
-    config = DataConfig(years=list(years))
-    return data_limits.limits_for_scenarios(
-        reform.baseline_scenario_for(config), reform.to_scenario()
-    )
+    return data_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
+
+
+def reform_model_limits(reform: Reform, baseline, reformed, years) -> list:
+    """The model limits a reform touches, decided as the publication
+    generator decides them: from the two built simulations and the models
+    they run; from the scenarios' parameter changes, against the installed
+    model, only for stand-ins with no parameter tree (tests)."""
+    if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
+        return model_limits.limits_touched(baseline, reformed)
+    return model_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
     """Run the ``geography`` command. Prints labels only."""
+    microcosm = _uses_microcosm(parsed)
+    reason = MICROCOSM_UNCERTIFIED if microcosm else None
+    if reason:
+        console.print(reason)
+    try:
+        return _run_geography(parsed, certification_reason=reason)
+    finally:
+        if reason:
+            console.print(reason)
+
+
+def _uses_microcosm(parsed: argparse.Namespace) -> bool:
+    """Identify Microcosm by kind, local export marker or bundle metadata."""
+    if parsed.dataset_kind.startswith(MICROCOSM):
+        return True
+    try:
+        local = _local_dataset(parsed.dataset)
+        if local is not None:
+            return is_microcosm_export(local)
+        name, repository = (
+            _bundle_dataset()
+            if parsed.dataset is None
+            else _bundle_dataset(str(parsed.dataset))
+        )
+    except (ValueError, OSError):
+        # Planning reports invalid datasets inside the normal command error
+        # handling; an unresolved name does not identify Microcosm data.
+        return False
+    return name.startswith("microcosm_") or repository in (
+        "policyengine/populace-uk",
+        "policyengine/populace-uk-private",
+    )
+
+
+def _run_geography(
+    parsed: argparse.Namespace, *, certification_reason: Optional[str]
+) -> int:
+    """Build and write a run, inside any dataset certification banners."""
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     release_name = parsed.dataset_kind
     try:
@@ -2149,6 +2382,7 @@ def run_geography(parsed: argparse.Namespace) -> int:
         start = time.perf_counter()
         collector = None
         limited = {}
+        held = {}
         for reform in plan.reforms:
             console.print(f"Simulating {reform.id}")
             baseline, reformed = simulate_reform(reform, dataset, plan.years)
@@ -2180,22 +2414,44 @@ def run_geography(parsed: argparse.Namespace) -> int:
                 )
                 if touched:
                     limited[reform.id] = touched
+            # A measure the installed model mis-costs is never approved, but
+            # one approved before its limit was registered, or on a model
+            # with the fix, still is: judge the area run's own simulations,
+            # as the generator judges its run.
+            touched = reform_model_limits(
+                reform, baseline, reformed, plan.years
+            )
+            if touched:
+                held[reform.id] = touched
             # The observation holds both simulations: free it with them, so
             # the next pair is never built with this one still alive.
             del baseline, reformed, observed
         simulate_s = time.perf_counter() - start
+        for reform_id, touched in limited.items():
+            reasons = " ".join(item["reason"] for item in touched)
+            console.print(
+                f"[red]Not computable on current data: {reform_id}: "
+                f"{reasons}[/red]"
+            )
+        for reform_id, touched in held.items():
+            reasons = " ".join(item["reason"] for item in touched)
+            console.print(
+                f"[red]Mis-costed by this model: {reform_id}: "
+                f"{reasons}[/red]"
+            )
         if limited:
-            for reform_id, touched in limited.items():
-                reasons = " ".join(item["reason"] for item in touched)
-                console.print(
-                    f"[red]Not computable on current data: {reform_id}: "
-                    f"{reasons}[/red]"
-                )
             console.print(
                 f"[red]Error: {len(limited)} reform(s) touch a data limit, "
                 "so no tables were written. Leave them, and any package "
                 "including them, out of --reforms.[/red]"
             )
+        if held:
+            console.print(
+                f"[red]Error: {len(held)} reform(s) touch a model limit, "
+                "so no tables were written. Leave them, and any package "
+                "including them, out of --reforms.[/red]"
+            )
+        if limited or held:
             return 1
 
         console.print("Estimating and checking")
@@ -2215,7 +2471,11 @@ def run_geography(parsed: argparse.Namespace) -> int:
                 )
         log = resolve(geo)
         audit = write_private_audit(
-            geo, log, run_id=run_id, release_name=release_name
+            geo,
+            log,
+            run_id=run_id,
+            release_name=release_name,
+            certification_reason=certification_reason,
         )
         for reform, year in log.demotions:
             console.print(

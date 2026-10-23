@@ -465,14 +465,14 @@ def household():
 
 
 def built(world):
-    """Stand-in simulations carrying a real parameter tree, built with the
-    scenario, so generation compares the trees as it does on a real run."""
+    """Stand-ins carrying a real parameter tree and input holders, built with
+    the scenario, so generation compares them as it does on a real run."""
 
     def build(dataset, scenario=None):
         sim = world.sim()
-        sim.tax_benefit_system = Simulation(
-            situation=household(), scenario=scenario
-        ).tax_benefit_system
+        underlying = Simulation(situation=household(), scenario=scenario)
+        sim.tax_benefit_system = underlying.tax_benefit_system
+        sim.get_holder = underlying.get_holder
         return sim
 
     return build
@@ -528,7 +528,10 @@ def test_generation_records_a_limited_input_read_while_the_measure_is_built(
     assert generated_limits(world, reform, built(world)) == [
         record(
             BY_KEY["non_residential_purchases"],
-            ["build:non_residential_property_purchased"],
+            [
+                "build:non_residential_property_purchased",
+                "input:sdlt_on_non_residential_property_transactions",
+            ],
         )
     ]
 

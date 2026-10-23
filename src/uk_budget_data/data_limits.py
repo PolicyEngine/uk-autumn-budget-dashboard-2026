@@ -14,6 +14,10 @@ limit covers while the run made the figures (a structural measure, through
 a template's formula helper, ``update_variable`` or
 ``neutralize_variable``). What that code reads is watched as the
 simulations calculate (:func:`observing`), not inferred from its source.
+Variables are compared with the metadata core reads during calculation,
+including formula end dates and conditions, and with their abolition
+parameters. Stored inputs are also compared, for each missing input and
+every model formula directly reading it or its limited parameters.
 
 On built simulations two things are compared for parameters: what formulas
 read under those parameters at the start of each year (the system's cached
@@ -194,12 +198,12 @@ def _equal(a, b) -> bool:
         return False
 
 
-def _flatten(view, behaviour=None):
+def _flatten(view, behaviour=None, by_item=False):
     """A view of the parameters at one instant, as plain data, read the way
     formulas read it: a scale by its class and any method set on the
     instance (both by content, see :class:`_Behaviour`), and its arrays; a
-    node by its children, reached by attribute as formulas reach them; a
-    leaf by its value."""
+    node by its children, reached by attribute as formulas reach them (or
+    by item for core's abolition lookup); a leaf by its value."""
     behaviour = behaviour or _Behaviour()
     if view is None:
         return None
@@ -220,7 +224,11 @@ def _flatten(view, behaviour=None):
     children = getattr(view, "_children", None)
     if children is not None:
         return {
-            key: _flatten(getattr(view, key), behaviour)
+            key: _flatten(
+                view[key] if by_item else getattr(view, key),
+                behaviour,
+                by_item,
+            )
             for key in sorted(children)
         }
     return view
@@ -267,10 +275,12 @@ def _view_at(parameters, prefix: str, instant: str):
     is what they read; with none, the view built at ``prefix`` itself."""
     parts = prefix.split(".")
     levels, node = [parameters], parameters
+    complete = True
     for part in parts:
         children = getattr(node, "children", None)
         if not isinstance(children, dict) or part not in children:
-            return None
+            complete = False
+            break
         node = children[part]
         levels.append(node)
     for depth, level in enumerate(levels):
@@ -283,18 +293,26 @@ def _view_at(parameters, prefix: str, instant: str):
             except AttributeError:
                 return None
             return view
+    if not complete:
+        return None
     return node.get_at_instant(instant)
 
 
-def _views(system, prefix: str, behaviour=None) -> list:
+def _views(
+    system, prefix: str, behaviour=None, by_item=False, *, from_year=None
+) -> list:
     """What formulas read under ``prefix`` at the start of each year. Run
-    inside :func:`_caches_left_as_found`: building a view caches it."""
+    inside :func:`_caches_left_as_found`: building a view caches it.
+    ``by_item`` follows core's bracket-based abolition lookup."""
     behaviour = behaviour or _Behaviour()
     return [
         _flatten(
-            _view_at(system.parameters, prefix, f"{year}-01-01"), behaviour
+            _view_at(system.parameters, prefix, f"{year}-01-01"),
+            behaviour,
+            by_item,
         )
         for year in VIEW_YEARS
+        if from_year is None or year >= from_year
     ]
 
 
@@ -321,15 +339,19 @@ def _structure(parameters, prefix: str) -> dict:
     return found
 
 
-def _same_effect(before, after) -> bool:
+def _same_effect(before, after, *, from_year=None) -> bool:
     """Whether two leaves from :func:`_structure` have the same value at
-    every breakpoint of either side."""
+    every breakpoint of either side, optionally from a year boundary."""
     if before is None or after is None:
         return before is after
     instants = sorted(
         {v.instant_str for v in before.values_list}
         | {v.instant_str for v in after.values_list}
     )
+    if from_year is not None:
+        start = f"{from_year}-01-01"
+        # Include the boundary: an earlier breakpoint can still be in force.
+        instants = sorted({start, *(i for i in instants if i >= start)})
     return all(_equal(before(i), after(i)) for i in instants)
 
 
@@ -376,6 +398,57 @@ _MODEL_PACKAGES = ("policyengine_uk", "uk_budget_data")
 _STDLIB = sysconfig.get_paths()["stdlib"]
 # How deep plain objects held by a formula are read, field by field.
 _OBJECT_DEPTH = 16
+
+# Core 3.33.0 and 3.33.3 read these on the calculation path: calculate,
+# _calculate, their period/formula/casting helpers, Variable.get_formula
+# and Variable.default_array. Methods count too: a modifier can replace
+# one on an instance without replacing any formula. set_input also affects
+# the values the calculation consumes. Keep this list alongside the audit
+# in docs/data-limit-detection.md when adopting another core version.
+_VARIABLE_CALCULATION_ATTRIBUTES = (
+    "name",
+    "entity",
+    "is_neutralized",
+    "requires_computation_after",
+    "definition_period",
+    "quantity_type",
+    "defined_for",
+    "uprating",
+    "_uprating",
+    "calculate_output",
+    "default_value",
+    "value_type",
+    "possible_values",
+    "dtype",
+    "adds",
+    "subtracts",
+    "end",
+    "get_formula",
+    "default_array",
+    "check_defined_for_variable",
+    "check_uprating_value_type",
+    "exhaustive_parameter_dependencies",
+    "baseline_variable",
+    "_explicit_attribute_names",
+    "set_input",
+)
+
+
+def _variable_attribute(variable, name):
+    """A calculation attribute, including the entity fields core consumes.
+
+    Held engine entities normally compare by type in formula behaviour.
+    Variable metadata also needs their key and person/group distinction:
+    these select the population and map formula results between entities.
+    """
+    value = getattr(variable, name, None)
+    if name == "entity":
+        return (
+            type(value),
+            getattr(value, "key", None),
+            getattr(value, "is_person", None),
+        )
+    return value
 
 
 def _library_path(path: str) -> bool:
@@ -485,6 +558,7 @@ def _loaded_globals(code) -> frozenset:
     return frozenset(found)
 
 
+@functools.lru_cache(maxsize=None)
 def _code_names(code) -> set:
     """The names and string constants a code object, and any code nested in
     it, uses: how a formula names the variables it reads."""
@@ -505,8 +579,8 @@ class _Behaviour:
     with generated names, so the same formula is a different object in
     each. A function is read as its code, its default arguments, the values
     it closes over and the globals its code looks up; a variable as its
-    formulas, whether it is neutralised, what it adds and subtracts and its
-    default; a class as its own members (methods and data alike), its bases
+    formulas and every attribute core reads while calculating; a class as
+    its own members (methods and data alike), its bases
     and any enum members; a plain object as its class and its fields, slots
     included; a mapping in its order; a container subclass with its type,
     factory and fields. Numbers compare by value (40000 matches 40000.0).
@@ -663,11 +737,10 @@ class _Behaviour:
             )
             return (
                 "variable",
-                getattr(value, "name", None),
-                bool(value.is_neutralized),
-                self.of(getattr(value, "adds", None)),
-                self.of(getattr(value, "subtracts", None)),
-                self.of(getattr(value, "default_value", None)),
+                tuple(
+                    (name, self.of(_variable_attribute(value, name)))
+                    for name in _VARIABLE_CALCULATION_ATTRIBUTES
+                ),
                 tuple((str(start), self.of(f)) for start, f in formulas),
             )
         if isinstance(value, types.FunctionType):
@@ -854,8 +927,8 @@ class _Behaviour:
         the components it holds."""
         names, held = set(), []
         if _is_variable(value):
-            self._collect(getattr(value, "adds", None), names, held)
-            self._collect(getattr(value, "subtracts", None), names, held)
+            for name in _VARIABLE_CALCULATION_ATTRIBUTES:
+                self._collect(_variable_attribute(value, name), names, held)
             held.extend((value.formulas or {}).values())
         elif isinstance(value, types.FunctionType):
             code = value.__code__
@@ -1283,6 +1356,39 @@ class _Exempt:
     functions: dict = field(default_factory=dict)
 
 
+def _abolitions_changed(base_system, reform_system, behaviour) -> set:
+    """Variables whose core abolition parameter differs between the sides.
+
+    Core's ``_calculate`` reads ``gov.abolitions[variable.name]`` before
+    running a formula. Both the stored leaves and cached views matter,
+    just as they do for a limit's own parameters.
+    """
+    prefix = "gov.abolitions"
+    with (
+        _caches_left_as_found(base_system),
+        _caches_left_as_found(reform_system),
+    ):
+        before = _structure(base_system.parameters, prefix)
+        after = _structure(reform_system.parameters, prefix)
+        changed = {
+            path[len(prefix) + 1 :].split(".")[0]
+            for path in before.keys() | after.keys()
+            if not _same_effect(before.get(path), after.get(path))
+        }
+        views = [
+            _views(system, prefix, behaviour, True)
+            for system in (base_system, reform_system)
+        ]
+        for left, right in zip(*views):
+            left, right = left or {}, right or {}
+            changed |= {
+                name
+                for name in left.keys() | right.keys()
+                if not _equal(left.get(name), right.get(name))
+            }
+    return changed
+
+
 class _Changes:
     """The variables that behave differently between two systems (see
     :class:`_Behaviour`), and for each side of each what it may call for a
@@ -1292,13 +1398,16 @@ class _Changes:
         self.behaviour = behaviour
         self.systems = (base_system, reform_system)
         base, reform = base_system.variables, reform_system.variables
+        abolished = _abolitions_changed(base_system, reform_system, behaviour)
         self.sides: dict = {}
         unchanged, installed = set(), []
         for name in sorted(base.keys() | reform.keys()):
             pair = (base.get(name), reform.get(name))
             formulas = [f for side in pair for f in _formulas(side)]
             installed += formulas
-            if behaviour.of(pair[0]) != behaviour.of(pair[1]):
+            if name in abolished or behaviour.of(pair[0]) != behaviour.of(
+                pair[1]
+            ):
                 self.sides[name] = pair
             else:
                 unchanged |= {behaviour.of(f) for f in formulas}
@@ -1492,7 +1601,8 @@ for _prefix in _LIMITED_PREFIXES:
         _TOWARDS.setdefault(".".join(_parts_of[:_depth]), set()).add(
             _parts_of[_depth]
         )
-del _prefix, _parts_of, _depth
+if _LIMITED_PREFIXES:
+    del _prefix, _parts_of, _depth
 
 
 def _engine_parts():
@@ -2566,6 +2676,81 @@ def _reads(limit: DataLimit, names: set) -> bool:
     )
 
 
+def limit_variables(limit: DataLimit, systems=()) -> frozenset:
+    """The missing input and the model variables directly reading a limit.
+
+    Derive the purchase-tax readers from installed formula names and
+    parameter paths, rather than keeping a second registry of their names.
+    Include both compared systems so a newly added reader is covered too.
+    The installed model keeps a replaced or ended reader covered.
+    """
+    from policyengine_uk.system import system as installed
+
+    found = {limit.missing_input}
+    for system in (installed, *systems):
+        for name, variable in system.variables.items():
+            names = set()
+            for formula in _formulas(variable):
+                if isinstance(formula, types.FunctionType):
+                    names |= _code_names(formula.__code__)
+            for attribute in ("adds", "subtracts"):
+                values = getattr(variable, attribute, None)
+                if isinstance(values, str):
+                    names.add(values)
+                elif isinstance(values, (list, tuple)):
+                    names |= {
+                        value for value in values if isinstance(value, str)
+                    }
+            if _reads(limit, names):
+                found.add(name)
+    return frozenset(found)
+
+
+def _stored_inputs(sim, names) -> dict:
+    """Every stored input period and value for these variables.
+
+    Core marks calculated values as derived. Read each storage tier
+    directly, including branch inputs, so a neutralised variable or a
+    calculated memory value cannot hide a stored input. Calculations
+    performed before or during a watch do not create differences and a
+    zero input is distinct from no input. Copy arrays because later
+    calculations can mutate them.
+    """
+    found = {}
+    for name in sorted(names & sim.tax_benefit_system.variables.keys()):
+        holder = sim.get_holder(name)
+        for storage in (holder._memory_storage, holder._disk_storage):
+            if storage is None:
+                continue
+            for branch, period in storage.get_known_branch_periods():
+                if storage.is_derived(period, branch):
+                    continue
+                value = storage.get(period, branch)
+                if value is not None:
+                    values = found.setdefault((name, branch, str(period)), [])
+                    if not any(_equal(value, other) for other in values):
+                        values.append(_copied(value))
+    return found
+
+
+def _inputs_changed(sim_baseline, sim_reform, limit) -> list[str]:
+    names = limit_variables(
+        limit,
+        (sim_baseline.tax_benefit_system, sim_reform.tax_benefit_system),
+    )
+    before = _stored_inputs(sim_baseline, names)
+    after = _stored_inputs(sim_reform, names)
+    return sorted(
+        {
+            f"input:{key[0]}"
+            for key in before.keys() | after.keys()
+            if key not in before
+            or key not in after
+            or not _equal(before[key], after[key])
+        }
+    )
+
+
 def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
     """The limits a measure touches, as recorded in its receipt.
 
@@ -2583,6 +2768,8 @@ def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
       recorded as ``formula:<variable>``;
     - or either simulation's build read the input the limit names (see
       :func:`building`), recorded as ``build:<input>``.
+    - or any stored input period or value differs for its missing input or
+      one of its formula readers, recorded as ``input:<variable>``.
 
     ``observation`` is the watch (:func:`observing`) kept over the run that
     made the figures, finished. Without one, each changed variable is
@@ -2630,6 +2817,7 @@ def limits_touched(sim_baseline, sim_reform, observation=None) -> list[dict]:
                     found = [prefix]
                 differing += found
             differing += formulas.get(limit.key, [])
+            differing += _inputs_changed(sim_baseline, sim_reform, limit)
             if limit.missing_input in built:
                 differing.append(f"build:{limit.missing_input}")
             if differing:
@@ -2659,6 +2847,15 @@ def _build_path(path, limit: DataLimit) -> bool:
     """A recorded ``build:<input>`` path: the limit's own missing input,
     read while a simulation was built (see :func:`limits_touched`)."""
     return path == f"build:{limit.missing_input}"
+
+
+def _input_path(path, limit: DataLimit) -> bool:
+    """A stored-input difference belonging to this limit's variables."""
+    return (
+        isinstance(path, str)
+        and path.startswith("input:")
+        and path[len("input:") :] in limit_variables(limit)
+    )
 
 
 def record_problems(records) -> list[str]:
@@ -2692,6 +2889,7 @@ def record_problems(records) -> list[str]:
                 limits_for_paths([path]) != [limit]
                 and not _formula_path(path)
                 and not _build_path(path, limit)
+                and not _input_path(path, limit)
                 for path in paths
             )
         ):

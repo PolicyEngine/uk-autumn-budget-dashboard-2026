@@ -1,9 +1,15 @@
 """The model-limit guard: a measure the installed model mis-costs until a
 known fix lands is held at provisional, never approved.
 
-The one limit today is the State Pension's: up to policyengine-uk #2336,
-additional State Pension and protected payments rise with the full rates,
-so a change to the full rates or the triple lock moves them too.
+Until policyengine-uk #2336, additional State Pension and protected
+payments rise with the full rates, so changing the full rates or triple
+lock moves them too. Until #2533, CPI-linked benefit levels from 2027
+follow lagged calendar-year CPI rather than the September outturn. Until
+the UK hub's earnings fix, the Pension Credit minimum guarantee does too,
+though the law requires it to rise with earnings. Until #2187, household
+VAT is grossed up to receipts by one factor, so VAT runs high (0.469 /
+0.38, about 23%);
+that limit covers variables as well as parameters.
 """
 
 import copy
@@ -33,6 +39,7 @@ from uk_budget_data.model_limits import (
     limits_touched,
     record,
     record_problems,
+    variable_path,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module
@@ -42,7 +49,18 @@ from uk_budget_data.publication.generate import generate_artifacts
 from uk_budget_data.publication.publish import PublishError, approve, stage
 from uk_budget_data.publication.receipt import dashboard_problems
 
-LIMIT = MODEL_LIMITS[0]
+
+def limit_by_key(key):
+    """A registered limit by key, not by position, so removing a limit at
+    adoption fails loudly at that limit's own lookups instead of quietly
+    pointing a test at another limit."""
+    return {limit.key: limit for limit in MODEL_LIMITS}[key]
+
+
+LIMIT = limit_by_key("state_pension_add_on_uprating")
+BENEFIT_LIMIT = limit_by_key("benefit_uprating_september_cpi")
+PENSION_CREDIT_LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
+BENEFIT_RATE = "gov.hmrc.child_benefit.amount.eldest"
 NEW_PENSION = "gov.dwp.state_pension.new_state_pension.amount"
 BASIC_PENSION = "gov.dwp.state_pension.basic_state_pension.amount"
 TRIPLE_LOCK_MINIMUM = "gov.dwp.state_pension.triple_lock.minimum_rate"
@@ -105,6 +123,14 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
             assert system.parameters.get_child(prefix) is not None, prefix
 
 
+def test_every_registered_variable_exists_in_the_installed_engine():
+    from policyengine_uk.system import system
+
+    for limit in MODEL_LIMITS:
+        for name in limit.variables:
+            assert name in system.variables, name
+
+
 def test_the_installed_model_still_lacks_the_fix():
     """Tripwire: when the installed policyengine-uk has #2336, this fails,
     and the limit is removed in the bundle-adoption PR that brings it."""
@@ -152,29 +178,59 @@ def test_a_system_without_the_variable_counts_as_unfixed():
 def test_a_state_pension_measure_without_the_fix_records_the_limit(
     changes, recorded
 ):
-    assert limits_touched(simulation(), simulation(changes)) == [
-        record(LIMIT, recorded)
-    ]
+    """The triple lock's CPI leg also reads the September 2026 input, so
+    the September CPI limit holds a triple-lock change as well; a change to
+    the full rates alone records only this limit."""
+    touched = limits_touched(simulation(), simulation(changes))
+    if TRIPLE_LOCK_MINIMUM in changes:
+        assert [item["key"] for item in touched] == [
+            LIMIT.key,
+            BENEFIT_LIMIT.key,
+        ]
+        touched = touched[:1]
+    assert touched == [record(LIMIT, recorded)]
 
 
 UPRATING_INPUTS = "gov.economic_assumptions.statutory_uprating_inputs"
 
 
 @pytest.mark.parametrize(
-    "changes",
+    "changes, also",
     [
-        {f"{UPRATING_INPUTS}.awe_total_pay_may_july": {"2026": 0.10}},
-        {f"{UPRATING_INPUTS}.cpi_september": {"2027": 0.10}},
+        (
+            {f"{UPRATING_INPUTS}.awe_total_pay_may_july": {"2026": 0.10}},
+            [BENEFIT_LIMIT, PENSION_CREDIT_LIMIT],
+        ),
+        (
+            {f"{UPRATING_INPUTS}.cpi_september": {"2027": 0.10}},
+            [BENEFIT_LIMIT],
+        ),
     ],
 )
-def test_an_uprating_input_that_moves_the_full_rates_records_them(changes):
+def test_an_uprating_input_that_moves_the_full_rates_records_them(
+    changes, also
+):
     """By effect: the triple lock is built from these inputs, so the full
     rates' stored amounts move and are recorded (#71's review found a 10%
     earnings input moved a pensioner's add-on). A CPI input also moves the
-    September CPI index, recorded too."""
-    (touched,) = limits_touched(simulation(), simulation(changes))
-    assert touched["key"] == LIMIT.key
-    assert {BASIC_PENSION, NEW_PENSION} <= set(touched["parameters"])
+    September CPI index, recorded too. Each input is also covered by
+    other limits: from 2027 the triple lock index and the September CPI
+    index are the September CPI limit's, and the earnings input is the
+    minimum guarantee's."""
+    touched = {
+        item["key"]: item
+        for item in limits_touched(simulation(), simulation(changes))
+    }
+    assert list(touched) == [LIMIT.key, *(limit.key for limit in also)]
+    assert {BASIC_PENSION, NEW_PENSION} <= set(
+        touched[LIMIT.key]["parameters"]
+    )
+
+
+def test_the_state_pension_limit_still_covers_changes_confined_to_2026():
+    assert limits_touched(
+        simulation(), simulation({NEW_PENSION: {"2026": 250.0}})
+    ) == [record(LIMIT, [NEW_PENSION])]
 
 
 def test_a_change_to_the_cached_views_alone_records_it():
@@ -194,13 +250,20 @@ def test_a_change_on_the_baseline_side_counts_too():
     ) == [record(LIMIT, [NEW_PENSION])]
 
 
-def test_a_template_built_state_pension_measure_records_it_and_warns():
-    with pytest.warns(ModelLimitedWarning, match="#2336"):
-        changes = rate_change(
-            NEW_PENSION, {2027: pension_uprating(230.25, 0.048)}
-        )
+@pytest.mark.parametrize(
+    "limit, path, amount",
+    [
+        (LIMIT, NEW_PENSION, pension_uprating(230.25, 0.048)),
+        (BENEFIT_LIMIT, BENEFIT_RATE, 30.0),
+    ],
+)
+def test_a_template_built_measure_records_its_limit_and_warns(
+    limit, path, amount
+):
+    with pytest.warns(ModelLimitedWarning, match=limit.fixed_by):
+        changes = rate_change(path, {2027: amount})
     assert limits_touched(simulation(), simulation(changes)) == [
-        record(LIMIT, [NEW_PENSION])
+        record(limit, [path])
     ]
 
 
@@ -292,22 +355,65 @@ def test_the_scenarios_record_nothing_once_the_installed_model_has_it():
 def test_limits_for_paths_matches_prefixes_not_name_fragments():
     assert limits_for_paths([NEW_PENSION]) == [LIMIT]
     assert limits_for_paths([NEW_PENSION + "_extra"]) == []
-    assert limits_for_paths(["gov.dwp.state_pension.triple_lock"]) == [LIMIT]
-    assert limits_for_paths([TRIPLE_LOCK_MINIMUM]) == [LIMIT]
+    # The triple lock is also the September CPI limit's, from 2027.
+    assert limits_for_paths(["gov.dwp.state_pension.triple_lock"]) == [
+        LIMIT,
+        BENEFIT_LIMIT,
+    ]
+    assert limits_for_paths([TRIPLE_LOCK_MINIMUM]) == [LIMIT, BENEFIT_LIMIT]
     assert limits_for_paths([INCOME_TAX]) == []
 
 
-PATHS = st.lists(
-    st.sampled_from(
-        [NEW_PENSION, BASIC_PENSION, TRIPLE_LOCK_MINIMUM, *LIMIT.parameters]
-    ),
-    min_size=1,
-)
+def record_cases(limit):
+    """Exercise every limit while retaining the original nested path, and
+    each variable the limit covers as its record names it."""
+    paths = (*limit.parameters, *map(variable_path, limit.variables))
+    if limit == LIMIT:
+        paths = (*paths, TRIPLE_LOCK_MINIMUM)
+    return st.tuples(
+        st.just(limit), st.lists(st.sampled_from(paths), min_size=1)
+    )
+
+
+PATHS = st.sampled_from(MODEL_LIMITS).flatmap(record_cases)
 
 
 @given(PATHS)
-def test_every_record_the_guard_makes_passes_its_own_check(paths):
-    assert record_problems([record(LIMIT, paths)]) == []
+def test_every_record_the_guard_makes_passes_its_own_check(case):
+    limit, paths = case
+    assert record_problems([record(limit, paths)]) == []
+
+
+@given(st.lists(PATHS, unique_by=lambda case: case[0].key))
+def test_records_for_several_limits_keep_registry_order(cases):
+    records = [
+        record(limit, paths)
+        for limit in MODEL_LIMITS
+        for chosen, paths in cases
+        if chosen == limit
+    ]
+    assert record_problems(records) == []
+    if len(records) > 1:
+        assert record_problems(list(reversed(records)))
+
+
+def test_a_path_under_two_limits_is_recorded_under_either():
+    """Limits may overlap: September CPI is the State Pension limit's and,
+    from 2027, the benefit index's; the minimum guarantee is the benefit
+    index's and its own limit's. A record of either is the guard's."""
+    september = "gov.economic_assumptions.indices.september_cpi_uprating"
+    guarantee = (
+        "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+    )
+    assert limits_for_paths([september]) == [LIMIT, BENEFIT_LIMIT]
+    assert limits_for_paths([guarantee]) == [
+        BENEFIT_LIMIT,
+        PENSION_CREDIT_LIMIT,
+    ]
+    assert record_problems([record(LIMIT, [september])]) == []
+    assert record_problems([record(BENEFIT_LIMIT, [september])]) == []
+    assert record_problems([record(PENSION_CREDIT_LIMIT, [guarantee])]) == []
+    assert record_problems([record(PENSION_CREDIT_LIMIT, [september])])
 
 
 BROKEN = [
@@ -316,22 +422,27 @@ BROKEN = [
     lambda r: {**r, "parameters": []},
     lambda r: {**r, "parameters": list(reversed(r["parameters"]))},
     lambda r: {**r, "parameters": r["parameters"] + [INCOME_TAX]},
+    lambda r: {
+        **r,
+        "parameters": sorted(r["parameters"] + ["variable:not_covered"]),
+    },
     lambda r: {**r, "parameters": r["parameters"] + [r["parameters"][0]]},
     lambda r: {**r, "parameters": "not a list"},
 ]
 
 
-@given(st.sampled_from(BROKEN))
-def test_a_record_the_guard_did_not_make_is_refused(break_it):
-    good = record(LIMIT, [BASIC_PENSION, NEW_PENSION])
+@given(st.sampled_from(MODEL_LIMITS), st.sampled_from(BROKEN))
+def test_a_record_the_guard_did_not_make_is_refused(limit, break_it):
+    good = record(limit, limit.parameters[:2])
     broken = break_it(copy.deepcopy(good))
     if broken == good:
         return
     assert record_problems([broken]) != []
 
 
-def test_a_limit_listed_twice_or_a_non_list_is_refused():
-    good = record(LIMIT, [NEW_PENSION])
+@pytest.mark.parametrize("limit", MODEL_LIMITS)
+def test_a_limit_listed_twice_or_a_non_list_is_refused(limit):
+    good = record(limit, [limit.parameters[0]])
     assert record_problems([good, good]) != []
     assert record_problems(good) == ["model_limits must be a list"]
 
@@ -352,12 +463,16 @@ def world(monkeypatch):
 HELD = record(LIMIT, [NEW_PENSION])
 
 
+@pytest.mark.parametrize("limit", MODEL_LIMITS)
 def test_a_model_limited_measure_stages_provisional_but_is_never_approved(
     world,
+    limit,
 ):
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
-    reference = world.ready("alpha", VALUES, model_limits=[HELD])
+    reference = world.ready(
+        "alpha", VALUES, model_limits=[record(limit, [limit.parameters[0]])]
+    )
     stage(manifest, reference.path, provisional=True, **args)
     assert manifest.entries()["alpha"].status == m.PROVISIONAL
     with pytest.raises(PublishError, match="held at provisional"):
@@ -375,14 +490,17 @@ def test_the_same_measure_without_the_limit_is_approved(world):
     assert manifest.entries()["alpha"].status == m.APPROVED
 
 
-def test_the_refusal_names_the_reason(world):
+@pytest.mark.parametrize("limit", MODEL_LIMITS)
+def test_the_refusal_names_the_reason(world, limit):
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
-    reference = world.ready("alpha", VALUES, model_limits=[HELD])
+    reference = world.ready(
+        "alpha", VALUES, model_limits=[record(limit, [limit.parameters[0]])]
+    )
     stage(manifest, reference.path, provisional=True, **args)
     with pytest.raises(PublishError) as raised:
         approve(manifest, "alpha", "Reviewer", **args)
-    assert LIMIT.reason in str(raised.value)
+    assert limit.reason in str(raised.value)
 
 
 def test_a_receipt_without_recorded_model_limits_is_a_problem(world):
@@ -430,7 +548,7 @@ def fake_process(values):
 
 
 def built(world, modifier=None):
-    """Stand-in simulations carrying a real parameter tree and model,
+    """Stand-ins carrying a real model, parameter tree and input holders,
     built with the scenario, as generation compares them on a real run."""
 
     def build(dataset, scenario=None):
@@ -440,9 +558,9 @@ def built(world, modifier=None):
                 parameter_changes=getattr(scenario, "parameter_changes", None),
                 simulation_modifier=modifier,
             )
-        sim.tax_benefit_system = Simulation(
-            situation=household(), scenario=scenario
-        ).tax_benefit_system
+        underlying = Simulation(situation=household(), scenario=scenario)
+        sim.tax_benefit_system = underlying.tax_benefit_system
+        sim.get_holder = underlying.get_holder
         return sim
 
     return build
@@ -461,6 +579,13 @@ def generated(world, reform, build):
     return read_receipt(report.written[0].path)["dashboard"]["model_limits"]
 
 
+BENEFIT_RISE = Reform(
+    id="benefit_rise",
+    name="Benefit rise",
+    parameter_changes={BENEFIT_RATE: {"2027": 30.0, "2028": 31.0}},
+)
+
+
 PENSION_RISE = Reform(
     id="pension_rise",
     name="Pension rise",
@@ -468,15 +593,24 @@ PENSION_RISE = Reform(
 )
 
 
+@pytest.mark.parametrize(
+    "reform, held",
+    [
+        (PENSION_RISE, HELD),
+        (BENEFIT_RISE, record(BENEFIT_LIMIT, [BENEFIT_RATE])),
+    ],
+)
 def test_generation_records_the_limit_from_the_scenarios_and_the_trees(
     world,
+    reform,
+    held,
 ):
     # From the scenarios alone (stand-ins with no model) ...
     assert generated(
-        world, PENSION_RISE, lambda dataset, scenario=None: world.sim()
-    ) == [HELD]
+        world, reform, lambda dataset, scenario=None: world.sim()
+    ) == [held]
     # ... and from the built trees and model.
-    assert generated(world, PENSION_RISE, built(world)) == [HELD]
+    assert generated(world, reform, built(world)) == [held]
 
 
 def test_generation_records_a_change_on_the_baseline_side(world):
@@ -486,7 +620,11 @@ def test_generation_records_a_change_on_the_baseline_side(world):
         id="pension_baseline",
         name="Pension baseline",
         parameter_changes={},
-        baseline_parameter_changes={NEW_PENSION: {"2027": 250.0}},
+        # Every scored year: after a bounded change an uprated amount
+        # returns to the old path, so generation refuses a gap (#2430).
+        baseline_parameter_changes={
+            NEW_PENSION: {"2027": 250.0, "2028": 260.0}
+        },
     )
     assert generated(world, reform, built(world)) == [HELD]
 
@@ -536,6 +674,7 @@ def test_the_flat_pipeline_says_when_this_model_mis_costs_a_measure(
     monkeypatch.setattr(pipeline.DataPipeline, "_save_all", lambda s, d: None)
     reforms = [
         PENSION_RISE,
+        BENEFIT_RISE,
         Reform(
             id="income",
             name="Income",
@@ -546,7 +685,8 @@ def test_the_flat_pipeline_says_when_this_model_mis_costs_a_measure(
         skip_input_check=True
     )
     out = " ".join(capsys.readouterr().out.split())
-    assert out.count("MIS-COSTED BY THIS MODEL") == 1
+    assert out.count("MIS-COSTED BY THIS MODEL") == 2
+    assert "Benefit rise: The installed benefit uprating index" in out
     assert "Pension rise: The installed model" in out
     assert "Income: The installed model" not in out
 
@@ -709,11 +849,15 @@ def test_a_rebound_node_is_recorded():
 def test_a_cpi_change_that_does_not_bind_the_full_rates_is_recorded():
     """Review of #73, finding C: without the fix the add-on ignores CPI, so
     a CPI change the triple lock doesn't pass on (earnings bind) still
-    mis-costs it, though the full rates don't move."""
+    mis-costs it, though the full rates don't move. The index's April 2027
+    step moves, so the benefit index's limit records it too."""
     touched = limits_touched(
         simulation(), simulation({CPI_INPUT: {"2026": 0.030}})
     )
-    assert [item["key"] for item in touched] == [LIMIT.key]
+    assert [item["key"] for item in touched] == [
+        LIMIT.key,
+        BENEFIT_LIMIT.key,
+    ]
     paths = touched[0]["parameters"]
     assert any(path.startswith(CPI_INDEX) for path in paths)
 
@@ -948,6 +1092,7 @@ def test_a_receipt_cannot_be_built_without_its_limits(missing):
         revision=None,
         data_limits=[],
         model_limits=[],
+        modifier_templates={"baseline": [], "reform": []},
     )
     del fields[missing]
     with pytest.raises(TypeError, match=missing):

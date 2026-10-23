@@ -9,7 +9,9 @@ still decided by bytes and versions exactly as in production.
 import copy
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -196,6 +198,60 @@ class World:
         shutil.rmtree(self.root, ignore_errors=True)
 
     @staticmethod
+    def commit_attestation(path: Path) -> None:
+        """Commit only one review input in its temporary, local Git repo.
+
+        Never reuse a worktree's external Git metadata or stage datasets
+        and generated artifacts beside the review input.
+        """
+        path = Path(path).resolve()
+        directory = path.parent
+        metadata = directory / ".git"
+        if metadata.is_symlink() or (
+            metadata.exists() and not metadata.is_dir()
+        ):
+            raise ValueError("attestation tests require local Git metadata")
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("GIT_")
+        }
+
+        def git(*arguments):
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(directory),
+                    "-c",
+                    "user.name=Attestation tests",
+                    "-c",
+                    "user.email=attestations@example.invalid",
+                    "-c",
+                    "commit.gpgSign=false",
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    *arguments,
+                ],
+                check=True,
+                capture_output=True,
+                env=environment,
+            )
+
+        if not metadata.exists():
+            git("init")
+        git("add", "--", path.name)
+        git(
+            "commit",
+            "--only",
+            "--allow-empty",
+            "-m",
+            "Commit attestation test input",
+            "--",
+            path.name,
+        )
+
+    @staticmethod
     def _bundle_for(dataset: Path) -> dict:
         digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
         bundle = copy.deepcopy(load_bundle_manifest())
@@ -250,9 +306,11 @@ class World:
         member_outputs=None,
         dataset_name: str = DATASET_NAME,
         reform_identity=None,
+        baseline_identity=None,
         config_baseline=None,
         data_limits=(),
         model_limits=(),
+        modifier_templates=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -267,8 +325,11 @@ class World:
                 RATE_PATH: {str(y): rate for y in sorted(values)}
             }
         )
-        baseline_identity = receipt_module.scenario_identity(
-            None, name=f"{key} baseline", revision=revision
+        baseline_identity = (
+            baseline_identity
+            or receipt_module.scenario_identity(
+                None, name=f"{key} baseline", revision=revision
+            )
         )
         composition = None
         requested_config_baseline, config_baseline = config_baseline, None
@@ -281,15 +342,32 @@ class World:
             ].ReformIdentity.model_validate(
                 requested_config_baseline or World.configured_baseline()
             )
+        reform_identity = reform_identity or receipt_module.scenario_identity(
+            scenario, name=key, revision=revision
+        )
+        if modifier_templates is None:
+            counts = receipt_module.template_proof.modifier_counts(
+                {
+                    "dashboard": {"members": members},
+                    "execution_receipt": {
+                        "baseline": json.loads(
+                            baseline_identity.model_dump_json()
+                        ),
+                        "reform": json.loads(
+                            reform_identity.model_dump_json()
+                        ),
+                    },
+                }
+            )
+            modifier_templates = {
+                side: [None] * count for side, count in counts.items()
+            }
         inputs = dict(
             key=key,
             measure_ids=measure_ids or [key],
             years=sorted(values),
             baseline_identity=baseline_identity,
-            reform_identity=reform_identity
-            or receipt_module.scenario_identity(
-                scenario, name=key, revision=revision
-            ),
+            reform_identity=reform_identity,
             basis=BASIS,
             revision=revision,
             members=members,
@@ -298,6 +376,7 @@ class World:
             config_baseline_identity=config_baseline,
             data_limits=list(data_limits),
             model_limits=list(model_limits),
+            modifier_templates=modifier_templates,
             generator_argv=["test"],
         )
         sim = self.sim(dataset, dataset_years, dataset_name)
