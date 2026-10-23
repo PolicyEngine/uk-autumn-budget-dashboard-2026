@@ -78,7 +78,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 | Setting | Value |
 |---|---|
 | Repository | `PolicyEngine/uk-autumn-budget-dashboard-2026`, production branch `main`: a merge publishes |
-| Framework | Next.js, Node 24.x, Vercel's defaults for install and build |
+| Framework | Next.js, Node 24.x. Install is Vercel's default, `bun install`, chosen because `bun.lock` is present; the build is `bun run build`, from `vercel.json`, as in CI |
 | Environment | None set. No `NEXT_PUBLIC_MOCK`; `NEXT_PUBLIC_BASE_PATH` unset, so the code default `/uk/autumn-budget-2026` applies. `BUDGET_API_URL` (#3's proxy) gets the household API URL once #3 lands |
 | Deployment protection | Standard (`all_except_custom_domains`), as on the 2025 project `uk-autumn-budget-dashboard` |
 | Production domain | `uk-autumn-budget-2026.vercel.app` |
