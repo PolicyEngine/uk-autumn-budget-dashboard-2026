@@ -16,6 +16,13 @@ A review entry of kind ``pending`` names who decides and by when. Until its
 expiry date, at most 14 days after it was added, it is reported without
 failing; from then on it fails.
 
+One file takes no review entry: the page's area routing status
+(public/data/area-routing.json, from uk_budget_data.area_routing). It says
+only whether the installed bundle routes results by area, so its bytes can
+be one of a few fixed texts, reviewed here once; any other text fails. A
+bundle adoption that changes the routing regenerates it without a new review.
+A review entry for it fails too, since nothing would read it.
+
 The record-level guard covers every public file, and no review entry turns
 it off: a public file may not carry household, benefit unit or person ids or
 weights. The area-code guard covers every tracked file: no file may carry
@@ -36,6 +43,7 @@ import argparse
 import csv
 import hashlib
 import io
+import json
 import os
 import re
 import subprocess
@@ -75,6 +83,26 @@ KINDS = (
     PENDING,
 )
 MAX_PENDING_DAYS = 14
+AREA_ROUTING_FILE = "public/data/area-routing.json"
+# Every text uk_budget_data.area_routing writes: whether the area views are
+# available, and the bundle's routing kind (tests/test_area_routing.py).
+AREA_ROUTING_CONTENTS = frozenset(
+    (
+        json.dumps(
+            {"area_views": views, "regional_release_kind": kind},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode()
+    for views, kind in (
+        ("available", "local_area"),
+        ("available", "area_coded_national"),
+        ("not_available", None),
+        ("not_available", "local_area"),
+        ("not_available", "area_coded_national"),
+    )
+)
 SHA256 = re.compile(r"[0-9a-f]{64}")
 # Reference inputs, such as the constituency lookup, carry area codes by
 # design and are never served.
@@ -243,7 +271,14 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                 validate_layer_table(path, name, report)
                 area_codes_allowed = True
             entry = review.get(name)
-            if entry is None:
+            if name == AREA_ROUTING_FILE:
+                if data not in AREA_ROUTING_CONTENTS:
+                    report.problems.append(
+                        f"{name}: not an area routing status"
+                    )
+                if entry is not None:
+                    report.problems.append(f"{name}: needs no review entry")
+            elif entry is None:
                 report.problems.append(
                     f"{name}: a disclosure table, not reviewed"
                     if layer

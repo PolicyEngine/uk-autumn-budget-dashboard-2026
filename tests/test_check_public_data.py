@@ -300,6 +300,60 @@ def test_an_invalid_review_entry_fails(repo, change, message):
     )
 
 
+ROUTING = (
+    '{\n  "area_views": "not_available",\n'
+    '  "regional_release_kind": null\n}\n'
+)
+
+
+def test_the_area_routing_status_needs_no_review(repo):
+    write(repo, check_public_data.AREA_ROUTING_FILE, ROUTING)
+    track(repo)
+    assert run(repo).problems == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        ROUTING.replace("not_available", "unknown"),
+        ROUTING.replace("not_available", "available"),
+        ROUTING.replace("null", '"national"'),
+        ROUTING.replace("}", '  "value": 1.5\n}'),
+        ROUTING.replace("  ", "    "),
+        ROUTING.rstrip("\n"),
+        "{}\n",
+    ],
+)
+def test_any_other_area_routing_text_fails(repo, text):
+    # A review entry doesn't make another text acceptable.
+    name = check_public_data.AREA_ROUTING_FILE
+    write(repo, name, text)
+    write_review(repo, [entry(repo, name, "static_asset")])
+    track(repo)
+    assert run(repo).problems == [
+        f"{name}: not an area routing status",
+        f"{name}: needs no review entry",
+    ]
+
+
+def test_a_review_entry_for_the_area_routing_status_fails(repo):
+    # Nothing reads it, so it would only look like a review.
+    name = check_public_data.AREA_ROUTING_FILE
+    write(repo, name, ROUTING)
+    write_review(repo, [entry(repo, name, "static_asset")])
+    track(repo)
+    assert run(repo).problems == [f"{name}: needs no review entry"]
+
+
+def test_a_routing_text_anywhere_else_needs_a_review(repo):
+    name = "public/data/blog_charts/area-routing.json"
+    write(repo, name, ROUTING)
+    track(repo)
+    assert run(repo).problems == [
+        f"{name}: not a disclosure table and not reviewed"
+    ]
+
+
 def test_a_review_entry_for_a_missing_file_fails(repo):
     name = "public/data/gone.csv"
     write(repo, name, "x\n")
