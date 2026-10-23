@@ -40,7 +40,7 @@
       "metrics.csv": "99f098f7fee841d8e204928a382c9afa9ad37ca42846b02368fb56831de4e307",
       "winners_losers.csv": "558dcf32e6f1f1a0eb1cd43d50e5a4772acd752e3561ed6568390b4a8b178c99"
     },
-    "generated_at": "2026-10-22T14:50:33.417845+00:00",
+    "generated_at": "2026-10-23T00:15:46.511416+00:00",
     "generator_argv": [
       "test"
     ],
@@ -52,7 +52,7 @@
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
-    "model_limits_registry_sha256": "02f7053018936f785bf0eeceeabdfbb3665c762a86f35172134bbf8a0c636b1b",
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",

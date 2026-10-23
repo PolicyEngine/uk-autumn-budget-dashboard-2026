@@ -289,6 +289,49 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - **If the UK hub's build raises the guarantee some other way,** such as with a formula or typed-in rates, `test_the_fix_check_agrees_with_the_guarantee_pensioners_get` fails in the adoption PR, and a person decides there whether the limit goes.
   - **Otherwise** the guard's tripwire test fails in the adoption PR, which removes the limit.
 
+**A VAT measure (one on a VAT rate, the VAT base or the consumption VAT is charged on) needs policyengine-uk #2187 in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (`vat_consumption_coverage`; coordinator on #88, 22 October, from the UK hub).
+- **Why:** the model grosses household VAT on survey consumption up to receipts by dividing it by one factor, `gov.simulation.microdata_vat_coverage`: 0.38 on policyengine-uk 2.132.6.
+  - #2187 divides instead by survey consumption coverage times the household share of VAT receipts: 0.67 × 0.7 = 0.469. So without it, VAT, and measures that work through the grossed liability (a rate, the reduced-rate share, consumption), run about 23% high (0.469 / 0.38). The energy VAT template's own figure doesn't (below).
+  - The UK hub measures VAT about 24% high on Microcosm without the fix (its notice 59).
+  - For comparison only, the coordinator gives the live API on policyengine-uk 2.130.1: it costs a 1-point VAT rise at £15.4bn, against HMRC's £8.8bn. W5's reading: that run is probably on the API's default enhanced FRS, not Microcosm, so it doesn't measure #2187's effect.
+  - #2187 is in policyengine-uk 2.145.0 and later. 6.10.0's 2.132.6 lacks it; 2.146.5 has it.
+  - **Energy VAT is one of the policies flagged for the App V3 demo,** so the hold bites if Friday's rehearsal runs on 6.10.0.
+- **Which measures:** any change, in any year, on either side (`parameter_changes`, `baseline_parameter_changes` or either side's modifier), to:
+  - a VAT rate or the reduced-rate share of consumption: anything under `gov.hmrc.vat`;
+  - the grossing factor itself, `gov.simulation.microdata_vat_coverage`;
+  - either of those in the engine's copy of the tree as built, under `baseline.`. `baseline_vat` reads that copy and `vat_change` subtracts it, so a modifier that edits it moves VAT;
+  - the index consumption rises by in years after the data's, `gov.economic_assumptions.indices.obr.consumer_price_index`, by any route that moves it, such as a CPI growth path. A test fails if the installed model uprates consumption by another index.
+    - In a household calculation, such a path moves projected consumption, and so VAT, without changing a VAT parameter or a stored input (W5's test on policyengine-uk 2.132.6, 22 October).
+    - On the dashboard's dataset route the projected consumption inputs change too, and record as `variable:<category>`.
+    - Holding the index itself is W5's addition, awaiting the coordinator's confirmation;
+  - a variable VAT is built from, recorded as `variable:<name>`: `vat`, `baseline_vat`, `vat_change`, the two consumption bases, the full-rated share of spending, `consumption` and its 12 categories. A variable counts when:
+    - its formula changes, or what decides how it runs (its end date, uprating rule, `defined_for` or how an input is spread). The VAT base template, `apply_vat_base_change`, replaces `vat`'s formula, so the energy VAT measure is held;
+    - it is neutralised, or missing on one side;
+    - a modifier sets an input for it on one side, or sets one to another value;
+    - a value stored for it differs where both sides hold one, calculated or cached. The guard runs after the figures are made, so this catches a modifier that edits a calculated value in place or caches one. It also catches the template applied on both sides with its spending input changed on one side only, as `variable:vat` and `variable:vat_change`. So a VAT measure's record also lists the variables its figures moved, such as `variable:vat` beside a rate.
+
+  The registry pins the categories, and a test compares the pin with the installed `consumption`.
+- **Not held: private school VAT** (`gov.contrib.labour.private_school_vat`, `gov.simulation.private_school_vat` and the `private_school_vat` variable). Its formula multiplies pupils by fees, the rate and the VAT basis, and reads no grossing factor. #2187 leaves it unchanged, so its figure doesn't depend on the fix. W5 has put this to the coordinator with the energy VAT question below.
+- **What the guard does:** as for the September CPI limit. Generation records `vat_consumption_coverage` and its reason in the receipt. The measure can be staged provisional, approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`): `rate_change` on a VAT parameter, and `apply_vat_base_change` itself. The flat pipeline prints "MIS-COSTED BY THIS MODEL". Such a measure stays out of the first cut and the briefing, and a combined run including one is provisional at most.
+- **The area view is held too.**
+  - Area runs (`uk-budget-data geography`, with `--reforms` or `--seat-reforms`) take approved ids only, and a model-limited measure is never approved.
+  - The area run also judges its own simulations, as generation does. If any measure touches a model limit, it prints "Mis-costed by this model" and writes no tables. That catches a VAT measure approved before this limit was registered, and one approved on a pair with #2187 but run by area on a model without it.
+  - So no VAT measure's area results are produced for the page while the limit holds. That includes Microcosm's local-area cut run on policyengine-uk 2.132.6 (the coordinator's "dense cut paired on 2.132.6 under the accepted mismatch").
+  - **Regenerate, and stage provisional, any VAT measure approved before this limit was registered.** Its receipt carries the old registry digest, so the page refuses it already, and the area run refuses it.
+- **When it lifts:** once a pair with #2187 is adopted, that is with policyengine-uk 2.145.0 or later. Any re-cut on 2.145.0 or later has it.
+  - **The check** needs both of #2187's factors (`gov.simulation.vat.survey_consumption_coverage` and `household_share_of_receipts`) in the tree as the model built it. It also needs every formula of `baseline_vat` to look up `vat_grossing_factor`, the helper that returns their product, which the formulas divide by. For the installed model it also parses `vat` and `baseline_vat`, and needs every formula of each to call that helper.
+  - **Neither check reads anything a parameter change or a template changes.** The template replaces `vat`'s formula, on whichever side calls it, and never `baseline_vat`'s. A rate change, or setting the old factor to 0.469, adds neither factor. Factors added to the tree as built don't count on their own, because no formula reads them.
+  - **A hand-written modifier can still change both things the check reads:** the tree as built (the parameters' `baseline` child) and `baseline_vat`'s formulas.
+    - Replacing `baseline_vat` on one side makes that side count as unfixed, so the measure is held: that fails safe.
+    - Adding #2187's factors to the tree as built and replacing `baseline_vat` on both sides makes 2.132.6 count as fixed, so nothing is held: that fails open.
+    - Neither the code nor the named human data-limits check, whose items are listed above, guards against this. W5 has raised it with the coordinator. Meanwhile, treat such a modifier as a change to the model, not a measure.
+  - **The CI cross-check:** a test reads behaviour. A household's VAT, divided by what its consumption owes at the statutory rates, must be 1 / 0.469 exactly when the checks say the model has the fix, for `vat` and `baseline_vat` alike.
+  - **On enhanced FRS, #2187 doesn't settle it.** Its survey coverage, 0.67, is calibrated to Microcosm's national release. Its own derivation note puts VAT on enhanced FRS 2024-25 38% or 44% above receipts. So a VAT run on the eFRS route (such as `uk-budget-data geography --dataset-kind efrs`) needs the coordinator's call even after adoption.
+  - **The adoption PR removes the limit** when the guard's tripwire test fails. On 2.146.5 the tests in `tests/test_vat_model_limit.py` that assume the limit is active fail with it: the measures recorded without the fix, the template warnings, the scenarios, generation and the area run's refusal. The checks and the CI cross-check pass there. On a venv swapped to 2.146.5 by hand, the area tests also error, because that model and data pair isn't certified.
+  - **With the limit, drop the fixture's `iota` measure** (`scripts/make_publication_fixture.py`) and its rows in the JS publication tests (`digest.test.js`, `load.test.js` and `manifest.test.js`). Then regenerate the fixture and `contract.json`.
+  - **Only this limit covers variables.** When it goes, keep the variable comparison's tests against another limit, or remove the `variables` field with it.
+- **The energy VAT template's own figure doesn't depend on #2187.** The term it adds, eligible spending × the rate change / (1 + the old rate), isn't divided by any grossing factor, so its cost is the same with or without the fix. The same goes for the template on both sides with its spending input changed on one. W5 is raising this with the coordinator; their scope holds it until they rule.
+
 **Dated changes: key every year by its bare fiscal year.**
 
 | Key | What it means | Use it? |
