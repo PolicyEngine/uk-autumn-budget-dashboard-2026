@@ -229,6 +229,19 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
+      # The five tabs render on the real data in jsdom (src/tabsSmoke.test.jsx,
+      # Frontend tests); this checks the build just made serves the page,
+      # each tab's address and every data file they fetch with HTTP 200,
+      # under the base path. In this job, so it adds no runner to the queue.
+      - name: Serve the build and check the page and its data files
+        run: |
+          bun run start > next-start.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl --silent --output /dev/null http://127.0.0.1:3000/uk/autumn-budget-2026 && break
+            sleep 1
+          done
+          scripts/smoke-built-site.sh http://127.0.0.1:3000/uk/autumn-budget-2026 \
+            || { cat next-start.log; exit 1; }
 
   app-test:
     name: Frontend tests
