@@ -6,6 +6,8 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
 
 **Part 6 input preflight:** the full local-workbook importer is present on certified UK **2.132.6**; its source is byte-identical to the historical 2.145.0 importer (SHA-256 `fa79cb02513362ea9f8621112aedfb307cbb7dab868cc144f07076158c89cf94`) and matches its installed RECORD. No fallback or overlay is needed. Its exact module CLI completed in **313.665 s**: **299.299 s** of nonoverlapping import roots plus **14.366 s** parser/workbook/rendering/interpreter residual. Machine-only value diff, omitted-series/statutory decisions and dated-dictionary reconstruction took **11.595 s** externally; source verification and scratch parameter copying took a separate **1.729 s**. The review retained 32 numerical edits (22 annual precision changes and 10 compensating forecast-gap changes) and reproduced the exact six-path, 26-assignment synthetic dictionary. These input stages passed; human review and the complete rebased output route remain unmeasured here, so this is not a first-cut feasibility verdict.
 
+**Part 6 subset probe: the original HPI expectation failed and remains failed.** The command completed in **732.562 s** externally (exit 1), with **507.167 s** of imports excluding gates, **206.962 s** of managed construction excluding gates and **0.264 s** of queries. The **198.439 s** root UK constructor is included in managed construction; do not add it again or add any component to the external total. **42/50 stored-input checks and 6/6 statutory checks passed; eight residential HPI checks failed.** The installed UK 2.132.6 `data/uprating_indices.yaml:95,103` explicitly maps `main_residence_value` to `gov.economic_assumptions.yoy_growth.obr.per_capita.gdp`; `variables/input/main_residence_value.py:16` also declares the corresponding GDP/head index. Historical UK 2.145.0 maps that input to house prices instead. A separate diagnostic made **10/10 GDP-prediction checks pass** (two unchanged 2026 controls and eight 2027–2030 weighted/unweighted checks) at the unchanged `rtol=1e-4, atol=1e-6`. It explains the certified pin's behavior; it does not pass the original HPI gate or validate house-price transmission on 2.132.6. The raw probe, original code and original failure remain preserved with `.job/probes/mapping-diagnosis.json`. Subsequent timing on the unchanged certified pair is a performance diagnostic pending an explicit reviewed choice about this residential-growth limitation, not acceptance of a full HPI forecast refresh. Generation, concurrency and staging still need measured completion before a full-route timing verdict.
+
 **Historical 22 October environment and input evidence:** dashboard `8a6b8a6d` used policyengine 6.10.0, UK 2.145.0 (`ecd531776`) and Core 3.33.3 through a local UK overlay. That overlay is historical evidence, not the current certified recipe. Scripted OBR acquisition returned HTTP 403, but the follow-up rehearsal completed the March round trip from the original cached economy and receipts workbooks. The installed UK 2.145.0 CLI took 107.740 s including cold imports; the identical standalone importer took 5.704 s, and all 24 importer fixture tests passed. The import is not byte-idempotent: 22 small annual-rate precision changes and 10 compensating forecast-gap changes require review. The source workbook's 2030 mortgage-interest cell is blank, so that dated model assumption remains retained. See the acquisition notes below. Resource waits are additional, unbounded time; a successful local import does not establish a simulation completion deadline.
 
 **Historical 23 October part 3 outcome (UK 2.145.0 overlay):** the fully guarded subset and national one-year comparisons passed the synthetic stored-input checks. Both subset registered-measure full processors refused at FY2027 distribution, so neither produced a complete result or artifact. The nonoverlapping observed partial work took **39m31.377s**, or **41m19.117s** including the previously measured local import. The **13:40–14:10 slot does not hold as a deliverable full-rebase release window**; see the historical [part 3 timed evidence](#23-october-timed-simulations). The [part 4 national follow-up](#23-october-national-follow-up) found every national FY2027 decile denominator positive on both bases. National all-measure generation, staging and publication review still have no measured completion deadline.
@@ -204,14 +206,17 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
    export DATASET="$REBASE_SCRATCH/every40.h5"
    ```
 
-   The command below runs the two subset arms sequentially and saves only aggregates. Each construction has a fresh `uptime`/disk gate. Weighted totals retain the subset's original weights and are **not** calibrated national estimates; unweighted sums isolate changes in stored values. The parameter probes distinguish observed statutory inputs, generated triple-lock rates and basic/new pension amounts. A `reform=` dict on this single-year dataset route re-uprates the data in 2.145.0; policyengine's separate `Simulation(policy=...)` API does not.
+   The command below runs the two subset arms sequentially and saves only aggregates. Each construction has a fresh `uptime`/disk gate. Weighted totals retain the subset's original weights and are **not** calibrated national estimates; unweighted sums isolate changes in stored values. The parameter probes distinguish observed statutory inputs, generated triple-lock rates and basic/new pension amounts. A `reform=` dict on this single-year dataset route re-uprates the data; policyengine's separate `Simulation(policy=...)` API does not. Check the installed input-to-growth mapping before assigning a synthetic housing expectation. The current recipe below verifies the reviewed mapping against both the installed YAML and the variable declaration: certified 2.132.6 uses GDP/head, while historical 2.145.0 used HPI. A GDP check on 2.132.6 tests that pin's existing transmission only; accepting those semantics for an intended house-price refresh remains a separate review decision. This future recipe does not rewrite or relabel the original part 6 failed HPI probe.
 
    ```sh
    cat > "$REBASE_SCRATCH/forecast_smoke.py" <<'PY'
    import gc
+   import hashlib
    import importlib
+   import importlib.metadata as metadata
    import json
    import os
+   import re
    import subprocess
    import time
    from pathlib import Path
@@ -221,10 +226,43 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
    import_started=time.perf_counter()
    import numpy as np
    import policyengine as pe
+   import yaml
    simulation_module=importlib.import_module('policyengine_uk.simulation')
    original_framework_simulation=simulation_module.Simulation
    cold_import_seconds=time.perf_counter()-import_started
    print(json.dumps({'cold_import_seconds':cold_import_seconds}),flush=True)
+
+   package=Path(importlib.import_module('policyengine_uk').__file__).parent
+   uk_version=metadata.version('policyengine-uk')
+   mapping_path=package/'data/uprating_indices.yaml'
+   variable_path=package/'variables/input/main_residence_value.py'
+   mapping=yaml.safe_load(mapping_path.read_text())
+   housing_paths=[path for path,names in mapping.items()
+                  if isinstance(names,list) and 'main_residence_value' in names]
+   growth_prefix='gov.economic_assumptions.yoy_growth.obr.'
+   reviewed_housing_paths={
+       '2.132.6':growth_prefix+'per_capita.gdp',
+       '2.145.0':growth_prefix+'house_prices',  # Historical comparison only.
+   }
+   expected_path=reviewed_housing_paths.get(uk_version)
+   if expected_path is None or housing_paths != [expected_path]:
+       raise RuntimeError('Unreviewed installed housing mapping: '
+                          +repr((uk_version,housing_paths)))
+   declaration=re.search(r'^\s+uprating\s*=\s*[\'"]([^\'"]+)[\'"]',
+                         variable_path.read_text(),re.M)
+   expected_index=expected_path.replace('.yoy_growth.','.indices.',1)
+   if declaration is None or declaration.group(1) != expected_index:
+       raise RuntimeError('Housing variable declaration disagrees with reviewed mapping')
+   housing_factor_after_2026=(1.0293/1.0323 if expected_path.endswith('per_capita.gdp')
+                              else 1.049/1.029)
+   housing_mapping={
+       'uk_version':uk_version,'growth_path':expected_path,
+       'variable_uprating':declaration.group(1),
+       'mapping_sha256':hashlib.sha256(mapping_path.read_bytes()).hexdigest(),
+       'variable_sha256':hashlib.sha256(variable_path.read_bytes()).hexdigest(),
+       'HPI_transmission_claimed':expected_path.endswith('house_prices'),
+   }
+   print(json.dumps({'reviewed_installed_housing_mapping':housing_mapping}),flush=True)
 
    gate_wait_seconds=0.0
 
@@ -317,7 +355,7 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
                'employment_income_before_lsr':1 if year==2026 else 1.019/1.024,
                'food_and_non_alcoholic_beverages_consumption':(
                    1.028/1.023 if year==2026 else (1.028/1.023)*(1.025/1.020)),
-               'main_residence_value':1 if year==2026 else 1.049/1.029,
+               'main_residence_value':1 if year==2026 else housing_factor_after_2026,
                'dividend_income':1 if year==2026 else 1.0293/1.0323,
                'council_tax':1,
            }
@@ -332,6 +370,7 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
                checks.append(check)
                if not passed: failures.append(check)
        results['synthetic_checks']={'rtol':1e-4,'atol':1e-6,'checks':checks}
+   results['reviewed_installed_housing_mapping']=housing_mapping
    results['timings']={
        'cold_import_seconds':cold_import_seconds,
        'gate_wait_seconds':gate_wait_seconds,
@@ -355,7 +394,7 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
 
    Gating only the public managed call misses framework-created baselines. In UK 2.145.0 a scenario constructor calls the module-global `policyengine_uk.simulation.Simulation` internally, including a full dataset baseline in the rebased national arm. The temporary patch above gates those recursive constructions while preserving the original class; keep it active during both construction and calculation. The patch changes no installed source and restores the module on exit. The helper below applies the same guard to registered processing and production generation.
 
-   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, residential values `1.049/1.029 - 1 = +1.94363%`, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. The synthetic checks compare **unweighted stored-input sums**, with employment, residential values and dividends unchanged in 2026. Their ratio tolerance is `rtol=1e-4, atol=1e-6`, approximately 0.0101 percentage points around a ratio of one. Residential cumulative HPI indices are rounded to five decimals, so their observed factor can vary slightly across later years; retain the calendar benchmark rather than substituting an observed rounded ratio. Compare weighted aggregates as well; fiscal-year blending and interactions may change fiscal output responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. A failed synthetic assertion, unexpected zero or one-year lag stops the run for investigation before the next phase. With synthetic checks disabled, review the real dictionary's expected input moves explicitly before continuing.
+   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. For residential values, the **current certified 2.132.6 mapping predicts the same GDP/head factor, −0.29061%**, after 2026. The **historical 2.145.0 HPI benchmark remains `1.049/1.029 - 1 = +1.94363%`**; it must not be claimed as transmitted to this stored input on 2.132.6. The synthetic checks compare **unweighted stored-input sums**, with employment, residential values and dividends unchanged in 2026. Their ratio tolerance stays `rtol=1e-4, atol=1e-6`, approximately 0.0101 percentage points around a ratio of one. Under the historical HPI mapping, residential cumulative indices are rounded to five decimals, so their observed factor can vary slightly across later years; retain the calendar benchmark rather than substituting an observed rounded ratio. Freeze the reviewed installed mapping and its hashes beside the reference aggregates; an unknown or changed mapping stops the recipe for review. Compare weighted aggregates as well; fiscal-year blending and interactions may change fiscal output responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. A failed synthetic assertion, unexpected zero or one-year lag stops the run for investigation before the next phase. The part 6 GDP diagnosis allowed only a separately labelled performance continuation; the original eight failed HPI checks remain failed and release semantics remain unaccepted. With synthetic checks disabled, review the real dictionary's expected input moves explicitly before continuing.
 
    Keep one simulation process at a time and all numerical thread pools at four. There is no timeout exception to load1 ≤110 and available disk ≥55 **decimal** GB. Log wait time separately; do not substitute a previous passing gate for the next check. Run each command in the foreground: do not append `&`, start a background retry or leave a scheduled simulation behind. If the gate remains closed, keep observing that foreground session or cancel it with Ctrl-C and record that no constructor ran. Before retrying, confirm the cancelled process has exited; the new invocation must check the gate again. Do not delete unrelated work or shared environments to open the disk gate.
 

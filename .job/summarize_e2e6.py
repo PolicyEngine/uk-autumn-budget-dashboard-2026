@@ -253,6 +253,24 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         external_component("scratch_staging_including_labelled_fixture",
                            find_phase(phases, "stage_e2e6.py")),
     ]
+    staging_component = components[-1]
+    if staging_component["complete"] and staging is not None:
+        prerequisite_wait = staging.get("prerequisite_wait_seconds", 0.)
+        raw_wall = staging_component["external_wall_seconds"]
+        if not finite_seconds(prerequisite_wait) or prerequisite_wait > raw_wall:
+            staging_component.update(complete=False,
+                                     reason="Invalid prerequisite-wait duration in completed staging report")
+            staging_component.pop("counted_seconds", None)
+        else:
+            adjusted = raw_wall - prerequisite_wait
+            staging_component.update(
+                raw_external_wall_seconds=raw_wall,
+                prerequisite_wait_seconds_excluded_once=prerequisite_wait,
+                wait_adjusted_postgeneration_cost_seconds=adjusted,
+                counted_seconds=adjusted + staging_component["supervisor_gate_seconds"],
+                stage_imports_counted_sequentially=True,
+                benchmark_schedule_note="Actual stage certification/imports and prerequisite wait may overlap serial generation. The critical path excludes only explicit prerequisite wait and conservatively counts every stage import second sequentially; observed overall benchmark walls must not be summed.",
+            )
     reference_component = external_component(
         "frozen_reference_prepublication", find_phase(phases, "probes_e2e6.py", "reference"))
     reference_seconds = reference_component.get("counted_seconds")
@@ -371,7 +389,11 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "selected_projection": selected,
         "staging": {"source_manifest_present": staging.get("source_manifest_present") if staging else None,
                     "actual_existing_entry_basis_transition_tested": staging.get("basis_adoption_transition_tested") if staging else None,
-                    "labelled_fixture": staging.get("labelled_basis_adoption_fixture") if staging else None},
+                    "labelled_fixture": staging.get("labelled_basis_adoption_fixture") if staging else None,
+                    "raw_external_wall_seconds": staging_component.get("raw_external_wall_seconds", staging_component.get("external_wall_seconds")),
+                    "prerequisite_wait_seconds": staging.get("prerequisite_wait_seconds", 0.) if staging else None,
+                    "wait_adjusted_postgeneration_cost_seconds": staging_component.get("wait_adjusted_postgeneration_cost_seconds"),
+                    "imports_counted_sequentially_despite_benchmark_overlap": True},
         "counting_rules": [
             "Use each chosen external command wall once; its imports, child gates, construction and calculations are included already.",
             "Add a selected phase's supervisor_gate_seconds once because that gate preceded its external timer.",
@@ -379,6 +401,8 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
             "Frozen references are prepublication; the repeat-reference variant adds their external wall and supervisor gate once.",
             "The full-launcher variant repeats observed batch admission/snapshot overhead as well as its child batch.",
             "Actual staging external wall conservatively includes the separately labelled basis-adoption fixture.",
+            "Stage preload prerequisite_wait_seconds overlaps serial generation and is subtracted once from the raw stage external wall. All stage import time remains counted sequentially as a conservative planning cost.",
+            "Benchmark phases can overlap in the actual schedule; no sum of their observed overall wall times is presented as actual elapsed benchmark duration.",
             "Environment installation, diagnostic UK2.145 importer, and failed preparation attempts are excluded from the prepared Budget-day critical path.",
         ],
     }

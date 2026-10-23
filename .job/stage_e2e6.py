@@ -7,6 +7,7 @@ COMMAND_STARTED = time.perf_counter()
 
 import argparse
 import contextlib
+import datetime as dt
 import hashlib
 import io
 import json
@@ -17,17 +18,79 @@ import sys
 
 sys.dont_write_bytecode = True
 JOB = Path(__file__).resolve().parent
+YEARS = list(range(2026, 2031))
+TABLES = {"budgetary_impact", "distributional_impact", "winners_losers", "metrics",
+          "income_curve", "household_scatter_binned"}
+
+
+def wait_for_validated_artifact(output_dir, common):
+    """Wait after certification; never copy or stage an incomplete artifact."""
+    started = time.perf_counter()
+    started_utc = dt.datetime.now(dt.timezone.utc).isoformat()
+    timing_path = output_dir / "timings.json"
+
+    def record(status, **extra):
+        result = {"status": status, "output_dir": str(output_dir),
+                  "timing_path": str(timing_path), "started_utc": started_utc,
+                  "prerequisite_wait_seconds": time.perf_counter() - started, **extra}
+        (JOB / "staging-prerequisite-wait.json").write_text(json.dumps(result, indent=2) + "\n")
+        common.event("staging_prerequisite_wait", **result)
+        return result
+
+    record("waiting")
+    try:
+        while True:
+            common.reservation("stage preload waiting for validated generator output")
+            if dt.datetime.now(dt.timezone.utc) >= dt.datetime(2026, 10, 23, 15, 30, tzinfo=dt.timezone.utc):
+                raise RuntimeError("15:30Z no-start boundary reached while awaiting generator output")
+            if timing_path.is_file():
+                try:
+                    timing = json.loads(timing_path.read_text())
+                except json.JSONDecodeError:
+                    # The producer writes this small report only after complete
+                    # validation; it can briefly be visible during that write.
+                    timing = None
+                if timing is not None:
+                    written = timing.get("written", {})
+                    tables = timing.get("years_by_table", {})
+                    if (timing.get("refused") or len(written) != 1
+                            or timing.get("years") != YEARS or set(tables) != TABLES
+                            or not all(years == YEARS for years in tables.values())
+                            or set(written) != {timing.get("measure")}):
+                        raise RuntimeError("Generator readiness report does not validate one complete six-table five-year artifact")
+                    source = Path(next(iter(written.values()))).resolve()
+                    if not source.is_relative_to(JOB) or not source.is_relative_to(output_dir):
+                        raise RuntimeError("Validated generator artifact resolves outside the selected job output directory")
+                    if {path.stem for path in source.glob("*.csv")} != TABLES:
+                        raise RuntimeError("Validated generator artifact is missing one of the six aggregate tables")
+                    receipt = json.loads((source / "receipt.json").read_text())
+                    if receipt["dashboard"]["key"] != timing["measure"]:
+                        raise RuntimeError("Validated generator receipt key differs from its readiness report")
+                    ready = record("ready", artifact=str(source), measure=timing["measure"],
+                                   timing_sha256=hashlib.sha256(timing_path.read_bytes()).hexdigest())
+                    return source, ready["prerequisite_wait_seconds"], ready
+            time.sleep(10)
+    except BaseException as error:
+        record("stopped", error=f"{type(error).__name__}: {error}")
+        raise
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("artifact", type=Path)
+    parser.add_argument("artifact", type=Path, nargs="?")
+    parser.add_argument("--wait-for-output", type=Path,
+                        help="Certify/import first, then wait for this generator output directory's validated timings.json")
     parser.add_argument("--repo-root", type=Path, default=JOB / "staging-repo")
     args = parser.parse_args(argv)
-    source = args.artifact.resolve()
+    if (args.artifact is None) == (args.wait_for_output is None):
+        parser.error("Supply either an artifact path or --wait-for-output DIR")
+    source = args.artifact.resolve() if args.artifact else None
+    wait_dir = args.wait_for_output.resolve() if args.wait_for_output else None
     repo = args.repo_root.resolve()
-    if not source.is_relative_to(JOB) or not repo.is_relative_to(JOB):
-        parser.error("Artifact and scratch repository must remain inside this job workspace")
+    if (not repo.is_relative_to(JOB)
+            or (source is not None and not source.is_relative_to(JOB))
+            or (wait_dir is not None and not wait_dir.is_relative_to(JOB))):
+        parser.error("Artifact, generator output and scratch repository must remain inside this job workspace")
     preparation = json.loads((JOB / "staging-preparation.json").read_text())
 
     import e2e_common as common
@@ -41,6 +104,10 @@ def main(argv=None):
     imports_seconds = time.perf_counter() - started
     startup_gate_seconds = common.COUNTERS["gates_s"] - initial_gates
     imports_seconds -= startup_gate_seconds
+    prerequisite_wait_seconds = 0.
+    prerequisite = None
+    if wait_dir is not None:
+        source, prerequisite_wait_seconds, prerequisite = wait_for_validated_artifact(wait_dir, common)
     common.gate("scratch artifact reconciliation and basis staging")
 
     data_root = repo / "public/data"
@@ -99,6 +166,9 @@ def main(argv=None):
             "manifest_before_sha256": hashlib.sha256(before).hexdigest() if before else None,
             "manifest_after_sha256": hashlib.sha256(after).hexdigest() if after else None,
             "imports_seconds": imports_seconds, "startup_gate_seconds": startup_gate_seconds,
+            "prerequisite_wait_seconds": prerequisite_wait_seconds,
+            "prerequisite": prerequisite,
+            "benchmark_schedule_note": "Stage certification/imports may overlap serial generation; prerequisite wait is a separately measured dependency interval. Planning conservatively counts stage imports sequentially and excludes only this explicit wait.",
             "copy_seconds": copy_seconds, "commands": calls,
             "timed_commands_seconds": sum(call["seconds"] for call in calls
                                             if call["scope"] == "authentic_source_copy"),
@@ -106,6 +176,7 @@ def main(argv=None):
             "fixture_timed_commands_seconds": sum(call["seconds"] for call in calls
                                                     if call["scope"] == "labelled_basis_adoption_fixture"),
             "whole_process_seconds_through_result": time.perf_counter() - COMMAND_STARTED,
+            "whole_process_seconds_excluding_prerequisite_wait": time.perf_counter() - COMMAND_STARTED - prerequisite_wait_seconds,
             "scope": "Scratch hidden staging only; no approval, provisional display, real public write, or execution-identity adoption",
         }
         (JOB / "staging-results.json").write_text(json.dumps(payload, indent=2) + "\n")
