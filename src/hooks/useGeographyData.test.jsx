@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import {
+  loadGeographyFile,
   resetGeographyCache,
   useConstituencyBoundaries,
   useGeographyData,
@@ -43,6 +44,24 @@ describe("useGeographyData", () => {
     const { result } = renderHook(() => useGeographyData("regional"));
     await waitFor(() => expect(result.current.status).toBe("unavailable"));
     expect(result.current.table).toBeNull();
+  });
+
+  it("does not request a file the build does not ship", async () => {
+    const fetchImpl = geographyFetch();
+    const state = await loadGeographyFile("regional", {
+      fetchImpl,
+      base: "",
+      published: ["constituency.csv"],
+    });
+    expect(state.status).toBe("unavailable");
+    expect(fetchImpl.calls).toEqual([]);
+    const shipped = await loadGeographyFile("regional", {
+      fetchImpl,
+      base: "",
+      published: ["regional.csv"],
+    });
+    expect(shipped.status).toBe("ready");
+    expect(fetchImpl.calls).toEqual(["/data/regional.csv"]);
   });
 
   it("refuses the 2025 constituency table and keeps no rows", async () => {

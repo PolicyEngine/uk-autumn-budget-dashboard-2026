@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkLifecycleApiEnv } from './scripts/lifecycle-api-env.mjs';
 
@@ -21,6 +21,17 @@ function lockedVersion(name: string): string {
   }
 }
 
+/**
+ * The files of results by area this build ships, comma-separated. The page
+ * requests only these, so a table not yet published shows as such without a
+ * 404 in the console.
+ */
+function publishedGeography(): string {
+  return ['regional.csv', 'constituency.csv']
+    .filter((file) => existsSync(join(process.cwd(), 'public', 'data', file)))
+    .join(',');
+}
+
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   ? process.env.NEXT_PUBLIC_BASE_PATH
   : '/uk/autumn-budget-2026';
@@ -36,6 +47,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_POLICYENGINE_VERSION: lockedVersion('policyengine'),
+    NEXT_PUBLIC_PUBLISHED_GEOGRAPHY: publishedGeography(),
   },
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
   // them through Next's pipeline avoids ESM/CJS mismatch errors during build.

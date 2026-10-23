@@ -30,6 +30,13 @@ export const LOADING = Object.freeze({
 
 const basePath = () => process.env.NEXT_PUBLIC_BASE_PATH || "";
 
+// The files of results by area the build ships (next.config.ts), or null
+// when not set (tests, dev without the config): then every file is fetched.
+const publishedFiles = () => {
+  const list = process.env.NEXT_PUBLIC_PUBLISHED_GEOGRAPHY;
+  return list === undefined ? null : list.split(",").filter(Boolean);
+};
+
 const failure = (status, error) =>
   Object.freeze({ status, table: null, features: null, error });
 
@@ -41,9 +48,11 @@ const failure = (status, error) =>
  */
 export async function loadGeographyFile(
   name,
-  { fetchImpl = fetch, base = basePath() } = {},
+  { fetchImpl = fetch, base = basePath(), published = publishedFiles() } = {},
 ) {
   const { file, level } = FILES[name];
+  // Not in this build: not published, and not requested
+  if (published && !published.includes(file)) return failure("unavailable", null);
   const url = `${base}/data/${file}`;
   let response;
   try {
