@@ -567,8 +567,7 @@ body {
   padding: var(--card-padding);
 }
 
-/* Component stylesheets give each chart its own white box and shadow; the
-   card now comes from its container, so the component's box is cleared. */
+/* Chart components fill their card: the card comes from the container */
 .main-content :is(
     .budgetary-impact-chart,
     .waterfall-chart,
@@ -578,34 +577,14 @@ body {
     .constituency-map-wrapper,
     .region-view
   ) {
-  box-shadow: none;
-  animation: none;
   min-width: 0;
 }
 
-.main-content .budgetary-impact-chart {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-}
-
-.main-content :is(
-    .budgetary-impact-chart,
-    .waterfall-chart,
-    .distributional-chart,
-    .employment-income-chart,
-    .employment-income-diff-chart,
-    .region-view,
-    .map-header,
-    .household-scatter-template
-  )
-  h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-900);
-  margin: 0 0 6px 0;
+.employment-income-chart,
+.employment-income-diff-chart {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-content .report-section .chart-description {
@@ -631,11 +610,16 @@ body {
   display: contents;
 }
 
+/* Every card's title: one size on every view */
 .main-content .chart-header h3 {
   grid-column: 1;
   grid-row: 1;
   align-self: center;
-  margin-bottom: 0;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
 }
 
 .main-content .chart-header .chart-download {
@@ -647,14 +631,6 @@ body {
   grid-column: 1 / -1;
   grid-row: 2;
   margin-top: 12px;
-}
-
-
-
-.main-content .map-header {
-  padding-bottom: 0;
-  border-bottom: none;
-  margin-bottom: 0;
 }
 
 /* Disclosure cards: OBR comparison, method notes, policy notes */
@@ -737,8 +713,7 @@ body {
   min-width: 0;
 }
 
-.charts-row-2 > div:only-child,
-.charts-row-regions > div:only-child {
+.charts-row-2 > div:only-child {
   grid-column: 1 / -1;
 }
 
@@ -840,7 +815,6 @@ body {
   margin: 0;
 }
 
-
 /* Few rules: cards and whitespace separate things. Tables keep only the
    underline beneath their header row. */
 .main-content .region-table th,
@@ -896,11 +870,6 @@ body {
 /* A fiscal year in a title never breaks at its hyphen */
 .nowrap {
   white-space: nowrap;
-}
-
-.main-content .lifecycle-calculator .legend {
-  border-top: none;
-  padding-top: 0;
 }
 
 /* A chart's plot for a year not yet published */
@@ -988,52 +957,6 @@ body {
   height: auto;
 }
 
-/* Info icon tooltips (used by some components) */
-.info-icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-  position: relative;
-  margin-left: 4px;
-}
-
-.info-icon {
-  cursor: help;
-  opacity: 0.5;
-  width: 14px;
-  height: 14px;
-}
-
-.info-icon-wrapper:hover .info-icon {
-  opacity: 1;
-}
-
-.info-tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  background: var(--pe-gray-900);
-  color: var(--pe-surface);
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.5;
-  white-space: normal;
-  width: 300px;
-  max-width: 90vw;
-  text-align: left;
-  z-index: 1000;
-  pointer-events: none;
-}
-
-.info-icon-wrapper:hover .info-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
 /* Responsive */
 @media (max-width: 1024px) {
   .charts-grid {
@@ -1104,7 +1027,6 @@ body {
     position: static;
   }
 
-
   .title-row .policy-selector-toggle {
     width: auto;
     min-width: 0;
@@ -1151,7 +1073,6 @@ body {
   .view-tabs {
     gap: 22px;
   }
-
 
   .preset-buttons {
     flex-direction: column;
@@ -1330,16 +1251,6 @@ body {
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--pe-gray-700);
-}
-
-.policy-sources {
-  margin: 20px 0 0;
-  font-size: 0.8125rem;
-  color: var(--pe-gray-500);
-}
-
-.policy-sources a {
-  color: var(--pe-teal-700);
 }
 
 @media (max-width: 768px) {

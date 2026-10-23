@@ -61,7 +61,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
   | `policyConfig.js` in #3, and the flat `public/data/*.csv` | A policy named "Autumn Budget 2025 (combined)" (id `autumn_budget_2025_combined`), with last year's rows | In #3, only through an old shared URL | #3 keeps it for old links: **your call** whether a 2026 page should still answer them |
-  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imports them, on `main`, in #3 or in the drills | Left alone. Delete them, or fix them before wiring them back |
+  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imported them, on `main`, in #3 or in the drills | Deleted in #69 (the UI redesign) |
   | `scripts/generate_combined_charts.py` | Chart titles "Combined Autumn Budget 2025" | Not a page | #22 |
 
   The page title and heading already say "UK Autumn Budget 2026".

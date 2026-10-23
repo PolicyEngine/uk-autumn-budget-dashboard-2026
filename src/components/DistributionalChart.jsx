@@ -24,8 +24,6 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
-import "./DistributionalChart.css";
-import "./ChartExport.css";
 import {
   useNarrowViewport,
   GRID_PROPS,

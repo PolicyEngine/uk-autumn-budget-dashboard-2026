@@ -14,7 +14,6 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./HouseholdChart.css";
-import "./ChartExport.css";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =

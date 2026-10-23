@@ -9,54 +9,6 @@
   min-width: 0;
 }
 
-.region-view h3 {
-  margin: 0 0 6px 0;
-  color: #374151;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.region-view .chart-description {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-/* Beats .chart-header > div, which would stretch the buttons' box. */
-.region-view .region-export {
-  display: flex;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.region-export-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  color: #4b5563;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.region-export-button:hover {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.region-export-button:focus-visible {
-  outline: 2px solid #319795;
-  outline-offset: 2px;
-}
-
 .region-toolbar {
   display: flex;
   align-items: center;

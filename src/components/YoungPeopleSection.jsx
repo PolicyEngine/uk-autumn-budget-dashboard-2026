@@ -51,7 +51,6 @@ import {
   youngAndAll,
   youngPopulation,
 } from "../utils/ageImpact";
-import "./ChartExport.css";
 import "./YoungPeopleSection.css";
 
 /** The section's anchor: link to it as #young-people. */

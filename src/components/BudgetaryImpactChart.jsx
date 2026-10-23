@@ -37,8 +37,6 @@ import {
   shortFiscalYearTick,
   axisWidth,
 } from "../utils/chartTheme";
-import "./BudgetaryImpactChart.css";
-import "./ChartExport.css";
 import {
   FIRST_DISPLAY_YEAR,
   LAST_DISPLAY_YEAR,

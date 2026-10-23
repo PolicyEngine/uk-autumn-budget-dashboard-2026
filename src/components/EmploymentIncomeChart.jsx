@@ -20,8 +20,6 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import "./EmploymentIncomeChart.css";
-import "./ChartExport.css";
 import {
   useNarrowViewport,
   GRID_PROPS,

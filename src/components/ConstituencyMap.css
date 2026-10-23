@@ -11,57 +11,6 @@
   height: 100%;
 }
 
-/* Header section */
-.map-header {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 4px;
-}
-
-.map-header h3 {
-  margin: 0 0 6px 0;
-  color: #374151;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.map-header .chart-description {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-/* Which measure the map shows */
-.map-policy-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 8px 12px;
-  background: #f0fdfa;
-  border-left: 3px solid #319795;
-  border-radius: 4px;
-}
-
-.map-policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
-.map-policy-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #0f766e;
-}
-
-/* Kept as they were: other components' .policy-label and .policy-name
-   share these global names. */
-.policy-label {
-  font-size: 0.8125rem;
-  color: #4b5563;
-}
-
 .policy-name {
   font-size: 0.8125rem;
   font-weight: 600;
@@ -318,13 +267,6 @@
   margin: 4px 0 0 0;
 }
 
-.tooltip-value-secondary {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 8px 0 4px 0;
-  line-height: 1;
-}
-
 .constituency-tooltip .tooltip-value {
   margin: 4px 0;
   line-height: 1;
@@ -391,10 +333,6 @@
 
   .map-search-section {
     max-width: 100%;
-  }
-
-  .map-top-bar .outcome-toggle {
-    align-self: flex-start;
   }
 
   .map-controls-container {

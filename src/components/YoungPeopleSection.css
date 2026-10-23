@@ -56,14 +56,6 @@
   color: var(--pe-gray-500);
 }
 
-.main-content :is(.young-people-mean, .young-people-shares) h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-900);
-  margin: 0 0 6px 0;
-}
-
 .young-people-unavailable {
   display: flex;
   align-items: center;

@@ -18,59 +18,6 @@
   margin-bottom: 16px;
 }
 
-/* Static/Behavioural Toggle */
-.obr-toggle-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.toggle-label {
-  font-size: 0.875rem;
-  color: #4b5563;
-  font-weight: 500;
-}
-
-/* OBR basis: a compact segmented control */
-.toggle-buttons {
-  display: flex;
-  height: 32px;
-  border: 1px solid var(--pe-gray-300);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.toggle-btn {
-  padding: 0 12px;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  background: var(--pe-surface);
-  border: none;
-  color: var(--pe-gray-600);
-  cursor: pointer;
-}
-
-.toggle-btn:first-child {
-  border-right: 1px solid var(--pe-gray-300);
-}
-
-.toggle-btn:hover:not(.active) {
-  background: var(--pe-gray-50);
-}
-
-.toggle-btn.active {
-  background: var(--pe-teal-700);
-  color: #ffffff;
-}
-
-.toggle-btn:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 .comparison-table-wrapper {
   overflow-x: auto;
   margin-bottom: 16px;
@@ -197,6 +144,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
 .legend-dot {
@@ -215,22 +164,6 @@
 
 .legend-dot.diff-large {
   background: #ef4444;
-}
-
-.comparison-note {
-  font-size: 0.8125rem;
-  color: #6b7280;
-  line-height: 1.5;
-  margin-top: 16px;
-}
-
-.comparison-note a {
-  color: #0d9488;
-  text-decoration: none;
-}
-
-.comparison-note a:hover {
-  text-decoration: underline;
 }
 
 /* Responsive adjustments */

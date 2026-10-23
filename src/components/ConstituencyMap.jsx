@@ -49,7 +49,6 @@ import {
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
-import "./ChartExport.css";
 
 const CHART_TITLE = "Constituency-level impacts";
 

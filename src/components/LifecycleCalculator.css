@@ -4,53 +4,6 @@
   color: #374151;
 }
 
-.lifecycle-header {
-  padding: 8px 0 0;
-  margin-bottom: 24px;
-}
-
-.lifecycle-header-content h2 {
-  margin: 0 0 6px 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.lifecycle-subtitle {
-  margin: 0;
-  color: var(--pe-gray-600);
-  font-size: 1rem;
-}
-
-.lifecycle-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 40px;
-}
-
-@media (max-width: 900px) {
-  .lifecycle-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Controls sidebar */
-/* Not sticky: only the page's title row sticks */
-.lifecycle-controls {
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  padding: 20px;
-  height: fit-content;
-}
-
-.lifecycle-controls h3 {
-  margin: 0 0 20px 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1e293b;
-}
-
 .control-group {
   margin-bottom: 16px;
 }
@@ -138,79 +91,6 @@
 .children-count {
   min-width: 0;
   white-space: nowrap;
-}
-
-/* Main content area */
-.lifecycle-main {
-  min-width: 0;
-}
-
-.toggle-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
-}
-
-.toggle-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toggle-label {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  transition: color 0.2s;
-}
-
-.toggle-label.active {
-  color: #319795;
-  font-weight: 600;
-}
-
-.toggle-switch {
-  position: relative;
-  width: 44px;
-  height: 24px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #e2e8f0;
-  transition: 0.3s;
-  border-radius: 24px;
-}
-
-.toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: 0.3s;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch input:checked + .toggle-slider {
-  background-color: #319795;
-}
-
-.toggle-switch input:checked + .toggle-slider:before {
-  transform: translateX(20px);
 }
 
 /* Summary cards */
@@ -319,57 +199,6 @@
 
 .chart .age-group:hover rect {
   filter: brightness(1.1);
-}
-
-/* Legend */
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.legend-color {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-}
-
-/* Download buttons */
-.download-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.download-btn {
-  padding: 8px 16px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    border-color 0.2s;
-}
-
-.download-btn:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
 }
 
 /* Tooltip */
@@ -485,9 +314,6 @@
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-  .lifecycle-controls {
-    position: static;
-  }
 
   .lifecycle-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -502,9 +328,6 @@
     font-size: 1.375rem;
   }
 
-  .legend {
-    gap: 12px;
-  }
 }
 
 /* On a phone the value stays beside its track, as on desktop */
@@ -737,31 +560,6 @@
   border: none;
   border-top: 1px solid var(--card-border);
   border-radius: 0;
-}
-
-.methodology-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 16px 0;
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--pe-gray-800);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.methodology-toggle:hover {
-  color: var(--pe-teal-700);
-}
-
-.methodology-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
 }
 
 .methodology-content {
@@ -1022,8 +820,7 @@
   }
 }
 
-.lifecycle-summary[hidden],
-.legend[hidden] {
+.lifecycle-summary[hidden] {
   display: none;
 }
 

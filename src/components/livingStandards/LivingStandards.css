@@ -53,14 +53,6 @@
   min-width: 0;
 }
 
-.main-content .ls-card h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-900);
-  margin: 0;
-}
-
 .main-content .ls-card .chart-description strong {
   font-weight: 600;
   color: var(--pe-gray-800);
