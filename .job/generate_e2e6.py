@@ -114,6 +114,7 @@ def main(argv=None):
     common.configure_environment()
     # The common loader checks actual import certification before any model run.
     initial_gates = common.COUNTERS["gates_s"]
+    import_cpu_started = time.process_time()
     import_started = time.perf_counter()
     common.load_runtime()
     from uk_budget_data.models import DataConfig
@@ -122,6 +123,7 @@ def main(argv=None):
     framework = importlib.import_module("policyengine_uk.simulation")
     startup_gate_seconds = common.COUNTERS["gates_s"] - initial_gates
     import_seconds = time.perf_counter() - import_started - startup_gate_seconds
+    import_cpu_seconds = time.process_time() - import_cpu_started
 
     verification_started = time.perf_counter()
     hashes = {"national": digest(NATIONAL), "forecast": digest(FORECAST)}
@@ -244,6 +246,7 @@ def main(argv=None):
     common.event("generation_start", measure=args.measure, output=str(output),
                  imports_seconds=import_seconds, registry_seconds=registry_seconds)
     generation_started = time.perf_counter()
+    generation_cpu_started = time.process_time()
     with patch.object(framework.Simulation, "__init__", guarded_init):
         report = generate.generate_artifacts(
             selected, cfg, artifacts_root=output / "artifacts", repo_root=repo_root,
@@ -252,6 +255,7 @@ def main(argv=None):
             on_progress=lambda message: common.event("generation_progress", message=message),
         )
     generation_seconds = time.perf_counter() - generation_started
+    generation_cpu_seconds = time.process_time() - generation_cpu_started
     written = {reference.key: str(reference.path) for reference in report.written}
     if report.refused or set(written) != {args.measure}:
         raise RuntimeError(f"Generation did not complete: {report.refused}; written={written}")
@@ -284,10 +288,12 @@ def main(argv=None):
         "rows_by_table": rows_by_table, "years_by_table": years_by_table,
         "timings": {
             "imports_seconds": import_seconds,
+            "imports_process_cpu_seconds": import_cpu_seconds,
             "startup_gate_seconds": startup_gate_seconds,
             "verification_seconds": verification_seconds,
             "registry_seconds": registry_seconds,
             "generation_seconds_including_gates": generation_seconds,
+            "generation_process_cpu_seconds": generation_cpu_seconds,
             "gate_seconds": ledger["gate_seconds"],
             "construction_seconds_excluding_gates": ledger["construction_seconds"],
             "calculation_seconds_excluding_construction_and_gates": calculation_seconds,
@@ -297,6 +303,7 @@ def main(argv=None):
         },
         "timing_note": "Generation total overlaps its disjoint gate/construction/calculation/build-overhead/generator-overhead components; constructor and calculator call records are diagnostic detail.",
         "peak_memory_bytes": peak_bytes, "peak_memory_decimal_gb": peak_bytes / 1e9,
+        "process_cpu_seconds": time.process_time(),
         "instrumentation": ledger,
     }
     (output / "timings.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
