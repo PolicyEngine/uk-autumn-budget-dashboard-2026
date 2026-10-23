@@ -65,6 +65,7 @@ function CellTooltip({ active, payload }) {
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">{households(point.households)}</p>
       <div className="chart-tooltip-row">
+        <span className="chart-tooltip-swatch" style={{ background: "transparent" }} />
         <span className="chart-tooltip-name">Baseline income</span>
         <span className="chart-tooltip-value">{incomeBandLabel(point.incomeBand)}</span>
       </div>
