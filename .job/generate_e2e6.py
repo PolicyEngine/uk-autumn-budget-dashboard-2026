@@ -230,6 +230,8 @@ def main(argv=None):
                                - (ledger["construction_seconds"] - constructors))
                     ledger["calculators"].append({"calculator": _name,
                                                    "calculation_seconds": seconds})
+                    common.event("generation_calculator", measure=args.measure,
+                                 calculator=_name, calculation_seconds=seconds)
             calculator.calculate = measured
         gates = ledger["gate_seconds"]
         started = time.perf_counter()
@@ -247,13 +249,24 @@ def main(argv=None):
                  imports_seconds=import_seconds, registry_seconds=registry_seconds)
     generation_started = time.perf_counter()
     generation_cpu_started = time.process_time()
-    with patch.object(framework.Simulation, "__init__", guarded_init):
-        report = generate.generate_artifacts(
-            selected, cfg, artifacts_root=output / "artifacts", repo_root=repo_root,
-            generator_argv=["generate_e2e6.py", args.measure, str(output)],
-            build=build, process=process,
-            on_progress=lambda message: common.event("generation_progress", message=message),
-        )
+    try:
+        with patch.object(framework.Simulation, "__init__", guarded_init):
+            report = generate.generate_artifacts(
+                selected, cfg, artifacts_root=output / "artifacts", repo_root=repo_root,
+                generator_argv=["generate_e2e6.py", args.measure, str(output)],
+                build=build, process=process,
+                on_progress=lambda message: common.event("generation_progress", message=message),
+            )
+    except BaseException as error:
+        partial = {"complete": False, "measure": args.measure,
+                   "error": f"{type(error).__name__}: {error}",
+                   "generation_seconds_including_gates": time.perf_counter()-generation_started,
+                   "process_cpu_seconds": time.process_time(),
+                   "peak_memory_decimal_gb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1e9,
+                   "instrumentation": ledger}
+        (output / "partial-timings.json").write_text(json.dumps(partial, indent=2)+"\n")
+        common.event("generation_stopped", **partial)
+        raise
     generation_seconds = time.perf_counter() - generation_started
     generation_cpu_seconds = time.process_time() - generation_cpu_started
     written = {reference.key: str(reference.path) for reference in report.written}
