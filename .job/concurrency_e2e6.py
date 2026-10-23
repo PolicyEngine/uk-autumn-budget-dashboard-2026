@@ -230,6 +230,15 @@ def run(count):
                 )
             else:
                 child["complete"] = False
+                partial_path = member["output"] / "partial-timings.json"
+                if partial_path.is_file():
+                    partial = json.loads(partial_path.read_text())
+                    child.update(
+                        partial_timing_file=str(partial_path),
+                        peak_memory_decimal_gb=partial.get("peak_memory_decimal_gb"),
+                        peak_is_for_incomplete_run=True,
+                        stop_reason=partial.get("error"),
+                    )
             report["children"].append(child)
         report["simulations_started"] = len(members)
         report["status"] = "completed" if all(child["complete"] for child in report["children"]) else "failed"
