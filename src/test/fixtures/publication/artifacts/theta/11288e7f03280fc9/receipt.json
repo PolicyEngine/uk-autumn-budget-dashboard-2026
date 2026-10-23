@@ -12,17 +12,8 @@
         "vintage": "v1"
       }
     },
-    "composition": {
-      "baseline_applied_before_data_load": false,
-      "reform_applied_before_data_load": false
-    },
-    "config_baseline": {
-      "binding": "content",
-      "kind": "current_law",
-      "name": "configured baseline",
-      "reform_sha256": null,
-      "representation": null
-    },
+    "composition": null,
+    "config_baseline": null,
     "data_limits": [],
     "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
@@ -38,71 +29,43 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "dd0a04f370a92c68abf111b63eaf2f33e7d8531174633d70412ef5296b807260",
-      "receipt_sha256": "cb790ba10a6c637a0311201783245a58d892de463428490917900dedb47325a3"
+      "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
+      "receipt_sha256": "bff114a8f4a8981cb2a446c857afe2a0702f7cad85647d99c2dd7f48606285f0"
     },
     "files": {
-      "budgetary_impact.csv": "4ebccc35f13f77c2c9a6e7182c1dfea6091b7a3edda990a677a8125243f7f509",
-      "distributional_impact.csv": "2a8c63393c1d822dbcc72cebb2571ae043e7ff075fa75c6dda60eafb0698dfac",
-      "household_scatter_binned.csv": "448274d20776b11c2f0974b811b2d554a7468ee0c43ddbe4f7a65b6176a7d4cb",
-      "income_curve.csv": "25d4ee98c97a322d336176eecae6bce8fb23549a72a58415b0fc89e659bf6d62",
-      "metrics.csv": "6bf8fd4ef06c38ff696e240d1b888c1fefcd4edaca3bd837eb1e800dfd0d1e68",
-      "winners_losers.csv": "4e426166df46c20c67fdaccbd316304a9efb5862636a6a41128ac7484241b8f4"
+      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
+      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
+      "household_scatter_binned.csv": "0e3143dfe1379b10592be357f7c64d779f8886d78e6ab4290dde255ff77d4c8b",
+      "income_curve.csv": "f44da90cef172468161fee797f81c1617ee69f5919d89f32009dd0a498597291",
+      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
+      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
     },
-    "generated_at": "2026-10-23T05:01:39.229966+00:00",
+    "generated_at": "2026-10-23T12:12:54.815765+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "combined--alpha+beta",
+    "key": "theta",
     "measure_ids": [
-      "alpha",
-      "beta"
+      "theta"
     ],
-    "member_outputs_sha256": {
-      "alpha": "fc3d958176619eb5b72155dadf14cae60a7fa03a4bc8502ead4c240887aa1a4e",
-      "beta": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1"
-    },
-    "members": [
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [
       {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "alpha baseline"
-        },
-        "baseline_bound": true,
-        "id": "alpha",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "alpha",
-          "reform_sha256": "30d1752d96dc171b2110dc1bfe897bf064aa21c6adc68cb8af2b350afb70c247",
-          "representation": "policyengine-uk.scenario/v1"
-        }
-      },
-      {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "beta baseline"
-        },
-        "baseline_bound": true,
-        "id": "beta",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "beta",
-          "reform_sha256": "d91c1ce71511f3c4ca55ff993e3e25a31befafe6556c7297296d0690cf90a0ad",
-          "representation": "policyengine-uk.scenario/v1"
-        }
+        "key": "pc_minimum_guarantee_uprating",
+        "parameters": [
+          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+        ],
+        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
       }
     ],
-    "model_limits": [],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
       "reform": []
     },
+    "name": "Theta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -115,7 +78,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "alpha+beta baseline"
+      "name": "theta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -155,18 +118,18 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "dd0a04f370a92c68abf111b63eaf2f33e7d8531174633d70412ef5296b807260",
+    "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "alpha+beta",
-      "reform_sha256": "f7cc3805e3c77aef70bc94ca3537b12bbd0999a3b76958d668e75bb932434ed9",
-      "representation": "policyengine-uk.scenario_composition/v1"
+      "name": "theta",
+      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
+      "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
-      "platform": "darwin",
-      "python_version": "3.13.9"
+      "platform": "linux",
+      "python_version": "3.13.16"
     },
     "schema_version": 1,
     "supported_years": [

@@ -40,7 +40,7 @@
       "metrics.csv": "e6efec18ecc0730939225c5465636e4e44fa09e99520d5817300982d983ea5e3",
       "winners_losers.csv": "812d47f4fb84077214197dcbb8099dd637daa67dc5278a6ce90fa9de304f6df4"
     },
-    "generated_at": "2026-10-23T05:01:38.679323+00:00",
+    "generated_at": "2026-10-23T12:12:54.117872+00:00",
     "generator_argv": [
       "test"
     ],
@@ -57,6 +57,7 @@
       "baseline": [],
       "reform": []
     },
+    "name": "Alpha",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -119,8 +120,8 @@
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
-      "platform": "darwin",
-      "python_version": "3.13.9"
+      "platform": "linux",
+      "python_version": "3.13.16"
     },
     "schema_version": 1,
     "supported_years": [

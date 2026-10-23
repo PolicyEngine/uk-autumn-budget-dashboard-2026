@@ -85,8 +85,8 @@ try:
     world.reconcile(refs["gamma"])
     stage(manifest, refs["gamma"].path, provisional=True, **args)
     # A measure the certified data cannot cost (the SDLT higher rates): its
-    # receipt records the limit, so staging lists it as not computable, with
-    # its reason and no figure.
+    # receipt records the limit, so its artifact is the receipt alone, and
+    # staging lists it as not computable, with its reason and no figure.
     surcharge = record(
         DATA_LIMITS[0],
         ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],

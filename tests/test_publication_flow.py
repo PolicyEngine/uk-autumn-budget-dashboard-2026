@@ -58,11 +58,11 @@ def reform(key: str, rate: float = 0.21, **extra) -> Reform:
 
 def fake_process(values_by_key):
     def process(reform, config, baseline, reformed, baseline_scenario):
-        tables = make_tables(reform.id, values_by_key[reform.id])
+        tables = make_tables(reform.id, values_by_key[reform.id], reform.name)
         tables.pop("household_scatter_binned")
         return ReformResult(
             household_scatter=make_household_rows(
-                reform.id, values_by_key[reform.id]
+                reform.id, values_by_key[reform.id], reform.name
             ),
             reform_id=reform.id,
             reform_name=reform.name,

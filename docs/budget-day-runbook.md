@@ -147,12 +147,14 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   - the LTT higher residential and non-residential rates.
 
   Main-home rates are computable.
-- **What happens:**
-  - **until option (d) is on `main`, such a measure isn't staged** (option (b); see "Review rows" at G2);
-  - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side;
-  - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for;
+- **What happens** (the coordinator's option (d), 22 October):
+  - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side. It still runs the measure, but writes only the receipt: no tables, and the receipt lists no files;
+  - `publish reconcile` skips it ("not computable on current data; nothing to reconcile") and writes nothing beside it;
+  - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for. Its name is the one its receipt records, never the key;
+  - `publish check` fails if its directory holds anything but `receipt.json`, or if the entry's name isn't its receipt's;
+  - `publish review-rows` writes one row, for its receipt, reading "not computable, staged by <stager>";
   - every level that shows a figure refuses it, and so does approval;
-  - once option (d) is on `main`, the page shows "Not computable on current data" and the reason, never a number;
+  - the page shows "Not computable on current data" and the reason, never a number;
   - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
   - building one with the templates warns (`DataLimitedWarning`).
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
@@ -227,10 +229,10 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **The check, in G0's commands for the adopted pair and again before a State Pension measure is staged:**
 
   ```sh
-  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
+  uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print({limit.key: limit.installed_fixed() for limit in MODEL_LIMITS})"
   ```
 
-  - **What it prints:** `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does. `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`.
+  - **What it prints:** each model limit's key, with whether the installed model has its fix. For `state_pension_add_on_uprating`, `True` means the installed policyengine-uk uprates the add-on by September CPI, as #2336 does, and `False` means it doesn't: 6.6.0 and 6.10.0 both print `False`. Once a fix is in the adopted pair, its adoption PR removes the limit, so its key no longer appears.
   - **How it decides:** this is the guard's own check. It parses the installed `additional_state_pension` and requires every formula to read the index as an attribute, so a comment or a string naming it doesn't count.
   - **The CI cross-check:** a test compares this check with the model's behaviour: whether the add-on moves when either full rate rises, for a new State Pension recipient and for a basic one. So a release that fools the code check, or fixes only one pension's add-on, fails CI instead of lifting the guard.
 - **Which measures:** any change that moves either full rate, or September CPI, in any year, on either side: `parameter_changes`, `baseline_parameter_changes` or either side's modifier. For example, a change to:
@@ -292,7 +294,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   The first three are also on the benefit index, so until #2557 is in the pair they record the September CPI limit too.
 - **What the guard does:** as for the September CPI limit. Generation records `pc_minimum_guarantee_uprating` and its reason in the receipt. The measure can be staged provisional, approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such a measure stays out of the first cut and the briefing, and a combined run including one is provisional at most.
 - **When it lifts:** when, in the model as built, the uprating rule for both rates of the guarantee names an index other than the benefit index (`gov.benefit_uprating_cpi`), and that index's April 2026 to April 2027 step reaches the published May to July 2026 earnings growth.
-  - The check reads the tree as the model built it, so a measure can't satisfy it, and 2027-28 rates typed in over a CPI rule don't count. #2557 alone doesn't lift it.
+  - The check reads the tree as the model built it, so neither a parameter change nor a template can satisfy it, and 2027-28 rates typed in over a CPI rule don't count. #2557 alone doesn't lift it. A hand-written modifier can change that tree, as for VAT below: treat one that repoints the guarantee's uprating rule there, or rebuilds the parameters on both sides, as a change to the model, not a measure.
   - **If the UK hub's build raises the guarantee some other way,** such as with a formula or typed-in rates, `test_the_fix_check_agrees_with_the_guarantee_pensioners_get` fails in the adoption PR, and a person decides there whether the limit goes.
   - **Otherwise** the guard's tripwire test fails in the adoption PR, which removes the limit.
 
@@ -326,18 +328,19 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - So no VAT measure's area results are produced for the page while the limit holds. That includes Microcosm's local-area cut run on policyengine-uk 2.132.6 (the coordinator's "dense cut paired on 2.132.6 under the accepted mismatch").
   - **Regenerate, and stage provisional, any VAT measure approved before this limit was registered.** Its receipt carries the old registry digest, so the page refuses it already, and the area run refuses it.
 - **When it lifts:** once a pair with #2187 is adopted, that is with policyengine-uk 2.145.0 or later. Any re-cut on 2.145.0 or later has it.
-  - **The check** needs both of #2187's factors (`gov.simulation.vat.survey_consumption_coverage` and `household_share_of_receipts`) in the tree as the model built it. It also needs every formula of `baseline_vat` to look up `vat_grossing_factor`, the helper that returns their product, which the formulas divide by. For the installed model it also parses `vat` and `baseline_vat`, and needs every formula of each to call that helper.
-  - **Neither check reads anything a parameter change or a template changes.** The template replaces `vat`'s formula, on whichever side calls it, and never `baseline_vat`'s. A rate change, or setting the old factor to 0.469, adds neither factor. Factors added to the tree as built don't count on their own, because no formula reads them.
+  - **The check** needs both of #2187's factors (`gov.simulation.vat.survey_consumption_coverage` and `household_share_of_receipts`) in the tree as the model built it. It also needs every formula of `baseline_vat` to look up `vat_grossing_factor`, the helper that returns their product (or the old factor, if a measure moves it from its default), which the formulas divide by. For the installed model it also parses `vat` and `baseline_vat`, and needs every formula of each to call that helper.
+  - **Neither check reads anything a parameter change or the VAT base template changes.** That template replaces `vat`'s formula, on whichever side calls it, and never `baseline_vat`'s. A rate change, or setting the old factor to 0.469, adds neither factor. Factors added to the tree as built don't count on their own, because no formula reads them.
+  - **The payment template** takes any annual household variable with a formula as its channel, so pointed at `baseline_vat` it replaces that formula. The replacement reads no grossing factor, so that side counts as unfixed and the measure is held: that fails safe. The property-surcharge template refuses `baseline_vat`, whose formula reads neither of the OBR indices a band deflates by.
   - **A hand-written modifier can still change both things the check reads:** the tree as built (the parameters' `baseline` child) and `baseline_vat`'s formulas.
-    - Replacing `baseline_vat` on one side makes that side count as unfixed, so the measure is held: that fails safe.
-    - Adding #2187's factors to the tree as built and replacing `baseline_vat` on both sides makes 2.132.6 count as fixed, so nothing is held: that fails open.
+    - Replacing `baseline_vat` on one side of a model without the fix holds the measure, since the variable then differs between the sides: that fails safe.
+    - Adding #2187's factors to the tree as built and replacing `baseline_vat` on both sides with formulas that look up `vat_grossing_factor` makes 2.132.6 count as fixed, so nothing is held: that fails open.
     - Neither the code nor the named human data-limits check, whose items are listed above, guards against this. W5 has raised it with the coordinator. Meanwhile, treat such a modifier as a change to the model, not a measure.
   - **The CI cross-check:** a test reads behaviour. A household's VAT, divided by what its consumption owes at the statutory rates, must be 1 / 0.469 exactly when the checks say the model has the fix, for `vat` and `baseline_vat` alike.
   - **On enhanced FRS, #2187 doesn't settle it.** Its survey coverage, 0.67, is calibrated to Microcosm's national release. Its own derivation note puts VAT on enhanced FRS 2024-25 38% or 44% above receipts. So a VAT run on the eFRS route (such as `uk-budget-data geography --dataset-kind efrs`) needs the coordinator's call even after adoption.
   - **The adoption PR removes the limit** when the guard's tripwire test fails. On 2.146.5 the tests in `tests/test_vat_model_limit.py` that assume the limit is active fail with it: the measures recorded without the fix, the template warnings, the scenarios, generation and the area run's refusal. The checks and the CI cross-check pass there. On a venv swapped to 2.146.5 by hand, the area tests also error, because that model and data pair isn't certified.
   - **With the limit, drop the fixture's `iota` measure** (`scripts/make_publication_fixture.py`) and its rows in the JS publication tests (`digest.test.js`, `load.test.js` and `manifest.test.js`). Then regenerate the fixture and `contract.json`.
   - **Only this limit covers variables.** When it goes, keep the variable comparison's tests against another limit, or remove the `variables` field with it.
-- **The energy VAT template's own figure doesn't depend on #2187.** The term it adds, eligible spending × the rate change / (1 + the old rate), isn't divided by any grossing factor, so its cost is the same with or without the fix. The same goes for the template on both sides with its spending input changed on one. W5 is raising this with the coordinator; their scope holds it until they rule.
+- **The energy VAT template's own figure doesn't depend on #2187.** The term it adds, eligible spending × the rate change / (1 + the old rate), isn't divided by any grossing factor, so its cost is the same with or without the fix. The same goes for the template on both sides with its spending input changed on one. W5 has put this to the coordinator; their scope holds it until they rule.
 
 **Dated changes: key every year by its bare fiscal year.**
 
@@ -419,7 +422,7 @@ mkdir -p receipts
 uv run python -m uk_budget_data.certified_data \
   --also enhanced_frs_2024_25_tiny
 REQUIRE_CERTIFIED_DATA=1 uv run pytest tests/ -m certified_data
-uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print(MODEL_LIMITS[0].installed_fixed())"
+uv run python -c "from uk_budget_data.model_limits import MODEL_LIMITS; print({limit.key: limit.installed_fixed() for limit in MODEL_LIMITS})"
 curl -s "$HOUSEHOLD_API/api/version"
 uv run python -m uk_budget_data.household_route \
   --base-url "$HOUSEHOLD_API" --fixtures data_inputs/household_fixtures \
@@ -434,7 +437,7 @@ uv run uk-budget-data publish status
 What they check:
 - `certified_data`: the token reads the bundle's data and the tests' small dataset, each file by its pinned hash (#12, #70);
 - the certified-data tests, which fail rather than skip here;
-- the State Pension check: whether the model has policyengine-uk #2336;
+- the model-limit check: whether the model has each limit's fix (policyengine-uk #2336, #2533's fix, the minimum guarantee's earnings fix and #2187);
 - `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
 - `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
 
@@ -446,7 +449,7 @@ Record in the clock table:
 - the dataset SHA-256;
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`);
-- whether the model has policyengine-uk #2336 (the State Pension check above prints `True`). If not, every State Pension measure today is held at provisional.
+- which model limits are active: each key the model-limit check prints with `False`. While active, `state_pension_add_on_uprating` holds every State Pension measure at provisional and `vat_consumption_coverage` every VAT measure, in every year; `benefit_uprating_september_cpi` and `pc_minimum_guarantee_uprating` hold their measures from 2027 (see "How a measure must be written").
 
 **The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check can pass on plumbing alone, and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
@@ -477,18 +480,16 @@ uv run uk-budget-data publish check
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
-- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **out of the repository**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
+- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **outside the checkout**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
   - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
   - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
   - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
-  - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
-  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it, and no row can be written for it yet.
-  - **So, until option (d) is on `main`, keep not-computable measures out of the manifest** (option (b); coordinator, 22 October). This holds for Friday's rehearsal.
-    - The Integrator doesn't stage them.
-    - The Reconciler lists each one in the coverage ledger as not computable, with its reason.
-    - A combined run that includes one is refused, since a member missing from the manifest blocks it.
-    - **Option (d), coming in W5's next PR:** such an artifact holds only its receipt, which gets a row reading "not computable, staged by <stager>".
-  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. The coordinator's ruling for option (d) (22 October): "The helper deletes any `public/data/artifacts/<id>` the manifest doesn't reference, with its row." Which of these earlier artifacts that covers is for the (d) PR to settle.
+  - **What it covers.** Rows go to the displayed entries' files, each not-computable entry's `receipt.json`, and the manifest. The command refuses, writing and deleting nothing, if any file is not what the gate bound.
+  - **Not-computable entries** (coordinator's ruling, 22 October, option (d)). Such an artifact is its `receipt.json` alone, and its row reads "not computable, staged by <stager>". So `--staged-by` is needed while any provisional or not-computable entry is listed. Anything else in its directory, a stray table or `reconciliation.json` included, makes the command refuse.
+  - **What it deletes.** Before it writes, it deletes everything under `public/data/artifacts/` that no current manifest entry names, with the rows for those files, and prints each path. That covers runs generated but not staged, and superseded artifacts after a G5 correction or a re-cut. **Stage every artifact you want to keep before running it, and never run it while a `generate` is running in the same checkout:** it would delete that run's half-written directory.
+    - **A hand-written modifier's artifact held for its attestation can't be staged, so it would go too** (see "Held by default" above). Its attestation binds that exact receipt, so a regeneration needs a fresh two-person review. Commit its attestation and stage it before running the command, or keep the artifact outside the checkout until then, as for `reconciliation.json`. Never run the command in a checkout holding one.
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries.
+  - **What it keeps.** Artifacts of staged, stale and withdrawn entries stay, since their entries still name them. It keeps them by the path the manifest spells, so it refuses, writing and deleting nothing, if any current entry's artifact is reached through a symbolic link or holds one, lies behind or holds anything it cannot list or read, is not a directory, or is spelled otherwise on disk, as a Mac's case-insensitive disk allows. It removes a row only when its file is gone, so a withdrawn entry's artifact keeps the row it had while displayed.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -528,7 +529,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   - a quantified explanation;
   - the reviewer's name;
   - the artifact's `outputs_sha256`;
-  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved out of the repository, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
+  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved outside the checkout, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
   Then reconcile again.
 - **Approve:**
@@ -558,7 +559,7 @@ uv run uk-budget-data publish check
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
-- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional entry is still displayed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
+- **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional or not-computable entry is listed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
 - **Publish.** Open a pull request. The six required checks must pass. Publication gate runs too: it isn't required (question 3), but don't merge if it fails. Merge, and production deploys.
 - **Verify on the live route:**
 
@@ -606,7 +607,7 @@ uv run uk-budget-data publish check
 ## G5: corrections (whenever one arrives)
 
 1. **Fix the measure and commit.**
-2. **Regenerate it.** This writes a new artifact; the old one is untouched.
+2. **Regenerate it.** This writes a new artifact; the old one is untouched until step 5's review rows delete it (its entry stays in `superseded` for audit).
 3. **Reconcile and stage it.** The previous entry moves to `superseded`. Any combined run that included it becomes **stale** automatically.
 4. **Regenerate the combined run**, stage it, and approve both.
 5. **Write the review rows, as at G2, and publish through a pull request.**

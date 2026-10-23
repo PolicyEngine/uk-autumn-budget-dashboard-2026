@@ -8,8 +8,7 @@ follow lagged calendar-year CPI rather than the September outturn. Until
 the UK hub's earnings fix, the Pension Credit minimum guarantee does too,
 though the law requires it to rise with earnings. Until #2187, household
 VAT is grossed up to receipts by one factor, so VAT runs high (0.469 /
-0.38, about 23%);
-that limit covers variables as well as parameters.
+0.38, about 23%); that limit covers variables as well as parameters.
 """
 
 import copy
@@ -533,10 +532,12 @@ def test_a_receipt_with_an_edited_model_limit_is_a_problem(world):
 
 def fake_process(values):
     def process(reform, config, baseline, reformed, baseline_scenario):
-        tables = make_tables(reform.id, values)
+        tables = make_tables(reform.id, values, reform.name)
         tables.pop("household_scatter_binned")
         return ReformResult(
-            household_scatter=make_household_rows(reform.id, values),
+            household_scatter=make_household_rows(
+                reform.id, values, reform.name
+            ),
             reform_id=reform.id,
             reform_name=reform.name,
             constituency=[],
@@ -1074,11 +1075,12 @@ def test_the_installed_check_ignores_a_bare_name(monkeypatch, tmp_path):
     assert LIMIT.installed_fixed() is False
 
 
-@pytest.mark.parametrize("missing", ["data_limits", "model_limits"])
+@pytest.mark.parametrize("missing", ["data_limits", "model_limits", "name"])
 def test_a_receipt_cannot_be_built_without_its_limits(missing):
     """Review of #73, round 3: with a default of no limits, a caller that
     forgot them would record that the measure touches none. Both are
-    required."""
+    required, and so is the name the page shows, which a not-computable
+    artifact has no tables to carry."""
     from uk_budget_data.publication.receipt import ReceiptInputs
 
     fields = dict(
@@ -1092,6 +1094,7 @@ def test_a_receipt_cannot_be_built_without_its_limits(missing):
         revision=None,
         data_limits=[],
         model_limits=[],
+        name="Alpha",
         modifier_templates={"baseline": [], "reform": []},
     )
     del fields[missing]

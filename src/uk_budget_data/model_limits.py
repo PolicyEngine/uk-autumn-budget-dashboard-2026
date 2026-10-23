@@ -428,18 +428,25 @@ def _vat_grossing_factors(system) -> bool:
     coverage and the household share of receipts (policyengine-uk #2187):
     both factors are leaves of the tree as the model built it, and every
     formula of its ``baseline_vat`` looks up the helper that returns their
-    product, which the formulas divide by.
+    product (or the old factor, if a measure moves it from its default),
+    which the formulas divide by.
 
-    Neither reads anything a parameter change or a template changes: the
-    VAT base template replaces ``vat``'s formula, never ``baseline_vat``'s,
-    and a parameter change can't add the factors to the tree as built. The
-    formula check is behaviour, so factors added to the tree as built,
-    which the model's formulas don't read, don't count either. A
-    hand-written modifier can change both: replacing ``baseline_vat`` on
-    one side makes that side unfixed (fails safe); adding the factors to
-    the tree as built and replacing ``baseline_vat`` on both sides makes an
-    unfixed model count as fixed (fails open). Nothing here guards the
-    second: treat such a modifier as a change to the model.
+    Neither reads anything a parameter change or the VAT base template
+    changes: that template replaces ``vat``'s formula, never
+    ``baseline_vat``'s, and a parameter change can't add the factors to the
+    tree as built. The formula check is behaviour, so factors added to the
+    tree as built, which the model's formulas don't read, don't count
+    either. The payment template, pointed at ``baseline_vat``, replaces
+    its formula with one that reads no grossing factor, so that side
+    counts as unfixed (fails safe); the property-surcharge template
+    refuses it, since ``baseline_vat``'s formula reads neither OBR index.
+    A hand-written modifier can change both things read: replacing
+    ``baseline_vat`` on one side of a model without the fix holds the
+    measure, since the variable then differs between the sides (fails
+    safe); adding the factors to the tree as built and replacing
+    ``baseline_vat`` on both sides with formulas that look up the helper
+    makes an unfixed model count as fixed (fails open). Nothing here
+    guards the second: treat such a modifier as a change to the model.
     """
     if not hasattr(system, "parameters"):
         return False
