@@ -76,5 +76,5 @@ def test_each_measure_writes_the_package_value(measure, path, year, value):
 def test_fuel_duty_2027_28_is_the_day_weighted_average():
     """153 days at 52.95p and 213 at 57.95p, of 366 (2027-28 includes 29
     February 2028)."""
-    assert FUEL_DUTY_2027_28 == pytest.approx(0.558604, abs=1e-6)
+    assert FUEL_DUTY_2027_28 == pytest.approx(0.558598, abs=1e-6)
     assert 0.5295 < FUEL_DUTY_2027_28 < 0.5795
