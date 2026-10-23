@@ -114,14 +114,18 @@ export function decileCsv(data, policyNames, { kind, year }) {
   });
 }
 
-/** The example household's net income before and after, by earnings. */
-export function householdIncomeCsv(data, { year }) {
+/** The units line of an example household's CSV: what it holds and who. */
+function householdUnits(household) {
+  return `£ per year. ${household.label}: ${household.definition}`;
+}
+
+/** An example household's net income before and after, by its income. */
+export function householdIncomeCsv(data, { year, household }) {
   return buildChartCsv({
     title: `Household net income, ${fiscalYear(year)}`,
-    units:
-      "£ per year; a household with 2 adults (both age 40) and 3 children (ages 7, 5 and 3)",
+    units: householdUnits(household),
     columns: [
-      { key: "employment", label: "Household head employment income", decimals: 0 },
+      { key: "income", label: household.x_label, decimals: 0 },
       { key: "baseline", label: "Net income before the Budget", decimals: 2 },
       { key: "reform", label: "Net income after the Budget", decimals: 2 },
     ],
@@ -129,14 +133,13 @@ export function householdIncomeCsv(data, { year }) {
   });
 }
 
-/** The example household's change in net income, by earnings. */
-export function householdChangeCsv(data, { year }) {
+/** An example household's change in net income, by its income. */
+export function householdChangeCsv(data, { year, household }) {
   return buildChartCsv({
     title: `Net income change, ${fiscalYear(year)}`,
-    units:
-      "£ per year; a household with 2 adults (both age 40) and 3 children (ages 7, 5 and 3)",
+    units: householdUnits(household),
     columns: [
-      { key: "employment", label: "Household head employment income", decimals: 0 },
+      { key: "income", label: household.x_label, decimals: 0 },
       { key: "difference", label: "Change in net income", decimals: 2 },
     ],
     rows: data,

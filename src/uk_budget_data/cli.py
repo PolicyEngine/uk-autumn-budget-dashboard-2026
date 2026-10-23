@@ -12,7 +12,11 @@ from uk_budget_data.lifetime_impact import (
     calculate_lifetime_impact,
 )
 from uk_budget_data.models import DataConfig, Reform
-from uk_budget_data.pipeline import generate_age_impact, generate_all_data
+from uk_budget_data.pipeline import (
+    generate_age_impact,
+    generate_all_data,
+    generate_income_curve,
+)
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
     PrivateOutputError,
@@ -131,6 +135,35 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
     )
 
     add_generate_arguments(generate_parser)
+
+    # The example households alone: household simulations, no survey data
+    income_curve_parser = subparsers.add_parser(
+        "income-curve",
+        help=(
+            "Write only income_curve.csv: the example households' net "
+            "income across their income grids (no dataset needed)"
+        ),
+    )
+    income_curve_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("./public/data"),
+        help="Output directory (default: ./public/data)",
+    )
+    income_curve_parser.add_argument(
+        "--reforms",
+        nargs="+",
+        default=None,
+        help="Reform IDs to process (default: all Autumn Budget reforms)",
+    )
+    income_curve_parser.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=[2026, 2027, 2028, 2029, 2030],
+        help="Years to calculate (default: 2026 2027 2028 2029 2030)",
+    )
+
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
 
@@ -348,6 +381,20 @@ def run_generate(parsed: argparse.Namespace) -> int:
         raise
 
 
+def run_income_curve(parsed: argparse.Namespace) -> int:
+    """Run the income-curve command."""
+    if parsed.reforms:
+        reforms = get_reforms_from_ids(parsed.reforms)
+        if not reforms:
+            console.print("[red]Error: No valid reforms specified[/red]")
+            return 1
+    else:
+        reforms = get_autumn_budget_2026_reforms()
+    config = DataConfig(output_dir=parsed.output_dir, years=parsed.years)
+    generate_income_curve(reforms=reforms, config=config)
+    return 0
+
+
 def run_lifetime(parsed: argparse.Namespace) -> int:
     """Run the lifetime impact command."""
     marriage_age = parsed.marriage_age if parsed.marriage_age > 0 else None
@@ -390,6 +437,8 @@ def main(args: list[str] = None) -> int:
         return run_generate(parsed)
     elif parsed.command == "lifetime":
         return run_lifetime(parsed)
+    elif parsed.command == "income-curve":
+        return run_income_curve(parsed)
     elif parsed.command == "publish":
         return run_publish(parsed)
     elif parsed.command == "geography":
@@ -402,6 +451,7 @@ def main(args: list[str] = None) -> int:
             "  generate  - Generate dashboard data from microsimulation"
         )
         console.print("  lifetime  - Calculate lifetime impact on a graduate")
+        console.print("  income-curve - The example households' curves only")
         console.print(
             "  publish   - Reconcile, stage, approve and check publications"
         )

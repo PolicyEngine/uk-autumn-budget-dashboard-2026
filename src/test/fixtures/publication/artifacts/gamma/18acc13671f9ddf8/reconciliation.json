@@ -1,6 +1,6 @@
 {
-  "measure_id": "zeta",
-  "outputs_sha256": "8a7dcfbf1bd18119bc6b918b9747b30a5c8ad796c7539b4f333867cda6143afd",
+  "measure_id": "gamma",
+  "outputs_sha256": "ecddbe8d91884c354ae0f9c7bf3e73e908e3289c4340fa7b926f4e34c2e7e06b",
   "policy": {
     "absolute_floor_bn": 0.05,
     "comparator_basis": "static_costing",
@@ -15,7 +15,7 @@
         "expectation_from": "declared",
         "expected_direction": "positive",
         "minimum_bn": 0.001,
-        "pe_bn": 0.9,
+        "pe_bn": 0.5,
         "status": "responsive",
         "year": 2032
       }
@@ -25,13 +25,13 @@
   "rows": [
     {
       "fiscal_year": "2032-33",
-      "pe_bn": 0.9,
+      "pe_bn": 0.5,
       "status": "awaiting_source",
       "year": 2032
     },
     {
       "fiscal_year": "2033-34",
-      "pe_bn": 1.0,
+      "pe_bn": 0.6,
       "reason": "Beyond the dataset's projected years",
       "status": "unsupported",
       "year": 2033

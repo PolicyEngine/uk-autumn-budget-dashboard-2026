@@ -437,79 +437,75 @@ class MetricsCalculator(BaseCalculator):
 
 @dataclass
 class IncomeCurveCalculator(BaseCalculator):
-    """Calculates income curve (net income vs employment income)."""
+    """Net income of the example households across one income each.
 
-    max_income: int = 150_000
+    For each household in ``example_households.EXAMPLE_HOUSEHOLDS``, its
+    net income before and after a measure at each point on its income grid
+    (employment income, or private pension income for the pensioners). One
+    simulation per household and scenario answers every year: the grid is
+    set in every year at once (``example_households.build_situation``).
+    """
+
     num_points: int = 201
 
-    def get_income_range(self) -> np.ndarray:
-        """Get the range of employment incomes to calculate."""
-        return np.linspace(0, self.max_income, self.num_points)
+    def simulate(self, household, scenario, years: list[int]) -> dict:
+        """``{year: household net income at each grid point}`` under
+        ``scenario`` (None for current law)."""
+        from policyengine_uk import Simulation
 
-    def get_base_situation(self, year: int) -> dict:
-        """Get the base household situation for income curve."""
-        return {
-            "people": {
-                "adult1": {
-                    "age": {str(year): 40},
-                    "employment_income": {str(year): 0},
-                    "employee_pension_contributions": {str(year): 10000},
-                },
-                "adult2": {
-                    "age": {str(year): 40},
-                    "employment_income": {str(year): 0},
-                },
-                "child1": {
-                    "age": {str(year): 7},
-                    "employment_income": {str(year): 0},
-                },
-                "child2": {
-                    "age": {str(year): 5},
-                    "employment_income": {str(year): 0},
-                },
-                "child3": {
-                    "age": {str(year): 3},
-                    "employment_income": {str(year): 0},
-                },
-            },
-            "benunits": {
-                "family": {
-                    "members": [
-                        "adult1",
-                        "adult2",
-                        "child1",
-                        "child2",
-                        "child3",
-                    ],
-                    "would_claim_uc": {str(year): True},
-                }
-            },
-            "households": {
-                "household": {
-                    "brma": {str(year): "MAIDSTONE"},
-                    "region": {str(year): "LONDON"},
-                    "members": [
-                        "adult1",
-                        "adult2",
-                        "child1",
-                        "child2",
-                        "child3",
-                    ],
-                    "local_authority": {str(year): "MAIDSTONE"},
-                }
-            },
-            "axes": [
-                [
+        from uk_budget_data.example_households import build_situation
+        from uk_budget_data.personal_impact import AsBuilt, effective
+
+        situation = build_situation(
+            household,
+            years,
+            state_pension_weekly=full_new_state_pension(years),
+            points=self.num_points,
+        )
+        sim = Simulation(situation=situation, scenario=effective(scenario))
+        built = AsBuilt(sim)
+        curves = {}
+        for year in years:
+            # As the household calculator reads several years from one
+            # simulation: each year as built, so no year sees another's
+            # calculated values.
+            built.restore()
+            curves[year] = np.asarray(
+                sim.calculate("household_net_income", year), dtype=float
+            )
+        return curves
+
+    def rows(
+        self,
+        household,
+        baseline: dict,
+        reformed: dict,
+        reform_id: str,
+        reform_name: str,
+        years: list[int],
+    ) -> list[dict]:
+        """The table rows for one household, from its simulated curves."""
+        grid = household.grid(self.num_points)
+        rows = []
+        for year in years:
+            for i, income in enumerate(grid):
+                rows.append(
                     {
-                        "name": "employment_income",
-                        "min": 0,
-                        "max": self.max_income,
-                        "count": self.num_points,
-                        "period": str(year),
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "household": household.id,
+                        "x_variable": household.x_variable,
+                        "income": float(income),
+                        "baseline_net_income": round(
+                            float(baseline[year][i]), 2
+                        ),
+                        "reform_net_income": round(
+                            float(reformed[year][i]), 2
+                        ),
                     }
-                ]
-            ],
-        }
+                )
+        return rows
 
     def calculate(
         self,
@@ -519,7 +515,7 @@ class IncomeCurveCalculator(BaseCalculator):
         reform_name: str,
         year: int,
     ) -> list[dict]:
-        """Calculate income curve from PolicyEngine scenarios.
+        """Every example household's curve for one measure and year.
 
         Args:
             baseline_scenario: Scenario for baseline (pre-budget policy).
@@ -529,45 +525,32 @@ class IncomeCurveCalculator(BaseCalculator):
             year: Year to calculate for.
 
         Returns:
-            List of dicts with employment_income, baseline_net_income,
-            reform_net_income.
+            One row per household and grid point (see ``rows``).
         """
-        from policyengine_uk import Simulation
-
-        base_situation = self.get_base_situation(year)
-
-        # Apply baseline scenario (pre-budget) if provided
-        if baseline_scenario is not None:
-            baseline_sim = Simulation(
-                scenario=baseline_scenario, situation=base_situation
-            )
-        else:
-            baseline_sim = Simulation(situation=base_situation)
-
-        # Apply reform scenario (post-budget)
-        reform_sim = Simulation(
-            scenario=reform_scenario, situation=base_situation
-        )
-
-        # Use fixed income range for consistent x-axis across all reforms
-        employment_incomes = self.get_income_range()
-        baseline_hnet = baseline_sim.calculate("household_net_income", year)
-        reform_hnet = reform_sim.calculate("household_net_income", year)
+        from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 
         results = []
-        for i in range(len(employment_incomes)):
-            results.append(
-                {
-                    "reform_id": reform_id,
-                    "reform_name": reform_name,
-                    "year": year,
-                    "employment_income": employment_incomes[i],
-                    "baseline_net_income": baseline_hnet[i],
-                    "reform_net_income": reform_hnet[i],
-                }
+        for household in EXAMPLE_HOUSEHOLDS:
+            results.extend(
+                self.rows(
+                    household,
+                    self.simulate(household, baseline_scenario, [year]),
+                    self.simulate(household, reform_scenario, [year]),
+                    reform_id,
+                    reform_name,
+                    [year],
+                )
             )
-
         return results
+
+
+def full_new_state_pension(years: list[int]) -> dict[int, float]:
+    """The full new State Pension, £ a week, in each year, as legislated
+    (the rate ``new_state_pension`` splits a reported amount at)."""
+    from policyengine_uk.system import system
+
+    amount = system.parameters.gov.dwp.state_pension.new_state_pension.amount
+    return {year: float(amount(f"{year}-01-01")) for year in years}
 
 
 @dataclass
@@ -992,7 +975,6 @@ class AgeImpactCalculator(BaseCalculator):
 
 def get_standard_calculators(
     years: list[int] = None,
-    income_curve_max: int = 150_000,
     income_curve_points: int = 201,
     household_scatter_max: int = 150_000,
 ) -> dict[str, BaseCalculator]:
@@ -1000,7 +982,6 @@ def get_standard_calculators(
 
     Args:
         years: Years for budgetary calculations.
-        income_curve_max: Max income for curve calculation.
         income_curve_points: Number of points on income curve.
         household_scatter_max: Max income for scatter plot.
 
@@ -1015,7 +996,6 @@ def get_standard_calculators(
         "winners_losers": WinnersLosersCalculator(),
         "metrics": MetricsCalculator(),
         "income_curve": IncomeCurveCalculator(
-            max_income=income_curve_max,
             num_points=income_curve_points,
         ),
         "household_scatter": HouseholdScatterCalculator(

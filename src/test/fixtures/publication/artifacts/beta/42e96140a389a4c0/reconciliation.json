@@ -1,6 +1,6 @@
 {
   "measure_id": "beta",
-  "outputs_sha256": "a45aa95dfef7330a6d348187a3da25ab1afc357fbe85719a358b80c07b2119f1",
+  "outputs_sha256": "b9c11dc0e68c348846540cf69d2c9ff7072dfa2fecfa42c98cd5952776d0854a",
   "policy": {
     "absolute_floor_bn": 0.05,
     "comparator_basis": "static_costing",

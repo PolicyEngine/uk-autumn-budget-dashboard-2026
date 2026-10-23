@@ -158,13 +158,12 @@ class DataConfig(BaseModel):
         default=None,
         description="Path to enhanced FRS dataset (optional)",
     )
-    income_curve_max: int = Field(
-        default=150_000,
-        description="Maximum employment income for curve",
-    )
     income_curve_points: int = Field(
         default=201,
-        description="Number of points on income curve",
+        description=(
+            "Points on each example household's income grid (its range is "
+            "set per household in example_households)"
+        ),
     )
     household_scatter_max_income: int = Field(
         default=150_000,

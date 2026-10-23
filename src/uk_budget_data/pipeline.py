@@ -110,7 +110,6 @@ class ReformProcessor:
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
         self.income_curve_calc = IncomeCurveCalculator(
-            max_income=self.config.income_curve_max,
             num_points=self.config.income_curve_points,
         )
         self.household_scatter_calc = HouseholdScatterCalculator(
@@ -604,5 +603,73 @@ def generate_age_impact(
     console.print(
         f"[green]Saved {len(frame)} rows to "
         f"{config.output_dir / 'age_impact.csv'}[/green]"
+    )
+    return frame
+
+
+def generate_income_curve(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``income_curve.csv``: the example households' curves.
+
+    The same rows as the full run's income curve, on the same baselines
+    (each measure's ``baseline_scenario_for(config)``) and reform scenarios,
+    but from household simulations alone: no survey data, so no dataset or
+    HUGGING_FACE_TOKEN is needed. Each distinct scenario is simulated once
+    per household for every year at once, and shared by the measures that
+    use it (most measures keep current law on one side).
+    ``uk-budget-data income-curve`` calls it.
+    """
+    from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
+    from uk_budget_data.personal_impact import scenario_key
+
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    calculator = IncomeCurveCalculator(num_points=config.income_curve_points)
+    years = list(config.years)
+    rows = []
+    for household in EXAMPLE_HOUSEHOLDS:
+        curves = {}
+
+        def curve(scenario):
+            key = scenario_key(scenario)
+            if key not in curves:
+                curves[key] = calculator.simulate(household, scenario, years)
+            return curves[key]
+
+        for reform in reforms:
+            rows.extend(
+                calculator.rows(
+                    household,
+                    curve(reform.baseline_scenario_for(config)),
+                    curve(reform.to_scenario()),
+                    reform.id,
+                    reform.name,
+                    years,
+                )
+            )
+        console.print(
+            f"[green]✓[/green] {household.label}: "
+            f"{len(curves)} scenarios simulated"
+        )
+    # Measures in the registry's order, then year, then the households in
+    # their own order, then income.
+    reform_order = {reform.id: i for i, reform in enumerate(reforms)}
+    household_order = {h.id: i for i, h in enumerate(EXAMPLE_HOUSEHOLDS)}
+    frame = pd.DataFrame(rows)
+    frame = (
+        frame.assign(
+            _reform=frame["reform_id"].map(reform_order),
+            _household=frame["household"].map(household_order),
+        )
+        .sort_values(["_reform", "year", "_household", "income"])
+        .drop(columns=["_reform", "_household"])
+        .reset_index(drop=True)
+    )
+    save_csv(frame, config.output_dir / "income_curve.csv")
+    console.print(
+        f"[green]Saved {len(frame)} rows to "
+        f"{config.output_dir / 'income_curve.csv'}[/green]"
     )
     return frame

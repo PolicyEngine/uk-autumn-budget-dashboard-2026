@@ -19,6 +19,7 @@ import pytest
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.certified_data import load_bundle_manifest
+from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication.artifacts import write_artifact
 from uk_budget_data.publication.receipt import projection_end_year
@@ -113,16 +114,18 @@ def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
             tables["winners_losers"].append(
                 {**base, "decile": group, "avg_change": value * 100}
             )
-        for point in range(201):
-            income = point * 750.0
-            tables["income_curve"].append(
-                {
-                    **base,
-                    "employment_income": income,
-                    "baseline_net_income": income * 0.7,
-                    "reform_net_income": income * 0.7 + value,
-                }
-            )
+        for household in EXAMPLE_HOUSEHOLDS:
+            for income in household.grid():
+                tables["income_curve"].append(
+                    {
+                        **base,
+                        "household": household.id,
+                        "x_variable": household.x_variable,
+                        "income": income,
+                        "baseline_net_income": income * 0.7,
+                        "reform_net_income": income * 0.7 + value,
+                    }
+                )
         tables["household_scatter_binned"].append(
             {
                 **base,
