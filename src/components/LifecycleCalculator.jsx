@@ -10,6 +10,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import GroupedLegend from "./GroupedLegend";
 import { lifecycleSelection, lifecycleTotals } from "../utils/lifecycleSelection";
 import PillSelect from "./PillSelect";
+import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import "./LifecycleCalculator.css";
 
 // API URL - supplied by the environment; no fallback.
@@ -120,7 +121,7 @@ const FIELD_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, step: 0, maxStep: 0 };
+const savedWizard = { inputs: null, step: 0, maxStep: 0, presetId: null };
 
 // The price base for "real terms": this dashboard's year
 const PRICE_BASE_YEAR = 2026;
@@ -239,6 +240,8 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
   const [error, setError] = useState(null);
   const [showRealTerms, setShowRealTerms] = useState(true);
   const [showAbout, setShowAbout] = useState(false);
+  // The example the form was last filled from, while its values stand
+  const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
   // The lifetime series for the policies selected in the title band
   const selectionKey = selectedPolicies.join(",");
   const selection = useMemo(
@@ -368,6 +371,7 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
 
   // Handle input change
   const handleInputChange = (id, value) => {
+    setPresetId(null);
     setInputs((prev) => ({
       ...prev,
       [id]: id === "children_ages" ? value : parseFloat(value),
@@ -916,7 +920,15 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
     savedWizard.inputs = inputs;
     savedWizard.step = step;
     savedWizard.maxStep = maxStep;
-  }, [inputs, step, maxStep]);
+    savedWizard.presetId = presetId;
+  }, [inputs, step, maxStep, presetId]);
+
+  // Fill the form from an example; every value stays editable
+  const applyPreset = (preset) => {
+    setInputs({ ...DEFAULT_INPUTS, ...preset.inputs });
+    setPresetId(preset.id);
+  };
+  const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
 
   const money = (value) => `£${d3.format(",.0f")(value)}`;
   const inputSummary = [
@@ -1487,6 +1499,32 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
             )}
             {isResults && <p className="wizard-summary">{inputSummary}</p>}
           </div>
+
+          {step === 0 && (
+            <div className="wizard-examples" role="group" aria-labelledby="wizard-examples-label">
+              <p id="wizard-examples-label" className="wizard-examples-label">
+                Start from an example
+              </p>
+              <div className="wizard-examples-buttons">
+                {YOUNG_PERSON_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`light-pill-button ${presetId === preset.id ? "is-active" : ""}`}
+                    aria-pressed={presetId === preset.id}
+                    onClick={() => applyPreset(preset)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              {activePreset && (
+                <p className="wizard-examples-note" role="status">
+                  {activePreset.note} Change any value in the steps that follow.
+                </p>
+              )}
+            </div>
+          )}
 
           {!isResults && (
             <div className="wizard-fields">

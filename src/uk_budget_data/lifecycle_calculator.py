@@ -131,6 +131,19 @@ EARNINGS_GROWTH_BY_AGE = {
     50: 2.20,
 }
 PEAK_EARNINGS_MULTIPLIER = 2.20
+YOUNGEST_TRAJECTORY_AGE = min(EARNINGS_GROWTH_BY_AGE)
+
+
+def earnings_multiplier(age: int) -> float:
+    """Earnings at ``age`` relative to age 22, on the age trajectory.
+
+    Ages below the trajectory's first age (22) stay at its first value, so
+    a 19-year-old's salary is carried flat to 22 and then grows; ages past
+    its last value (50) stay at the peak.
+    """
+    if age < YOUNGEST_TRAJECTORY_AGE:
+        return EARNINGS_GROWTH_BY_AGE[YOUNGEST_TRAJECTORY_AGE]
+    return EARNINGS_GROWTH_BY_AGE.get(age, PEAK_EARNINGS_MULTIPLIER)
 
 
 class LifecycleInputs(BaseModel):
@@ -515,9 +528,7 @@ def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
     current_age = inputs.current_age
     input_year = INPUT_YEAR
 
-    current_age_multiplier = EARNINGS_GROWTH_BY_AGE.get(
-        current_age, PEAK_EARNINGS_MULTIPLIER
-    )
+    current_age_multiplier = earnings_multiplier(current_age)
     base_multiplier_22 = EARNINGS_GROWTH_BY_AGE.get(22, 1.0)
     starting_salary = (
         current_salary / current_age_multiplier * base_multiplier_22
@@ -547,9 +558,7 @@ def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
             state_pension = get_state_pension(current_year)
             gross_income = state_pension
         else:
-            base_multiplier = EARNINGS_GROWTH_BY_AGE.get(
-                age, PEAK_EARNINGS_MULTIPLIER
-            )
+            base_multiplier = earnings_multiplier(age)
             additional_growth = (
                 1 + inputs.additional_income_growth_rate
             ) ** years_since_graduation

@@ -29,4 +29,26 @@ describe("the personal impact form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
     expect(screen.getByLabelText("Age")).toBeInTheDocument();
   });
+
+  it("fills the form from a young-person example, still editable", () => {
+    render(<LifecycleCalculator />);
+    fireEvent.click(screen.getByRole("button", { name: "A 22-year-old renting" }));
+    expect(screen.getByRole("button", { name: "A 22-year-old renting" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText(/Rent is not an input/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Age")).toHaveValue("22");
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByLabelText("Salary")).toHaveValue("25000");
+
+    fireEvent.change(screen.getByLabelText("Salary"), { target: { value: "26000" } });
+    expect(screen.getByLabelText("Salary")).toHaveValue("26000");
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    // Edited: no longer the example as given
+    expect(screen.queryByText(/Rent is not an input/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "A 23-year-old graduate" }));
+    expect(screen.getByText(/Plan 5, for courses starting from August 2023, is not modelled/)).toBeInTheDocument();
+  });
 });
