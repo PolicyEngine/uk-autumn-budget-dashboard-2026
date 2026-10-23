@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_fuel_duty_cut_extended,Fuel duty 5p cut to August 2027 (MOCK),2026,54.38818031562897,-8.44214843200242e-05,0.0,0.0
+mock_fuel_duty_cut_extended,Fuel duty 5p cut to August 2027 (MOCK),2027,76.55561291310569,-0.00031627957585924433,0.0,0.0
+mock_fuel_duty_cut_extended,Fuel duty 5p cut to August 2027 (MOCK),2028,69.62399001095648,-0.00014453774274877376,0.0,0.0
+mock_fuel_duty_cut_extended,Fuel duty 5p cut to August 2027 (MOCK),2029,68.92219113075257,-0.0001396369604283332,0.0,0.0
+mock_fuel_duty_cut_extended,Fuel duty 5p cut to August 2027 (MOCK),2030,68.22012748771068,-0.00013151585836911444,0.0,0.0

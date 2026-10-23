@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_pensions_annual_allowance,"Pensions annual allowance £40,000 (MOCK)",2026,0.0,0.0,0.0,0.0
+mock_pensions_annual_allowance,"Pensions annual allowance £40,000 (MOCK)",2027,1.9292703329208967,-0.0021890583578301776,0.012972832,0.11039084
+mock_pensions_annual_allowance,"Pensions annual allowance £40,000 (MOCK)",2028,1.9542449124361376,-0.00224072118622439,0.012971878,0.109851316
+mock_pensions_annual_allowance,"Pensions annual allowance £40,000 (MOCK)",2029,2.0486331001507554,-0.002642811320895362,0.053689003,0.45221382
+mock_pensions_annual_allowance,"Pensions annual allowance £40,000 (MOCK)",2030,2.2547950579818625,-0.002583158506406318,0.0536623,0.4380615

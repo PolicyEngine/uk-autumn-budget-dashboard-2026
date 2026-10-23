@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_salary_sacrifice_cap_2028,Salary sacrifice NICs cap from April 2028 (MOCK),2026,0.0,0.0,0.0,0.0
+mock_salary_sacrifice_cap_2028,Salary sacrifice NICs cap from April 2028 (MOCK),2027,0.0,0.0,0.0,0.0
+mock_salary_sacrifice_cap_2028,Salary sacrifice NICs cap from April 2028 (MOCK),2028,70.24292562670492,-0.0008789119766309632,0.010425568,0.08828809
+mock_salary_sacrifice_cap_2028,Salary sacrifice NICs cap from April 2028 (MOCK),2029,0.0,0.0,0.0,0.0
+mock_salary_sacrifice_cap_2028,Salary sacrifice NICs cap from April 2028 (MOCK),2030,0.0,0.0,0.0,0.0

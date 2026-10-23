@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_cgt_aea_and_higher_rate,"CGT: exempt amount halved, higher rate 26% (MOCK)",2026,0.0,0.0,0.0,0.0
+mock_cgt_aea_and_higher_rate,"CGT: exempt amount halved, higher rate 26% (MOCK)",2027,2.0662347515817183,-0.0028172941222296493,0.0,0.0
+mock_cgt_aea_and_higher_rate,"CGT: exempt amount halved, higher rate 26% (MOCK)",2028,2.068878855071541,-0.0028381716900526743,0.0,0.0
+mock_cgt_aea_and_higher_rate,"CGT: exempt amount halved, higher rate 26% (MOCK)",2029,2.070925996930502,-0.0028690919573993363,0.0,0.0
+mock_cgt_aea_and_higher_rate,"CGT: exempt amount halved, higher rate 26% (MOCK)",2030,2.072143802784103,-0.002883120735436872,0.0,0.0

@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "digests": {
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "outputs_sha256": "f816ff11e87b63fc379afe6c321c6b9bf2cca6e9fdd611541521a8fc0090cb54",
+      "receipt_sha256": "bbf65f319e191a5278351ca997cc63f78a79b7e3fa9c50db0fed2a2bb59771a5"
+    },
+    "files": {
+      "budgetary_impact.csv": "c25b8d69fd92f9a6f6f05b3d3c449181ee95263479675d8724e15468a00276dc",
+      "distributional_impact.csv": "d36e76061105dcb0b53c28d527fb84e9ddf275c1d4ab537e22f8a180384aadc5",
+      "household_scatter_binned.csv": "e4773eb13155e7e9d9795d21af16b223c6d088f21cd1c22dd27ec1cd1c518d39",
+      "income_curve.csv": "4cf8b688fa47646e0b8aea8c33f06f5ba7f11764102050dcbd02bbe6ab340751",
+      "metrics.csv": "188011451520dc423043c5659a5b82ab6c7e000241d193839748bc30f605d76e",
+      "winners_losers.csv": "2e8858724e872e93ecd88480288e511dbd90da9c017939f4c396d4a8137a1362"
+    },
+    "generated_at": "2026-10-23T11:37:52.786325+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/PolicyEngine/uk-autumn-budget-dashboard-2026/.claude/worktrees/practical-kapitsa-1b128a/.venv/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--reforms",
+      "mock_pensions_annual_allowance",
+      "--years",
+      "2026",
+      "2027",
+      "2028",
+      "2029",
+      "2030"
+    ],
+    "git_sha": "e07070503e045bb7361cc4edff513fe47631f8f6",
+    "key": "mock_pensions_annual_allowance",
+    "measure_ids": [
+      "mock_pensions_annual_allowance"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "mock_pensions_annual_allowance baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.0",
+      "certificate_sha256": "82000fa5fe409e422b6069491786bd3039a67b4d59422217417038e39c923f59",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ef34471483ee8513d9d75b7430a45198fb99b8f8b051a0120fbf328347910091"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "f816ff11e87b63fc379afe6c321c6b9bf2cca6e9fdd611541521a8fc0090cb54",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "mock_pensions_annual_allowance",
+      "reform_sha256": "5be2d644d9ab82eb10a51acde4074e0e2ca1393f04230478007bcad5547f15c5",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

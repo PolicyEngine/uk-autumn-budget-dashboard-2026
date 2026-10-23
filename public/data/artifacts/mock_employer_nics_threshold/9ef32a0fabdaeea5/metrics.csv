@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_employer_nics_threshold,"Employer NICs threshold £5,500 (MOCK)",2026,0.0,0.0,0.0,0.0
+mock_employer_nics_threshold,"Employer NICs threshold £5,500 (MOCK)",2027,70.34824087846692,-0.000284602264897825,-0.07544899,-0.64202464
+mock_employer_nics_threshold,"Employer NICs threshold £5,500 (MOCK)",2028,70.41656833544158,-0.00040211081234356,-0.009666443,-0.08185951
+mock_employer_nics_threshold,"Employer NICs threshold £5,500 (MOCK)",2029,70.32533195088277,-0.0002870362134059247,-0.030147552,-0.25392798
+mock_employer_nics_threshold,"Employer NICs threshold £5,500 (MOCK)",2030,70.39121347466863,-0.0004924324847865777,-0.03128147,-0.25536007

@@ -1,0 +1,6 @@
+reform_id,reform_name,year,value
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2026,0.0
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2027,-1.7819863835319862
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2028,-1.837499415810275
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2029,-1.8555350034504101
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2030,-1.8764252155945655

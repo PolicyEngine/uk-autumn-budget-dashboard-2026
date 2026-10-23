@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_state_pension_4_5pc,State Pension +4.5% in April 2027 (MOCK),2026,0.0,0.0,0.0,0.0
+mock_state_pension_4_5pc,State Pension +4.5% in April 2027 (MOCK),2027,19.060106662417358,-0.0002939118911902374,-0.029733658,-0.2530152
+mock_state_pension_4_5pc,State Pension +4.5% in April 2027 (MOCK),2028,18.67461660708518,-0.0002851698037994353,-0.03434658,-0.29086128
+mock_state_pension_4_5pc,State Pension +4.5% in April 2027 (MOCK),2029,18.633326603229943,-0.00027969153150583125,-0.02426529,-0.20438263
+mock_state_pension_4_5pc,State Pension +4.5% in April 2027 (MOCK),2030,18.619398364302697,-0.00026394674642506286,-0.022533417,-0.18394706

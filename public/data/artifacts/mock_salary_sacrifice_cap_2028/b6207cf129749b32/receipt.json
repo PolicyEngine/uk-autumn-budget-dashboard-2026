@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "digests": {
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "outputs_sha256": "a7bdb86bd7f84783fddb9027029b6899a6ea64614eabaa1326e063cd8011c02a",
+      "receipt_sha256": "32ba3a78648cd2ff76b734724db93464a4cc3eaadb3b0158f58aee457044a68b"
+    },
+    "files": {
+      "budgetary_impact.csv": "6174ba3abfb741ededdfd431381a2f4a82bc4dc67d25a7287c61ebdb85dcd839",
+      "distributional_impact.csv": "4f173952248a31a88554d6aae66e064077d1b26d57a6ea053ae915a5f34a53e8",
+      "household_scatter_binned.csv": "4d1b599ef386d50a89693635805272a6b99b6e1dd5ca7cf7f17473bf470f5033",
+      "income_curve.csv": "ef9eb31eb9dfbde37795bf9cdee6a1c65dc5198f4426fccfcfd9f5fd734d19c9",
+      "metrics.csv": "7471e17bcb0c543bf87b37e6452f3efc3942af8d3b23be4890d501472614297c",
+      "winners_losers.csv": "ba29c0ceda6df8cac4cfbb5dd7fbc01e7c12d664cbc10c89e95857b23a943165"
+    },
+    "generated_at": "2026-10-23T11:37:53.622371+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/PolicyEngine/uk-autumn-budget-dashboard-2026/.claude/worktrees/practical-kapitsa-1b128a/.venv/bin/uk-budget-data",
+      "generate",
+      "--artifacts",
+      "--reforms",
+      "mock_salary_sacrifice_cap_2028",
+      "--years",
+      "2026",
+      "2027",
+      "2028",
+      "2029",
+      "2030"
+    ],
+    "git_sha": "e07070503e045bb7361cc4edff513fe47631f8f6",
+    "key": "mock_salary_sacrifice_cap_2028",
+    "measure_ids": [
+      "mock_salary_sacrifice_cap_2028"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.0",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "mock_salary_sacrifice_cap_2028 baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.0",
+      "certificate_sha256": "82000fa5fe409e422b6069491786bd3039a67b4d59422217417038e39c923f59",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ef34471483ee8513d9d75b7430a45198fb99b8f8b051a0120fbf328347910091"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "a7bdb86bd7f84783fddb9027029b6899a6ea64614eabaa1326e063cd8011c02a",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "mock_salary_sacrifice_cap_2028",
+      "reform_sha256": "6bb608de514c513d23deb4b3322e545538d33e4706ee2c43d3cf7f99a259e634",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.9"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.0"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

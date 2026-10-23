@@ -1,1 +1,10 @@
 measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer
+mock_additional_rate_threshold,AB2026-T4.1-static,1,1,0,,,
+mock_cgt_aea_and_higher_rate,AB2026-T4.1-static,2,1,0,,,
+mock_pensions_annual_allowance,AB2026-T4.1-static,3,1,0,,,
+mock_salary_sacrifice_cap_2028,AB2026-T4.1-static,4,1,0,,,
+mock_hvcts_band,AB2026-T4.1-static,5,1,0,,,
+mock_employer_nics_threshold,AB2026-T4.1-static,8,1,0,,,
+mock_fuel_duty_cut_extended,AB2026-T4.1-static,12,0.52,0,,"Households buy around 52% of road fuel (OBR costing note, line 12); the model covers household fuel only",W5 (rehearsal)
+mock_state_pension_4_5pc,AB2026-T4.1-static,13,1,0,,,
+mock_uc_taper_50pc,AB2026-T4.1-static,14,1,0,,,
