@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import {
   LineChart,
   Line,
@@ -17,6 +17,15 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import HouseholdPicker from "./HouseholdPicker";
+import useIncomeCurve from "../hooks/useIncomeCurve";
+import {
+  DEFAULT_HOUSEHOLD,
+  exampleHousehold,
+  formatPounds,
+  formatPoundsShort,
+  roundTicks,
+} from "../utils/exampleHouseholds";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -33,8 +42,6 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 // Chart metadata for export
 const CHART_TITLE = "Household net income";
-const getChartDescription = (year) =>
-  `Net income before and after the selected policies, by the main earner's pay, ${formatYearRange(year)}.`;
 
 // Legend items for export
 const LEGEND_ITEMS = [
@@ -42,9 +49,23 @@ const LEGEND_ITEMS = [
   { color: "#319795", label: "After the Budget", type: "line" },
 ];
 
-function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * An example household's net income before and after the selected
+ * policies, across its income grid. The card's own chooser picks the
+ * household, so the two household cards can show different ones.
+ */
+function EmploymentIncomeChart({
+  selectedPolicies,
+  selectedYear = 2029,
+  defaultHousehold = DEFAULT_HOUSEHOLD,
+}) {
+  const [householdId, setHouseholdId] = useState(defaultHousehold);
+  const household = exampleHousehold(householdId);
+  const { loading, data } = useIncomeCurve({
+    household: household.id,
+    year: selectedYear,
+    policies: selectedPolicies,
+  });
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -52,10 +73,10 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
 
   // The income curve file covers this year only if it has rows for it
   const published = data.length > 0;
-  const exportName = `household-net-income-${selectedYear}`;
+  const exportName = `household-net-income-${household.id}-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
-    description: getChartDescription(selectedYear),
+    description: `${household.label}: ${household.definition}`,
     legendItems: LEGEND_ITEMS,
     logo: CHART_LOGO,
   };
@@ -64,103 +85,28 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => householdIncomeCsv(data, { year: selectedYear }),
+    csv: () => householdIncomeCsv(data, { year: selectedYear, household }),
     published,
   };
 
-  useEffect(() => {
-    // Load income curve data from CSV
-    fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/income_curve.csv`)
-      .then((response) => response.text())
-      .then((csvText) => {
-        const lines = csvText.trim().split("\n");
-        const headers = lines[0].split(",");
-
-        // Parse all income curve data
-        const allData = [];
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(",");
-          const row = {};
-          headers.forEach((header, index) => {
-            row[header] = values[index];
-          });
-          allData.push(row);
-        }
-
-        // Filter by selected year
-        const yearFilteredData = allData.filter(
-          (row) => parseInt(row.year) === selectedYear,
-        );
-
-        // Get unique employment income values (up to 100k)
-        const employmentIncomes = [
-          ...new Set(
-            yearFilteredData
-              .filter((row) => parseFloat(row.employment_income) <= 100000)
-              .map((row) => parseFloat(row.employment_income)),
-          ),
-        ].sort((a, b) => a - b);
-
-        // Build chart data: for each employment income, compute baseline and combined reform
-        const chartData = employmentIncomes.map((income) => {
-          // Get baseline from any row (it's the same across reforms)
-          const baselineRow = yearFilteredData.find(
-            (row) => parseFloat(row.employment_income) === income,
-          );
-          const baseline = baselineRow
-            ? parseFloat(baselineRow.baseline_net_income)
-            : 0;
-
-          // Sum up the income changes from each selected policy
-          let totalIncomeChange = 0;
-          selectedPolicies.forEach((policyId) => {
-            const policyRow = yearFilteredData.find(
-              (row) =>
-                row.reform_id === policyId &&
-                parseFloat(row.employment_income) === income,
-            );
-            if (policyRow) {
-              const reformIncome = parseFloat(policyRow.reform_net_income);
-              const baselineIncome = parseFloat(policyRow.baseline_net_income);
-              totalIncomeChange += reformIncome - baselineIncome;
-            }
-          });
-
-          return {
-            employment: income,
-            baseline: baseline,
-            reform: baseline + totalIncomeChange,
-          };
-        });
-
-        setData(chartData);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error loading income curve data:", error);
-        setLoading(false);
-      });
-  }, [selectedPolicies, selectedYear]);
-
-  const formatCurrency = (value) => {
-    if (value >= 1000) {
-      return `£${(value / 1000).toFixed(0)}k`;
-    }
-    return `£${value.toFixed(0)}`;
-  };
+  const xTicks = roundTicks(household.x_max);
+  const yMax = Math.max(1, ...data.map((point) => Math.max(point.baseline, point.reform)));
+  const yTicks = roundTicks(yMax);
+  const picker = <HouseholdPicker value={household.id} onChange={setHouseholdId} />;
 
   if (loading) {
     return (
       <div className="employment-income-chart">
-        <h3>
-            <NoBreakYear text={chartTitle} />
-          </h3>
-        <p className="chart-description">
-          Net income before and after the selected policies, by the main
-          earner's pay.
-        </p>
+        <div className="chart-header">
+          <div>
+            <h3>
+              <NoBreakYear text={chartTitle} />
+            </h3>
+          </div>
+        </div>
+        {picker}
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-          Loading income curve data...
+          Loading example households...
         </div>
       </div>
     );
@@ -173,15 +119,12 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
           <h3>
             <NoBreakYear text={chartTitle} />
           </h3>
-          <p className="chart-description">
-            Net income before and after the selected policies, by the main
-            earner's pay.
-          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
+      {picker}
 
-      <div ref={chartRef}>
+      <div ref={chartRef} className="chart-plot">
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 420 : 430}>
             <LineChart
@@ -190,30 +133,30 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
             >
               <CartesianGrid {...GRID_PROPS} />
               <XAxis
-                dataKey="employment"
+                dataKey="income"
                 type="number"
                 axisLine={AXIS_LINE}
                 tickLine={false}
                 label={{
-                  value: "Household head employment income",
+                  value: household.x_label,
                   position: "insideBottom",
                   offset: 4,
                   style: AXIS_TITLE_STYLE,
                 }}
-                tickFormatter={formatCurrency}
+                tickFormatter={formatPoundsShort}
                 tick={TICK_STYLE}
                 height={48}
-                ticks={[0, 20000, 40000, 60000, 80000, 100000]}
-                domain={[0, 100000]}
+                ticks={xTicks}
+                domain={[0, xTicks[xTicks.length - 1]]}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={formatCurrency}
+                tickFormatter={formatPoundsShort}
                 tick={TICK_STYLE}
-                width={axisWidth([0, 80000], formatCurrency)}
-                ticks={[0, 20000, 40000, 60000, 80000]}
-                domain={[0, 80000]}
+                width={axisWidth(yTicks, formatPoundsShort)}
+                ticks={yTicks}
+                domain={[0, yTicks[yTicks.length - 1]]}
               />
 
               <Tooltip
@@ -224,9 +167,9 @@ function EmploymentIncomeChart({ selectedPolicies, selectedYear = 2029 }) {
 
                   <ChartTooltip
 
-                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
+                    format={formatPounds}
 
-                    labelFormat={(label) => `Main earner's pay £${Math.round(label).toLocaleString("en-GB")}`}
+                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}`}
 
                     grouped={false}
 

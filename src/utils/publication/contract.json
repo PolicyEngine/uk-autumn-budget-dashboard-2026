@@ -96,6 +96,48 @@
     "approved",
     "provisional"
   ],
+  "income_curve_households": [
+    {
+      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month.",
+      "id": "single_renter",
+      "label": "Single adult renting",
+      "x_label": "Employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A couple aged 35 and 33 with children aged 3, 6 and 8 and one earner, renting a three-bedroom home privately in Manchester for \u00a31,441 a month and spending \u00a3957 a year on petrol.",
+      "id": "couple_three_children",
+      "label": "Couple with three children",
+      "x_label": "Earner's employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month.",
+      "id": "lone_parent",
+      "label": "Lone parent with two children",
+      "x_label": "Employment income",
+      "x_max": 100000,
+      "x_variable": "employment_income"
+    },
+    {
+      "definition": "A couple aged 70 and 68 who own their home outright, each on the full new State Pension (\u00a3241.30 a week in 2026-27); the older partner has the private pension.",
+      "id": "pensioner_couple",
+      "label": "Pensioner couple",
+      "x_label": "Older partner's private pension income",
+      "x_max": 60000,
+      "x_variable": "private_pension_income"
+    },
+    {
+      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay.",
+      "id": "higher_income_saver",
+      "label": "Higher earner with savings",
+      "x_label": "Employment income",
+      "x_max": 150000,
+      "x_variable": "employment_income"
+    }
+  ],
   "manifest_file": "manifest.json",
   "manifest_schema": "uk-budget-dashboard/publication-manifest/v1",
   "measure_templates": [
@@ -1953,7 +1995,15 @@
           "int"
         ],
         [
-          "employment_income",
+          "household",
+          "str"
+        ],
+        [
+          "x_variable",
+          "str"
+        ],
+        [
+          "income",
           "float"
         ],
         [
@@ -1969,7 +2019,8 @@
       "key": [
         "reform_id",
         "year",
-        "employment_income"
+        "household",
+        "income"
       ],
       "required": true
     },

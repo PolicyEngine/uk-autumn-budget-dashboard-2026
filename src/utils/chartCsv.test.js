@@ -10,6 +10,7 @@ import {
   revenueCsv,
   unpublishedCsv,
 } from "./chartCsv";
+import { exampleHousehold } from "./exampleHouseholds";
 
 /** Lines of a CSV, without the byte-order mark and final line break. */
 const lines = (text) => text.replace(/^﻿/, "").replace(/\r\n$/, "").split("\r\n");
@@ -92,26 +93,28 @@ describe("chart CSV downloads", () => {
     expect(relative[1]).toMatch(/% change in household net income/);
   });
 
-  it("write the example household's curves", () => {
+  it("write the example household's curves, naming the household", () => {
+    const pensioners = exampleHousehold("pensioner_couple");
     const income = lines(
-      householdIncomeCsv([{ employment: 20000, baseline: 30000.123, reform: 31000.5 }], {
+      householdIncomeCsv([{ income: 20000, baseline: 30000.123, reform: 31000.5 }], {
         year: 2029,
+        household: pensioners,
       }),
     );
+    expect(income[1]).toContain(pensioners.definition);
     expect(income.slice(2)).toEqual([
-      "Household head employment income,Net income before the Budget,Net income after the Budget",
+      `${pensioners.x_label},Net income before the Budget,Net income after the Budget`,
       "20000,30000.12,31000.5",
     ]);
+    const renter = exampleHousehold("single_renter");
     const change = lines(
       householdChangeCsv(
-        [{ employment: 80000, difference: -512.4, positive: null, negative: -512.4 }],
-        { year: 2029 },
+        [{ income: 80000, difference: -512.4, positive: null, negative: -512.4 }],
+        { year: 2029, household: renter },
       ),
     );
-    expect(change.slice(2)).toEqual([
-      "Household head employment income,Change in net income",
-      "80000,-512.4",
-    ]);
+    expect(change[1]).toContain(renter.definition);
+    expect(change.slice(2)).toEqual(["Employment income,Change in net income", "80000,-512.4"]);
   });
 
   it("write the lifetime calculator's rows with the net impact summed", () => {

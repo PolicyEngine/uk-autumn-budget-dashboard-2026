@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      },
+      "forecast": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      }
+    },
+    "composition": null,
+    "config_baseline": null,
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "digests": {
+      "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
+      "outputs_sha256": "5d658a5757aa206a368f4a7fb8acf21c72075a84b55c9a6282a97a43175abab5",
+      "receipt_sha256": "96ec308e9227d3a8a3b7da1fa2c7cb5ff4685780b6422572dcc74b7a1b1dd5d2"
+    },
+    "files": {
+      "budgetary_impact.csv": "bffba30939ec96988e2221bd383d58b8cbbdb64d393e858faddec52914f950eb",
+      "distributional_impact.csv": "4f34cc2bfa775aad6eefc6abd2e6d6e2e6cc5c355b64d30c42c24ae39313b3d0",
+      "household_scatter_binned.csv": "716127ac9e647a0a1762e81d76053b284269fb58666bbacd683ad72fd6e18115",
+      "income_curve.csv": "7f1c002504d1913dc907e7bf2f5bb2d5e9d3796421c5ebdd4160308d031bb1f4",
+      "metrics.csv": "befeaa4af25739e9557d61fca966db6f116a650f35d8c96443ee6ad1520ebcbe",
+      "winners_losers.csv": "376f401df6c398a58ce39f425f2ed589d871795802d840183cdf8bcd6bf516f1"
+    },
+    "generated_at": "2026-10-23T15:38:15.235455+00:00",
+    "generator_argv": [
+      "test"
+    ],
+    "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "key": "iota",
+    "measure_ids": [
+      "iota"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [
+      {
+        "key": "vat_consumption_coverage",
+        "parameters": [
+          "variable:vat"
+        ],
+        "reason": "The installed model grosses household VAT up to receipts by a single factor of 0.38 (gov.simulation.microdata_vat_coverage). policyengine-uk #2187 divides instead by survey consumption coverage times the household share of VAT receipts, 0.67 \u00d7 0.7 = 0.469, so this model's VAT is about 23% higher (the UK hub's notice 59 puts it about 24% high on Microcosm), and a measure that moves a VAT rate, the VAT base or the consumption VAT is charged on can be overstated by as much. A measure built with the VAT base template is held too, though the term the template adds is not grossed. #2187 is not in this model. Until a pair with it is adopted, such measures are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.1",
+    "tree_clean": true,
+    "unsupported_years": [
+      2033
+    ]
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "iota baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.1",
+      "certificate_sha256": "c031345e3d8f8b729c07dc62d63aae806621536b9e28fc991e4e5999dc3182dc",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "5d658a5757aa206a368f4a7fb8acf21c72075a84b55c9a6282a97a43175abab5",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "iota",
+      "reform_sha256": "31e95e90307d202d10b25a4f63e7a0479a29d78eb0cca3408f34990e11a85609",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.15"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.1"
+    },
+    "years": [
+      2032,
+      2033
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

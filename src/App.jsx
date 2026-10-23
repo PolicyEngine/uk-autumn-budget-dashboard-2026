@@ -11,6 +11,7 @@ import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import OBRComparisonTable from "./components/OBRComparisonTable";
 import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
+import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import ViewTabs from "./components/ViewTabs";
 import MethodologyTab, { METHOD_SECTIONS } from "./components/MethodologyTab";
@@ -717,10 +718,11 @@ function App() {
                       />
                     </section>
 
-                    {/* Row 3: Net Income Analysis Charts */}
+                    {/* Row 3: example households. Each card has its own
+                        household chooser, starting on different ones. */}
                     <SectionHeading
-                      title="Example household"
-                      subtitle="Two adults aged 40 and three children aged 7, 5 and 3. The main earner pays £10,000 a year into a pension."
+                      title="Example households"
+                      subtitle="Net income of five example households across their incomes. Choose a household in each chart."
                     />
                     <section
                       id="household"
@@ -729,10 +731,12 @@ function App() {
                       <EmploymentIncomeChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
+                        defaultHousehold={EXAMPLE_HOUSEHOLDS[0].id}
                       />
                       <EmploymentIncomeDiffChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
+                        defaultHousehold={EXAMPLE_HOUSEHOLDS[1].id}
                       />
                     </section>
 

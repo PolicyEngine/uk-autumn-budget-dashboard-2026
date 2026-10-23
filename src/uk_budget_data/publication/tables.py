@@ -91,17 +91,23 @@ TABLES: dict[str, TableSpec] = {
             ),
             ("reform_id", "year"),
         ),
+        # The example households' net income across one income each
+        # (uk_budget_data.example_households): ``household`` names the
+        # household, ``x_variable`` the income on its x-axis, ``income``
+        # that income's value.
         TableSpec(
             "income_curve",
             (
                 ("reform_id", STR),
                 ("reform_name", STR),
                 ("year", INT),
-                ("employment_income", FLOAT),
+                ("household", STR),
+                ("x_variable", STR),
+                ("income", FLOAT),
                 ("baseline_net_income", FLOAT),
                 ("reform_net_income", FLOAT),
             ),
-            ("reform_id", "year", "employment_income"),
+            ("reform_id", "year", "household", "income"),
         ),
         # The household scatter the dashboard has always published (cos
         # d1397): the same columns as public/data/household_scatter.csv, for

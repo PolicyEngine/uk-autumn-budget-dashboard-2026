@@ -1,0 +1,155 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      },
+      "forecast": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      }
+    },
+    "composition": null,
+    "config_baseline": null,
+    "data_limits": [
+      {
+        "key": "additional_dwelling_purchases",
+        "parameters": [
+          "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
+        ],
+        "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this."
+      }
+    ],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "digests": {
+      "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
+      "outputs_sha256": "1fa49d68f1ab609bced2da9b1be6d3cb0c9e949ad3ba413d09388b6fca3c1019",
+      "receipt_sha256": "bcd1df344b066b230983f3a89818a70311c38b6e9bdc986ee1d8d770bd343041"
+    },
+    "files": {
+      "budgetary_impact.csv": "50abe4f9c12cad36c31d69b0410db5cfe2612cbb9c263198888e6a834353c1a5",
+      "distributional_impact.csv": "040dd07c94c6bcd18a9b82b734c69e3d568a6e09492c7f394994327ce0154b0c",
+      "household_scatter_binned.csv": "c9838035cbc4fe302534ba6956dbecca9193281f78209a703b8d4c3144ccbeef",
+      "income_curve.csv": "57289e6954bff24e1b58bc604ea6f03ea4b8d0f11e034376b9fcc46cd6cde0ad",
+      "metrics.csv": "85c86ac747ef3f3c1d373c82b35681078f7358c2432a2934d0a04b8f40ea6d20",
+      "winners_losers.csv": "eba5cf5ec98832c177a9f28c8ecd9d747f50e958a0a495395293eeba84ae53ad"
+    },
+    "generated_at": "2026-10-23T15:38:14.616407+00:00",
+    "generator_argv": [
+      "test"
+    ],
+    "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "key": "epsilon",
+    "measure_ids": [
+      "epsilon"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.1",
+    "tree_clean": true,
+    "unsupported_years": [
+      2033
+    ]
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "epsilon baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.1",
+      "certificate_sha256": "c031345e3d8f8b729c07dc62d63aae806621536b9e28fc991e4e5999dc3182dc",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "1fa49d68f1ab609bced2da9b1be6d3cb0c9e949ad3ba413d09388b6fca3c1019",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "epsilon",
+      "reform_sha256": "6d64fa2298d4c04d10be25e40776ed4c289e668287d5cbce1d820a214f81ad54",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.15"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.1"
+    },
+    "years": [
+      2032,
+      2033
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}
