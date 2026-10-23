@@ -489,8 +489,8 @@ def _entry_rows(
             if name != RECEIPT_FILE:
                 problems.append(
                     f"{where}/{name}: in a not-computable artifact, which "
-                    f"holds only its {RECEIPT_FILE}; move it out of the "
-                    "repository (the gates refuse it there)"
+                    f"holds only its {RECEIPT_FILE}; move it outside the "
+                    "checkout (the gates refuse it there)"
                 )
         return rows
 
@@ -525,7 +525,7 @@ def _entry_rows(
         if name not in bound:
             problems.append(
                 f"{where}/{name}: in a displayed artifact, but its receipt "
-                "does not bind it; move it out of the repository (the gates "
+                "does not bind it; move it outside the checkout (the gates "
                 "never read it, and an untracked file in the tree makes the "
                 "next receipt dirty)"
             )

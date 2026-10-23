@@ -480,7 +480,7 @@ uv run uk-budget-data publish check
 - **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
-- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **out of the repository**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
+- **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **outside the checkout**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
   - **Why it moves:** the gates recompute reconciliation and never read the file, and under the coordinator's ruling it gets no row.
   - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
   - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
@@ -529,7 +529,7 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
   - a quantified explanation;
   - the reviewer's name;
   - the artifact's `outputs_sha256`;
-  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved out of the repository, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
+  - the failed row's `comparator.sha256` from `reconciliation.json` (read it before the file is moved outside the checkout, or from its moved copy), as `comparator_sha256`. The exception then lapses if any Treasury figure, mapping or the basis behind that comparison changes (#17).
 
   Then reconcile again.
 - **Approve:**

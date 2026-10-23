@@ -729,7 +729,7 @@ def test_a_receipt_unbound_file_in_a_displayed_artifact_refuses(base):
         assert refused.value.problems == [
             f"{DATA}/{manifest.measures['alpha'].artifact}/"
             "reconciliation.json: in a displayed artifact, but its receipt "
-            "does not bind it; move it out of the repository (the gates "
+            "does not bind it; move it outside the checkout (the gates "
             "never read it, and an untracked file in the tree makes the next "
             "receipt dirty)"
         ]
@@ -804,7 +804,7 @@ def test_anything_beside_a_not_computable_receipt_refuses(base, name):
         assert (review_bytes(root), snapshot(root / DATA)) == before
     assert refused.value.problems == [
         f"{DATA}/{artifact}/{name}: in a not-computable artifact, which "
-        "holds only its receipt.json; move it out of the repository (the "
+        "holds only its receipt.json; move it outside the checkout (the "
         "gates refuse it there)"
     ]
 
