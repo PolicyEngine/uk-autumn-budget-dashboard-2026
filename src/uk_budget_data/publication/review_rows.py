@@ -32,8 +32,7 @@ names them whenever a provisional or not-computable entry is listed.
 The artifact digest covers a receipt's content except the two fields that
 record when and how it was generated (``receipt.VOLATILE_DASHBOARD_FIELDS``:
 the time and the command line; a hand-written generation's id is covered),
-so a
-receipt must also hold nothing beyond what that digest covers, in the form
+so a receipt must also hold nothing beyond what that digest covers, in the form
 publication writes, with those two fields shaped as a time and a command
 line. Their values are the only bytes in a row that the gate did not bind.
 
@@ -58,8 +57,8 @@ is spelled otherwise on disk (as a case-insensitive filesystem allows).
 Stage everything to be kept before running it. A hand-written modifier's
 artifact held for its attestation (``attestations``) can't be staged until
 the attestation is committed, so it goes too, and the attestation binds
-that exact receipt: commit and stage it first, or keep it out of the
-repository.
+that exact receipt: commit its attestation and stage it first, or keep
+the artifact outside the checkout until then.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,

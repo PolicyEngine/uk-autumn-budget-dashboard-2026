@@ -158,7 +158,11 @@ def test_a_not_computable_handwritten_artifact_lists_without_a_release(world):
         problems, _ = gate_problems(
             "alpha", reference.path, m.Manifest(), level=level, **args(world)
         )
-        assert any("not computable" in problem for problem in problems)
+        assert any(
+            f"not computable on current data, so it cannot be {level}"
+            in problem
+            for problem in problems
+        )
 
 
 @pytest.mark.parametrize(

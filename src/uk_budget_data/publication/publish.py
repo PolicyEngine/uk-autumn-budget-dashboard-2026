@@ -18,9 +18,9 @@ The gates, in order:
    never approved. Its artifact is receipt-only: the receipt lists no
    files, and the directory holds ``receipt.json`` and nothing else. It
    skips responsiveness and reconciliation, which would only measure the £0
-   the data give it, and the certificate's verification and the hold on
-   hand-written modifiers (4c), since it publishes no figure for them to
-   vouch for or release.
+   the data give it, and the hold on hand-written modifiers (4c), since it
+   publishes no figure to release. It must still be publishable, so its
+   certificate is still verified (``receipt.dashboard_problems``).
 4b. **Model limits.** A measure the installed model overstates until a
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
