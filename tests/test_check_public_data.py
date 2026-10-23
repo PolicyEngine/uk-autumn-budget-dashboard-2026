@@ -326,3 +326,14 @@ def test_a_symbolic_link_fails(repo, tmp_path_factory):
 
 def test_this_repository_passes():
     assert run(REPO, today=date.today()).problems == []
+
+
+# Budget week: the Budget is on 28 October and the briefing is due by 07:00
+# on the 29th. A pending row that lapses inside this window stops every
+# build, so the repository must pass on each day of it, not only today.
+BUDGET_WEEK = [date(2026, 10, day) for day in range(23, 31)]
+
+
+@pytest.mark.parametrize("day", BUDGET_WEEK, ids=lambda d: d.isoformat())
+def test_this_repository_passes_through_budget_week(day):
+    assert run(REPO, today=day).problems == []
