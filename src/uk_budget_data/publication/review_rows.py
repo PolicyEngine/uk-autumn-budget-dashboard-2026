@@ -50,10 +50,10 @@ no longer names, after a correction or a re-cut. Directories left empty go
 too. It never follows a symbolic link and never deletes anything outside
 ``artifacts/``. It keeps what an entry names by the path the manifest
 spells, so it also refuses, writing and deleting nothing, if any current
-entry's artifact is reached through a symbolic link, holds one, holds
-anything it cannot list or read, or is spelled otherwise on disk (as a
-case-insensitive filesystem allows). Stage everything to be kept before
-running it.
+entry's artifact is reached through a symbolic link or holds one, lies
+behind or holds anything it cannot list or read, is not a directory, or
+is spelled otherwise on disk (as a case-insensitive filesystem allows).
+Stage everything to be kept before running it.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -406,7 +406,11 @@ def _entry_rows(
     directory = data_root / entry.artifact
     relative = directory.relative_to(root)
     where = relative.as_posix()
-    link = _first_link(root, relative)
+    try:
+        link = _first_link(root, relative)
+    except OSError:
+        problems.append(f"{where}: {key}'s artifact cannot be read")
+        return []
     if link is not None:
         problems.append(f"{link}: a symbolic link")
         return []
@@ -531,7 +535,11 @@ def planned_rows(
         )
     # The artifacts directory too: the run deletes under it, and never
     # through a link.
-    link = _first_link(root, relative / ARTIFACTS_DIR)
+    try:
+        link = _first_link(root, relative / ARTIFACTS_DIR)
+    except OSError:
+        where = (relative / ARTIFACTS_DIR).as_posix()
+        raise ReviewRowsError([f"{where}: cannot be read"]) from None
     if link is not None:
         raise ReviewRowsError([f"{link}: a symbolic link"])
     data_root = root / relative

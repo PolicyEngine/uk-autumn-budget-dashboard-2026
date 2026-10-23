@@ -1340,6 +1340,9 @@ def test_a_kept_artifact_that_cannot_be_listed_refuses(base, monkeypatch):
     link, so the run refuses rather than miss one."""
     scandir = os.scandir
     with repository(base) as (root, manifest):
+        # As the run sees it: the temporary directory may be reached
+        # through a link, as macOS's /var is.
+        root = Path(os.path.realpath(root))
         artifact = root / DATA / manifest.measures["delta"].artifact
         hidden = artifact / "sub"
         hidden.mkdir()
@@ -1372,6 +1375,9 @@ def test_a_kept_artifact_that_cannot_be_read_refuses(
     False. The run looks with lstat, and refuses where it can't."""
     lstat = os.lstat
     with repository(base) as (root, manifest):
+        # As the run sees it: the temporary directory may be reached
+        # through a link, as macOS's /var is.
+        root = Path(os.path.realpath(root))
         artifact = root / DATA / manifest.measures["delta"].artifact
         (artifact / "sub").mkdir()
         (artifact / "sub" / "x.csv").write_text("x\n")
@@ -1397,6 +1403,41 @@ def test_a_kept_artifact_that_cannot_be_read_refuses(
     assert refused.value.problems == [
         f"{where}: delta's artifact cannot be read"
     ]
+
+
+@pytest.mark.parametrize("unreadable", ["artifacts", "listed artifact"])
+def test_a_path_the_rows_need_that_cannot_be_read_refuses(
+    base, monkeypatch, unreadable
+):
+    """Where ``artifacts/`` or a listed entry's artifact can't be looked
+    at, the run refuses by name rather than failing with a traceback."""
+    lstat = os.lstat
+    with repository(base) as (root, manifest):
+        root = Path(os.path.realpath(root))
+        hidden = {
+            "artifacts": root / DATA / "artifacts",
+            "listed artifact": root
+            / DATA
+            / manifest.measures["alpha"].artifact,
+        }[unreadable]
+
+        def refuse_the_hidden_one(path, *args, **kwargs):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return lstat(path, *args, **kwargs)
+
+        before = snapshot(root / DATA)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "lstat", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        where = hidden.relative_to(root).as_posix()
+    expected = {
+        "artifacts": f"{where}: cannot be read",
+        "listed artifact": f"{where}: alpha's artifact cannot be read",
+    }[unreadable]
+    assert refused.value.problems == [expected]
 
 
 def test_a_kept_artifact_that_is_a_file_refuses(base):
