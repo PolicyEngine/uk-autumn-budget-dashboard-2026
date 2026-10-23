@@ -1,19 +1,19 @@
 .obr-comparison-section {
   margin-top: 48px;
   padding-top: 32px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pe-gray-200);
 }
 
 .obr-comparison-section h2 {
-  font-size: 1.25rem;
+  font-size: var(--fs-section);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 12px 0;
 }
 
 .comparison-description {
-  font-size: 0.95rem;
-  color: #4b5563;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-600);
   line-height: 1.6;
   margin-bottom: 16px;
 }
@@ -26,7 +26,7 @@
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
 }
 
 .comparison-table th,
@@ -39,7 +39,7 @@
 .comparison-table th {
   background: transparent;
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 /* The only rule: under the header */
@@ -65,34 +65,34 @@
 }
 
 .source-header {
-  font-size: 0.75rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .source-header.pe {
-  color: #0f766e;
+  color: var(--pe-teal-700);
 }
 
 .source-header.obr {
-  color: #6b7280;
+  color: var(--pe-gray-500);
 }
 
 .policy-name-cell {
   font-weight: 500;
-  color: #374151;
+  color: var(--pe-gray-700);
   white-space: nowrap;
 }
 
 .value-cell {
   font-variant-numeric: tabular-nums;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   white-space: nowrap;
 }
 
 .value-cell.obr {
-  color: #6b7280;
+  color: var(--pe-gray-500);
 }
 
 /* Difference highlighting */
@@ -136,15 +136,15 @@
   display: flex;
   gap: 24px;
   margin-bottom: 16px;
-  font-size: 0.8125rem;
-  color: #6b7280;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--fs-caption);
   color: #64748b;
 }
 
@@ -169,7 +169,7 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .comparison-table {
-    font-size: 0.75rem;
+    font-size: var(--fs-micro);
   }
 
   .comparison-table th,

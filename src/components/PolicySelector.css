@@ -13,7 +13,7 @@
   border: 1px solid var(--pe-gray-300);
   border-radius: 6px;
   font-family: var(--pe-font-family-primary);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--pe-gray-700);
   cursor: pointer;
@@ -41,14 +41,14 @@
   padding: 0 7px;
   background: var(--pe-teal-700);
   color: white;
-  font-size: 0.8rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: var(--card-radius);
   flex-shrink: 0;
 }
 
 .policy-selector-label {
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--pe-gray-700);
 }
@@ -67,7 +67,7 @@
   right: 0;
   background: white;
   border: 1px solid var(--pe-gray-200);
-  border-radius: 8px;
+  border-radius: var(--pe-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   width: 380px;
   max-width: calc(100vw - 32px);
@@ -125,11 +125,11 @@
 .policy-name {
   font-weight: 500;
   color: var(--pe-gray-700);
-  font-size: 1rem;
+  font-size: var(--fs-body-lg);
 }
 
 .policy-description {
-  font-size: 0.9rem;
+  font-size: var(--fs-small);
   color: var(--pe-gray-500);
   line-height: 1.4;
 }

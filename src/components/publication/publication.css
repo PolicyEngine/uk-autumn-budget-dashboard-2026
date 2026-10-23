@@ -1,10 +1,10 @@
 .publication-unavailable {
   padding: 12px 16px;
-  border-left: 3px solid #9ca3af;
-  background: #f9fafb;
+  border-left: 3px solid var(--pe-gray-400);
+  background: var(--pe-gray-50);
   border-radius: 4px;
-  color: #4b5563;
-  font-size: 0.95rem;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 
@@ -14,7 +14,7 @@
 
 .publication-unavailable-reason {
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .publication-provisional {
@@ -24,7 +24,7 @@
   border-radius: 4px;
   background: #fff7e6;
   color: #7a5a1f;
-  font-size: 0.85rem;
+  font-size: var(--fs-small);
   font-weight: 500;
 }
 
@@ -37,15 +37,15 @@
 
 .publication-stat {
   padding: 12px;
-  background: #f9fafb;
-  border-left: 3px solid #319795;
+  background: var(--pe-gray-50);
+  border-left: 3px solid var(--pe-teal-500);
   border-radius: 4px;
 }
 
 .publication-stat dt {
-  font-size: 0.75rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
-  color: #6b7280;
+  color: var(--pe-gray-500);
   line-height: 1.2;
 }
 
@@ -53,20 +53,20 @@
   margin: 4px 0 0;
   font-size: 1.4rem;
   font-weight: 600;
-  color: #319795;
+  color: var(--pe-teal-500);
   font-variant-numeric: tabular-nums;
 }
 
 .publication-fiscal table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
 
 .publication-fiscal caption {
   text-align: left;
-  color: #4b5563;
+  color: var(--pe-gray-600);
   margin-bottom: 8px;
 }
 
@@ -80,13 +80,13 @@
 .publication-fiscal th[scope="row"],
 .publication-fiscal thead th:first-child {
   text-align: left;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .publication-row-combined th,
 .publication-row-combined td {
   font-weight: 600;
-  color: #319795;
+  color: var(--pe-teal-500);
 }
 
 .publication-row-interaction th,
@@ -95,7 +95,7 @@
 }
 
 .publication-cell-unavailable {
-  color: #9ca3af;
+  color: var(--pe-gray-400);
 }
 
 @media (max-width: 1024px) {
@@ -117,7 +117,7 @@
 .publication-note {
   margin: 8px 0 0;
   color: #666;
-  font-size: 0.85rem;
+  font-size: var(--fs-small);
   line-height: 1.5;
 }
 
@@ -126,8 +126,8 @@
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  font-size: 0.85rem;
-  color: #374151;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
 }
 
 .publication-tooltip p {

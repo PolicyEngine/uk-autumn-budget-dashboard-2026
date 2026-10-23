@@ -111,6 +111,18 @@ code {
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97) */
   --band-teal: #285e61;
+  /* Type scale: section titles, card titles, body, small text, captions
+     (sources, notes, axis units) and micro labels */
+  --fs-stat: 1.75rem;
+  --fs-xl: 1.5rem;
+  --fs-section: 1.25rem;
+  --fs-card-title: 1.125rem;
+  --fs-lead: 1.0625rem;
+  --fs-body-lg: 1rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.875rem;
+  --fs-caption: 0.8125rem;
+  --fs-micro: 0.75rem;
 }
 
 body {
@@ -200,7 +212,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: var(--pe-font-family);
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: #ffffff;
   margin: 0;
@@ -287,7 +299,7 @@ body {
   height: 100%;
   padding: 0 2px;
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   font-weight: 500;
   white-space: nowrap;
   color: var(--pe-gray-600);
@@ -334,7 +346,7 @@ body {
 
 .method-card {
   padding: var(--card-padding);
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   line-height: 1.6;
   color: var(--pe-gray-700);
 }
@@ -371,7 +383,7 @@ body {
 .lifecycle-method-link {
   margin: 0;
   padding-top: 16px;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   color: var(--pe-gray-600);
 }
 
@@ -431,14 +443,14 @@ body {
 .title-row .policy-selector-count {
   min-width: 24px;
   height: 24px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   background: #ffffff;
-  color: #285e61;
+  color: var(--band-teal);
   font-weight: 600;
 }
 
 .title-row .policy-selector-label {
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
 }
 
 .title-row .policy-selector-icon {
@@ -447,7 +459,7 @@ body {
 
 /* Standfirst: the full content width */
 .dashboard-intro {
-  font-size: 1.0625rem;
+  font-size: var(--fs-lead);
   color: var(--pe-gray-700);
   line-height: 1.6;
   margin: 24px 0 16px;
@@ -466,7 +478,7 @@ body {
 
 .showing-line {
   margin: 0 0 24px;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   color: var(--pe-gray-500);
 }
 
@@ -480,7 +492,7 @@ body {
 }
 
 .empty-state p {
-  font-size: 1.0625rem;
+  font-size: var(--fs-lead);
   color: var(--pe-gray-500);
   line-height: 1.6;
   margin-bottom: 24px;
@@ -496,7 +508,7 @@ body {
 .preset-button {
   padding: 10px 20px;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-surface);
   background: var(--pe-teal-700);
@@ -533,7 +545,7 @@ body {
 
 .section-heading h2 {
   margin: 0 0 4px;
-  font-size: 1.25rem;
+  font-size: var(--fs-section);
   font-weight: 600;
   line-height: 1.3;
   color: var(--pe-gray-800);
@@ -541,7 +553,7 @@ body {
 
 .section-heading p {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   line-height: 1.5;
   color: var(--pe-gray-500);
 }
@@ -581,7 +593,7 @@ body {
 }
 
 .main-content .report-section .chart-description {
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--pe-gray-600);
   margin: 0 0 12px 0;
@@ -609,7 +621,7 @@ body {
   grid-row: 1;
   align-self: center;
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--fs-card-title);
   font-weight: 600;
   line-height: 1.35;
   color: var(--pe-gray-900);
@@ -645,7 +657,7 @@ body {
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   line-height: 1.4;
   color: var(--pe-gray-800);
@@ -681,7 +693,7 @@ body {
 
 .disclosure-in-card > .disclosure-content > p {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--pe-gray-600);
 }
@@ -698,7 +710,7 @@ body {
 
 .policy-detail {
   padding: 8px 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-small);
   line-height: 1.6;
   color: var(--pe-gray-600);
 }
@@ -894,7 +906,7 @@ body {
   justify-content: center;
   padding: 24px;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   font-weight: 500;
   line-height: 1.55;
   color: var(--pe-gray-600);
@@ -913,18 +925,18 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--pe-gray-50);
-  border-radius: 8px;
+  border-radius: var(--pe-radius-md);
 }
 
 .unpublished-plot p {
   margin: 0;
   padding: 8px 14px;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   font-weight: 500;
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: 8px;
+  border-radius: var(--pe-radius-md);
 }
 
 /* Card rows for charts drawn outside Recharts (map, scatter template) */
@@ -938,7 +950,7 @@ body {
 
 .chart-note {
   margin: 8px 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-500);
   text-align: center;
@@ -950,7 +962,7 @@ body {
   align-items: flex-start;
   gap: 6px;
   margin: 8px 0 0;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-600);
 }
@@ -1046,7 +1058,7 @@ body {
   }
 
   .title-row h1 {
-    font-size: 1.125rem;
+    font-size: var(--fs-card-title);
   }
 
   .band-year .year-picker-toggle {
@@ -1078,7 +1090,7 @@ body {
 
   .title-row .policy-selector-label-short {
     display: inline;
-    font-size: 0.8125rem;
+    font-size: var(--fs-caption);
     font-weight: 500;
   }
 
@@ -1104,7 +1116,7 @@ body {
   }
 
   .dashboard-intro {
-    font-size: 1rem;
+    font-size: var(--fs-body-lg);
   }
 
   .view-tabs {
@@ -1157,7 +1169,7 @@ body {
   margin: auto 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--card-border);
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-500);
   text-align: center;
@@ -1201,7 +1213,7 @@ body {
 
 .site-footer-links a {
   color: white;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   font-weight: 500;
   text-decoration: none;
 }
@@ -1212,7 +1224,7 @@ body {
 
 .site-footer-copy {
   margin: 0 0 0 auto;
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -1249,7 +1261,7 @@ body {
 
 .policy-group-heading {
   margin: 0 0 10px;
-  font-size: 0.75rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--pe-gray-500);
@@ -1272,7 +1284,7 @@ body {
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
-  font-size: 0.9375rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-gray-900);
 }
@@ -1285,7 +1297,7 @@ body {
 
 .policy-detail-text {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--pe-gray-700);
 }

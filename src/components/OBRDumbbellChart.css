@@ -18,9 +18,9 @@
 }
 
 .obr-dumbbell-header h3 {
-  font-size: 1.05rem;
+  font-size: var(--fs-body-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0;
 }
 
@@ -42,10 +42,10 @@
   margin: 0;
   padding: 40px 16px;
   text-align: center;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+  font-size: var(--fs-body);
 }
 
 .obr-dumbbell-footer {
@@ -65,7 +65,7 @@
   padding: 0;
   list-style: none;
   font-size: 13px;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .obr-dumbbell-legend li {
@@ -82,7 +82,7 @@
 }
 
 .obr-dumbbell-legend .obr-dumbbell-legend-title {
-  color: #4b5563;
+  color: var(--pe-gray-600);
 }
 
 .obr-dumbbell-logo {
