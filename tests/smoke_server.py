@@ -9,13 +9,44 @@ import json
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Optional
+
+
+def lifecycle_answer(
+    first_year: int = 2026,
+    first_age: int = 19,
+    last_age: int = 85,
+    retirement_age: int = 67,
+    pay: float = 23_600,
+) -> dict:
+    """A /api/lifecycle/calculate answer of the real route's shape: one row
+    a year, flat pay to retirement and none after."""
+    return {
+        "data": [
+            {
+                "age": age,
+                "year": first_year + (age - first_age),
+                "employment_income": pay if age <= retirement_age else 0,
+                "baseline_net_income": 20_000,
+                "impact_threshold_freeze": -50,
+            }
+            for age in range(first_age, last_age + 1)
+        ]
+    }
 
 
 @contextmanager
-def serving(version: dict, impact: dict, health_status: int = 200):
-    """Serve /api/health, /api/version and /api/personal-impact; yield the
-    base URL. Each POST body is recorded on ``server.posted``."""
+def serving(
+    version: dict,
+    impact: dict,
+    health_status: int = 200,
+    lifecycle: Optional[dict] = None,
+):
+    """Serve /api/health, /api/version, /api/personal-impact and
+    /api/lifecycle/calculate; yield the base URL. Each POST body is
+    recorded on ``server.posted``."""
     posted = []
+    lifecycle = lifecycle_answer() if lifecycle is None else lifecycle
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -42,6 +73,8 @@ def serving(version: dict, impact: dict, health_status: int = 200):
             posted.append(json.loads(self.rfile.read(length) or b"null"))
             if self.path == "/api/personal-impact":
                 self._send(200, impact)
+            elif self.path == "/api/lifecycle/calculate":
+                self._send(200, lifecycle)
             else:
                 self._send(404, {"detail": "not found"})
 

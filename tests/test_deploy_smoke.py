@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from hypothesis import given
 from hypothesis import strategies as st
 
-from tests.smoke_server import serving
+from tests.smoke_server import lifecycle_answer, serving
 from uk_budget_data import deploy_smoke
 from uk_budget_data.api import app as real_app
 from uk_budget_data.deploy_smoke import (
@@ -64,9 +64,20 @@ def coverage(monkeypatch):
 
 
 def fake_api(
-    version=None, impact=None, health_status=200, impact_status=200
+    version=None,
+    impact=None,
+    health_status=200,
+    impact_status=200,
+    lifecycle=None,
+    lifecycle_status=200,
 ) -> TestClient:
     app = FastAPI()
+
+    @app.post("/api/lifecycle/calculate")
+    def lifecycle_route(body: dict):
+        if lifecycle_status != 200:
+            raise HTTPException(status_code=lifecycle_status)
+        return lifecycle_answer() if lifecycle is None else lifecycle
 
     @app.get("/api/health")
     def health():
@@ -298,7 +309,10 @@ def test_the_standard_library_client_checks_a_real_server(tmp_path):
             ]
         )
     assert code == 0
-    assert server.posted == [deploy_smoke.SMOKE_HOUSEHOLD]
+    assert server.posted == [
+        deploy_smoke.SMOKE_HOUSEHOLD,
+        deploy_smoke.SMOKE_LIFECYCLE_HOUSEHOLD,
+    ]
 
 
 def test_the_checker_judges_with_its_own_logic_not_the_images(tmp_path):
@@ -355,3 +369,160 @@ def test_a_server_error_is_a_problem_not_a_crash(tmp_path):
         result = deploy_smoke.run_smoke(client, SHA, BUILD, YEARS, POLICIES)
     assert not result["pass"]
     assert "/api/health returned HTTP 503" in result["problems"]
+
+
+# --- the lifecycle route the Personal impact tab calls ---------------------
+
+
+def _real_lifecycle_answer() -> dict:
+    response = TestClient(real_app).post(
+        deploy_smoke.LIFECYCLE_ROUTE,
+        json=deploy_smoke.SMOKE_LIFECYCLE_HOUSEHOLD,
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def _under_22_bug() -> dict:
+    """The live API's answer on 23 October, before #69's fix: inputs read
+    as 2025, so 2026 starts at age 20, and pay at 22 falls by 54%."""
+    body = lifecycle_answer(first_year=2026, first_age=20)
+    for row in body["data"]:
+        if 22 <= row["age"] <= 67:
+            row["employment_income"] = 10_727
+    body["data"][1]["employment_income"] = 23_366
+    return body
+
+
+def test_the_real_lifecycle_route_passes():
+    """Differential: this build's calculator, through the real route,
+    passes the strict check."""
+    body = _real_lifecycle_answer()
+    assert deploy_smoke.expected_lifecycle() == {"input_year": 2026}
+    assert deploy_smoke.lifecycle_problems(body, 2026) == []
+    rows = body["data"]
+    assert (rows[0]["year"], rows[0]["age"]) == (2026, 19)
+
+
+def test_the_under_22_bug_fails_the_strict_check():
+    problems = deploy_smoke.lifecycle_problems(_under_22_bug(), 2026)
+    assert "/api/lifecycle/calculate starts at age 20, not 19" in problems
+    assert any(
+        "pay falls from 23366 at 21 to 10727 at 22" in p for p in problems
+    )
+    result = run_smoke(fake_api(lifecycle=_under_22_bug()), SHA, BUILD)
+    assert not result["pass"]
+
+
+def test_a_start_year_other_than_2026_fails():
+    body = lifecycle_answer(first_year=2025)
+    assert deploy_smoke.lifecycle_problems(body, 2026) == [
+        "/api/lifecycle/calculate starts in 2025, not 2026"
+    ]
+
+
+def test_an_image_that_declares_no_input_year_is_checked_for_shape_only():
+    """A rollback runs main's checker against an older image. One without
+    INPUT_YEAR predates the under-22 fix, so its pay path is not a reason
+    to refuse the rollback; its shape still is."""
+    assert deploy_smoke.lifecycle_problems(_under_22_bug(), None) == []
+    result = run_smoke(
+        fake_api(lifecycle=_under_22_bug()),
+        SHA,
+        BUILD,
+        lifecycle={"input_year": None},
+    )
+    assert result["pass"], result["problems"]
+
+
+def _shape(body):
+    return deploy_smoke.lifecycle_problems(body, None)
+
+
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda b: b.update(data=[]), "returned no rows"),
+        (lambda b: b.pop("data"), "returned no rows"),
+        (lambda b: b["data"].__setitem__(3, "x"), "returned no rows"),
+        (lambda b: b["data"][5].pop("age"), "has a row with no age"),
+        (
+            lambda b: b["data"][5].update(employment_income=None),
+            "has a row with no employment_income",
+        ),
+        (
+            lambda b: b["data"][5].update(age=b["data"][4]["age"]),
+            "age does not rise by one a year",
+        ),
+        (
+            lambda b: b["data"].reverse(),
+            "age does not rise by one a year",
+        ),
+        (
+            lambda b: b["data"][7].update(year=b["data"][7]["year"] + 1),
+            "year does not rise by one a year",
+        ),
+        (
+            lambda b: b.update(detail="Calculation error: boom"),
+            "reported a failure at detail",
+        ),
+        (
+            lambda b: b["data"][2].update(impact_threshold_freeze=math.inf),
+            "returned a non-finite number",
+        ),
+    ],
+)
+def test_a_lifecycle_answer_of_the_wrong_shape_always_fails(mutate, message):
+    body = lifecycle_answer()
+    mutate(body)
+    problems = _shape(body)
+    assert problems and message in problems[0], problems
+
+
+def test_a_lifecycle_route_that_fails_is_a_problem():
+    result = run_smoke(fake_api(lifecycle_status=404), SHA, BUILD)
+    assert "/api/lifecycle/calculate returned HTTP 404" in result["problems"]
+
+
+def test_expectations_without_a_lifecycle_entry_check_shape_only(tmp_path):
+    """An expectations file written before the lifecycle check (no
+    "lifecycle" key) still runs; one that names the input year is strict."""
+    for changes, code in [({}, 0), ({"lifecycle": {"input_year": 2026}}, 1)]:
+        with serving(BUILD, GOOD_ANSWER, lifecycle=_under_22_bug()) as (
+            url,
+            _,
+        ):
+            assert (
+                deploy_smoke.main(
+                    [
+                        "--base-url",
+                        url,
+                        "--expect-git-sha",
+                        SHA,
+                        "--expectations",
+                        _expectations(tmp_path, **changes),
+                    ]
+                )
+                == code
+            )
+
+
+@pytest.mark.parametrize(
+    "lifecycle", [{"input_year": "2026"}, {"input_year": True}, [2026]]
+)
+def test_a_malformed_lifecycle_expectation_is_refused(
+    tmp_path, capsys, lifecycle
+):
+    with serving(BUILD, GOOD_ANSWER) as (url, _):
+        code = deploy_smoke.main(
+            [
+                "--base-url",
+                url,
+                "--expect-git-sha",
+                SHA,
+                "--expectations",
+                _expectations(tmp_path, lifecycle=lifecycle),
+            ]
+        )
+    assert code == 1
+    assert "lifecycle input year" in capsys.readouterr().err

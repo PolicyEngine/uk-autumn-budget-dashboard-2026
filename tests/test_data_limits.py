@@ -527,6 +527,20 @@ def test_a_neutralised_limited_variable_shows():
 
 def band_on_sdlt(amount):
     def modifier(sim):
+        native = sim.tax_benefit_system.get_variable(RESIDENTIAL)
+
+        def indexed_native(household, period, parameters):
+            # Give this synthetic property channel an explicit valuation
+            # basis; the band template refuses channels with no index.
+            index = parameters(
+                period
+            ).gov.economic_assumptions.indices.obr.per_capita.gdp
+            return (
+                _call_formula(native, household, period, parameters)
+                + 0 * index
+            )
+
+        _replace_formula(sim, RESIDENTIAL, indexed_native)
         return apply_property_band_surcharge(
             sim,
             channel=RESIDENTIAL,
@@ -4490,7 +4504,11 @@ def holding_its_input_holder(sim, banded):
         values = holder.get_array(period)
         if values is None:
             values = household("non_residential_property_purchased", period)
-        return values * 0.05
+        # This stand-in must declare the band template's valuation index.
+        index = parameters(
+            period
+        ).gov.economic_assumptions.indices.obr.per_capita.gdp
+        return values * 0.05 + 0 * index
 
     _replace_formula(sim, NON_RESIDENTIAL_SDLT, native)
     if banded:

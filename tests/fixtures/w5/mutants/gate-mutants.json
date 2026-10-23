@@ -1,0 +1,67 @@
+{
+  "automatic_hold_disabled": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    return any(\n        proof is None\n",
+    "    return False and any(\n        proof is None\n"
+  ],
+  "automatic_hold_ignores_empty_registry": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    if not data_limits.DATA_LIMITS:\n",
+    "    if False:\n"
+  ],
+  "automatic_hold_ignores_baseline_modifiers": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        for side in (\"baseline\", \"reform\")\n        for proof in proofs.get(side, [])\n",
+    "        for side in (\"reform\",)\n        for proof in proofs.get(side, [])\n"
+  ],
+  "attestation_digest_not_bound": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    if attestation.receipt_sha256 != receipt_document_sha256(document):\n",
+    "    if False:\n"
+  ],
+  "attestation_distinct_reviewers_not_required": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        if self.checker.casefold() == self.second.casefold():\n",
+    "        if False:\n"
+  ],
+  "attestation_lower_instead_of_casefold": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        if self.checker.casefold() == self.second.casefold():\n",
+    "        if self.checker.lower() == self.second.lower():\n"
+  ],
+  "attestation_empty_fields_not_rejected": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        if not value.strip():\n",
+    "        if False:\n"
+  ],
+  "attestation_other_measure_accepted": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    if attestation.measure_id != document[\"dashboard\"][\"key\"]:\n",
+    "    if False:\n"
+  ],
+  "attestation_measure_id_is_trimmed": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    if attestation.measure_id != document[\"dashboard\"][\"key\"]:\n",
+    "    if attestation.measure_id.strip() != document[\"dashboard\"][\"key\"]:\n"
+  ],
+  "attestation_uses_execution_only_digest": [
+    "src/uk_budget_data/publication/attestations.py",
+    "    return api.content_sha256(document)\n",
+    "    return api.content_sha256(document.get(\"execution_receipt\", document))\n"
+  ],
+  "handwritten_regeneration_reuses_artifact": [
+    "src/uk_budget_data/publication/receipt.py",
+    "        dashboard[\"generation_id\"] = uuid4().hex\n",
+    "        dashboard[\"generation_id\"] = \"f\" * 32\n"
+  ],
+  "manifest_release_is_not_recorded": [
+    "src/uk_budget_data/publication/publish.py",
+    "        attestation=info.get(\"attestation\"),\n",
+    "        attestation=None,\n"
+  ],
+  "combined_member_release_is_not_rechecked": [
+    "src/uk_budget_data/publication/publish.py",
+    "        if m.NOT_COMPUTABLE not in need and requires_attestation(own_document):\n",
+    "        if False:\n"
+  ]
+}

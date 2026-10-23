@@ -55,6 +55,7 @@ def test_the_certified_dataset_yields_a_certified_receipt():
             revision=revision,
             data_limits=[],
             model_limits=[],
+            modifier_templates={"baseline": [], "reform": []},
         ),
     )
     receipt = document["execution_receipt"]

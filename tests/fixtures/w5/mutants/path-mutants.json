@@ -1,0 +1,12 @@
+{
+  "attestation_accepts_working_symlink": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        if requested.resolve() != requested:\n",
+    "        if False:\n"
+  ],
+  "attestation_accepts_committed_symlink_type": [
+    "src/uk_budget_data/publication/attestations.py",
+    "        if not entry.startswith((b\"100644 blob \", b\"100755 blob \")) or (\n",
+    "        if False or (\n"
+  ]
+}
