@@ -1,0 +1,12 @@
+runtime/
+importer-runtime/
+uv-cache/
+cache/
+hf-cache/
+mpl-cache/
+tmp/
+history.git/
+staging-repo/
+scratch/importer/
+__pycache__/
+*.pyc

@@ -61,14 +61,14 @@ def gate(label, memory_gb=0.):
         s = os.statvfs(JOB)
         free = s.f_bavail*s.f_frsize/1e9
         load = os.getloadavg()[0]
-        # Free pages are a conservative concurrency gate (no inactive-page credit).
+        # macOS reclaimable headroom: free + inactive, less a 5 GB reserve.
         memory = None
         if memory_gb:
             import re
             vm = subprocess.check_output(["vm_stat"], text=True)
             page = int(re.search(r"page size of (\d+) bytes",vm).group(1))
-            pages = int(re.search(r"Pages free:\s+(\d+)",vm).group(1))
-            memory = page*pages/1e9
+            pages = sum(int(re.search(r"Pages "+kind+r":\s+(\d+)",vm).group(1)) for kind in ("free", "inactive"))
+            memory = max(0.,page*pages/1e9-5.)
         event("gate", label=label, load1=load, free_disk_gb=free, free_memory_gb=memory, required_memory_gb=memory_gb)
         if load <= 110 and free >= 55 and (memory is None or memory >= memory_gb):
             break

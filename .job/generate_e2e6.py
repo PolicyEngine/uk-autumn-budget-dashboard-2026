@@ -195,6 +195,7 @@ def main(argv=None):
         before_gates = ledger["gate_seconds"]
         started = time.perf_counter()
         try:
+            gated(f"generate {args.measure}: default-build private-copy")
             # Preserve the dashboard's official exact-byte private-copy path.
             return original_build(dataset_path, scenario)
         finally:
