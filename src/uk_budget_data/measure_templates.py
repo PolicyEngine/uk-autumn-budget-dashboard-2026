@@ -1,4 +1,4 @@
-"""Reusable, unregistered building blocks for announced Budget measures.
+"""Reusable, registered building blocks for announced Budget measures.
 
 Parameter builders return content-bound dictionaries for ``Reform``. Runtime
 helpers must be called from module-level modifiers with finite JSON defaults:
@@ -944,3 +944,18 @@ def apply_property_band_surcharge(
 
     _replace_formula(sim, channel, formula)
     return sim
+
+
+# The reviewed policy builders that may prove a modifier is made purely
+# from templates. Keep helper functions out of this explicit registry.
+TEMPLATES = (
+    "rate_change",
+    "threshold_change",
+    "uc_health_element_change",
+    "allowance_uprating",
+    "pension_uprating",
+    "apply_vat_base_change",
+    "apply_benefit_receipt_payment",
+    "apply_age_conditioned_allowance",
+    "apply_property_band_surcharge",
+)

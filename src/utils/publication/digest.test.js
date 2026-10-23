@@ -6,6 +6,7 @@ import {
   artifactSha256,
   dropNulls,
   jcsSha256,
+  modifierTemplatesProblems,
   receiptProblems,
   sha256Hex,
   verifyFile,
@@ -19,6 +20,30 @@ import {
 
 const manifest = fixtureJson("manifest.json");
 const entries = { ...manifest.measures, ...manifest.combined };
+
+async function handwritten(key = "alpha", side = "reform") {
+  const entry = structuredClone(entries[key]);
+  const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+  receipt.dashboard.modifier_templates = { baseline: [], reform: [] };
+  receipt.dashboard.modifier_templates[side] = [null];
+  receipt.dashboard.generation_id = "a".repeat(32);
+  receipt.execution_receipt[side].binding = "code_revision";
+  receipt.execution_receipt[side].representation =
+    "policyengine-uk.scenario/v1";
+  entry.artifact_sha256 = await artifactSha256(receipt);
+  return { entry, receipt };
+}
+
+async function attest(key, receipt) {
+  return {
+    measure_id: key,
+    receipt_sha256: await jcsSha256(receipt),
+    reason: "The modifier only changes the registered allowance calculation.",
+    checker: "First reviewer",
+    second: "Second reviewer",
+    released_at: "2026-10-22T12:00:00+00:00",
+  };
+}
 
 describe("sha256Hex", () => {
   it("matches the standard empty-string digest", async () => {
@@ -245,5 +270,154 @@ describe("binding a receipt to its manifest entry", () => {
     expect(await receiptProblems(receipt, "alpha", entry)).toContain(
       "the receipt is not the artifact the manifest names",
     );
+  });
+});
+
+describe("the automatic modifier hold", () => {
+  it("checks the fixture's attestation using Python's full receipt digest", async () => {
+    const entry = entries.delta;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    expect(receipt.dashboard.modifier_templates.reform).toEqual([null]);
+    expect(await jcsSha256(receipt)).toBe(entry.attestation.receipt_sha256);
+    expect(await receiptProblems(receipt, "delta", entry)).toEqual([]);
+  });
+
+  it.each(["baseline", "reform"])(
+    "holds a hand-written %s modifier without an attestation",
+    async (side) => {
+      const { entry, receipt } = await handwritten("alpha", side);
+      const problems = await receiptProblems(receipt, "alpha", entry);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toMatch(/^held: a hand-written modifier/);
+      expect(problems[0]).toContain("attestations/alpha.json");
+    },
+  );
+
+  it.each(["staged", "provisional", "approved"])(
+    "a valid attestation releases a held modifier at %s",
+    async (status) => {
+      const { entry, receipt } = await handwritten();
+      entry.status = status;
+      entry.attestation = await attest("alpha", receipt);
+      expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+    },
+  );
+
+  it("binds release to the full receipt, including every regeneration", async () => {
+    const { entry, receipt } = await handwritten();
+    entry.attestation = await attest("alpha", receipt);
+    receipt.dashboard.generated_at = "2026-10-22T12:00:01+00:00";
+    // Timestamp changes deliberately leave the stable artifact digest alone.
+    expect(await artifactSha256(receipt)).toBe(entry.artifact_sha256);
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([
+      expect.stringMatching(/^held: a hand-written modifier/),
+    ]);
+  });
+
+  it.each([
+    ["another receipt", (a) => (a.receipt_sha256 = "0".repeat(64))],
+    ["another measure", (a) => (a.measure_id = "beta")],
+    ["the same reviewer twice", (a) => (a.second = " FIRST REVIEWER ")],
+    [
+      "Unicode-equivalent names",
+      (a) => {
+        a.checker = "Straße";
+        a.second = "STRASSE";
+      },
+    ],
+    ["an empty reviewer", (a) => (a.checker = "\u0085 ")],
+    ["an empty reason", (a) => (a.reason = " ")],
+    ["a date without a time", (a) => (a.released_at = "2026-10-22")],
+    [
+      "a time without a timezone",
+      (a) => (a.released_at = "2026-10-22T12:00:00"),
+    ],
+    ["an invalid timestamp", (a) => (a.released_at = "not a timestamp")],
+    [
+      "a timestamp before Python's UTC range",
+      (a) => (a.released_at = "0001-01-01T00:00:00+23:59"),
+    ],
+    [
+      "a timestamp after Python's UTC range",
+      (a) => (a.released_at = "9999-12-31T23:59:59-23:59"),
+    ],
+  ])("does not release with %s", async (_, change) => {
+    const { entry, receipt } = await handwritten();
+    entry.attestation = await attest("alpha", receipt);
+    change(entry.attestation);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContainEqual(
+      expect.stringMatching(/^held: a hand-written modifier/),
+    );
+  });
+
+  it("accepts a recorded pure-template proof", async () => {
+    const { entry, receipt } = await handwritten();
+    receipt.dashboard.modifier_templates.reform = [
+      [contract.measure_templates[0]],
+    ];
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+  });
+
+  it.each([
+    undefined,
+    null,
+    [],
+    { baseline: [] },
+    { baseline: [], reform: [], extra: [] },
+    { baseline: [], reform: null },
+    { baseline: [], reform: [[]] },
+    { baseline: [], reform: [["unregistered_template"]] },
+    {
+      baseline: [],
+      reform: [[contract.measure_templates[0], contract.measure_templates[0]]],
+    },
+  ])("refuses an absent or malformed template proof: %j", async (proof) => {
+    const { receipt } = await handwritten();
+    receipt.dashboard.modifier_templates = proof;
+    expect(modifierTemplatesProblems(receipt).length).toBeGreaterThan(0);
+  });
+
+  it("refuses to omit the proof of a bound modifier", async () => {
+    const { entry, receipt } = await handwritten();
+    receipt.dashboard.modifier_templates.reform = [];
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's reform modifier templates do not match its bound modifiers",
+    );
+  });
+
+  it.each([undefined, null, "", "a".repeat(31), "a".repeat(32) + "\n", 1])(
+    "refuses a hand-written receipt without a valid generation id: %j",
+    async (generationId) => {
+      const { receipt } = await handwritten();
+      receipt.dashboard.generation_id = generationId;
+      expect(modifierTemplatesProblems(receipt)).toContain(
+        "the receipt's hand-written generation id is malformed",
+      );
+    },
+  );
+
+  it("holds a combined receipt with a hand-written member", async () => {
+    const key = "combined--alpha+beta";
+    const { entry, receipt } = await handwritten(key);
+    receipt.dashboard.members[0].reform.binding = "code_revision";
+    receipt.dashboard.members[0].reform.representation =
+      "policyengine-uk.scenario/v1";
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    expect(await receiptProblems(receipt, key, entry)).toContainEqual(
+      expect.stringMatching(/^held: a hand-written modifier/),
+    );
+  });
+
+  it("disables the automatic hold with an empty active-limit registry", async () => {
+    const { entry, receipt } = await handwritten();
+    const active = contract.data_limits_active;
+    try {
+      contract.data_limits_active = false;
+      expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+    } finally {
+      contract.data_limits_active = active;
+    }
   });
 });

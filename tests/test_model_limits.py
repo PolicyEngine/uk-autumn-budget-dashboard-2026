@@ -548,7 +548,7 @@ def fake_process(values):
 
 
 def built(world, modifier=None):
-    """Stand-in simulations carrying a real parameter tree and model,
+    """Stand-ins carrying a real model, parameter tree and input holders,
     built with the scenario, as generation compares them on a real run."""
 
     def build(dataset, scenario=None):
@@ -558,9 +558,9 @@ def built(world, modifier=None):
                 parameter_changes=getattr(scenario, "parameter_changes", None),
                 simulation_modifier=modifier,
             )
-        sim.tax_benefit_system = Simulation(
-            situation=household(), scenario=scenario
-        ).tax_benefit_system
+        underlying = Simulation(situation=household(), scenario=scenario)
+        sim.tax_benefit_system = underlying.tax_benefit_system
+        sim.get_holder = underlying.get_holder
         return sim
 
     return build
@@ -1092,6 +1092,7 @@ def test_a_receipt_cannot_be_built_without_its_limits(missing):
         revision=None,
         data_limits=[],
         model_limits=[],
+        modifier_templates={"baseline": [], "reform": []},
     )
     del fields[missing]
     with pytest.raises(TypeError, match=missing):

@@ -21,6 +21,10 @@ export const PROVISIONAL_LABEL =
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
+function isDigest(value) {
+  return typeof value === "string" && value.length === 64 && DIGEST.test(value);
+}
+
 /** Raised when a manifest cannot be trusted. Lists every problem found. */
 export class ManifestError extends Error {
   constructor(problems) {
@@ -36,6 +40,93 @@ function isPlainObject(value) {
 
 function isYearList(value) {
   return Array.isArray(value) && value.every(Number.isInteger);
+}
+
+/** Python's whitespace and Unicode case-fold rules for attestor names. */
+function stripped(value) {
+  const whitespace = new Set(contract.name_whitespace);
+  const characters = Array.from(value);
+  let start = 0;
+  let end = characters.length;
+  while (start < end && whitespace.has(characters[start])) start += 1;
+  while (end > start && whitespace.has(characters[end - 1])) end -= 1;
+  return characters.slice(start, end).join("");
+}
+
+function foldedName(value) {
+  return Array.from(
+    stripped(value),
+    (char) => contract.name_casefold[char] ?? char,
+  ).join("");
+}
+
+function isIsoTimestamp(value) {
+  if (typeof value !== "string") return false;
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/.exec(
+      value,
+    );
+  if (!match || match[0] !== value) return false;
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const second = Number(match[6] ?? "0");
+  const instant = new Date(value);
+  return (
+    year >= 1 &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= new Date(Date.UTC(year, month, 0)).getUTCDate() &&
+    hour < 24 &&
+    minute < 60 &&
+    second < 60 &&
+    Number.isFinite(instant.getTime()) &&
+    instant.getUTCFullYear() >= 1 &&
+    instant.getUTCFullYear() <= 9999
+  );
+}
+
+/** Structural attestation checks shared by manifest and receipt checks. */
+export function attestationProblems(attestation, key) {
+  if (!isPlainObject(attestation)) return ["attestation is not an object"];
+  const problems = [];
+  const fields = [
+    "measure_id",
+    "receipt_sha256",
+    "reason",
+    "checker",
+    "second",
+    "released_at",
+  ];
+  if (Object.keys(attestation).some((field) => !fields.includes(field))) {
+    problems.push("attestation has unknown fields");
+  }
+  if (attestation.measure_id !== key) {
+    problems.push("attestation names a different measure");
+  }
+  if (!isDigest(attestation.receipt_sha256)) {
+    problems.push("attestation receipt_sha256 is not a SHA-256 digest");
+  }
+  for (const field of ["reason", "checker", "second"]) {
+    if (
+      typeof attestation[field] !== "string" ||
+      stripped(attestation[field]) === ""
+    ) {
+      problems.push(`attestation ${field} is empty`);
+    }
+  }
+  if (
+    typeof attestation.checker === "string" &&
+    typeof attestation.second === "string" &&
+    foldedName(attestation.checker) === foldedName(attestation.second)
+  ) {
+    problems.push("attestation checker and second must be distinct");
+  }
+  // An audit timestamp includes its timezone, so the release has one
+  // unambiguous instant. Date-only strings and locale formats are refused.
+  if (!isIsoTimestamp(attestation.released_at)) {
+    problems.push("attestation released_at is not an ISO 8601 timestamp");
+  }
+  return problems;
 }
 
 /** True for a relative path that stays inside the data directory. */
@@ -69,7 +160,7 @@ function entryProblems(key, entry, { combined }) {
     "execution_identity_sha256",
     "artifact_sha256",
   ]) {
-    if (typeof entry[field] !== "string" || !DIGEST.test(entry[field])) {
+    if (!isDigest(entry[field])) {
       problems.push(`${where}.${field} is not a SHA-256 digest`);
     }
   }
@@ -106,6 +197,13 @@ function entryProblems(key, entry, { combined }) {
   if (limited && DISPLAYABLE.includes(entry.status)) {
     problems.push(`${where} has data limits, so its figures cannot be shown`);
   }
+  if (entry.attestation !== undefined && entry.attestation !== null) {
+    problems.push(
+      ...attestationProblems(entry.attestation, key).map(
+        (problem) => `${where}.${problem}`,
+      ),
+    );
+  }
   if (combined) {
     const members = entry.measures;
     if (
@@ -118,9 +216,7 @@ function entryProblems(key, entry, { combined }) {
     const memberOutputs = entry.member_outputs_sha256;
     if (
       !isPlainObject(memberOutputs) ||
-      !Object.values(memberOutputs).every(
-        (digest) => typeof digest === "string" && DIGEST.test(digest),
-      )
+      !Object.values(memberOutputs).every(isDigest)
     ) {
       problems.push(`${where}.member_outputs_sha256 is not a map of digests`);
     }
@@ -166,8 +262,7 @@ export function parseManifest(json) {
   if (execution !== undefined && execution !== null) {
     if (
       !isPlainObject(execution) ||
-      typeof execution.execution_identity_sha256 !== "string" ||
-      !DIGEST.test(execution.execution_identity_sha256)
+      !isDigest(execution.execution_identity_sha256)
     ) {
       problems.push("execution.execution_identity_sha256 is not a digest");
     }

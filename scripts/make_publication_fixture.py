@@ -10,20 +10,29 @@ that publishes, so the browser code is tested against bytes and digests the
 Python side actually produces. Its receipts are certified against a dummy
 dataset (see tests/publication_support.py), so it is test data only.
 """
+
 import json, shutil, sys
 from pathlib import Path
+from policyengine_uk.utils.scenario import Scenario
+from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import PROJECTION_END, World
 from uk_budget_data import model_limits
 from uk_budget_data.data_limits import DATA_LIMITS, record
 from uk_budget_data.publication import manifest as m
+from uk_budget_data.publication import attestations
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, stage
+from uk_budget_data.publication.receipt import scenario_identity
 
 out = Path(sys.argv[1])
 # A year the dataset covers and the year after it, which it does not, so
 # the browser code is tested on both sides of the projection horizon.
 IN, BEYOND = PROJECTION_END, PROJECTION_END + 1
 world = World()
+original_attestations_root = attestations.ATTESTATIONS_ROOT
+original_attestation_repository = attestations.ATTESTATION_REPOSITORY
+attestations.ATTESTATIONS_ROOT = world.root / "attestations"
+attestations.ATTESTATION_REPOSITORY = attestations.ATTESTATIONS_ROOT
 try:
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
@@ -35,7 +44,39 @@ try:
     }
     refs = {}
     for key in ("alpha", "beta", "delta"):
-        refs[key] = world.ready(key, values[key], rate=0.2 + 0.01 * len(refs))
+        kwargs = {}
+        if key == "delta":
+            # A hand-written modifier is held until two people attest this
+            # exact receipt. The browser checks the Python-written full
+            # receipt digest and reviewer record as well as its shape.
+            kwargs["reform_identity"] = scenario_identity(
+                Scenario(simulation_modifier=module_level_modifier),
+                name=key,
+                revision=world.revision(),
+            )
+        refs[key] = world.ready(
+            key, values[key], rate=0.2 + 0.01 * len(refs), **kwargs
+        )
+        if key == "delta":
+            attestations.ATTESTATIONS_ROOT.mkdir()
+            document = read_receipt(refs[key].path)
+            attestation_file = attestations.ATTESTATIONS_ROOT / f"{key}.json"
+            attestation_file.write_text(
+                json.dumps(
+                    {
+                        "measure_id": key,
+                        "receipt_sha256": attestations.receipt_document_sha256(
+                            document
+                        ),
+                        "reason": "The modifier leaves the simulation unchanged.",
+                        "checker": "First reviewer",
+                        "second": "Second reviewer",
+                        "released_at": "2026-10-22T12:00:00+00:00",
+                    }
+                )
+                + "\n"
+            )
+            World.commit_attestation(attestation_file)
         stage(manifest, refs[key].path, **args)
     for key in ("alpha", "beta"):
         approve(manifest, key, "Reviewer", **args)
@@ -119,7 +160,13 @@ try:
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]
-        records.append({"id": member, "reform": receipt["reform"], "baseline": receipt["baseline"]})
+        records.append(
+            {
+                "id": member,
+                "reform": receipt["reform"],
+                "baseline": receipt["baseline"],
+            }
+        )
     combined = world.write(
         "combined--alpha+beta",
         {IN: -2.75, BEYOND: -3.0},
@@ -138,6 +185,15 @@ try:
     # survives beside the new ones.
     shutil.rmtree(out, ignore_errors=True)
     shutil.copytree(world.data_root, out)
-    print(json.dumps({k: (e.status, e.unsupported_years) for k, e in manifest.entries().items()}))
+    print(
+        json.dumps(
+            {
+                k: (e.status, e.unsupported_years)
+                for k, e in manifest.entries().items()
+            }
+        )
+    )
 finally:
+    attestations.ATTESTATIONS_ROOT = original_attestations_root
+    attestations.ATTESTATION_REPOSITORY = original_attestation_repository
     world.close()

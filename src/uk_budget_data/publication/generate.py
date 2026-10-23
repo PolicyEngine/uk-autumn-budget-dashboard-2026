@@ -45,6 +45,10 @@ from uk_budget_data.publication.receipt import (
     scenario_identity,
 )
 from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.template_proof import (
+    combined_templates_proof,
+    measure_templates_proof,
+)
 from uk_budget_data.scored_years import missing_scored_years
 
 
@@ -279,6 +283,7 @@ def generate_artifacts(
         member_outputs=None,
         composition=None,
         uses_config_baseline=False,
+        modifier_templates=None,
     ):
         baseline_identity, reform_identity = identities
         baseline_scenario = _scenarios(
@@ -330,6 +335,11 @@ def generate_artifacts(
                 composition=composition,
                 data_limits=limits,
                 model_limits=held,
+                modifier_templates=(
+                    modifier_templates
+                    if modifier_templates is not None
+                    else measure_templates_proof(reform, config, revision)
+                ),
             )
             if argv is not None:
                 inputs.generator_argv = argv
@@ -435,6 +445,9 @@ def generate_artifacts(
                 member_outputs=(snapshot if all(snapshot.values()) else None),
                 composition=composition,
                 uses_config_baseline=uses_config,
+                modifier_templates=combined_templates_proof(
+                    ordered, config, revision
+                ),
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason
