@@ -52,6 +52,15 @@ const nextConfig: NextConfig = {
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
   // them through Next's pipeline avoids ESM/CJS mismatch errors during build.
   transpilePackages: ['recharts', 'd3'],
+  // The rehearsal branch is a mock: never index any build of it.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ];
+  },
   turbopack: {
     root: process.cwd(),
   },

@@ -4,6 +4,7 @@ import "@policyengine/ui-kit/styles.css";
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import SiteFooter from '@/components/SiteFooter';
+import MockBanner, { IS_MOCK } from '@/components/MockBanner';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
@@ -12,6 +13,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
+  ...(IS_MOCK ? { robots: { index: false, follow: false } } : {}),
 };
 
 export const viewport: Viewport = {
@@ -43,6 +45,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <MockBanner />
         <PolicyEngineShell country="uk" showFooter={false}>
           {children}
           <SiteFooter />
