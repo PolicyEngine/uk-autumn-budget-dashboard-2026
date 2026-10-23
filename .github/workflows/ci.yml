@@ -20,8 +20,10 @@ jobs:
     # Two parts on two runners at once. In one job, the data-limit tests
     # (#51; about 2,300 worker-seconds at e66e4da) and the rest of the suite
     # (about 20 minutes on its own, 19 October) passed even a 45-minute
-    # limit.
-    timeout-minutes: 30
+    # limit. The rest took 28 minutes on 23 October (1,951 tests, after the
+    # VAT model limit), and a slower runner ran past 30, so the limit leaves
+    # room for that.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
