@@ -17,23 +17,52 @@ jobs:
   python-test-parts:
     name: Python tests (${{ matrix.part }})
     runs-on: ubuntu-latest
-    # Two parts on two runners at once. In one job, the data-limit tests
-    # (#51; about 2,300 worker-seconds at e66e4da) and the rest of the suite
-    # (about 20 minutes on its own, 19 October) passed even a 45-minute
-    # limit. The rest took 28 minutes on 23 October (1,951 tests, after the
-    # VAT model limit), and a slower runner ran past 30, so the limit leaves
-    # room for that.
-    timeout-minutes: 40
+    # Three parts on three runners at once. Two parts stopped fitting: on 23
+    # October, after #90 and #96, "the rest" took 29 of its 30 minutes
+    # (1,937 tests, 28:25 of pytest at 4473f83), so the next test added
+    # crossed the limit. The model-limit and template files, about half of
+    # that part's worker-seconds on CI, now run on their own; data limits
+    # took 12 minutes. A test file named in no part runs in "the rest", and
+    # tests/test_ci_parts.py checks that the parts partition the suite.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
           - part: data limits
             tests: tests/test_data_limits.py tests/test_publication_data_limits.py
+          - part: model limits and templates
+            tests: >-
+              tests/test_vat_model_limit.py
+              tests/test_model_limits.py
+              tests/test_september_cpi_model_limit.py
+              tests/test_pension_credit_model_limit.py
+              tests/test_measure_templates.py
+              tests/test_uc_health_template.py
+              tests/test_measure_template_composition.py
+              tests/test_measure_template_round3.py
+              tests/test_measure_template_receipt.py
+              tests/test_measure_template_age.py
+              tests/test_property_band_index.py
+              tests/test_native_measure_regressions.py
+              tests/test_measure_keys.py
           - part: the rest
             tests: >-
               tests/ --ignore=tests/test_data_limits.py
               --ignore=tests/test_publication_data_limits.py
+              --ignore=tests/test_vat_model_limit.py
+              --ignore=tests/test_model_limits.py
+              --ignore=tests/test_september_cpi_model_limit.py
+              --ignore=tests/test_pension_credit_model_limit.py
+              --ignore=tests/test_measure_templates.py
+              --ignore=tests/test_uc_health_template.py
+              --ignore=tests/test_measure_template_composition.py
+              --ignore=tests/test_measure_template_round3.py
+              --ignore=tests/test_measure_template_receipt.py
+              --ignore=tests/test_measure_template_age.py
+              --ignore=tests/test_property_band_index.py
+              --ignore=tests/test_native_measure_regressions.py
+              --ignore=tests/test_measure_keys.py
     steps:
       - uses: actions/checkout@v6
 
@@ -61,7 +90,7 @@ jobs:
 
   python-tests:
     name: Python tests
-    # The required check: it passes only when both parts pass. It runs
+    # The required check: it passes only when every part passes. It runs
     # whatever they did (always()), because a skipped job's check counts as
     # passed.
     needs: python-test-parts
@@ -69,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Both parts passed
+      - name: Every part passed
         env:
           PARTS: ${{ needs.python-test-parts.result }}
         run: |
