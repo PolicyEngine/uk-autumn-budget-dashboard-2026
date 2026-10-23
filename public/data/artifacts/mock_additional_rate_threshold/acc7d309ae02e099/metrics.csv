@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_additional_rate_threshold,"Additional rate threshold £100,000 (MOCK)",2026,0.0,0.0,0.0,0.0
+mock_additional_rate_threshold,"Additional rate threshold £100,000 (MOCK)",2027,6.590019514699534,-0.0017132061840516995,0.0,0.0
+mock_additional_rate_threshold,"Additional rate threshold £100,000 (MOCK)",2028,6.924587206085098,-0.0017393819925886204,0.0,0.0
+mock_additional_rate_threshold,"Additional rate threshold £100,000 (MOCK)",2029,7.484085659952086,-0.0017783030159484825,0.0,0.0
+mock_additional_rate_threshold,"Additional rate threshold £100,000 (MOCK)",2030,7.840764074748341,-0.0018085553136929881,0.0,0.0

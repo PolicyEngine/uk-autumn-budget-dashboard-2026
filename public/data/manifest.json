@@ -1,0 +1,314 @@
+{
+  "basis": {
+    "calibration": {
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
+      "status": "pre_budget",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "forecast": {
+      "source": "policyengine-uk default economic assumptions",
+      "status": "pre_budget",
+      "vintage": "as shipped in the installed policyengine-uk"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "combined": {
+    "combined--mock_employer_nics_threshold+mock_fuel_duty_cut_extended+mock_uc_taper_50pc": {
+      "approval": {
+        "artifact_sha256": "c7bfde9090c7b6c0e90623ba9d64e6da88daac79f7f44d527cf2daae96ea0a05",
+        "at": "2026-10-23T12:21:43.218571+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "49759786f117f6d126599cd00acf13f5948ac238065b622ec82eb699a859ae2b"
+      },
+      "artifact": "artifacts/combined--mock_employer_nics_threshold+mock_fuel_duty_cut_extended+mock_uc_taper_50pc/c7bfde9090c7b6c0",
+      "artifact_sha256": "c7bfde9090c7b6c0e90623ba9d64e6da88daac79f7f44d527cf2daae96ea0a05",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "measures": [
+        "mock_employer_nics_threshold",
+        "mock_fuel_duty_cut_extended",
+        "mock_uc_taper_50pc"
+      ],
+      "member_outputs_sha256": {
+        "mock_employer_nics_threshold": "fd11c8fbed505746ccd77ec188d5258c5cb93ecddbc427aa9f9cb263bde9198d",
+        "mock_fuel_duty_cut_extended": "471b930a271ce960aba57ed0d1eb0963dced2a2294358f4d78034dc3f08b53a2",
+        "mock_uc_taper_50pc": "1179db1d7f945e27b8f33b3e6e85e581bb7a5727b987dbef547384af0cbd7bb1"
+      },
+      "name": "Combined: Employer NICs threshold \u00a35,500 (MOCK), Fuel duty 5p cut to August 2027 (MOCK), Universal Credit taper 50% (MOCK)",
+      "outputs_sha256": "49759786f117f6d126599cd00acf13f5948ac238065b622ec82eb699a859ae2b",
+      "receipt_sha256": "0b2a924e90c166fc858d0baadd4543181075f9f1b8a621f6a46fd8ad744fe5fb",
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    }
+  },
+  "execution": {
+    "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+    "identity": {
+      "certificate": {
+        "bundle_version": "6.10.0",
+        "certificate_sha256": "82000fa5fe409e422b6069491786bd3039a67b4d59422217417038e39c923f59",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "certified_for_core_version": "3.33.3",
+        "certified_for_model_version": "2.132.6",
+        "compatibility_basis": "built_with_model_package",
+        "country_id": "uk"
+      },
+      "certification_status": "certified",
+      "core": {
+        "name": "policyengine-core",
+        "version": "3.33.3"
+      },
+      "country_id": "uk",
+      "data": {
+        "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "build_model_version": "2.132.6",
+        "data_package": "microcosm-data",
+        "dataset": "microcosm_uk_2024_25",
+        "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+        "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+        "release_version": "0.1.0"
+      },
+      "model": {
+        "name": "policyengine-uk",
+        "version": "2.132.6"
+      },
+      "schema_version": 1,
+      "wrapper": {
+        "name": "policyengine",
+        "version": "6.10.0"
+      }
+    }
+  },
+  "measures": {
+    "mock_additional_rate_threshold": {
+      "artifact": "artifacts/mock_additional_rate_threshold/acc7d309ae02e099",
+      "artifact_sha256": "acc7d309ae02e0992700c99455a942968617e75e9a0ce51cf32943ecacf8d724",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Additional rate threshold \u00a3100,000 (MOCK)",
+      "outputs_sha256": "87510fb59adefaad29a27353aa78ee2a15ef0194aec712f3d5f5dfb1480d1789",
+      "receipt_sha256": "c5018c0b14527bd6bc9682803a144aa3f4de621f420d184a202606c33ea7baa1",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_cgt_aea_and_higher_rate": {
+      "artifact": "artifacts/mock_cgt_aea_and_higher_rate/efe217db1c57b7fb",
+      "artifact_sha256": "efe217db1c57b7fbf2b2df8fb898d9ccd63018513897e4aca478984a9796469f",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "CGT: exempt amount halved, higher rate 26% (MOCK)",
+      "outputs_sha256": "890a3cdfb1ec8034d00a6602542b9c0da8b49dd51f2ceaa49e36cf2e04a33e63",
+      "receipt_sha256": "1287fd1160580204874fdbf3a54e348179f046dd886818541fc383641f2d8d98",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_employer_nics_threshold": {
+      "approval": {
+        "artifact_sha256": "9ef32a0fabdaeea53ce8f840c4d2d29211b78a90cd4960fef062ea67d7899b5d",
+        "at": "2026-10-23T12:19:32.578559+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "fd11c8fbed505746ccd77ec188d5258c5cb93ecddbc427aa9f9cb263bde9198d"
+      },
+      "artifact": "artifacts/mock_employer_nics_threshold/9ef32a0fabdaeea5",
+      "artifact_sha256": "9ef32a0fabdaeea53ce8f840c4d2d29211b78a90cd4960fef062ea67d7899b5d",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Employer NICs threshold \u00a35,500 (MOCK)",
+      "outputs_sha256": "fd11c8fbed505746ccd77ec188d5258c5cb93ecddbc427aa9f9cb263bde9198d",
+      "receipt_sha256": "dd3e553f7f86e7f783b851efd93f850f7091b11646a22141fbc303f43ec7d05b",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_fuel_duty_cut_extended": {
+      "approval": {
+        "artifact_sha256": "9699c7b4b9b64ae8e30abc5786e90bc9870919858abd41a059b86b38df968faf",
+        "at": "2026-10-23T12:19:37.488959+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "471b930a271ce960aba57ed0d1eb0963dced2a2294358f4d78034dc3f08b53a2"
+      },
+      "artifact": "artifacts/mock_fuel_duty_cut_extended/9699c7b4b9b64ae8",
+      "artifact_sha256": "9699c7b4b9b64ae8e30abc5786e90bc9870919858abd41a059b86b38df968faf",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Fuel duty 5p cut to August 2027 (MOCK)",
+      "outputs_sha256": "471b930a271ce960aba57ed0d1eb0963dced2a2294358f4d78034dc3f08b53a2",
+      "receipt_sha256": "a02bef423f767d5f2992c899ef00c92bc70d9f2d875cb769a8b4d8e6d5a23376",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_hvcts_band": {
+      "artifact": "artifacts/mock_hvcts_band/c60cb84fed73a145",
+      "artifact_sha256": "c60cb84fed73a145f5b6b823a8a0b685faeae0fcd851ee46df67ea3d77b591b6",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "HVCTS band \u00a31.5m to \u00a32m (MOCK)",
+      "outputs_sha256": "c43525f965ca6acbac028d9ac7f51b4c7e8957f9df8efb3bd4430d1966411c57",
+      "receipt_sha256": "dcbbe58ef15349c34c04c988047fcc2dc6aaa398db42d10287ece7dc07255e9a",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_pensions_annual_allowance": {
+      "artifact": "artifacts/mock_pensions_annual_allowance/f8f5de1953efdac4",
+      "artifact_sha256": "f8f5de1953efdac489efa15d433bd5344d919eb899fa42fd8c059e68ab51f8a0",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Pensions annual allowance \u00a340,000 (MOCK)",
+      "outputs_sha256": "f816ff11e87b63fc379afe6c321c6b9bf2cca6e9fdd611541521a8fc0090cb54",
+      "receipt_sha256": "bbf65f319e191a5278351ca997cc63f78a79b7e3fa9c50db0fed2a2bb59771a5",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_salary_sacrifice_cap_2028": {
+      "artifact": "artifacts/mock_salary_sacrifice_cap_2028/b6207cf129749b32",
+      "artifact_sha256": "b6207cf129749b32777602a65c8bfde5ea334cf033e365baa3b9484c9a93eb7b",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Salary sacrifice NICs cap from April 2028 (MOCK)",
+      "outputs_sha256": "a7bdb86bd7f84783fddb9027029b6899a6ea64614eabaa1326e063cd8011c02a",
+      "receipt_sha256": "32ba3a78648cd2ff76b734724db93464a4cc3eaadb3b0158f58aee457044a68b",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_state_pension_4_5pc": {
+      "artifact": "artifacts/mock_state_pension_4_5pc/5ddb9c46b918fb58",
+      "artifact_sha256": "5ddb9c46b918fb58f1634738dce26e64a96d07fe4659217f259fd0539ff5f788",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "State Pension +4.5% in April 2027 (MOCK)",
+      "outputs_sha256": "8a9d1139679fc4c26e69521525c0735a569944011ffc50cf782c9c15366ea433",
+      "receipt_sha256": "6f2efb6bae01ed2ff520dc8132ec2e5e565b4af36902389459bfc80d1fadc991",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "failed"
+      },
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    },
+    "mock_uc_taper_50pc": {
+      "approval": {
+        "artifact_sha256": "20cb8399415062a164108e3ed4c3cf3b60785d6c3e0084807ca4a435d53e9829",
+        "at": "2026-10-23T12:19:43.987122+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "1179db1d7f945e27b8f33b3e6e85e581bb7a5727b987dbef547384af0cbd7bb1"
+      },
+      "artifact": "artifacts/mock_uc_taper_50pc/20cb8399415062a1",
+      "artifact_sha256": "20cb8399415062a164108e3ed4c3cf3b60785d6c3e0084807ca4a435d53e9829",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "name": "Universal Credit taper 50% (MOCK)",
+      "outputs_sha256": "1179db1d7f945e27b8f33b3e6e85e581bb7a5727b987dbef547384af0cbd7bb1",
+      "receipt_sha256": "123ea2fffc624badded11f2fed9930dee1825bcdf26a0156471e8694e72d1b28",
+      "reconciliation": {
+        "responsiveness_status": "responsive",
+        "summary_status": "pass"
+      },
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    }
+  },
+  "revision": 17,
+  "schema": "uk-budget-dashboard/publication-manifest/v1",
+  "superseded": [],
+  "updated_at": "2026-10-23T12:21:43.218709+00:00"
+}

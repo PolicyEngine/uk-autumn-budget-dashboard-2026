@@ -397,16 +397,9 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
 
   // Policy name mapping for tooltip
   const policyNames = {
-    two_child_limit: "2 child limit repeal",
-    fuel_duty_freeze: "Fuel duty freeze",
-    rail_fares_freeze: "Rail fares freeze",
-    threshold_freeze_extension: "Threshold freeze",
-    dividend_tax_increase_2pp: "Dividend tax +2pp",
-    savings_tax_increase_2pp: "Savings tax +2pp",
-    property_tax_increase_2pp: "Property tax +2pp",
-    freeze_student_loan_thresholds: "Student loan freeze",
-    salary_sacrifice_cap: "Salary sacrifice cap",
-    autumn_budget_2026_combined: "Autumn Budget (combined)",
+    mock_employer_nics_threshold: "Employer NICs threshold",
+    mock_fuel_duty_cut_extended: "Fuel duty cut extended",
+    mock_uc_taper_50pc: "UC taper 50%",
   };
 
   // Custom tooltip

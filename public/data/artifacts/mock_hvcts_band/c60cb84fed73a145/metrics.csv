@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_hvcts_band,HVCTS band £1.5m to £2m (MOCK),2026,0.0,0.0,0.0,0.0
+mock_hvcts_band,HVCTS band £1.5m to £2m (MOCK),2027,0.0,0.0,0.0,0.0
+mock_hvcts_band,HVCTS band £1.5m to £2m (MOCK),2028,0.4008959924175515,-3.875441902769915e-06,0.0,0.0
+mock_hvcts_band,HVCTS band £1.5m to £2m (MOCK),2029,0.40089599257331016,-8.002644312963935e-06,0.0,0.0
+mock_hvcts_band,HVCTS band £1.5m to £2m (MOCK),2030,0.40089599416851834,-8.502073628475315e-06,0.0,0.0

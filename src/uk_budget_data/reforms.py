@@ -845,7 +845,17 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     """Get the main Autumn Budget 2025 reforms (lazy-loaded)."""
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
-        _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
+        # Rehearsal branch (MOCK DATA): the mock measures only.
+        from uk_budget_data.rehearsal_registry import rehearsal_reforms
+
+        _AUTUMN_BUDGET_2026_REFORMS_CACHE = rehearsal_reforms()
+    return _AUTUMN_BUDGET_2026_REFORMS_CACHE
+
+
+def _get_last_years_reforms() -> list[Reform]:
+    """Last year's measures, unused on the rehearsal branch."""
+    if True:
+        return [
             _create_combined_autumn_budget_reform(),  # Combined first
             _create_two_child_limit_repeal(),
             _create_fuel_duty_freeze(),
@@ -857,16 +867,14 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
             get_freeze_student_loan_thresholds(),
             create_salary_sacrifice_cap_reform(),
         ]
-    return _AUTUMN_BUDGET_2026_REFORMS_CACHE
 
 
 def _get_all_reforms() -> list[Reform]:
-    """Get all available reforms (lazy-loaded)."""
+    """Get all available reforms (lazy-loaded): on the rehearsal branch,
+    the mock measures only."""
     global _ALL_REFORMS_CACHE
     if _ALL_REFORMS_CACHE is None:
-        _ALL_REFORMS_CACHE = _get_autumn_budget_2026_reforms() + [
-            create_salary_sacrifice_cap_reform(),
-        ]
+        _ALL_REFORMS_CACHE = list(_get_autumn_budget_2026_reforms())
     return _ALL_REFORMS_CACHE
 
 

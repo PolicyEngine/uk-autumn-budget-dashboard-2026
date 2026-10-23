@@ -1,0 +1,6 @@
+reform_id,reform_name,year,people_affected,gini_change,poverty_change_pp,poverty_change_pct
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2026,0.0,0.0,0.0,0.0
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2027,11.630367072580393,-0.0017208248090086237,-0.1962862,-1.6702752
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2028,11.541277693633605,-0.0017528567172852784,-0.121245384,-1.0267569
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2029,11.518585191172516,-0.0017546068219461465,-0.18809223,-1.5842706
+mock_uc_taper_50pc,Universal Credit taper 50% (MOCK),2030,11.440676261815414,-0.0017649822540874893,-0.24560642,-2.004959

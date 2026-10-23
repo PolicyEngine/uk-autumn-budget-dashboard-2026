@@ -1,1 +1,10 @@
 measure_id,direction,from_year,to_year,reviewer,note
+mock_additional_rate_threshold,positive,2027,,W5 (rehearsal),MOCK line 1
+mock_cgt_aea_and_higher_rate,positive,2027,,W5 (rehearsal),MOCK line 2
+mock_pensions_annual_allowance,positive,2027,,W5 (rehearsal),MOCK line 3
+mock_salary_sacrifice_cap_2028,positive,2028,2028,W5 (rehearsal),MOCK line 4: direct effect in 2028-29 only
+mock_hvcts_band,positive,2028,,W5 (rehearsal),MOCK line 5
+mock_employer_nics_threshold,negative,2027,,W5 (rehearsal),MOCK line 8
+mock_fuel_duty_cut_extended,negative,2026,,W5 (rehearsal),MOCK line 12
+mock_state_pension_4_5pc,negative,2027,,W5 (rehearsal),MOCK line 13
+mock_uc_taper_50pc,negative,2027,,W5 (rehearsal),MOCK line 14
