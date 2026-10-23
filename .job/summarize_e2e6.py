@@ -235,10 +235,16 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
     # outer wall overlaps them; only its outside gate is assigned to step 1.
     importer_gate = (importer_phase.get("supervisor_gate_seconds", 0)
                      if importer_phase else 0)
+    verification = importer.get("source_verification_and_parameter_copy", {})
+    verification_seconds = verification.get("seconds")
     components = [
         {"name": "acquisition_estimate", "complete": True,
          "counted_seconds": acquisition_seconds, "estimated": True,
          "note": "Planning estimate for browser acquisition; no October download was timed"},
+        {"name": "source_verification_and_scratch_parameter_copy",
+         "complete": finite_seconds(verification_seconds),
+         "counted_seconds": verification_seconds if finite_seconds(verification_seconds) else 0.,
+         "estimated": False, "source": "importer-certified-timings.json"},
         direct_import_component("primary_certified_importer",
                                 importer.get("certified_module_cli"), importer_gate),
         direct_import_component("reviewed_inputs_machine_only",
@@ -290,8 +296,8 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
     staging_pass = bool(staging and staging.get("staged") is True)
     fixture_pass = bool(staging and (staging.get("labelled_basis_adoption_fixture") or {}).get("passed") is True)
     checks = {
-        "certified_importer_command_passed": components[1]["complete"],
-        "reviewed_inputs_command_passed": components[2]["complete"],
+        "certified_importer_command_passed": components[2]["complete"],
+        "reviewed_inputs_command_passed": components[3]["complete"],
         "reviewed_input_readiness_valid": input_pass,
         "frozen_reference_valid": reference_pass,
         "rebased_subset_measurement_completed_or_failure_separately_diagnosed": probe_pass or diagnosis_valid,
@@ -351,7 +357,7 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         verdict = ("MEASURED MACHINE TIMING FITS; original HPI probe failed and release semantics remain unaccepted"
                    if selected["machine_fits"] else
                    "MEASURED MACHINE TIMING DOES NOT FIT the 13:30–15:45 window; original HPI probe also remains failed")
-    diagnostic = importer.get("source_verification_and_parameter_copy", {})
+    diagnostic = verification
     return {
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "verdict": verdict, "complete_for_measured_machine_projection": complete,
@@ -383,7 +389,7 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "known_component_seconds": base_seconds,
         "all_base_components_measured_or_explicitly_estimated": base_complete,
         "prepublication_frozen_reference": reference_component,
-        "prepublication_importer_source_verification_and_parameter_copy_seconds": diagnostic.get("seconds"),
+        "importer_source_verification_and_parameter_copy_seconds_counted_once": diagnostic.get("seconds"),
         "concurrency": concurrency,
         "selected_largest_successfully_measured_concurrency": selected_count,
         "selected_projection": selected,

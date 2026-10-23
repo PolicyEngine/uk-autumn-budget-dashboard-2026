@@ -16,7 +16,7 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
 
 **Historical part 4 setup blocker (UK 2.145.0 overlay):** a restart at **07:22:35Z on 23 October** failed during the common `policyengine` import: `Data release manifest is not certified for the runtime model version 2.145.0 in country 'uk'.` Preserve the certification guard (`policyengine/provenance/manifest.py:610`). No complete national measure, constructor profile or end-to-end reduced route was obtained in that restart. Part 6's current frozen setup now passes certification; the fresh reduced and full output timings must still complete before assessing the route.
 
-1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Do not run concurrent jobs.
+1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Keep independent input probes serial. Concurrent measure generation is permitted only in separately measured, resource-checked two- and three-process trials after a complete serial artifact: freshly require load1 ≤110, free disk ≥55 decimal GB, and memory headroom of at least the larger of 18.6 GB or the measured serial peak per process. Every child still gates all of its constructors and caps its thread pools at four; registry factory refreshes stay process-local.
 
    ```sh
    set -e
@@ -722,13 +722,18 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
 
    Keep `export DATASET="$NATIONAL_DATASET"` for production artifact generation in step 6; a subset cannot produce publishable national receipts.
 
-6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact. The default artifact builder makes a private copy of a local dataset and hashes exactly those bytes, so allow disk space for that copy in addition to the 55 GB reserve. The preceding validation reads the source in place; this receipted production route deliberately uses the dashboard's exact-byte provenance mechanism.
+6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact.
+
+   **Current certified dataset selection:** use the supported default bundle dataset `microcosm_uk_2024_25` for receipted generation on policyengine 6.10.0 / UK 2.132.6. The part 6 `two_child_limit` attempt with an explicit local national path took **2,012.027 s** externally and completed its calculator calls, but receipt construction refused: the simulation recorded a private local-copy URI while the receipt identified the same SHA-256 bytes by their canonical `hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71` URI. No artifact or CSV was written: the artifact writer constructs its receipt before creating its output directory. This failed attempt does not establish successful artifact throughput. A supported default-bundle retry is underway; no complete-route timing or concurrency verdict is established yet.
+
+   The recipe below leaves the generator's default builder and every receipt/certification check unchanged. It first hashes the original national input, seeds a **scratch** bundle cache with a symlink to those exact read-only input bytes, and sets `cfg.dataset_path=None`. The official materializer checks that cache against the bundle SHA-256 and records its canonical dataset name, URI, revision and package. Run the entire generator call with the scratch cache as its working directory because the official cache defaults to `./data`; preserve the original source repository as an **absolute** `repo_root` so the receipt still reads that repository's committed forecast declaration and code identity. Do not relabel a local simulation's provenance, edit the certificate, change calibration, or bypass the URI check. The preceding direct-input probes and unreceipted national processor retain their original local read-in-place paths.
 
    This complete-registry recipe puts the standalone dividend first, so its effective-rate preflight and full processor must pass before any later artifact is generated. A scenario-binding refusal happens before `process`; the progress callback stops that refusal immediately instead of allowing the generator to continue. The helper also checks the registered `autumn_budget_2026_combined` measure. Explicit combined sets run after standalone measures, so this ordering protects them even when long combined keys are hashed. A custom generation call that omits the standalone dividend must separately complete its preflight before generating a combination containing it; do not infer that protection from a combined key's text.
 
    ```sh
    export DATASET="$NATIONAL_DATASET"
    PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" uv run --no-sync python - <<'PY'
+   import hashlib
    import json
    import os
    import time
@@ -740,8 +745,38 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
    )
    from uk_budget_data import pipeline
    from uk_budget_data.publication.generate import generate_artifacts
+   from policyengine.provenance.dataset_materialization import _resolve_bundle_dataset
+   from policyengine.provenance.manifest import get_release_manifest
 
+   source_repo = Path.cwd().resolve()
    cfg = config()
+   cfg = cfg.model_copy(update={"dataset_path": None,
+                                "output_dir": cfg.output_dir.resolve()})
+   cache_root = (Path(os.environ["REBASE_SCRATCH"]) / "bundle-default").resolve()
+   national = Path(os.environ["DATASET"]).resolve()
+   expected_sha = "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+   def file_sha(path):
+       digest = hashlib.sha256()
+       with path.open("rb") as stream:
+           for block in iter(lambda: stream.read(1024 * 1024), b""):
+               digest.update(block)
+       return digest.hexdigest()
+   assert file_sha(national) == expected_sha, "National source hash changed"
+   release = get_release_manifest("uk")
+   assert release.default_dataset == "microcosm_uk_2024_25"
+   spec = _resolve_bundle_dataset("uk", release.default_dataset,
+                                  data_dir=cache_root / "data", manifest=release)
+   assert spec.sha256 == expected_sha, "Default bundle dataset differs from national source"
+   spec.destination.parent.mkdir(parents=True, exist_ok=True)
+   if not spec.destination.exists() and not spec.destination.is_symlink():
+       spec.destination.symlink_to(national)
+   assert spec.destination.is_file() and file_sha(spec.destination) == expected_sha
+   print(json.dumps({"dataset_selection": "official_certified_default_bundle",
+                     "dataset": release.default_dataset,
+                     "canonical_uri": spec.source_uri,
+                     "revision": spec.revision,
+                     "scratch_cache": str(spec.destination),
+                     "sha256": expected_sha}), flush=True)
    forecast = load_forecast()
    reforms = registered_measures(forecast)
    assert len({m.id for m in reforms}) == len(reforms) == 10
@@ -761,16 +796,21 @@ Use after the OBR publishes its October 2026 EFO, before releasing results. This
        return original_build(dataset_path, scenario)
 
    started = time.perf_counter()
-   with guard_framework_baselines(), \
-        patch.object(pipeline, "build_microsimulation", guarded_build):
-       report = generate_artifacts(
-           reforms, cfg,
-           artifacts_root=cfg.output_dir / "artifacts",
-           repo_root=Path.cwd(),
-           generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
-           process=process,
-           on_progress=progress_or_stop,
-       )
+   previous_cwd = Path.cwd()
+   try:
+       os.chdir(cache_root)
+       with guard_framework_baselines(), \
+            patch.object(pipeline, "build_microsimulation", guarded_build):
+           report = generate_artifacts(
+               reforms, cfg,
+               artifacts_root=cfg.output_dir / "artifacts",
+               repo_root=source_repo,
+               generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
+               process=process,
+               on_progress=progress_or_stop,
+           )
+   finally:
+       os.chdir(previous_cwd)
    paths = {reference.key: str(reference.path) for reference in report.written}
    out = Path(os.environ["REBASE_SCRATCH"])
    (out / "new-artifacts.json").write_text(json.dumps(paths, indent=2) + "\n")
