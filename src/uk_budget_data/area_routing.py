@@ -10,7 +10,11 @@ belongs to it.
 The page needs to know that, to label its area views rather than show an
 earlier release's results by area. This module writes
 public/data/area-routing.json, the page's area routing status, from the
-installed bundle. The file holds two fields and changes only when the
+installed bundle. The page labels its area views "not available on this
+release" when the file says so, and draws them only when it says
+``available``: when it can't read the file, they say their results could not
+be loaded and show no figures, since a file of results by area may belong to
+an earlier release. The file holds two fields and changes only when the
 routing does. tests/test_area_routing.py pins it to the installed bundle, so
 a bundle adoption that changes the routing fails until the file is
 regenerated::

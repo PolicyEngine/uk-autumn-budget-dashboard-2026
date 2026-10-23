@@ -1,14 +1,35 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { AREA_ROUTING_CONTENTS } from "../../scripts/check-public-files.mjs";
 import {
+  loadAreaRouting,
   resetGeographyCache,
+  useAreaRouting,
   useConstituencyBoundaries,
   useGeographyData,
 } from "./useGeographyData";
 import {
+  AREA_ROUTING_URL,
+  areaRouting,
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+// Written by uk_budget_data.area_routing from the installed bundle.
+const PUBLIC_AREA_ROUTING = readFileSync(
+  join(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "public",
+    "data",
+    "area-routing.json",
+  ),
+  "utf-8",
+);
 
 beforeEach(() => resetGeographyCache());
 afterEach(() => vi.unstubAllGlobals());
@@ -122,6 +143,118 @@ describe("useConstituencyBoundaries", () => {
       geographyFetch({ "/data/uk_constituencies_2024.geojson": "{}" }),
     );
     const { result } = renderHook(() => useConstituencyBoundaries());
+    await waitFor(() => expect(result.current.status).toBe("error"));
+  });
+});
+
+describe("useAreaRouting", () => {
+  it("reads the release's routing once, however many components ask", async () => {
+    const fetchImpl = geographyFetch();
+    vi.stubGlobal("fetch", fetchImpl);
+    const first = renderHook(() => useAreaRouting());
+    expect(first.result.current.status).toBe("loading");
+    expect(first.result.current.routing).toBeNull();
+    const second = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    expect(first.result.current.routing).toEqual({
+      areaViews: "available",
+      regionalReleaseKind: "local_area",
+    });
+    expect(second.result.current).toBe(first.result.current);
+    expect(fetchImpl.calls).toEqual([AREA_ROUTING_URL]);
+  });
+
+  // The module writes a kind with not_available for a routing that is
+  // missing a template.
+  it.each([null, "local_area", "area_coded_national"])(
+    "reads a release that routes no results by area, with the kind %s",
+    async (kind) => {
+      vi.stubGlobal(
+        "fetch",
+        geographyFetch({
+          [AREA_ROUTING_URL]: areaRouting("not_available", kind),
+        }),
+      );
+      const { result } = renderHook(() => useAreaRouting());
+      await waitFor(() => expect(result.current.status).toBe("ready"));
+      expect(result.current.routing).toEqual({
+        areaViews: "not_available",
+        regionalReleaseKind: kind,
+      });
+    },
+  );
+
+  it("reads the file the Python side wrote for the installed bundle", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ [AREA_ROUTING_URL]: PUBLIC_AREA_ROUTING }),
+    );
+    const { result } = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(["available", "not_available"]).toContain(
+      result.current.routing.areaViews,
+    );
+  });
+
+  it("says a missing file is unavailable", async () => {
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: 404 }));
+    const { result } = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    expect(result.current.routing).toBeNull();
+  });
+
+  it("reads every answer the public file checks accept, as written", async () => {
+    expect(AREA_ROUTING_CONTENTS.size).toBe(5);
+    for (const text of AREA_ROUTING_CONTENTS) {
+      const fetchImpl = geographyFetch({ [AREA_ROUTING_URL]: text });
+      const answer = await loadAreaRouting({ fetchImpl, base: "" });
+      const written = JSON.parse(text);
+      expect(answer.status, text).toBe("ready");
+      expect(answer.routing).toEqual({
+        areaViews: written.area_views,
+        regionalReleaseKind: written.regional_release_kind,
+      });
+    }
+  });
+
+  it.each([
+    ["an HTTP error", 500],
+    [
+      "an HTTP error whose body says available",
+      { status: 503, body: areaRouting("available") },
+    ],
+    ["text that is not JSON", "available\n"],
+    ["an empty object", "{}\n"],
+    ["a list", "[]\n"],
+    ["null", "null\n"],
+    [
+      "an unknown status",
+      '{"area_views": "partly", "regional_release_kind": null}',
+    ],
+    ["a missing kind", '{"area_views": "not_available"}'],
+    // The module writes available only with a kind the area run serves.
+    ["available with no kind", areaRouting("available", null)],
+    ["available with an unknown kind", areaRouting("available", "state_release")],
+    [
+      "not available with an unknown kind",
+      areaRouting("not_available", "state_release"),
+    ],
+    [
+      "another field",
+      '{"area_views": "available", "regional_release_kind": "local_area", "x": 1}',
+    ],
+  ])("refuses %s, and says nothing about the release", async (_, answer) => {
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: answer }));
+    const { result } = renderHook(() => useAreaRouting());
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current.routing).toBeNull();
+  });
+
+  it("refuses a network failure", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw new TypeError("network down");
+    });
+    const { result } = renderHook(() => useAreaRouting());
     await waitFor(() => expect(result.current.status).toBe("error"));
   });
 });

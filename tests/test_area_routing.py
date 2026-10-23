@@ -51,6 +51,14 @@ def test_the_committed_file_matches_the_installed_bundle():
     )
 
 
+def test_the_page_tests_read_what_the_module_writes():
+    fixture = REPO / "src/test/fixtures/geography/area-routing.json"
+    routing = area_routing.area_routing(
+        manifest("local_area", {**NATIONAL, **AREAS})
+    )
+    assert fixture.read_bytes() == area_routing.render(routing).encode()
+
+
 def test_a_local_area_release_is_available():
     routing = area_routing.area_routing(
         manifest("local_area", {**NATIONAL, **AREAS})

@@ -21,17 +21,47 @@ import { parseGeographyTable } from "../utils/geography/parse";
 
 export const BOUNDARIES_FILE = "uk_constituencies_2024.geojson";
 
+/**
+ * Whether the release routes results by area, as uk_budget_data.area_routing
+ * writes it from the installed bundle.
+ */
+export const AREA_ROUTING_FILE = "area-routing.json";
+
+/**
+ * The routing kinds the area run serves (SERVED_KINDS in
+ * uk_budget_data.area_routing). The file says `available` only with one of
+ * them, and `not_available` with one of them or none. The page reads only
+ * those five answers, the ones both public file checks accept.
+ */
+export const SERVED_KINDS = Object.freeze(["local_area", "area_coded_national"]);
+
+const ROUTING_FIELDS = "area_views,regional_release_kind";
+
+const isRoutingStatus = (body) => {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return false;
+  }
+  if (Object.keys(body).sort().join() !== ROUTING_FIELDS) return false;
+  const served = SERVED_KINDS.includes(body.regional_release_kind);
+  if (body.area_views === "available") return served;
+  if (body.area_views === "not_available") {
+    return served || body.regional_release_kind === null;
+  }
+  return false;
+};
+
 export const LOADING = Object.freeze({
   status: "loading",
   table: null,
   features: null,
+  routing: null,
   error: null,
 });
 
 const basePath = () => process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const failure = (status, error) =>
-  Object.freeze({ status, table: null, features: null, error });
+  Object.freeze({ status, table: null, features: null, routing: null, error });
 
 /**
  * Fetch and check one file of results by area.
@@ -94,10 +124,56 @@ export async function loadBoundaries({
   }
 }
 
+/**
+ * Fetch whether the release routes results by area.
+ *
+ * @returns {Promise<Object>} `ready` with `routing`
+ *   (`{areaViews, regionalReleaseKind}`) for one of the five answers above,
+ *   or `unavailable` (HTTP 404) or `error`; never rejects. Only `ready` says anything about the release:
+ *   for the others the area views say their results could not be loaded,
+ *   and show none (viewState).
+ */
+export async function loadAreaRouting({
+  fetchImpl = fetch,
+  base = basePath(),
+} = {}) {
+  let response;
+  try {
+    response = await fetchImpl(`${base}/data/${AREA_ROUTING_FILE}`, {
+      cache: "no-cache",
+    });
+  } catch {
+    return failure("error", `${AREA_ROUTING_FILE} could not be fetched`);
+  }
+  if (response.status === 404) return failure("unavailable", null);
+  if (!response.ok) {
+    return failure("error", `${AREA_ROUTING_FILE}: HTTP ${response.status}`);
+  }
+  try {
+    const body = await response.json();
+    if (!isRoutingStatus(body)) {
+      return failure("error", `${AREA_ROUTING_FILE}: not an area routing status`);
+    }
+    return Object.freeze({
+      status: "ready",
+      table: null,
+      features: null,
+      routing: Object.freeze({
+        areaViews: body.area_views,
+        regionalReleaseKind: body.regional_release_kind,
+      }),
+      error: null,
+    });
+  } catch {
+    return failure("error", `${AREA_ROUTING_FILE} could not be read`);
+  }
+}
+
 const LOADERS = {
   regional: () => loadGeographyFile("regional"),
   constituency: () => loadGeographyFile("constituency"),
   boundaries: () => loadBoundaries(),
+  routing: () => loadAreaRouting(),
 };
 
 // One entry per resource and base path: its settled state, and who to tell.
@@ -149,6 +225,12 @@ export function useGeographyData(name) {
 
 /** The constituency boundaries: `{status, features, error}`. */
 export const useConstituencyBoundaries = () => useCachedResource("boundaries");
+
+/**
+ * Whether the release routes results by area: `{status, routing, error}`,
+ * fetched once and shared.
+ */
+export const useAreaRouting = () => useCachedResource("routing");
 
 /** Forget every fetched file (for tests). */
 export function resetGeographyCache() {
