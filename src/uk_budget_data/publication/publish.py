@@ -18,11 +18,17 @@ The gates, in order:
    never approved. Its artifact is receipt-only: the receipt lists no
    files, and the directory holds ``receipt.json`` and nothing else. It
    skips responsiveness and reconciliation, which would only measure the £0
-   the data give it. Every other check still applies.
+   the data give it, and the certificate's verification and the hold on
+   hand-written modifiers (4c), since it publishes no figure for them to
+   vouch for or release.
 4b. **Model limits.** A measure the installed model overstates until a
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
    approved.
+4c. **Hand-written modifiers.** While a data limit is active, an artifact
+   whose receipt binds a hand-written modifier on either side is held at
+   every figure level until two people attest its exact receipt
+   (``attestations``); a release never waives any other check.
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or

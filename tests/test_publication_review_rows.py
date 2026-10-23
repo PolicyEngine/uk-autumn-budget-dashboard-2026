@@ -1411,8 +1411,9 @@ def test_a_kept_artifact_that_cannot_be_read_refuses(
 def test_a_path_the_rows_need_that_cannot_be_read_refuses(
     base, monkeypatch, unreadable
 ):
-    """Where ``artifacts/`` or a listed entry's artifact can't be looked
-    at, the run refuses by name rather than failing with a traceback."""
+    """Where the data root, ``artifacts/``, or a listed entry's key
+    directory or artifact can't be looked at, the run refuses by name,
+    naming the component that failed, rather than with a traceback."""
     lstat = os.lstat
     with repository(base) as (root, manifest):
         root = Path(os.path.realpath(root))

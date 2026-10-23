@@ -30,7 +30,9 @@ all. The manifest does not record who staged an entry, so ``--staged-by``
 names them whenever a provisional or not-computable entry is listed.
 
 The artifact digest covers a receipt's content except the two fields that
-describe its generation run (``receipt.VOLATILE_DASHBOARD_FIELDS``), so a
+record when and how it was generated (``receipt.VOLATILE_DASHBOARD_FIELDS``:
+the time and the command line; a hand-written generation's id is covered),
+so a
 receipt must also hold nothing beyond what that digest covers, in the form
 publication writes, with those two fields shaped as a time and a command
 line. Their values are the only bytes in a row that the gate did not bind.
@@ -53,7 +55,11 @@ spells, so it also refuses, writing and deleting nothing, if any current
 entry's artifact is reached through a symbolic link or holds one, lies
 behind or holds anything it cannot list or read, is not a directory, or
 is spelled otherwise on disk (as a case-insensitive filesystem allows).
-Stage everything to be kept before running it.
+Stage everything to be kept before running it. A hand-written modifier's
+artifact held for its attestation (``attestations``) can't be staged until
+the attestation is committed, so it goes too, and the attestation binds
+that exact receipt: commit and stage it first, or keep it out of the
+repository.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -687,7 +693,7 @@ def _kept_problems(
             try:
                 names = os.listdir(path)
             except OSError:
-                where = path.relative_to(root).as_posix() or "."
+                where = path.relative_to(root).as_posix()
                 problems.append(f"{where}: {key}'s artifact cannot be listed")
                 break
             if part not in names:
