@@ -132,7 +132,11 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
   }
   const bins = SCATTER_BINS;
   const points = data.rows
-    .filter((row) => row.reform_id === choice.reform && row.year === year)
+    // A cell whose count rounds to nothing has no bubble to draw.
+    .filter(
+      (row) =>
+        row.reform_id === choice.reform && row.year === year && row.households > 0,
+    )
     .map((row) => ({
       income: row.income_band + bins.income_band_width / 2,
       change: row.change_band + bins.change_band_width / 2,
