@@ -109,7 +109,7 @@
     "apply_age_conditioned_allowance",
     "apply_property_band_surcharge"
   ],
-  "model_limits_registry_sha256": "05ebedd4c64e55329026cd05e98e98579d9497d420f305d480537a01f34b759a",
+  "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
   "name_casefold": {
     "A": "a",
     "B": "b",

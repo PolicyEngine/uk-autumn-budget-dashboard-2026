@@ -80,6 +80,8 @@ describe("loadPublication", () => {
   it.each([
     ["zeta", 0.9],
     ["eta", 1.1],
+    ["theta", 1.3],
+    ["iota", 1.5],
   ])("loads %s's model-limited figures as provisional", async (key, value) => {
     const fetchImpl = fixtureFetch();
     const result = await loadPublication(BASE_PATH, [key], { fetchImpl });
@@ -87,10 +89,10 @@ describe("loadPublication", () => {
     expect(result.tablesByKey[key].budgetary_impact[0].value).toBe(value);
   });
 
-  it.each(["zeta", "eta"])(
+  it.each(["zeta", "eta", "theta", "iota"])(
     "refuses %s's model-limited artifact relabelled as approved",
     async (key) => {
-      // A manifest edited by hand to approve either model-limited measure
+      // A manifest edited by hand to approve any model-limited measure
       // cannot make its figures load while its receipt records the limit.
       const edited = structuredClone(manifest);
       edited.measures[key].status = "approved";

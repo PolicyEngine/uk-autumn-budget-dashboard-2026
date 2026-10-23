@@ -99,7 +99,10 @@ try:
     # rates before policyengine-uk #2336): its receipt records the model
     # limit, so it is shown as provisional and can never be approved.
     full_rate = model_limits.record(
-        model_limits.MODEL_LIMITS[0],
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "state_pension_add_on_uprating"
+        ),
         ["gov.dwp.state_pension.new_state_pension.amount"],
     )
     world.expect("zeta", "positive", IN)
@@ -123,6 +126,37 @@ try:
     )
     world.reconcile(refs["eta"])
     stage(manifest, refs["eta"].path, provisional=True, **args)
+    # A 2027 Pension Credit measure held until the minimum guarantee follows
+    # earnings: a third limit, honoured like the other two.
+    guarantee = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "pc_minimum_guarantee_uprating"
+        ),
+        ["gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"],
+    )
+    world.expect("theta", "positive", IN)
+    refs["theta"] = world.write(
+        "theta", {IN: 1.3, BEYOND: 1.4}, rate=0.29, model_limits=[guarantee]
+    )
+    world.reconcile(refs["theta"])
+    stage(manifest, refs["theta"].path, provisional=True, **args)
+    # An energy VAT measure built with the VAT base template, held until
+    # policyengine-uk #2187: a fourth limit, recorded by the variable whose
+    # formula the template replaces, honoured like the others.
+    vat = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "vat_consumption_coverage"
+        ),
+        [model_limits.variable_path("vat")],
+    )
+    world.expect("iota", "positive", IN)
+    refs["iota"] = world.write(
+        "iota", {IN: 1.5, BEYOND: 1.6}, rate=0.31, model_limits=[vat]
+    )
+    world.reconcile(refs["iota"])
+    stage(manifest, refs["iota"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]

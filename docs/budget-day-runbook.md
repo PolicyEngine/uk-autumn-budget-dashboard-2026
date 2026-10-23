@@ -107,6 +107,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes`, `00018-xuv` and `00020-pal`, after #46. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
   - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
+  - **Time the regeneration** (regenerate, stage, reconcile: the fifth row of the table under "How long one adoption takes" below), as that section says, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
 
 ## How a measure must be written
 
@@ -116,6 +117,12 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
+**Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
+
+**Wealth-tax templates refuse `gov.contrib.ubi_center.wealth_tax`** (UK hub, `budget-triage/JUDGED.md` S4). The engine taxes gross wealth, including private pensions, with no debts netted, so an announcement on net assets would use the wrong base. A hand-written wealth-tax modifier is held not computable by hand for the same reason.
+
+**An HVCTS band uses the engine's own index.** `apply_property_band_surcharge` reads the native formula's compiled index names and deflates by the same GDP-per-capita or OBR house-price index. It refuses a formula reading neither or both, so a new band cannot overlap the native bands because it uses a different index.
+
 **A measure on pension tax relief, the annual allowance, its taper or the MPAA is expected to fail the Treasury reconciliation. By default it is held for the 07:00 briefing pending review** (Vahid and María to confirm).
 - **Why:** the UK hub's rebuild of policyengine-uk #2240 replays the Spring Budget 2023 pension changes at about −£12.9bn over four years against the OBR's −£1.55bn, roughly 8 times over. The remaining causes are mostly data: the imputation of pension inputs, defined-benefit accrual, the taper's income measure and carry-forward. A pensions decomposition is queued; revisit this row when it reports.
 - **The limitation sentence** (final; from the UK hub, 16 Oct, for the dashboard methodology and wherever such a measure is listed):
@@ -123,7 +130,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
   > "The model overstates the pension annual allowance charge: for 2024-25 it finds 262,000 people with pension savings above their allowance, against 30,440 in HMRC's provisional self-assessment statistics for the same year, and £2.7 billion of annual allowance charge against HMRC's provisional estimate of £0.3 billion, so pension tax relief and annual allowance measures are not published on Budget day without review."
 
   - **Sources, all tax year 2024-25:** HMRC private pension statistics (July 2026), Table 7, row "2024 to 2025 [provisional]": 30,440 individuals reporting contributions above their allowance through self assessment. Table 6, column "2024 to 2025 tax year [provisional]": £300m of annual allowance charges. The model's 262,304 people and £2.699bn are model year 2024 (tax year 2024-25), from uk-data 1.58.1 with policyengine-uk #2240's charge formulas: counts and aggregates only.
-  - **Cause:** the hub's research report (`~/reviews/uk-hub/jobs/research-sb2023-aa-gap/REPORT-full.md`) attributes it mostly to the imputation of employer pension contributions, tracked as uk-data#606, which lands after the Budget.
+  - **Cause:** the UK hub's research report attributes it mostly to the imputation of employer pension contributions, tracked as uk-data#606, which lands after the Budget.
 - **What the gate does:** approval needs the reconciliation to pass or carry an accepted exception, and the briefing exports take approved entries only. So such a measure stays out of the briefing unless someone approves an exception. The default is to hold it, not to approve a named-reviewer exception on the day.
 - **Still open, for Vahid and María:**
   - whether it is shown on the page meanwhile: staging it as provisional does not need the reconciliation, and the page labels it provisional;
@@ -141,10 +148,11 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 
   Main-home rates are computable.
 - **What happens:**
+  - **until option (d) is on `main`, such a measure isn't staged** (option (b); see "Review rows" at G2);
   - generation records the limit in the measure's receipt, whether the change is in `parameter_changes` or a modifier, on either side;
   - `publish stage` lists it as `not_computable`, with the reason, whatever level was asked for;
   - every level that shows a figure refuses it, and so does approval;
-  - the page shows "Not computable on current data" and the reason, never a number;
+  - once option (d) is on `main`, the page shows "Not computable on current data" and the reason, never a number;
   - a combined package that includes such a measure is not computable too, since its total would leave that measure out;
   - building one with the templates warns (`DataLimitedWarning`).
 - **What to say:** the measure is in the Budget, but the survey data can't cost it yet. Where to place that wording, and whether a package total excluding it should be shown separately, is Vahid and María's call.
@@ -202,14 +210,14 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Found by the UK hub.** Its engine-side fix is policyengine-uk #2428 (below), merged on 16 October. Re-check this row on the first certified pair that carries it.
 - **2030-31 UC will move up when a fix for policyengine-uk issue #2282 is certified.** The rebalancing runs for 2026 to 2029 only (`range(2026, 2030)` in `uc_reform.py`, policyengine-uk 2.130.1). So in 2030 every protected claimant's element falls to the formula's amount, the new claimants' rate, and the 2030-31 baseline understates UC (UK hub). The fix extends the rebalancing. Once a certified bundle with it is adopted:
   - the dashboard's 2030-31 UC figures rise, and so does any measure's 2030-31 effect that runs through UC. That is a correct change to the baseline, not a regression: say so wherever those figures were shown before.
-  - #47's engine table (`tests/test_uc_health_template.py`) fails at 2030 until `UC_REBALANCED_YEARS` follows, so a 2030 measure on the element's amount can't quietly start scoring £0. The fix is policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6). It extends the rebalancing to 2032 and exports the years as `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS`. In the adoption PR for the first certified bundle with it, set `UC_REBALANCED_YEARS` from that export, so UC health measures for 2026–2032 go through `uc_health_element_change`.
+  - `UC_REBALANCED_YEARS` now follows `policyengine_uk.scenarios.uc_reform.REBALANCING_YEARS` automatically, with `range(2026, 2030)` as the fallback for engines without the export. policyengine-uk #2428 (merged 16 October; not in 6.10.0's policyengine-uk 2.132.6) extends the rebalancing to 2032 and exports those years, so UC health measures for 2026–2032 then go through `uc_health_element_change`. #47's engine table (`tests/test_uc_health_template.py`) still checks the actual award edges against the template's years, including on the fallback: extending the rebalancing without exporting its years must fail that check.
   - policyengine-uk #2284 (merged 15 Oct, UC Act 2025 s. 3) freezes the element's amount through 2029-30, so 2030-31's baseline amount falls from £235.86 to £221.60 a month. It changes no template rule.
 
 **A State Pension measure (one that moves the basic or new State Pension's full rate) needs policyengine-uk #2336 in the adopted pair. Without it, the measure is staged provisional, not approved** (the UK hub, via the coordinator, 21 October). The model-limit guard (#73, `uk_budget_data.model_limits`) enforces this.
 - **Why:** additional pensions (SERPS and S2P) and new State Pension protected payments rise each April by prices, not with the full rates. Prices are the statutory floor (Social Security Administration Act 1992 ss. 150 and 151A), and the Up-rating Orders give September CPI.
   - The 2026 Order (SI 2026/148, articles 4(3)(a) and 6(3)(b)) raises them by 3.8%, against about 4.8% for the full rates (articles 4(2) and 6(1)).
   - Up to policyengine-uk #2336, the model raises them by the full rate's own ratio (`additional_state_pension`). So anything that moves the full rates moves them too. 6.6.0 (policyengine-uk 2.130.1) and 6.10.0 (2.132.6) both lack the fix.
-  - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. As of 21 October it is open; the UK hub expects it to land shortly.
+  - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. It has been on policyengine-uk's `main` since 21 October, 20:32Z (coordinator), and policyengine-uk 2.146.5 (on PyPI 22 October) has it.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
   - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
   - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
@@ -238,6 +246,11 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - **The templates** warn (`ModelLimitedWarning`) when a measure is built on one of the guard's own parameters: either full rate, the triple lock or the September CPI index. A template change elsewhere that moves them, such as to the statutory uprating inputs, doesn't warn, but generation still records it.
   - **The flat pipeline** prints "MIS-COSTED BY THIS MODEL".
   - **When #2336 lands,** nothing more is recorded. The guard's tripwire test then fails in the adoption PR, with the other tests that assume the limit is active, so the limit and those tests are removed there.
+    - **Retarget, don't delete, the guard's general tests.** Some tests of how the guard works are written against this limit: cache hygiene, rebound nodes, added leaves, cached views, modifiers, the baseline side, generation, the flat pipeline and the template warning. The other limits rely on the same code, so move those tests to a remaining limit, such as the September CPI limit with a 2027 PIP change, including those built on the State Pension record `HELD`, such as the combined run's approval refusal (review of #90).
+  - **If the adopted pair has #2336 but not #2557** (#2533's fix, below), the add-on's April 2027 rise reads the September 2026 input, which is still a forecast there. policyengine-uk 2.146.5 is that case, so the next bundle may be too. Until #2557 is in the pair, the September CPI limit below holds:
+    - **a measure that moves the September CPI index from 2027** (coordinator, 22 October);
+    - **a measure on the triple lock's rule,** such as dropping its earnings leg, or anything else that moves the triple lock index from 2027. Its April 2027 CPI leg reads the same forecast: 2.1% on 2.146.5, against the 3.5% outturn (review of #90; coordinator on #90, 22 October). A rule change dated later, such as dropping the earnings link from 2030, is held too until #2557, since the limit applies from 2027: that fails safe.
+  - **A measure on the full rates alone is not held then.** After #2336 it doesn't move the add-on. Its cost is still slightly off through means tests such as Pension Credit, since the 2027-28 baseline's add-on uses the forecast: disclose that (see "Data and model limitations" below; coordinator on #90, 22 October).
   - **The page doesn't show the reason.** It is in the receipt, and the page labels every provisional entry "Provisional: statement figures, awaiting Treasury costing", once #20's modules are wired in after #3. Record it in the coverage ledger too. **Your call:** whether such a figure is shown on the page meanwhile, as for a held pension tax relief measure.
   - **The first cut and the briefing:** it stays out of both, because they take approved entries only.
   - **G4:** it holds up the combined run's approval, as a provisional CGT measure does ("Which ids" at G4). A combined run including it can still be staged provisional.
@@ -248,15 +261,83 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **Why:** the benefit uprating index follows lagged calendar-year CPI, so the parameters on it rise by 2.3% in April 2027, against September 2026 CPI of 3.5% (ONS D7G7, published 21 October). That covers most CPI-linked benefits, the UC standard allowance among them.
   - **The September 2026 statutory input is still null,** so it's a forecast. The UC protected health element's 2027 amount is the UC Act 2025 s. 4 floor, which reads that input, so it's off too.
   - **The 2026-27 rates** are hard-coded and unaffected.
-  - **The Pension Credit minimum guarantee** is on the index too, but in law it has risen with earnings. With #2533 it would rise 3.5% against earnings of 3.9%, so it stays under-uprated after the fix. Whether it needs a limit of its own is a question for the UK hub.
+  - **The Pension Credit minimum guarantee** is on the index too, but in law it rises at least with earnings. #2557 keeps it on lagged CPI, so it has a limit of its own (the next section).
+  - **Additional State Pension and new State Pension protected payments,** once #2336 is in the pair, rise by the September CPI index, which reads the same September 2026 input.
 - **Which measures:** changes from 2027 onwards, on either side of the measure, to:
   - any parameter whose uprating metadata names the benefit uprating index (79 prefixes, the UC standard allowance among them);
-  - or the UC protected health element.
+  - the UC protected health element;
+  - the September CPI index, `gov.economic_assumptions.indices.september_cpi_uprating`, by any route that moves it: the index itself, the September input, or a CPI growth path;
+  - or the triple lock: its rule, `gov.dwp.state_pension.triple_lock`, or anything that moves the index it builds, `gov.economic_assumptions.indices.triple_lock`.
+
+  Without #2336 the State Pension limit holds the last two as well. A measure on the State Pension's full rates alone isn't held by this limit.
 
   The registry pins those prefixes, and a test compares the pin with the installed engine's metadata.
   - **Not held:** a structural measure that changes no covered parameter, such as repealing the two-child limit. The 2027 benefit levels it interacts with are still about 1.2% low.
 - **What the guard does:** generation records `benefit_uprating_september_cpi` and its reason in the receipt. Provisional staging is allowed; approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such measures stay out of the first cut and briefing, which take approved entries only; a combined run including one is provisional at most.
-- **When it lifts:** the adopted pair must include both steps of #2533: enter the September 2026 outturn (`0.035`) in `statutory_uprating_inputs.cpi_september`, and make the benefit uprating index follow the September CPI index. The guard checks the input and the resulting April 2026 to April 2027 uprating; entering the outturn alone does not lift it. The UK hub will name the release. Its adoption PR removes this limit when the tripwire test finds the fix in the adopted model.
+- **At an adoption before #2557, update the pin, keeping what's still lagged.** On policyengine-uk 2.146.5 the pinned-metadata test fails (review of #90):
+  - three `aged_from_cutoff` Housing Benefit allowances join the index. Add them to the pin, and to the Pension Credit limit below;
+  - the UC standard allowance and the UC LCWRA element (`elements.disabled.amount`) move to indices of their own, `uc_standard_allowance` and `uc_health_element`, which are still built from the lagged benefit index. Keep both in this limit beside the protected health element, rather than repinning to the metadata alone, until #2557. The new claimants' health element (`rebalancing.new_claimant_health_element`) also names `uc_health_element` there, though it had no uprating rule on 2.132.6: add it beside them.
+- **When it lifts:** the adopted pair must include both steps of #2533: enter the September 2026 outturn (`0.035`) in `statutory_uprating_inputs.cpi_september`, and make the benefit uprating index follow the September CPI index. The guard checks the input and the resulting April 2026 to April 2027 uprating; entering the outturn alone does not lift it. The fix is policyengine-uk #2557, which also repoints the UC Act indices and so fixes the UC protected health element (coordinator, 22 October). Its adoption PR removes this limit when the tripwire test finds the fix in the adopted model.
+
+**A measure on the Pension Credit minimum guarantee, the pension-age Housing Benefit allowances or the savings credit threshold, from 2027, needs the UK hub's earnings fix for the guarantee in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (`pc_minimum_guarantee_uprating`; coordinator, 22 October).
+- **Why:** the Social Security Administration Act 1992, s. 150A(2), requires the standard minimum guarantee to rise at least with earnings: 3.9% for April 2027, the May to July 2026 figure. The model raises it by lagged CPI, 2.3%.
+  - #2557, #2533's fix, deliberately keeps the guarantee on lagged CPI.
+  - The fix is the UK hub's separate earnings build, stacked on #2557 and aimed at Saturday's re-cut. It also covers the pension-age Housing Benefit allowances and the savings credit threshold.
+- **Which measures:** changes from 2027 onwards, on either side, to:
+  - the standard minimum guarantee, single or couple;
+  - the savings credit threshold;
+  - the pension-age Housing Benefit allowances: the three `aged` ones on policyengine-uk 2.132.6, and the six of later releases, which add `aged_from_cutoff`. The adoption PR for such a release lists the new three here and in the September CPI limit's pinned list; a test of each fails until it does;
+  - the May to July earnings input, `statutory_uprating_inputs.awe_total_pay_may_july`, by any route that moves it, such as an earnings growth path. Without the fix the guarantee ignores earnings, so such a change misses it.
+
+  The first three are also on the benefit index, so until #2557 is in the pair they record the September CPI limit too.
+- **What the guard does:** as for the September CPI limit. Generation records `pc_minimum_guarantee_uprating` and its reason in the receipt. The measure can be staged provisional, approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`), and the flat pipeline prints "MIS-COSTED BY THIS MODEL". Such a measure stays out of the first cut and the briefing, and a combined run including one is provisional at most.
+- **When it lifts:** when, in the model as built, the uprating rule for both rates of the guarantee names an index other than the benefit index (`gov.benefit_uprating_cpi`), and that index's April 2026 to April 2027 step reaches the published May to July 2026 earnings growth.
+  - The check reads the tree as the model built it, so a measure can't satisfy it, and 2027-28 rates typed in over a CPI rule don't count. #2557 alone doesn't lift it.
+  - **If the UK hub's build raises the guarantee some other way,** such as with a formula or typed-in rates, `test_the_fix_check_agrees_with_the_guarantee_pensioners_get` fails in the adoption PR, and a person decides there whether the limit goes.
+  - **Otherwise** the guard's tripwire test fails in the adoption PR, which removes the limit.
+
+**A VAT measure (one on a VAT rate, the VAT base or the consumption VAT is charged on) needs policyengine-uk #2187 in the adopted pair.** Until then, the model-limit guard holds it at provisional, not approved (`vat_consumption_coverage`; coordinator on #88, 22 October, from the UK hub).
+- **Why:** the model grosses household VAT on survey consumption up to receipts by dividing it by one factor, `gov.simulation.microdata_vat_coverage`: 0.38 on policyengine-uk 2.132.6.
+  - #2187 divides instead by survey consumption coverage times the household share of VAT receipts: 0.67 × 0.7 = 0.469. So without it, VAT, and measures that work through the grossed liability (a rate, the reduced-rate share, consumption), run about 23% high (0.469 / 0.38). The energy VAT template's own figure doesn't (below).
+  - The UK hub measures VAT about 24% high on Microcosm without the fix (its notice 59).
+  - For comparison only, the coordinator gives the live API on policyengine-uk 2.130.1: it costs a 1-point VAT rise at £15.4bn, against HMRC's £8.8bn. W5's reading: that run is probably on the API's default enhanced FRS, not Microcosm, so it doesn't measure #2187's effect.
+  - #2187 is in policyengine-uk 2.145.0 and later. 6.10.0's 2.132.6 lacks it; 2.146.5 has it.
+  - **Energy VAT is one of the policies flagged for the App V3 demo,** so the hold bites if Friday's rehearsal runs on 6.10.0.
+- **Which measures:** any change, in any year, on either side (`parameter_changes`, `baseline_parameter_changes` or either side's modifier), to:
+  - a VAT rate or the reduced-rate share of consumption: anything under `gov.hmrc.vat`;
+  - the grossing factor itself, `gov.simulation.microdata_vat_coverage`;
+  - either of those in the engine's copy of the tree as built, under `baseline.`. `baseline_vat` reads that copy and `vat_change` subtracts it, so a modifier that edits it moves VAT;
+  - the index consumption rises by in years after the data's, `gov.economic_assumptions.indices.obr.consumer_price_index`, by any route that moves it, such as a CPI growth path. A test fails if the installed model uprates consumption by another index.
+    - In a household calculation, such a path moves projected consumption, and so VAT, without changing a VAT parameter or a stored input (W5's test on policyengine-uk 2.132.6, 22 October).
+    - On the dashboard's dataset route the projected consumption inputs change too, and record as `variable:<category>`.
+    - Holding the index itself is W5's addition, awaiting the coordinator's confirmation;
+  - a variable VAT is built from, recorded as `variable:<name>`: `vat`, `baseline_vat`, `vat_change`, the two consumption bases, the full-rated share of spending, `consumption` and its 12 categories. A variable counts when:
+    - its formula changes, or what decides how it runs (its end date, uprating rule, `defined_for` or how an input is spread). The VAT base template, `apply_vat_base_change`, replaces `vat`'s formula, so the energy VAT measure is held;
+    - it is neutralised, or missing on one side;
+    - a modifier sets an input for it on one side, or sets one to another value;
+    - a value stored for it differs where both sides hold one, calculated or cached. The guard runs after the figures are made, so this catches a modifier that edits a calculated value in place or caches one. It also catches the template applied on both sides with its spending input changed on one side only, as `variable:vat` and `variable:vat_change`. So a VAT measure's record also lists the variables its figures moved, such as `variable:vat` beside a rate.
+
+  The registry pins the categories, and a test compares the pin with the installed `consumption`.
+- **Not held: private school VAT** (`gov.contrib.labour.private_school_vat`, `gov.simulation.private_school_vat` and the `private_school_vat` variable). Its formula multiplies pupils by fees, the rate and the VAT basis, and reads no grossing factor. #2187 leaves it unchanged, so its figure doesn't depend on the fix. W5 has put this to the coordinator with the energy VAT question below.
+- **What the guard does:** as for the September CPI limit. Generation records `vat_consumption_coverage` and its reason in the receipt. The measure can be staged provisional, approval is refused, and the browser refuses an approved receipt carrying the limit. The templates warn (`ModelLimitedWarning`): `rate_change` on a VAT parameter, and `apply_vat_base_change` itself. The flat pipeline prints "MIS-COSTED BY THIS MODEL". Such a measure stays out of the first cut and the briefing, and a combined run including one is provisional at most.
+- **The area view is held too.**
+  - Area runs (`uk-budget-data geography`, with `--reforms` or `--seat-reforms`) take approved ids only, and a model-limited measure is never approved.
+  - The area run also judges its own simulations, as generation does. If any measure touches a model limit, it prints "Mis-costed by this model" and writes no tables. That catches a VAT measure approved before this limit was registered, and one approved on a pair with #2187 but run by area on a model without it.
+  - So no VAT measure's area results are produced for the page while the limit holds. That includes Microcosm's local-area cut run on policyengine-uk 2.132.6 (the coordinator's "dense cut paired on 2.132.6 under the accepted mismatch").
+  - **Regenerate, and stage provisional, any VAT measure approved before this limit was registered.** Its receipt carries the old registry digest, so the page refuses it already, and the area run refuses it.
+- **When it lifts:** once a pair with #2187 is adopted, that is with policyengine-uk 2.145.0 or later. Any re-cut on 2.145.0 or later has it.
+  - **The check** needs both of #2187's factors (`gov.simulation.vat.survey_consumption_coverage` and `household_share_of_receipts`) in the tree as the model built it. It also needs every formula of `baseline_vat` to look up `vat_grossing_factor`, the helper that returns their product, which the formulas divide by. For the installed model it also parses `vat` and `baseline_vat`, and needs every formula of each to call that helper.
+  - **Neither check reads anything a parameter change or a template changes.** The template replaces `vat`'s formula, on whichever side calls it, and never `baseline_vat`'s. A rate change, or setting the old factor to 0.469, adds neither factor. Factors added to the tree as built don't count on their own, because no formula reads them.
+  - **A hand-written modifier can still change both things the check reads:** the tree as built (the parameters' `baseline` child) and `baseline_vat`'s formulas.
+    - Replacing `baseline_vat` on one side makes that side count as unfixed, so the measure is held: that fails safe.
+    - Adding #2187's factors to the tree as built and replacing `baseline_vat` on both sides makes 2.132.6 count as fixed, so nothing is held: that fails open.
+    - Neither the code nor the named human data-limits check, whose items are listed above, guards against this. W5 has raised it with the coordinator. Meanwhile, treat such a modifier as a change to the model, not a measure.
+  - **The CI cross-check:** a test reads behaviour. A household's VAT, divided by what its consumption owes at the statutory rates, must be 1 / 0.469 exactly when the checks say the model has the fix, for `vat` and `baseline_vat` alike.
+  - **On enhanced FRS, #2187 doesn't settle it.** Its survey coverage, 0.67, is calibrated to Microcosm's national release. Its own derivation note puts VAT on enhanced FRS 2024-25 38% or 44% above receipts. So a VAT run on the eFRS route (such as `uk-budget-data geography --dataset-kind efrs`) needs the coordinator's call even after adoption.
+  - **The adoption PR removes the limit** when the guard's tripwire test fails. On 2.146.5 the tests in `tests/test_vat_model_limit.py` that assume the limit is active fail with it: the measures recorded without the fix, the template warnings, the scenarios, generation and the area run's refusal. The checks and the CI cross-check pass there. On a venv swapped to 2.146.5 by hand, the area tests also error, because that model and data pair isn't certified.
+  - **With the limit, drop the fixture's `iota` measure** (`scripts/make_publication_fixture.py`) and its rows in the JS publication tests (`digest.test.js`, `load.test.js` and `manifest.test.js`). Then regenerate the fixture and `contract.json`.
+  - **Only this limit covers variables.** When it goes, keep the variable comparison's tests against another limit, or remove the `variables` field with it.
+- **The energy VAT template's own figure doesn't depend on #2187.** The term it adds, eligible spending × the rate change / (1 + the old rate), isn't divided by any grossing factor, so its cost is the same with or without the fix. The same goes for the template on both sides with its spending input changed on one. W5 is raising this with the coordinator; their scope holds it until they rule.
 
 **Dated changes: key every year by its bare fiscal year.**
 
@@ -401,8 +482,13 @@ uv run uk-budget-data publish check
   - **Why outside the repository:** an untracked file anywhere in the tree makes the next receipt dirty, so every later `generate` writes an unpublishable receipt.
   - **Move it again after every `publish reconcile`** (G3, G5, each re-cut). `data_inputs/public_data_review.csv` goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
   - **What it covers.** Rows go only to the displayed entries' files and the manifest. The command refuses, writing nothing, if any file is not what the gate bound.
-  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it: **an open question for the coordinator, to settle before the rehearsal.**
-  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. Whether such artifacts are deleted before the helper runs is with the coordinator.
+  - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries. A not-computable entry's can't, since `publish check` needs it, and no row can be written for it yet.
+  - **So, until option (d) is on `main`, keep not-computable measures out of the manifest** (option (b); coordinator, 22 October). This holds for Friday's rehearsal.
+    - The Integrator doesn't stage them.
+    - The Reconciler lists each one in the coverage ledger as not computable, with its reason.
+    - A combined run that includes one is refused, since a member missing from the manifest blocks it.
+    - **Option (d), coming in W5's next PR:** such an artifact holds only its receipt, which gets a row reading "not computable, staged by <stager>".
+  - **What it keeps.** It removes a row only when its file is gone. After a withdrawal, a G5 correction or a re-cut, an earlier artifact left in `public/` keeps its earlier row, and the build passes. The coordinator's ruling for option (d) (22 October): "The helper deletes any `public/data/artifacts/<id>` the manifest doesn't reference, with its row." Which of these earlier artifacts that covers is for the (d) PR to settle.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)
@@ -468,7 +554,7 @@ uv run uk-budget-data publish check
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
   - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
   - **What it doesn't:** the manifest records publication approval, but the command does not read the holds ledger. The Reconciler still checks that measures held by hand have not been approved. A limit read only outside household net income, or in a year outside `--years`, isn't seen by the area run (#76's gap note).
-  - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). The page doesn't show the label yet: a caveat on the area views is a change to the public page, so it's Vahid's and María's call (the coordinator has it), and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
+  - **Microcosm is uncertified:** every run using Microcosm, however supplied, prints the uncertified label at the start and end and records `certified: false` and the reason in the private audit (policyengine.py#685). **The coordinator's ruling on the page caveat** (22 October): the area views show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement. Until it's added, the page doesn't show the label, and the CSVs carry no dataset field to drive it. The disclosure CSV schema is unchanged. The default `efrs` route refuses 6.10.0's Microcosm bundle rather than mixing it with enhanced-FRS seat weights, and points to PR #59.
 - **Which ids.** A measure that isn't approved blocks the combined run's approval: a CGT measure that depends on taxpayer numbers (held provisional), a pension measure held for review, a State Pension measure held provisional for want of policyengine-uk #2336, or an SDLT measure that isn't computable. If the call is to leave such measures out of the combined run, list every coded id but those, and say so wherever the package total appears. The results by area label their package reform "All measures (the full package)" when every measure on the page is selected (`src/utils/geography/selection.js`). If that package leaves a measure out, that label must change too.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
@@ -577,7 +663,11 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
     - **Quiet runners:** about 1 h 20 min, plus any regeneration beyond 20 min.
     - **At 21–22 October's queue:** about 7 h 15 min, plus any regeneration beyond about 1 h 45 min.
   - **Where CI time goes:** each CI run's ten jobs queue separately for runners. In #72's run the work took about 16 minutes; the rest was queueing.
-  - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table.
+  - **Time the regeneration** at the rehearsal and at every re-cut, and record it in the clock table:
+    - **What to time:** regenerate every published measure and the combined run, stage, and reconcile, as the final cut would. Hand-written modifiers each take a `generate` call of their own.
+    - **How:** run `date -u` before the first `generate`, and again after the last `publish stage` or `publish reconcile`, whichever comes last.
+    - **What to record:** both times, how many measures and combined runs were regenerated, and the bundle. The rehearsal may carry fewer measures than the day, so the count lets the time be scaled.
+    - **Who:** whoever runs the rehearsal's regeneration, probably the Integrator (pending Max's answer on #88). W5's cloud session has no data access, so it can't time it itself.
   - **To fit the overnight window:**
     - W5 dispatches the adoption by hand as soon as the release is on PyPI, as it did for 6.10.0;
     - start regenerating on the adoption branch as soon as the lock is in, alongside its CI;
@@ -664,7 +754,7 @@ W5 re-measured on the same file for 2025:
   - **This also holds up G4.** A combined run is approved only when every member is, so a combined run that includes such a measure can't be approved, and the first cut then carries per-measure figures only. **Your call, before the day:** leave such a measure out of the combined run (and say so wherever the package total appears), or accept per-measure figures only.
 - **A CGT rate change** goes through G3 as any measure does: reconciled, then approved. It depends mainly on total gains. On 1.59.1 these are 10% to 25% off the calibration target, the OBR's March 2026 capital gains tax receipts forecast (`obr/capital_gains_tax` in uk-data's `obr_march_2026.yaml`), against 25% to 50% before.
 
-**Model gaps the UK hub found (22 October).** These are from the UK hub's Budget-relevance triage of 22 October, relayed by the coordinator. Most are limits of the model; #1911, #1912 and #547 also need data the survey doesn't hold. They apply on any adopted pair until a fix lands. **Say each one wherever a figure depends on it.** Figures come from the hub's report once it's written; don't quote any until then.
+**Model gaps the UK hub found (22 October).** These are from the UK hub's Budget-relevance triage of 22 October, relayed by the coordinator. Most are limits of the model; #1911, #1912 and #547 also need data the survey doesn't hold. They apply on any adopted pair until a fix lands. **Say each one wherever a figure depends on it.** The figures will come from the UK hub. The coordinator has asked it to post its re-measured aggregates on GitHub, in this repository: aggregates and counts only, with small cells suppressed. W5 adds them here. Don't quote any until then.
 - **AHC absolute poverty runs high.** From 2025-26 both absolute poverty lines rise by headline OBR CPI. HBAI's after-housing-costs deflator is CPI excluding housing, which the model carries but doesn't use for the poverty lines. Headline CPI is above that series in every year to 2030, so the AHC absolute line, and AHC absolute poverty with it, runs high. Disclose this wherever AHC absolute poverty appears.
 - **Capital gains tax runs above the OBR's receipts** in 2026-27 (policyengine-uk #2272). It inflates the leading CGT measure, aligning CGT rates with income tax rates.
 - **The CGT behavioural response adds nothing back to income tax** (policyengine-uk #1982).
@@ -678,6 +768,12 @@ W5 re-measured on the same file for 2025:
 - **Universal Credit has no transitional element for managed migrants** (policyengine-uk #1912).
 - **Universal Credit doesn't exclude full-time students** (policyengine-uk #2346).
 - **Children aged 9 to 11 months get no working-parent childcare hours** (policyengine-uk-data #547): the data store whole-year ages.
+
+**State Pension measures from 2027-28, in a pair with #2336 but without #2557** (coordinator on #90, 22 October). Say this wherever such a measure's figure appears, and in the briefing's caveats when one is published:
+
+> "Until #2557 is in the adopted pair, the 2027-28 baseline's additional State Pension and protected payments use forecast September CPI, so a full-rate measure's cost is slightly off through means tests such as Pension Credit."
+
+It lifts with #2557. A measure that moves September CPI or the triple lock is held at provisional instead (the September CPI limit above).
 
 **Where they go:** the data limitations describe the national results, not the household calculator, which uses the visitor's own ages and incomes; whatever is placed should say so. The model gaps can also reach a household answer wherever the household has the circumstance, for example a full-time student claiming UC. The dashboard has no methodology section today. The only data notes are in two measures' descriptions in `App.jsx`, which #3 rewrites. The briefing has no template yet; #22 exports its tables. Where the text sits is your call.
 
