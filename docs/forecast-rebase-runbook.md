@@ -355,6 +355,8 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 5. **Check the real route and regenerate a registered measure with the forecast in both arms.** This command reads the dataset in place, runs the dashboard's full `ReformProcessor`, and prints only aggregate budgetary rows and timings. It writes a reusable helper script into scratch so the same reviewed gate/merge functions can be used in the artifact step. The macro dict is part of both scenario identities; retain every registered policy change and modifier. `DataConfig.baseline_parameter_changes` alone does not rebase the reform arm and is overridden by a measure's own baseline.
 
+   **Production preflight: check the policy's intended years before the full processor.** The registered dividend measure describes a 2 percentage-point basic/higher rate increase from April 2026, but `_set_pre_budget_dividend_rates` in `src/uk_budget_data/reforms.py` only changes entries dated 2027 onward. UK 2.145.0's fiscal conversion materialises annual entries, including 2026, from each year's April 30 value. The modifier therefore leaves the two 2026 rates equal. The helper below prints the effective rates and requires a 0.02 reform-minus-baseline difference in both brackets for every scored year (2026–2030 in this configuration). It refuses the current period coverage before the full processor; obtain a reviewed registry correction before production generation. Do not remove 2026 or bypass the preflight to conceal the gap. The timed rehearsal retains the unchanged registry for diagnosis and timing; that does not clear this production check. A zero-year costing can satisfy receipts-minus-spending reconciliation, so the budget identity alone cannot establish policy responsiveness.
+
    ```sh
    cat > "$REBASE_SCRATCH/forecast_helpers.py" <<'PY'
    import copy
@@ -476,7 +478,39 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
        with guard_framework_baselines():
            return pipeline.build_microsimulation(dataset_path, scenario)
 
+   def check_dividend_policy_responsiveness(baseline, reformed, years):
+       path = "gov.hmrc.income_tax.rates.dividends"
+       before = baseline.tax_benefit_system.parameters.get_child(path)
+       after = reformed.tax_benefit_system.parameters.get_child(path)
+       checks = []
+       failures = []
+       for year in years:
+           for bracket, name in enumerate(("basic", "higher")):
+               date = f"{year}-04-30"
+               baseline_rate = float(before.brackets[bracket].rate(date))
+               reform_rate = float(after.brackets[bracket].rate(date))
+               difference = reform_rate - baseline_rate
+               passed = math.isclose(difference, 0.02, rel_tol=0, abs_tol=1e-10)
+               row = {"year": year, "bracket": name,
+                      "baseline_rate": baseline_rate, "reform_rate": reform_rate,
+                      "difference": difference, "expected_difference": 0.02,
+                      "passed": passed}
+               checks.append(row)
+               if not passed:
+                   failures.append(f"{year} {name}: {difference:.12g}")
+       print(json.dumps({"dividend_policy_rate_preflight": checks}), flush=True)
+       if failures:
+           raise RuntimeError(
+               "Registered dividend policy period coverage failed: "
+               + "; ".join(failures)
+               + ". A reviewed registry period fix is required before the full "
+               "processor or production generation; do not accept an unresponsive "
+               "score year or bypass this check."
+           )
+
    def process(measure, cfg, baseline, reformed, baseline_scenario):
+       if measure.id == "dividend_tax_increase_2pp":
+           check_dividend_policy_responsiveness(baseline, reformed, cfg.years)
        original = policyengine_uk.Simulation
        def guarded_situation(*args, **kwargs):
            gate("income-curve situation Simulation")
