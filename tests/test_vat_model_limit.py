@@ -6,9 +6,10 @@ factor, ``gov.simulation.microdata_vat_coverage`` (0.38), to reach receipts.
 #2187, in policyengine-uk 2.145.0 and later, divides by survey consumption
 coverage times the household share of VAT receipts, 0.67 × 0.7 = 0.469, so
 without it VAT runs about 23% high (0.469 / 0.38; the UK hub measured about
-24% on Microcosm, relayed by the coordinator on 22 October). A measure can move VAT through its parameters, through the VAT base
-template, which replaces the ``vat`` formula, or through the consumption VAT
-is charged on, so the limit covers variables as well as parameters.
+24% on Microcosm, relayed by the coordinator on 22 October). A measure can
+move VAT through its parameters, through the VAT base template, which
+replaces the ``vat`` formula, or through the consumption VAT is charged on,
+so the limit covers variables as well as parameters.
 """
 
 import copy
@@ -81,6 +82,8 @@ FACTORS = {SURVEY_COVERAGE: 0.67, HOUSEHOLD_SHARE: 0.7}
 FIXED_FACTOR = 0.67 * 0.7
 VAT = variable_path("vat")
 TRANSPORT = "transport_consumption"
+PRIVATE_SCHOOL_VAT_RATE = "gov.contrib.labour.private_school_vat"
+PRIVATE_SCHOOL_FEES = "gov.simulation.private_school_vat.private_school_fees"
 # What the limit covers beside consumption's categories.
 NOT_CATEGORIES = {
     "vat",
@@ -196,6 +199,11 @@ def test_every_variable_household_vat_is_built_from_is_covered(variable):
         ("vat", False),
         (variable_path("income_tax"), False),
         (variable_path("domestic_energy_consumption"), False),
+        # Private school VAT reads no grossing factor, and #2187 leaves it
+        # unchanged, so it isn't held.
+        (PRIVATE_SCHOOL_VAT_RATE, False),
+        (PRIVATE_SCHOOL_FEES, False),
+        (variable_path("private_school_vat"), False),
         (variable_path(""), False),
     ],
 )
@@ -344,11 +352,12 @@ def add_dead_factors(sim):
     _add_factors(tree, FACTORS)
 
 
-def test_a_measure_cannot_make_its_own_model_count_as_fixed_or_unfixed():
-    """The template replaces ``vat``'s formula, a measure can set the old
-    factor to #2187's product, and a modifier can add #2187's factors to
-    the tree as built: none of them changes what the check reads, the tree
-    as the model built it and what ``baseline_vat``'s formulas look up."""
+def test_the_template_the_old_factor_and_dead_factors_leave_the_check():
+    """The VAT base template replaces ``vat``'s formula, a measure can set
+    the old factor to #2187's product, and a modifier can add #2187's
+    factors to the tree as built: none of them changes the check's answer.
+    A hand-written modifier that also replaces ``baseline_vat`` can (the
+    runbook's VAT section)."""
     installed = LIMIT.fixed(installed_system)
     for sim in (
         simulation(modifier=quietly(template_measures.vat_modifier)),
@@ -750,6 +759,18 @@ def test_a_measure_off_vat_records_nothing():
         limits_touched(simulation(), simulation({INCOME_TAX: {"2027": 0.21}}))
         == []
     )
+
+
+def test_a_private_school_vat_measure_records_nothing():
+    """Its formula multiplies pupils by fees, the rate and the VAT basis,
+    and reads no grossing factor, so #2187 doesn't change it."""
+    measure = simulation(
+        {
+            PRIVATE_SCHOOL_VAT_RATE: {"2027": 0.2},
+            PRIVATE_SCHOOL_FEES: {"2027": 16_000},
+        }
+    )
+    assert limits_touched(simulation(), measure) == []
 
 
 def shopping(changes=None, modifier=None):

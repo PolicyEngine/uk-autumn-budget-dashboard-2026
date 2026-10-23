@@ -258,6 +258,7 @@ def receipt_inputs(modules, **updates):
     return modules.receipt.ReceiptInputs(
         key="alpha",
         measure_ids=["alpha"],
+        name="Alpha",
         years=[2027],
         baseline_identity=None,
         reform_identity=None,
@@ -321,6 +322,7 @@ def publisher(modules, monkeypatch):
     dependencies = {
         "artifacts": {
             "COMBINED_PREFIX": "combined--",
+            "RECEIPT_FILE": "receipt.json",
             **{
                 name: Mock()
                 for name in (
@@ -382,6 +384,7 @@ def test_staging_copies_the_review_into_the_manifest(
         },
         basis={},
         unsupported_years=[],
+        name="Alpha",
     )
     monkeypatch.setattr(publish, "read_receipt", lambda path: receipt)
     monkeypatch.setattr(
@@ -393,7 +396,10 @@ def test_staging_copies_the_review_into_the_manifest(
     monkeypatch.setattr(
         publish,
         "gate_problems",
-        lambda *args, **kwargs: ([], {"tables": {}, "attestation": release}),
+        lambda *args, **kwargs: (
+            [],
+            {"tables": {}, "attestation": release, "document": receipt},
+        ),
     )
     manifest = manifest_module.Manifest()
     publish.stage(manifest, tmp_path / "artifact", data_root=tmp_path)

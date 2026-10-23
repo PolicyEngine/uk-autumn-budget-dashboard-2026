@@ -11,6 +11,13 @@ one measure cannot overwrite or erase another, and anything that names an
 artifact by its digest keeps meaning the same bytes. ``reconciliation.json``
 is the one file added later: it is a review record bound to the artifact by
 its output digest, not part of the artifact's own content.
+
+A measure the certified data cannot cost (its receipt records a data limit)
+is written receipt-only: the directory holds ``receipt.json`` and nothing
+else, the receipt lists no files, and its outputs digest is that of the
+empty file map. It is listed as not computable and binds no figure, so none
+is written, and nothing is added beside it later, ``reconciliation.json``
+included.
 """
 
 import json
@@ -20,7 +27,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Optional
 
 from uk_budget_data.publication.receipt import artifact_sha256
 from uk_budget_data.publication.tables import (
@@ -92,7 +99,7 @@ def table_files(tables: Mapping[str, Any], key: str) -> dict[str, bytes]:
 
 
 def write_artifact(
-    tables: Mapping[str, Any],
+    tables: Optional[Mapping[str, Any]],
     key: str,
     build_receipt: Callable[[dict[str, str]], dict],
     root: Path = ARTIFACTS_ROOT,
@@ -100,11 +107,16 @@ def write_artifact(
     """Write an artifact atomically and return a reference to it.
 
     Args:
-        tables: Table name -> rows (a DataFrame or a list of dicts).
+        tables: Table name -> rows (a DataFrame or a list of dicts), or
+            None for a receipt-only artifact: one whose receipt records a
+            data limit, so it binds no figures and lists no files.
         key: The measure id, or a combined key.
         build_receipt: Given ``{filename: sha256}``, returns the receipt
             document for these exact files.
         root: The artifacts directory.
+
+    A receipt that records a data limit must come with no tables, and one
+    that records none needs its required tables.
 
     If an artifact with the same digest already exists with the same files
     and the same receipt content, nothing is written. If it exists with any
@@ -112,12 +124,23 @@ def write_artifact(
     """
 
     check_key(key)
-    files = table_files(tables, key)
+    files = {} if tables is None else table_files(tables, key)
     digests = {name: sha256_bytes(data) for name, data in files.items()}
     document = build_receipt(digests)
     recorded = document["dashboard"]["digests"]
     if document["dashboard"]["files"] != dict(sorted(digests.items())):
         raise ArtifactError(f"{key}: the receipt lists different files")
+    limited = bool(document["dashboard"].get("data_limits"))
+    if limited and tables is not None:
+        raise ArtifactError(
+            f"{key}: its receipt records a data limit, so it binds no "
+            "figures; write it receipt-only"
+        )
+    if not limited and tables is None:
+        raise ArtifactError(
+            f"{key}: only an artifact whose receipt records a data limit "
+            "may be written without its tables"
+        )
 
     digest = artifact_sha256(document)
     target = root / key / digest[:16]

@@ -300,6 +300,7 @@ def test_a_simulation_with_no_load_time_hash_cannot_be_receipted(world):
         revision=revision,
         data_limits=[],
         model_limits=[],
+        name="Alpha",
         modifier_templates={"baseline": [], "reform": []},
     )
     with pytest.raises(ReceiptUnavailable, match="without verifying"):

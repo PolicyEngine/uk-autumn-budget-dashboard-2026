@@ -7,10 +7,11 @@ Every artifact carries ``receipt.json`` with two parts:
   simulated, whether that pair is certified, the reform and baseline
   identities, the fiscal-year convention, the years and a digest of the
   artifact's outputs.
-- ``dashboard``: what only this repository knows: the measures, the files,
-  the commit and whether the tree was clean, the forecast and calibration
-  basis, the years the dataset supports, the data limits the measure
-  touches (``uk_budget_data.data_limits``), the model limits it touches
+- ``dashboard``: what only this repository knows: the measures and the
+  name the page shows, the files, the commit and whether the tree was
+  clean, the forecast and calibration basis, the years the dataset
+  supports, the data limits the measure touches
+  (``uk_budget_data.data_limits``), the model limits it touches
   (``uk_budget_data.model_limits``), the registered templates proving each
   modifier is pure (or null for hand-written code), and whether the
   artifact is publishable.
@@ -493,6 +494,11 @@ class ReceiptInputs:
     # The model limits it touches (model_limits.limits_touched), so it is
     # held at provisional, never approved. Required, as data_limits is.
     model_limits: list[dict] = field(kw_only=True)
+    # The name the page shows: the Reform's name, or for a combined run the
+    # combined Reform's, as its tables' reform_name column says. Required,
+    # as the limits are: a not-computable artifact has no tables to carry
+    # it, and its entry's name is never the key.
+    name: str = field(kw_only=True)
     # One proof per bound modifier on each side: registered template ids,
     # or None for a hand-written modifier. Required so omission fails shut.
     modifier_templates: dict[str, list] = field(kw_only=True)
@@ -545,6 +551,7 @@ def build_receipt_document(
         )
     dashboard = {
         "key": inputs.key,
+        "name": inputs.name,
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,
@@ -727,6 +734,9 @@ def dashboard_problems(document: dict) -> list[str]:
     - so are the model limits, against theirs;
     - each bound modifier has either a registered-template proof or an
       explicit hand-written marker.
+
+    The name the page shows is checked against the entry and the tables
+    by the gate (``publish._name_problems``).
     """
     dashboard = document.get("dashboard") or {}
     problems = []

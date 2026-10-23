@@ -126,6 +126,45 @@ def test_each_figure_level_holds_a_handwritten_modifier(world, level):
         )
 
 
+def test_a_not_computable_handwritten_artifact_lists_without_a_release(world):
+    """Option (d) meets the hold: a hand-written modifier's artifact that
+    records a data limit is receipt-only and is staged as not computable
+    without a release, since it publishes no figure. A release never lifts
+    the data limit to any figure level."""
+    identity = scenario_identity(
+        Scenario(simulation_modifier=module_level_modifier),
+        name="alpha",
+        revision=world.revision(),
+    )
+    limit = data_limits.DATA_LIMITS[0]
+    reference = world.write(
+        "alpha",
+        {2027: 0.0, 2028: 0.0},
+        reform_identity=identity,
+        modifier_templates={"baseline": [], "reform": [None]},
+        data_limits=[data_limits.record(limit, [limit.parameters[0]])],
+    )
+    assert sorted(path.name for path in reference.path.iterdir()) == [
+        "receipt.json"
+    ]
+    assert a.requires_attestation(read_receipt(reference.path))
+    manifest = m.Manifest()
+    stage(manifest, reference.path, provisional=True, **args(world))
+    entry = manifest.measures["alpha"]
+    assert (entry.status, entry.attestation) == (m.NOT_COMPUTABLE, None)
+    assert check(manifest, **args(world)) == []
+    attest(reference)
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        problems, _ = gate_problems(
+            "alpha", reference.path, m.Manifest(), level=level, **args(world)
+        )
+        assert any(
+            f"not computable on current data, so it cannot be {level}"
+            in problem
+            for problem in problems
+        )
+
+
 @pytest.mark.parametrize(
     "updates",
     [

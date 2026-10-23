@@ -14,13 +14,13 @@
   "combined": {
     "combined--alpha+beta": {
       "approval": {
-        "artifact_sha256": "8469f067274dc4ae7573ee91f5d4a17228ae172c33250d2cf09229fdca527486",
-        "at": "2026-10-23T15:38:15.581105+00:00",
+        "artifact_sha256": "5ae9e3adc2bedd5584322ab18f5a833f1dfdd7d81d1d57678097925b73683f24",
+        "at": "2026-10-23T18:58:30.564645+00:00",
         "by": "Reviewer",
         "outputs_sha256": "97a83515607fa7f6214137908c6b79ac154c6f7cc39039ca438bc6163b8e4f1f"
       },
-      "artifact": "artifacts/combined--alpha+beta/8469f067274dc4ae",
-      "artifact_sha256": "8469f067274dc4ae7573ee91f5d4a17228ae172c33250d2cf09229fdca527486",
+      "artifact": "artifacts/combined--alpha+beta/5ae9e3adc2bedd55",
+      "artifact_sha256": "5ae9e3adc2bedd5584322ab18f5a833f1dfdd7d81d1d57678097925b73683f24",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "measures": [
@@ -88,13 +88,13 @@
   "measures": {
     "alpha": {
       "approval": {
-        "artifact_sha256": "a1d0d565ed3572d10fe6819e963797d47c8c1e9e8168ab1c171eac90690b2cea",
-        "at": "2026-10-23T15:38:14.346691+00:00",
+        "artifact_sha256": "ff07a4de3d7b3f4b10a89f4b15b575ecfeba82d6215e5c11a1cc477c10207a74",
+        "at": "2026-10-23T18:58:30.038100+00:00",
         "by": "Reviewer",
         "outputs_sha256": "236d085aa8807dccfa440c6f93917334f9cfc6a11ba85e2110c26e16396d1db3"
       },
-      "artifact": "artifacts/alpha/a1d0d565ed3572d1",
-      "artifact_sha256": "a1d0d565ed3572d10fe6819e963797d47c8c1e9e8168ab1c171eac90690b2cea",
+      "artifact": "artifacts/alpha/ff07a4de3d7b3f4b",
+      "artifact_sha256": "ff07a4de3d7b3f4b10a89f4b15b575ecfeba82d6215e5c11a1cc477c10207a74",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Alpha",
@@ -115,13 +115,13 @@
     },
     "beta": {
       "approval": {
-        "artifact_sha256": "0add128541043ac4ae20066a344cc291a960bd58eb0f51821c99409dc44531f5",
-        "at": "2026-10-23T15:38:14.414704+00:00",
+        "artifact_sha256": "f8b0bb94042215b46f46c669b7bc8bd85f8ab398f2d59ab2a9bff7955f2336cc",
+        "at": "2026-10-23T18:58:30.067670+00:00",
         "by": "Reviewer",
         "outputs_sha256": "b9c11dc0e68c348846540cf69d2c9ff7072dfa2fecfa42c98cd5952776d0854a"
       },
-      "artifact": "artifacts/beta/0add128541043ac4",
-      "artifact_sha256": "0add128541043ac4ae20066a344cc291a960bd58eb0f51821c99409dc44531f5",
+      "artifact": "artifacts/beta/f8b0bb94042215b4",
+      "artifact_sha256": "f8b0bb94042215b46f46c669b7bc8bd85f8ab398f2d59ab2a9bff7955f2336cc",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Beta",
@@ -141,13 +141,13 @@
       ]
     },
     "delta": {
-      "artifact": "artifacts/delta/adf0aff8917b5eb3",
-      "artifact_sha256": "adf0aff8917b5eb328986da58cc651a6c3fcc2a682ff199ac99c519022f332d2",
+      "artifact": "artifacts/delta/87ed3723a8a36b59",
+      "artifact_sha256": "87ed3723a8a36b59eed85381af09ba11a04e3387bd78e3a59bc6ecdf69f4dff2",
       "attestation": {
         "checker": "First reviewer",
         "measure_id": "delta",
         "reason": "The modifier leaves the simulation unchanged.",
-        "receipt_sha256": "3f45f070ae2335558bedbd293111f321990f6859aac211ba014b4ad857bab4d4",
+        "receipt_sha256": "1932f2dd3f481e6b8e93475a527b6454116b7f6d0a69b4e8000c46e2f67b7cd4",
         "released_at": "2026-10-22T12:00:00+00:00",
         "second": "Second reviewer"
       },
@@ -170,16 +170,16 @@
       ]
     },
     "epsilon": {
-      "artifact": "artifacts/epsilon/a3171951555ca4ce",
-      "artifact_sha256": "a3171951555ca4ce85d50b52da9d54aa05976eefdbc69b3177d8118a684e457a",
+      "artifact": "artifacts/epsilon/d50a97a162a14711",
+      "artifact_sha256": "d50a97a162a14711e82fb345b5b8f8b86d30a857217a5033d223e2b48453b08e",
       "data_limits": [
         "additional_dwelling_purchases"
       ],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Epsilon",
-      "outputs_sha256": "1fa49d68f1ab609bced2da9b1be6d3cb0c9e949ad3ba413d09388b6fca3c1019",
+      "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this.",
-      "receipt_sha256": "bcd1df344b066b230983f3a89818a70311c38b6e9bdc986ee1d8d770bd343041",
+      "receipt_sha256": "b8f7832a46982e6c42fd4b743b1f4b80d44219e98fc9ab83a5401dd3312ce4b0",
       "status": "not_computable",
       "unsupported_years": [
         2033
@@ -190,8 +190,8 @@
       ]
     },
     "eta": {
-      "artifact": "artifacts/eta/f6dc80246d6c83a0",
-      "artifact_sha256": "f6dc80246d6c83a0ef6aad08ae0784d9894293120433d7a72f711005348ecd3a",
+      "artifact": "artifacts/eta/b02b8bc06e89696b",
+      "artifact_sha256": "b02b8bc06e89696b794f58317d02f482df3ca42347e79ec9d89d4754675e874d",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Eta",
@@ -211,8 +211,8 @@
       ]
     },
     "gamma": {
-      "artifact": "artifacts/gamma/6e82c0184853e25b",
-      "artifact_sha256": "6e82c0184853e25b1d01a33c1ddccf72677c0636641b63dd5b95e8899b49fd64",
+      "artifact": "artifacts/gamma/d3e1a293df0c6c64",
+      "artifact_sha256": "d3e1a293df0c6c6462a3084f6898117243d1934e803e46ba291ea68c15dea508",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Gamma",
@@ -232,8 +232,8 @@
       ]
     },
     "iota": {
-      "artifact": "artifacts/iota/5ff4f3693ee3d003",
-      "artifact_sha256": "5ff4f3693ee3d003b0480a66c2b9201a008f8c12f502eea5e814df013b976c0b",
+      "artifact": "artifacts/iota/fb300adb153cec06",
+      "artifact_sha256": "fb300adb153cec06bf56fb98585fc96c949e20002fc384cb8a6d40d59ad14d15",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Iota",
@@ -253,8 +253,8 @@
       ]
     },
     "theta": {
-      "artifact": "artifacts/theta/9088aabacafc7f14",
-      "artifact_sha256": "9088aabacafc7f14152f7d1275ee920c660233cd1da2678b8e8b2b7b66e3fd1a",
+      "artifact": "artifacts/theta/de4b1109acf79011",
+      "artifact_sha256": "de4b1109acf790119296beec03dca7c9a27ccc27ffe1f685e3aa684731b3ebd1",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Theta",
@@ -274,8 +274,8 @@
       ]
     },
     "zeta": {
-      "artifact": "artifacts/zeta/18ef76522a9eef7a",
-      "artifact_sha256": "18ef76522a9eef7a1a9c675e2bd35be33f60cc0357b09946961aeea669cdce54",
+      "artifact": "artifacts/zeta/073c6bfd32a867c8",
+      "artifact_sha256": "073c6bfd32a867c824f53ceec328dae65a457ef30725140715b86eda3da9939a",
       "data_limits": [],
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
       "name": "Zeta",
@@ -298,5 +298,5 @@
   "revision": 1,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-23T15:38:15.581734+00:00"
+  "updated_at": "2026-10-23T18:58:30.564838+00:00"
 }

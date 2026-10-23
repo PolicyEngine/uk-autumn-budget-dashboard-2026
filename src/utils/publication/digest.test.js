@@ -79,7 +79,11 @@ describe("jcsSha256 against policyengine's receipt code", () => {
 });
 
 describe("verifying the fixture's artifacts", () => {
-  it.each(Object.entries(entries))("%s", async (key, entry) => {
+  const withFigures = Object.entries(entries).filter(
+    ([, entry]) => entry.status !== "not_computable",
+  );
+
+  it.each(withFigures)("%s", async (key, entry) => {
     const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
     expect(receipt.dashboard.key).toBe(key);
     expect(await verifyReceiptFiles(receipt, entry)).toBe(true);
@@ -87,6 +91,17 @@ describe("verifying the fixture's artifacts", () => {
       const bytes = fixtureBytes(`${entry.artifact}/${name}`);
       expect(await verifyFile(name, bytes, receipt)).toBe(true);
     }
+  });
+
+  it("binds no files for a not-computable entry, so none can verify", async () => {
+    // Its artifact is its receipt alone: the outputs digest is that of the
+    // empty file map, and no file can pass step 1.
+    const entry = entries.epsilon;
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    expect(receipt.dashboard.files).toEqual({});
+    expect(await jcsSha256({})).toBe(entry.outputs_sha256);
+    expect(await artifactSha256(receipt)).toBe(entry.artifact_sha256);
+    expect(await verifyReceiptFiles(receipt, entry)).toBe(false);
   });
 
   it("refuses a receipt whose files are not the entry's", async () => {

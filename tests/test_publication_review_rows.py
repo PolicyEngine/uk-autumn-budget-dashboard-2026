@@ -295,6 +295,8 @@ def expected_rows(
             phrase = f"approved by {one_line(entry.approval.by)}"
         elif entry.status == m.PROVISIONAL:
             phrase = f"provisional, staged by {one_line(staged_by)}"
+        elif entry.status == m.NOT_COMPUTABLE:
+            phrase = f"not computable, staged by {one_line(staged_by)}"
         else:
             continue
         for path, file in entry_files(data_root, entry).items():
@@ -440,19 +442,21 @@ def drawn(base: Path):
 
 
 def test_every_artifact_lists_the_six_published_tables(base):
-    for entry in base_entries(base).values():
+    """Except the not-computable one, which is its receipt alone."""
+    for key, entry in base_entries(base).items():
         listed = json.loads(
             (base / entry.artifact / "receipt.json").read_bytes()
         )["dashboard"]["files"]
-        assert sorted(listed) == sorted(KINDS_TABLES)
+        tables = [] if key == LIMITED_KEY else KINDS_TABLES
+        assert sorted(listed) == sorted(tables)
         assert sorted(os.listdir(base / entry.artifact)) == sorted(
-            [*KINDS_TABLES, "receipt.json"]
+            [*tables, "receipt.json"]
         )
 
 
 @PROPERTY
 @given(data=st.data())
-def test_rows_are_exactly_the_displayed_files_and_the_manifest(base, data):
+def test_rows_are_exactly_the_listed_files_and_the_manifest(base, data):
     scenario = data.draw(drawn(base))
     with apply(base, scenario) as (root, manifest):
         before = split_records(scenario["review"])
@@ -510,7 +514,7 @@ def test_rows_are_exactly_the_displayed_files_and_the_manifest(base, data):
 
 @PROPERTY
 @given(data=st.data())
-def test_no_row_is_written_for_an_entry_the_page_does_not_display(base, data):
+def test_no_row_is_written_for_an_entry_the_page_does_not_list(base, data):
     scenario = data.draw(drawn(base))
     with apply(base, scenario) as (root, manifest):
         before = {
@@ -523,7 +527,7 @@ def test_no_row_is_written_for_an_entry_the_page_does_not_display(base, data):
             for raw, values in split_records(review_bytes(root).decode())[1:]
         }
         for entry in manifest.entries().values():
-            if entry.status in m.DISPLAYABLE:
+            if entry.status in m.LISTED:
                 continue
             for path in entry_files(root / DATA, entry):
                 assert after.get(path) == before.get(path)
@@ -531,26 +535,37 @@ def test_no_row_is_written_for_an_entry_the_page_does_not_display(base, data):
 
 @PROPERTY
 @given(data=st.data())
-def test_a_displayed_provisional_entry_needs_its_stager(base, data):
+def test_a_provisional_or_not_computable_entry_needs_its_stager(base, data):
     scenario = data.draw(drawn(base))
-    provisional = sorted(
-        key
-        for key, status in scenario["statuses"].items()
-        if status == m.PROVISIONAL
-    )
-    assume(provisional)
+
+    def having(status):
+        return sorted(
+            key
+            for key, drawn_status in scenario["statuses"].items()
+            if drawn_status == status
+        )
+
+    provisional, limited = having(m.PROVISIONAL), having(m.NOT_COMPUTABLE)
+    assume(provisional or limited)
     stager = data.draw(st.sampled_from([None, "", "  \n "]))
+    groups = []
+    if provisional:
+        groups.append(
+            f"provisional entries are displayed ({', '.join(provisional)})"
+        )
+    if limited:
+        groups.append(
+            f"not-computable entries are listed ({', '.join(limited)})"
+        )
     with apply(base, scenario) as (root, _):
-        before = review_bytes(root)
+        before = review_bytes(root), snapshot(root / DATA)
         with pytest.raises(rr.ReviewRowsError) as refused:
             run(root, staged_by=stager)
         assert refused.value.problems == [
-            "provisional entries are displayed ("
-            + ", ".join(provisional)
-            + "); name who staged them with --staged-by (the manifest does "
-            "not record it)"
+            " and ".join(groups) + "; name who staged them with --staged-by "
+            "(the manifest does not record it)"
         ]
-        assert review_bytes(root) == before
+        assert (review_bytes(root), snapshot(root / DATA)) == before
 
 
 @PROPERTY
@@ -699,7 +714,9 @@ def test_each_file_is_reviewed_as_its_kind(base):
         rows = rows_by_path(root)
     kinds = {path.rsplit("/", 1)[1]: row[1] for path, row in rows.items()}
     assert kinds == KINDS
-    assert len(rows) == 1 + 5 * 7
+    # The manifest, five displayed artifacts' seven files each, and the
+    # not-computable artifact's receipt.
+    assert len(rows) == 1 + 5 * 7 + 1
 
 
 def test_a_receipt_unbound_file_in_a_displayed_artifact_refuses(base):
@@ -712,7 +729,7 @@ def test_a_receipt_unbound_file_in_a_displayed_artifact_refuses(base):
         assert refused.value.problems == [
             f"{DATA}/{manifest.measures['alpha'].artifact}/"
             "reconciliation.json: in a displayed artifact, but its receipt "
-            "does not bind it; move it out of the repository (the gates "
+            "does not bind it; move it outside the checkout (the gates "
             "never read it, and an untracked file in the tree makes the next "
             "receipt dirty)"
         ]
@@ -730,15 +747,103 @@ def test_the_same_file_beside_an_entry_not_displayed_is_not_a_refusal(base):
     ) in report.unreviewed
 
 
-def test_a_not_computable_entry_gets_no_rows_and_is_reported(base):
+def test_a_not_computable_entry_gets_one_row_for_its_receipt(base):
     with repository(base) as (root, manifest):
-        report = run(root)
+        report = run(root, staged_by="Vahid", on="2026-10-23")
         rows = rows_by_path(root)
-        epsilon = entry_files(root / DATA, manifest.measures[LIMITED_KEY])
-    assert not set(epsilon) & set(rows)
-    assert {
-        (path, f"{LIMITED_KEY} is not_computable") for path in epsilon
-    } <= set(report.unreviewed)
+        entry = manifest.measures[LIMITED_KEY]
+        receipt = root / DATA / entry.artifact / "receipt.json"
+        sha = hashlib.sha256(receipt.read_bytes()).hexdigest()
+        revision = m.load_manifest(root / DATA).revision
+    path = f"{DATA}/{entry.artifact}/receipt.json"
+    assert [p for p in rows if f"/{LIMITED_KEY}/" in p] == [path]
+    assert rows[path] == [
+        path,
+        "static_asset",
+        sha,
+        "María",
+        "2026-10-23",
+        "",
+        f"Gated publication: not computable, staged by Vahid (manifest "
+        f"revision {revision}); receipt bound by the entry's artifact digest",
+    ]
+    assert not [p for p, _ in report.unreviewed if f"/{LIMITED_KEY}/" in p]
+
+
+def test_a_not_computable_entry_alone_needs_its_stager(base):
+    with repository(base, statuses={"gamma": m.STAGED}) as (root, _):
+        before = review_bytes(root), snapshot(root / DATA)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root, staged_by=None)
+        assert (review_bytes(root), snapshot(root / DATA)) == before
+    assert refused.value.problems == [
+        f"not-computable entries are listed ({LIMITED_KEY}); name who staged "
+        "them with --staged-by (the manifest does not record it)"
+    ]
+
+
+@pytest.mark.parametrize(
+    "name", ["budgetary_impact.csv", RECONCILIATION_FILE, "notes"]
+)
+def test_anything_beside_a_not_computable_receipt_refuses(base, name):
+    """A stray table, a reconciliation record or a directory: nothing is
+    written and nothing deleted."""
+    with repository(base) as (root, manifest):
+        artifact = manifest.measures[LIMITED_KEY].artifact
+        stray = root / DATA / artifact / name
+        if name == "notes":
+            stray.mkdir()
+        else:
+            stray.write_bytes(b"reform_id,reform_name,year,value\n")
+        orphan = root / DATA / "artifacts" / "orphan" / "0123456789abcdef"
+        orphan.mkdir(parents=True)
+        (orphan / "receipt.json").write_text("{}\n")
+        before = review_bytes(root), snapshot(root / DATA)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        assert (review_bytes(root), snapshot(root / DATA)) == before
+    assert refused.value.problems == [
+        f"{DATA}/{artifact}/{name}: in a not-computable artifact, which "
+        "holds only its receipt.json; move it outside the checkout (the "
+        "gates refuse it there)"
+    ]
+
+
+def test_a_not_computable_receipt_listing_files_refuses():
+    """As generation wrote one before not-computable artifacts became
+    receipt-only."""
+    document = {
+        "schema": receipt_module.SCHEMA,
+        "execution_receipt": {},
+        "dashboard": {
+            "key": LIMITED_KEY,
+            "files": {"budgetary_impact.csv": "a" * 64},
+            "digests": {"outputs_sha256": "b" * 64},
+            "data_limits": [{"key": "additional_dwelling_purchases"}],
+            "generated_at": "2026-10-23T12:00:00+00:00",
+            "generator_argv": ["test"],
+        },
+    }
+    data = rr.receipt_bytes(document)
+    entry = m.Entry(
+        name="Epsilon",
+        status=m.NOT_COMPUTABLE,
+        artifact=f"artifacts/{LIMITED_KEY}/0123456789abcdef",
+        outputs_sha256="b" * 64,
+        receipt_sha256="c" * 64,
+        execution_identity_sha256="d" * 64,
+        artifact_sha256=receipt_module.artifact_sha256(document),
+        years=[2027],
+        data_limits=["additional_dwelling_purchases"],
+        reason="r",
+    )
+    problems = rr._receipt_problems(
+        LIMITED_KEY, entry, document, data, "where"
+    )
+    assert (
+        "where: lists files, but a not-computable artifact binds no figures"
+        in problems
+    )
 
 
 def test_an_approval_for_another_artifact_refuses(base):
@@ -819,6 +924,79 @@ def test_a_receipt_with_another_value_refuses(base):
         f"{where}: not the receipt alpha's entry names (its artifact digest "
         "differs)"
     ]
+
+
+def test_a_displayed_receipt_recording_a_data_limit_refuses(base):
+    """A data-limited artifact written with its tables, as before option
+    (d), named by a displayed entry: no row attests figures the data can't
+    support, whatever ``publish check`` would say."""
+    limit = record(
+        DATA_LIMITS[0],
+        ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
+    )
+
+    def add_the_limit(document):
+        document["dashboard"]["data_limits"] = [limit]
+
+    with repository(base) as (root, manifest):
+        where = edit_receipt(
+            root, manifest, "gamma", edit_document(add_the_limit)
+        )
+        document = json.loads((root / where).read_bytes())
+        manifest.measures["gamma"].artifact_sha256 = (
+            receipt_module.artifact_sha256(document)
+        )
+        m.save_manifest(manifest, root / DATA)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: records a data limit, so its figures cannot be displayed"
+        in refused.value.problems
+    )
+
+
+def rewrite_receipt(root, manifest, key, change) -> str:
+    """Change an entry's receipt and point the entry at the result, so
+    only the change itself is left to refuse."""
+    where = edit_receipt(root, manifest, key, edit_document(change))
+    document = json.loads((root / where).read_bytes())
+    manifest.entries()[key].artifact_sha256 = receipt_module.artifact_sha256(
+        document
+    )
+    m.save_manifest(manifest, root / DATA)
+    return where
+
+
+def test_a_not_computable_receipt_recording_no_data_limit_refuses(base):
+    with repository(base) as (root, manifest):
+        where = rewrite_receipt(
+            root,
+            manifest,
+            LIMITED_KEY,
+            lambda document: document["dashboard"].update(data_limits=[]),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: records no data limit, so it is not 'not computable'"
+        in refused.value.problems
+    )
+
+
+def test_a_displayed_receipt_listing_no_files_refuses(base):
+    with repository(base) as (root, manifest):
+        where = rewrite_receipt(
+            root,
+            manifest,
+            "gamma",
+            lambda document: document["dashboard"].update(files={}),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: does not record its files and digests"
+        in refused.value.problems
+    )
 
 
 def test_a_receipt_written_in_another_form_refuses(base):
@@ -1012,6 +1190,466 @@ def test_a_repository_reached_through_a_link_is_still_found(base, tmp_path):
     assert all(path.startswith("public/") for path in rows)
 
 
+# --- deleting artifacts no entry names --------------------------------------
+
+
+def copy_artifact(root: Path, entry: m.Entry, to: str) -> Path:
+    """Copy an entry's artifact directory to ``to`` under the data root."""
+    target = root / DATA / to
+    shutil.copytree(
+        root / DATA / entry.artifact, target, copy_function=link_or_copy
+    )
+    return target
+
+
+def file_rows(root: Path, directory: Path) -> str:
+    """Review rows for every file in ``directory``, as an earlier run
+    wrote them."""
+    return "".join(
+        f"{path.relative_to(root).as_posix()},static_asset,{'0' * 64},R,"
+        "2026-10-14,,B\n"
+        for path in sorted(directory.rglob("*"))
+        if path.is_file()
+    )
+
+
+def test_artifacts_no_entry_names_are_deleted_with_their_rows(base):
+    """A generated run never staged, a superseded entry's artifact and a
+    stray file go, with their rows; every artifact a current entry names
+    stays, whatever its status."""
+    statuses = {"gamma": m.WITHDRAWN, "beta": m.STALE}
+    with repository(base, statuses=statuses) as (root, manifest):
+        artifacts = root / DATA / "artifacts"
+        orphan = copy_artifact(
+            root,
+            manifest.measures["alpha"],
+            "artifacts/omega/0123456789abcdef",
+        )
+        older = copy_artifact(
+            root,
+            manifest.measures["alpha"],
+            "artifacts/alpha/fedcba9876543210",
+        )
+        manifest.superseded.append(
+            m.Superseded(
+                key="alpha",
+                superseded_at="2026-10-23T12:00:00+00:00",
+                entry=manifest.measures["alpha"].model_copy(
+                    update={"artifact": "artifacts/alpha/fedcba9876543210"}
+                ),
+            )
+        )
+        m.save_manifest(manifest, root / DATA)
+        (artifacts / "notes.txt").write_text("stray\n")
+        (root / "data_inputs" / "public_data_review.csv").write_text(
+            HEADER + file_rows(root, orphan) + file_rows(root, older)
+        )
+        gone = {
+            path.relative_to(root).as_posix()
+            for directory in (orphan, older)
+            for path in directory.rglob("*")
+        }
+        kept = {
+            key: root / DATA / entry.artifact
+            for key, entry in manifest.entries().items()
+        }
+
+        report = run(root)
+
+        assert not orphan.parent.exists() and not older.exists()
+        assert not (artifacts / "notes.txt").exists()
+        assert all(directory.is_dir() for directory in kept.values())
+        assert (artifacts / "alpha").is_dir()
+        rows = rows_by_path(root)
+    prefix = f"{ARTIFACTS}"
+    assert set(report.deleted) == gone | {
+        f"{prefix}omega/",
+        f"{prefix}omega/0123456789abcdef/",
+        f"{prefix}alpha/fedcba9876543210/",
+        f"{prefix}notes.txt",
+    }
+    assert report.deleted == sorted(report.deleted)
+    files = {path for path in gone if not path.endswith("/")}
+    assert set(report.removed) == files
+    assert not files & set(rows)
+    # The withdrawn and stale entries' artifacts stay, reported unreviewed.
+    assert {why for _, why in report.unreviewed} >= {
+        "gamma is withdrawn",
+        "beta is stale",
+        "delta is staged",
+    }
+
+
+def test_deleting_never_follows_a_symbolic_link(base, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep.csv").write_text("x\n")
+    with repository(base) as (root, _):
+        link = root / DATA / "artifacts" / "linked"
+        link.symlink_to(outside)
+        report = run(root)
+        assert not os.path.lexists(link)
+    assert (outside / "keep.csv").read_text() == "x\n"
+    assert report.deleted == [f"{ARTIFACTS}linked"]
+
+
+def move_behind_a_link(path: Path, to: Path) -> None:
+    """Move ``path`` to ``to`` and leave a relative link to it in its
+    place."""
+    to.parent.mkdir(parents=True, exist_ok=True)
+    path.rename(to)
+    path.symlink_to(os.path.relpath(to, path.parent))
+
+
+@pytest.mark.parametrize("status", [m.STAGED, m.STALE, m.WITHDRAWN])
+@pytest.mark.parametrize(
+    "linked", ["key", "artifact", "file", "directory", "nested file"]
+)
+def test_a_link_on_or_in_a_kept_artifact_refuses(base, status, linked):
+    """Review of #98: deletion keeps what an entry names by the path the
+    manifest spells. Behind a link, an entry the page doesn't list would
+    keep the link and lose its real files, so the run refuses first."""
+    with repository(base, statuses={"delta": status}) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        store = root / DATA / "artifacts" / "store"
+        (artifact / "sub").mkdir()
+        (artifact / "sub" / "x.csv").write_text("x\n")
+        path = {
+            "key": artifact.parent,
+            "artifact": artifact,
+            "file": artifact / "budgetary_impact.csv",
+            "directory": artifact / "sub",
+            "nested file": artifact / "sub" / "x.csv",
+        }[linked]
+        move_behind_a_link(path, store / path.name)
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+    where = path.relative_to(root).as_posix()
+    on = "on" if linked in ("key", "artifact") else "in"
+    assert refused.value.problems == [
+        f"{where}: a symbolic link {on} delta's artifact"
+    ]
+
+
+def test_a_kept_artifact_that_cannot_be_listed_refuses(base, monkeypatch):
+    """A directory in a kept artifact that cannot be listed could hide a
+    link, so the run refuses rather than miss one."""
+    scandir = os.scandir
+    with repository(base) as (root, manifest):
+        # As the run sees it: the temporary directory may be reached
+        # through a link, as macOS's /var is.
+        root = Path(os.path.realpath(root))
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        hidden = artifact / "sub"
+        hidden.mkdir()
+
+        def refuse_the_hidden_one(path="."):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return scandir(path)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "scandir", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact cannot be listed"
+    ]
+
+
+@pytest.mark.parametrize("unreadable", ["key directory", "inner file"])
+def test_a_kept_artifact_that_cannot_be_read_refuses(
+    base, monkeypatch, unreadable
+):
+    """Where a directory can be listed but not searched, a link in it can't
+    be told from a file, and Python 3.14's ``Path.is_symlink`` answers
+    False. The run looks with lstat, and refuses where it can't."""
+    lstat = os.lstat
+    with repository(base) as (root, manifest):
+        # As the run sees it: the temporary directory may be reached
+        # through a link, as macOS's /var is.
+        root = Path(os.path.realpath(root))
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        (artifact / "sub").mkdir()
+        (artifact / "sub" / "x.csv").write_text("x\n")
+        hidden = {
+            "key directory": artifact.parent,
+            "inner file": artifact / "sub" / "x.csv",
+        }[unreadable]
+
+        def refuse_the_hidden_one(path, *args, **kwargs):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return lstat(path, *args, **kwargs)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "lstat", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact cannot be read"
+    ]
+
+
+@pytest.mark.parametrize(
+    "unreadable", ["data root", "artifacts", "listed key", "listed artifact"]
+)
+def test_a_path_the_rows_need_that_cannot_be_read_refuses(
+    base, monkeypatch, unreadable
+):
+    """Where the data root, ``artifacts/``, or a listed entry's key
+    directory or artifact can't be looked at, the run refuses by name,
+    naming the component that failed, rather than with a traceback."""
+    lstat = os.lstat
+    with repository(base) as (root, manifest):
+        root = Path(os.path.realpath(root))
+        artifact = root / DATA / manifest.measures["alpha"].artifact
+        hidden = {
+            "data root": root / DATA,
+            "artifacts": root / DATA / "artifacts",
+            "listed key": artifact.parent,
+            "listed artifact": artifact,
+        }[unreadable]
+
+        def refuse_the_hidden_one(path, *args, **kwargs):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return lstat(path, *args, **kwargs)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "lstat", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    expected = {
+        "data root": f"{where}: cannot be read",
+        "artifacts": f"{where}: cannot be read",
+        "listed key": f"{where}: alpha's artifact cannot be read",
+        "listed artifact": f"{where}: alpha's artifact cannot be read",
+    }[unreadable]
+    assert refused.value.problems == [expected]
+
+
+@pytest.mark.parametrize("key", ["alpha", LIMITED_KEY])
+def test_a_listed_artifact_that_cannot_be_listed_refuses(
+    base, monkeypatch, key
+):
+    """A displayed or not-computable entry's artifact that can be looked at
+    but not listed is refused by name, not with a traceback."""
+    listdir = os.listdir
+    with repository(base) as (root, manifest):
+        root = Path(os.path.realpath(root))
+        hidden = root / DATA / manifest.entries()[key].artifact
+
+        def refuse_the_hidden_one(path="."):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return listdir(path)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "listdir", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: {key}'s artifact cannot be listed"
+    ]
+
+
+def test_a_kept_artifacts_parent_that_cannot_be_listed_refuses(
+    base, monkeypatch
+):
+    """A directory on the way to a kept artifact that can be searched but
+    not listed is named as such."""
+    listdir = os.listdir
+    with repository(base) as (root, manifest):
+        root = Path(os.path.realpath(root))
+        hidden = (root / DATA / manifest.measures["delta"].artifact).parent
+
+        def refuse_the_hidden_one(path="."):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return listdir(path)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "listdir", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact cannot be listed"
+    ]
+
+
+def test_a_kept_artifact_that_is_a_file_refuses(base):
+    with repository(base) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        shutil.rmtree(artifact)
+        artifact.write_text("not a directory\n")
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        where = artifact.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact is not a directory"
+    ]
+
+
+def test_an_artifact_spelled_otherwise_on_disk_refuses(base, monkeypatch):
+    """As on a Mac's case-insensitive disk, where the manifest's spelling
+    reaches a directory the disk spells otherwise: kept by the manifest's
+    spelling, the directory on disk would be deleted."""
+    listdir = os.listdir
+
+    def as_the_disk_spells_it(path):
+        names = listdir(path)
+        if Path(path).name == "artifacts":
+            return ["DELTA" if name == "delta" else name for name in names]
+        return names
+
+    with repository(base) as (root, _):
+        before = snapshot(root / DATA)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "listdir", as_the_disk_spells_it)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+    assert refused.value.problems == [
+        f"{ARTIFACTS}delta: delta's artifact is spelled otherwise on disk"
+    ]
+
+
+def test_the_walk_never_descends_a_link_to_a_named_artifact(base, tmp_path):
+    """Beneath the refusal: ``_unreferenced`` neither descends nor returns
+    a link on the way to a named artifact, so nothing behind it can be
+    deleted through it."""
+    with repository(base) as (root, manifest):
+        key = root / DATA / "artifacts" / "delta"
+        outside = tmp_path / "outside"
+        shutil.copytree(key, outside, copy_function=link_or_copy)
+        (outside / "0123456789abcdef").mkdir()
+        (outside / "0123456789abcdef" / "x.csv").write_text("x\n")
+        shutil.rmtree(key)
+        key.symlink_to(outside)
+        found = rr._unreferenced(root / DATA, manifest)
+        relative = [path.relative_to(root / DATA).parts for path in found]
+    assert not [parts for parts in relative if parts[:2] == key.parts[-2:]]
+
+
+def test_a_directory_the_deletions_empty_goes_too(base):
+    """A staged entry's artifact gone from disk, an older one beside it:
+    the older one goes, and so does the key directory it leaves empty."""
+    with repository(base) as (root, manifest):
+        named = root / DATA / manifest.measures["delta"].artifact
+        copy_artifact(
+            root,
+            manifest.measures["delta"],
+            "artifacts/delta/0123456789abcdef",
+        )
+        shutil.rmtree(named)
+        report = run(root)
+        assert not os.path.lexists(named.parent)
+    assert f"{ARTIFACTS}delta/" in report.deleted
+    assert f"{ARTIFACTS}delta/0123456789abcdef/" in report.deleted
+
+
+def test_links_elsewhere_to_a_kept_artifact_go_unfollowed(base):
+    """A link outside every named artifact that points into one is removed
+    as a link: what it points to stays."""
+    with repository(base) as (root, manifest):
+        alpha = root / DATA / manifest.measures["alpha"].artifact
+        junk = root / DATA / "artifacts" / "junk" / "x"
+        junk.mkdir(parents=True)
+        (junk / "to_alpha").symlink_to(alpha)
+        (junk / "to_receipt").symlink_to(alpha / "receipt.json")
+        before = snapshot(alpha)
+        report = run(root)
+        assert not os.path.lexists(junk.parent)
+        assert snapshot(alpha) == before
+    assert report.deleted == [
+        f"{ARTIFACTS}junk/",
+        f"{ARTIFACTS}junk/x/",
+        f"{ARTIFACTS}junk/x/to_alpha",
+        f"{ARTIFACTS}junk/x/to_receipt",
+    ]
+
+
+def test_a_linked_artifacts_directory_refuses(base, tmp_path):
+    with repository(base) as (root, _):
+        artifacts = root / DATA / "artifacts"
+        shutil.copytree(
+            artifacts, tmp_path / "artifacts", copy_function=link_or_copy
+        )
+        shutil.rmtree(artifacts)
+        artifacts.symlink_to(tmp_path / "artifacts")
+        before = snapshot(tmp_path / "artifacts")
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert refused.value.problems == [f"{DATA}/artifacts: a symbolic link"]
+    assert snapshot(tmp_path / "artifacts") == before
+
+
+def test_the_command_prints_each_deleted_path_and_a_count(base, capsys):
+    with repository(base) as (root, manifest):
+        copy_artifact(
+            root,
+            manifest.measures["alpha"],
+            "artifacts/omega/0123456789abcdef",
+        )
+        code = main(
+            [
+                "publish",
+                "--data-root",
+                str(root / DATA),
+                "review-rows",
+                "--reviewer",
+                "María",
+                "--staged-by",
+                "Vahid",
+                "--review-csv",
+                str(root / "data_inputs" / "public_data_review.csv"),
+            ]
+        )
+    output = capsys.readouterr().out.splitlines()
+    assert code == 0
+    deleted = [line for line in output if line.startswith("deleted ")]
+    assert deleted[:2] == [
+        f"deleted {ARTIFACTS}omega/",
+        f"deleted {ARTIFACTS}omega/0123456789abcdef/",
+    ]
+    # The key directory, the artifact directory and its seven files.
+    assert len(deleted) == 9
+    assert (
+        "9 paths deleted under the data root's artifacts/ that no manifest "
+        "entry names"
+    ) in output
+
+
 def test_record_level_identifiers_in_the_manifest_refuse(base):
     with repository(
         base,
@@ -1087,7 +1725,7 @@ def test_a_last_row_without_a_line_end_keeps_its_bytes(base, path):
         text = review_bytes(root).decode()
     records = split_records(text)
     assert [values[0] for _, values in records[1:]].count(path) == 1
-    assert len(records) == 1 + 1 + 29
+    assert len(records) == 1 + 1 + 30
     if path == "public/zz.png":
         # Still last: its bytes are untouched, with no line end added.
         assert text.endswith("\n" + row)
@@ -1190,7 +1828,7 @@ def test_the_command_prints_paths_and_counts_never_values(base, capsys):
         rows = rows_by_path(root)
     assert code == 0
     assert re.search(
-        r"^review rows for manifest revision \d+: 29 added, 0 replaced "
+        r"^review rows for manifest revision \d+: 30 added, 0 replaced "
         r"\(0 unchanged\), 0 removed; took \d+\.\d\d s after start-up$",
         output,
         re.MULTILINE,
@@ -1240,19 +1878,20 @@ def test_the_command_refuses_with_a_reason(base, capsys):
     output = capsys.readouterr().out
     assert code == 1
     assert output.splitlines() == [
-        "REFUSED review rows (nothing written):",
-        "  - provisional entries are displayed (gamma); name who staged "
-        "them with --staged-by (the manifest does not record it)",
+        "REFUSED review rows (nothing written or deleted):",
+        "  - provisional entries are displayed (gamma) and not-computable "
+        f"entries are listed ({LIMITED_KEY}); name who staged them with "
+        "--staged-by (the manifest does not record it)",
     ]
 
 
 # --- both disclosure checks pass on the helper's rows -----------------------
 
 
-def displayed_only(root: Path, manifest: m.Manifest) -> None:
-    """Remove the artifacts of entries the page does not display."""
+def listed_only(root: Path, manifest: m.Manifest) -> None:
+    """Remove the artifacts of entries the page does not list."""
     for entry in manifest.entries().values():
-        if entry.status not in m.DISPLAYABLE:
+        if entry.status not in m.LISTED:
             shutil.rmtree(root / DATA / entry.artifact)
 
 
@@ -1282,7 +1921,7 @@ def with_legacy_file(root: Path) -> str:
 @needs_node
 def test_the_build_check_passes_on_the_helpers_rows(base):
     with repository(base) as (root, manifest):
-        displayed_only(root, manifest)
+        listed_only(root, manifest)
         legacy = with_legacy_file(root)
         csv_path = root / "data_inputs" / "public_data_review.csv"
         csv_path.write_text(HEADER + legacy)
@@ -1294,7 +1933,7 @@ def test_the_build_check_passes_on_the_helpers_rows(base):
 
 def test_the_ci_check_passes_on_the_helpers_rows(base):
     with repository(base) as (root, manifest):
-        displayed_only(root, manifest)
+        listed_only(root, manifest)
         legacy = with_legacy_file(root)
         (root / "data_inputs" / "public_data_review.csv").write_text(
             HEADER + legacy
@@ -1307,18 +1946,14 @@ def test_the_ci_check_passes_on_the_helpers_rows(base):
 
 
 @needs_node
-def test_the_build_check_still_fails_on_undisplayed_artifacts(base):
-    """The open question for the coordinator: a not-computable (or staged)
-    entry's artifact gets no row under the ruling, yet `publish check`
-    needs it on disk, so the build check fails on its files. The helper
-    names each one."""
+def test_the_build_check_still_fails_on_unlisted_artifacts(base):
+    """A staged entry's artifact gets no row, so the build check fails on
+    its files until it is approved or left out of the commit; the helper
+    names each one. A not-computable entry's receipt has its row."""
     with repository(base) as (root, _):
         report = run(root)
         problems = build_check(root)
     assert sorted(problems) == sorted(
         f"{path}: not reviewed" for path, _ in report.unreviewed
     )
-    assert {why for _, why in report.unreviewed} == {
-        "delta is staged",
-        f"{LIMITED_KEY} is not_computable",
-    }
+    assert {why for _, why in report.unreviewed} == {"delta is staged"}

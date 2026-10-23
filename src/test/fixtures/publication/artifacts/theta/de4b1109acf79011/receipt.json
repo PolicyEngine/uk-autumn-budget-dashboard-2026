@@ -29,35 +29,35 @@
     ],
     "digests": {
       "execution_identity_sha256": "642b491cfb6a6e63623abaacd99ec29761060a0425cea87b82425f9f5efc26e2",
-      "outputs_sha256": "6ed186a2cbe5550683bfad8b228c1c29ffccd062e4a3b74fb557a3bd6f1d8992",
-      "receipt_sha256": "9f167fed3de94839e5519c917b19651966f922367ec177a5c9ed6322fec841c5"
+      "outputs_sha256": "a688540dce254c13d174c1258a0a86193c28c445f175e3ce82275feae9c78c3a",
+      "receipt_sha256": "5f53e6bb3a83a88196a4b59d5fa5fb5b536d7b8440fa8b3bba301971bc8d9694"
     },
     "files": {
-      "budgetary_impact.csv": "3232247c23f75c3d2c8d1b7086c36d1738928ecc93811c0c9419ba8627475c7a",
-      "distributional_impact.csv": "08e9f78a74ed06a222b635fd33f5f2e9e2561ea53f44e4767e15d6f5d18c6d69",
-      "household_scatter_binned.csv": "f138628fa84e1aaa8dfd6c9a9d96bb7bf8a823d4d494ae514ff01ee14583d290",
-      "income_curve.csv": "0536f1999b68a439acd4673866d761ca650a468e8875d62b1f83486be04bcbda",
-      "metrics.csv": "95a005b2c38fbdba0a7af6fb55a934ee7f4f35d8a66548a3206e4c68681407df",
-      "winners_losers.csv": "60c0fd1a30f1eb0bcf1038f3231e65cd5a4d6c71fcb3863d7376d192cfc1ae30"
+      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
+      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
+      "household_scatter_binned.csv": "0e3143dfe1379b10592be357f7c64d779f8886d78e6ab4290dde255ff77d4c8b",
+      "income_curve.csv": "98c65fa31ea1801cff78e2d1f42c593f48947d0b02d9b25373ca12b7f94d2aa4",
+      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
+      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
     },
-    "generated_at": "2026-10-23T15:38:14.766046+00:00",
+    "generated_at": "2026-10-23T18:58:30.350477+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "zeta",
+    "key": "theta",
     "measure_ids": [
-      "zeta"
+      "theta"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [
       {
-        "key": "state_pension_add_on_uprating",
+        "key": "pc_minimum_guarantee_uprating",
         "parameters": [
-          "gov.dwp.state_pension.new_state_pension.amount"
+          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
         ],
-        "reason": "The installed model raises additional State Pension and new State Pension protected payments with the full rates, not with prices, so anything that moves the full rates moves them too, and a change to September CPI misses them. They rise by prices: the statutory floor, which the Up-rating Orders give as September CPI (SI 2026/148 articles 4(3)(a) and 6(3)(b)). So this measure is mis-costed: on uk-data 1.58.1, a 10% rise in the full rates overstates its net cost by about \u00a30.85bn to \u00a31.06bn a year over 2026-27 to 2030-31. policyengine-uk #2336 fixes it; it is not in this model. Held at provisional."
+        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
       }
     ],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
@@ -65,6 +65,7 @@
       "baseline": [],
       "reform": []
     },
+    "name": "Theta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.1",
@@ -77,7 +78,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "zeta baseline"
+      "name": "theta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.1",
@@ -117,13 +118,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "6ed186a2cbe5550683bfad8b228c1c29ffccd062e4a3b74fb557a3bd6f1d8992",
+    "outputs_sha256": "a688540dce254c13d174c1258a0a86193c28c445f175e3ce82275feae9c78c3a",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "zeta",
-      "reform_sha256": "529ecf42be6c27a32a43bb700409a37d95f28b99ba77e7c96cfd55f70a5e0e7a",
+      "name": "theta",
+      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
