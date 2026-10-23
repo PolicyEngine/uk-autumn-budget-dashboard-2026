@@ -6,6 +6,8 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 **Rehearsal status:** scripted OBR acquisition returned HTTP 403, but the follow-up rehearsal completed the March round trip from the original cached economy and receipts workbooks. The installed UK 2.145.0 CLI took 107.740 s including cold imports; the identical standalone importer took 5.704 s, and all 24 importer fixture tests passed. The import is not byte-idempotent: 22 small annual-rate precision changes and 10 compensating forecast-gap changes require review. The source workbook's 2030 mortgage-interest cell is blank, so that dated model assumption remains retained. See the acquisition notes below. Resource waits are additional, unbounded time; a successful local import does not establish a simulation completion deadline.
 
+**23 October simulation outcome:** the fully guarded subset and national one-year comparisons passed the synthetic stored-input checks. Both registered-measure full processors refused at FY2027 distribution, so neither produced a complete result or artifact. The nonoverlapping observed partial work took **39m31.377s**, or **41m19.117s** including the previously measured local import, before successful full artifacts, national all-measure generation and publication review. The **13:40–14:10 slot does not hold as a deliverable full-rebase release window**; see the [timed simulation evidence](#23-october-timed-simulations). The observed partial route exceeded 30 minutes; a corrected complete workflow remains untimed.
+
 1. **Prepare a scratch directory and cap every numerical thread pool at four.** Run from the clean dashboard checkout. `REBASE_JSON` is the reviewed JSON object mapping parameter paths to calendar-year interval/value mappings, including the statutory-input overrides. `DATASET` is the single-year Microcosm cut (or the rehearsal's every-40th-household cut). Do not run concurrent jobs.
 
    ```sh
@@ -172,6 +174,8 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    To repeat the synthetic drill, start from the **unchanged installed UK 2.145.0 parameter tree**, not the scratch tree modified by the March round trip. In the builder above set `base=Path(os.environ['PARAMETER_SOURCE'])/'gov/economic_assumptions'` (or use an untouched backup of that exact pin), add `obr.per_capita.gdp` to `paths`, and change only CPI 2026 `.023 → .028`, CPI 2027 `.020 → .025`, earnings 2027 `.024 → .019`, house prices 2027 `.029 → .049`, and nominal GDP/head 2027 `.0323 → .0293`. Other 2026–2031 entries stay fixed. Adopting the 22 round-trip precision changes would alter this isolated shock and invalidate the expected factors below. Keep the published statutory overrides above. The resulting unpublished September 2027 CPI is `.02572`, May–July 2027 AWE `.01927`, rounded to 2.6% and 1.9%; April 2028 triple lock becomes **2.6%**, versus 2.5%. Leave April 2027 triple lock at 3.9%; let parameter processing derive it.
 
+   For the exact synthetic dictionary, explicitly `export SMOKE_SYNTHETIC_CHECKS=1` before the subset and national commands below. Its default is `0`; the real October dictionary needs its own reviewed benchmarks rather than these synthetic factors.
+
 4. **Make the every-40th-household cut and smoke-test the data path first.** Retain whole households with their people/benefit units and original weights. Do not call this a calibrated national estimate. Read the national source in place; never overwrite it.
 
    ```sh
@@ -201,16 +205,27 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    ```sh
    cat > "$REBASE_SCRATCH/forecast_smoke.py" <<'PY'
    import gc
+   import importlib
    import json
    import os
    import subprocess
    import time
    from pathlib import Path
+   from unittest.mock import patch
 
+   command_started=time.perf_counter()
+   import_started=time.perf_counter()
    import numpy as np
    import policyengine as pe
+   simulation_module=importlib.import_module('policyengine_uk.simulation')
+   original_framework_simulation=simulation_module.Simulation
+   cold_import_seconds=time.perf_counter()-import_started
+   print(json.dumps({'cold_import_seconds':cold_import_seconds}),flush=True)
+
+   gate_wait_seconds=0.0
 
    def gate(label):
+       global gate_wait_seconds
        waited=time.perf_counter()
        while True:
            uptime=subprocess.run(['uptime'],check=True,capture_output=True,text=True).stdout.strip()
@@ -219,8 +234,14 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
            load1=os.getloadavg()[0]
            print(f'{label}: {uptime}; available={free_gb:.3f} GB',flush=True)
            if load1<=110 and free_gb>=55:
-               return time.perf_counter()-waited
+               elapsed=time.perf_counter()-waited
+               gate_wait_seconds+=elapsed
+               return elapsed
            time.sleep(30)
+
+   def guarded_framework_simulation(*args,**kwargs):
+       gate('framework internal Simulation')
+       return original_framework_simulation(*args,**kwargs)
 
    variables=['employment_income_before_lsr',
               'food_and_non_alcoholic_beverages_consumption','dividend_income',
@@ -229,37 +250,53 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    forecast=json.loads(Path(os.environ['REBASE_JSON']).read_text())
    arms=os.environ.get('SMOKE_ARMS','unshifted,rebased').split(',')
    assert arms and set(arms)<=set(['unshifted','rebased'])
+   years=[int(year) for year in os.environ.get(
+       'SMOKE_YEARS','2026,2027,2028,2029,2030').split(',')]
+   assert years and years==sorted(set(years)) and set(years)<=set(range(2026,2031))
+   synthetic_option=os.environ.get('SMOKE_SYNTHETIC_CHECKS','0')
+   assert synthetic_option in ('0','1')
+   synthetic_checks=synthetic_option=='1'
+   if synthetic_checks and set(arms)!=set(['unshifted','rebased']):
+       raise RuntimeError('Synthetic checks require both unshifted and rebased arms')
    results={}
-   for label in arms:
-       wait_seconds=gate(label)
-       started=time.perf_counter()
-       kwargs={'reform':forecast} if label=='rebased' else {}
-       sim=pe.uk.managed_microsimulation(
-           dataset=os.environ['DATASET'],allow_unmanaged=True,**kwargs)
-       construction_seconds=time.perf_counter()-started
-       rows=[]
-       for year in range(2026,2031):
-           totals={}
-           for variable in variables:
-               values=sim.calculate(variable,year)
-               totals[variable]={'weighted_gbp':float(values.sum()),
-                                 'unweighted_gbp':float(np.asarray(values).sum())}
-           p=sim.tax_benefit_system.parameters
-           statutory='gov.economic_assumptions.statutory_uprating_inputs.'
-           parameters={
-               'previous_september_cpi':float(p.get_child(statutory+'cpi_september')(f'{year-1}-09-01')),
-               'previous_may_july_awe':float(p.get_child(statutory+'awe_total_pay_may_july')(f'{year-1}-07-01')),
-               'triple_lock':float(p.get_child('gov.economic_assumptions.yoy_growth.triple_lock')(f'{year}-04-30')),
-               'basic_pension_weekly_gbp':float(p.get_child('gov.dwp.state_pension.basic_state_pension.amount')(f'{year}-04-30')),
-               'new_pension_weekly_gbp':float(p.get_child('gov.dwp.state_pension.new_state_pension.amount')(f'{year}-04-30')),
+   with patch.object(simulation_module,'Simulation',guarded_framework_simulation):
+       for label in arms:
+           gate_wait_before=gate_wait_seconds
+           outer_wait_seconds=gate(label)
+           started=time.perf_counter()
+           kwargs={'reform':forecast} if label=='rebased' else {}
+           sim=pe.uk.managed_microsimulation(
+               dataset=os.environ['DATASET'],allow_unmanaged=True,**kwargs)
+           construction_seconds=time.perf_counter()-started
+           rows=[]
+           for year in years:
+               totals={}
+               for variable in variables:
+                   values=sim.calculate(variable,year)
+                   totals[variable]={'weighted_gbp':float(values.sum()),
+                                     'unweighted_gbp':float(np.asarray(values).sum(dtype=np.float64))}
+               p=sim.tax_benefit_system.parameters
+               statutory='gov.economic_assumptions.statutory_uprating_inputs.'
+               parameters={
+                   'previous_september_cpi':float(p.get_child(statutory+'cpi_september')(f'{year-1}-09-01')),
+                   'previous_may_july_awe':float(p.get_child(statutory+'awe_total_pay_may_july')(f'{year-1}-07-01')),
+                   'triple_lock':float(p.get_child('gov.economic_assumptions.yoy_growth.triple_lock')(f'{year}-04-30')),
+                   'basic_pension_weekly_gbp':float(p.get_child('gov.dwp.state_pension.basic_state_pension.amount')(f'{year}-04-30')),
+                   'new_pension_weekly_gbp':float(p.get_child('gov.dwp.state_pension.new_state_pension.amount')(f'{year}-04-30')),
+               }
+               rows.append({'year':year,'totals':totals,'parameters':parameters})
+           simulation_wall_seconds=time.perf_counter()-started
+           arm_gate_wait_seconds=gate_wait_seconds-gate_wait_before
+           results[label]={
+               'gate_wait_seconds':arm_gate_wait_seconds,
+               'outer_gate_wait_seconds':outer_wait_seconds,
+               'construction_seconds_including_internal_gates':construction_seconds,
+               'simulation_wall_seconds_including_internal_gates':simulation_wall_seconds,
+               'simulation_seconds_excluding_gates':simulation_wall_seconds-(arm_gate_wait_seconds-outer_wait_seconds),
+               'rows':rows,
            }
-           rows.append({'year':year,'totals':totals,'parameters':parameters})
-       results[label]={'wait_seconds':wait_seconds,
-                       'construction_seconds':construction_seconds,
-                       'simulation_wall_seconds':time.perf_counter()-started,
-                       'rows':rows}
-       del values,sim
-       gc.collect()
+           del values,sim
+           gc.collect()
    if set(results)==set(['unshifted','rebased']):
        results['percentage_changes']=[
            {'year':old['year'],'weighted_percent':{
@@ -267,18 +304,60 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
                if old['totals'][name]['weighted_gbp'] else None
                for name in variables}}
            for old,new in zip(results['unshifted']['rows'],results['rebased']['rows'])]
+   failures=[]
+   if synthetic_checks:
+       checks=[]
+       for old,new in zip(results['unshifted']['rows'],results['rebased']['rows']):
+           year=old['year']
+           expected={
+               'employment_income_before_lsr':1 if year==2026 else 1.019/1.024,
+               'food_and_non_alcoholic_beverages_consumption':(
+                   1.028/1.023 if year==2026 else (1.028/1.023)*(1.025/1.020)),
+               'main_residence_value':1 if year==2026 else 1.049/1.029,
+               'dividend_income':1 if year==2026 else 1.0293/1.0323,
+               'council_tax':1,
+           }
+           for variable,factor in expected.items():
+               before=old['totals'][variable]['unweighted_gbp']
+               after=new['totals'][variable]['unweighted_gbp']
+               measured=after/before if before else None
+               passed=measured is not None and bool(np.isclose(
+                   measured,factor,rtol=1e-4,atol=1e-6))
+               check={'year':year,'variable':variable,'measured_ratio':measured,
+                      'expected_ratio':factor,'passed':passed}
+               checks.append(check)
+               if not passed: failures.append(check)
+       results['synthetic_checks']={'rtol':1e-4,'atol':1e-6,'checks':checks}
+   results['timings']={
+       'cold_import_seconds':cold_import_seconds,
+       'gate_wait_seconds':gate_wait_seconds,
+       'script_wall_seconds_including_imports_and_gates':time.perf_counter()-command_started,
+   }
    output=Path(os.environ['REBASE_SCRATCH'])/os.environ.get('SMOKE_OUTPUT','subset-smoke.json')
    output.write_text(json.dumps(results,indent=2)+'\n')
    print(json.dumps(results,indent=2))
+   if failures:
+       raise RuntimeError(
+           'STOP: synthetic stored-input factors failed; inspect the saved aggregate '
+           'ratios, fiscal-year conversion and cumulative-index rounding before '
+           'running the measure or national phases. Do not widen the tolerance '
+           'or replace a factor without explaining the difference.')
    PY
-   uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
+   SMOKE_SYNTHETIC_CHECKS="${SMOKE_SYNTHETIC_CHECKS:-0}" \
+     /usr/bin/time -p uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
    ```
 
-   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, residential values `1.049/1.029 - 1 = +1.94363%`, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. Compare both weighted and unweighted aggregates; fiscal-year blending and interactions may change aggregate responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. An unexpected zero or one-year lag on earnings/CPI stops the run for investigation.
+   `SMOKE_YEARS` selects the years queried; it defaults to 2026–2030 for the subset. Record the command's external `real` total, cold imports, each gate wait and each arm's construction/calculation wall time. The arm wall counters exclude imports and the preceding outer gate, but include any internal baseline gates; `simulation_seconds_excluding_gates` subtracts those internal waits. The external total includes all of them. These counters overlap, so do not add the external total to its components. A one-year query still constructs the single-year dataset's model projection through its configured horizon (2032 in this overlay); it does not establish a one-year construction cost.
+
+   Gating only the public managed call misses framework-created baselines. In UK 2.145.0 a scenario constructor calls the module-global `policyengine_uk.simulation.Simulation` internally, including a full dataset baseline in the rebased national arm. The temporary patch above gates those recursive constructions while preserving the original class; keep it active during both construction and calculation. The patch changes no installed source and restores the module on exit. The helper below applies the same guard to registered processing and production generation.
+
+   Check the stored-input probes before interpreting tax/benefit outputs. Calendar-input benchmarks are employment `1.019/1.024 - 1 = −0.48828%`, CPI-linked food consumption `1.028/1.023 - 1 = +0.48876%` after 2026 and `(1.028/1.023)*(1.025/1.020) - 1 = +0.98135%` cumulatively after 2027, residential values `1.049/1.029 - 1 = +1.94363%`, and GDP/head-linked dividend income `1.0293/1.0323 - 1 = −0.29061%`. The synthetic checks compare **unweighted stored-input sums**, with employment, residential values and dividends unchanged in 2026. Their ratio tolerance is `rtol=1e-4, atol=1e-6`, approximately 0.0101 percentage points around a ratio of one. Residential cumulative HPI indices are rounded to five decimals, so their observed factor can vary slightly across later years; retain the calendar benchmark rather than substituting an observed rounded ratio. Compare weighted aggregates as well; fiscal-year blending and interactions may change fiscal output responses from those calendar factors. Council tax is the **unchanged negative control** because its country paths are independent. VAT rises with affected non-energy consumption while coverage factors stay fixed. Pension rate movement follows the triple lock; stored pension/additional-pension CPI projection may also affect its aggregate. A failed synthetic assertion, unexpected zero or one-year lag stops the run for investigation before the next phase. With synthetic checks disabled, review the real dictionary's expected input moves explicitly before continuing.
 
    Keep one simulation process at a time and all numerical thread pools at four. There is no timeout exception to load1 ≤110 and available disk ≥55 **decimal** GB. Log wait time separately; do not substitute a previous passing gate for the next check. Run each command in the foreground: do not append `&`, start a background retry or leave a scheduled simulation behind. If the gate remains closed, keep observing that foreground session or cancel it with Ctrl-C and record that no constructor ran. Before retrying, confirm the cancelled process has exited; the new invocation must check the gate again. Do not delete unrelated work or shared environments to open the disk gate.
 
 5. **Check the real route and regenerate a registered measure with the forecast in both arms.** This command reads the dataset in place, runs the dashboard's full `ReformProcessor`, and prints only aggregate budgetary rows and timings. It writes a reusable helper script into scratch so the same reviewed gate/merge functions can be used in the artifact step. The macro dict is part of both scenario identities; retain every registered policy change and modifier. `DataConfig.baseline_parameter_changes` alone does not rebase the reform arm and is overridden by a measure's own baseline.
+
+   **Production preflight: check the policy's intended years before the full processor.** The registered dividend measure describes a 2 percentage-point basic/higher rate increase from April 2026, but `_set_pre_budget_dividend_rates` in `src/uk_budget_data/reforms.py` only changes entries dated 2027 onward. UK 2.145.0's fiscal conversion materialises annual entries, including 2026, from each year's April 30 value. The modifier therefore leaves the two 2026 rates equal. The helper below prints the effective rates and requires a 0.02 reform-minus-baseline difference in both brackets for every scored year (2026–2030 in this configuration). It refuses the current period coverage before the full processor; obtain a reviewed registry correction before production generation of the dividend measure or any combined artifact containing it. Do not remove 2026 or bypass the preflight to conceal the gap. The timed rehearsal retains the unchanged registry for diagnosis and timing; that does not clear this production check. A zero-year costing can satisfy receipts-minus-spending reconciliation, so the budget identity alone cannot establish policy responsiveness.
 
    ```sh
    cat > "$REBASE_SCRATCH/forecast_helpers.py" <<'PY'
@@ -289,6 +368,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    import os
    import subprocess
    import time
+   from contextlib import contextmanager
    from pathlib import Path
    from unittest.mock import patch
 
@@ -300,7 +380,13 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    from uk_budget_data.models import DataConfig
    from uk_budget_data.pipeline import ReformProcessor
 
+   gate_wait_seconds = 0.0
+   framework_simulation_module = importlib.import_module("policyengine_uk.simulation")
+   original_framework_simulation = framework_simulation_module.Simulation
+
    def gate(label):
+       global gate_wait_seconds
+       started = time.perf_counter()
        while True:
            observed = subprocess.run(
                ["uptime"], check=True, capture_output=True, text=True
@@ -310,8 +396,18 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
            free_gb = fs.f_bavail * fs.f_frsize / 1e9  # Decimal GB.
            print(f"{label}: {observed}; available={free_gb:.3f} GB", flush=True)
            if load1 <= 110 and free_gb >= 55:
-               return
+               elapsed = time.perf_counter() - started
+               gate_wait_seconds += elapsed
+               return elapsed
            time.sleep(30)
+
+   @contextmanager
+   def guard_framework_baselines():
+       def guarded(*args, **kwargs):
+           gate("framework internal Simulation")
+           return original_framework_simulation(*args, **kwargs)
+       with patch.object(framework_simulation_module, "Simulation", guarded):
+           yield
 
    def merged(forecast, policy):
        policy = policy or {}
@@ -381,26 +477,75 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    def build_in_place(dataset_path, scenario=None):
        gate("managed_microsimulation")
-       return pipeline.build_microsimulation(dataset_path, scenario)
+       with guard_framework_baselines():
+           return pipeline.build_microsimulation(dataset_path, scenario)
+
+   def check_dividend_policy_responsiveness(baseline, reformed, years):
+       path = "gov.hmrc.income_tax.rates.dividends"
+       before = baseline.tax_benefit_system.parameters.get_child(path)
+       after = reformed.tax_benefit_system.parameters.get_child(path)
+       checks = []
+       failures = []
+       for year in years:
+           for bracket, name in enumerate(("basic", "higher")):
+               date = f"{year}-04-30"
+               baseline_rate = float(before.brackets[bracket].rate(date))
+               reform_rate = float(after.brackets[bracket].rate(date))
+               difference = reform_rate - baseline_rate
+               passed = math.isclose(difference, 0.02, rel_tol=0, abs_tol=1e-10)
+               row = {"year": year, "bracket": name,
+                      "baseline_rate": baseline_rate, "reform_rate": reform_rate,
+                      "difference": difference, "expected_difference": 0.02,
+                      "passed": passed}
+               checks.append(row)
+               if not passed:
+                   failures.append(f"{year} {name}: {difference:.12g}")
+       print(json.dumps({"dividend_policy_rate_preflight": checks}), flush=True)
+       if failures:
+           raise RuntimeError(
+               "Registered dividend policy period coverage failed: "
+               + "; ".join(failures)
+               + ". A reviewed registry period fix is required before the full "
+               "processor or production generation; do not accept an unresponsive "
+               "score year or bypass this check."
+           )
 
    def process(measure, cfg, baseline, reformed, baseline_scenario):
+       if measure.id in ("dividend_tax_increase_2pp", "autumn_budget_2026_combined"):
+           check_dividend_policy_responsiveness(baseline, reformed, cfg.years)
+       processor = ReformProcessor(measure, cfg)
+       calculate_budget = processor.budgetary_calc.calculate
+       def budget_checkpoint(*args, **kwargs):
+           rows = calculate_budget(*args, **kwargs)
+           print(json.dumps({"checkpoint_only": True,
+                             "full_processor_passed": False,
+                             "budgetary_impact": rows}), flush=True)
+           return rows
+       processor.budgetary_calc.calculate = budget_checkpoint
        original = policyengine_uk.Simulation
        def guarded_situation(*args, **kwargs):
            gate("income-curve situation Simulation")
            return original(*args, **kwargs)
        # IncomeCurveCalculator imports this class inside calculate().
-       with patch.object(policyengine_uk, "Simulation", guarded_situation):
-           return ReformProcessor(measure, cfg).process(
+       with guard_framework_baselines(), \
+            patch.object(policyengine_uk, "Simulation", guarded_situation):
+           return processor.process(
                baseline, reformed, baseline_scenario
            )
    PY
-   PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" uv run --no-sync python - <<'PY'
+   PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" /usr/bin/time -p uv run --no-sync python - <<'PY'
    import json
    import time
+   command_started = time.perf_counter()
+   import_started = time.perf_counter()
+   import numpy as np
+   import forecast_helpers as helpers
    from forecast_helpers import (
        build_in_place, config, load_forecast, process, rebase_measure,
    )
    from uk_budget_data.reforms import get_reform
+   cold_import_seconds = time.perf_counter() - import_started
+   print(json.dumps({"cold_import_seconds": cold_import_seconds}), flush=True)
 
    cfg = config()
    original = get_reform("dividend_tax_increase_2pp")
@@ -409,11 +554,11 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
                ("rebased", rebase_measure(original, load_forecast()))]
    for label, measure in measures:
        started = time.perf_counter()
+       gate_wait_before = helpers.gate_wait_seconds
        baseline_scenario = measure.baseline_scenario_for(cfg)
        baseline = build_in_place(str(cfg.dataset_path), baseline_scenario)
        reformed = build_in_place(str(cfg.dataset_path), measure.to_scenario())
        result = process(measure, cfg, baseline, reformed, baseline_scenario)
-       import numpy as np
        # A dividend-rate change must share the same projected input data.
        for year in cfg.years:
            for variable in ['employment_income_before_lsr',
@@ -432,25 +577,110 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
            if not np.isclose(row['value'], tax_delta-spend_delta,
                              rtol=1e-4, atol=1e-5):
                raise RuntimeError(f'Budget identity failed: {year}')
+       wall_seconds = time.perf_counter() - started
+       gate_wait_seconds = helpers.gate_wait_seconds - gate_wait_before
        print(json.dumps({"basis": label,
-                         "wall_seconds": time.perf_counter() - started,
+                         "wall_seconds_including_gates": wall_seconds,
+                         "gate_wait_seconds": gate_wait_seconds,
+                         "simulation_and_validation_seconds_excluding_gates": wall_seconds - gate_wait_seconds,
                          "budgetary_impact": result.budgetary_impact}))
        del result, baseline, reformed
+   print(json.dumps({
+       "script_wall_seconds_including_imports_and_gates": time.perf_counter() - command_started,
+       "cold_import_seconds": cold_import_seconds,
+       "gate_wait_seconds": helpers.gate_wait_seconds,
+   }))
    PY
    ```
 
-   This runs the whole processor: costing, distribution, winners/losers, metrics, income curve and household scatter. The output above is aggregate only. The internal result also contains household rows; do not print or export them. The gate checks `uptime` and `os.statvfs` before every managed microsimulation and each of the income curve's household `Simulation` constructions. Each 5-year measure builds two microsimulations plus ten vectorised household situations; all run sequentially.
+   This runs the whole processor: costing, distribution, winners/losers, metrics, income curve and household scatter. The output above is aggregate only. The internal result also contains household rows; do not print or export them. The gate checks `uptime` and `os.statvfs` before every managed microsimulation, each income-curve household `Simulation` and every recursive framework baseline. Each 5-year measure makes two outer microsimulation calls and ten vectorised household situation calls, plus the internal baselines created by those scenarios; all run sequentially. Per-basis wall time includes every gate and validation; the printed gate total separates that waiting from computation. Cold imports are outside those per-basis counters but inside the script and external command totals. Use the external `real` total once in the critical path, with the counters explaining its components.
 
-   **Then run one national rebased simulation**, after both subset arms and both registered-measure bases have passed. This invocation checks the gate again and records national aggregates separately; it does not rerun the national unshifted arm. It leaves the shell's `DATASET` pointing at the subset. The rehearsal order is subset comparison → registered measure on both bases → one national simulation.
+   **A processor refusal stops production generation.** The strict unchanged-registry rehearsal refused the unshifted subset at FY2027 distribution: `ValueError: Decile 4 has non-positive weighted baseline income (-719095882.8319045) in 2027; a relative change is undefined.` Budgetary calculation and the FY2026 income curve completing beforehand do not constitute a full `ReformResult`, and no artifact was produced. Once the production rate preflight passes, the helper prints an aggregate budget checkpoint immediately after the unchanged budget calculator returns, preserving that diagnostic evidence if a later calculator refuses. The checkpoint is explicitly incomplete. Preserve the denominator guard: do not drop the decile, substitute a denominator or treat a partial result as a successful measure. The dividend period preflight above is a separate production blocker and remains active.
+
+   **Diagnostic continuation is an explicit scratch-only path.** After recording the refusal and confirming the failed process has exited, the following command can diagnose aggregate costings on both bases and then compare the national baseline/rebased inputs for 2027. It retains the dataset, registered modifiers, forecast merge and every constructor gate. It deliberately calls only `BudgetaryImpactCalculator`, rather than `process` or artifact generation, so it cannot satisfy the full-processor check or clear either production blocker. It prints an aggregate checkpoint for each basis, independently reconciles receipts minus spending, and writes only the national smoke script's aggregate JSON in scratch. Its final nonzero exit preserves the failed-generation status; no receipt, artifact, staging or approval is created.
 
    ```sh
-   DATASET="$NATIONAL_DATASET" SMOKE_ARMS=rebased SMOKE_OUTPUT=national-smoke.json \
-     uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
+   DIAGNOSTIC_ONLY=1 PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" \
+     /usr/bin/time -p uv run --no-sync python - <<'PY'
+   import gc
+   import json
+   import os
+   import subprocess
+   import sys
+   import time
+   if os.environ.get('DIAGNOSTIC_ONLY') != '1':
+       raise SystemExit('This command is restricted to an explicit scratch diagnosis')
+   started=time.perf_counter()
+   import numpy as np
+   import forecast_helpers as helpers
+   from uk_budget_data.calculators import BudgetaryImpactCalculator
+   from uk_budget_data.reforms import get_reform
+
+   cfg=helpers.config()
+   original=get_reform('dividend_tax_increase_2pp')
+   assert original is not None
+   measures=[('unshifted',original),
+             ('rebased',helpers.rebase_measure(original,helpers.load_forecast()))]
+   with helpers.guard_framework_baselines():
+       for label,measure in measures:
+           basis_started=time.perf_counter()
+           wait_before=helpers.gate_wait_seconds
+           baseline=helpers.build_in_place(
+               str(cfg.dataset_path),measure.baseline_scenario_for(cfg))
+           reformed=helpers.build_in_place(str(cfg.dataset_path),measure.to_scenario())
+           rows=BudgetaryImpactCalculator(years=cfg.years).calculate(
+               baseline,reformed,measure.id,measure.name)
+           for year in cfg.years:
+               for variable in ('employment_income_before_lsr',
+                                'food_and_non_alcoholic_beverages_consumption',
+                                'dividend_income'):
+                   if not np.allclose(np.asarray(baseline.calculate(variable,year)),
+                                      np.asarray(reformed.calculate(variable,year)),
+                                      rtol=1e-6,atol=0.01):
+                       raise RuntimeError(f'Forecast arms disagree: {variable}, {year}')
+           for row in rows:
+               year=row['year']
+               tax_delta=(reformed.calculate('gov_tax',year)
+                          -baseline.calculate('gov_tax',year)).sum()/1e9
+               spending_delta=(reformed.calculate('gov_spending',year)
+                               -baseline.calculate('gov_spending',year)).sum()/1e9
+               if not np.isclose(row['value'],tax_delta-spending_delta,
+                                 rtol=1e-4,atol=1e-5):
+                   raise RuntimeError(f'Diagnostic budget identity failed: {year}')
+           print(json.dumps({'basis':label,'diagnostic_only':True,
+                             'full_processor_passed':False,'artifact_written':False,
+                             'wall_seconds_including_gates':time.perf_counter()-basis_started,
+                             'gate_wait_seconds':helpers.gate_wait_seconds-wait_before,
+                             'budgetary_impact':rows}),flush=True)
+           del rows,baseline,reformed
+           gc.collect()
+   national_env={**os.environ,'DATASET':os.environ['NATIONAL_DATASET'],
+                 'SMOKE_ARMS':'unshifted,rebased','SMOKE_YEARS':'2027',
+                 'SMOKE_OUTPUT':'diagnostic-national-smoke.json'}
+   subprocess.run([sys.executable,
+                   os.path.join(os.environ['REBASE_SCRATCH'],'forecast_smoke.py')],
+                  env=national_env,check=True)
+   print(json.dumps({'diagnostic_only':True,'full_processor_passed':False,
+                     'artifact_written':False,
+                     'diagnostic_command_seconds':time.perf_counter()-started}),flush=True)
+   raise SystemExit('Diagnostics ended; full generation remains refused. No artifact was generated.')
+   PY
+   ```
+
+   **Then run the national baseline and rebased simulations for one year**, after both subset arms and both registered-measure bases have passed in the normal successful path. If full processing was refused, use only the explicitly labelled diagnostic continuation above; its national comparison does not clear the refusal. This invocation checks the gate before each constructor and records national aggregates separately. Use 2027 for this synthetic drill so every changed growth series is exercised; `SMOKE_YEARS` can select another reviewed year. It leaves the shell's `DATASET` pointing at the subset. The rehearsal order is subset comparison → registered measure on both bases → national comparison for one year.
+
+   ```sh
+   DATASET="$NATIONAL_DATASET" SMOKE_ARMS=unshifted,rebased SMOKE_YEARS=2027 \
+     SMOKE_SYNTHETIC_CHECKS="${SMOKE_SYNTHETIC_CHECKS:-0}" \
+     SMOKE_OUTPUT=national-smoke.json \
+     /usr/bin/time -p uv run --no-sync python "$REBASE_SCRATCH/forecast_smoke.py"
    ```
 
    Before production artifact generation in step 6, explicitly restore `export DATASET="$NATIONAL_DATASET"`; a subset cannot produce publishable national receipts.
 
 6. **Generate new receipted artifacts and rehearse basis adoption in scratch.** Use the clean, committed forecast declaration. `registered_measures` rebuilds a parameter-only system, then temporarily supplies its forecast indices to the registered factories with their caches cleared. This recalculates CPIH/RPI-dependent counterfactual cash amounts, including income-tax and Plan 2 thresholds; adding the macro dictionary to old cached measures leaves those amounts wrong. It retains each factory's functions/modifiers and restores the original module state afterward. Plain `stage` writes a hidden entry and permits an uncertified or dirty-source receipt. Provisional display (`stage --provisional`) and approval require the receipt to be publishable, including a clean source tree and a certified model/data pair. A subsample deliberately remains uncertified and must never become displayable. Leave these publication gates intact. The default artifact builder makes a private copy of a local dataset and hashes exactly those bytes, so allow disk space for that copy in addition to the 55 GB reserve. The preceding validation reads the source in place; this receipted production route deliberately uses the dashboard's exact-byte provenance mechanism.
+
+   This complete-registry recipe puts the standalone dividend first, so its effective-rate preflight and full processor must pass before any later artifact is generated. A scenario-binding refusal happens before `process`; the progress callback stops that refusal immediately instead of allowing the generator to continue. The helper also checks the registered `autumn_budget_2026_combined` measure. Explicit combined sets run after standalone measures, so this ordering protects them even when long combined keys are hashed. A custom generation call that omits the standalone dividend must separately complete its preflight before generating a combination containing it; do not infer that protection from a combined key's text.
 
    ```sh
    export DATASET="$NATIONAL_DATASET"
@@ -461,7 +691,9 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    from pathlib import Path
    from unittest.mock import patch
 
-   from forecast_helpers import config, gate, load_forecast, process, registered_measures
+   from forecast_helpers import (
+       config, gate, guard_framework_baselines, load_forecast, process, registered_measures,
+   )
    from uk_budget_data import pipeline
    from uk_budget_data.publication.generate import generate_artifacts
 
@@ -469,20 +701,31 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    forecast = load_forecast()
    reforms = registered_measures(forecast)
    assert len({m.id for m in reforms}) == len(reforms) == 10
+   dividend_id = "dividend_tax_increase_2pp"
+   reforms.sort(key=lambda measure: measure.id != dividend_id)
+   assert reforms[0].id == dividend_id
+   def progress_or_stop(message):
+       print(message, flush=True)
+       if message.startswith(f"{dividend_id}: REFUSED:"):
+           raise RuntimeError(
+               "Dividend preflight could not run because its scenario was refused; "
+               "stop before generating any other artifact."
+           )
    original_build = pipeline.build_microsimulation
    def guarded_build(dataset_path, scenario=None):
        gate("receipted managed_microsimulation")
        return original_build(dataset_path, scenario)
 
    started = time.perf_counter()
-   with patch.object(pipeline, "build_microsimulation", guarded_build):
+   with guard_framework_baselines(), \
+        patch.object(pipeline, "build_microsimulation", guarded_build):
        report = generate_artifacts(
            reforms, cfg,
            artifacts_root=cfg.output_dir / "artifacts",
            repo_root=Path.cwd(),
            generator_argv=["forecast-rebase-runbook", os.environ["REBASE_JSON"]],
            process=process,
-           on_progress=print,
+           on_progress=progress_or_stop,
        )
    paths = {reference.key: str(reference.path) for reference in report.written}
    out = Path(os.environ["REBASE_SCRATCH"])
@@ -528,7 +771,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 The 22 October scratch fixture proved the basis transition with the real CLI parser/handler: refusal without adoption took 0.00052 s and left the manifest byte-for-byte unchanged; adoption took 0.03565 s, staged the new entry and made the previously approved old entry stale with its approval cleared. The complete test process took 301.346 s, including 300.054 s of cold imports under the host conditions. These are synthetic aggregate artifacts and dummy data. Only the test world's certification fields were adjusted to isolate adoption semantics; the unmodified bundle independently refused provisional publication as uncertified. None of this certifies economic outputs or measures national regeneration time.
 
-7. **Check coverage, timings and release readiness.** Record wall time for acquisition/import, dictionary construction/review, first subset simulation, one complete measure, national smoke run and staging. Estimate serial regeneration as `10 × one-measure time` only as a labelled extrapolation from a complete measure timed on the **same national dataset and model**: the registry contains nine individual measures plus `autumn_budget_2026_combined`; different policies/calculators may cost more. A subset measure time or one rebased national constructor is insufficient to estimate the national all-measure route. The generator builds two microsimulations and ten vectorised household simulations per five-year measure. Explicit combined artifacts add work. The Budget-day critical path is **OBR acquisition → importer/value diff → manual omitted-series/statutory review → subset probes → one registered measure on both bases → one national probe → all measure generation → reconciliation → one basis adoption plus restaging → reviews/approvals**. Include resource waits and rework; do not put a fixed 30-minute promise on this path without measured national/all-measure evidence. Preinstall the environment and preflight downloads before publication time.
+7. **Check coverage, timings and release readiness.** Record external command totals for acquisition/import, dictionary construction/review, subset comparison, one complete measure on both bases, national comparison for one year and staging. Record cold imports, constructors, calculations and gate waits separately, without adding overlapping counters. Estimate serial regeneration as `10 × one-measure time` only as a labelled extrapolation from a complete measure timed on the **same national dataset and model**: the registry contains nine individual measures plus `autumn_budget_2026_combined`; different policies/calculators may cost more. A subset measure time or a one-year national smoke comparison is insufficient to estimate the national all-measure route. The generator makes two outer microsimulation calls and ten vectorised household situation calls per five-year measure, plus recursive framework baselines; gate and time all of them. Explicit combined artifacts add work. The Budget-day critical path is **OBR acquisition → importer/value diff → manual omitted-series/statutory review → subset probes → one registered measure on both bases → national comparison for one year → all measure generation → reconciliation → one basis adoption plus restaging → reviews/approvals**. Include resource waits and rework; do not put a fixed 30-minute promise on this path without measured national/all-measure evidence. Preinstall the environment and preflight downloads before publication time.
 
 8. **Label retained inputs and model limits.** Use the inventory below as the review checklist. None of these labels bypasses an existing publication gate.
 
@@ -628,6 +871,37 @@ The follow-up used the unchanged installed UK 2.145.0 parameters and read Part 1
 | Basis adoption/restaging | Not repeated here. Part 1's synthetic fixture took **301.346 s** including **300.054 s** cold imports; adoption handler **0.035654 s**. This is not an economic-generation timing. |
 
 The **13:40–14:10 slot remains unvalidated**. The measured import is one completed stage; resource waiting is unbounded and no economic-generation stage has a measured duration. Do not add the standalone import time to an imagined simulation throughput or treat the expected input factors as measured results. The operational sequence is acquisition → local import/value review → omitted-series/statutory decisions → subset comparison → registered measure on both bases → national probe → national all-measure generation → reconciliation/adoption/restaging → review and approval. Pre-download the March rehearsal sources, preinstall and prewarm the reviewed environment, and reserve disk/load capacity before promising a 30-minute completion time. The existing certified-pair and statutory-benefit-uprating limits still apply.
+
+## 23 October timed simulations
+
+The strict rehearsal reused the unchanged UK 2.145.0 installation, Part 1's exact synthetic dictionary and every-40th subset, and read the national Microcosm file in place. It ran sequentially in the foreground with all six numerical thread caps set to four. Every outer and recursive simulation constructor checked load1 ≤110 and available disk ≥55 decimal GB using `os.statvfs`. Only the fully guarded timings below support this assessment; preliminary attempts that missed recursive constructor gates were stopped and excluded.
+
+The subset's measured stored-input moves matched the synthetic factors: employment −0.488281% from 2027; CPI-linked consumption +0.488758% in 2026 and +0.981351% in 2027; GDP/head-linked dividends −0.290615% from 2027; council tax unchanged. Residential values rose about 1.944%, with the small year-to-year differences explained by the cumulative HPI index's five-decimal rounding. The unchanged 2026 employment, dividend and residential controls passed as well. These are subset checks with original weights, not calibrated national estimates.
+
+| Strict phase | Measured seconds and outcome |
+|---|---|
+| First process cold imports | **21.331 s**. Outside its subset/measure counters. |
+| Subset baseline, 2026–2030 | **97.853 s**: construction 59.511 s; calculations 38.342 s. |
+| Subset rebased, 2026–2030 | **192.083 s**: construction 81.409 s; calculations 110.674 s. Synthetic factor checks passed. |
+| Registered dividend unshifted full attempt | **573.343 s to refusal**, approximately, from its constructor gate to the final error journal write. Includes budget calculation 272.651 s and the FY2026 income curve 128.247 s; these are components, not extra phases. |
+| Separate unshifted costing-only diagnostic | **504.135 s**: constructions 165.369 s; budget calculator 338.582 s, plus validation. Repeated work after the refusal; it is not an additional required step in the normal production path. |
+| Diagnostic continuation cold imports | **61.809 s**. A separate process restart, not part of the first process's import counter. |
+| Registered dividend rebased checkpoint and full attempt | **318.564 s total**: constructions 141.280 s; costing checkpoint 80.811 s; subsequent full attempt 96.336 s, plus validation. The full processor refused. |
+| National baseline, FY2027–28 | **197.282 s**: construction 111.292 s; calculations 85.990 s. One-year smoke probes only. |
+| National rebased, FY2027–28 | **970.921 s**: construction 567.362 s; calculations 403.559 s. Both national arms' synthetic factor checks passed. |
+| Successful full registered measure; national five-year all-measure generation | **Not measured**. Both subset full processors refused, so no complete measure or national all-measure throughput can be extrapolated. |
+
+Both full processors preserved the distributional guard and refused FY2027 decile 4 because its weighted baseline income was non-positive: −£719,095,882.8319045 unshifted and −£714,106,692.6294405 rebased. A relative distributional change is undefined on those denominators. The separate aggregate costings passed same-input and receipts-minus-spending checks on both bases, but returned no `ReformResult` or artifact. They also confirmed the registered measure's unresponsive FY2026 period, which the new production effective-rate preflight stops before the full processor. None of these diagnostics clears either blocker.
+
+The national FY2027–28 unweighted input checks also passed: employment −0.488281%, CPI-linked consumption +0.981351%, GDP/head-linked dividends −0.290614%, residential values +1.943853%, and council tax unchanged. The national comparison is an input smoke test, not a successful full registered-measure generation.
+
+Use each whole phase once when assessing the critical path. The two strict subset arms total **289.936 s**. Calculator times sit inside the corresponding attempt totals; the repeated unshifted costing diagnosis and restarted imports describe recovery work, rather than mandatory extra steps in a clean run. Do not add those duplicate attempts or overlapping components to estimate normal throughput. The one-year national probe still prepares the model's dataset projection through its configured horizon and does not time a full five-year registered measure. A subset costing cannot be multiplied by 40 or by the ten registered measures to infer national throughput.
+
+The **nonoverlapping observed partial-work subtotal is 2,371.377 s (39m31.377s)**: first cold imports 21.331 s, subset arms 97.853 + 192.083 s, first unshifted full refusal 573.343 s, rebased checkpoint/full attempt 318.564 s, and national arms 197.282 + 970.921 s. This excludes the repeated unshifted costing diagnosis (504.135 s), continuation restart imports (61.809 s), and minor overhead. Adding the earlier local import's 107.740 s gives **2,479.117 s (41m19.117s)**, before acquisition/human review, successful full artifacts, national all-measure generation, staging and approval. This is measured partial work under the observed conditions, not a throughput estimate for a corrected future implementation.
+
+The required release path remains **OBR acquisition → importer/value review → omitted-series/statutory decisions → reviewed dictionary → subset comparison → complete registered-measure check on both bases → national comparison for one year → national five-year artifact generation for all measures → reconciliation → basis adoption/restaging → review and approval**. **The 13:40–14:10 full-rebase release slot does not hold:** even the measured partial route exceeded 30 minutes, and both full processors refused. A corrected complete run and its remaining national publication work are still unmeasured, so these observations do not establish a fixed runtime for that future workflow.
+
+Keep 13:40–14:10 for reviewed forecast inputs and guarded direct-input/statutory probes if a shorter scope is needed; defer national fiscal-output queries as well as full measure generation. Rehearse that reduced route before relying on it. Move full five-year artifacts, income curves, household scatter, explicit combinations and adoption/approval to a later window, retaining the previous forecast basis until complete outputs pass. Fix the registered period coverage and investigate the subset's negative distributional denominator before Budget day; preinstall and prewarm the reviewed certified bundle, prepare the subset and decision worksheets, reserve resources, and batch later reconciliation/staging to reduce repeated imports. Do not weaken the denominator, responsiveness, resource or publication guards, skip required calculators, or describe costing-only checkpoints as full artifacts. A smaller publication product would need its own reviewed route before the live window.
 
 ## Omitted-series decision table
 
