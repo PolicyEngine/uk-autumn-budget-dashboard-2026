@@ -31,11 +31,14 @@ export function loadOutlook() {
 /** "2024-25" -> 2024 (numeric x value for the line chart). */
 export const fyStart = (fy) => parseInt(String(fy).slice(0, 4), 10);
 
-/** 2030 -> "2030–31" (en dash). */
-export const fyLabel = (start) => `${start}–${String(start + 1).slice(-2)}`;
+/** 2030 -> "2030-31", written as on the rest of the page. */
+export const fyLabel = (start) => `${start}-${String(start + 1).slice(-2)}`;
 
-/** Display a fiscal year from the data ("2025-26") with an en dash: "2025–26". */
-export const fyDash = (fy) => String(fy ?? "").replace(/(\d{4})-(\d{2})(?!\d)/g, "$1–$2");
+/**
+ * Fiscal years in text, written as on the rest of the page: "2025-26". The
+ * data already use that form; an en dash ("2025–26") becomes a hyphen.
+ */
+export const fyDash = (fy) => String(fy ?? "").replace(/(\d{4})–(\d{2})(?!\d)/g, "$1-$2");
 
 const gb = (opts) => new Intl.NumberFormat("en-GB", opts);
 const pct1 = gb({ minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -107,8 +110,8 @@ export function changeVerb(delta, unit) {
 export const sectionNotes = (notes) =>
   (notes || []).filter((n) => !/baseline discontinuity|UC health element protection|^Series end in/i.test(n));
 
-/** 2030 -> "30–31", for phone axes. */
-export const fyShortLabel = (start) => `${String(start).slice(-2)}–${String(start + 1).slice(-2)}`;
+/** 2030 -> "30-31", for phone axes. */
+export const fyShortLabel = (start) => `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

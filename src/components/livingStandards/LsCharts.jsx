@@ -34,9 +34,9 @@ export const dashOf = (s) => s.dash ?? (s.dashed ? "8 4" : undefined);
 export const lineLegendItems = (series) =>
   series.filter((s) => !s.hidden).map((s) => ({ label: s.name, color: s.colour, type: "line", dash: dashOf(s) }));
 
-// Width a "2025–26" tick needs at 12px; below it the axis uses "25–26"
+// Width a "2025-26" tick needs at 12px; below it the axis uses "25-26"
 const LONG_YEAR_TICK = 60;
-// Width a "25–26" tick needs; below it every other year is labelled
+// Width a "25-26" tick needs; below it every other year is labelled
 const SHORT_YEAR_TICK = 38;
 
 /**

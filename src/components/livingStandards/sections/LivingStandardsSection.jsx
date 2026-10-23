@@ -195,7 +195,7 @@ export default function LivingStandardsSection({ data }) {
     >
       {chartData.length === 0 ? (
         <div className="chart-plot">
-          <div className="chart-empty">No data for this metric.</div>
+          <div className="plot-empty">No data for this metric.</div>
         </div>
       ) : (
         <LsLineChart

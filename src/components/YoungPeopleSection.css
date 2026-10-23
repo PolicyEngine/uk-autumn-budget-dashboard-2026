@@ -1,5 +1,5 @@
-/* "Young people (under 25)": a card of headline figures, then the two
-   chart cards in the page's charts grid. */
+/* "Young people (under 25)": the headline figures (StatTiles), then the
+   two chart cards in the page's charts grid. */
 
 .young-people-heading {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
@@ -11,66 +11,10 @@
   gap: 20px;
 }
 
-.young-people-headline {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  padding: var(--card-padding);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-}
-
-.young-people-stat p {
-  margin: 0;
-}
-
-.young-people-stat-value {
-  font-size: var(--fs-stat);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-  font-variant-numeric: tabular-nums;
-}
-
-.young-people-stat-share {
-  font-size: var(--fs-body-lg);
-  font-weight: 500;
-  color: var(--pe-gray-600);
-}
-
-.young-people-stat-label {
-  margin-top: 4px !important;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.young-people-status {
-  grid-template-columns: 1fr;
-}
-
-.young-people-status p {
-  margin: 0;
-  font-size: var(--fs-body);
-  color: var(--pe-gray-500);
-}
-
 /* The outcome legend: one centred row, no group headings */
 .young-people-outcome-legend .grouped-legend-items {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 4px 20px;
-}
-
-@media (max-width: 768px) {
-  .young-people-headline {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .young-people-stat-value {
-    font-size: var(--fs-xl);
-  }
 }

@@ -116,15 +116,25 @@ export default function LivingStandardsTab() {
 
   return (
     <>
-      <p className="dashboard-intro">
-        Projections of UK household incomes and poverty under current legislated policy: the baseline against which
-        Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget measures are
-        not modelled.
-      </p>
-      {data?.meta && <Provenance meta={data.meta} />}
+      <div className="tab-lede">
+        <p>
+          Projections of UK household incomes and poverty under current legislated policy: the baseline against which
+          Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget measures are
+          not modelled.
+        </p>
+        {data?.meta && <Provenance meta={data.meta} />}
+      </div>
 
-      {loading && <p className="ls-loading">Loading outlook data…</p>}
-      {error && <div className="ls-error">Could not load outlook data: {error}</div>}
+      {loading && (
+        <p className="view-status" role="status">
+          Loading outlook data…
+        </p>
+      )}
+      {error && (
+        <p className="view-status" role="alert">
+          Could not load outlook data: {error}
+        </p>
+      )}
 
       {data && (
         <div className="results-container">
@@ -147,7 +157,7 @@ export default function LivingStandardsTab() {
                 subtitle={
                   forecast.post_published
                     ? `The OBR economic forecast behind the baseline. This compares the ${forecast.pre_label.replace(/\s*\(pre-Budget\)/, "")} forecast with the Autumn Budget 2026 forecast.`
-                    : "The OBR economic forecast behind the baseline. This shows the OBR March 2026 (pre-Budget) forecast; each chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
+                    : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
                 }
               />
               <section id="living-forecast" className="report-section">

@@ -13,6 +13,7 @@ import PillSelect from "./PillSelect";
 import { RAISER_KEYS } from "./LifecycleAbout";
 import { METHOD_SECTIONS } from "./MethodologyTab";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
+import SectionHeading from "./SectionHeading";
 import "./LifecycleCalculator.css";
 
 // API URL - supplied by the environment; no fallback.
@@ -1405,12 +1406,11 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
     <div className="lifecycle-calculator">
       {/* A step-by-step form in one card: a few questions per step, then
           the results. Inputs keep their values between steps and tabs. */}
+      <SectionHeading
+        title="Your lifetime impact"
+        subtitle="Answer a few questions about yourself to see how the selected policies change your take-home pay over your working life."
+      />
       <div className="wizard">
-        <h2 className="wizard-title">Your lifetime impact</h2>
-        <p className="wizard-lead">
-          Answer a few questions about yourself to see how the selected
-          policies change your take-home pay over your working life.
-        </p>
 
         <nav className="wizard-steps" aria-label="Steps">
           <ol style={{ "--step-progress": step / (WIZARD_STEPS.length - 1) }}>
@@ -1577,23 +1577,24 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
                   </p>
                 )}
 
-                {/* Summary cards: only with results, never as £0 */}
-                <div className="lifecycle-summary" hidden={!showResults}>
-                  <div className="summary-item highlighted">
-                    <div className="summary-label">
+                {/* Headline figures, as on the other views: only with
+                    results, never as £0 */}
+                <div
+                  className="stat-tiles-row lifecycle-summary"
+                  style={{ "--stat-count": 2 }}
+                  hidden={!showResults}
+                >
+                  <div className="stat-tile">
+                    <p className="stat-value">{formatTileCurrency(summaryStats.netTotal)}</p>
+                    <p className="stat-label">
                       Net lifetime impact{showRealTerms ? ` (${PRICE_LABEL})` : ""}
-                    </div>
-                    <div className="summary-value">
-                      {formatTileCurrency(summaryStats.netTotal)}
-                    </div>
+                    </p>
                   </div>
-                  <div className="summary-item">
-                    <div className="summary-label">
+                  <div className="stat-tile">
+                    <p className="stat-value">{formatTileCurrency(summaryStats.avgPerYear)}</p>
+                    <p className="stat-label">
                       Average per year{showRealTerms ? ` (${PRICE_LABEL})` : ""}
-                    </div>
-                    <div className="summary-value">
-                      {formatTileCurrency(summaryStats.avgPerYear)}
-                    </div>
+                    </p>
                   </div>
                 </div>
 

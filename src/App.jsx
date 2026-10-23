@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
@@ -461,7 +461,11 @@ function App() {
   const tabsSentinelRef = useRef(null);
 
   // Switch view. If the reader had scrolled past the tabs, bring the new
-  // view's top up under them, so it does not open part way down.
+  // view's top up under them, so it does not open part way down. The band
+  // can change height with the view (compact on a phone when the view has
+  // no year pill), so this runs once the new view is laid out.
+  const appRef = useRef(null);
+  const tabScrollPending = useRef(false);
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     // A hash that belongs to the Young people view goes when another view
@@ -469,14 +473,18 @@ function App() {
     if (tab !== "young" && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
       window.history.replaceState({}, "", window.location.pathname + window.location.search);
     }
+    tabScrollPending.current = true;
+  };
+  useLayoutEffect(() => {
+    if (!tabScrollPending.current) return;
+    tabScrollPending.current = false;
     const sentinel = tabsSentinelRef.current;
-    if (!sentinel) return;
-    const band = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue("--title-row-height"),
-    ) || 0;
+    if (!sentinel || !appRef.current) return;
+    const band =
+      parseFloat(getComputedStyle(appRef.current).getPropertyValue("--title-row-height")) || 0;
     const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
     if (window.scrollY > top) window.scrollTo({ top });
-  };
+  }, [activeTab]);
 
   // Open the Methodology view at one of its sections
   const showMethod = (sectionId) => {
@@ -511,7 +519,8 @@ function App() {
 
 
   return (
-    <div className="app">
+    // A view without the year pill has a one-row band on a phone
+    <div className="app" ref={appRef} data-band={view.year ? undefined : "compact"}>
       <main className="main-content">
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy

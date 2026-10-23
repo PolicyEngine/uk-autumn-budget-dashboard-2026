@@ -8,7 +8,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin: -24px 0 40px;
+  margin: 8px 0 0;
   font-size: var(--fs-small);
   line-height: 1.5;
   color: var(--pe-gray-600);
@@ -23,18 +23,6 @@
   line-height: 1.6;
   color: #92400e;
   background: #fef3c7;
-}
-
-.ls-loading {
-  color: var(--pe-gray-500);
-}
-
-.ls-error {
-  padding: 12px 16px;
-  border: 1px solid #fcd34d;
-  border-radius: var(--pe-radius-md);
-  background: #fffbeb;
-  color: #92400e;
 }
 
 /* Sections: two-up rows of cards, 20px apart, and notes under them */
@@ -104,6 +92,20 @@
   min-width: 0;
 }
 
+/* "About this chart" sits at the foot of the card, so in two cards side
+   by side the two disclosures line up */
+.ls-card-footer > .disclosure-in-card {
+  margin-top: auto;
+}
+
+.ls-card-footer > :has(+ .disclosure-in-card) {
+  margin-bottom: 16px;
+}
+
+.ls-card-footer:has(> .disclosure-in-card:first-child) {
+  padding-top: 16px;
+}
+
 /* The plot, legend and logo rows a chart fills are rows of the card */
 .ls-chart-rows {
   display: contents;
@@ -138,7 +140,7 @@
 }
 
 /* An empty plot keeps the height of the chart it stands in for */
-.ls-card .chart-empty {
+.ls-card .plot-empty {
   min-height: 330px;
 }
 
@@ -176,62 +178,12 @@
   margin-top: 6px;
 }
 
-/* Forecast headline tiles */
-.ls-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.main-content .ls-tile {
-  padding: 20px var(--card-padding);
-}
-
-.ls-tile-label {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-600);
-}
-
-.ls-tile-label a {
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--pe-gray-300);
-  text-underline-offset: 3px;
-}
-
-.ls-tile-label a:hover {
-  color: var(--pe-teal-700);
-}
-
-.ls-tile-number {
-  margin-top: 6px;
-  font-size: var(--fs-stat);
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-  font-variant-numeric: tabular-nums;
-}
-
-.ls-tile-sub {
-  margin-top: 6px;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
-
-.ls-tile .ls-source {
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--card-border);
-}
-
-.ls-tile-sub.change-positive,
+.stat-sub.change-positive,
 .ls-table td.change-positive {
   color: var(--pe-teal-700);
 }
 
-.ls-tile-sub.change-negative,
+.stat-sub.change-negative,
 .ls-table td.change-negative {
   color: #b91c1c;
 }
@@ -511,16 +463,8 @@
   white-space: nowrap;
 }
 
-@media (max-width: 1024px) {
-  .ls-tiles {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-}
-
 @media (max-width: 768px) {
   .ls-provenance {
-    margin-top: -24px;
     font-size: var(--fs-caption);
   }
 

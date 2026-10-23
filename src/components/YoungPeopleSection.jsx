@@ -26,6 +26,7 @@ import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import SectionHeading from "./SectionHeading";
 import Note from "./Note";
+import StatTiles from "./StatTiles";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -444,7 +445,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="chart-empty" style={{ minHeight: height }} role="status">
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>
               These shares come from one simulation of the selected policies
               together, so they are shown for a single policy or for all
@@ -465,28 +466,24 @@ function Headline({ rows, policies, selectedPolicies, selectedYear }) {
   const pair = youngAndAll(rows, policies, selectedPolicies, selectedYear);
   const direct = pair ? pair.young.people_directly_affected : null;
   return (
-    <div className="young-people-headline">
-      <div className="young-people-stat">
-        <p className="young-people-stat-value">{formatPeople(population)}</p>
-        <p className="young-people-stat-label">young people aged 16 to 24 in the UK</p>
-      </div>
-      <div className="young-people-stat">
-        <p className="young-people-stat-value">
-          {pair ? formatPeople(direct) : "–"}
-          {pair && population ? (
-            <span className="young-people-stat-share">
-              {" "}
-              ({percent((direct / pair.young.people) * 100)} of them)
-            </span>
-          ) : null}
-        </p>
-        <p className="young-people-stat-label">
-          {pair
+    <StatTiles
+      items={[
+        {
+          key: "population",
+          value: formatPeople(population),
+          label: "young people aged 16 to 24 in the UK",
+        },
+        {
+          key: "direct",
+          value: pair ? formatPeople(direct) : "–",
+          extra:
+            pair && population ? `(${percent((direct / pair.young.people) * 100)} of them)` : null,
+          label: pair
             ? "directly affected: their own income tax, National Insurance, student loan repayments or earnings change"
-            : "directly affected: shown for a single policy or for all policies"}
-        </p>
-      </div>
-    </div>
+            : "directly affected: shown for a single policy or for all policies",
+        },
+      ]}
+    />
   );
 }
 
@@ -530,13 +527,9 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             </div>
           </>
         ) : (
-          <div className="young-people-headline young-people-status" role="status">
-            <p>
-              {status === "loading"
-                ? "Loading results by age…"
-                : "Results by age are not available."}
-            </p>
-          </div>
+          <p className="view-status" role="status">
+            {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
+          </p>
         )}
       </section>
     </>

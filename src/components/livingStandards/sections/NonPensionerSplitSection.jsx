@@ -52,7 +52,7 @@ export default function NonPensionerSplitSection({ data }) {
   return (
     <LsCard
       title="Non-pensioner income halves"
-      about={`${split.statistic.replace(/(\d{4})-(\d{2})/g, "$1–$2")}. People in families with no pensioner, split at their own median.`}
+      about={`${split.statistic}. People in families with no pensioner, split at their own median.`}
       notes={[
         ...(data.income_by_decile.notes || []).filter((n) => /halves/i.test(n)),
         view === "level" && data.meta.units?.mean_equivalised_income_ahc && `Incomes are in ${data.meta.units.mean_equivalised_income_ahc}.`,

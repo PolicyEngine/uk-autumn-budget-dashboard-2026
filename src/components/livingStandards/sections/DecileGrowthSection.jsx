@@ -37,7 +37,7 @@ export default function DecileGrowthSection({ data }) {
   return (
     <LsCard
       title="Income growth by decile"
-      about={`${dec.statistic.replace(/(\d{4})-(\d{2})/g, "$1–$2")}. Deciles are re-ranked each year, so this compares positions in the distribution, not the same people.`}
+      about={`${dec.statistic}. Deciles are re-ranked each year, so this compares positions in the distribution, not the same people.`}
       notes={(dec.notes || []).filter((n) => /lowest tenth/i.test(n))}
       summary={
         <>

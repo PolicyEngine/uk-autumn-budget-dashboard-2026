@@ -64,3 +64,12 @@
   font-weight: 600;
   color: var(--pe-gray-900);
 }
+
+/* A phone's plot is narrower than 300px: Recharts keeps the tooltip
+   inside the plot area, so a wider tooltip would run off the screen */
+@media (max-width: 768px) {
+  .chart-tooltip {
+    max-width: 260px;
+    min-width: 0;
+  }
+}

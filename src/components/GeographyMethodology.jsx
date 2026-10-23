@@ -68,7 +68,7 @@ function GeographyMethodology() {
           from a different dataset.
         </li>
         <li>
-          <strong>Later years.</strong> Constituency figures from the
+          <strong>Later years.</strong>{" "}Constituency figures from the
           national dataset use its constituency weights, which are
           estimated for 2025. Later years keep each household&apos;s 2025
           split across constituencies, scaled to that year&apos;s household

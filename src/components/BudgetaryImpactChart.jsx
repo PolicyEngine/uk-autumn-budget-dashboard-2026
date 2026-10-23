@@ -73,12 +73,14 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
         // always shows, so the empty year is never read as zero.
         if (!show && !unpublished) return null;
         const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
-        // On a phone the not-yet-published tag takes two lines to fit its band
-        const lines =
-          unpublished && narrow ? ["Not yet", "published"] : [text];
+        // On a phone the not-yet-published tag takes two lines, in smaller
+        // type, so it fits its year's band beside the last bar
+        const twoLine = unpublished && narrow;
+        const lines = twoLine ? ["Not yet", "published"] : [text];
+        const size = twoLine ? 10 : fontSize;
         const longest = Math.max(...lines.map((line) => line.length));
-        const width = Math.ceil(longest * fontSize * 0.6) + 10;
-        const height = tagHeight + (lines.length - 1) * (fontSize + 2);
+        const width = Math.ceil(longest * size * 0.6) + (twoLine ? 6 : 10);
+        const height = size + 8 + (lines.length - 1) * (size + 2);
         // Kept inside the plot, so a wide tag at either end is not clipped
         const x = Math.min(
           Math.max(xAxis.scale(point.year) + band / 2, xAxis.x + width / 2),
@@ -106,15 +108,15 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
             />
             <text
               x={x}
-              y={top + height / 2 - ((lines.length - 1) * (fontSize + 2)) / 2}
+              y={top + height / 2 - ((lines.length - 1) * (size + 2)) / 2}
               fill={unpublished ? "#6B7280" : "#111827"}
-              fontSize={fontSize}
+              fontSize={size}
               fontWeight={unpublished ? 500 : 600}
               textAnchor="middle"
               dominantBaseline="central"
             >
               {lines.map((line, index) => (
-                <tspan key={line} x={x} dy={index === 0 ? 0 : fontSize + 2}>
+                <tspan key={line} x={x} dy={index === 0 ? 0 : size + 2}>
                   {line}
                 </tspan>
               ))}

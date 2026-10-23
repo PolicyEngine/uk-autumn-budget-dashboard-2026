@@ -28,12 +28,6 @@
   border-color: var(--pe-teal-500);
 }
 
-.chart-download-button:focus-visible,
-.chart-download-item:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 .chart-download-menu {
   position: absolute;
   top: calc(100% + 4px);

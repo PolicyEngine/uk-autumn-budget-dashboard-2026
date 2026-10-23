@@ -91,7 +91,7 @@ export default function PovertySection({ data }) {
 
   const description = `${
     isAbsolute
-      ? "Absolute poverty measures income below a fixed line (60% of the 2024–25 median) held constant in real terms."
+      ? "Absolute poverty measures income below a fixed line (60% of the 2024-25 median) held constant in real terms."
       : "Relative poverty measures income below 60% of the contemporary median income."
   } ${isAHC ? "After housing costs." : "Before housing costs."}`;
 
@@ -147,7 +147,7 @@ export default function PovertySection({ data }) {
     >
       {visibleEmpty ? (
         <div className="chart-plot">
-          <div className="chart-empty">
+          <div className="plot-empty">
             {viewMode === "outturn" && noOutturn
               ? `No official outturn series for ${groupName} on this measure.`
               : "No projection for this selection."}

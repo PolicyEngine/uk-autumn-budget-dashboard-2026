@@ -3,9 +3,11 @@
   margin: 0;
 }
 
+/* The checks use the card's full width: no list indent or bullets */
 .geography-method ul {
   margin: 12px 0;
-  padding-left: 20px;
+  padding-left: 0;
+  list-style: none;
 }
 
 .geography-method li {

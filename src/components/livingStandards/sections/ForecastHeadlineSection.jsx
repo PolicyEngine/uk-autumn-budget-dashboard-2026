@@ -2,6 +2,7 @@
 // PolicyEngine/uk-living-standards-outlook; text and figures unchanged.
 
 import { HERO_YEAR, changeClass, pctLabel, ppLabel, toRows } from "../../../utils/livingStandards/forecast";
+import StatTiles from "../../StatTiles";
 import { ObrSource } from "../sources";
 
 // ONS series pages for the tile names (checked 20 Oct 2026). Earnings is not
@@ -30,37 +31,28 @@ export default function ForecastHeadlineSection({ data }) {
 
   if (!cards.length) return null;
 
+  // One source line for the three figures; the section subtitle says when
+  // the Budget forecast will be added
   return (
-    <div className="ls-tiles">
-      {cards.map((card) => (
-        <div key={card.key} className="card ls-tile">
-          <div className="ls-tile-label">
-            {ONS_SERIES[card.key] ? (
-              <a href={ONS_SERIES[card.key]} target="_blank" rel="noopener noreferrer" title="ONS series">
-                {card.label}
-              </a>
-            ) : (
-              card.label
-            )}
-          </div>
-          {published ? (
-            <>
-              <div className="ls-tile-number">
-                {pctLabel(card.previous)} &rarr; {pctLabel(card.updated)}
-              </div>
-              <div className={`ls-tile-sub ${changeClass(card.change)}`}>{ppLabel(card.change)}</div>
-            </>
-          ) : (
-            <>
-              <div className="ls-tile-number">{pctLabel(card.previous)}</div>
-              <div className="ls-tile-sub">Budget revision pending</div>
-            </>
-          )}
-          <p className="ls-source">
-            <ObrSource />
-          </p>
-        </div>
-      ))}
-    </div>
+    <StatTiles
+      items={cards.map((card) => ({
+        key: card.key,
+        value: published ? `${pctLabel(card.previous)} → ${pctLabel(card.updated)}` : pctLabel(card.previous),
+        label: ONS_SERIES[card.key] ? (
+          <a href={ONS_SERIES[card.key]} target="_blank" rel="noopener noreferrer" title="ONS series">
+            {card.label}
+          </a>
+        ) : (
+          card.label
+        ),
+        sub: published ? ppLabel(card.change) : null,
+        subClassName: changeClass(card.change),
+      }))}
+      footer={
+        <p className="ls-source">
+          <ObrSource />
+        </p>
+      }
+    />
   );
 }

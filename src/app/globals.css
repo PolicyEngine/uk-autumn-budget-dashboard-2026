@@ -329,6 +329,13 @@ body {
   background: var(--band-teal);
 }
 
+/* One keyboard focus ring for every button and link on the page; the
+   tabs, the band's pills and list options keep their own (inset or white) */
+.main-content :is(button, a, summary):focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
 .view-tab:focus-visible {
   outline: 2px solid var(--band-teal);
   outline-offset: -2px;
@@ -341,7 +348,7 @@ body {
 }
 
 .method-section + .method-section {
-  margin-top: 48px;
+  margin-top: 56px;
 }
 
 .method-card {
@@ -476,6 +483,18 @@ body {
   text-decoration-color: currentColor;
 }
 
+/* A view's own lede, above its first section (Living standards) */
+.tab-lede {
+  margin: 0 0 40px;
+}
+
+.tab-lede > p:first-child {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
 .showing-line {
   margin: 0 0 24px;
   font-size: var(--fs-small);
@@ -527,20 +546,9 @@ body {
   margin: 0 0 16px;
 }
 
-/* Between sections: a soft divider that fades at both ends, 48px below the
-   last section and 32px above the next title. None above the first. */
-.section-heading:not(:first-of-type)::before {
-  content: "";
-  display: block;
-  height: 1px;
-  margin: 48px 0 32px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--pe-gray-200) 12%,
-    var(--pe-gray-200) 88%,
-    transparent
-  );
+/* Between sections: space, no rule. None above the first. */
+.section-heading:not(:first-of-type) {
+  margin-top: 56px;
 }
 
 .section-heading h2 {
@@ -737,7 +745,8 @@ body {
   min-width: 0;
 }
 
-.charts-row-2 > div:only-child {
+/* A card alone in its row takes the full width */
+.charts-grid > div:only-child {
   grid-column: 1 / -1;
 }
 
@@ -898,9 +907,75 @@ body {
   white-space: nowrap;
 }
 
+/* Headline figures (StatTiles.jsx): one card, the figures side by side,
+   each a large number over a short label; on a phone they stack */
+.stat-tiles {
+  padding: var(--card-padding);
+}
+
+.stat-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(var(--stat-count, 2), minmax(0, 1fr));
+  gap: 24px;
+}
+
+.stat-tile p {
+  margin: 0;
+}
+
+.stat-value {
+  font-size: var(--fs-stat);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pe-gray-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-extra {
+  font-size: var(--fs-body-lg);
+  font-weight: 500;
+  color: var(--pe-gray-600);
+}
+
+.stat-label {
+  margin-top: 4px !important;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.stat-label a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--pe-gray-300);
+  text-underline-offset: 3px;
+}
+
+.stat-label a:hover {
+  color: var(--pe-teal-700);
+}
+
+.stat-sub {
+  margin-top: 2px !important;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.stat-tiles-footer {
+  margin-top: 16px;
+}
+
+/* A view's loading or error line, in place of its content */
+.view-status {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-500);
+}
+
 /* A chart that cannot be drawn for the current choice: a quiet grey panel
    in the plot's place, with the reason */
-.chart-empty {
+.plot-empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -914,7 +989,7 @@ body {
   border-radius: var(--pe-radius-md);
 }
 
-.chart-empty p {
+.plot-empty p {
   max-width: 34ch;
   margin: 0;
 }
@@ -1040,6 +1115,22 @@ body {
   .band-year {
     justify-self: start;
   }
+
+  /* A view without the year pill (Personal impact, Living standards,
+     Methodology) has one row: no empty second row. App.jsx sets
+     data-band and keeps the reader's place when the height changes. */
+  .app[data-band="compact"] {
+    --title-row-height: 60px;
+    --sticky-offset: calc(60px + var(--view-tabs-height));
+  }
+
+  .app[data-band="compact"] .title-row {
+    grid-template-areas: "title policy";
+  }
+
+  .app[data-band="compact"] .band-year {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1125,6 +1216,15 @@ body {
 
   .preset-buttons {
     flex-direction: column;
+  }
+
+  .stat-tiles-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .stat-value {
+    font-size: var(--fs-xl);
   }
 
   .preset-button {

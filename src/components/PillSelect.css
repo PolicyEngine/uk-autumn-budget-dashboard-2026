@@ -108,11 +108,6 @@
   border-color: var(--pe-teal-500);
 }
 
-.pill-select-light .pill-select-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 .pill-select-prefix {
   color: var(--pe-gray-500);
 }
@@ -162,7 +157,3 @@
   color: var(--pe-teal-700);
 }
 
-.light-pill-button:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
