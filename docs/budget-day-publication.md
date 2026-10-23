@@ -79,7 +79,7 @@ As of 19 October. Merge dates are when each pull request landed on `main`.
 |---|---|
 | Repository | `PolicyEngine/uk-autumn-budget-dashboard-2026`, production branch `main`: a merge publishes |
 | Framework | Next.js, Node 24.x, Vercel's defaults for install and build |
-| Environment | None set. No `NEXT_PUBLIC_MOCK`; `NEXT_PUBLIC_BASE_PATH` unset, so the code default `/uk/autumn-budget-2026` applies. `BUDGET_API_URL` (#3's proxy) gets the household API URL once #3 lands |
+| Environment | None set as of 23 October, so the Personal impact tab cannot calculate in production. **To set (Production and Preview), then redeploy:** `NEXT_PUBLIC_LIFECYCLE_API_URL=https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/lifecycle`. It must end in `/api/lifecycle`, with no trailing slash: the page POSTs to `<value>/calculate`, and the service root answers `/calculate` with 404. It is baked in at build time, so setting it takes a new build. A Vercel production build without it fails (`scripts/lifecycle-api-env.mjs`, run by `next.config.ts`), except a drill build (`NEXT_PUBLIC_MOCK` set); a value in the wrong form fails every build. No `NEXT_PUBLIC_MOCK`; `NEXT_PUBLIC_BASE_PATH` unset, so the code default `/uk/autumn-budget-2026` applies. `BUDGET_API_URL` (#3's proxy) gets the household API URL once #3 lands |
 | Deployment protection | Standard (`all_except_custom_domains`), as on the 2025 project `uk-autumn-budget-dashboard` |
 | Production domain | `uk-autumn-budget-2026.vercel.app` |
 | Deployments | One at every merge to `main`; the latest is of `5324080`, 16 October. Until the measures are regenerated, `main` still carries the 2025 measures' CSVs |
