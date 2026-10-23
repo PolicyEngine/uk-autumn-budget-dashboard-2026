@@ -14,7 +14,15 @@
     },
     "composition": null,
     "config_baseline": null,
-    "data_limits": [],
+    "data_limits": [
+      {
+        "key": "additional_dwelling_purchases",
+        "parameters": [
+          "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
+        ],
+        "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this."
+      }
+    ],
     "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
@@ -29,38 +37,30 @@
     ],
     "digests": {
       "execution_identity_sha256": "5b15fd5898a7a3ecb9b1dc048426e9b810484fa7170ebd04aec6dc5232ef6388",
-      "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
-      "receipt_sha256": "bff114a8f4a8981cb2a446c857afe2a0702f7cad85647d99c2dd7f48606285f0"
+      "outputs_sha256": "1d942d3b30562d174e0310a456095b63ad9d4ecfceae21db9317238efe7fdcd5",
+      "receipt_sha256": "08b7178d24f6c4d59aa2e4d73909b6bcc5ac6166cdae9cf8cca51e98949ce14f"
     },
     "files": {
-      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
-      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
-      "household_scatter_binned.csv": "0e3143dfe1379b10592be357f7c64d779f8886d78e6ab4290dde255ff77d4c8b",
-      "income_curve.csv": "f44da90cef172468161fee797f81c1617ee69f5919d89f32009dd0a498597291",
-      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
-      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
+      "budgetary_impact.csv": "50abe4f9c12cad36c31d69b0410db5cfe2612cbb9c263198888e6a834353c1a5",
+      "distributional_impact.csv": "040dd07c94c6bcd18a9b82b734c69e3d568a6e09492c7f394994327ce0154b0c",
+      "household_scatter_binned.csv": "c9838035cbc4fe302534ba6956dbecca9193281f78209a703b8d4c3144ccbeef",
+      "income_curve.csv": "efedcd0f23619e521d7c63db4be5df2dd9c27ad3f1b622bc496c30d7afd22287",
+      "metrics.csv": "85c86ac747ef3f3c1d373c82b35681078f7358c2432a2934d0a04b8f40ea6d20",
+      "winners_losers.csv": "eba5cf5ec98832c177a9f28c8ecd9d747f50e958a0a495395293eeba84ae53ad"
     },
-    "generated_at": "2026-10-22T21:37:26.534028+00:00",
+    "generated_at": "2026-10-23T00:15:47.028227+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "theta",
+    "key": "epsilon",
     "measure_ids": [
-      "theta"
+      "epsilon"
     ],
     "member_outputs_sha256": null,
     "members": null,
-    "model_limits": [
-      {
-        "key": "pc_minimum_guarantee_uprating",
-        "parameters": [
-          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
-        ],
-        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
-      }
-    ],
-    "model_limits_registry_sha256": "c67de0aace91b309b24ef568c2ef1faf1314f98e227c5ee54060a3e79c2bdb76",
+    "model_limits": [],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.0",
@@ -73,7 +73,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "theta baseline"
+      "name": "epsilon baseline"
     },
     "certificate": {
       "bundle_version": "6.10.0",
@@ -113,13 +113,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "b192f1c05141ef784e17abc4451f13fea1034d87cc36899a0c75134794916f46",
+    "outputs_sha256": "1d942d3b30562d174e0310a456095b63ad9d4ecfceae21db9317238efe7fdcd5",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "theta",
-      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
+      "name": "epsilon",
+      "reform_sha256": "6d64fa2298d4c04d10be25e40776ed4c289e668287d5cbce1d820a214f81ad54",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

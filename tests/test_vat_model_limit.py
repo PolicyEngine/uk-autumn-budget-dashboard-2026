@@ -5,8 +5,8 @@ The installed model divides household VAT on survey consumption by one
 factor, ``gov.simulation.microdata_vat_coverage`` (0.38), to reach receipts.
 #2187, in policyengine-uk 2.145.0 and later, divides by survey consumption
 coverage times the household share of VAT receipts, 0.67 × 0.7 = 0.469, so
-without it VAT runs about 23% high (coordinator, 22 October, from the UK
-hub). A measure can move VAT through its parameters, through the VAT base
+without it VAT runs about 23% high (0.469 / 0.38; the UK hub measured about
+24% on Microcosm, relayed by the coordinator on 22 October). A measure can move VAT through its parameters, through the VAT base
 template, which replaces the ``vat`` formula, or through the consumption VAT
 is charged on, so the limit covers variables as well as parameters.
 """

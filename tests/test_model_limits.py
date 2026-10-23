@@ -7,7 +7,8 @@ lock moves them too. Until #2533, CPI-linked benefit levels from 2027
 follow lagged calendar-year CPI rather than the September outturn. Until
 the UK hub's earnings fix, the Pension Credit minimum guarantee does too,
 though the law requires it to rise with earnings. Until #2187, household
-VAT is grossed up to receipts by one factor, so VAT runs about 23% high;
+VAT is grossed up to receipts by one factor, so VAT runs high (0.469 /
+0.38, about 23%);
 that limit covers variables as well as parameters.
 """
 

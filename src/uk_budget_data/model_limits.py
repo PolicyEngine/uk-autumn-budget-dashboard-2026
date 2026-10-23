@@ -427,17 +427,19 @@ def _vat_grossing_factors(system) -> bool:
     """Whether the system grosses household VAT up by survey consumption
     coverage and the household share of receipts (policyengine-uk #2187):
     both factors are leaves of the tree as the model built it, and every
-    formula of its ``baseline_vat`` looks up the helper that divides by
-    their product.
+    formula of its ``baseline_vat`` looks up the helper that returns their
+    product, which the formulas divide by.
 
-    Neither reads what a measure changes, so a measure can't make its own
-    model count as fixed, nor a fixed one as unfixed: the VAT base template
-    replaces ``vat``'s formula, never ``baseline_vat``'s, and a modifier
-    that adds the factors adds them to the tree it changes. The formula
-    check is behaviour, so factors added to the tree as built, which the
-    model's formulas don't read, don't count either. A modifier that adds
-    the factors there and also replaces ``baseline_vat`` on both sides
-    changes the model: review it as such.
+    Neither reads anything a parameter change or a template changes: the
+    VAT base template replaces ``vat``'s formula, never ``baseline_vat``'s,
+    and a parameter change can't add the factors to the tree as built. The
+    formula check is behaviour, so factors added to the tree as built,
+    which the model's formulas don't read, don't count either. A
+    hand-written modifier can change both: replacing ``baseline_vat`` on
+    one side makes that side unfixed (fails safe); adding the factors to
+    the tree as built and replacing ``baseline_vat`` on both sides makes an
+    unfixed model count as fixed (fails open). Nothing here guards the
+    second: treat such a modifier as a change to the model.
     """
     if not hasattr(system, "parameters"):
         return False
@@ -495,8 +497,9 @@ def _installed_formulas_call(path: str, variable: str, name: str) -> bool:
 
 def _installed_vat_grossing_factors() -> bool:
     """Read the installed engine with the same check, and its source: every
-    formula of its ``vat`` and ``baseline_vat`` classes divides by the
-    grossing factor #2187 adds (parsed, as for the State Pension add-on)."""
+    formula of its ``vat`` and ``baseline_vat`` classes calls the helper
+    for the grossing factor #2187 adds (parsed, as for the State Pension
+    add-on)."""
     from policyengine_uk.system import system
 
     return _vat_grossing_factors(system) and all(
@@ -642,8 +645,8 @@ MODEL_LIMITS = (
             "single factor of 0.38 (gov.simulation.microdata_vat_coverage). "
             "policyengine-uk #2187 divides instead by survey consumption "
             "coverage times the household share of VAT receipts, 0.67 × 0.7 "
-            "= 0.469, so this model's VAT is about 23% higher (the UK hub "
-            "measured about 24% on Microcosm, 22 October 2026), and a "
+            "= 0.469, so this model's VAT is about 23% higher (the UK hub's "
+            "notice 59 puts it about 24% high on Microcosm), and a "
             "measure that moves a VAT rate, the VAT base or the consumption "
             "VAT is charged on can be overstated by as much. A measure "
             "built with the VAT base template is held too, though the term "

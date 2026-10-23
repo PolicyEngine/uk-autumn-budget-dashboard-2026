@@ -2512,15 +2512,17 @@ def test_a_template_measure_is_not_refused_on_real_simulations(
     real_simulations, monkeypatch, tmp_path, capsys, name
 ):
     """No false refusal: without the run watch, or with its sides swapped,
-    a template measure would be refused or the run would stop. The data
-    limits are under test: the model limits are set aside, since the VAT
-    base template is held by one until policyengine-uk #2187
-    (tests/test_vat_model_limit.py)."""
+    a template measure would be refused or the run would stop. The model
+    limits stay active for the other templates, so the area run's own
+    model-limit check is shown not to refuse them; for the VAT base
+    template they are set aside, since a model limit holds it until
+    policyengine-uk #2187 (tests/test_vat_model_limit.py)."""
     from tests import template_measures
     from uk_budget_data import model_limits
     from uk_budget_data.models import Reform
 
-    monkeypatch.setattr(model_limits, "MODEL_LIMITS", ())
+    if name == "vat_modifier":
+        monkeypatch.setattr(model_limits, "MODEL_LIMITS", ())
     reform = Reform(
         id="tpl",
         name="tpl",
