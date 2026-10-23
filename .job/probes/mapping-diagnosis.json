@@ -1,0 +1,331 @@
+{
+  "created_utc": "2026-10-23T14:27:24.692735+00:00",
+  "classification": "certified_pin_semantic_mismatch_with_runbook_HPI_expectation",
+  "runtime_installed_mapping": {
+    "version": "2.132.6",
+    "mapping_file": ".job/runtime/.venv/lib/python3.13/site-packages/policyengine_uk/data/uprating_indices.yaml",
+    "mapping_file_sha256": "c4c2ef3266669410a59646f3503458828182f08a1e6a57123f3a73e67b6dd5f2",
+    "parameter_path": "gov.economic_assumptions.yoy_growth.obr.per_capita.gdp",
+    "mapping_header_line": 95,
+    "variable_line": 103,
+    "mapping_excerpt": [
+      {
+        "line": 95,
+        "text": "gov.economic_assumptions.yoy_growth.obr.per_capita.gdp:"
+      },
+      {
+        "line": 96,
+        "text": "- benunit_reported_capital"
+      },
+      {
+        "line": 97,
+        "text": "- corporate_wealth"
+      },
+      {
+        "line": 98,
+        "text": "- dividend_income"
+      },
+      {
+        "line": 99,
+        "text": "- gross_financial_wealth"
+      },
+      {
+        "line": 100,
+        "text": "- household_lifetime_isa_balance"
+      },
+      {
+        "line": 101,
+        "text": "- lifetime_isa_balance"
+      },
+      {
+        "line": 102,
+        "text": "- lump_sum_income"
+      },
+      {
+        "line": 103,
+        "text": "- main_residence_value"
+      },
+      {
+        "line": 104,
+        "text": "- maintenance_income"
+      },
+      {
+        "line": 105,
+        "text": "- miscellaneous_income"
+      }
+    ],
+    "variable_file": ".job/runtime/.venv/lib/python3.13/site-packages/policyengine_uk/variables/input/main_residence_value.py",
+    "variable_file_sha256": "b577ae347372fa2738502f5b722947d082a60737d87e2accbea362ad9ac01f27",
+    "variable_uprating_declaration": [
+      {
+        "line": 16,
+        "text": "    uprating = \"gov.economic_assumptions.indices.obr.per_capita.gdp\""
+      }
+    ]
+  },
+  "diagnostic_later_model_mapping": {
+    "version": "2.145.0",
+    "mapping_file": ".job/importer-runtime/.venv/lib/python3.13/site-packages/policyengine_uk/data/uprating_indices.yaml",
+    "mapping_file_sha256": "3bc4f4d9cdc380599fd21aa5d8ffbb5137ebac5f79a75d2297867876971d3bf4",
+    "parameter_path": "gov.economic_assumptions.yoy_growth.obr.house_prices",
+    "mapping_header_line": 96,
+    "variable_line": 97,
+    "mapping_excerpt": [
+      {
+        "line": 96,
+        "text": "gov.economic_assumptions.yoy_growth.obr.house_prices:"
+      },
+      {
+        "line": 97,
+        "text": "- main_residence_value"
+      },
+      {
+        "line": 98,
+        "text": "- other_residential_property_value"
+      },
+      {
+        "line": 99,
+        "text": "# Imputed additional-dwelling prices share the home-price forecast,"
+      }
+    ],
+    "variable_file": ".job/importer-runtime/.venv/lib/python3.13/site-packages/policyengine_uk/variables/input/main_residence_value.py",
+    "variable_file_sha256": "0325c7eeff9f3e0831345eccf402fad83e1209fdf27078157c1b84b5980a5696",
+    "variable_uprating_declaration": [
+      {
+        "line": 17,
+        "text": "    uprating = \"gov.economic_assumptions.indices.obr.house_prices\""
+      }
+    ]
+  },
+  "later_model_usage": "Read-only source comparison from importer environment only; not imported into or used by certified simulation.",
+  "dataset_uprating_source": {
+    "path": ".job/runtime/.venv/lib/python3.13/site-packages/policyengine_uk/data/economic_assumptions.py",
+    "sha256": "3ccd7806bea1239719a5eab7d639956d83b031a22f322345987a61d5717d0fae",
+    "excerpt": [
+      {
+        "line": 254,
+        "text": "    # First, apply standard variable-YoY growth based uprating."
+      },
+      {
+        "line": 255,
+        "text": ""
+      },
+      {
+        "line": 256,
+        "text": "    uprating = _uprating_index_map()"
+      },
+      {
+        "line": 257,
+        "text": "    for index_name, variables in uprating.items():"
+      },
+      {
+        "line": 258,
+        "text": "        index_rel_change = parameters.get_child(index_name)(current_year.time_period)"
+      },
+      {
+        "line": 259,
+        "text": "        for variable in variables:"
+      },
+      {
+        "line": 260,
+        "text": "            for table_name, df in zip(current_year.table_names, current_year.tables):"
+      },
+      {
+        "line": 261,
+        "text": "                if variable in df.columns:"
+      },
+      {
+        "line": 262,
+        "text": "                    prev_year_value = getattr(previous_year, table_name)[variable]"
+      },
+      {
+        "line": 263,
+        "text": "                    current_year_value = prev_year_value * (1 + index_rel_change)"
+      },
+      {
+        "line": 264,
+        "text": "                    getattr(current_year, table_name)[variable] = current_year_value"
+      }
+    ]
+  },
+  "original_probe_checks": {
+    "passed": 48,
+    "failed": 8,
+    "total": 56,
+    "unchanged_failures": [
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938707770493,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2027,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938726758065,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938684702084,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2028,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938673468195,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938700121719,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2029,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938648464331,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "weighted_gbp",
+        "measured_ratio": 0.9970938630113092,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      },
+      {
+        "year": 2030,
+        "variable": "main_residence_value",
+        "aggregation": "unweighted_gbp",
+        "measured_ratio": 0.9970938688195313,
+        "expected_ratio": 1.0194363459669582,
+        "passed": false
+      }
+    ],
+    "HPI_expected_formula": "1.049 / 1.029",
+    "HPI_expected_ratio": 1.0194363459669582,
+    "status": "HPI checks remain FAILED; no expectation, tolerance, code or model edit"
+  },
+  "version_correct_GDP_prediction": {
+    "status": "PASS as separate explanatory diagnostic only",
+    "rtol": 0.0001,
+    "atol": 1e-06,
+    "checks": [
+      {
+        "year": 2026,
+        "aggregation": "weighted_gbp",
+        "observed_ratio": 1.0,
+        "expected_ratio": 1,
+        "expected_formula": "1 (2026 unchanged)",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2026,
+        "aggregation": "unweighted_gbp",
+        "observed_ratio": 1.0,
+        "expected_ratio": 1,
+        "expected_formula": "1 (2026 unchanged)",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2027,
+        "aggregation": "weighted_gbp",
+        "observed_ratio": 0.9970938707770493,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2027,
+        "aggregation": "unweighted_gbp",
+        "observed_ratio": 0.9970938726758065,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2028,
+        "aggregation": "weighted_gbp",
+        "observed_ratio": 0.9970938684702084,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2028,
+        "aggregation": "unweighted_gbp",
+        "observed_ratio": 0.9970938673468195,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2029,
+        "aggregation": "weighted_gbp",
+        "observed_ratio": 0.9970938700121719,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2029,
+        "aggregation": "unweighted_gbp",
+        "observed_ratio": 0.9970938648464331,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2030,
+        "aggregation": "weighted_gbp",
+        "observed_ratio": 0.9970938630113092,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      },
+      {
+        "year": 2030,
+        "aggregation": "unweighted_gbp",
+        "observed_ratio": 0.9970938688195313,
+        "expected_ratio": 0.9970938680616102,
+        "expected_formula": "1.0293 / 1.0323",
+        "passed": true,
+        "diagnostic_label": "version_correct_GDP_prediction_only_not_HPI_check"
+      }
+    ]
+  },
+  "interpretation": "The certified 2.132.6 pair correctly propagates its existing GDP/head mapping into stored residential values. It does not implement the runbook's 2.145.0 HPI semantics. This diagnosis explains the failure without clearing the original HPI input-readiness check or validating an October residential forecast refresh. Timing the unmodified certified pair remains a performance diagnostic; release adoption requires an explicit reviewed choice of model semantics.",
+  "continuation_scope": "Timing-only continuation on the identical unmodified certified 2.132.6 pair can measure generation cost with this residential-growth limitation recorded. Do not report that full HPI rebase validation passed.",
+  "frozen_files_sha256_before": {
+    ".job/probes/reference.json": "1ad2955694972766b0466dd63d80b4e96efc9d95dee0ee9fe6bb7ce3d08d7607",
+    ".job/probes/rebased.json": "62f2277620511248d7a578401a4e478e3014f1607156d0fe19e84f096cf44af4",
+    ".job/probes_e2e6.py": "a845b2b93b9d588d6208422dcca7f33f170b1fa4e65680338927c7eaa1cbdd7b",
+    ".job/e2e_common.py": "db27139d2ae63e79f5632c9f80f6ae0980f5562fdfd4ac5ffc3445b39543c03f"
+  },
+  "originals_preserved": true
+}
