@@ -188,7 +188,51 @@ def run(before_parameters, after_parameters, runtime_parameters, output_dir):
             for leaf, timeline in timelines(node).items():
                 values[PREFIX + path + ('.' + leaf if leaf else '')] = timeline
         ledger.append({'family': family, 'synthetic_rehearsal_decision': action, 'reason': reason, 'retained_vintage': vintage, 'pinned_growth_timelines': values, 'paths_absent_from_certified_pin': absent})
-    (output_dir / 'omitted-series-decisions.json').write_text(json.dumps({'scope': 'Replay of documented synthetic decisions; no new October human sign-off', 'human_review_seconds': None, 'decisions': ledger}, indent=2) + '\n')
+    # Retain non-growth leaves as complete raw timelines, including historical
+    # dates. These are not inserted into the six-path shock dictionary.
+    non_growth_paths = [
+        'gov.hmrc.stamp_duty.statistics.residential.corporate.revenue',
+        'gov.hmrc.stamp_duty.statistics.non_residential.corporate.revenue',
+        'gov.hmrc.business_rates.statistics.revenue',
+        'gov.boe.base_rate',
+        'gov.simulation.vat.survey_consumption_coverage',
+        'gov.simulation.vat.household_share_of_receipts',
+        'gov.simulation.microdata_vat_coverage',
+        'gov.dft.rail.ridership_index', 'gov.dft.rail.fare_index',
+        'gov.dft.rail.prior_law_fare_index', 'gov.dft.bus',
+        'gov.indices.private_rent_index',
+        'gov.economic_assumptions.local_authority_targets.ons_income',
+    ]
+    parameter_root = runtime_parameters.resolve()
+    retained_non_growth = {}
+    absent_non_growth = []
+    for path in non_growth_paths:
+        parts = path.split('.')
+        node = None
+        for count in range(1, len(parts) + 1):
+            candidate = parameter_root.joinpath(*parts[:count]).with_suffix('.yaml')
+            if not candidate.is_file():
+                continue
+            node = yaml.safe_load(candidate.read_text())
+            for part in parts[count:]:
+                if not isinstance(node, dict) or part not in node:
+                    node = None
+                    break
+                node = node[part]
+            break
+        if node is None:
+            directory = parameter_root.joinpath(*parts)
+            if directory.is_dir():
+                for candidate in sorted(directory.rglob('*.yaml')):
+                    suffix = '.'.join(candidate.relative_to(directory).with_suffix('').parts)
+                    for leaf, timeline in timelines(yaml.safe_load(candidate.read_text())).items():
+                        retained_non_growth[path + '.' + suffix + ('.' + leaf if leaf else '')] = timeline
+                continue
+            absent_non_growth.append(path)
+            continue
+        for leaf, timeline in timelines(node).items():
+            retained_non_growth[path + ('.' + leaf if leaf else '')] = timeline
+    (output_dir / 'omitted-series-decisions.json').write_text(json.dumps({'scope': 'Replay of documented synthetic decisions; no new October human sign-off', 'human_review_seconds': None, 'decisions': ledger, 'retained_non_growth_timelines': retained_non_growth, 'paths_absent_from_certified_pin': absent_non_growth}, indent=2) + '\n')
     phases['omitted_series_retention_ledger'] = time.perf_counter() - phase
 
     phase = time.perf_counter()
