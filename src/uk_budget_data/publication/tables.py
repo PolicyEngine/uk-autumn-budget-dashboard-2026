@@ -169,6 +169,27 @@ TABLES: dict[str, TableSpec] = {
             ),
             required=False,
         ),
+        # UK results by age band (calculators.AgeImpactCalculator). Not
+        # required, so artifacts generated before it existed stay complete.
+        TableSpec(
+            "age_impact",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("age_band", STR),
+                ("people", FLOAT),
+                ("sample_size", INT),
+                ("mean_change", FLOAT),
+                ("mean_equivalised_change", FLOAT),
+                ("pct_better_off", FLOAT),
+                ("pct_worse_off", FLOAT),
+                ("pct_unchanged", FLOAT),
+                ("people_directly_affected", FLOAT),
+            ),
+            ("reform_id", "year", "age_band"),
+            required=False,
+        ),
     )
 }
 

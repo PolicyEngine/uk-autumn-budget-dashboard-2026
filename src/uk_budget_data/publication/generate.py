@@ -70,6 +70,7 @@ def result_tables(
         "metrics": result.metrics,
         "income_curve": result.income_curve,
         "household_scatter_binned": bin_scatter(result.household_scatter),
+        "age_impact": result.age_impact,
     }
 
 

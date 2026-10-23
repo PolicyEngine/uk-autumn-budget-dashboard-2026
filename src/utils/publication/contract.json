@@ -118,6 +118,65 @@
     "not_computable"
   ],
   "tables": {
+    "age_impact": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "age_band",
+          "str"
+        ],
+        [
+          "people",
+          "float"
+        ],
+        [
+          "sample_size",
+          "int"
+        ],
+        [
+          "mean_change",
+          "float"
+        ],
+        [
+          "mean_equivalised_change",
+          "float"
+        ],
+        [
+          "pct_better_off",
+          "float"
+        ],
+        [
+          "pct_worse_off",
+          "float"
+        ],
+        [
+          "pct_unchanged",
+          "float"
+        ],
+        [
+          "people_directly_affected",
+          "float"
+        ]
+      ],
+      "file": "age_impact.csv",
+      "key": [
+        "reform_id",
+        "year",
+        "age_band"
+      ],
+      "required": false
+    },
     "budgetary_impact": {
       "columns": [
         [

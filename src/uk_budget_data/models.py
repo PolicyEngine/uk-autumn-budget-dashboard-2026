@@ -130,6 +130,7 @@ class ReformResult(BaseModel):
     household_scatter: list[dict]
     constituency: list[dict]
     demographic_constituency: list[dict]
+    age_impact: list[dict] = []
 
     model_config = {"arbitrary_types_allowed": True}
 

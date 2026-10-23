@@ -827,6 +827,169 @@ class DemographicConstituencyCalculator(BaseCalculator):
         return results
 
 
+# Age bands for results by age: (label, lowest age, highest age), inclusive.
+# Children are under 16, as in HBAI; HBAI also counts 16- to 19-year-olds
+# in full-time non-advanced education as children, which these bands do
+# not: everyone aged 16 to 24 is in "16-24". The adult bands are coarser
+# than HBAI's ten-year bands so that each is large in the survey.
+AGE_BANDS: tuple[tuple[str, int, int], ...] = (
+    ("0-15", 0, 15),
+    ("16-24", 16, 24),
+    ("25-34", 25, 34),
+    ("35-49", 35, 49),
+    ("50-64", 50, 64),
+    ("65+", 65, 200),
+)
+AGE_BAND_ALL = "all"
+# A change smaller than this share of household net income counts as no
+# change: the test MetricsCalculator uses for people affected.
+AGE_CHANGE_THRESHOLD = 0.0001
+# A change in a person's own taxes or earnings smaller than this, in £ a
+# year, does not make them directly affected.
+DIRECT_EFFECT_MIN_GBP = 1.0
+# The person-level variables whose change makes someone directly affected.
+DIRECT_EFFECT_VARIABLES = (
+    "income_tax",
+    "national_insurance",
+    "student_loan_repayment",
+    "employment_income",
+)
+
+
+def age_band_of(age: np.ndarray) -> np.ndarray:
+    """The AGE_BANDS label of each age; ages outside every band get ""."""
+    labels = np.full(len(age), "", dtype=object)
+    for label, low, high in AGE_BANDS:
+        labels[(age >= low) & (age <= high)] = label
+    return labels
+
+
+@dataclass
+class AgeImpactCalculator(BaseCalculator):
+    """Change in household net income by the age of each person.
+
+    Every person is given their household's change in net income (not
+    equivalised; ``mean_equivalised_change`` carries the equivalised
+    change too), and the rows average it over people, so a mean of £100 for
+    16- to 24-year-olds means the average young person lives in a household
+    £100 a year better off. People whose household has no income decile
+    (``household_income_decile`` < 1) are left out, as in MetricsCalculator.
+
+    A person is better off when their household's change is more than
+    AGE_CHANGE_THRESHOLD of its baseline net income (at least £1), worse off
+    when it is less than minus that, and unchanged otherwise.
+
+    A person is directly affected when their own income tax, National
+    Insurance, student loan repayment or employment income changes by
+    DIRECT_EFFECT_MIN_GBP or more a year. Benefits are paid to benefit
+    units, not people, so a change only in benefits (or in prices) is not
+    counted as direct.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+    ) -> list[dict]:
+        def person(sim, variable):
+            return np.asarray(
+                sim.calculate(variable, period=year, map_to="person").values,
+                dtype=float,
+            )
+
+        own_change = np.zeros_like(person(baseline, "age"))
+        for variable in DIRECT_EFFECT_VARIABLES:
+            own_change = np.maximum(
+                own_change,
+                np.abs(
+                    person(reformed, variable) - person(baseline, variable)
+                ),
+            )
+        frame = pd.DataFrame(
+            {
+                "age": person(baseline, "age"),
+                "weight": person(baseline, "person_weight"),
+                "decile": person(baseline, "household_income_decile"),
+                "baseline_income": person(baseline, "household_net_income"),
+                "reform_income": person(reformed, "household_net_income"),
+                "baseline_equivalised": person(
+                    baseline, "equiv_household_net_income"
+                ),
+                "reform_equivalised": person(
+                    reformed, "equiv_household_net_income"
+                ),
+                "own_change": own_change,
+            }
+        )
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        """Rows by age band from a person-level frame.
+
+        ``frame`` has one row per person: age, weight, decile,
+        baseline_income and reform_income (household net income),
+        baseline_equivalised and reform_equivalised, and own_change (the
+        largest absolute change in the person's own taxes or earnings).
+        """
+        frame = frame[frame["decile"] >= 1]
+        change = (frame["reform_income"] - frame["baseline_income"]).to_numpy()
+        relative = change / np.maximum(frame["baseline_income"].to_numpy(), 1)
+        better = relative > AGE_CHANGE_THRESHOLD
+        worse = relative < -AGE_CHANGE_THRESHOLD
+        equivalised = (
+            frame["reform_equivalised"] - frame["baseline_equivalised"]
+        ).to_numpy()
+        direct = frame["own_change"].to_numpy() >= DIRECT_EFFECT_MIN_GBP
+        weight = frame["weight"].to_numpy()
+        bands = age_band_of(frame["age"].to_numpy())
+
+        groups = [(label, bands == label) for label, _, _ in AGE_BANDS]
+        groups.append((AGE_BAND_ALL, np.ones(len(frame), dtype=bool)))
+        rows = []
+        for label, members in groups:
+            w = weight[members]
+            people = float(w.sum())
+            if people <= 0:
+                continue
+
+            def share(flags):
+                return float(w[flags[members]].sum()) / people * 100
+
+            rows.append(
+                {
+                    "reform_id": reform_id,
+                    "reform_name": reform_name,
+                    "year": year,
+                    "age_band": label,
+                    "people": people,
+                    "sample_size": int(members.sum()),
+                    "mean_change": float((w * change[members]).sum()) / people,
+                    "mean_equivalised_change": float(
+                        (w * equivalised[members]).sum()
+                    )
+                    / people,
+                    "pct_better_off": share(better),
+                    "pct_worse_off": share(worse),
+                    "pct_unchanged": share(~better & ~worse),
+                    "people_directly_affected": float(
+                        w[direct[members]].sum()
+                    ),
+                }
+            )
+        return rows
+
+
 def get_standard_calculators(
     years: list[int] = None,
     income_curve_max: int = 150_000,
@@ -860,4 +1023,5 @@ def get_standard_calculators(
         ),
         "constituency": ConstituencyCalculator(),
         "demographic_constituency": DemographicConstituencyCalculator(),
+        "age_impact": AgeImpactCalculator(),
     }

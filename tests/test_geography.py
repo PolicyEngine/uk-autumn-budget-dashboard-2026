@@ -762,6 +762,7 @@ def test_the_reform_processor_feeds_a_collector_each_year():
         "metrics_calc",
         "income_curve_calc",
         "household_scatter_calc",
+        "age_calc",
     ):
         setattr(processor, name, Stub())
     processor.distributional_calc = SimpleNamespace(

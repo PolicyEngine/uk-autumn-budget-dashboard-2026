@@ -12,7 +12,7 @@ from uk_budget_data.lifetime_impact import (
     calculate_lifetime_impact,
 )
 from uk_budget_data.models import DataConfig, Reform
-from uk_budget_data.pipeline import generate_all_data
+from uk_budget_data.pipeline import generate_age_impact, generate_all_data
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
     PrivateOutputError,
@@ -117,6 +117,16 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
             "Also run the legacy constituency calculators, writing their "
             f"rows to ${AUDIT_DIR_ENV}/legacy. They have no disclosure "
             "control, so they are never written to --output-dir."
+        ),
+    )
+
+    generate_parser.add_argument(
+        "--only",
+        choices=["age_impact"],
+        default=None,
+        help=(
+            "Write only this file to --output-dir, leaving the others as "
+            "they are. age_impact: results by age band (age_impact.csv)."
         ),
     )
 
@@ -300,6 +310,16 @@ def run_generate(parsed: argparse.Namespace) -> int:
     console.print(f"Years: {config.years}")
     console.print(f"Reforms: {len(reforms)}")
     console.print()
+
+    if parsed.only == "age_impact":
+        if parsed.artifacts or parsed.combined or parsed.legacy_geography:
+            console.print(
+                "[red]Error: --only writes one flat CSV; it does not combine "
+                "with --artifacts, --combined or --legacy-geography[/red]"
+            )
+            return 1
+        generate_age_impact(reforms=reforms, config=config)
+        return 0
 
     # Receipted artifacts: one write-once directory per measure, and one
     # per combined set. --combined alone generates only the combined runs.
