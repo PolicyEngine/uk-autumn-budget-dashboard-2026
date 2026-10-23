@@ -18,8 +18,9 @@ some people's income tax. It raises their adjusted net income, and so the
 High Income Child Benefit Charge, from £60,000, and the personal allowance
 taper, from £100,000. And the model relieves it only up to the person's
 annual allowance, and charges more annual allowance charge where the
-higher income tapers that allowance further below their pension savings
-(see ``create_salary_sacrifice_cap_reform``). The cap changes no income
+higher income tapers that allowance further below their pension savings,
+or raises the marginal rate the charge is levied at (see
+``create_salary_sacrifice_cap_reform``). The cap changes no income
 tax rule, and the OBR describes it as raising NICs, so it declares
 National Insurance alone.
 """
@@ -177,8 +178,9 @@ DECLARED = {
     # Insurance. In the model it also raises some people's income tax:
     # through the High Income Child Benefit Charge and the personal
     # allowance taper, and through the annual allowance, which limits its
-    # relief and whose charge rises where the allowance tapers further (see
-    # the module docstring). But the cap changes no income tax rule.
+    # relief and whose charge rises where the allowance tapers further or
+    # the rate it is levied at rises (see the module docstring). But the
+    # cap changes no income tax rule.
     "salary_sacrifice_cap": {"National Insurance"},
 }
 # The combined measure moves what its members move.

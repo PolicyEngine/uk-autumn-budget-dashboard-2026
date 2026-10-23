@@ -663,10 +663,11 @@ def create_salary_sacrifice_cap_reform() -> Reform:
       £60,000 by half the net income above £260,000, to £10,000 from
       £360,000. Where the higher net income tapers it further below the
       person's pension savings, the model also charges more annual
-      allowance charge, on the savings above the new allowance. The charge
-      counts sacrificed contributions too, so savings above the allowance
-      were charged before the cap; now the excess above it also goes
-      unrelieved.
+      allowance charge, on the savings above the new allowance; and as the
+      charge is levied at the person's marginal rate, it also rises where
+      the higher income lifts that rate. The charge counts sacrificed
+      contributions too, so savings above the allowance were charged
+      before the cap; now the excess above it also goes unrelieved.
 
     Which part dominates depends on the person. On policyengine-uk 2.132.6
     in 2029, on £300,000 with £30,000 sacrificed, the allowance falls from

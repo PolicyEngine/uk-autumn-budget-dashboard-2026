@@ -129,9 +129,9 @@ export async function loadBoundaries({
  *
  * @returns {Promise<Object>} `ready` with `routing`
  *   (`{areaViews, regionalReleaseKind}`) for one of the five answers above,
- *   or `unavailable` (HTTP 404) or `error`; never rejects. Only `ready` says anything about the release:
- *   for the others the area views say their results could not be loaded,
- *   and show none (viewState).
+ *   or `unavailable` (HTTP 404) or `error`; never rejects. Only `ready`
+ *   says anything about the release: for the others the area views say
+ *   their results could not be loaded, and show none (viewState).
  */
 export async function loadAreaRouting({
   fetchImpl = fetch,

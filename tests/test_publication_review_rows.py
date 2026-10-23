@@ -1993,11 +1993,16 @@ def test_a_row_for_the_area_routing_status_is_removed(base):
         f"{hashlib.sha256(routing).hexdigest()},Reconciler,2026-10-23,,"
         "Whether the release routes results by area.\n"
     )
+    # A copy anywhere else is an ordinary public file: its row stays.
+    elsewhere = f"{DATA}/elsewhere/area-routing.json"
+    kept = row.replace(rr.AREA_ROUTING_FILE, elsewhere, 1)
     with repository(base) as (root, manifest):
         listed_only(root, manifest)
         (root / rr.AREA_ROUTING_FILE).write_bytes(routing)
+        (root / elsewhere).parent.mkdir()
+        (root / elsewhere).write_bytes(routing)
         csv_path = root / "data_inputs" / "public_data_review.csv"
-        csv_path.write_text(HEADER + row)
+        csv_path.write_text(HEADER + row + kept)
         before = build_check(root)
         report = run(root)
         after = build_check(root)
@@ -2006,4 +2011,5 @@ def test_a_row_for_the_area_routing_status_is_removed(base):
     assert report.removed == [rr.AREA_ROUTING_FILE]
     assert report.unreviewed == []
     assert after == []
-    assert "area-routing.json" not in review
+    assert f"{rr.AREA_ROUTING_FILE}," not in review
+    assert kept in review

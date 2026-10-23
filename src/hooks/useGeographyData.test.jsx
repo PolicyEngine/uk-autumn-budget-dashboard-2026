@@ -231,6 +231,10 @@ describe("useAreaRouting", () => {
       "an unknown status",
       '{"area_views": "partly", "regional_release_kind": null}',
     ],
+    [
+      "an unknown status with a served kind",
+      '{"area_views": "partly", "regional_release_kind": "local_area"}',
+    ],
     ["a missing kind", '{"area_views": "not_available"}'],
     // The module writes available only with a kind the area run serves.
     ["available with no kind", areaRouting("available", null)],
