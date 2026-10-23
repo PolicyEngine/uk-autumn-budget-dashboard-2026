@@ -442,12 +442,22 @@ def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
     Args:
         rows: One row per household, with ``reform_id``, ``reform_name``,
             ``year``, ``baseline_income``, ``income_change`` and
-            ``household_weight``.
+            ``household_weight``. A row may also carry
+            ``survey_household``: the survey household it was made from.
+            Microcosm builds several records from one survey household, so
+            when any row carries it, a cell's floor counts distinct survey
+            households, not records.
 
     Returns:
         One row per cell with at least SCATTER_MIN_HOUSEHOLDS households.
     """
     b = SCATTER_BINS
+    rows = list(rows)
+    by_survey = any("survey_household" in row for row in rows)
+    if by_survey and not all("survey_household" in row for row in rows):
+        raise ValueError(
+            "Some scatter rows name their survey household and some do not"
+        )
     cells: dict[tuple, list] = {}
     for row in rows:
         key = (
@@ -469,13 +479,17 @@ def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
                 b["change_max"],
             ),
         )
-        cell = cells.setdefault(key, [0, 0.0])
-        cell[0] += 1
+        cell = cells.setdefault(key, [set() if by_survey else 0, 0.0])
+        if by_survey:
+            cell[0].add(row["survey_household"])
+        else:
+            cell[0] += 1
         cell[1] += float(row["household_weight"])
     binned = []
-    for (reform_id, name, year, income, change), (count, weight) in sorted(
+    for (reform_id, name, year, income, change), (members, weight) in sorted(
         cells.items()
     ):
+        count = len(members) if by_survey else members
         if count < SCATTER_MIN_HOUSEHOLDS:
             continue
         binned.append(

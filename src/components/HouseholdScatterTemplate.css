@@ -16,7 +16,26 @@
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  white-space: nowrap;
+  max-width: min(90%, 420px);
+  text-align: center;
+}
+
+.household-scatter-template-note p {
+  margin: 0;
+}
+
+.household-scatter-template-note .household-scatter-template-detail {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+/* The floor under the key, as small print */
+.household-scatter-floor {
+  margin: 6px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--pe-gray-600, #4B5563);
 }
 
 /* Colour and size key, centred like the chart legends */

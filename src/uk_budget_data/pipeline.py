@@ -606,3 +606,146 @@ def generate_age_impact(
         f"{config.output_dir / 'age_impact.csv'}[/green]"
     )
     return frame
+
+
+HOUSEHOLD_SCATTER_FILE = "household_scatter_binned.csv"
+
+
+def scatter_survey_households(simulation, dataset_path: Optional[str]):
+    """The survey household behind each of a simulation's households.
+
+    In the engine's household order. Microcosm builds several records from
+    one survey household, so the scatter's floor counts these ids, as the
+    results by area do (``geography.survey_household_ids``). The bundle's
+    own dataset is a Microcosm export when its data package is Microcosm's;
+    a local file is one when its H5 carries the export marker.
+    """
+    from policyengine.provenance.manifest import get_release_manifest
+
+    from uk_budget_data import geography
+
+    tables = geography.dataset_tables(simulation)
+    if dataset_path is None:
+        microcosm = (
+            get_release_manifest("uk").data_package.name == "microcosm-data"
+        )
+    else:
+        microcosm = geography.is_microcosm_export(dataset_path)
+    return geography.survey_household_ids(
+        tables.household,
+        tables.person,
+        geography.MICROCOSM if microcosm else geography.EFRS,
+        microcosm_export=microcosm,
+    )
+
+
+def household_scatter_rows(
+    reform: Reform,
+    year: int,
+    baseline_incomes,
+    reform_incomes,
+    weights,
+    survey_households,
+    max_income: float,
+) -> list[dict]:
+    """One year's household rows for the binned scatter, never published.
+
+    Households with a baseline net income from £0 to ``max_income`` are
+    kept, as the household scatter calculator keeps them; each row names
+    its survey household so that ``bin_scatter`` counts those.
+    """
+    rows = []
+    for base, new, weight, survey in zip(
+        baseline_incomes, reform_incomes, weights, survey_households
+    ):
+        if 0 <= base <= max_income:
+            rows.append(
+                {
+                    "reform_id": reform.id,
+                    "reform_name": reform.name,
+                    "year": year,
+                    "baseline_income": float(base),
+                    "income_change": float(new - base),
+                    "household_weight": float(weight),
+                    "survey_household": survey,
+                }
+            )
+    return rows
+
+
+def generate_household_scatter(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``household_scatter_binned.csv``: the binned scatter.
+
+    Households by baseline income band and income change band, for each
+    reform and year, binned as the receipted artifacts bin them
+    (``publication.tables.bin_scatter``): cells with fewer than the floor
+    of survey households are left out, and counts are rounded. No
+    household row is written anywhere. ``uk-budget-data generate --only
+    household_scatter`` calls it.
+    """
+    from uk_budget_data.geography import household_values
+    from uk_budget_data.publication.tables import bin_scatter
+
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    binned = []
+    for reform in reforms:
+        baseline = data_limits.watched_build(
+            build_microsimulation,
+            dataset_path,
+            reform.baseline_scenario_for(config),
+        )
+        reformed = data_limits.watched_build(
+            build_microsimulation, dataset_path, reform.to_scenario()
+        )
+        survey = scatter_survey_households(baseline, dataset_path)
+        rows = []
+        with data_limits.observing(baseline, reformed) as observed:
+            for year in config.years:
+                rows.extend(
+                    household_scatter_rows(
+                        reform,
+                        year,
+                        household_values(
+                            baseline, "household_net_income", year
+                        ),
+                        household_values(
+                            reformed, "household_net_income", year
+                        ),
+                        household_values(baseline, "household_weight", year),
+                        survey,
+                        config.household_scatter_max_income,
+                    )
+                )
+        binned.extend(bin_scatter(rows))
+        for limit in data_limits.limits_touched(baseline, reformed, observed):
+            console.print(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        for limit in model_limits.limits_touched(baseline, reformed):
+            console.print(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        del baseline, reformed, observed, rows
+        console.print(f"[green]✓[/green] {reform.name}")
+    frame = pd.DataFrame(
+        binned,
+        columns=[
+            "reform_id",
+            "reform_name",
+            "year",
+            "income_band",
+            "change_band",
+            "households",
+        ],
+    )
+    path = config.output_dir / HOUSEHOLD_SCATTER_FILE
+    save_csv(frame, path)
+    console.print(f"[green]Saved {len(frame)} cells to {path}[/green]")
+    return frame
