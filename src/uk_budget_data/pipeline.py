@@ -19,6 +19,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
     DemographicConstituencyCalculator,
@@ -112,7 +113,6 @@ class ReformProcessor:
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
         self.income_curve_calc = IncomeCurveCalculator(
-            max_income=self.config.income_curve_max,
             num_points=self.config.income_curve_points,
         )
         self.household_scatter_calc = HouseholdScatterCalculator(
@@ -120,6 +120,7 @@ class ReformProcessor:
         )
         self.constituency_calc = ConstituencyCalculator()
         self.demographic_calc = DemographicConstituencyCalculator()
+        self.age_calc = AgeImpactCalculator()
 
     def process(
         self,
@@ -156,6 +157,7 @@ class ReformProcessor:
         all_household_scatter = []
         all_constituency = []
         all_demographic = []
+        all_age = []
 
         scenario = self.reform.to_scenario()
 
@@ -177,6 +179,13 @@ class ReformProcessor:
                 baseline, reformed, reform_id, reform_name, year
             )
             all_metrics.extend(metrics)
+
+            # Results by age band
+            all_age.extend(
+                self.age_calc.calculate(
+                    baseline, reformed, reform_id, reform_name, year
+                )
+            )
 
             # Income curve: against the population's own baseline.
             income_curve = self.income_curve_calc.calculate(
@@ -216,6 +225,7 @@ class ReformProcessor:
             household_scatter=all_household_scatter,
             constituency=all_constituency,
             demographic_constituency=all_demographic,
+            age_impact=all_age,
         )
 
     def _calculate_constituency(
@@ -383,6 +393,7 @@ class DataPipeline:
             "metrics": "metrics.csv",
             "income_curve": "income_curve.csv",
             "obr_comparison": "obr_comparison.csv",
+            "age_impact": "age_impact.csv",
         }
         # Household rows are never written under output_dir: one row per
         # survey household is unit-record data. The receipted artifacts
@@ -429,6 +440,7 @@ def aggregate_results(
         "constituency": pd.DataFrame(),
         "demographic_constituency": pd.DataFrame(),
         "obr_comparison": pd.DataFrame(),
+        "age_impact": pd.DataFrame(),
     }
 
     for result in results:
@@ -504,6 +516,12 @@ def aggregate_results(
                 ignore_index=True,
             )
 
+        if result.age_impact:
+            aggregated["age_impact"] = pd.concat(
+                [aggregated["age_impact"], pd.DataFrame(result.age_impact)],
+                ignore_index=True,
+            )
+
     # Generate OBR comparison by merging budgetary impact with OBR estimates
     if config and len(aggregated["budgetary_impact"]) > 0:
         obr_path = config.data_inputs_dir / "obr_estimates.csv"
@@ -549,3 +567,268 @@ def generate_all_data(
     """
     pipeline = DataPipeline(reforms=reforms, config=config)
     return pipeline.run(skip_input_check=skip_input_check)
+
+
+def generate_age_impact(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``age_impact.csv``: results by age band.
+
+    Builds the same two simulations per reform as the full run, on the same
+    baselines, but runs only the age calculator, so it is quick to rerun
+    after the other files exist. ``uk-budget-data generate --only
+    age_impact`` calls it.
+    """
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    calculator = AgeImpactCalculator()
+    rows = []
+    for reform in reforms:
+        baseline = data_limits.watched_build(
+            build_microsimulation,
+            dataset_path,
+            reform.baseline_scenario_for(config),
+        )
+        reformed = data_limits.watched_build(
+            build_microsimulation, dataset_path, reform.to_scenario()
+        )
+        with data_limits.observing(baseline, reformed) as observed:
+            for year in config.years:
+                rows.extend(
+                    calculator.calculate(
+                        baseline, reformed, reform.id, reform.name, year
+                    )
+                )
+        # As the full flat run does: say when the data or the model cannot
+        # cost a measure, since this path has no publication gate either.
+        for limit in data_limits.limits_touched(baseline, reformed, observed):
+            console.print(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        for limit in model_limits.limits_touched(baseline, reformed):
+            console.print(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        console.print(f"[green]✓[/green] {reform.name}")
+    frame = pd.DataFrame(rows)
+    save_csv(frame, config.output_dir / "age_impact.csv")
+    console.print(
+        f"[green]Saved {len(frame)} rows to "
+        f"{config.output_dir / 'age_impact.csv'}[/green]"
+    )
+    return frame
+
+
+HOUSEHOLD_SCATTER_FILE = "household_scatter_binned.csv"
+
+
+def scatter_survey_households(simulation, dataset_path: Optional[str]):
+    """The survey household behind each of a simulation's households.
+
+    In the engine's household order. Microcosm builds several records from
+    one survey household, so the scatter's floor counts these ids, as the
+    results by area do (``geography.survey_household_ids``). The bundle's
+    own dataset is a Microcosm export when its data package is Microcosm's;
+    a local file is one when its H5 carries the export marker.
+    """
+    from policyengine.provenance.manifest import get_release_manifest
+
+    from uk_budget_data import geography
+
+    tables = geography.dataset_tables(simulation)
+    if dataset_path is None:
+        microcosm = (
+            get_release_manifest("uk").data_package.name == "microcosm-data"
+        )
+    else:
+        microcosm = geography.is_microcosm_export(dataset_path)
+    return geography.survey_household_ids(
+        tables.household,
+        tables.person,
+        geography.MICROCOSM if microcosm else geography.EFRS,
+        microcosm_export=microcosm,
+    )
+
+
+def household_scatter_rows(
+    reform: Reform,
+    year: int,
+    baseline_incomes,
+    reform_incomes,
+    weights,
+    survey_households,
+    max_income: float,
+) -> list[dict]:
+    """One year's household rows for the binned scatter, never published.
+
+    Households with a baseline net income from £0 to ``max_income`` are
+    kept, as the household scatter calculator keeps them; each row names
+    its survey household so that ``bin_scatter`` counts those.
+    """
+    rows = []
+    for base, new, weight, survey in zip(
+        baseline_incomes, reform_incomes, weights, survey_households
+    ):
+        if 0 <= base <= max_income:
+            rows.append(
+                {
+                    "reform_id": reform.id,
+                    "reform_name": reform.name,
+                    "year": year,
+                    "baseline_income": float(base),
+                    "income_change": float(new - base),
+                    "household_weight": float(weight),
+                    "survey_household": survey,
+                }
+            )
+    return rows
+
+
+def generate_household_scatter(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``household_scatter_binned.csv``: the binned scatter.
+
+    Households by baseline income band and income change band, for each
+    reform and year, binned as the receipted artifacts bin them
+    (``publication.tables.bin_scatter``): cells with fewer than the floor
+    of survey households are left out, and counts are rounded. No
+    household row is written anywhere. ``uk-budget-data generate --only
+    household_scatter`` calls it.
+    """
+    from uk_budget_data.geography import household_values
+    from uk_budget_data.publication.tables import bin_scatter
+
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    binned = []
+    for reform in reforms:
+        baseline = data_limits.watched_build(
+            build_microsimulation,
+            dataset_path,
+            reform.baseline_scenario_for(config),
+        )
+        reformed = data_limits.watched_build(
+            build_microsimulation, dataset_path, reform.to_scenario()
+        )
+        survey = scatter_survey_households(baseline, dataset_path)
+        rows = []
+        with data_limits.observing(baseline, reformed) as observed:
+            for year in config.years:
+                rows.extend(
+                    household_scatter_rows(
+                        reform,
+                        year,
+                        household_values(
+                            baseline, "household_net_income", year
+                        ),
+                        household_values(
+                            reformed, "household_net_income", year
+                        ),
+                        household_values(baseline, "household_weight", year),
+                        survey,
+                        config.household_scatter_max_income,
+                    )
+                )
+        binned.extend(bin_scatter(rows))
+        for limit in data_limits.limits_touched(baseline, reformed, observed):
+            console.print(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        for limit in model_limits.limits_touched(baseline, reformed):
+            console.print(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        del baseline, reformed, observed, rows
+        console.print(f"[green]✓[/green] {reform.name}")
+    frame = pd.DataFrame(
+        binned,
+        columns=[
+            "reform_id",
+            "reform_name",
+            "year",
+            "income_band",
+            "change_band",
+            "households",
+        ],
+    )
+    path = config.output_dir / HOUSEHOLD_SCATTER_FILE
+    save_csv(frame, path)
+    console.print(f"[green]Saved {len(frame)} cells to {path}[/green]")
+    return frame
+
+
+def generate_income_curve(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``income_curve.csv``: the example households' curves.
+
+    The same rows as the full run's income curve, on the same baselines
+    (each measure's ``baseline_scenario_for(config)``) and reform scenarios,
+    but from household simulations alone: no survey data, so no dataset or
+    HUGGING_FACE_TOKEN is needed. Each distinct scenario is simulated once
+    per household for every year at once, and shared by the measures that
+    use it (most measures keep current law on one side).
+    ``uk-budget-data income-curve`` calls it.
+    """
+    from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
+    from uk_budget_data.personal_impact import scenario_key
+
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    calculator = IncomeCurveCalculator(num_points=config.income_curve_points)
+    years = list(config.years)
+    rows = []
+    for household in EXAMPLE_HOUSEHOLDS:
+        curves = {}
+
+        def curve(scenario):
+            key = scenario_key(scenario)
+            if key not in curves:
+                curves[key] = calculator.simulate(household, scenario, years)
+            return curves[key]
+
+        for reform in reforms:
+            rows.extend(
+                calculator.rows(
+                    household,
+                    curve(reform.baseline_scenario_for(config)),
+                    curve(reform.to_scenario()),
+                    reform.id,
+                    reform.name,
+                    years,
+                )
+            )
+        console.print(
+            f"[green]✓[/green] {household.label}: "
+            f"{len(curves)} scenarios simulated"
+        )
+    # Measures in the registry's order, then year, then the households in
+    # their own order, then income.
+    reform_order = {reform.id: i for i, reform in enumerate(reforms)}
+    household_order = {h.id: i for i, h in enumerate(EXAMPLE_HOUSEHOLDS)}
+    frame = pd.DataFrame(rows)
+    frame = (
+        frame.assign(
+            _reform=frame["reform_id"].map(reform_order),
+            _household=frame["household"].map(household_order),
+        )
+        .sort_values(["_reform", "year", "_household", "income"])
+        .drop(columns=["_reform", "_household"])
+        .reset_index(drop=True)
+    )
+    save_csv(frame, config.output_dir / "income_curve.csv")
+    console.print(
+        f"[green]Saved {len(frame)} rows to "
+        f"{config.output_dir / 'income_curve.csv'}[/green]"
+    )
+    return frame

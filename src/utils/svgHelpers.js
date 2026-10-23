@@ -85,7 +85,7 @@ export function createSvgRect({ x, y, width, height, fill }) {
  * @param {number} options.strokeWidth - Stroke width
  * @returns {SVGLineElement}
  */
-export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2 }) {
+export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2, dash }) {
   return createSvgElement("line", {
     x1,
     y1,
@@ -93,6 +93,7 @@ export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2 }) {
     y2,
     stroke,
     "stroke-width": strokeWidth,
+    ...(dash ? { "stroke-dasharray": dash } : {}),
   });
 }
 

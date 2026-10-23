@@ -131,6 +131,19 @@ EARNINGS_GROWTH_BY_AGE = {
     50: 2.20,
 }
 PEAK_EARNINGS_MULTIPLIER = 2.20
+YOUNGEST_TRAJECTORY_AGE = min(EARNINGS_GROWTH_BY_AGE)
+
+
+def earnings_multiplier(age: int) -> float:
+    """Earnings at ``age`` relative to age 22, on the age trajectory.
+
+    Ages below the trajectory's first age (22) stay at its first value, so
+    a 19-year-old's salary is carried flat to 22 and then grows; ages past
+    its last value (50) stay at the peak.
+    """
+    if age < YOUNGEST_TRAJECTORY_AGE:
+        return EARNINGS_GROWTH_BY_AGE[YOUNGEST_TRAJECTORY_AGE]
+    return EARNINGS_GROWTH_BY_AGE.get(age, PEAK_EARNINGS_MULTIPLIER)
 
 
 class LifecycleInputs(BaseModel):
@@ -500,15 +513,22 @@ def calculate_scenario(
     }
 
 
+# The year the inputs describe (age, salary, children's ages): this
+# dashboard's year. The first projected year is this year.
+INPUT_YEAR = 2026
+
+
 def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
-    """Run the lifecycle model and return year-by-year results."""
+    """Run the lifecycle model and return year-by-year results.
+
+    The inputs describe INPUT_YEAR; results start in that year at the
+    given age, in cash terms.
+    """
     current_salary = inputs.current_salary
     current_age = inputs.current_age
-    input_year = 2025
+    input_year = INPUT_YEAR
 
-    current_age_multiplier = EARNINGS_GROWTH_BY_AGE.get(
-        current_age, PEAK_EARNINGS_MULTIPLIER
-    )
+    current_age_multiplier = earnings_multiplier(current_age)
     base_multiplier_22 = EARNINGS_GROWTH_BY_AGE.get(22, 1.0)
     starting_salary = (
         current_salary / current_age_multiplier * base_multiplier_22
@@ -517,7 +537,7 @@ def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
     graduation_age = 22
     graduation_year = input_year - (current_age - graduation_age)
 
-    base_year = 2026
+    base_year = INPUT_YEAR
     end_year = input_year + (inputs.life_expectancy - current_age)
     results = []
 
@@ -538,9 +558,7 @@ def run_lifecycle_model(inputs: LifecycleInputs) -> list[dict]:
             state_pension = get_state_pension(current_year)
             gross_income = state_pension
         else:
-            base_multiplier = EARNINGS_GROWTH_BY_AGE.get(
-                age, PEAK_EARNINGS_MULTIPLIER
-            )
+            base_multiplier = earnings_multiplier(age)
             additional_growth = (
                 1 + inputs.additional_income_growth_rate
             ) ** years_since_graduation

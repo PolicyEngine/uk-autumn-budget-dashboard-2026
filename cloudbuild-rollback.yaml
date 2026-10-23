@@ -195,7 +195,8 @@ steps:
           "$$tag" > /workspace/tagged_url
 
   # What the revision's image says it is, as data: its identity and the
-  # years and policies its calculator covers (deploy_smoke's
+  # years and policies its calculator covers, and its lifecycle
+  # calculator's input year (deploy_smoke's
   # print_expectations, written out so an image older than that function
   # can answer). Nothing here decides pass or fail.
   - id: expectations
@@ -206,9 +207,9 @@ steps:
       - |
         set -euo pipefail
         docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import json
-        from uk_budget_data import personal_impact
+        from uk_budget_data import lifecycle_calculator, personal_impact
         from uk_budget_data.runtime_identity import runtime_identity
-        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS)}, sort_keys=True))' > /workspace/expectations.json
+        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS), "lifecycle": {"input_year": getattr(lifecycle_calculator, "INPUT_YEAR", None)}}, sort_keys=True))' > /workspace/expectations.json
 
   # Main's checker, on plain Python: the revision's own code decides
   # nothing.

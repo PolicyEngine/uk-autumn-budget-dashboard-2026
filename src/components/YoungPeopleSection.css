@@ -1,0 +1,20 @@
+/* "Young people (under 25)": the headline figures (StatTiles), then the
+   two chart cards in the page's charts grid. */
+
+.young-people-heading {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.young-people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The outcome legend: one centred row, no group headings */
+.young-people-outcome-legend .grouped-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+}

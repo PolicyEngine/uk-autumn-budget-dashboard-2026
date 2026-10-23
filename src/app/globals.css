@@ -81,7 +81,7 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: var(--pe-text-primary);
-  background-color: var(--pe-background);
+  background-color: var(--pe-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -93,731 +93,1317 @@ code {
 #root {
   min-height: 100vh;
 }
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ------------------------------------------------------------------
+   Page layout
+   A light grey page with each section or result in a light card: white,
+   a 1px border, 12px radius, no heavy shadows.
+   ------------------------------------------------------------------ */
+
+:root {
+  /* Aliases over the PolicyEngine tokens */
+  --page-bg: var(--pe-gray-50);
+  --card-border: var(--pe-gray-200);
+  --card-radius: 12px;
+  --card-padding: 24px;
+  --title-row-height: 64px;
+  /* The view tabs under the intro; they stick under the band */
+  --view-tabs-height: 48px;
+  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* Solid PolicyEngine dark teal (rgb 40, 94, 97) */
+  --band-teal: #285e61;
+  /* Type scale: section titles, card titles, body, small text, captions
+     (sources, notes, axis units) and micro labels */
+  --fs-stat: 1.75rem;
+  --fs-xl: 1.5rem;
+  --fs-section: 1.25rem;
+  --fs-card-title: 1.125rem;
+  --fs-lead: 1.0625rem;
+  --fs-body-lg: 1rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.875rem;
+  --fs-caption: 0.8125rem;
+  --fs-micro: 0.75rem;
+}
+
+body {
+  background: var(--page-bg);
+}
+
+/* Only the title row is sticky: the ui-kit site nav (PolicyEngineShell
+   renders it with an inline position:sticky) scrolls away normally.
+   Written against @policyengine/ui-kit 0.12.0, whose shell is
+   <div class="min-h-screen flex flex-col"> with the nav as its first
+   child. If a ui-kit upgrade changes that markup this selector stops
+   matching: App.jsx warns in the console in development, and
+   src/shellStickyNav.test.jsx fails. */
+.min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  position: relative !important;
 }
 
 .app {
-  min-height: 100vh;
-  background: linear-gradient(180deg, var(--pe-gray-50) 0%, #f0f4f8 100%);
+  background: var(--page-bg);
   font-family: var(--pe-font-family);
-  position: relative;
-}
-
-/* Subtle grain texture overlay */
-.app::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.03;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  z-index: 0;
+  /* The full-bleed title band is 100vw wide; never let it add a sideways
+     scroll. clip, unlike hidden, keeps the band sticky. */
+  overflow-x: clip;
 }
 
 .main-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 40px;
-  position: relative;
-  z-index: 1;
+  padding: 0 40px 64px;
 }
 
-/* Title Row - Editorial style */
+/* Shared card treatment */
+.card,
+.hero-chart,
+.charts-grid > div,
+.disclosure-card {
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+}
+
+/* Title band: the full-width teal band under the site nav that the
+   published UK dashboards use (uk-spring-statement-2026,
+   uk-childcare-100k-threshold, uk-living-standards-outlook .title-row):
+   white Inter 700 title on rgba(40, 94, 97, 0.95). It is the page's only
+   sticky element and keeps one height, so nothing below it moves. The
+   band bleeds to the window edges while its content stays in the column.
+   It looks the same stuck or not: same height, title size and padding, no
+   transitions. The only change once stuck (the sentinel just above it
+   tells App.jsx) is a soft 1px shadow under it. */
+.title-sentinel {
+  height: 1px;
+  margin-bottom: -1px;
+}
+
 .title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-  gap: var(--pe-space-md);
   position: sticky;
   top: 0;
-  background: linear-gradient(180deg, rgba(249, 250, 251, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 20px 0;
-  margin: -20px 0 32px 0;
-  z-index: 100;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  /* Above every chart, label, tooltip and card on the page */
+  z-index: 1100;
+  /* One row on a wide screen: the title, then the year and policy pills
+     at the right. A pill that does not apply to the view is hidden but
+     keeps its place. Narrower screens use two fixed rows (below). */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "title year policy";
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 8px;
+  height: var(--title-row-height);
+  /* Full-bleed with real edges: the band spans the window, and its padding
+     lines its content up with the page column. */
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  /* Solid, no alpha, no blur */
+  background: var(--band-teal);
+}
+
+.title-row.is-stuck {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .title-row h1 {
-  font-size: 2.25rem;
+  grid-area: title;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--pe-font-family);
+  font-size: var(--fs-xl);
   font-weight: 700;
-  color: var(--pe-gray-900);
+  color: #ffffff;
   margin: 0;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
-/* Tab Navigation - Refined with indicators */
-.tab-navigation {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 32px;
-  padding: 6px;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 14px;
-  width: fit-content;
+/* The band's controls */
+.band-year {
+  grid-area: year;
 }
 
-.tab-button {
+.band-policy {
+  grid-area: policy;
+}
+
+/* A band control that does not apply to the current view keeps its place
+   (so the others do not move) but is not shown */
+.title-row .is-hidden {
+  visibility: hidden;
+}
+
+.tab-panel {
+  padding-top: 32px;
+}
+
+/* The view tabs: an underline tab bar under the intro, the chosen view
+   underlined in the band's teal. It sticks under the band. Its background
+   spans the window so nothing shows beside it while it is stuck; the tabs
+   and their one rule keep to the page column. */
+.view-tabs-sentinel {
+  height: 0;
+}
+
+.view-tabs-bar {
+  position: sticky;
+  top: var(--title-row-height);
+  /* Under the band and its pill lists, above the charts */
+  z-index: 1090;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  background: var(--page-bg);
+}
+
+.view-tabs {
   display: flex;
+  gap: 28px;
+  height: var(--view-tabs-height);
+  border-bottom: 1px solid var(--card-border);
+  /* A narrow screen scrolls the row, never the page */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tabs out of sight at either end of a scrolling row fade out there */
+.view-tabs.fade-end {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs.fade-start {
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs.fade-start.fade-end {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 40px,
+    #000 calc(100% - 40px),
+    transparent
+  );
+}
+
+.view-tab {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 24px;
+  height: 100%;
+  padding: 0 2px;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
   background: transparent;
   border: none;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--pe-gray-500);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
 }
 
-.tab-button:hover {
+.view-tab:hover {
+  color: var(--band-teal);
+}
+
+/* One weight for every tab, so choosing one never moves the others */
+.view-tab[aria-selected="true"] {
+  color: var(--band-teal);
+}
+
+/* The underline sits on the bar's rule */
+.view-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--band-teal);
+}
+
+/* One keyboard focus ring for every button and link on the page; the
+   tabs, the band's pills and list options keep their own (inset or white) */
+.main-content :where(button, a, summary):focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Methodology view: one card per note */
+.method-section {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.method-section + .method-section {
+  margin-top: 56px;
+}
+
+.method-card {
+  padding: var(--card-padding);
+  font-size: var(--fs-body);
+  line-height: 1.6;
   color: var(--pe-gray-700);
 }
 
-.tab-button.active {
+.method-card > p + p {
+  margin-top: 12px;
+}
+
+.method-card p {
+  margin: 0;
+}
+
+.method-card .methodology-content {
+  padding: 0;
+}
+
+.method-card a,
+.map-method-link a,
+.lifecycle-method-link a {
   color: var(--pe-teal-700);
-  background: var(--pe-surface);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.08),
-    0 4px 12px rgba(0, 0, 0, 0.04);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
 }
 
-.tab-button svg {
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
+.method-card a:hover,
+.map-method-link a:hover,
+.lifecycle-method-link a:hover {
+  text-decoration-color: currentColor;
 }
 
-.tab-button:hover svg {
-  transform: scale(1.1);
-}
-
-/* Dashboard Intro - Editorial typography */
-.dashboard-intro {
-  font-size: 1.125rem;
+/* One-line pointers from a card to its note on the Methodology view */
+.map-method-link,
+.lifecycle-method-link {
+  margin: 0;
+  padding-top: 16px;
+  font-size: var(--fs-small);
   color: var(--pe-gray-600);
-  line-height: 1.7;
-  margin: 0 0 32px 0;
-  max-width: 720px;
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-  animation-delay: 0.1s;
+}
+
+/* Under the lifetime chart, with the card's one rule above it, as under
+   the map */
+.lifecycle-method-link {
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The policy selector on the teal band: translucent white outline, white
+   text, a white count badge. Its list stays white. */
+.title-row .policy-selector-toggle {
+  height: 40px;
+  min-width: 0;
+  padding: 0 14px 0 6px;
+  gap: 8px;
+  color: #ffffff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+}
+
+.title-row .policy-selector-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.title-row .policy-selector-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.title-row .policy-selector-toggle:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.title-row .policy-selector-label,
+.title-row .policy-selector-label-short,
+.title-row .policy-selector-icon {
+  color: #ffffff;
+}
+
+.title-row .policy-selector-count {
+  min-width: 24px;
+  height: 24px;
+  font-size: var(--fs-caption);
+  background: #ffffff;
+  color: var(--band-teal);
+  font-weight: 600;
+}
+
+.title-row .policy-selector-label {
+  font-size: var(--fs-small);
+}
+
+.title-row .policy-selector-icon {
+  font-size: 0.625rem;
+}
+
+/* Standfirst: the full content width */
+.dashboard-intro {
+  font-size: var(--fs-lead);
+  color: var(--pe-gray-700);
+  line-height: 1.6;
+  margin: 24px 0 16px;
 }
 
 .dashboard-intro a {
-  color: var(--pe-teal-600);
-  text-decoration: none;
-  font-weight: 500;
-  position: relative;
-  transition: color 0.2s ease;
-}
-
-.dashboard-intro a::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--pe-teal-400);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
 }
 
 .dashboard-intro a:hover {
-  color: var(--pe-teal-700);
+  text-decoration-color: currentColor;
 }
 
-.dashboard-intro a:hover::after {
-  transform: scaleX(1);
-  transform-origin: left;
+/* A view's own lede, above its first section (Living standards) */
+.tab-lede {
+  margin: 0 0 40px;
 }
 
-/* Empty State - Refined with illustration feel */
+.tab-lede > p:first-child {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.showing-line {
+  margin: 0 0 24px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
+}
+
+/* Empty state */
 .empty-state {
   text-align: center;
-  padding: 100px 40px;
-  max-width: 560px;
-  margin: 0 auto;
-  animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  padding: 64px 24px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
 }
 
 .empty-state p {
-  font-size: 1.2rem;
+  font-size: var(--fs-lead);
   color: var(--pe-gray-500);
-  line-height: 1.7;
-  margin-bottom: 40px;
+  line-height: 1.6;
+  margin-bottom: 24px;
 }
 
 .preset-buttons {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .preset-button {
-  padding: 16px 32px;
-  font-size: 1rem;
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-surface);
-  background: linear-gradient(135deg, var(--pe-teal-600) 0%, var(--pe-teal-700) 100%);
+  background: var(--pe-teal-700);
   border: none;
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 4px 14px rgba(15, 118, 110, 0.3),
-    0 2px 4px rgba(15, 118, 110, 0.2);
-  position: relative;
-  overflow: hidden;
-}
-
-.preset-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s ease;
 }
 
 .preset-button:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 24px rgba(15, 118, 110, 0.35),
-    0 4px 8px rgba(15, 118, 110, 0.25);
+  background: var(--pe-teal-800);
 }
 
-.preset-button:hover::before {
-  left: 100%;
+/* Section headings: a title and a subtitle on the page, above the
+   section's cards */
+.section-heading {
+  margin: 0 0 16px;
 }
 
-.preset-button:active {
-  transform: translateY(0);
+/* Between sections: space, no rule. None above the first. */
+.section-heading:not(:first-of-type) {
+  margin-top: 56px;
 }
 
-/* Results Container - Staggered reveal */
-.results-container {
-  animation: fadeIn 0.4s ease forwards;
+.section-heading h2 {
+  margin: 0 0 4px;
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--pe-gray-800);
 }
 
-/* Hero Chart - Premium card treatment */
+.section-heading p {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+/* Sections */
+.report-section {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
 .hero-chart {
-  margin-bottom: 32px;
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-  animation-delay: 0.15s;
+  padding: var(--card-padding);
+  margin-bottom: 0;
 }
 
-.hero-chart > div {
-  background: var(--pe-surface);
-  border-radius: 20px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 8px 32px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.charts-grid > div {
+  padding: var(--card-padding);
 }
 
-.hero-chart > div:hover {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 12px 40px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+/* Chart components fill their card: the card comes from the container */
+.main-content :is(
+    .budgetary-impact-chart,
+    .waterfall-chart,
+    .distributional-chart,
+    .employment-income-chart,
+    .employment-income-diff-chart,
+    .constituency-map-wrapper,
+    .region-view
+  ) {
+  min-width: 0;
 }
 
-/* OBR Expandable Section */
-.obr-expandable {
-  margin-bottom: 32px;
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-  animation-delay: 0.2s;
+.employment-income-chart,
+.employment-income-diff-chart {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.obr-toggle-button {
+.main-content .report-section .chart-description {
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+  margin: 0 0 12px 0;
+}
+
+/* Every card header: title on the left and the Download button on the
+   right of the first row; the description on its own full-width row
+   below. On a phone the button moves under the description. */
+.main-content .chart-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  row-gap: 0;
+  align-items: start;
+  margin-bottom: 4px;
+}
+
+.main-content .chart-header > div:not(.chart-download) {
+  display: contents;
+}
+
+/* Every card's title: one size on every view */
+.main-content .chart-header h3 {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  margin: 0;
+  font-size: var(--fs-card-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
+}
+
+.main-content .chart-header .chart-download {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.main-content .chart-header .chart-description {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 12px;
+}
+
+/* Disclosures (Disclosure.jsx), closed by default: a full-width button
+   with a chevron. As a card of its own (About selected policies, About
+   this data), or in a card's foot under the card's one rule (About this
+   chart, Compare with OBR estimates). */
+.disclosure-card {
+  margin: 0;
+  padding: 0 var(--card-padding);
+}
+
+.disclosure-toggle {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   width: 100%;
-  padding: 16px 20px;
-  background: var(--pe-surface);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 12px;
-  font-size: 0.95rem;
+  padding: 16px 0;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--pe-gray-700);
+  line-height: 1.4;
+  color: var(--pe-gray-800);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  text-align: left;
 }
 
-.obr-toggle-button:hover {
-  background: var(--pe-gray-50);
-  border-color: var(--pe-teal-200);
+.disclosure-toggle:hover {
   color: var(--pe-teal-700);
 }
 
-.obr-toggle-button svg:first-child {
-  color: var(--pe-teal-500);
+.disclosure-chevron {
+  flex: 0 0 auto;
+  transition: transform 0.2s;
 }
 
-.obr-content {
+.disclosure-toggle[aria-expanded="true"] .disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.disclosure-in-card {
   margin-top: 16px;
-  background: var(--pe-surface);
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  border-top: 1px solid var(--card-border);
+}
+
+.disclosure-in-card > .disclosure-toggle {
+  padding: 14px 0 0;
+}
+
+.disclosure-in-card > .disclosure-content {
+  margin-top: 8px;
+}
+
+.disclosure-in-card > .disclosure-content > p {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
 }
 
 .obr-content .obr-comparison-section {
   margin: 0;
-  padding: 24px;
+  padding: 0;
+  border-top: none;
 }
 
 .obr-content .obr-comparison-section h2 {
   margin-top: 0;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Key Metrics Row */
-.key-metrics-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--pe-space-md);
-  margin-bottom: var(--pe-space-lg);
-}
-
-.key-metric {
-  background: var(--pe-surface);
-  padding: 24px;
-  border-radius: 16px;
-  text-align: center;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 4px 16px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 100px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.key-metric:hover {
-  transform: translateY(-3px);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.key-metric.highlighted {
-  background: linear-gradient(135deg, var(--pe-teal-600) 0%, var(--pe-teal-700) 100%);
-  box-shadow:
-    0 4px 20px rgba(15, 118, 110, 0.3),
-    0 8px 32px rgba(15, 118, 110, 0.2);
-  border: none;
-}
-
-.key-metric.highlighted:hover {
-  box-shadow:
-    0 6px 24px rgba(15, 118, 110, 0.35),
-    0 12px 40px rgba(15, 118, 110, 0.25);
-}
-
-.key-metric.highlighted .metric-label {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.key-metric.highlighted .metric-number {
-  color: var(--pe-surface);
-}
-
-.key-metric.highlighted .info-icon {
-  stroke: rgba(255, 255, 255, 0.7);
-}
-
-.metric-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--pe-gray-500);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.metric-number {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--pe-teal-700);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-/* Info Icon - Refined interactions */
-.info-icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-  position: relative;
-  margin-left: 4px;
-}
-
-.info-icon {
-  cursor: help;
-  opacity: 0.5;
-  transition: all 0.2s ease;
-  width: 14px;
-  height: 14px;
-}
-
-.info-icon-wrapper:hover .info-icon {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-.info-tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--pe-gray-900);
-  color: var(--pe-surface);
-  padding: 14px 18px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.6;
-  white-space: normal;
-  width: 300px;
-  max-width: 90vw;
-  text-align: left;
-  z-index: 1000;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.2),
-    0 8px 32px rgba(0, 0, 0, 0.15);
-  pointer-events: none;
-}
-
-.info-tooltip::after {
-  content: "";
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 8px solid transparent;
-  border-bottom-color: var(--pe-gray-900);
-}
-
-.info-icon-wrapper:hover .info-tooltip {
-  visibility: visible;
-  opacity: 1;
-  transform: translateX(-50%) translateY(8px);
-}
-
-/* Charts Grid - Staggered animations */
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 0;
-}
-
-.charts-grid > div {
-  background: var(--pe-surface);
-  border-radius: 20px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 8px 32px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-}
-
-.charts-grid > div:nth-child(1) {
-  animation-delay: 0.2s;
-}
-
-.charts-grid > div:nth-child(2) {
-  animation-delay: 0.3s;
-}
-
-.charts-grid > div:hover {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 12px 40px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-.charts-row-2 {
-  margin-top: 24px;
-}
-
-.charts-row-2 > div:only-child {
-  grid-column: 1 / -1;
-}
-
-.charts-row-2 > div:nth-child(1) {
-  animation-delay: 0.35s;
-}
-
-.charts-row-2 > div:nth-child(2) {
-  animation-delay: 0.45s;
-}
-
-.charts-row-regions {
-  margin-top: 24px;
-}
-
-.charts-row-regions > div:only-child {
-  grid-column: 1 / -1;
-}
-
-.charts-row-regions > div:nth-child(1) {
-  animation-delay: 0.4s;
-}
-
-.charts-row-3 {
-  margin-top: 24px;
-}
-
-.charts-row-3 > div:nth-child(1) {
-  animation-delay: 0.5s;
-}
-
-.charts-row-3 > div:nth-child(2) {
-  animation-delay: 0.6s;
-}
-
-/* Distributional Section - Premium styling */
-.distributional-section {
-  margin-bottom: 32px;
-}
-
-.section-year-slider {
-  background: var(--pe-surface);
-  border-radius: 16px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 4px 16px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  margin-bottom: 24px;
-  overflow: hidden;
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-  animation-delay: 0.18s;
-}
-
-.section-year-slider .year-slider {
-  border-radius: 16px;
-  border-top: none;
-  background: transparent;
-}
-
-/* Policy Details Footer - Refined accordion */
-.policy-details-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  padding-top: 32px;
-  margin-top: 24px;
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-  animation-delay: 0.7s;
-}
-
-.policy-details-toggle {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.policy-details-toggle:hover {
-  background: var(--pe-gray-50);
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-}
-
-.policy-details-toggle svg {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.policy-details-content {
-  margin-top: 16px;
-  padding: 24px;
-  background: var(--pe-surface);
-  border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  animation: expandDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
 .policy-detail {
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  font-size: 0.95rem;
-  line-height: 1.7;
+  padding: 8px 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
   color: var(--pe-gray-600);
-}
-
-.policy-detail:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
 }
 
 .policy-detail strong {
-  color: var(--pe-gray-800);
+  color: var(--pe-gray-900);
   font-weight: 600;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+.policy-detail a {
+  color: var(--pe-teal-700);
+}
+
+/* Charts grid: side-by-side cards of equal height */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+  margin: 0;
+}
+
+.charts-grid > div {
+  min-width: 0;
+}
+
+/* A card alone in its row takes the full width */
+.charts-grid > div:only-child {
+  grid-column: 1 / -1;
+}
+
+/* Paired cards align row by row. Each pair is one grid with three shared
+   rows (title and Download button / description / chart), and each card
+   takes those rows as a subgrid, so a row is as tall as the taller of the
+   two cards: a title that wraps to two lines in one card pushes both
+   descriptions, plots, axes, legends and logos down together. The chart
+   header and its text wrapper dissolve (display: contents) so the title,
+   description and button are placed on the card's grid directly. On a
+   phone or tablet (one column) the cards fall back to normal flow. */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) {
+    grid-template-rows: repeat(7, auto);
+    row-gap: 0;
   }
-  to {
-    opacity: 1;
+
+  .charts-grid > div:not(:only-child) {
+    display: grid;
+    grid-row: span 7;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    /* No gaps of their own: the shared rows carry the spacing */
+    row-gap: 0;
+    align-content: start;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-header,
+  .charts-grid > div:not(:only-child) > .map-header,
+  .charts-grid > div:not(:only-child) > .map-header > .chart-header {
+    display: contents;
+  }
+
+  /* Row 1: title | Download. Row 2: description. */
+  .charts-grid > div:not(:only-child) h3 {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    margin-bottom: 0;
+  }
+
+  .charts-grid > div:not(:only-child) .chart-download {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) .chart-description {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-self: start;
+    margin-top: 12px;
+  }
+
+  /* Rows 3 to 7: controls, plot, legend, logo, footer */
+  .charts-grid > div:not(:only-child) > .chart-controls,
+  .charts-grid > div:not(:only-child) > .chart-plot,
+  .charts-grid > div:not(:only-child) > .chart-legend,
+  .charts-grid > div:not(:only-child) > .chart-logo,
+  .charts-grid > div:not(:only-child) > .chart-footer {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-controls {
+    grid-row: 3;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-plot {
+    grid-row: 4;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-legend {
+    grid-row: 5;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-logo {
+    grid-row: 6;
+  }
+
+  .charts-grid > div:not(:only-child) > .chart-footer,
+  .charts-grid > div:not(:only-child) > .note {
+    grid-column: 1 / -1;
+    grid-row: 7;
+  }
+
+  /* A Recharts chart draws its plot, legend and logo in one SVG: it takes
+     rows 3 to 6 together (its pair draws the same parts at the same
+     sizes, so they still line up). */
+  .charts-grid > div:not(:only-child) > div:not([class]) {
+    grid-column: 1 / -1;
+    grid-row: 3 / span 4;
+    align-self: start;
+    min-width: 0;
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Distributional section with the shared year control */
+.distributional-section {
+  margin: 0;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Few rules: cards and whitespace separate things. Tables keep only the
+   underline beneath their header row. */
+.main-content .region-table th,
+.main-content .region-table td {
+  border-bottom: none;
 }
 
-@keyframes expandDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.main-content .region-table thead th {
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* Constituency search results: a hover background, not a rule per row */
+.main-content .search-result-item {
+  border-bottom: none;
+  border-radius: 6px;
+}
+
+.main-content .search-result-item:hover {
+  background: var(--pe-gray-50);
+}
+
+.main-content .tooltip-region {
+  border-top: none;
+}
+
+/* Chart legends: centred under the plot. On desktop the items flow in
+   centred rows with even gaps; on a phone they sit in a centred 2-column
+   grid. The PolicyEngine logo has its own row below, so it never pushes the
+   legend off centre. */
+.main-content .recharts-default-legend {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  text-align: center !important;
+}
+
+.main-content .recharts-default-legend .recharts-legend-item {
+  margin-right: 0 !important;
+}
+
+/* Stacking: the sticky title band (z-index 1100) stays above every chart.
+   Chart tooltips sit just below it (a component stylesheet sets them to
+   9999 globally); the lifetime calculator's modal sits above it. */
+.main-content .recharts-tooltip-wrapper {
+  z-index: 1000 !important;
+}
+
+.main-content .modal-overlay {
+  z-index: 1200;
+}
+
+/* A fiscal year in a title never breaks at its hyphen */
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Headline figures (StatTiles.jsx): one card, the figures side by side,
+   each a large number over a short label; on a phone they stack */
+.stat-tiles {
+  padding: var(--card-padding);
+}
+
+.stat-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(var(--stat-count, 2), minmax(0, 1fr));
+  gap: 24px;
+}
+
+.stat-tile p {
+  margin: 0;
+}
+
+.stat-value {
+  font-size: var(--fs-stat);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pe-gray-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-extra {
+  font-size: var(--fs-body-lg);
+  font-weight: 500;
+  color: var(--pe-gray-600);
+}
+
+.stat-label {
+  margin-top: 4px !important;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.stat-label a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--pe-gray-300);
+  text-underline-offset: 3px;
+}
+
+.stat-label a:hover {
+  color: var(--pe-teal-700);
+}
+
+.stat-sub {
+  margin-top: 2px !important;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.stat-tiles-footer {
+  margin-top: 16px;
+}
+
+/* A view's loading or error line, in place of its content */
+.view-status {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-500);
+}
+
+/* A chart that cannot be drawn for the current choice: a quiet grey panel
+   in the plot's place, with the reason */
+.plot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+}
+
+.plot-empty p {
+  max-width: 34ch;
+  margin: 0;
+}
+
+/* A chart's plot for a year not yet published */
+.unpublished-plot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+}
+
+.unpublished-plot p {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+}
+
+/* Card rows for charts drawn outside Recharts (map, scatter template) */
+.chart-controls:empty {
+  min-height: 0;
+}
+
+.chart-legend {
+  padding-top: 12px;
+}
+
+.chart-note {
+  margin: 8px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+  text-align: center;
+}
+
+/* A reading caveat under a chart or a section (Note.jsx) */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.note svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--pe-gray-400);
+}
+
+.chart-logo {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  min-height: 25px;
+}
+
+.chart-logo img {
+  display: block;
+  width: 80px;
+  height: auto;
+}
+
+/* A card's foot link (the map's method note): under the card's one rule,
+   like an in-card disclosure */
+.main-content .chart-footer {
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+/* PolicyEngine logo under a table or chart drawn outside Recharts */
+.card-logo {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.card-logo img {
+  display: block;
+  width: 80px;
+  height: auto;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
   .charts-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .main-content {
-    padding: 24px;
+    padding: 0 24px 48px;
+  }
+
+  .title-row,
+  .view-tabs-bar {
+    padding-inline: 24px;
+  }
+}
+
+/* Below 900px the band has two fixed rows: the title and the policy
+   pill, then the year pill. One height, stuck or not. */
+@media (max-width: 899px) {
+  :root {
+    --title-row-height: 104px;
+  }
+
+  .title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title policy"
+      "year .";
+    align-content: center;
+  }
+
+  .band-year {
+    justify-self: start;
+  }
+
+  /* A view without the year pill (Personal impact, Living standards,
+     Methodology) has one row: no empty second row. App.jsx sets
+     data-band and keeps the reader's place when the height changes. */
+  .app[data-band="compact"] {
+    --title-row-height: 60px;
+    --sticky-offset: calc(60px + var(--view-tabs-height));
+  }
+
+  .app[data-band="compact"] .title-row {
+    grid-template-areas: "title policy";
+  }
+
+  .app[data-band="compact"] .band-year {
+    display: none;
   }
 }
 
 @media (max-width: 768px) {
-  .key-metrics-row {
-    grid-template-columns: 1fr;
-  }
-
-  .title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .title-row h1 {
-    font-size: 1.75rem;
-  }
-
-  .tab-navigation {
-    width: 100%;
-  }
-
-  .tab-button {
-    flex: 1;
-    justify-content: center;
-    padding: 12px 16px;
-    font-size: 0.85rem;
+  :root {
+    --card-padding: 16px;
+    --title-row-height: 100px;
   }
 
   .main-content {
-    padding: 16px;
+    padding: 0 16px 48px;
   }
 
-  .empty-state {
-    padding: 60px 20px;
+  .title-row,
+  .view-tabs-bar {
+    padding-inline: 16px;
   }
 
-  .empty-state p {
-    font-size: 1.1rem;
+  .title-row h1 {
+    font-size: var(--fs-card-title);
+  }
+
+  .band-year .year-picker-toggle {
+    gap: 4px;
+    padding: 0 10px 0 4px;
+  }
+
+  .band-year .year-picker-badge {
+    padding: 0 7px;
+  }
+
+  /* The pills' lists span the band */
+  .band-policy .policy-selector,
+  .band-year .year-picker {
+    position: static;
+  }
+
+  .title-row .policy-selector-toggle {
+    width: auto;
+    min-width: 0;
+    height: 34px;
+    gap: 6px;
+    padding: 0 12px 0 5px;
+  }
+
+  .title-row .policy-selector-label {
+    display: none;
+  }
+
+  .title-row .policy-selector-label-short {
+    display: inline;
+    font-size: var(--fs-caption);
+    font-weight: 500;
+  }
+
+  .main-content .recharts-default-legend {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    justify-content: center;
+    gap: 4px 16px;
+    text-align: left !important;
+  }
+
+  .main-content .recharts-default-legend .recharts-legend-item {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 2px;
+    margin-right: 0 !important;
+    line-height: 1.35;
+  }
+
+  .main-content .recharts-default-legend .recharts-legend-item svg {
+    flex: 0 0 auto;
+    margin-top: 3px;
+  }
+
+  .dashboard-intro {
+    font-size: var(--fs-body-lg);
+  }
+
+  .view-tabs {
+    gap: 22px;
   }
 
   .preset-buttons {
     flex-direction: column;
   }
 
+  .stat-tiles-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .stat-value {
+    font-size: var(--fs-xl);
+  }
+
   .preset-button {
     width: 100%;
   }
+}
 
-  .metric-number {
-    font-size: 1.75rem;
+/* The page fills the window without overshooting it: the shell's main
+   grows to the window, the app grows inside it, and the replication line
+   sits at the bottom of the content column, just above the footer. */
+.min-h-screen.flex.flex-col > main {
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.app > .main-content {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: 20px;
+}
+
+.app > .main-content > * {
+  flex-shrink: 0;
+}
+
+/* At least 40px between the last section and the replication line */
+.app > .main-content > :nth-last-child(2) {
+  margin-bottom: 40px;
+}
+
+/* Replication line above the footer: a thin rule across the column,
+   small muted centred text */
+.replication-line {
+  margin: auto 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+  text-align: center;
+}
+
+.replication-line a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+}
+
+/* Compact site footer (see SiteFooter.jsx): one row on desktop, in place of
+   the ui-kit shell's taller stacked footer. */
+.site-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  background: linear-gradient(to right, #234e52, #2c7a7b);
+}
+
+.site-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+}
+
+.site-footer-logo img {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+}
+
+.site-footer-links a {
+  color: white;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.site-footer-links a:hover {
+  opacity: 0.8;
+}
+
+.site-footer-copy {
+  margin: 0 0 0 auto;
+  font-size: var(--fs-caption);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 1024px) {
+  .site-footer-inner {
+    padding: 20px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 16px;
   }
 
-  .dashboard-intro {
-    font-size: 1rem;
+  .site-footer-links {
+    gap: 6px 16px;
+  }
+
+  .site-footer-copy {
+    margin: 0;
+  }
+}
+
+/* About selected policies: one grouped list, no boxes */
+.policy-details-content {
+  padding: 4px 0 20px;
+}
+
+.policy-group + .policy-group {
+  margin-top: 20px;
+}
+
+.policy-group-heading {
+  margin: 0 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pe-gray-500);
+}
+
+/* One list: each policy's name, then its description */
+.policy-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.main-content .policy-detail {
+  padding: 0;
+  border: none;
+}
+
+.policy-detail-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.policy-detail-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+
+.policy-detail-text {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+@media (max-width: 768px) {
+  .policy-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

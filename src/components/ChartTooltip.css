@@ -1,0 +1,75 @@
+.chart-tooltip {
+  max-width: 300px;
+  min-width: 200px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--pe-gray-800);
+  background: #ffffff;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: var(--pe-radius-md);
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.1);
+}
+
+.chart-tooltip p {
+  margin: 0;
+}
+
+.chart-tooltip-label {
+  margin-bottom: 6px !important;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.chart-tooltip-section + .chart-tooltip-section {
+  margin-top: 6px;
+}
+
+.chart-tooltip-heading {
+  margin-bottom: 2px !important;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pe-gray-500);
+}
+
+.chart-tooltip-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.chart-tooltip-swatch {
+  width: 10px;
+  height: 10px;
+}
+
+.chart-tooltip-swatch-line {
+  height: 2px;
+  background: #000000;
+}
+
+.chart-tooltip-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.chart-tooltip-net {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--pe-gray-200);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* A phone's plot is narrower than 300px: Recharts keeps the tooltip
+   inside the plot area, so a wider tooltip would run off the screen */
+@media (max-width: 768px) {
+  .chart-tooltip {
+    max-width: 260px;
+    min-width: 0;
+  }
+}

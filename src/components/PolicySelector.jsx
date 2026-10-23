@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import "./PolicySelector.css";
 
-function PolicySelector({ policies, selectedPolicies, onPolicyToggle }) {
+function PolicySelector({ policies, selectedPolicies, onPolicyToggle, disabledReason }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -30,7 +30,9 @@ function PolicySelector({ policies, selectedPolicies, onPolicyToggle }) {
         className="policy-selector-toggle"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
-        aria-label="Select policies"
+        aria-label={disabledReason ? `Select policies: ${disabledReason}` : "Select policies"}
+        disabled={Boolean(disabledReason)}
+        title={disabledReason}
       >
         <span className="policy-selector-count">{selectedCount}</span>
         <span className="policy-selector-label">
@@ -39,6 +41,9 @@ function PolicySelector({ policies, selectedPolicies, onPolicyToggle }) {
             : selectedCount === 1
               ? "policy selected"
               : "policies selected"}
+        </span>
+        <span className="policy-selector-label-short" aria-hidden="true">
+          selected
         </span>
         <span className="policy-selector-icon">{isExpanded ? "▲" : "▼"}</span>
       </button>

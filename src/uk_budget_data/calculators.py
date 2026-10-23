@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 from microdf import MicroDataFrame, MicroSeries
 
+from uk_budget_data.budget_years import POLICY_YEARS
+
 
 def _as_weighted(df) -> MicroDataFrame:
     """Return df as a MicroDataFrame weighted by household_weight.
@@ -41,9 +43,7 @@ class BaseCalculator(ABC):
 class BudgetaryImpactCalculator(BaseCalculator):
     """Calculates budgetary impact (cost/revenue) of reforms."""
 
-    years: list[int] = field(
-        default_factory=lambda: [2026, 2027, 2028, 2029, 2030]
-    )
+    years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))
 
     # Reforms that use student_loan_repayments_modelled instead of gov_balance
     STUDENT_LOAN_REFORMS = ["freeze_student_loan_thresholds"]
@@ -437,79 +437,75 @@ class MetricsCalculator(BaseCalculator):
 
 @dataclass
 class IncomeCurveCalculator(BaseCalculator):
-    """Calculates income curve (net income vs employment income)."""
+    """Net income of the example households across one income each.
 
-    max_income: int = 150_000
+    For each household in ``example_households.EXAMPLE_HOUSEHOLDS``, its
+    net income before and after a measure at each point on its income grid
+    (employment income, or private pension income for the pensioners). One
+    simulation per household and scenario answers every year: the grid is
+    set in every year at once (``example_households.build_situation``).
+    """
+
     num_points: int = 201
 
-    def get_income_range(self) -> np.ndarray:
-        """Get the range of employment incomes to calculate."""
-        return np.linspace(0, self.max_income, self.num_points)
+    def simulate(self, household, scenario, years: list[int]) -> dict:
+        """``{year: household net income at each grid point}`` under
+        ``scenario`` (None for current law)."""
+        from policyengine_uk import Simulation
 
-    def get_base_situation(self, year: int) -> dict:
-        """Get the base household situation for income curve."""
-        return {
-            "people": {
-                "adult1": {
-                    "age": {str(year): 40},
-                    "employment_income": {str(year): 0},
-                    "employee_pension_contributions": {str(year): 10000},
-                },
-                "adult2": {
-                    "age": {str(year): 40},
-                    "employment_income": {str(year): 0},
-                },
-                "child1": {
-                    "age": {str(year): 7},
-                    "employment_income": {str(year): 0},
-                },
-                "child2": {
-                    "age": {str(year): 5},
-                    "employment_income": {str(year): 0},
-                },
-                "child3": {
-                    "age": {str(year): 3},
-                    "employment_income": {str(year): 0},
-                },
-            },
-            "benunits": {
-                "family": {
-                    "members": [
-                        "adult1",
-                        "adult2",
-                        "child1",
-                        "child2",
-                        "child3",
-                    ],
-                    "would_claim_uc": {str(year): True},
-                }
-            },
-            "households": {
-                "household": {
-                    "brma": {str(year): "MAIDSTONE"},
-                    "region": {str(year): "LONDON"},
-                    "members": [
-                        "adult1",
-                        "adult2",
-                        "child1",
-                        "child2",
-                        "child3",
-                    ],
-                    "local_authority": {str(year): "MAIDSTONE"},
-                }
-            },
-            "axes": [
-                [
+        from uk_budget_data.example_households import build_situation
+        from uk_budget_data.personal_impact import AsBuilt, effective
+
+        situation = build_situation(
+            household,
+            years,
+            state_pension_weekly=full_new_state_pension(years),
+            points=self.num_points,
+        )
+        sim = Simulation(situation=situation, scenario=effective(scenario))
+        built = AsBuilt(sim)
+        curves = {}
+        for year in years:
+            # As the household calculator reads several years from one
+            # simulation: each year as built, so no year sees another's
+            # calculated values.
+            built.restore()
+            curves[year] = np.asarray(
+                sim.calculate("household_net_income", year), dtype=float
+            )
+        return curves
+
+    def rows(
+        self,
+        household,
+        baseline: dict,
+        reformed: dict,
+        reform_id: str,
+        reform_name: str,
+        years: list[int],
+    ) -> list[dict]:
+        """The table rows for one household, from its simulated curves."""
+        grid = household.grid(self.num_points)
+        rows = []
+        for year in years:
+            for i, income in enumerate(grid):
+                rows.append(
                     {
-                        "name": "employment_income",
-                        "min": 0,
-                        "max": self.max_income,
-                        "count": self.num_points,
-                        "period": str(year),
+                        "reform_id": reform_id,
+                        "reform_name": reform_name,
+                        "year": year,
+                        "household": household.id,
+                        "x_variable": household.x_variable,
+                        "income": float(income),
+                        "baseline_net_income": round(
+                            float(baseline[year][i]), 2
+                        ),
+                        "reform_net_income": round(
+                            float(reformed[year][i]), 2
+                        ),
                     }
-                ]
-            ],
-        }
+                )
+        return rows
 
     def calculate(
         self,
@@ -519,7 +515,7 @@ class IncomeCurveCalculator(BaseCalculator):
         reform_name: str,
         year: int,
     ) -> list[dict]:
-        """Calculate income curve from PolicyEngine scenarios.
+        """Every example household's curve for one measure and year.
 
         Args:
             baseline_scenario: Scenario for baseline (pre-budget policy).
@@ -529,45 +525,32 @@ class IncomeCurveCalculator(BaseCalculator):
             year: Year to calculate for.
 
         Returns:
-            List of dicts with employment_income, baseline_net_income,
-            reform_net_income.
+            One row per household and grid point (see ``rows``).
         """
-        from policyengine_uk import Simulation
-
-        base_situation = self.get_base_situation(year)
-
-        # Apply baseline scenario (pre-budget) if provided
-        if baseline_scenario is not None:
-            baseline_sim = Simulation(
-                scenario=baseline_scenario, situation=base_situation
-            )
-        else:
-            baseline_sim = Simulation(situation=base_situation)
-
-        # Apply reform scenario (post-budget)
-        reform_sim = Simulation(
-            scenario=reform_scenario, situation=base_situation
-        )
-
-        # Use fixed income range for consistent x-axis across all reforms
-        employment_incomes = self.get_income_range()
-        baseline_hnet = baseline_sim.calculate("household_net_income", year)
-        reform_hnet = reform_sim.calculate("household_net_income", year)
+        from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 
         results = []
-        for i in range(len(employment_incomes)):
-            results.append(
-                {
-                    "reform_id": reform_id,
-                    "reform_name": reform_name,
-                    "year": year,
-                    "employment_income": employment_incomes[i],
-                    "baseline_net_income": baseline_hnet[i],
-                    "reform_net_income": reform_hnet[i],
-                }
+        for household in EXAMPLE_HOUSEHOLDS:
+            results.extend(
+                self.rows(
+                    household,
+                    self.simulate(household, baseline_scenario, [year]),
+                    self.simulate(household, reform_scenario, [year]),
+                    reform_id,
+                    reform_name,
+                    [year],
+                )
             )
-
         return results
+
+
+def full_new_state_pension(years: list[int]) -> dict[int, float]:
+    """The full new State Pension, £ a week, in each year, as legislated
+    (the rate ``new_state_pension`` splits a reported amount at)."""
+    from policyengine_uk.system import system
+
+    amount = system.parameters.gov.dwp.state_pension.new_state_pension.amount
+    return {year: float(amount(f"{year}-01-01")) for year in years}
 
 
 @dataclass
@@ -827,9 +810,171 @@ class DemographicConstituencyCalculator(BaseCalculator):
         return results
 
 
+# Age bands for results by age: (label, lowest age, highest age), inclusive.
+# Children are under 16, as in HBAI; HBAI also counts 16- to 19-year-olds
+# in full-time non-advanced education as children, which these bands do
+# not: everyone aged 16 to 24 is in "16-24". The adult bands are coarser
+# than HBAI's ten-year bands so that each is large in the survey.
+AGE_BANDS: tuple[tuple[str, int, int], ...] = (
+    ("0-15", 0, 15),
+    ("16-24", 16, 24),
+    ("25-34", 25, 34),
+    ("35-49", 35, 49),
+    ("50-64", 50, 64),
+    ("65+", 65, 200),
+)
+AGE_BAND_ALL = "all"
+# A change smaller than this share of household net income counts as no
+# change: the test MetricsCalculator uses for people affected.
+AGE_CHANGE_THRESHOLD = 0.0001
+# A change in a person's own taxes or earnings smaller than this, in £ a
+# year, does not make them directly affected.
+DIRECT_EFFECT_MIN_GBP = 1.0
+# The person-level variables whose change makes someone directly affected.
+DIRECT_EFFECT_VARIABLES = (
+    "income_tax",
+    "national_insurance",
+    "student_loan_repayment",
+    "employment_income",
+)
+
+
+def age_band_of(age: np.ndarray) -> np.ndarray:
+    """The AGE_BANDS label of each age; ages outside every band get ""."""
+    labels = np.full(len(age), "", dtype=object)
+    for label, low, high in AGE_BANDS:
+        labels[(age >= low) & (age <= high)] = label
+    return labels
+
+
+@dataclass
+class AgeImpactCalculator(BaseCalculator):
+    """Change in household net income by the age of each person.
+
+    Every person is given their household's change in net income (not
+    equivalised; ``mean_equivalised_change`` carries the equivalised
+    change too), and the rows average it over people, so a mean of £100 for
+    16- to 24-year-olds means the average young person lives in a household
+    £100 a year better off. People whose household has no income decile
+    (``household_income_decile`` < 1) are left out, as in MetricsCalculator.
+
+    A person is better off when their household's change is more than
+    AGE_CHANGE_THRESHOLD of its baseline net income (at least £1), worse off
+    when it is less than minus that, and unchanged otherwise.
+
+    A person is directly affected when their own income tax, National
+    Insurance, student loan repayment or employment income changes by
+    DIRECT_EFFECT_MIN_GBP or more a year. Benefits are paid to benefit
+    units, not people, so a change only in benefits (or in prices) is not
+    counted as direct.
+    """
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+    ) -> list[dict]:
+        def person(sim, variable):
+            return np.asarray(
+                sim.calculate(variable, period=year, map_to="person").values,
+                dtype=float,
+            )
+
+        own_change = np.zeros_like(person(baseline, "age"))
+        for variable in DIRECT_EFFECT_VARIABLES:
+            own_change = np.maximum(
+                own_change,
+                np.abs(
+                    person(reformed, variable) - person(baseline, variable)
+                ),
+            )
+        frame = pd.DataFrame(
+            {
+                "age": person(baseline, "age"),
+                "weight": person(baseline, "person_weight"),
+                "decile": person(baseline, "household_income_decile"),
+                "baseline_income": person(baseline, "household_net_income"),
+                "reform_income": person(reformed, "household_net_income"),
+                "baseline_equivalised": person(
+                    baseline, "equiv_household_net_income"
+                ),
+                "reform_equivalised": person(
+                    reformed, "equiv_household_net_income"
+                ),
+                "own_change": own_change,
+            }
+        )
+        return self.calculate_from_dataframe(
+            reform_id, reform_name, year, frame
+        )
+
+    def calculate_from_dataframe(
+        self,
+        reform_id: str,
+        reform_name: str,
+        year: int,
+        frame: pd.DataFrame,
+    ) -> list[dict]:
+        """Rows by age band from a person-level frame.
+
+        ``frame`` has one row per person: age, weight, decile,
+        baseline_income and reform_income (household net income),
+        baseline_equivalised and reform_equivalised, and own_change (the
+        largest absolute change in the person's own taxes or earnings).
+        """
+        frame = frame[frame["decile"] >= 1]
+        change = (frame["reform_income"] - frame["baseline_income"]).to_numpy()
+        relative = change / np.maximum(frame["baseline_income"].to_numpy(), 1)
+        better = relative > AGE_CHANGE_THRESHOLD
+        worse = relative < -AGE_CHANGE_THRESHOLD
+        equivalised = (
+            frame["reform_equivalised"] - frame["baseline_equivalised"]
+        ).to_numpy()
+        direct = frame["own_change"].to_numpy() >= DIRECT_EFFECT_MIN_GBP
+        weight = frame["weight"].to_numpy()
+        bands = age_band_of(frame["age"].to_numpy())
+
+        groups = [(label, bands == label) for label, _, _ in AGE_BANDS]
+        groups.append((AGE_BAND_ALL, np.ones(len(frame), dtype=bool)))
+        rows = []
+        for label, members in groups:
+            w = weight[members]
+            people = float(w.sum())
+            if people <= 0:
+                continue
+
+            def share(flags):
+                return float(w[flags[members]].sum()) / people * 100
+
+            rows.append(
+                {
+                    "reform_id": reform_id,
+                    "reform_name": reform_name,
+                    "year": year,
+                    "age_band": label,
+                    "people": people,
+                    "sample_size": int(members.sum()),
+                    "mean_change": float((w * change[members]).sum()) / people,
+                    "mean_equivalised_change": float(
+                        (w * equivalised[members]).sum()
+                    )
+                    / people,
+                    "pct_better_off": share(better),
+                    "pct_worse_off": share(worse),
+                    "pct_unchanged": share(~better & ~worse),
+                    "people_directly_affected": float(
+                        w[direct[members]].sum()
+                    ),
+                }
+            )
+        return rows
+
+
 def get_standard_calculators(
     years: list[int] = None,
-    income_curve_max: int = 150_000,
     income_curve_points: int = 201,
     household_scatter_max: int = 150_000,
 ) -> dict[str, BaseCalculator]:
@@ -837,14 +982,13 @@ def get_standard_calculators(
 
     Args:
         years: Years for budgetary calculations.
-        income_curve_max: Max income for curve calculation.
         income_curve_points: Number of points on income curve.
         household_scatter_max: Max income for scatter plot.
 
     Returns:
         Dict mapping calculator name to calculator instance.
     """
-    years = years or [2026, 2027, 2028, 2029, 2030]
+    years = years or list(POLICY_YEARS)
 
     return {
         "budgetary": BudgetaryImpactCalculator(years=years),
@@ -852,7 +996,6 @@ def get_standard_calculators(
         "winners_losers": WinnersLosersCalculator(),
         "metrics": MetricsCalculator(),
         "income_curve": IncomeCurveCalculator(
-            max_income=income_curve_max,
             num_points=income_curve_points,
         ),
         "household_scatter": HouseholdScatterCalculator(
@@ -860,4 +1003,5 @@ def get_standard_calculators(
         ),
         "constituency": ConstituencyCalculator(),
         "demographic_constituency": DemographicConstituencyCalculator(),
+        "age_impact": AgeImpactCalculator(),
     }

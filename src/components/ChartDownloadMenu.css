@@ -1,0 +1,105 @@
+.chart-download,
+.chart-header > .chart-download {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* Icon only: a 36px square (40px on a phone) */
+.chart-download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-gray-600);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chart-download-button:hover,
+.chart-download-button[aria-expanded="true"] {
+  color: var(--pe-teal-700);
+  border-color: var(--pe-teal-500);
+}
+
+.chart-download-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  min-width: 168px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: var(--pe-radius-md);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
+}
+
+.chart-download-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  color: var(--pe-gray-900);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chart-download-item:hover:not(:disabled) {
+  background: var(--pe-teal-50);
+}
+
+.chart-download-item:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.chart-download-format {
+  font-weight: 600;
+}
+
+.chart-download-detail {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+/* Phone: 40px targets; the list opens to the right of the button */
+@media (max-width: 768px) {
+  /* Top right of the title row, 32px */
+  .chart-download-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chart-download-item {
+    align-items: center;
+    min-height: 40px;
+  }
+
+  .lifecycle-chart-footer .chart-download-menu {
+    right: auto;
+    left: 0;
+  }
+}
+
+.chart-download-button:disabled {
+  color: var(--pe-gray-400);
+  border-color: var(--pe-gray-200);
+  background: var(--pe-gray-50);
+  cursor: not-allowed;
+}

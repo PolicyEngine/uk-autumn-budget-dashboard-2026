@@ -24,6 +24,7 @@ from policyengine.disclosure.schema import PUBLIC_COLUMNS, WITHHELD
 
 from tests import geography_fixture
 from uk_budget_data import geography as g
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.private_outputs import AUDIT_DIR_ENV, PrivateOutputError
 
 REPO = Path(__file__).resolve().parents[1]
@@ -762,6 +763,7 @@ def test_the_reform_processor_feeds_a_collector_each_year():
         "metrics_calc",
         "income_curve_calc",
         "household_scatter_calc",
+        "age_calc",
     ):
         setattr(processor, name, Stub())
     processor.distributional_calc = SimpleNamespace(
@@ -1417,7 +1419,7 @@ def test_geography_arguments():
     assert parsed.levels == ["region", "constituency"]
     assert parsed.seat_reforms is None and parsed.reforms is None
     assert parsed.seat_lookup is None
-    assert parsed.years == [2026, 2027, 2028, 2029, 2030]
+    assert parsed.years == POLICY_YEARS
     assert parsed.out_dir == Path("public/data")
     assert parsed.manifest == Path("public/data/manifest.json")
     parsed = parse_args(

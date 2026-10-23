@@ -1,0 +1,202 @@
+/**
+ * The household scatter, as published in public/data/household_scatter_binned.csv.
+ *
+ * Households are never shown one by one: each row is one cell of baseline
+ * income band by income change band, with the weighted number of
+ * households in it (`uk-budget-data generate --only household_scatter`).
+ * Cells with fewer than the floor of survey households are left out, and
+ * counts are rounded, so the cells need not cover every household.
+ *
+ * Cells are published per reform and never added up by the page: one
+ * measure shows its own cells, every measure shows the package's, and any
+ * other selection shows a notice (as the constituency map does).
+ */
+
+import { fiscalYearLabel } from "./publication/format";
+import { buildChartCsv } from "./chartCsv";
+import { chooseReform } from "./geography/selection";
+import { bandLabel, SCATTER_BINS } from "./publication/scatter";
+
+export const SCATTER_FILE = "household_scatter_binned.csv";
+
+const COLUMNS = [
+  "reform_id",
+  "reform_name",
+  "year",
+  "income_band",
+  "change_band",
+  "households",
+];
+const NUMERIC = new Set(["year", "income_band", "change_band", "households"]);
+
+function splitCsvLine(line) {
+  const fields = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    if (quoted) {
+      if (char === '"' && line[i + 1] === '"') {
+        field += '"';
+        i += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      fields.push(field);
+      field = "";
+    } else {
+      field += char;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+/**
+ * Parse the published file. Throws if its columns are not the contract's
+ * or a number does not parse, so a malformed file shows nothing.
+ *
+ * @param {string} text
+ * @returns {Array<{reform_id: string, reform_name: string, year: number,
+ *   income_band: number, change_band: number, households: number}>}
+ */
+export function parseScatterCsv(text) {
+  const lines = text
+    .replace(/^﻿/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.length > 0);
+  const header = splitCsvLine(lines[0] ?? "");
+  if (header.join(",") !== COLUMNS.join(",")) {
+    throw new Error(`${SCATTER_FILE}: unexpected columns`);
+  }
+  return lines.slice(1).map((line) => {
+    const values = splitCsvLine(line);
+    const row = {};
+    COLUMNS.forEach((column, i) => {
+      const value = values[i] ?? "";
+      if (NUMERIC.has(column)) {
+        const number = Number(value);
+        if (value === "" || !Number.isFinite(number)) {
+          throw new Error(`${SCATTER_FILE}: ${column} is not a number`);
+        }
+        row[column] = number;
+      } else {
+        row[column] = value;
+      }
+    });
+    return row;
+  });
+}
+
+const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
+
+/**
+ * What the scatter can show for a selection.
+ *
+ * @param {Object} options
+ * @param {{status: "loading"|"ready"|"unavailable"|"error",
+ *   rows: Array<Object>|null}} options.data
+ * @param {Array<string>} options.selectedIds
+ * @param {Array<string>} options.policyIds - Every measure the page offers.
+ * @param {number} options.year
+ * @returns {{kind: "loading"} | {kind: "notice", reason: string,
+ *   detail: string|null} | {kind: "points", reform: string,
+ *   points: Array<Object>}}
+ */
+export function scatterView({ data, selectedIds, policyIds, year }) {
+  if (data.status === "loading") return { kind: "loading" };
+  if (data.status !== "ready") {
+    return notice("Household results are not yet published.");
+  }
+  const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
+  const choice = chooseReform({ selectedIds, policyIds, reforms });
+  if (choice.kind === "none") {
+    return notice("Select a measure to see household results.");
+  }
+  if (choice.kind === "pick") {
+    return notice(
+      "Household results are shown for one measure at a time, or for all measures together.",
+      "Select one measure, or all of them. Groups of households are published for each measure separately and are not added together.",
+    );
+  }
+  if (choice.kind === "no-package") {
+    return notice("Household results are not yet published for the full package.");
+  }
+  if (!reforms.includes(choice.reform)) {
+    return notice("Household results are not yet published for this measure.");
+  }
+  const bins = SCATTER_BINS;
+  const points = data.rows
+    // A cell whose count rounds to nothing has no bubble to draw.
+    .filter(
+      (row) =>
+        row.reform_id === choice.reform && row.year === year && row.households > 0,
+    )
+    .map((row) => ({
+      income: row.income_band + bins.income_band_width / 2,
+      change: row.change_band + bins.change_band_width / 2,
+      households: row.households,
+      incomeBand: row.income_band,
+      changeBand: row.change_band,
+    }));
+  if (points.length === 0) {
+    return notice(
+      `No household results are published for this measure in ${fiscalYearLabel(year)}.`,
+    );
+  }
+  return { kind: "points", reform: choice.reform, points };
+}
+
+const wholePounds = (value) =>
+  `£${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value)}`;
+const signedPounds = (value) =>
+  `${value < 0 ? "−" : ""}${wholePounds(Math.abs(value))}`;
+
+/** A cell's baseline income band, as words (outer bands open-ended). */
+export const incomeBandLabel = (lower) =>
+  bandLabel(
+    lower,
+    SCATTER_BINS.income_band_width,
+    SCATTER_BINS.income_min,
+    SCATTER_BINS.income_max,
+    wholePounds,
+  );
+
+/** A cell's income change band, as words (outer bands open-ended). */
+export const changeBandLabel = (lower) =>
+  bandLabel(
+    lower,
+    SCATTER_BINS.change_band_width,
+    SCATTER_BINS.change_min,
+    SCATTER_BINS.change_max,
+    signedPounds,
+  );
+
+/** The cells a chart shows, as a CSV download. */
+export function scatterCsv(points, { title }) {
+  return buildChartCsv({
+    title,
+    units:
+      "£ a year (bands of baseline household net income and of its change); households (weighted, rounded to the nearest 1,000)",
+    columns: [
+      { key: "income", label: "Baseline income band" },
+      { key: "change", label: "Change band" },
+      { key: "households", label: "Households", decimals: 0 },
+    ],
+    rows: [...points]
+      .sort((a, b) => a.incomeBand - b.incomeBand || a.changeBand - b.changeBand)
+      .map((point) => ({
+        income: incomeBandLabel(point.incomeBand),
+        change: changeBandLabel(point.changeBand),
+        households: point.households,
+      })),
+    notes: [
+      `Groups with fewer than ${SCATTER_BINS.min_households} surveyed households are not shown; the outer bands include everything beyond them.`,
+    ],
+  });
+}

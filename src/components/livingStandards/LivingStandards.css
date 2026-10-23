@@ -1,0 +1,537 @@
+/* Living standards view: the dashboard's cards, section headings and chart
+   theme (globals.css), plus the few parts the other views do not have:
+   in-card notes and source lines, the dot plot, forecast tiles and tables,
+   and the provenance line. Colours come from the PolicyEngine tokens. */
+
+/* Provenance: the view's engine, data and demo status, said once */
+.ls-provenance {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.ls-demo-badge {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.6;
+  color: #92400e;
+  background: #fef3c7;
+}
+
+/* Sections: two-up rows of cards, 20px apart, and notes under them */
+.ls-section > .charts-grid + .charts-grid {
+  margin-top: 20px;
+}
+
+.ls-section > .note {
+  margin-top: 16px;
+}
+
+/* Cards */
+.main-content .ls-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main-content .ls-card .chart-description strong {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.ls-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.ls-controls:empty {
+  margin: 0;
+}
+
+/* In-card pill lists open from the pill's left edge, inside the card */
+.ls-controls .pill-select-list,
+.ls-section-controls .pill-select-list {
+  left: 0;
+  right: auto;
+}
+
+/* A long choice shortens with an ellipsis rather than leave the card */
+.ls-controls .pill-select,
+.ls-controls .pill-select-toggle {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ls-controls .pill-select-light .pill-select-badge {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 24px;
+  flex-shrink: 1;
+}
+
+.ls-controls .pill-select-prefix,
+.ls-controls .policy-selector-icon {
+  flex-shrink: 0;
+}
+
+.ls-card-footer {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* "About this chart" sits at the foot of the card, so in two cards side
+   by side the two disclosures line up */
+.ls-card-footer > .disclosure-in-card {
+  margin-top: auto;
+}
+
+.ls-card-footer > :has(+ .disclosure-in-card) {
+  margin-bottom: 16px;
+}
+
+.ls-card-footer:has(> .disclosure-in-card:first-child) {
+  padding-top: 16px;
+}
+
+/* The plot, legend and logo rows a chart fills are rows of the card */
+.ls-chart-rows {
+  display: contents;
+}
+
+@media (min-width: 1025px) {
+  /* Rows 4 to 7 of a paired card (see the charts-grid rules in globals.css) */
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-plot,
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-legend,
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-logo,
+  .charts-grid > div:not(:only-child) > .ls-card-footer {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-plot {
+    grid-row: 4;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-legend {
+    grid-row: 5;
+    align-self: start;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-chart-rows > .chart-logo {
+    grid-row: 6;
+  }
+
+  .charts-grid > div:not(:only-child) > .ls-card-footer {
+    grid-row: 7;
+  }
+}
+
+/* An empty plot keeps the height of the chart it stands in for */
+.ls-card .plot-empty {
+  min-height: 330px;
+}
+
+.ls-source {
+  margin: 10px 0 0;
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+.ls-source a {
+  color: var(--pe-teal-700);
+}
+
+.ls-source-label {
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+/* What the baseline leaves out: the caveats as body text */
+.main-content .ls-caveats {
+  padding: var(--card-padding);
+}
+
+.ls-caveats ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.ls-caveats li + li {
+  margin-top: 6px;
+}
+
+.stat-sub.change-positive,
+.ls-table td.change-positive {
+  color: var(--pe-teal-700);
+}
+
+.stat-sub.change-negative,
+.ls-table td.change-negative {
+  color: #b91c1c;
+}
+
+.ls-section-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.ls-section-controls .pill-select {
+  position: relative;
+}
+
+/* Forecast tables */
+.ls-table-wrapper {
+  overflow-x: auto;
+}
+
+.ls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.ls-table th,
+.ls-table td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: none;
+}
+
+.ls-table thead th {
+  font-weight: 600;
+  color: var(--pe-gray-700);
+  border-bottom: 1px solid var(--card-border);
+  vertical-align: bottom;
+}
+
+.ls-table th:first-child,
+.ls-table td:first-child {
+  text-align: left;
+}
+
+.ls-table td {
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-700);
+}
+
+.ls-table td.pending {
+  color: var(--pe-gray-500);
+  font-style: italic;
+}
+
+/* About this data */
+.ls-meta-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-600);
+}
+
+.ls-meta-list dt {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.ls-meta-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ls-meta-list a,
+.ls-meta-notes a {
+  color: var(--pe-teal-700);
+}
+
+.ls-meta-notes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.ls-meta-notes li + li {
+  margin-top: 4px;
+}
+
+.ls-technical-notes {
+  margin-top: 12px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.ls-technical-notes summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+/* Poverty and income by group: a dot plot drawn in HTML */
+.ls-dot-plot {
+  --dot-cols: minmax(150px, 250px) minmax(0, 1fr) 170px;
+  margin: 8px 0 4px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.ls-dot-plot .dot-head,
+.ls-dot-plot .dot-row {
+  display: grid;
+  grid-template-columns: var(--dot-cols);
+  align-items: center;
+  column-gap: 16px;
+}
+
+.ls-dot-plot .dot-head {
+  min-height: 22px;
+}
+
+.ls-dot-plot .dot-row {
+  min-height: 34px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.ls-dot-plot .dot-axis {
+  border-top: 1px solid var(--pe-gray-200);
+  min-height: 22px;
+}
+
+.ls-dot-plot .dot-label {
+  line-height: 1.3;
+}
+
+.ls-dot-plot .dot-plot-area {
+  position: relative;
+  align-self: stretch;
+  margin: 0 8px;
+}
+
+.ls-dot-plot .dot-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--pe-gray-100);
+}
+
+.ls-dot-plot .dot-all {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--pe-gray-400);
+}
+
+.ls-dot-plot .dot-all-label {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.ls-dot-plot .dot-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.ls-dot-plot .dot-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 3px;
+}
+
+.ls-dot-plot .dot-legend i.from,
+.ls-dot-plot .dot.from {
+  background: var(--pe-gray-400);
+}
+
+.ls-dot-plot .dot-legend i.to,
+.ls-dot-plot .dot.to {
+  background: var(--pe-teal-500);
+}
+
+.ls-dot-plot .dot-link {
+  position: absolute;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: #b8c4cc;
+}
+
+.ls-dot-plot .dot-arrow {
+  position: absolute;
+  top: -3px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.ls-dot-plot .dot-arrow.right {
+  right: 6px;
+  border-left: 6px solid #8a9aa5;
+}
+
+.ls-dot-plot .dot-arrow.left {
+  left: 6px;
+  border-right: 6px solid #8a9aa5;
+}
+
+.ls-dot-plot .dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.ls-dot-plot .dot-values {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ls-dot-plot .dot-nums {
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+.ls-dot-plot .dot-chip {
+  min-width: 52px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ls-dot-plot .dot-chip.good {
+  background: var(--pe-teal-50);
+  color: var(--pe-teal-700);
+}
+
+.ls-dot-plot .dot-chip.bad {
+  background: #fdf0e1;
+  color: #b45309;
+}
+
+.ls-dot-plot .dot-chip.flat {
+  background: var(--pe-gray-100);
+  color: var(--pe-gray-500);
+}
+
+.ls-dot-plot .dot-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .ls-provenance {
+    font-size: var(--fs-caption);
+  }
+
+  .ls-section-controls {
+    justify-content: flex-start;
+  }
+
+  .ls-meta-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .ls-meta-list dd {
+    margin-bottom: 8px;
+  }
+
+  /* Phones: label on its own line, then the plot and the values */
+  .ls-dot-plot {
+    --dot-cols: minmax(0, 1fr) 150px;
+  }
+
+  .ls-dot-plot .dot-head,
+  .ls-dot-plot .dot-row {
+    column-gap: 8px;
+  }
+
+  .ls-dot-plot .dot-row {
+    row-gap: 2px;
+    padding: 6px 0;
+  }
+
+  .ls-dot-plot .dot-row .dot-label {
+    grid-column: 1 / -1;
+  }
+
+  .ls-dot-plot .dot-row .dot-plot-area {
+    min-height: 20px;
+    margin: 0 4px;
+  }
+
+  .ls-dot-plot .dot-head .dot-label,
+  .ls-dot-plot .dot-axis .dot-label {
+    display: none;
+  }
+
+  .ls-dot-plot .dot-head .dot-legend {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    margin-bottom: 18px;
+  }
+
+  .ls-dot-plot .dot-head .dot-plot-area {
+    grid-row: 2;
+    min-height: 18px;
+  }
+
+  .ls-dot-plot .dot-nums {
+    font-size: var(--fs-micro);
+  }
+
+  .ls-dot-plot .dot-chip {
+    min-width: 0;
+    padding: 1px 5px;
+  }
+
+  .ls-dot-plot .dot-values {
+    gap: 5px;
+  }
+}

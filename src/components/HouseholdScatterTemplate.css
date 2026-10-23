@@ -1,0 +1,68 @@
+.household-scatter-template-plot {
+  position: relative;
+}
+
+/* The empty plot's note, centred over the plot area */
+.household-scatter-template-note {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 8px 14px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  max-width: min(90%, 420px);
+  text-align: center;
+}
+
+.household-scatter-template-note p {
+  margin: 0;
+}
+
+.household-scatter-template-note .household-scatter-template-detail {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+/* The floor under the key, as small print */
+.household-scatter-floor {
+  margin: 6px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--pe-gray-600, #4B5563);
+}
+
+/* Colour and size key, centred like the chart legends */
+.scatter-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--pe-gray-700);
+}
+
+.scatter-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scatter-key-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.scatter-key-size {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--pe-gray-400);
+  border-radius: 50%;
+}

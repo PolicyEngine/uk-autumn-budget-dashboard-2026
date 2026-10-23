@@ -1,67 +1,21 @@
 .obr-comparison-section {
   margin-top: 48px;
   padding-top: 32px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--pe-gray-200);
 }
 
 .obr-comparison-section h2 {
-  font-size: 1.25rem;
+  font-size: var(--fs-section);
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
   margin: 0 0 12px 0;
 }
 
 .comparison-description {
-  font-size: 0.95rem;
-  color: #4b5563;
+  font-size: var(--fs-body);
+  color: var(--pe-gray-600);
   line-height: 1.6;
   margin-bottom: 16px;
-}
-
-/* Static/Behavioural Toggle */
-.obr-toggle-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.toggle-label {
-  font-size: 0.875rem;
-  color: #4b5563;
-  font-weight: 500;
-}
-
-.toggle-buttons {
-  display: flex;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.toggle-btn {
-  padding: 6px 14px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  background: white;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.toggle-btn:first-child {
-  border-right: 1px solid #d1d5db;
-}
-
-.toggle-btn:hover:not(.active) {
-  background: #f3f4f6;
-}
-
-.toggle-btn.active {
-  background: #319795;
-  color: white;
 }
 
 .comparison-table-wrapper {
@@ -72,20 +26,32 @@
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
 }
 
 .comparison-table th,
 .comparison-table td {
-  padding: 10px 12px;
+  padding: 7px 10px;
   text-align: right;
-  border: 1px solid #e5e7eb;
+  border: none;
 }
 
 .comparison-table th {
-  background: #f9fafb;
+  background: transparent;
   font-weight: 600;
-  color: #374151;
+  color: var(--pe-gray-700);
+}
+
+/* The only rule: under the header */
+.comparison-table thead {
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* Space, not rules, between the year pairs */
+.comparison-table .year-header,
+.comparison-table .source-header.pe,
+.comparison-table .value-cell.pe {
+  padding-left: 22px;
 }
 
 .comparison-table th:first-child,
@@ -99,41 +65,34 @@
 }
 
 .source-header {
-  font-size: 0.75rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .source-header.pe {
-  background: #f0fdfa;
-  color: #0d9488;
+  color: var(--pe-teal-700);
 }
 
 .source-header.obr {
-  background: #fef3c7;
-  color: #92400e;
+  color: var(--pe-gray-500);
 }
 
 .policy-name-cell {
   font-weight: 500;
-  color: #374151;
+  color: var(--pe-gray-700);
   white-space: nowrap;
 }
 
 .value-cell {
-  font-family:
-    "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono",
-    "Source Code Pro", monospace;
-  font-size: 0.8125rem;
-}
-
-.value-cell.pe {
-  background: #f0fdfa;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-caption);
+  white-space: nowrap;
 }
 
 .value-cell.obr {
-  background: #fffbeb;
+  color: var(--pe-gray-500);
 }
 
 /* Difference highlighting */
@@ -177,14 +136,16 @@
   display: flex;
   gap: 24px;
   margin-bottom: 16px;
-  font-size: 0.8125rem;
-  color: #6b7280;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: var(--fs-caption);
+  color: #64748b;
 }
 
 .legend-dot {
@@ -205,26 +166,10 @@
   background: #ef4444;
 }
 
-.comparison-note {
-  font-size: 0.8125rem;
-  color: #6b7280;
-  line-height: 1.5;
-  margin-top: 16px;
-}
-
-.comparison-note a {
-  color: #0d9488;
-  text-decoration: none;
-}
-
-.comparison-note a:hover {
-  text-decoration: underline;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .comparison-table {
-    font-size: 0.75rem;
+    font-size: var(--fs-micro);
   }
 
   .comparison-table th,
@@ -235,5 +180,66 @@
   .comparison-legend {
     flex-wrap: wrap;
     gap: 12px;
+  }
+
+  /* Policy names wrap and stay in view while the years scroll sideways */
+  .comparison-table thead tr:first-child th:first-child,
+  .policy-name-cell {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #ffffff;
+    white-space: normal;
+    min-width: 128px;
+    max-width: 150px;
+  }
+}
+
+/* The PE header opens its row, so the first-column rule must not left-align it */
+.comparison-table th.source-header {
+  text-align: right;
+}
+
+/* The difference key, one inline line */
+.comparison-legend {
+  display: block;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.comparison-legend .legend-item {
+  display: inline-flex;
+  margin-right: 10px;
+}
+
+/* The table sits behind a toggle under the dumbbell chart */
+/* Show table: the light pill button (PillSelect.css .light-pill-button) */
+.obr-table-toggle {
+  margin-bottom: 12px;
+}
+
+.comparison-table-wrapper[hidden],
+.comparison-legend[hidden] {
+  display: none;
+}
+
+/* Intro left, the OBR basis pill right, top-aligned; on a phone the pill
+   goes above the intro */
+.obr-intro-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.obr-intro-row .comparison-description {
+  flex: 1;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .obr-intro-row {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 }
