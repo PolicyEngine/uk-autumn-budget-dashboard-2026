@@ -20,9 +20,9 @@ jobs:
     # Three parts on three runners at once. Two parts stopped fitting: on 23
     # October, after #90 and #96, "the rest" took 29 of its 30 minutes
     # (1,937 tests, 28:25 of pytest at 4473f83), so the next test added
-    # crossed the limit. The model-limit and template files, about 43% of
-    # that part's worker-seconds, now run on their own; data limits took 12
-    # minutes. A test file named in no part runs in "the rest", and
+    # crossed the limit. The model-limit and template files, about half of
+    # that part's worker-seconds on CI, now run on their own; data limits
+    # took 12 minutes. A test file named in no part runs in "the rest", and
     # tests/test_ci_parts.py checks that the parts partition the suite.
     timeout-minutes: 30
     strategy:

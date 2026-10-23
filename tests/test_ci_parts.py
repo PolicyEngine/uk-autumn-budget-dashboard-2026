@@ -15,12 +15,12 @@ REPO = Path(__file__).resolve().parent.parent
 WORKFLOW = yaml.safe_load(
     (REPO / ".github" / "workflows" / "ci.yml").read_text()
 )
-PARTS = {
-    entry["part"]: entry["tests"].split()
-    for entry in WORKFLOW["jobs"]["python-test-parts"]["strategy"]["matrix"][
-        "include"
-    ]
+JOB = WORKFLOW["jobs"]["python-test-parts"]
+RAW = {
+    entry["part"]: entry["tests"]
+    for entry in JOB["strategy"]["matrix"]["include"]
 }
+PARTS = {part: tests.split() for part, tests in RAW.items()}
 REST = "the rest"
 
 
@@ -82,3 +82,22 @@ def test_the_required_check_waits_for_every_part():
     assert aggregate["needs"] == "python-test-parts"
     assert aggregate["if"] == "always()"
     assert 'test "$PARTS" = success' in aggregate["steps"][0]["run"]
+
+
+def test_each_part_is_one_line_of_arguments():
+    """A part written with `|` or `>` instead of `>-` keeps newlines, which
+    the shell's line breaks would turn into separate commands in CI."""
+    assert {part: tests for part, tests in RAW.items() if "\n" in tests} == {}
+
+
+def test_the_run_line_takes_its_paths_from_the_part_only():
+    """The test step passes the part's arguments and adds no paths of its
+    own, so the partition above is what CI runs."""
+    run = next(
+        step["run"]
+        for step in JOB["steps"]
+        if "pytest" in str(step.get("run", ""))
+    )
+    assert "${{ matrix.tests }}" in run
+    words = run.replace("${{ matrix.tests }}", "").split()
+    assert not [word for word in words if word.startswith("tests")]
