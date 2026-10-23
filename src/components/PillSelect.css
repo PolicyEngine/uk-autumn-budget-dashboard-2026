@@ -54,6 +54,34 @@
   color: var(--pe-teal-700);
 }
 
+.pill-select-option.is-disabled {
+  color: var(--pe-gray-400);
+  cursor: not-allowed;
+}
+
+.pill-select-option.is-disabled.is-active {
+  background: var(--pe-gray-50);
+}
+
+/* stableWidth: the faces share one grid cell, so the pill is as wide as
+   the widest; the others keep their space but are not shown */
+.pill-select-faces {
+  display: inline-grid;
+  justify-items: start;
+}
+
+.pill-select-face {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  visibility: hidden;
+}
+
+.pill-select-face.is-chosen {
+  visibility: visible;
+}
+
 .pill-select-check {
   width: 14px;
   color: var(--pe-teal-700);

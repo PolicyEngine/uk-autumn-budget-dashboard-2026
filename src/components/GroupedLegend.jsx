@@ -10,11 +10,15 @@ const SUB_GAP = 24;
 
 /**
  * Split legend items into the two groups, "Raise revenue" then "Cost
- * revenue", keeping their order; empty groups are left out.
+ * revenue", keeping their order; empty groups are left out. Items that are
+ * not policies (no `raises`) form one group with no heading.
  *
- * @param {Array<{label: string, color: string, raises: boolean}>} items
+ * @param {Array<{label: string, color: string, raises?: boolean}>} items
  */
 export function legendGroups(items) {
+  if (items.length > 0 && items.every((item) => item.raises === undefined)) {
+    return [[null, items]];
+  }
   return [
     ["Raise revenue", items.filter((item) => item.raises)],
     ["Cost revenue", items.filter((item) => !item.raises)],
@@ -28,6 +32,40 @@ export const policyItems = (names) =>
     color: POLICY_COLORS[name],
     raises: REVENUE_RAISING_NAMES.has(name),
   }));
+
+/** A legend key: a square, or a short line (dashed when `dash` is set). */
+function Swatch({ item, measure = false }) {
+  if (item.type === "line") {
+    return (
+      <svg
+        className="grouped-legend-swatch-line"
+        width="20"
+        height="10"
+        viewBox="0 0 20 10"
+        aria-hidden="true"
+      >
+        {!measure && (
+          <line
+            x1="0"
+            y1="5"
+            x2="20"
+            y2="5"
+            stroke={item.color}
+            strokeWidth="2.5"
+            strokeDasharray={item.dash}
+          />
+        )}
+      </svg>
+    );
+  }
+  return (
+    <span
+      className="grouped-legend-swatch"
+      style={measure ? undefined : { background: item.color }}
+      aria-hidden="true"
+    />
+  );
+}
 
 /**
  * A chart legend: the groups side by side as columns (each a tidy list,
@@ -88,11 +126,13 @@ function GroupedLegend({ names, items, netLabel }) {
       {/* Off-screen copy, one line per item, to measure natural widths */}
       <div ref={measureRef} className="grouped-legend-measure" aria-hidden="true">
         {groups.map(([heading, groupItems]) => (
-          <div key={heading} data-group>
-            <span data-measure className="grouped-legend-heading">{heading}</span>
+          <div key={heading ?? "items"} data-group>
+            {heading && (
+              <span data-measure className="grouped-legend-heading">{heading}</span>
+            )}
             {groupItems.map((item) => (
               <span key={item.label} data-measure className="grouped-legend-measure-item">
-                <span className="grouped-legend-swatch" />
+                <Swatch item={item} measure />
                 {item.label}
               </span>
             ))}
@@ -103,16 +143,12 @@ function GroupedLegend({ names, items, netLabel }) {
         {groups.map(([heading, groupItems]) => {
           const split = layout === "split" && groupItems.length > SPLIT_ABOVE;
           return (
-            <div key={heading} className="grouped-legend-group">
-              <p className="grouped-legend-heading">{heading}</p>
+            <div key={heading ?? "items"} className="grouped-legend-group">
+              {heading && <p className="grouped-legend-heading">{heading}</p>}
               <ul className={`grouped-legend-items ${split ? "is-split" : ""}`}>
                 {groupItems.map((item) => (
                   <li key={item.label}>
-                    <span
-                      className="grouped-legend-swatch"
-                      style={{ background: item.color }}
-                      aria-hidden="true"
-                    />
+                    <Swatch item={item} />
                     <span className="grouped-legend-label">{item.label}</span>
                   </li>
                 ))}

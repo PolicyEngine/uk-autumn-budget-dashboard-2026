@@ -96,6 +96,11 @@
   margin-top: 3px;
 }
 
+.grouped-legend-swatch-line {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
 .grouped-legend-net {
   display: inline-flex;
   align-items: center;

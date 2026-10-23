@@ -1,0 +1,239 @@
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Customized,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
+import GroupedLegend from "../GroupedLegend";
+import ChartUnitLabel from "../../utils/ChartUnitLabel";
+import { CHART_LOGO } from "../../utils/chartLogo";
+import useElementWidth from "../../hooks/useElementWidth";
+import {
+  AXIS_LINE,
+  AXIS_TITLE_STYLE,
+  GRID_PROPS,
+  TICK_STYLE,
+  axisWidth,
+  useNarrowViewport,
+} from "../../utils/chartTheme";
+import { fyLabel, fyShortLabel } from "../../utils/livingStandards/outlook";
+
+/** Lines on one chart differ in pattern as well as colour. */
+export const dashOf = (s) => s.dash ?? (s.dashed ? "8 4" : undefined);
+
+/** Legend items for a line chart's series (GroupedLegend and the exports). */
+export const lineLegendItems = (series) =>
+  series.filter((s) => !s.hidden).map((s) => ({ label: s.name, color: s.colour, type: "line", dash: dashOf(s) }));
+
+// Width a "2025–26" tick needs at 12px; below it the axis uses "25–26"
+const LONG_YEAR_TICK = 60;
+// Width a "25–26" tick needs; below it every other year is labelled
+const SHORT_YEAR_TICK = 38;
+
+/**
+ * X-axis ticks that fit the plot. Fiscal years: full, short, or every
+ * other. Other labels (calendar years): every one, or every other.
+ */
+function xTicksFor({ width, count, yAxisWidth, fiscal, xFormat }) {
+  const perTick = count ? Math.max(0, width - yAxisWidth - 8) / count : 0;
+  if (!fiscal) return { tickFormatter: xFormat, interval: !width || perTick >= SHORT_YEAR_TICK ? 0 : 1 };
+  if (!width || perTick >= LONG_YEAR_TICK) return { tickFormatter: fyLabel, interval: 0 };
+  return { tickFormatter: fyShortLabel, interval: perTick >= SHORT_YEAR_TICK ? 0 : 1 };
+}
+
+// The shared axisWidth sizes digits; "%", "£" and "−" are wider, so give
+// the ticks a little more room.
+const tickWidth = (ticks, format) => axisWidth(ticks?.length ? ticks : [0], format) + 12;
+
+// The plot's height. An x-axis title adds its own height, so the x axes of
+// two cards side by side stay level.
+const X_AXIS_HEIGHT = 30;
+const X_TITLE_HEIGHT = 18;
+const plotHeight = (narrow, xLabel) => (narrow ? 280 : 300) + (xLabel ? X_TITLE_HEIGHT : 0);
+// Room for the unit label above the plot, and for the last x tick at the right
+const MARGIN = { top: 24, right: 30, left: 0, bottom: 0 };
+
+/**
+ * The card rows a chart fills: the plot, then its legend, then the logo
+ * (each its own row, so two cards side by side keep them level).
+ */
+function ChartRows({ plotRef, children, legendItems }) {
+  return (
+    <>
+      <div className="chart-plot" ref={plotRef}>
+        {children}
+      </div>
+      <div className="chart-legend">
+        <GroupedLegend items={legendItems} />
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+    </>
+  );
+}
+
+/**
+ * Line chart in the dashboard's chart theme: light horizontal grid, the
+ * unit above the plot, the shared tooltip, and the shared legend and the
+ * logo in the card's rows below the plot.
+ *
+ * series: [{ key, name, colour, dash?, dashed?, hidden? }]. Hidden series
+ * are not drawn.
+ */
+export function LsLineChart({
+  data,
+  series,
+  xKey = "year",
+  xFormat = fyLabel,
+  yFormat = (v) => v,
+  tooltipFormat = yFormat,
+  showPlus = false,
+  yLabel,
+  yDomain,
+  yTicks,
+}) {
+  const narrow = useNarrowViewport();
+  const [ref, width] = useElementWidth();
+  const visible = series.filter((s) => !s.hidden);
+  const yWidth = tickWidth(yTicks, yFormat);
+  const xTicks = xTicksFor({ width, count: data.length, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat });
+
+  return (
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)}>
+      <ResponsiveContainer width="100%" height={plotHeight(narrow)}>
+        <LineChart data={data} margin={MARGIN}>
+          <CartesianGrid {...GRID_PROPS} />
+          <XAxis
+            dataKey={xKey}
+            tick={TICK_STYLE}
+            axisLine={AXIS_LINE}
+            tickLine={false}
+            height={X_AXIS_HEIGHT}
+            {...xTicks}
+          />
+          <YAxis
+            domain={yDomain}
+            ticks={yTicks}
+            tickFormatter={yFormat}
+            tick={TICK_STYLE}
+            axisLine={false}
+            tickLine={false}
+            width={yWidth}
+            allowDecimals
+          />
+          <Tooltip
+            {...TOOLTIP_PROPS}
+            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+          />
+          {visible.map((s) => (
+            <Line
+              key={s.key}
+              type="monotone"
+              dataKey={s.key}
+              name={s.name}
+              stroke={s.colour}
+              strokeWidth={2.5}
+              strokeDasharray={dashOf(s)}
+              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1 }}
+              activeDot={{ r: 5 }}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          ))}
+          <Customized component={<ChartUnitLabel text={yLabel} />} />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartRows>
+  );
+}
+
+/**
+ * Bar chart in the same theme. Bars stack when `stacked`; with
+ * `signColours` a single series is coloured by sign, and `legendItems`
+ * names the colours.
+ */
+export function LsBarChart({
+  data,
+  series,
+  xKey = "year",
+  xFormat = fyLabel,
+  xLabel,
+  yFormat = (v) => v,
+  tooltipFormat = yFormat,
+  showPlus = false,
+  yLabel,
+  yDomain,
+  yTicks,
+  stacked = false,
+  signColours = null,
+  legendItems,
+}) {
+  const narrow = useNarrowViewport();
+  const [ref, width] = useElementWidth();
+  const yWidth = tickWidth(yTicks, yFormat);
+  const xTicks = xTicksFor({ width, count: data.length, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat });
+  const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
+
+  return (
+    <ChartRows plotRef={ref} legendItems={items}>
+      <ResponsiveContainer width="100%" height={plotHeight(narrow, xLabel)}>
+        <BarChart data={data} margin={MARGIN} barCategoryGap="20%">
+          <CartesianGrid {...GRID_PROPS} />
+          <XAxis
+            dataKey={xKey}
+            tick={TICK_STYLE}
+            axisLine={AXIS_LINE}
+            tickLine={false}
+            {...xTicks}
+            height={X_AXIS_HEIGHT + (xLabel ? X_TITLE_HEIGHT : 0)}
+            label={xLabel ? { value: xLabel, position: "insideBottom", offset: 4, style: AXIS_TITLE_STYLE } : undefined}
+          />
+          <YAxis
+            domain={yDomain}
+            ticks={yTicks}
+            tickFormatter={yFormat}
+            tick={TICK_STYLE}
+            axisLine={false}
+            tickLine={false}
+            width={yWidth}
+            allowDecimals
+          />
+          <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+          <Tooltip
+            {...TOOLTIP_PROPS}
+            cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+          />
+          {series.map((s) => (
+            <Bar
+              key={s.key}
+              dataKey={s.key}
+              name={s.name}
+              fill={s.colour}
+              stackId={stacked ? "stack" : undefined}
+              maxBarSize={56}
+              isAnimationActive={false}
+            >
+              {signColours &&
+                data.map((d, i) => (
+                  <Cell key={i} fill={(d[s.key] ?? 0) < 0 ? signColours.negative : signColours.positive} />
+                ))}
+            </Bar>
+          ))}
+          <Customized component={<ChartUnitLabel text={yLabel} />} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartRows>
+  );
+}

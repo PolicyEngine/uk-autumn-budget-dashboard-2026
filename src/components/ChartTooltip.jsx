@@ -19,6 +19,8 @@ export const signed = (text, value) => (value < 0 ? `−${text}` : text);
  * @param {boolean} [props.grouped] - Group policy rows (default true)
  * @param {{key: string, label: string, color: string}} [props.single] - Show
  *   one value from the hovered point instead of the series
+ * @param {boolean} [props.showPlus] - Mark rises with "+" as well as falls
+ *   with "−" (for changes)
  */
 function ChartTooltip({
   active,
@@ -30,6 +32,7 @@ function ChartTooltip({
   netLabel = "Net impact",
   grouped = true,
   single,
+  showPlus = false,
 }) {
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
@@ -61,7 +64,8 @@ function ChartTooltip({
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 
-  const valueText = (value) => signed(format(Math.abs(value)), value);
+  const valueText = (value) =>
+    showPlus && value > 0 ? `+${format(value)}` : signed(format(Math.abs(value)), value);
 
   return (
     <div className="chart-tooltip">

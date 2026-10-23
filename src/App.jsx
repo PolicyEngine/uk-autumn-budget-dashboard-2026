@@ -15,6 +15,8 @@ import HouseholdScatterTemplate from "./components/HouseholdScatterTemplate";
 import YearSlider from "./components/YearSlider";
 import PillSelect from "./components/PillSelect";
 import ReplicationLine from "./components/ReplicationLine";
+import SectionHeading from "./components/SectionHeading";
+import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -93,6 +95,17 @@ const POLICIES = [
   },
 ];
 
+// The views in the band's view pill. The Living standards view is the
+// pre-Budget baseline outlook: the year and policy pills do not apply to it.
+export const VIEWS = [
+  { value: "dashboard", label: "Population impact", badge: "Population" },
+  { value: "personal", label: "Personal impact", badge: "Personal" },
+  { value: "living", label: "Living standards", badge: "Living", suffix: "standards" },
+];
+
+// Views that keep their own ?tab= in the URL (the Population view is the default)
+const TAB_PARAM_VIEWS = new Set(["personal", "living"]);
+
 // Preset policy combinations
 const PRESETS = [
   {
@@ -106,16 +119,6 @@ const PRESETS = [
 // scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
-
-/** A section's title and one-line subtitle, on the page above its cards. */
-function SectionHeading({ title, subtitle }) {
-  return (
-    <div className="section-heading">
-      <h2>{title}</h2>
-      <p>{subtitle}</p>
-    </div>
-  );
-}
 
 function parseCSV(csvText) {
   const lines = csvText.trim().split("\n");
@@ -176,8 +179,8 @@ function App() {
     const policiesParam = params.get("policies");
     const tabParam = params.get("tab");
 
-    if (tabParam === "personal") {
-      setActiveTab("personal");
+    if (TAB_PARAM_VIEWS.has(tabParam)) {
+      setActiveTab(tabParam);
     }
 
     if (policiesParam) {
@@ -196,8 +199,8 @@ function App() {
     // Preserve personal impact data if present
     const personalParam = params.get("personal");
 
-    if (activeTab === "personal") {
-      params.set("tab", "personal");
+    if (TAB_PARAM_VIEWS.has(activeTab)) {
+      params.set("tab", activeTab);
       params.delete("policies");
     } else {
       params.delete("tab");
@@ -467,22 +470,27 @@ function App() {
             </div>
           )}
 
-          {/* The view (Population or Personal impact): a pill like the
-              year and policy pills, switching the tab panel below */}
+          {/* The view (Population impact, Personal impact or Living
+              standards): a pill like the year and policy pills, switching the
+              tab panel below. It keeps one width whichever is chosen. */}
           <div className="band-view">
             <PillSelect
               name="View"
               label="impact"
               value={activeTab}
               onChange={handleTabChange}
-              options={[
-                { value: "dashboard", label: "Population impact", badge: "Population" },
-                { value: "personal", label: "Personal impact", badge: "Personal" },
-              ]}
+              options={VIEWS}
+              stableWidth
             />
           </div>
-          {/* The policy pill applies to both views */}
-          <div className="band-policy">
+          {/* The policy pill applies to the Population and Personal views.
+              On Living standards it keeps its place but is hidden, so the
+              band does not move. */}
+          <div
+            className={`band-policy ${activeTab === "living" ? "is-hidden" : ""}`}
+            aria-hidden={activeTab === "living" ? "true" : undefined}
+            inert={activeTab === "living"}
+          >
             <PolicySelector
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
@@ -491,7 +499,16 @@ function App() {
           </div>
         </div>
 
-        {activeTab === "personal" ? (
+        {activeTab === "living" ? (
+          <div
+            id="panel-living"
+            role="region"
+            aria-label="Living standards"
+            className="tab-panel"
+          >
+            <LivingStandardsTab />
+          </div>
+        ) : activeTab === "personal" ? (
           <div
             id="panel-personal"
             role="region"

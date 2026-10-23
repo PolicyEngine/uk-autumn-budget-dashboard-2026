@@ -11,15 +11,29 @@ import "./PillSelect.css";
  * Escape or a click outside closes, and focus returns to the button.
  *
  * @param {Object} props
- * @param {Array<{value: string, label: string, badge?: string}>} props.options
+ * @param {Array<{value: string, label: string, badge?: string, suffix?: string, disabled?: boolean, title?: string}>} props.options
+ *   - `suffix` replaces `label` after this option's badge ("" for none);
+ *   a disabled option is listed (with `title` saying why) but cannot be
+ *   chosen
  * @param {string} props.value - The chosen option's value
  * @param {(value: string) => void} props.onChange
  * @param {string} props.name - What is being chosen, for the accessible name
  * @param {string} [props.label] - Text after the badge (e.g. "impact")
  * @param {string} [props.prefix] - Muted text before the badge (light variant)
  * @param {"band"|"light"} [props.variant]
+ * @param {boolean} [props.stableWidth] - Keep the pill as wide as its widest
+ *   option, so choosing another option never moves what is beside it
  */
-function PillSelect({ options, value, onChange, name, label, prefix, variant = "band" }) {
+function PillSelect({
+  options,
+  value,
+  onChange,
+  name,
+  label,
+  prefix,
+  variant = "band",
+  stableWidth = false,
+}) {
   const [open, setOpen] = useState(false);
   const current = Math.max(
     0,
@@ -50,6 +64,7 @@ function PillSelect({ options, value, onChange, name, label, prefix, variant = "
   };
 
   const choose = (index) => {
+    if (options[index].disabled) return;
     onChange(options[index].value);
     close();
   };
@@ -81,6 +96,15 @@ function PillSelect({ options, value, onChange, name, label, prefix, variant = "
 
   const chosen = options[current];
   const optionId = (index) => `${listId}-option-${index}`;
+  const suffixOf = (option) => option.suffix ?? label;
+  const face = (option) => (
+    <>
+      <span className="policy-selector-count pill-select-badge">
+        {option.badge ?? option.label}
+      </span>
+      {suffixOf(option) && <span className="policy-selector-label">{suffixOf(option)}</span>}
+    </>
+  );
 
   return (
     <div className={`pill-select pill-select-${variant}`} ref={rootRef}>
@@ -96,16 +120,29 @@ function PillSelect({ options, value, onChange, name, label, prefix, variant = "
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-label={`${name}: ${chosen.label}`}
+        title={stableWidth ? chosen.label : undefined}
         onClick={() => {
           setActive(current);
           setOpen((isOpen) => !isOpen);
         }}
       >
         {prefix && <span className="pill-select-prefix">{prefix}</span>}
-        <span className="policy-selector-count pill-select-badge">
-          {chosen.badge ?? chosen.label}
-        </span>
-        {label && <span className="policy-selector-label">{label}</span>}
+        {stableWidth ? (
+          // Every option's face in one grid cell; only the chosen one shows
+          <span className="pill-select-faces">
+            {options.map((option, index) => (
+              <span
+                key={option.value}
+                className={`pill-select-face ${index === current ? "is-chosen" : ""}`}
+                aria-hidden={index === current ? undefined : "true"}
+              >
+                {face(option)}
+              </span>
+            ))}
+          </span>
+        ) : (
+          face(chosen)
+        )}
         <span className="policy-selector-icon" aria-hidden="true">
           {open ? "▲" : "▼"}
         </span>
@@ -128,7 +165,11 @@ function PillSelect({ options, value, onChange, name, label, prefix, variant = "
               id={optionId(index)}
               role="option"
               aria-selected={index === current}
-              className={`pill-select-option ${index === active ? "is-active" : ""}`}
+              aria-disabled={option.disabled ? "true" : undefined}
+              title={option.title}
+              className={`pill-select-option ${index === active ? "is-active" : ""} ${
+                option.disabled ? "is-disabled" : ""
+              }`}
               onClick={() => choose(index)}
               onMouseEnter={() => setActive(index)}
             >

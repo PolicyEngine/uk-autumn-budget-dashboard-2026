@@ -226,6 +226,7 @@ function createLegend(items, maxWidth, yPosition, options = {}) {
           y2: currentY,
           stroke: item.color,
           strokeWidth: 2,
+          dash: item.dash,
         });
         itemGroup.appendChild(line);
       } else {

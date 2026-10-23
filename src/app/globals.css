@@ -218,6 +218,12 @@ body {
   grid-area: view;
 }
 
+/* A band control that does not apply to the current view keeps its place
+   (so the others do not move) but is not shown */
+.title-row .is-hidden {
+  visibility: hidden;
+}
+
 .tab-panel {
   padding-top: 24px;
 }
