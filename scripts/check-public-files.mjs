@@ -6,7 +6,9 @@
 // reviewed, tables from the disclosure layer included; a pending entry
 // passes only until its expiry date. A file reviewed as a disclosure table
 // must carry the layer's public columns, and a CSV that carries them must be
-// reviewed as one. No public file may carry record-level identifiers.
+// reviewed as one. No public file may carry record-level identifiers. The
+// page's area routing status takes no review entry, and must be one of the
+// few texts uk_budget_data.area_routing writes.
 //
 // scripts/check_public_data.py runs the full check in CI, including the
 // layer's validate_public. This smaller check runs in the build, so a deploy
@@ -19,6 +21,22 @@ import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
+
+// As scripts/check_public_data.py: every text the area routing file may hold
+// (tests/test_check_public_files_build.py checks the two sets are equal).
+const AREA_ROUTING_FILE = "public/data/area-routing.json";
+export const AREA_ROUTING_CONTENTS = new Set(
+  [
+    ["available", "local_area"],
+    ["available", "area_coded_national"],
+    ["not_available", null],
+    ["not_available", "local_area"],
+    ["not_available", "area_coded_national"],
+  ].map(
+    ([views, kind]) =>
+      `${JSON.stringify({ area_views: views, regional_release_kind: kind }, null, 2)}\n`,
+  ),
+);
 
 function parseCsv(text) {
   const rows = [];
@@ -97,6 +115,13 @@ export function checkPublicFiles(root, today = new Date()) {
     const text = data.subarray(0, 8192).includes(0) ? null : data.toString("utf8");
     if (text !== null && RECORD_LEVEL.test(text)) {
       problems.push(`${name}: record-level identifiers`);
+    }
+    if (name === AREA_ROUTING_FILE) {
+      if (text === null || !AREA_ROUTING_CONTENTS.has(text)) {
+        problems.push(`${name}: not an area routing status`);
+      }
+      if (review.has(name)) problems.push(`${name}: needs no review entry`);
+      continue;
     }
     const entry = review.get(name);
     if (!entry) {
