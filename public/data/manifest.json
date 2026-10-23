@@ -12,7 +12,42 @@
     },
     "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
   },
-  "combined": {},
+  "combined": {
+    "combined--mock_employer_nics_threshold+mock_fuel_duty_cut_extended+mock_uc_taper_50pc": {
+      "approval": {
+        "artifact_sha256": "c7bfde9090c7b6c0e90623ba9d64e6da88daac79f7f44d527cf2daae96ea0a05",
+        "at": "2026-10-23T12:21:43.218571+00:00",
+        "by": "REHEARSAL approver (Budget coordinator, MOCK)",
+        "outputs_sha256": "49759786f117f6d126599cd00acf13f5948ac238065b622ec82eb699a859ae2b"
+      },
+      "artifact": "artifacts/combined--mock_employer_nics_threshold+mock_fuel_duty_cut_extended+mock_uc_taper_50pc/c7bfde9090c7b6c0",
+      "artifact_sha256": "c7bfde9090c7b6c0e90623ba9d64e6da88daac79f7f44d527cf2daae96ea0a05",
+      "data_limits": [],
+      "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
+      "measures": [
+        "mock_employer_nics_threshold",
+        "mock_fuel_duty_cut_extended",
+        "mock_uc_taper_50pc"
+      ],
+      "member_outputs_sha256": {
+        "mock_employer_nics_threshold": "fd11c8fbed505746ccd77ec188d5258c5cb93ecddbc427aa9f9cb263bde9198d",
+        "mock_fuel_duty_cut_extended": "471b930a271ce960aba57ed0d1eb0963dced2a2294358f4d78034dc3f08b53a2",
+        "mock_uc_taper_50pc": "1179db1d7f945e27b8f33b3e6e85e581bb7a5727b987dbef547384af0cbd7bb1"
+      },
+      "name": "Combined: Employer NICs threshold \u00a35,500 (MOCK), Fuel duty 5p cut to August 2027 (MOCK), Universal Credit taper 50% (MOCK)",
+      "outputs_sha256": "49759786f117f6d126599cd00acf13f5948ac238065b622ec82eb699a859ae2b",
+      "receipt_sha256": "0b2a924e90c166fc858d0baadd4543181075f9f1b8a621f6a46fd8ad744fe5fb",
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030
+      ]
+    }
+  },
   "execution": {
     "execution_identity_sha256": "60cc80691f52e85d06c5c21263c2970beae88709b90f92f4936f11f23f775661",
     "identity": {
@@ -272,8 +307,8 @@
       ]
     }
   },
-  "revision": 15,
+  "revision": 17,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-23T12:19:43.987245+00:00"
+  "updated_at": "2026-10-23T12:21:43.218709+00:00"
 }
