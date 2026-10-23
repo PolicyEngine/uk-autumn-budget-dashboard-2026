@@ -679,11 +679,16 @@ def _kept_problems(
         for part in relative.parts:
             try:
                 os.lstat(path / part)
-                names = os.listdir(path)
             except (FileNotFoundError, NotADirectoryError):
                 break
             except OSError:
                 unreadable(path / part, key)
+                break
+            try:
+                names = os.listdir(path)
+            except OSError:
+                where = path.relative_to(root).as_posix() or "."
+                problems.append(f"{where}: {key}'s artifact cannot be listed")
                 break
             if part not in names:
                 where = (path / part).relative_to(root).as_posix()
