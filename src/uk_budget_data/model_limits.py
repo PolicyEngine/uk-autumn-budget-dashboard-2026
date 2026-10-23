@@ -440,14 +440,13 @@ def _vat_grossing_factors(system) -> bool:
     its formula with one that reads no grossing factor, so that side
     counts as unfixed (fails safe); the property-surcharge template
     refuses it, since ``baseline_vat``'s formula reads neither OBR index.
-    A hand-written
-    modifier can change both things read: replacing ``baseline_vat`` on one
-    side of a model without the fix holds the measure, since the variable
-    then differs between the sides (fails safe); adding the factors to the
-    tree as built and replacing ``baseline_vat`` on both sides with formulas
-    that look up the helper makes an unfixed model count as fixed (fails
-    open). Nothing here guards the second: treat such a modifier as a
-    change to the model.
+    A hand-written modifier can change both things read: replacing
+    ``baseline_vat`` on one side of a model without the fix holds the
+    measure, since the variable then differs between the sides (fails
+    safe); adding the factors to the tree as built and replacing
+    ``baseline_vat`` on both sides with formulas that look up the helper
+    makes an unfixed model count as fixed (fails open). Nothing here
+    guards the second: treat such a modifier as a change to the model.
     """
     if not hasattr(system, "parameters"):
         return False

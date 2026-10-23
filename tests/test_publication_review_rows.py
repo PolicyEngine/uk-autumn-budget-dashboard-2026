@@ -1363,6 +1363,55 @@ def test_a_kept_artifact_that_cannot_be_listed_refuses(base, monkeypatch):
     ]
 
 
+@pytest.mark.parametrize("unreadable", ["key directory", "inner file"])
+def test_a_kept_artifact_that_cannot_be_read_refuses(
+    base, monkeypatch, unreadable
+):
+    """Where a directory can be listed but not searched, a link in it can't
+    be told from a file, and Python 3.14's ``Path.is_symlink`` answers
+    False. The run looks with lstat, and refuses where it can't."""
+    lstat = os.lstat
+    with repository(base) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        (artifact / "sub").mkdir()
+        (artifact / "sub" / "x.csv").write_text("x\n")
+        hidden = {
+            "key directory": artifact.parent,
+            "inner file": artifact / "sub" / "x.csv",
+        }[unreadable]
+
+        def refuse_the_hidden_one(path, *args, **kwargs):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return lstat(path, *args, **kwargs)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "lstat", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact cannot be read"
+    ]
+
+
+def test_a_kept_artifact_that_is_a_file_refuses(base):
+    with repository(base) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        shutil.rmtree(artifact)
+        artifact.write_text("not a directory\n")
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        where = artifact.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: delta's artifact is not a directory"
+    ]
+
+
 def test_an_artifact_spelled_otherwise_on_disk_refuses(base, monkeypatch):
     """As on a Mac's case-insensitive disk, where the manifest's spelling
     reaches a directory the disk spells otherwise: kept by the manifest's

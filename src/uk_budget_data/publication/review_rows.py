@@ -50,8 +50,8 @@ no longer names, after a correction or a re-cut. Directories left empty go
 too. It never follows a symbolic link and never deletes anything outside
 ``artifacts/``. It keeps what an entry names by the path the manifest
 spells, so it also refuses, writing and deleting nothing, if any current
-entry's artifact is reached through a symbolic link, holds one, holds a
-directory it cannot list, or is spelled otherwise on disk (as a
+entry's artifact is reached through a symbolic link, holds one, holds
+anything it cannot list or read, or is spelled otherwise on disk (as a
 case-insensitive filesystem allows). Stage everything to be kept before
 running it.
 
@@ -221,13 +221,27 @@ def _within(root: Path, path: Path) -> Optional[Path]:
     return None
 
 
+def _is_link(path: Path) -> bool:
+    """Whether ``path`` is a symbolic link, raising OSError where it
+    can't be looked at. ``Path.is_symlink`` answers False there on
+    Python 3.14, which would hide a link."""
+    return stat.S_ISLNK(os.lstat(path).st_mode)
+
+
 def _first_link(root: Path, relative: Path) -> Optional[str]:
-    """The first component of ``root / relative`` that is a symbolic link."""
+    """The first component of ``root / relative`` that is a symbolic link.
+
+    A component that isn't there ends the search; one that can't be looked
+    at raises OSError.
+    """
     path = root
     for part in relative.parts:
         path = path / part
-        if path.is_symlink():
-            return path.relative_to(root).as_posix()
+        try:
+            if _is_link(path):
+                return path.relative_to(root).as_posix()
+        except (FileNotFoundError, NotADirectoryError):
+            return None
     return None
 
 
@@ -604,22 +618,38 @@ def _kept_problems(
     ``_unreferenced`` keeps an artifact by the path its entry spells, so
     a symbolic link on the way to it or inside it, or a spelling the disk
     doesn't use (which a case-insensitive filesystem still resolves),
-    would leave its real files looking unreferenced. So would a directory
-    inside it that cannot be listed, which could hide such a link. Every
-    current entry counts, whatever its status.
+    would leave its real files looking unreferenced. So would anything on
+    the way to it or inside it that cannot be listed or looked at, which
+    could hide such a link. Every current entry counts, whatever its
+    status.
     """
     problems = []
+
+    def unreadable(path: Path, key: str) -> None:
+        where = path.relative_to(root).as_posix()
+        problems.append(f"{where}: {key}'s artifact cannot be read")
+
     for key, entry in sorted(manifest.entries().items()):
         relative = (data_root / entry.artifact).relative_to(root)
-        link = _first_link(root, relative)
+        try:
+            link = _first_link(root, relative)
+        except OSError as error:
+            unreadable(Path(error.filename or root / relative), key)
+            continue
         if link is not None:
             problems.append(f"{link}: a symbolic link on {key}'s artifact")
             continue
         path = root
         for part in relative.parts:
-            if not os.path.lexists(path / part):
+            try:
+                os.lstat(path / part)
+                names = os.listdir(path)
+            except (FileNotFoundError, NotADirectoryError):
                 break
-            if part not in os.listdir(path):
+            except OSError:
+                unreadable(path / part, key)
+                break
+            if part not in names:
                 where = (path / part).relative_to(root).as_posix()
                 problems.append(
                     f"{where}: {key}'s artifact is spelled otherwise on "
@@ -629,14 +659,26 @@ def _kept_problems(
             path = path / part
         else:
 
-            def unlisted(error: OSError, key: str = key) -> None:
-                where = Path(error.filename).relative_to(root).as_posix()
-                problems.append(f"{where}: {key}'s artifact cannot be listed")
+            def unlisted(
+                error: OSError, key: str = key, top: Path = path
+            ) -> None:
+                where = Path(error.filename or top).relative_to(root)
+                what = (
+                    "is not a directory"
+                    if isinstance(error, NotADirectoryError)
+                    else "cannot be listed"
+                )
+                problems.append(f"{where.as_posix()}: {key}'s artifact {what}")
 
             for directory, names, files in os.walk(path, onerror=unlisted):
                 for name in sorted(names + files):
                     inner = Path(directory) / name
-                    if inner.is_symlink():
+                    try:
+                        link = _is_link(inner)
+                    except OSError:
+                        unreadable(inner, key)
+                        continue
+                    if link:
                         problems.append(
                             f"{inner.relative_to(root).as_posix()}: a "
                             f"symbolic link in {key}'s artifact"
