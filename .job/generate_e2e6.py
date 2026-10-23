@@ -1,7 +1,8 @@
 """Time one rebased national registered measure through the real generator.
 
 Only aggregate tables and timing records are persisted. The generator's own
-exact-byte dataset copy, receipt construction and output writer remain active.
+default builder, receipt construction and output writer remain active. The
+certified default dataset uses the official materializer's hash-checked cache.
 Run each concurrency member in its own interpreter and output directory.
 """
 from __future__ import annotations
@@ -142,7 +143,47 @@ def main(argv=None):
         raise RuntimeError(f"Expected one registered measure {args.measure!r}")
     registry_seconds = time.perf_counter() - registry_started
     output.mkdir(parents=True, exist_ok=True)
-    cfg = DataConfig(dataset_path=NATIONAL, years=YEARS, output_dir=output)
+    # An explicit unmanaged local path records its local URI, while this
+    # wrapper's receipt identifies these exact certified bytes by their bundle
+    # URI. Use the supported default bundle selection instead. Its ordinary
+    # materializer verifies the scratch cache against the manifest hash and
+    # records the canonical identity; no provenance member is rewritten.
+    dataset_preparation_started = time.perf_counter()
+    from policyengine.provenance.dataset_materialization import _resolve_bundle_dataset
+    from policyengine.provenance.manifest import get_release_manifest
+    release = get_release_manifest("uk")
+    dataset_name = release.default_dataset
+    if dataset_name != "microcosm_uk_2024_25":
+        raise RuntimeError(f"Unexpected certified default dataset {dataset_name!r}")
+    spec = _resolve_bundle_dataset("uk", dataset_name, data_dir=repo_root / "data",
+                                   manifest=release)
+    if spec.sha256 != EXPECTED["national"]:
+        raise RuntimeError("Certified default dataset does not match the reviewed national bytes")
+    cached_dataset = spec.destination
+    cached_dataset.parent.mkdir(parents=True, exist_ok=True)
+    if not cached_dataset.exists() and not cached_dataset.is_symlink():
+        cached_dataset.symlink_to(NATIONAL)
+    if not cached_dataset.is_file() or digest(cached_dataset) != EXPECTED["national"]:
+        raise RuntimeError("Scratch bundle cache does not contain the reviewed national bytes")
+    dataset_selection = {
+        "mode": "official_certified_default_bundle_dataset",
+        "dataset_name": dataset_name,
+        "canonical_uri": spec.source_uri,
+        "canonical_revision": spec.revision,
+        "canonical_data_package": spec.data_package_name,
+        "manifest_sha256": spec.sha256,
+        "original_readonly_input": str(NATIONAL),
+        "original_input_sha256": hashes["national"],
+        "scratch_cache_path": str(cached_dataset),
+        "scratch_cache_is_symlink": cached_dataset.is_symlink(),
+        "scratch_cache_resolved_path": str(cached_dataset.resolve()),
+        "scratch_cache_sha256": digest(cached_dataset),
+        "runtime_provenance_modified": False,
+        "receipt_checks_bypassed": False,
+        "build_provenance": [],
+    }
+    dataset_preparation_seconds = time.perf_counter() - dataset_preparation_started
+    cfg = DataConfig(dataset_path=None, years=YEARS, output_dir=output)
 
     # Durations of root calls are disjoint. Internal constructor durations are
     # diagnostic only and never added to the root constructor accumulator.
@@ -198,8 +239,24 @@ def main(argv=None):
         started = time.perf_counter()
         try:
             gated(f"generate {args.measure}: default-build private-copy")
-            # Preserve the dashboard's official exact-byte private-copy path.
-            return original_build(dataset_path, scenario)
+            # Preserve the dashboard's official builder. For None, its bundle
+            # materializer verifies the cache and supplies canonical provenance.
+            sim = original_build(dataset_path, scenario)
+            provenance = getattr(sim, "policyengine_bundle", {})
+            expected_provenance = {
+                "runtime_dataset": dataset_name,
+                "runtime_dataset_uri": spec.source_uri,
+                "runtime_dataset_revision": spec.revision,
+                "runtime_dataset_data_package": spec.data_package_name,
+                "runtime_dataset_sha256": EXPECTED["national"],
+            }
+            observed = {name: provenance.get(name) for name in expected_provenance}
+            if observed != expected_provenance:
+                raise RuntimeError(f"Official materializer provenance differs from reviewed bundle: {observed}")
+            dataset_selection["build_provenance"].append({
+                **observed, "runtime_dataset_source": provenance.get("runtime_dataset_source"),
+            })
+            return sim
         finally:
             seconds = time.perf_counter() - started - (ledger["gate_seconds"] - before_gates)
             ledger["build_seconds_excluding_gates"] += seconds
@@ -249,7 +306,11 @@ def main(argv=None):
                  imports_seconds=import_seconds, registry_seconds=registry_seconds)
     generation_started = time.perf_counter()
     generation_cpu_started = time.process_time()
+    previous_cwd = Path.cwd()
     try:
+        # Official materialize_dataset defaults to ./data. Keep that supported
+        # cache inside the scratch repository for the entire generator call.
+        os.chdir(repo_root)
         with patch.object(framework.Simulation, "__init__", guarded_init):
             report = generate.generate_artifacts(
                 selected, cfg, artifacts_root=output / "artifacts", repo_root=repo_root,
@@ -267,6 +328,8 @@ def main(argv=None):
         (output / "partial-timings.json").write_text(json.dumps(partial, indent=2)+"\n")
         common.event("generation_stopped", **partial)
         raise
+    finally:
+        os.chdir(previous_cwd)
     generation_seconds = time.perf_counter() - generation_started
     generation_cpu_seconds = time.process_time() - generation_cpu_started
     written = {reference.key: str(reference.path) for reference in report.written}
@@ -297,6 +360,7 @@ def main(argv=None):
     peak_bytes = peak if sys.platform == "darwin" else peak * 1024
     result = {
         "measure": args.measure, "basis": basis, "hashes": hashes,
+        "dataset_selection": dataset_selection,
         "years": YEARS, "written": written, "refused": report.refused,
         "rows_by_table": rows_by_table, "years_by_table": years_by_table,
         "timings": {
@@ -305,6 +369,7 @@ def main(argv=None):
             "startup_gate_seconds": startup_gate_seconds,
             "verification_seconds": verification_seconds,
             "registry_seconds": registry_seconds,
+            "dataset_preparation_seconds": dataset_preparation_seconds,
             "generation_seconds_including_gates": generation_seconds,
             "generation_process_cpu_seconds": generation_cpu_seconds,
             "gate_seconds": ledger["gate_seconds"],
