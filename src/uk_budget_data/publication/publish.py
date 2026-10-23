@@ -287,8 +287,9 @@ def _members_problems(
     Every not-computable member has the outputs digest of no files, so the
     snapshot cannot tell two such artifacts of one measure apart. Staging
     the second still stales the combined run (``stage``), but restaging
-    that run unchanged is not refused here. No figure rests on it: a
-    combined run with a not-computable member is not computable itself.
+    that run unchanged is not refused here while the member's definition
+    is unchanged (a changed one is refused below). No figure rests on it:
+    a combined run with a not-computable member is not computable itself.
     """
     dashboard = document["dashboard"]
     recorded = dashboard.get("member_outputs_sha256")

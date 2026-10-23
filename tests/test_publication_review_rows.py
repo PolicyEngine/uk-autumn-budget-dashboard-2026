@@ -456,7 +456,7 @@ def test_every_artifact_lists_the_six_published_tables(base):
 
 @PROPERTY
 @given(data=st.data())
-def test_rows_are_exactly_the_displayed_files_and_the_manifest(base, data):
+def test_rows_are_exactly_the_listed_files_and_the_manifest(base, data):
     scenario = data.draw(drawn(base))
     with apply(base, scenario) as (root, manifest):
         before = split_records(scenario["review"])
@@ -926,6 +926,79 @@ def test_a_receipt_with_another_value_refuses(base):
     ]
 
 
+def test_a_displayed_receipt_recording_a_data_limit_refuses(base):
+    """A data-limited artifact written with its tables, as before option
+    (d), named by a displayed entry: no row attests figures the data can't
+    support, whatever ``publish check`` would say."""
+    limit = record(
+        DATA_LIMITS[0],
+        ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
+    )
+
+    def add_the_limit(document):
+        document["dashboard"]["data_limits"] = [limit]
+
+    with repository(base) as (root, manifest):
+        where = edit_receipt(
+            root, manifest, "gamma", edit_document(add_the_limit)
+        )
+        document = json.loads((root / where).read_bytes())
+        manifest.measures["gamma"].artifact_sha256 = (
+            receipt_module.artifact_sha256(document)
+        )
+        m.save_manifest(manifest, root / DATA)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: records a data limit, so its figures cannot be displayed"
+        in refused.value.problems
+    )
+
+
+def rewrite_receipt(root, manifest, key, change) -> str:
+    """Change an entry's receipt and point the entry at the result, so
+    only the change itself is left to refuse."""
+    where = edit_receipt(root, manifest, key, edit_document(change))
+    document = json.loads((root / where).read_bytes())
+    manifest.entries()[key].artifact_sha256 = receipt_module.artifact_sha256(
+        document
+    )
+    m.save_manifest(manifest, root / DATA)
+    return where
+
+
+def test_a_not_computable_receipt_recording_no_data_limit_refuses(base):
+    with repository(base) as (root, manifest):
+        where = rewrite_receipt(
+            root,
+            manifest,
+            LIMITED_KEY,
+            lambda document: document["dashboard"].update(data_limits=[]),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: records no data limit, so it is not 'not computable'"
+        in refused.value.problems
+    )
+
+
+def test_a_displayed_receipt_listing_no_files_refuses(base):
+    with repository(base) as (root, manifest):
+        where = rewrite_receipt(
+            root,
+            manifest,
+            "gamma",
+            lambda document: document["dashboard"].update(files={}),
+        )
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+    assert (
+        f"{where}: does not record its files and digests"
+        in refused.value.problems
+    )
+
+
 def test_a_receipt_written_in_another_form_refuses(base):
     def reformat(data: bytes) -> bytes:
         return json.dumps(json.loads(data), indent=1, sort_keys=True).encode()
@@ -1218,6 +1291,121 @@ def test_deleting_never_follows_a_symbolic_link(base, tmp_path):
         assert not os.path.lexists(link)
     assert (outside / "keep.csv").read_text() == "x\n"
     assert report.deleted == [f"{ARTIFACTS}linked"]
+
+
+def move_behind_a_link(path: Path, to: Path) -> None:
+    """Move ``path`` to ``to`` and leave a relative link to it in its
+    place."""
+    to.parent.mkdir(parents=True, exist_ok=True)
+    path.rename(to)
+    path.symlink_to(os.path.relpath(to, path.parent))
+
+
+@pytest.mark.parametrize("status", [m.STAGED, m.STALE, m.WITHDRAWN])
+@pytest.mark.parametrize("linked", ["key", "artifact", "file"])
+def test_a_link_on_or_in_a_kept_artifact_refuses(base, status, linked):
+    """Review of #98: deletion keeps what an entry names by the path the
+    manifest spells. Behind a link, an entry the page doesn't list would
+    keep the link and lose its real files, so the run refuses first."""
+    with repository(base, statuses={"delta": status}) as (root, manifest):
+        artifact = root / DATA / manifest.measures["delta"].artifact
+        store = root / DATA / "artifacts" / "store"
+        path = {
+            "key": artifact.parent,
+            "artifact": artifact,
+            "file": artifact / "budgetary_impact.csv",
+        }[linked]
+        move_behind_a_link(path, store / path.name)
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with pytest.raises(rr.ReviewRowsError) as refused:
+            run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+    where = path.relative_to(root).as_posix()
+    on = "in" if linked == "file" else "on"
+    assert refused.value.problems == [
+        f"{where}: a symbolic link {on} delta's artifact"
+    ]
+
+
+def test_an_artifact_spelled_otherwise_on_disk_refuses(base, monkeypatch):
+    """As on a Mac's case-insensitive disk, where the manifest's spelling
+    reaches a directory the disk spells otherwise: kept by the manifest's
+    spelling, the directory on disk would be deleted."""
+    listdir = os.listdir
+
+    def as_the_disk_spells_it(path):
+        names = listdir(path)
+        if Path(path).name == "artifacts":
+            return ["DELTA" if name == "delta" else name for name in names]
+        return names
+
+    with repository(base) as (root, _):
+        before = snapshot(root / DATA)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "listdir", as_the_disk_spells_it)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+    assert refused.value.problems == [
+        f"{ARTIFACTS}delta: delta's artifact is spelled otherwise on disk"
+    ]
+
+
+def test_the_walk_never_descends_a_link_to_a_named_artifact(base, tmp_path):
+    """Beneath the refusal: ``_unreferenced`` neither descends nor returns
+    a link on the way to a named artifact, so nothing behind it can be
+    deleted through it."""
+    with repository(base) as (root, manifest):
+        key = root / DATA / "artifacts" / "delta"
+        outside = tmp_path / "outside"
+        shutil.copytree(key, outside, copy_function=link_or_copy)
+        (outside / "0123456789abcdef").mkdir()
+        (outside / "0123456789abcdef" / "x.csv").write_text("x\n")
+        shutil.rmtree(key)
+        key.symlink_to(outside)
+        found = rr._unreferenced(root / DATA, manifest)
+        relative = [path.relative_to(root / DATA).parts for path in found]
+    assert not [parts for parts in relative if parts[:2] == key.parts[-2:]]
+
+
+def test_a_directory_the_deletions_empty_goes_too(base):
+    """A staged entry's artifact gone from disk, an older one beside it:
+    the older one goes, and so does the key directory it leaves empty."""
+    with repository(base) as (root, manifest):
+        named = root / DATA / manifest.measures["delta"].artifact
+        copy_artifact(
+            root,
+            manifest.measures["delta"],
+            "artifacts/delta/0123456789abcdef",
+        )
+        shutil.rmtree(named)
+        report = run(root)
+        assert not os.path.lexists(named.parent)
+    assert f"{ARTIFACTS}delta/" in report.deleted
+    assert f"{ARTIFACTS}delta/0123456789abcdef/" in report.deleted
+
+
+def test_links_elsewhere_to_a_kept_artifact_go_unfollowed(base):
+    """A link outside every named artifact that points into one is removed
+    as a link: what it points to stays."""
+    with repository(base) as (root, manifest):
+        alpha = root / DATA / manifest.measures["alpha"].artifact
+        junk = root / DATA / "artifacts" / "junk" / "x"
+        junk.mkdir(parents=True)
+        (junk / "to_alpha").symlink_to(alpha)
+        (junk / "to_receipt").symlink_to(alpha / "receipt.json")
+        before = snapshot(alpha)
+        report = run(root)
+        assert not os.path.lexists(junk.parent)
+        assert snapshot(alpha) == before
+    assert report.deleted == [
+        f"{ARTIFACTS}junk/",
+        f"{ARTIFACTS}junk/x/",
+        f"{ARTIFACTS}junk/x/to_alpha",
+        f"{ARTIFACTS}junk/x/to_receipt",
+    ]
 
 
 def test_a_linked_artifacts_directory_refuses(base, tmp_path):

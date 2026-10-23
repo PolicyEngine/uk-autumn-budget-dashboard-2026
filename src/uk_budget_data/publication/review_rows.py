@@ -38,8 +38,9 @@ line. Their values are the only bytes in a row that the gate did not bind.
 The run refuses, and writes and deletes nothing, if any listed file is not
 what the gate bound, if a displayed artifact holds a file its receipt does
 not bind (``reconciliation.json``, say, which the gates recompute and never
-read), if a not-computable artifact holds anything but its receipt, or if a
-symbolic link lies on any path it would review.
+read), if a not-computable artifact holds anything but its receipt, if a
+displayed entry's receipt records a data limit, or if a symbolic link lies
+on any path it would review.
 
 Once nothing is refused, it deletes every path under the data root's
 ``artifacts/`` that is not inside an artifact directory a current manifest
@@ -47,7 +48,11 @@ entry names, whatever that entry's status: generated runs never staged, and
 the artifacts of superseded entries, which the manifest keeps for audit but
 no longer names, after a correction or a re-cut. Directories left empty go
 too. It never follows a symbolic link and never deletes anything outside
-``artifacts/``. Stage everything to be kept before running it.
+``artifacts/``. It keeps what an entry names by the path the manifest
+spells, so it also refuses, deleting nothing, if any current entry's
+artifact is reached through a symbolic link, holds one, or is spelled
+otherwise on disk (as a case-insensitive filesystem allows). Stage
+everything to be kept before running it.
 
 Re-running replaces the rows for the same paths in place. It removes only
 rows under the data root's ``artifacts/`` whose files are no longer on disk,
@@ -349,6 +354,11 @@ def _receipt_problems(
                 f"{where}: records no data limit, so it is not 'not "
                 "computable'"
             )
+    elif dashboard.get("data_limits"):
+        problems.append(
+            f"{where}: records a data limit, so its figures cannot be "
+            "displayed"
+        )
     elif not files:
         return problems + [f"{where}: does not record its files and digests"]
     api, _ = receipt_api()
@@ -585,6 +595,48 @@ def _need_stager(listed: dict[str, m.Entry]) -> None:
         )
 
 
+def _kept_problems(
+    data_root: Path, root: Path, manifest: m.Manifest
+) -> list[str]:
+    """Why deleting could reach what a current entry names.
+
+    ``_unreferenced`` keeps an artifact by the path its entry spells, so
+    a symbolic link on the way to it or inside it, or a spelling the disk
+    doesn't use (which a case-insensitive filesystem still resolves),
+    would leave its real files looking unreferenced. Every current entry
+    counts, whatever its status.
+    """
+    problems = []
+    for key, entry in sorted(manifest.entries().items()):
+        relative = (data_root / entry.artifact).relative_to(root)
+        link = _first_link(root, relative)
+        if link is not None:
+            problems.append(f"{link}: a symbolic link on {key}'s artifact")
+            continue
+        path = root
+        for part in relative.parts:
+            if not os.path.lexists(path / part):
+                break
+            if part not in os.listdir(path):
+                where = (path / part).relative_to(root).as_posix()
+                problems.append(
+                    f"{where}: {key}'s artifact is spelled otherwise on "
+                    "disk"
+                )
+                break
+            path = path / part
+        else:
+            for directory, names, files in os.walk(path):
+                for name in sorted(names + files):
+                    inner = Path(directory) / name
+                    if inner.is_symlink():
+                        problems.append(
+                            f"{inner.relative_to(root).as_posix()}: a "
+                            f"symbolic link in {key}'s artifact"
+                        )
+    return problems
+
+
 def _unreferenced(data_root: Path, manifest: m.Manifest) -> list[Path]:
     """Every path under ``data_root/artifacts`` outside the artifact
     directories the manifest's current entries name, outermost first.
@@ -813,6 +865,9 @@ def review_rows(
     )
     report = Report(revision=manifest.revision)
     # Only once every row is planned: a refusal deletes nothing.
+    problems = _kept_problems(data_root, root, manifest)
+    if problems:
+        raise ReviewRowsError(problems)
     report.deleted = _delete(
         _unreferenced(data_root, manifest), data_root, root
     )

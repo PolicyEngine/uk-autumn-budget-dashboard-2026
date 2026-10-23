@@ -3,7 +3,8 @@
 ``uk-budget-data generate --artifacts`` writes receipted artifacts, and
 ``uk-budget-data publish ...`` reconciles, stages, approves, withdraws and
 checks manifest entries, and writes the public-file review rows for the
-entries the page lists.
+entries the page lists, after deleting the artifacts no current entry
+names.
 """
 
 import argparse

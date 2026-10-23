@@ -323,7 +323,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
 - **When it lifts:** once a pair with #2187 is adopted, that is with policyengine-uk 2.145.0 or later. Any re-cut on 2.145.0 or later has it.
   - **The check** needs both of #2187's factors (`gov.simulation.vat.survey_consumption_coverage` and `household_share_of_receipts`) in the tree as the model built it. It also needs every formula of `baseline_vat` to look up `vat_grossing_factor`, the helper that returns their product (or the old factor, if a measure moves it from its default), which the formulas divide by. For the installed model it also parses `vat` and `baseline_vat`, and needs every formula of each to call that helper.
   - **Neither check reads anything a parameter change or the VAT base template changes.** That template replaces `vat`'s formula, on whichever side calls it, and never `baseline_vat`'s. A rate change, or setting the old factor to 0.469, adds neither factor. Factors added to the tree as built don't count on their own, because no formula reads them.
-  - **The payment and property-surcharge templates** take any annual household variable with a formula as their channel, so pointed at `baseline_vat` they replace its formula. The replacement reads no grossing factor, so that side counts as unfixed and the measure is held: that fails safe.
+  - **The payment template** takes any annual household variable with a formula as its channel, so pointed at `baseline_vat` it replaces that formula. The replacement reads no grossing factor, so that side counts as unfixed and the measure is held: that fails safe. The property-surcharge template refuses `baseline_vat`, whose formula reads neither of the OBR indices a band deflates by.
   - **A hand-written modifier can still change both things the check reads:** the tree as built (the parameters' `baseline` child) and `baseline_vat`'s formulas.
     - Replacing `baseline_vat` on one side of a model without the fix holds the measure, since the variable then differs between the sides: that fails safe.
     - Adding #2187's factors to the tree as built and replacing `baseline_vat` on both sides with formulas that look up `vat_grossing_factor` makes 2.132.6 count as fixed, so nothing is held: that fails open.
@@ -430,7 +430,7 @@ uv run uk-budget-data publish status
 What they check:
 - `certified_data`: the token reads the bundle's data and the tests' small dataset, each file by its pinned hash (#12, #70);
 - the certified-data tests, which fail rather than skip here;
-- the model-limit check: whether the model has each limit's fix (policyengine-uk #2336, #2533's fix, and the minimum guarantee's earnings fix);
+- the model-limit check: whether the model has each limit's fix (policyengine-uk #2336, #2533's fix, the minimum guarantee's earnings fix and #2187);
 - `/api/version`: the household API's versions must match the bundle's (#15), and the household check compares them again;
 - `publish check`: every gate over each entry the page lists (#19); `publish status` lists the manifest's entries.
 
@@ -442,7 +442,7 @@ Record in the clock table:
 - the dataset SHA-256;
 - the household API identity;
 - the basis in `data_inputs/publication_basis.json` (expected `pre_budget`);
-- which model limits are active: each key the model-limit check prints with `False`. While `state_pension_add_on_uprating` is active, every State Pension measure today is held at provisional; the other two hold their measures from 2027 (see "How a measure must be written").
+- which model limits are active: each key the model-limit check prints with `False`. While active, `state_pension_add_on_uprating` holds every State Pension measure at provisional and `vat_consumption_coverage` every VAT measure, in every year; `benefit_uprating_september_cpi` and `pc_minimum_guarantee_uprating` hold their measures from 2027 (see "How a measure must be written").
 
 **The gate fails** if any command fails, or the API's versions differ from the bundle's. With only the plumbing fixture, the household check can pass on plumbing alone, and checks no measure's non-zero answer (see "Household fixtures" above). The household check takes the bundle's versions from the installed packages here, because `main` has no `public/data/manifest.json` until the first entry is published (`--manifest` on a missing file exits 2). Once a manifest is published, pass `--manifest public/data/manifest.json` instead, as at G4.
 
@@ -481,7 +481,7 @@ uv run uk-budget-data publish check
   - **Not-computable entries** (coordinator's ruling, 22 October, option (d)). Such an artifact is its `receipt.json` alone, and its row reads "not computable, staged by <stager>". So `--staged-by` is needed while any provisional or not-computable entry is listed. Anything else in its directory, a stray table or `reconciliation.json` included, makes the command refuse.
   - **What it deletes.** Before it writes, it deletes everything under `public/data/artifacts/` that no current manifest entry names, with the rows for those files, and prints each path. That covers runs generated but not staged, and superseded artifacts after a G5 correction or a re-cut. **Stage every artifact you want to keep before running it, and never run it while a `generate` is running in the same checkout:** it would delete that run's half-written directory.
   - **What it leaves.** It lists each file under `public/data` it left with no row, and the build fails on those; the command still exits 0, so read its list. A staged entry's artifact can stay out of the commit until it is approved, since `publish check` skips staged entries.
-  - **What it keeps.** Artifacts of staged, stale and withdrawn entries stay, since their entries still name them. It removes a row only when its file is gone, so a withdrawn entry's artifact keeps the row it had while displayed.
+  - **What it keeps.** Artifacts of staged, stale and withdrawn entries stay, since their entries still name them. It keeps them by the path the manifest spells, so it refuses, deleting nothing, if any current entry's artifact is reached through a symbolic link, holds one, or is spelled otherwise on disk, as a Mac's case-insensitive disk allows. It removes a row only when its file is gone, so a withdrawn entry's artifact keeps the row it had while displayed.
 - **Publish.** Open a pull request, wait for the checks, then merge, which deploys. The page labels these "Provisional: statement figures, awaiting Treasury costing" once #20's modules are wired in after #3.
 
 ## Documents arrive (13:40)

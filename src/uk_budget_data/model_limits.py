@@ -436,9 +436,10 @@ def _vat_grossing_factors(system) -> bool:
     ``baseline_vat``'s, and a parameter change can't add the factors to the
     tree as built. The formula check is behaviour, so factors added to the
     tree as built, which the model's formulas don't read, don't count
-    either. The payment and property-surcharge templates, pointed at
-    ``baseline_vat``, replace its formula with one that reads no grossing
-    factor, so that side counts as unfixed (fails safe). A hand-written
+    either. The payment template, pointed at ``baseline_vat``, replaces
+    its formula with one that reads no grossing factor, so that side
+    counts as unfixed (fails safe); the property-surcharge template
+    refuses it, as it reads neither OBR index. A hand-written
     modifier can change both things read: replacing ``baseline_vat`` on one
     side of a model without the fix holds the measure, since the variable
     then differs between the sides (fails safe); adding the factors to the
