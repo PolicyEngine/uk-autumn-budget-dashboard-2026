@@ -358,6 +358,12 @@ What they check:
 
 The shell blocks in this runbook carry no comments, so they paste into zsh as they are, once any `<placeholder>` in them is filled in.
 
+**The Hugging Face token is a G0 prerequisite.** policyengine.py fetches the UK data release manifest from huggingface.co when it certifies the model and data pair at import. It reads the token only from the environment: the first of `HUGGING_FACE_TOKEN`, `HF_TOKEN` or `HUGGINGFACE_HUB_TOKEN` (`policyengine/provenance/manifest.py:255-263` in 6.10.0). It doesn't read a `huggingface-cli login` cache by itself. On 23 October, on the certified 6.10.0 pair, an import without the token was refused before any simulation; with it, the import passed certification with basis `exact_build_model_version`.
+- **Before G0's commands,** load the token into the runner's shell environment, in memory only. Never put it on a command line, in a committed file or in a receipt. Confirm that huggingface.co answers.
+- **Record** the certification basis the import reports in the clock table: `exact_build_model_version` for the adopted pair. Any other basis fails G0. That includes `unverified_data_release_manifest_unavailable`, which is what an uncertified runtime gets when the manifest can't be fetched (`manifest.py:448-490`); such a run's provenance is unverified and can't publish.
+- **If Hugging Face is down:** a process that has already certified keeps the manifest for its lifetime (`get_data_release_manifest` is cached with `lru_cache`), but every new process fetches it again, and 6.10.0 has no setting for a pinned local copy. So a new generation process can't certify while Hugging Face is down. At G0, hold and retry, and tell the coordinator. Taking a pinned local manifest would need a policyengine.py change.
+
+
 Record in the clock table:
 - the start SHA;
 - the manifest revision and its execution identity;
