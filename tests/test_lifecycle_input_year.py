@@ -44,3 +44,14 @@ def test_one_row_per_year_to_life_expectancy():
     rows = run_lifecycle_model(_inputs())
     assert [row["age"] for row in rows] == list(range(30, 86))
     assert [row["year"] for row in rows] == list(range(2026, 2082))
+
+
+def test_under_22_salary_does_not_fall_at_22():
+    """Review finding (under-25s, 23 Oct 2026): ages below 22 took the peak
+    multiplier, so a 19-year-old's salary was divided by 2.2 from age 22."""
+    rows = run_lifecycle_model(_inputs(current_age=19, current_salary=23_600))
+    income = {row["age"]: row["employment_income"] for row in rows}
+    assert round(income[19]) == 23_600
+    # Flat to 22, then the age trajectory: 1.05 times at 23
+    assert round(income[22]) == 23_600
+    assert round(income[23]) == round(23_600 * 1.05)

@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
     DemographicConstituencyCalculator,
@@ -117,6 +118,7 @@ class ReformProcessor:
         )
         self.constituency_calc = ConstituencyCalculator()
         self.demographic_calc = DemographicConstituencyCalculator()
+        self.age_calc = AgeImpactCalculator()
 
     def process(
         self,
@@ -153,6 +155,7 @@ class ReformProcessor:
         all_household_scatter = []
         all_constituency = []
         all_demographic = []
+        all_age = []
 
         scenario = self.reform.to_scenario()
 
@@ -174,6 +177,13 @@ class ReformProcessor:
                 baseline, reformed, reform_id, reform_name, year
             )
             all_metrics.extend(metrics)
+
+            # Results by age band
+            all_age.extend(
+                self.age_calc.calculate(
+                    baseline, reformed, reform_id, reform_name, year
+                )
+            )
 
             # Income curve: against the population's own baseline.
             income_curve = self.income_curve_calc.calculate(
@@ -213,6 +223,7 @@ class ReformProcessor:
             household_scatter=all_household_scatter,
             constituency=all_constituency,
             demographic_constituency=all_demographic,
+            age_impact=all_age,
         )
 
     def _calculate_constituency(
@@ -367,6 +378,7 @@ class DataPipeline:
             "metrics": "metrics.csv",
             "income_curve": "income_curve.csv",
             "obr_comparison": "obr_comparison.csv",
+            "age_impact": "age_impact.csv",
         }
         # Household rows are never written under output_dir: one row per
         # survey household is unit-record data. The receipted artifacts
@@ -413,6 +425,7 @@ def aggregate_results(
         "constituency": pd.DataFrame(),
         "demographic_constituency": pd.DataFrame(),
         "obr_comparison": pd.DataFrame(),
+        "age_impact": pd.DataFrame(),
     }
 
     for result in results:
@@ -488,6 +501,12 @@ def aggregate_results(
                 ignore_index=True,
             )
 
+        if result.age_impact:
+            aggregated["age_impact"] = pd.concat(
+                [aggregated["age_impact"], pd.DataFrame(result.age_impact)],
+                ignore_index=True,
+            )
+
     # Generate OBR comparison by merging budgetary impact with OBR estimates
     if config and len(aggregated["budgetary_impact"]) > 0:
         obr_path = config.data_inputs_dir / "obr_estimates.csv"
@@ -533,3 +552,57 @@ def generate_all_data(
     """
     pipeline = DataPipeline(reforms=reforms, config=config)
     return pipeline.run(skip_input_check=skip_input_check)
+
+
+def generate_age_impact(
+    reforms: Optional[list[Reform]] = None,
+    config: Optional[DataConfig] = None,
+) -> pd.DataFrame:
+    """Write only ``age_impact.csv``: results by age band.
+
+    Builds the same two simulations per reform as the full run, on the same
+    baselines, but runs only the age calculator, so it is quick to rerun
+    after the other files exist. ``uk-budget-data generate --only
+    age_impact`` calls it.
+    """
+    reforms = reforms or get_autumn_budget_2026_reforms()
+    config = config or DataConfig()
+    dataset_path = str(config.dataset_path) if config.dataset_path else None
+    calculator = AgeImpactCalculator()
+    rows = []
+    for reform in reforms:
+        baseline = data_limits.watched_build(
+            build_microsimulation,
+            dataset_path,
+            reform.baseline_scenario_for(config),
+        )
+        reformed = data_limits.watched_build(
+            build_microsimulation, dataset_path, reform.to_scenario()
+        )
+        with data_limits.observing(baseline, reformed) as observed:
+            for year in config.years:
+                rows.extend(
+                    calculator.calculate(
+                        baseline, reformed, reform.id, reform.name, year
+                    )
+                )
+        # As the full flat run does: say when the data or the model cannot
+        # cost a measure, since this path has no publication gate either.
+        for limit in data_limits.limits_touched(baseline, reformed, observed):
+            console.print(
+                f"[bold red]NOT COMPUTABLE ON CURRENT DATA[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        for limit in model_limits.limits_touched(baseline, reformed):
+            console.print(
+                f"[bold red]MIS-COSTED BY THIS MODEL[/bold red] "
+                f"{reform.name}: {limit['reason']}"
+            )
+        console.print(f"[green]✓[/green] {reform.name}")
+    frame = pd.DataFrame(rows)
+    save_csv(frame, config.output_dir / "age_impact.csv")
+    console.print(
+        f"[green]Saved {len(frame)} rows to "
+        f"{config.output_dir / 'age_impact.csv'}[/green]"
+    )
+    return frame

@@ -1457,3 +1457,36 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* "Start from an example": young-person presets on the first step */
+.wizard-examples {
+  margin: 0 0 20px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--card-border, #e5e7eb);
+}
+
+.wizard-examples-label {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.wizard-examples-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wizard-examples-buttons .light-pill-button.is-active {
+  border-color: var(--pe-teal-700);
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50, #f0fdfa);
+}
+
+.wizard-examples-note {
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}

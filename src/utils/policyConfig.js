@@ -77,6 +77,12 @@ export const REVENUE_RAISING_NAMES = new Set([
   "Freeze student loan repayment thresholds",
 ]);
 
+// The id of the run that simulates every measure together
+// (reforms.AUTUMN_BUDGET_2026_COMBINED_ID). Statistics that cannot be added
+// up across measures, such as the share of people better off, are read from
+// it when every policy is selected.
+export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
+
 // Lifecycle calculator reform configuration
 // Note: In lifecycle view, we show impact FROM HOUSEHOLD PERSPECTIVE
 // (positive = good for household, negative = bad)

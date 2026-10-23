@@ -1,0 +1,108 @@
+/* "Young people (under 25)": a card of headline figures, then the two
+   chart cards in the page's charts grid. */
+
+.young-people-heading {
+  scroll-margin-top: calc(var(--title-row-height) + 16px);
+}
+
+.young-people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.young-people-headline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding: var(--card-padding);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+}
+
+.young-people-stat p {
+  margin: 0;
+}
+
+.young-people-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pe-gray-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.young-people-stat-share {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--pe-gray-600);
+}
+
+.young-people-stat-label {
+  margin-top: 4px !important;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.young-people-status {
+  grid-template-columns: 1fr;
+}
+
+.young-people-status p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--pe-gray-500);
+}
+
+.main-content :is(.young-people-mean, .young-people-shares) h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
+  margin: 0 0 6px 0;
+}
+
+.young-people-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: var(--pe-gray-50);
+  border-radius: 8px;
+}
+
+.young-people-unavailable p {
+  max-width: 34ch;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.young-people-note {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--pe-gray-500);
+}
+
+/* The outcome legend: one centred row, no group headings */
+.young-people-outcome-legend .grouped-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+}
+
+@media (max-width: 768px) {
+  .young-people-headline {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .young-people-stat-value {
+    font-size: 1.5rem;
+  }
+}

@@ -17,6 +17,7 @@ import PillSelect from "./components/PillSelect";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
+import YoungPeopleSection from "./components/YoungPeopleSection";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -653,6 +654,13 @@ function App() {
                         />
                       </div>
                     </section>
+
+                    {/* Young people (under 25): results by age, #young-people */}
+                    <YoungPeopleSection
+                      selectedPolicies={selectedPolicies}
+                      selectedYear={distributionalYear}
+                      policies={POLICIES}
+                    />
 
                     {/* Row 2: the constituency map beside the household
                         scatter. The scatter is a template until binned
