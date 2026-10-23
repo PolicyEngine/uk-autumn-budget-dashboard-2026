@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, PALETTE, joinSeries, niceAxis, rangeAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -81,14 +81,15 @@ export default function NonPensionerSplitSection({ data }) {
           }),
       }}
       controls={
-        <Choice
-          fieldLabel="Show"
-          label="Show"
+        <PillSelect
+          variant="light"
+          prefix="Show"
+          name="Show"
           value={view}
           onChange={setView}
           options={[
-            { id: "change", label: `Change since ${fyDash(lower[0]?.year)}` },
-            { id: "level", label: `Level (${fyDash(base)} prices)` },
+            { value: "change", label: `Change since ${fyDash(lower[0]?.year)}` },
+            { value: "level", label: `Level (${fyDash(base)} prices)` },
           ]}
         />
       }

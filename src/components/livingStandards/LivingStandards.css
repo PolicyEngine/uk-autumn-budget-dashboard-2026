@@ -42,7 +42,7 @@
   margin-top: 20px;
 }
 
-.ls-section > .ls-note {
+.ls-section > .note {
   margin-top: 16px;
 }
 
@@ -137,35 +137,9 @@
   }
 }
 
-.ls-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* An empty plot keeps the height of the chart it stands in for */
+.ls-card .chart-empty {
   min-height: 330px;
-  padding: 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-align: center;
-  color: var(--pe-gray-600);
-  background: var(--pe-gray-50);
-  border-radius: 8px;
-}
-
-/* A reading caveat: visible, small, with an info icon */
-.ls-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 8px 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.ls-note svg {
-  flex: 0 0 auto;
-  margin-top: 3px;
-  color: var(--pe-gray-400);
 }
 
 .ls-source {
@@ -181,46 +155,6 @@
 
 .ls-source-label {
   font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-/* "About this chart": the in-card disclosure, under a rule like the
-   dashboard's other in-card expanders */
-.ls-about {
-  margin-top: 16px;
-  border-top: 1px solid var(--card-border);
-}
-
-.main-content .ls-about-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 14px 0 0;
-  background: transparent;
-  border: none;
-  font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--pe-gray-800);
-  cursor: pointer;
-  text-align: left;
-}
-
-.main-content .ls-about-toggle:hover {
-  color: var(--pe-teal-700);
-}
-
-.main-content .ls-about-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.ls-about-content {
-  margin: 8px 0 0;
-  font-size: 0.875rem;
-  line-height: 1.55;
   color: var(--pe-gray-600);
 }
 

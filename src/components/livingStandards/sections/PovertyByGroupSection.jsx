@@ -7,7 +7,7 @@
 import { useState } from "react";
 import LsCard from "../LsCard";
 import { CHART_LOGO } from "../../../utils/chartLogo";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { niceAxis, rangeAxis } from "../../../utils/livingStandards/baseline";
 import { formatOneDp, formatPct, formatPounds, fyDash, headlineYear, round1 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
@@ -134,19 +134,21 @@ export default function PovertyByGroupSection({ data }) {
       }}
       controls={
         <>
-          <Choice
-            fieldLabel="Breakdown"
-            label="Breakdown"
+          <PillSelect
+            variant="light"
+            prefix="Breakdown"
+            name="Breakdown"
             value={breakdown}
             onChange={setBreakdown}
-            options={breakdownIds.map((id) => ({ id, label: pbg.breakdowns[id].label }))}
+            options={breakdownIds.map((id) => ({ value: id, label: pbg.breakdowns[id].label }))}
           />
-          <Choice
-            fieldLabel="Measure"
-            label="Measure"
+          <PillSelect
+            variant="light"
+            prefix="Measure"
+            name="Measure"
             value={measure}
             onChange={setMeasure}
-            options={Object.entries(MEASURES).map(([id, x]) => ({ id, label: x.label }))}
+            options={Object.entries(MEASURES).map(([id, x]) => ({ value: id, label: x.label }))}
           />
         </>
       }

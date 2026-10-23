@@ -56,30 +56,6 @@
   color: var(--pe-gray-500);
 }
 
-.young-people-unavailable {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-  background: var(--pe-gray-50);
-  border-radius: 8px;
-}
-
-.young-people-unavailable p {
-  max-width: 34ch;
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-.young-people-note {
-  margin: 8px 0 0;
-  font-size: 0.8125rem;
-  color: var(--pe-gray-500);
-}
-
 /* The outcome legend: one centred row, no group headings */
 .young-people-outcome-legend .grouped-legend-items {
   display: flex;

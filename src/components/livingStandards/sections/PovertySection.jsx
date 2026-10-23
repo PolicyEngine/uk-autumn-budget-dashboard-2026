@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1 } from "../../../utils/livingStandards/outlook";
 import {
@@ -18,7 +18,8 @@ import {
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource, Note } from "../sources";
+import Note from "../../Note";
+import { CSV_SOURCES, HbaiSource } from "../sources";
 
 const GROUP_SUFFIX = {
   all: "",
@@ -118,21 +119,23 @@ export default function PovertySection({ data }) {
       }
       controls={
         <>
-          <Choice
-            fieldLabel="Measure"
-            label="Poverty measure"
+          <PillSelect
+            variant="light"
+            prefix="Measure"
+            name="Poverty measure"
             value={measure}
             onChange={setMeasure}
-            options={measureIds.map((id) => ({ id, label: poverty.measures[id] }))}
+            options={measureIds.map((id) => ({ value: id, label: poverty.measures[id] }))}
           />
-          <Choice
-            fieldLabel="Group"
-            label="Population group"
+          <PillSelect
+            variant="light"
+            prefix="Group"
+            name="Population group"
             value={group}
             onChange={setGroup}
-            options={groupIds.map((id) => ({ id, label: poverty.groups[id] }))}
+            options={groupIds.map((id) => ({ value: id, label: poverty.groups[id] }))}
           />
-          <Choice fieldLabel="Period" label="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+          <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
         </>
       }
       notes={poverty.notes}
@@ -144,7 +147,7 @@ export default function PovertySection({ data }) {
     >
       {visibleEmpty ? (
         <div className="chart-plot">
-          <div className="ls-empty">
+          <div className="chart-empty">
             {viewMode === "outturn" && noOutturn
               ? `No official outturn series for ${groupName} on this measure.`
               : "No projection for this selection."}

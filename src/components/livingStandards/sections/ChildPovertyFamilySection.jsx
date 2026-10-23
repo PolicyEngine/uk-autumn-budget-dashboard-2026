@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, PALETTE, joinSeries, niceAxis } from "../../../utils/livingStandards/baseline";
 import { fyDash, formatPct, formatPctAxis, headlineYear } from "../../../utils/livingStandards/outlook";
@@ -98,19 +98,21 @@ export default function ChildPovertyFamilySection({ data }) {
       }}
       controls={
         <>
-          <Choice
-            fieldLabel="Measure"
-            label="Poverty measure"
+          <PillSelect
+            variant="light"
+            prefix="Measure"
+            name="Poverty measure"
             value={measure}
             onChange={setMeasure}
-            options={measureIds.map((id) => ({ id, label: cp.measures[id] }))}
+            options={measureIds.map((id) => ({ value: id, label: cp.measures[id] }))}
           />
-          <Choice
-            fieldLabel="Split by"
-            label="Split by"
+          <PillSelect
+            variant="light"
+            prefix="Split by"
+            name="Split by"
             value={split}
             onChange={setSplit}
-            options={Object.entries(SPLITS).map(([id, s]) => ({ id, label: s.label }))}
+            options={Object.entries(SPLITS).map(([id, s]) => ({ value: id, label: s.label }))}
           />
         </>
       }

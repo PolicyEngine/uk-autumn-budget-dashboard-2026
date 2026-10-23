@@ -7,8 +7,8 @@
 
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
-import Choice from "./Choice";
-import { Note } from "./sources";
+import PillSelect from "../PillSelect";
+import Note from "../Note";
 import { describeDataset, fyDash, loadOutlook } from "../../utils/livingStandards/outlook";
 import LivingStandardsSection from "./sections/LivingStandardsSection";
 import DecileGrowthSection from "./sections/DecileGrowthSection";
@@ -153,14 +153,15 @@ export default function LivingStandardsTab() {
               <section id="living-forecast" className="report-section">
                 <ForecastHeadlineSection data={data} />
                 <div className="ls-section-controls">
-                  <Choice
-                    fieldLabel="Show as"
-                    label="Chart or table"
+                  <PillSelect
+                    variant="light"
+                    prefix="Show as"
+                    name="Chart or table"
                     value={forecastView}
                     onChange={setForecastView}
                     options={[
-                      { id: "chart", label: "Charts" },
-                      { id: "table", label: "Tables" },
+                      { value: "chart", label: "Charts" },
+                      { value: "table", label: "Tables" },
                     ]}
                   />
                 </div>

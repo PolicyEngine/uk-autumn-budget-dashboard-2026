@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartSvg } from "../utils/exportChartAsSvg";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
@@ -7,6 +7,7 @@ import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { useNarrowViewport, TICK_STYLE } from "../utils/chartTheme";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import NoBreakYear from "./NoBreakYear";
+import useElementWidth from "../hooks/useElementWidth";
 import "./OBRDumbbellChart.css";
 
 /**
@@ -98,26 +99,12 @@ function niceScale(lo, hi, targetTicks) {
 // Text width without a canvas: close enough for 12–13px system sans.
 const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
 
-function useElementWidth(ref, fallback) {
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return undefined;
-    const update = () => setWidth(element.getBoundingClientRect().width);
-    update();
-    if (typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width > 0 ? width : fallback;
-}
-
 function OBRDumbbellChart({ policies, year, showBehavioural }) {
-  const wrapperRef = useRef(null);
+  const [wrapperRef, measuredWidth] = useElementWidth();
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
-  const width = useElementWidth(wrapperRef, narrow ? 358 : 800);
+  // Until the plot is measured, a typical width for the screen
+  const width = measuredWidth > 0 ? measuredWidth : narrow ? 358 : 800;
 
   const yearLabel = fiscalYear(year);
   const obrKind = showBehavioural ? "post-behavioural" : "static";

@@ -15,9 +15,6 @@ import {
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { downloadFile } from "../utils/downloadFile";
-import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
@@ -196,20 +193,12 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     legendItems,
     logo: CHART_LOGO,
   };
-  const handleExportSvg = async () => {
-    await exportChartAsSvg(chartRef, exportName, exportOptions);
-  };
-  // One menu: the chart's data as CSV, and the SVG export as SVG or PNG.
-  const downloads = {
-    csv: () =>
-      downloadFile(
-        revenueCsv(data, activePolicies),
-        `${exportName}.csv`,
-        "text/csv;charset=utf-8",
-      ),
-    png: async () =>
-      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
-    svg: handleExportSvg,
+  // One menu: the chart's data as CSV, and the chart as PNG or SVG.
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: () => revenueCsv(data, activePolicies),
   };
 
   return (
@@ -226,7 +215,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             the Treasury.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} chartTitle={CHART_TITLE} />
+        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
       <div ref={chartRef}>

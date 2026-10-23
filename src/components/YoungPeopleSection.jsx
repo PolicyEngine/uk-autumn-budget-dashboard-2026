@@ -16,10 +16,7 @@ import {
   YAxis,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { downloadFile } from "../utils/downloadFile";
-import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { buildChartCsv, unpublishedCsv } from "../utils/chartCsv";
+import { buildChartCsv } from "../utils/chartCsv";
 import { parseTable } from "../utils/publication/csv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
@@ -27,6 +24,8 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import SectionHeading from "./SectionHeading";
+import Note from "./Note";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -216,19 +215,13 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         ? [`Not shown, too few survey records: ${suppressed.map((p) => p.label).join(", ")}`]
         : [],
     });
-  const downloads = {
-    csv: () =>
-      downloadFile(
-        published ? csvText() : unpublishedCsv(csvText()),
-        `${exportName}.csv`,
-        "text/csv;charset=utf-8",
-      ),
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: csvText,
+    published,
   };
-  if (published) {
-    downloads.png = async () =>
-      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName);
-    downloads.svg = () => exportChartAsSvg(chartRef, exportName, exportOptions);
-  }
   const height = narrow ? 560 : 440;
 
   return (
@@ -240,7 +233,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           </h3>
           <p className="chart-description">{MEAN_DESCRIPTION}</p>
         </div>
-        <ChartDownloadMenu formats={downloads} chartTitle={title} />
+        <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div ref={chartRef}>
         {published ? (
@@ -318,9 +311,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         )}
       </div>
       {published && suppressed.length > 0 && (
-        <p className="chart-footer young-people-note">
+        <Note>
           Not shown, as too few survey records: {suppressed.map((p) => p.label).join(", ")}.
-        </p>
+        </Note>
       )}
     </div>
   );
@@ -364,17 +357,14 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
       ],
       rows: data,
     });
-  const downloads = {};
-  if (pair) {
-    downloads.csv = () =>
-      downloadFile(csvText(), `${exportName}.csv`, "text/csv;charset=utf-8");
-    downloads.png = async () =>
-      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName);
-    downloads.svg = () => exportChartAsSvg(chartRef, exportName, exportOptions);
-  } else if (!published) {
-    downloads.csv = () =>
-      downloadFile(unpublishedCsv(csvText()), `${exportName}.csv`, "text/csv;charset=utf-8");
-  }
+  // Until the year is published, only its CSV (the menu says why otherwise)
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: csvText,
+    published: Boolean(pair),
+  };
   const height = narrow ? 300 : 260;
 
   return (
@@ -387,7 +377,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
           <p className="chart-description">{SHARES_DESCRIPTION}</p>
         </div>
         <ChartDownloadMenu
-          formats={downloads}
+          download={download}
           chartTitle={title}
           disabledReason={
             pair || !published ? undefined : "Choose one policy or all policies"
@@ -454,7 +444,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="young-people-unavailable" style={{ minHeight: height }} role="status">
+          <div className="chart-empty" style={{ minHeight: height }} role="status">
             <p>
               These shares come from one simulation of the selected policies
               together, so they are shown for a single policy or for all
@@ -524,13 +514,12 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const props = { rows, policies, selectedPolicies, selectedYear, narrow };
   return (
     <>
-      <div className="section-heading young-people-heading" id={YOUNG_PEOPLE_ANCHOR}>
-        <h2>Young people (under 25)</h2>
-        <p>
-          How the selected policies change the household incomes of young
-          people aged 16 to 24, compared with other ages, in the selected year.
-        </p>
-      </div>
+      <SectionHeading
+        id={YOUNG_PEOPLE_ANCHOR}
+        className="young-people-heading"
+        title="Young people (under 25)"
+        subtitle="How the selected policies change the household incomes of young people aged 16 to 24, compared with other ages, in the selected year."
+      />
       <section className="report-section young-people-section" aria-label="Young people (under 25)">
         {status === "ready" ? (
           <>

@@ -1,49 +1,10 @@
-import { useId, useRef, useState } from "react";
+import { useRef } from "react";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import Disclosure from "../Disclosure";
 import { CHART_LOGO } from "../../utils/chartLogo";
-import { buildChartSvg, exportChartAsSvg } from "../../utils/exportChartAsSvg";
-import { downloadFile } from "../../utils/downloadFile";
-import { downloadSvgAsPng } from "../../utils/rasteriseSvg";
 import { fyDash } from "../../utils/livingStandards/outlook";
-import { Note, plainWords } from "./sources";
-
-/** An in-card disclosure, closed by default: what the chart measures. */
-function AboutChart({ text }) {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  return (
-    <div className="ls-about">
-      <button
-        type="button"
-        className="ls-about-toggle"
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen((value) => !value)}
-      >
-        About this chart
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && (
-        <p id={id} className="ls-about-content">
-          {text}
-        </p>
-      )}
-    </div>
-  );
-}
+import Note from "../Note";
+import { plainWords } from "./sources";
 
 /**
  * A Living standards chart card in the dashboard's card layout: title and
@@ -61,24 +22,20 @@ function AboutChart({ text }) {
  */
 export default function LsCard({ title, summary, about, controls, download, children, footer, notes, source }) {
   const plotRef = useRef(null);
-  let formats = null;
-  if (download) {
-    const options = {
+  const downloadSpec = download && {
+    chartRef: plotRef,
+    name: download.filename,
+    exportOptions: {
       title,
       description: typeof about === "string" ? about : "",
       legendItems: download.legendItems || [],
       logo: CHART_LOGO,
       // The legend is drawn outside the chart's SVG
       reservedLegendHeight: 0,
-    };
-    formats = {
-      csv: () => downloadFile(download.csv(), `${download.filename}.csv`, "text/csv;charset=utf-8"),
-    };
-    if (download.image !== false) {
-      formats.png = async () => downloadSvgAsPng(await buildChartSvg(plotRef, options), download.filename);
-      formats.svg = () => exportChartAsSvg(plotRef, download.filename, options);
-    }
-  }
+    },
+    csv: download.csv,
+    image: download.image !== false,
+  };
   const visibleNotes = (notes || []).filter(Boolean);
 
   return (
@@ -88,7 +45,7 @@ export default function LsCard({ title, summary, about, controls, download, chil
           <h3>{title}</h3>
           {summary && <p className="chart-description">{summary}</p>}
         </div>
-        {formats && <ChartDownloadMenu formats={formats} chartTitle={title} />}
+        {downloadSpec && <ChartDownloadMenu download={downloadSpec} chartTitle={title} />}
       </div>
       <div className="chart-controls ls-controls">{controls}</div>
       {/* display: contents, so the plot, legend and logo are rows of the card */}
@@ -101,7 +58,11 @@ export default function LsCard({ title, summary, about, controls, download, chil
           <Note key={typeof n === "string" ? n : undefined}>{typeof n === "string" ? fyDash(plainWords(n)) : n}</Note>
         ))}
         {source && <p className="ls-source">{source}</p>}
-        {about && <AboutChart text={about} />}
+        {about && (
+          <Disclosure inCard title="About this chart">
+            <p>{about}</p>
+          </Disclosure>
+        )}
       </div>
     </div>
   );

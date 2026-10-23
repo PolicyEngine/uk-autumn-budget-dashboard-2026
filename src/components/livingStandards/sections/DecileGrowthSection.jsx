@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsBarChart } from "../LsCharts";
 import { PALETTE, rangeAxis } from "../../../utils/livingStandards/baseline";
 import { changeVerb, fyDash, formatOneDp, headlineYear } from "../../../utils/livingStandards/outlook";
@@ -62,12 +62,13 @@ export default function DecileGrowthSection({ data }) {
           }),
       }}
       controls={
-        <Choice
-          fieldLabel="Housing costs"
-          label="Housing costs"
+        <PillSelect
+          variant="light"
+          prefix="Housing costs"
+          name="Housing costs"
           value={basis}
           onChange={setBasis}
-          options={Object.keys(dec.bases).map((id) => ({ id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)" }))}
+          options={Object.keys(dec.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)" }))}
         />
       }
     >

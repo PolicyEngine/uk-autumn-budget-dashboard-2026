@@ -12,10 +12,7 @@ import {
   Legend,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { downloadFile } from "../utils/downloadFile";
-import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { householdChangeCsv, unpublishedCsv } from "../utils/chartCsv";
+import { householdChangeCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
@@ -63,28 +60,14 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
     legendItems: LEGEND_ITEMS,
     logo: CHART_LOGO,
   };
-  const handleExportSvg = async () => {
-    await exportChartAsSvg(chartRef, exportName, exportOptions);
+  // One menu: the chart's data as CSV, and the chart as PNG or SVG.
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: () => householdChangeCsv(data, { year: selectedYear }),
+    published,
   };
-  // One menu: the chart's data as CSV, and the SVG export as SVG or PNG.
-  const downloads = {
-    csv: () =>
-      downloadFile(
-        published
-          ? householdChangeCsv(data, { year: selectedYear })
-          : unpublishedCsv(householdChangeCsv(data, { year: selectedYear })),
-        `${exportName}.csv`,
-        "text/csv;charset=utf-8",
-      ),
-    png: async () =>
-      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
-    svg: handleExportSvg,
-  };
-  // A year not yet published has only its (empty) CSV to download
-  if (!published) {
-    delete downloads.png;
-    delete downloads.svg;
-  }
 
   useEffect(() => {
     // Load income curve data from CSV
@@ -208,7 +191,7 @@ function EmploymentIncomeDiffChart({ selectedPolicies, selectedYear = 2029 }) {
             earner's pay.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
+        <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { EMPTY, VIEW_OPTIONS, lineSeries, mergeSeries, rangeAxis, visibleRows } from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan } from "../../../utils/livingStandards/outlook";
@@ -81,21 +81,23 @@ export default function InequalitySection({ data }) {
       }
       controls={
         <>
-          <Choice
-            fieldLabel="Measure"
-            label="Inequality measure"
+          <PillSelect
+            variant="light"
+            prefix="Measure"
+            name="Inequality measure"
             value={measure}
             onChange={setMeasure}
-            options={Object.keys(ineq.measures).map((id) => ({ id, label: ineq.measures[id] }))}
+            options={Object.keys(ineq.measures).map((id) => ({ value: id, label: ineq.measures[id] }))}
           />
-          <Choice
-            fieldLabel="Housing costs"
-            label="Housing costs"
+          <PillSelect
+            variant="light"
+            prefix="Housing costs"
+            name="Housing costs"
             value={basis}
             onChange={setBasis}
-            options={Object.keys(ineq.bases).map((id) => ({ id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)" }))}
+            options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)" }))}
           />
-          <Choice fieldLabel="Period" label="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+          <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
         </>
       }
     >

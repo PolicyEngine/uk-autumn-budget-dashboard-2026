@@ -1,7 +1,7 @@
 /** A section's title and one-line subtitle, on the page above its cards. */
-function SectionHeading({ title, subtitle }) {
+function SectionHeading({ title, subtitle, id, className = "" }) {
   return (
-    <div className="section-heading">
+    <div id={id} className={`section-heading ${className}`.trim()}>
       <h2>{title}</h2>
       {subtitle && <p>{subtitle}</p>}
     </div>

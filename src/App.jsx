@@ -16,6 +16,7 @@ import ViewTabs from "./components/ViewTabs";
 import MethodologyTab, { METHOD_SECTIONS } from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
+import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import {
@@ -186,8 +187,6 @@ function App() {
   // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
   const [distributionalYear, setDistributionalYear] = useState(2029);
   const [results, setResults] = useState(null);
-  const [showPolicyDetails, setShowPolicyDetails] = useState(false);
-  const [showOBRComparison, setShowOBRComparison] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Valid policy IDs from POLICIES
@@ -632,43 +631,17 @@ function App() {
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the card */}
-                      <div id="obr-comparison" className="obr-expandable">
-                        <button
-                          type="button"
-                          className="obr-toggle-button"
-                          aria-expanded={showOBRComparison}
-                          onClick={() => setShowOBRComparison(!showOBRComparison)}
-                        >
-                          Compare with OBR estimates
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
-                            style={{
-                              transform: showOBRComparison
-                                ? "rotate(180deg)"
-                                : "rotate(0deg)",
-                              transition: "transform 0.2s",
-                            }}
-                          >
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                          </svg>
-                        </button>
-                        {showOBRComparison && (
-                          <div className="obr-content">
-                            <OBRComparisonTable
-                              selectedPolicies={selectedPolicies}
-                              selectedYear={distributionalYear}
-                            />
-                          </div>
-                        )}
-                      </div>
+                      <Disclosure
+                        id="obr-comparison"
+                        inCard
+                        title="Compare with OBR estimates"
+                        contentClassName="obr-content"
+                      >
+                        <OBRComparisonTable
+                          selectedPolicies={selectedPolicies}
+                          selectedYear={distributionalYear}
+                        />
+                      </Disclosure>
                     </section>
 
                     {/* Row 1: Absolute and Relative Impact (the year is chosen in the title band) */}
@@ -754,39 +727,11 @@ function App() {
                       title="Policies"
                       subtitle="What each selected policy does and how it is modelled."
                     />
-                    <section
-                      id="policy-details"
-                      className="report-section policy-details-footer"
-                    >
-                      <button
-                        type="button"
-                        className="policy-details-toggle"
-                        aria-expanded={showPolicyDetails}
-                        onClick={() => setShowPolicyDetails(!showPolicyDetails)}
+                    <section id="policy-details" className="report-section">
+                      <Disclosure
+                        title="About selected policies"
+                        contentClassName="policy-details-content"
                       >
-                        About selected policies
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                          style={{
-                            transform: showPolicyDetails
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-                            transition: "transform 0.2s",
-                          }}
-                        >
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      {showPolicyDetails && (
-                        <div className="policy-details-content">
                           {[
                             ["Raise revenue", true],
                             ["Cost revenue", false],
@@ -821,8 +766,7 @@ function App() {
                               </div>
                             );
                           })}
-                        </div>
-                      )}
+                      </Disclosure>
                     </section>
                   </>
                 )}

@@ -13,10 +13,7 @@ import {
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
-import { buildChartSvg, exportChartAsSvg } from "../utils/exportChartAsSvg";
-import { downloadFile } from "../utils/downloadFile";
-import { downloadSvgAsPng } from "../utils/rasteriseSvg";
-import { decileCsv, unpublishedCsv } from "../utils/chartCsv";
+import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
@@ -234,31 +231,17 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
     legendItems,
     logo: CHART_LOGO,
   };
-  const handleExportSvg = async () => {
-    await exportChartAsSvg(chartRef, exportName, exportOptions);
-  };
   const selectedPolicyNames = POLICIES.filter((policy) =>
     selectedPolicies.includes(policy.id),
   ).map((policy) => policy.name);
-  // One menu: the chart's data as CSV, and the SVG export as SVG or PNG.
-  const downloads = {
-    csv: () =>
-      downloadFile(
-        published
-          ? decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear })
-          : unpublishedCsv(decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear })),
-        `${exportName}.csv`,
-        "text/csv;charset=utf-8",
-      ),
-    png: async () =>
-      downloadSvgAsPng(await buildChartSvg(chartRef, exportOptions), exportName),
-    svg: handleExportSvg,
+  // One menu: the chart's data as CSV, and the chart as PNG or SVG.
+  const download = {
+    chartRef,
+    name: exportName,
+    exportOptions,
+    csv: () => decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear }),
+    published,
   };
-  // A year not yet published has only its (empty) CSV to download
-  if (!published) {
-    delete downloads.png;
-    delete downloads.svg;
-  }
 
   return (
     <div className="distributional-chart">
@@ -273,7 +256,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
             Positive values indicate gains; negative values indicate losses.
           </p>
         </div>
-        <ChartDownloadMenu formats={downloads} chartTitle={chartTitle} />
+        <ChartDownloadMenu download={download} chartTitle={chartTitle} />
       </div>
 
       <div ref={chartRef}>

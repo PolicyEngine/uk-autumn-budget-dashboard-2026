@@ -146,8 +146,7 @@ body {
 .card,
 .hero-chart,
 .charts-grid > div,
-.obr-expandable,
-.policy-details-footer {
+.disclosure-card {
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
@@ -446,12 +445,6 @@ body {
   font-size: 0.625rem;
 }
 
-.obr-toggle-button:focus-visible,
-.policy-details-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 /* Standfirst: the full content width */
 .dashboard-intro {
   font-size: 1.0625rem;
@@ -633,15 +626,16 @@ body {
   margin-top: 12px;
 }
 
-/* Disclosure cards: OBR comparison, method notes, policy notes */
-.obr-expandable,
-.policy-details-footer {
+/* Disclosures (Disclosure.jsx), closed by default: a full-width button
+   with a chevron. As a card of its own (About selected policies, About
+   this data), or in a card's foot under the card's one rule (About this
+   chart, Compare with OBR estimates). */
+.disclosure-card {
   margin: 0;
   padding: 0 var(--card-padding);
 }
 
-.obr-toggle-button,
-.policy-details-toggle {
+.disclosure-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -650,24 +644,46 @@ body {
   padding: 16px 0;
   background: transparent;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   font-weight: 600;
+  line-height: 1.4;
   color: var(--pe-gray-800);
   cursor: pointer;
   text-align: left;
 }
 
-.obr-toggle-button:hover,
-.policy-details-toggle:hover {
-  background: transparent;
+.disclosure-toggle:hover {
   color: var(--pe-teal-700);
 }
 
-.obr-content {
-  padding: 0 0 20px;
+.disclosure-chevron {
+  flex: 0 0 auto;
+  transition: transform 0.2s;
+}
+
+.disclosure-toggle[aria-expanded="true"] .disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.disclosure-in-card {
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.disclosure-in-card > .disclosure-toggle {
+  padding: 14px 0 0;
+}
+
+.disclosure-in-card > .disclosure-content {
+  margin-top: 8px;
+}
+
+.disclosure-in-card > .disclosure-content > p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
 }
 
 .obr-content .obr-comparison-section {
@@ -678,10 +694,6 @@ body {
 
 .obr-content .obr-comparison-section h2 {
   margin-top: 0;
-}
-
-.policy-details-content {
-  padding: 0 0 16px;
 }
 
 .policy-detail {
@@ -795,7 +807,9 @@ body {
     grid-row: 6;
   }
 
-  .charts-grid > div:not(:only-child) > .chart-footer {
+  .charts-grid > div:not(:only-child) > .chart-footer,
+  .charts-grid > div:not(:only-child) > .note {
+    grid-column: 1 / -1;
     grid-row: 7;
   }
 
@@ -872,6 +886,27 @@ body {
   white-space: nowrap;
 }
 
+/* A chart that cannot be drawn for the current choice: a quiet grey panel
+   in the plot's place, with the reason */
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border-radius: var(--pe-radius-md);
+}
+
+.chart-empty p {
+  max-width: 34ch;
+  margin: 0;
+}
+
 /* A chart's plot for a year not yet published */
 .unpublished-plot {
   display: flex;
@@ -909,6 +944,23 @@ body {
   text-align: center;
 }
 
+/* A reading caveat under a chart or a section (Note.jsx) */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.note svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--pe-gray-400);
+}
+
 .chart-logo {
   display: flex;
   justify-content: flex-end;
@@ -922,23 +974,8 @@ body {
   height: auto;
 }
 
-/* A card's expandable footer (OBR comparison, method note): inside the
-   card, separated from the chart by space only */
-.chart-footer,
-.hero-chart .obr-expandable {
-  margin-top: 16px;
-}
-
-.main-content .hero-chart .obr-expandable {
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-
-/* The only rules inside cards: one above each in-card expander */
-.main-content .hero-chart .obr-expandable,
+/* A card's foot link (the map's method note): under the card's one rule,
+   like an in-card disclosure */
 .main-content .chart-footer {
   margin-top: 16px;
   border-top: 1px solid var(--card-border);

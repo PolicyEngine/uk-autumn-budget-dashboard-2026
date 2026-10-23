@@ -8,9 +8,9 @@ export const OUTTURN_COLOUR = "#9CA3AF";
 export const PROJECTION_COLOUR = "#319795";
 
 export const VIEW_OPTIONS = [
-  { id: "outturn", label: "Outturn" },
-  { id: "both", label: "Both" },
-  { id: "forecast", label: "Projection" },
+  { value: "outturn", label: "Outturn" },
+  { value: "both", label: "Both" },
+  { value: "forecast", label: "Projection" },
 ];
 
 /** SVG dash patterns, so lines differ by pattern as well as colour. */

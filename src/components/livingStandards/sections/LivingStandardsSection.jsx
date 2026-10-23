@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
-import Choice from "../Choice";
+import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   changeVerb,
@@ -26,7 +26,8 @@ import {
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import { CSV_SOURCES, HbaiSource, Note } from "../sources";
+import Note from "../../Note";
+import { CSV_SOURCES, HbaiSource } from "../sources";
 
 /** meta.units[metric] may be a string or an object with a label/unit field. */
 function unitFor(meta, metric) {
@@ -148,30 +149,33 @@ export default function LivingStandardsSection({ data }) {
       }
       controls={
         <>
-          <Choice
-            fieldLabel="Measure"
-            label="Income metric"
+          <PillSelect
+            variant="light"
+            prefix="Measure"
+            name="Income metric"
             value={metric}
             onChange={setMetric}
-            options={metricIds.map((id) => ({ id, label: living.metrics[id] }))}
+            options={metricIds.map((id) => ({ value: id, label: living.metrics[id] }))}
           />
-          <Choice
-            fieldLabel="Prices"
-            label="Price basis"
+          <PillSelect
+            variant="light"
+            prefix="Prices"
+            name="Price basis"
             value={adjustment}
             onChange={setAdjustment}
             options={[
-              { id: "real", label: "Real" },
-              { id: "nominal", label: "Cash terms" },
+              { value: "real", label: "Real" },
+              { value: "nominal", label: "Cash terms" },
             ]}
           />
-          <Choice
-            fieldLabel="Period"
-            label="Series shown"
+          <PillSelect
+            variant="light"
+            prefix="Period"
+            name="Series shown"
             value={effectiveView}
             onChange={setViewMode}
             options={VIEW_OPTIONS.map((o) =>
-              o.id === "outturn" && noOutturn
+              o.value === "outturn" && noOutturn
                 ? { ...o, disabled: true, title: realOnlyOutturn ? "Official series in real terms only" : NO_OFFICIAL_SERIES }
                 : o,
             )}
@@ -191,7 +195,7 @@ export default function LivingStandardsSection({ data }) {
     >
       {chartData.length === 0 ? (
         <div className="chart-plot">
-          <div className="ls-empty">No data for this metric.</div>
+          <div className="chart-empty">No data for this metric.</div>
         </div>
       ) : (
         <LsLineChart

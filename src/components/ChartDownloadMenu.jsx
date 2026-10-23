@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { chartDownloads } from "../utils/chartDownloads";
 import "./ChartDownloadMenu.css";
 
 const FORMAT_LABELS = {
@@ -36,8 +37,12 @@ function DownloadIcon() {
  * function that downloads it; formats without a function are left out.
  * Escape or a click outside closes the list; Escape returns focus to the
  * button.
+ *
+ * For a Recharts chart, pass `download` instead of `formats`: { chartRef,
+ * name, exportOptions, csv, published?, image? } (see chartDownloads).
  */
-function ChartDownloadMenu({ formats, chartTitle, ariaLabel, disabledReason }) {
+function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLabel, disabledReason }) {
+  const formats = formatsProp ?? (download ? chartDownloads(download) : null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
   const rootRef = useRef(null);
