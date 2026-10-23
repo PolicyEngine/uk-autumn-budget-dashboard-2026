@@ -185,17 +185,27 @@ def validate_mapping_diagnosis(diagnosis, reference, rebased):
 def timed_projection(base, batch_wall, count, gate, reference, budget, measures,
                      full_launcher_wall=None):
     batches = math.ceil(measures / count)
-    total = base + batches * batch_wall + gate
+    core_total = base + batches * (batch_wall + gate)
+    launcher = full_launcher_wall if finite_seconds(full_launcher_wall) else batch_wall
+    total = base + batches * (launcher + gate)
     result = {
         "concurrency": count, "projected_measures": measures,
         "projected_batches": batches, "observed_batch_wall_seconds": batch_wall,
-        "projected_generation_seconds": batches * batch_wall,
-        "batch_supervisor_gate_counted_once_seconds": gate,
+        "observed_full_launcher_external_seconds": full_launcher_wall,
+        "projected_generation_seconds_including_repeated_admission": batches * (launcher + gate),
+        "batch_supervisor_gate_seconds_each": gate,
+        "batch_supervisor_gate_seconds_counted": batches * gate,
         "critical_path_seconds": total,
         "machine_margin_seconds": budget - total,
         "machine_fits": total <= budget,
         "finish_clock_from_1330": finish_clock(total),
         "maximum_remaining_human_review_and_rework_seconds": max(0, budget - total),
+        "core_batch_only_projection": {
+            "critical_path_seconds": core_total,
+            "machine_margin_seconds": budget - core_total,
+            "excludes_launcher_admission_and_snapshot_overhead": True,
+        },
+        "counting_note": "Primary projection repeats the full measured launcher and its outside supervisor gate for every batch; concurrent child walls are never added.",
     }
     if reference is not None:
         repeated = total + reference
@@ -203,14 +213,6 @@ def timed_projection(base, batch_wall, count, gate, reference, budget, measures,
             "critical_path_seconds": repeated, "reference_added_once_seconds": reference,
             "machine_margin_seconds": budget - repeated, "machine_fits": repeated <= budget,
             "finish_clock_from_1330": finish_clock(repeated),
-        }
-    if finite_seconds(full_launcher_wall):
-        envelope = base + batches * full_launcher_wall + gate
-        result["conservative_repeat_full_batch_launcher"] = {
-            "observed_launcher_external_seconds": full_launcher_wall,
-            "critical_path_seconds": envelope, "machine_margin_seconds": budget - envelope,
-            "machine_fits": envelope <= budget,
-            "finish_clock_from_1330": finish_clock(envelope),
         }
     return result
 
@@ -349,7 +351,9 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
     checks["concurrency_three_assessed"] = bool(batches[3] and batches[3].get("status") in
                                                ("completed", "skipped_resource_gate"))
     checks["at_least_one_concurrent_batch_completed"] = bool(successful)
-    selected_count = max(successful) if successful else None
+    projected = [count for count in successful if "projection" in concurrency[str(count)]]
+    selected_count = (min(projected, key=lambda count: concurrency[str(count)]["projection"]["critical_path_seconds"])
+                      if projected else None)
     selected = concurrency[str(selected_count)].get("projection") if selected_count else None
     complete = all(checks.values())
     verdict = "UNKNOWN: required timing evidence is incomplete; the original HPI probe remains failed"
@@ -391,7 +395,7 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "prepublication_frozen_reference": reference_component,
         "importer_source_verification_and_parameter_copy_seconds_counted_once": diagnostic.get("seconds"),
         "concurrency": concurrency,
-        "selected_largest_successfully_measured_concurrency": selected_count,
+        "selected_fastest_successfully_measured_concurrency": selected_count,
         "selected_projection": selected,
         "staging": {"source_manifest_present": staging.get("source_manifest_present") if staging else None,
                     "actual_existing_entry_basis_transition_tested": staging.get("basis_adoption_transition_tested") if staging else None,
@@ -403,9 +407,9 @@ def summarize(acquisition_seconds=600., measures=15, budget_seconds=8100.):
         "counting_rules": [
             "Use each chosen external command wall once; its imports, child gates, construction and calculations are included already.",
             "Add a selected phase's supervisor_gate_seconds once because that gate preceded its external timer.",
-            "Use ceil(15/k) times observed batch_wall_seconds; concurrent child walls and detailed subcounters are never added.",
+            "Use ceil(15/k) times the observed full launcher external wall plus its outside supervisor gate per batch; concurrent child walls and detailed subcounters are never added.",
             "Frozen references are prepublication; the repeat-reference variant adds their external wall and supervisor gate once.",
-            "The full-launcher variant repeats observed batch admission/snapshot overhead as well as its child batch.",
+            "The primary projection repeats observed batch admission/snapshot overhead as well as its child batch; choose the fastest complete measured projected route.",
             "Actual staging external wall conservatively includes the separately labelled basis-adoption fixture.",
             "Stage preload prerequisite_wait_seconds overlaps serial generation and is subtracted once from the raw stage external wall. All stage import time remains counted sequentially as a conservative planning cost.",
             "Benchmark phases can overlap in the actual schedule; no sum of their observed overall wall times is presented as actual elapsed benchmark duration.",
