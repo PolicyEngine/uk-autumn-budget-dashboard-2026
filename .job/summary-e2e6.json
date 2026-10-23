@@ -1,0 +1,256 @@
+{
+  "generated_at_utc": "2026-10-23T15:33:17.503007+00:00",
+  "verdict": "UNKNOWN: required timing evidence is incomplete; the original HPI probe remains failed",
+  "complete_for_measured_machine_projection": false,
+  "timing_evidence_complete": false,
+  "semantic_route_accepted": false,
+  "firm_full_release_claim_supported": false,
+  "operational_decision": "NO: retain the March first cut; a full rebase for 15:45 is not validated.",
+  "partial_timing_budget": {
+    "recorded_work_including_failed_staging_and_acquisition_estimate_seconds": 3418.3356200840135,
+    "remaining_before_unknown_batches_staging_rework_and_human_review_seconds": 4681.6643799159865,
+    "full_route_complete": false,
+    "verified_full_route_margin_seconds": null,
+    "conditional_maximum_full_batch_seconds_by_concurrency": {
+      "2": 585.2080474894983,
+      "3": 936.3328759831973
+    },
+    "note": "Budget hurdles only: failed staging is not a successful cost estimate, both batch throughputs are unmeasured, and further staging work and human review still consume this remainder."
+  },
+  "remaining_checks": [
+    "authentic_scratch_staging_passed",
+    "labelled_real_receipt_basis_fixture_passed",
+    "all_required_external_phase_records_present_for_completed_measurements",
+    "concurrency_two_assessed",
+    "concurrency_three_assessed",
+    "at_least_one_concurrent_batch_completed"
+  ],
+  "checks": {
+    "certified_importer_command_passed": true,
+    "reviewed_inputs_command_passed": true,
+    "reviewed_input_readiness_valid": true,
+    "frozen_reference_valid": true,
+    "rebased_subset_measurement_completed_or_failure_separately_diagnosed": true,
+    "serial_measure_six_tables_five_years": true,
+    "authentic_scratch_staging_passed": false,
+    "labelled_real_receipt_basis_fixture_passed": false,
+    "all_required_external_phase_records_present_for_completed_measurements": false,
+    "concurrency_two_assessed": false,
+    "concurrency_three_assessed": false,
+    "at_least_one_concurrent_batch_completed": false
+  },
+  "input_issues": [],
+  "semantic_checks": {
+    "original_runbook_probe_passed": false,
+    "installed_mapping_failure_separately_diagnosed": true,
+    "reviewed_choice_of_residential_growth_semantics_recorded": false,
+    "human_review_completed_and_timed": false
+  },
+  "semantic_blockers": [
+    "Original HPI checks remain failed: certified UK2.132.6 maps main_residence_value to GDP/head, whereas the runbook's UK2.145.0 expectation used HPI.",
+    "A reviewed choice about the certified bundle's residential-growth limitation and the intended full forecast refresh remains required.",
+    "Human input review, output review and approval remain unmeasured; timing-only continuation does not accept or approve a release."
+  ],
+  "mapping_diagnosis": {
+    "valid_for_timing_only_continuation": true,
+    "checks": {
+      "certified_21326_GDP_mapping_identified": true,
+      "original_56_checks_and_eight_HPI_failures_retained": true,
+      "same_tolerance_distinct_GDP_prediction_has_ten_checks": true,
+      "GDP_predictions_reproduce_frozen_aggregate_ratios": true,
+      "frozen_raw_reference_and_failed_probe_hashes_unchanged": true,
+      "installed_mapping_source_hash_matches_diagnosis": true
+    },
+    "raw_probe_passed": false,
+    "raw_original_passed_checks": 48,
+    "raw_original_failed_checks": 8,
+    "raw_original_total_checks": 56,
+    "interpretation": "The certified 2.132.6 pair correctly propagates its existing GDP/head mapping into stored residential values. It does not implement the runbook's 2.145.0 HPI semantics. This diagnosis explains the failure without clearing the original HPI input-readiness check or validating an October residential forecast refresh. Timing the unmodified certified pair remains a performance diagnostic; release adoption requires an explicit reviewed choice of model semantics.",
+    "continuation_scope": "Timing-only continuation on the identical unmodified certified 2.132.6 pair can measure generation cost with this residential-growth limitation recorded. Do not report that full HPI rebase validation passed.",
+    "semantic_acceptance": false
+  },
+  "window": {
+    "start_clock": "13:30:00",
+    "first_cut_clock": "15:45:00",
+    "available_seconds": 8100.0,
+    "clock_timezone": "Budget-day publication local clock"
+  },
+  "planning": {
+    "acquisition_estimate_seconds": 600.0,
+    "projected_measure_count": 15,
+    "human_review_seconds": null,
+    "human_review_counted": false,
+    "measure_heterogeneity_and_rework_measured": false,
+    "about_fifteen_measure_projection_is_extrapolation": true
+  },
+  "critical_path_components_before_projected_batches": [
+    {
+      "name": "acquisition_estimate",
+      "complete": true,
+      "counted_seconds": 600.0,
+      "estimated": true,
+      "note": "Planning estimate for browser acquisition; no October download was timed"
+    },
+    {
+      "name": "source_verification_and_scratch_parameter_copy",
+      "complete": true,
+      "counted_seconds": 1.7292782080039615,
+      "estimated": false,
+      "source": "importer-certified-timings.json"
+    },
+    {
+      "name": "primary_certified_importer",
+      "source": "importer-certified-timings.json",
+      "complete": true,
+      "supervisor_gate_seconds": 0,
+      "external_wall_seconds": 313.6650414579999,
+      "exit_code": 0,
+      "counted_seconds": 313.6650414579999
+    },
+    {
+      "name": "reviewed_inputs_machine_only",
+      "source": "importer-certified-timings.json",
+      "complete": true,
+      "supervisor_gate_seconds": 0,
+      "external_wall_seconds": 11.595199750001484,
+      "exit_code": 0,
+      "counted_seconds": 11.595199750001484
+    },
+    {
+      "name": "rebased_subset_probe_original_HPI_gate_failed",
+      "source": "phases.jsonl",
+      "complete": true,
+      "label": "rebased-probe",
+      "exit_code": 1,
+      "command_passed": false,
+      "external_wall_seconds": 732.5618571669984,
+      "supervisor_gate_seconds": 0.8360560830042232,
+      "counted_seconds": 733.3979132500026,
+      "reason": "Completed timing measurement retained despite the original failed HPI expectation; separately validated installed-mapping diagnosis does not accept the release semantics"
+    },
+    {
+      "name": "one_serial_national_measure",
+      "source": "phases.jsonl",
+      "complete": true,
+      "label": "serial-certified-default",
+      "exit_code": 0,
+      "command_passed": true,
+      "external_wall_seconds": 1525.831628,
+      "supervisor_gate_seconds": 0.11838720898958854,
+      "counted_seconds": 1525.9500152089895
+    },
+    {
+      "name": "scratch_staging_including_labelled_fixture",
+      "source": "phases.jsonl",
+      "complete": false,
+      "label": "scratch-staging",
+      "exit_code": 1,
+      "command_passed": false,
+      "external_wall_seconds": 2716.5881053750054,
+      "supervisor_gate_seconds": 0.41639154200674966,
+      "reason": "Latest matching command did not pass",
+      "raw_external_wall_seconds": 2716.5881053750054,
+      "prerequisite_wait_seconds_excluded_once": 2485.006324707996,
+      "wait_adjusted_postgeneration_cost_seconds": 231.5817806670093,
+      "diagnostic_failed_attempt_seconds_including_supervisor_gate": 231.99817220901605,
+      "diagnostic_note": "Measured refusal cost only; successful staging remains unmeasured and is not marked complete."
+    }
+  ],
+  "known_component_seconds": 3186.3374478749975,
+  "all_base_components_measured_or_explicitly_estimated": false,
+  "unmeasured_batch_budget_hurdles": null,
+  "prepublication_frozen_reference": {
+    "name": "frozen_reference_prepublication",
+    "source": "phases.jsonl",
+    "complete": true,
+    "label": "reference",
+    "exit_code": 0,
+    "command_passed": true,
+    "external_wall_seconds": 632.6206038749951,
+    "supervisor_gate_seconds": 0.6633905839989893,
+    "counted_seconds": 633.2839944589941
+  },
+  "importer_source_verification_and_parameter_copy_seconds_counted_once": 1.7292782080039615,
+  "concurrency": {
+    "2": {
+      "count": 2,
+      "evidence_present": true,
+      "status": "failed",
+      "external_phase": {
+        "name": "concurrency_2",
+        "source": "phases.jsonl",
+        "complete": false,
+        "label": "concurrency-2",
+        "exit_code": 1,
+        "command_passed": false,
+        "external_wall_seconds": 131.8926233749953,
+        "supervisor_gate_seconds": 0.14710312501119915,
+        "reason": "Latest matching command did not pass"
+      },
+      "complete": false,
+      "batch_wall_seconds": 130.13619787499192,
+      "skip_reason": null,
+      "resource_snapshot": {
+        "utc": "2026-10-23T15:28:07.690298+00:00",
+        "load1": 81.7578125,
+        "free_disk_decimal_gb": 94.581886976,
+        "memory_page_bytes": 16384,
+        "memory_free_pages": 1213027,
+        "memory_inactive_pages": 2602757,
+        "memory_reserve_decimal_gb": 5.0,
+        "memory_headroom_decimal_gb": 57.517805056,
+        "required_memory_decimal_gb": 37.2,
+        "checks": {
+          "load1_at_most_110": true,
+          "free_disk_at_least_55_decimal_gb": true,
+          "memory_headroom_sufficient": true
+        },
+        "passed": true
+      },
+      "measured_peak_memory_decimal_gb_by_process": {
+        "two_child_limit": null,
+        "savings_tax_increase_2pp": null
+      },
+      "child_wall_times_counted": false
+    },
+    "3": {
+      "count": 3,
+      "evidence_present": true,
+      "status": "not_started_reservation_refused",
+      "external_phase": {
+        "name": "concurrency_3",
+        "source": "phases.jsonl",
+        "complete": false,
+        "reason": "No completed external phase record"
+      },
+      "complete": false,
+      "batch_wall_seconds": null,
+      "skip_reason": null,
+      "resource_snapshot": null,
+      "measured_peak_memory_decimal_gb_by_process": {},
+      "child_wall_times_counted": false
+    }
+  },
+  "selected_fastest_successfully_measured_concurrency": null,
+  "selected_projection": null,
+  "staging": {
+    "source_manifest_present": false,
+    "actual_existing_entry_basis_transition_tested": false,
+    "labelled_fixture": null,
+    "raw_external_wall_seconds": 2716.5881053750054,
+    "prerequisite_wait_seconds": 2485.006324707996,
+    "wait_adjusted_postgeneration_cost_seconds": 231.5817806670093,
+    "imports_counted_sequentially_despite_benchmark_overlap": true
+  },
+  "counting_rules": [
+    "Use each chosen external command wall once; its imports, child gates, construction and calculations are included already.",
+    "Add a selected phase's supervisor_gate_seconds once because that gate preceded its external timer.",
+    "Use ceil(15/k) times the observed full launcher external wall plus its outside supervisor gate per batch; concurrent child walls and detailed subcounters are never added.",
+    "Frozen references are prepublication; the repeat-reference variant adds their external wall and supervisor gate once.",
+    "The primary projection repeats observed batch admission/snapshot overhead as well as its child batch; choose the fastest complete measured projected route.",
+    "Actual staging external wall conservatively includes the separately labelled basis-adoption fixture.",
+    "Stage preload prerequisite_wait_seconds overlaps serial generation and is subtracted once from the raw stage external wall. All stage import time remains counted sequentially as a conservative planning cost.",
+    "Benchmark phases can overlap in the actual schedule; no sum of their observed overall wall times is presented as actual elapsed benchmark duration.",
+    "Environment installation, diagnostic UK2.145 importer, and failed preparation attempts are excluded from the prepared Budget-day critical path."
+  ]
+}

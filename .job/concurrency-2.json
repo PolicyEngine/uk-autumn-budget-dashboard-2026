@@ -1,0 +1,73 @@
+{
+  "count": 2,
+  "requested_measures": [
+    "two_child_limit",
+    "savings_tax_increase_2pp"
+  ],
+  "serial_timing_file": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/serial-two-child/timings.json",
+  "serial_measured_peak_decimal_gb": 14.85963264,
+  "minimum_per_process_decimal_gb": 18.6,
+  "admission_per_process_decimal_gb": 18.6,
+  "required_batch_memory_decimal_gb": 37.2,
+  "status": "failed",
+  "children": [
+    {
+      "measure": "two_child_limit",
+      "pid": 69869,
+      "returncode": 1,
+      "external_wall_seconds": 129.82097008399433,
+      "finished_utc": "2026-10-23T15:30:17.979512+00:00",
+      "output": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/concurrency-2-two_child_limit",
+      "log": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/logs/concurrency-2-two_child_limit.log",
+      "command": [
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+        "-B",
+        "-u",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/generate_e2e6.py",
+        "two_child_limit",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/concurrency-2-two_child_limit"
+      ],
+      "complete": false
+    },
+    {
+      "measure": "savings_tax_increase_2pp",
+      "pid": 69898,
+      "returncode": 1,
+      "external_wall_seconds": 129.57157225000265,
+      "finished_utc": "2026-10-23T15:30:17.981567+00:00",
+      "output": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/concurrency-2-savings_tax_increase_2pp",
+      "log": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/logs/concurrency-2-savings_tax_increase_2pp.log",
+      "command": [
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+        "-B",
+        "-u",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/generate_e2e6.py",
+        "savings_tax_increase_2pp",
+        "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/outputs/concurrency-2-savings_tax_increase_2pp"
+      ],
+      "complete": false
+    }
+  ],
+  "timing_note": "Use batch_wall_seconds once for the measured critical path. Child wall times overlap and must not be summed with the batch.",
+  "resource_snapshot": {
+    "utc": "2026-10-23T15:28:07.690298+00:00",
+    "load1": 81.7578125,
+    "free_disk_decimal_gb": 94.581886976,
+    "memory_page_bytes": 16384,
+    "memory_free_pages": 1213027,
+    "memory_inactive_pages": 2602757,
+    "memory_reserve_decimal_gb": 5.0,
+    "memory_headroom_decimal_gb": 57.517805056,
+    "required_memory_decimal_gb": 37.2,
+    "checks": {
+      "load1_at_most_110": true,
+      "free_disk_at_least_55_decimal_gb": true,
+      "memory_headroom_sufficient": true
+    },
+    "passed": true
+  },
+  "batch_started_utc": "2026-10-23T15:28:07.937382+00:00",
+  "batch_wall_seconds": 130.13619787499192,
+  "batch_finished_utc": "2026-10-23T15:30:18.073751+00:00",
+  "simulations_started": 2
+}

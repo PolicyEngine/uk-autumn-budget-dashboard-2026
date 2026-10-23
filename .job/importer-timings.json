@@ -1,0 +1,296 @@
+{
+  "venv": {
+    "external_seconds": 2.9191492500031018,
+    "returncode": 0,
+    "argv": [
+      "uv",
+      "venv",
+      "--python",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv"
+    ]
+  },
+  "initial_install_interrupted": {
+    "completed": false,
+    "reason": "Slow Plotly download/extraction; interrupted alongside main sync. Exact existing immutable5.24.1 cache now read in place through workspace links. Preparation only, excluded from Budget route clock.",
+    "elapsed_seconds_approximate": 176.907329082489
+  },
+  "install_after_cache_seed": {
+    "external_seconds": 41.67102350000641,
+    "returncode": 0,
+    "argv": [
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "policyengine-uk==2.145.0",
+      "policyengine-core==3.33.3"
+    ]
+  },
+  "importer_extra_dependencies": {
+    "external_seconds": 3.4642113750014687,
+    "returncode": 0,
+    "argv": [
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "--constraint",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-dependency-constraints.txt",
+      "PyYAML",
+      "openpyxl",
+      "beautifulsoup4",
+      "lxml"
+    ]
+  },
+  "versions": {
+    "external_seconds": 10.411327750000055,
+    "returncode": 0,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "-B",
+      "-c",
+      "import importlib.metadata as m, json, sys; print(json.dumps({\"python\": sys.version, \"installed\": {d.metadata[\"Name\"]: d.version for d in m.distributions()}}, sort_keys=True))"
+    ],
+    "environment": {
+      "installed": {
+        "Jinja2": "3.1.6",
+        "MarkupSafe": "3.0.3",
+        "PyYAML": "6.0.3",
+        "Pygments": "2.19.2",
+        "annotated-types": "0.7.0",
+        "anyio": "4.11.0",
+        "asttokens": "3.0.1",
+        "beautifulsoup4": "4.15.0",
+        "blosc2": "3.11.1",
+        "certifi": "2026.10.19",
+        "charset-normalizer": "3.4.4",
+        "click": "8.3.1",
+        "decorator": "5.2.1",
+        "dpath": "2.2.0",
+        "et_xmlfile": "2.0.0",
+        "executing": "2.2.1",
+        "filelock": "3.20.0",
+        "fsspec": "2025.10.0",
+        "h11": "0.16.0",
+        "h2": "4.4.1",
+        "h5py": "3.15.1",
+        "hf-xet": "1.7.0",
+        "hpack": "4.2.0",
+        "httpcore": "1.0.9",
+        "httpcore2": "2.16.0",
+        "httpx": "0.28.1",
+        "httpx2": "2.16.0",
+        "huggingface_hub": "1.1.5",
+        "hyperframe": "6.1.0",
+        "idna": "3.11",
+        "iniconfig": "2.3.0",
+        "ipython": "8.37.0",
+        "jedi": "0.19.2",
+        "jsonpickle": "4.1.1",
+        "lxml": "6.1.3",
+        "markdown-it-py": "4.2.0",
+        "matplotlib-inline": "0.2.1",
+        "mdurl": "0.1.2",
+        "microdf-python": "1.3.10",
+        "msgpack": "1.1.2",
+        "ndindex": "1.10.1",
+        "networkx": "3.6",
+        "numexpr": "2.14.1",
+        "numpy": "2.1.3",
+        "openpyxl": "3.1.5",
+        "packaging": "25.0",
+        "pandas": "2.3.3",
+        "parso": "0.8.5",
+        "pexpect": "4.9.0",
+        "platformdirs": "4.5.0",
+        "plotly": "5.24.1",
+        "pluggy": "1.6.0",
+        "policyengine-core": "3.33.3",
+        "policyengine-uk": "2.145.0",
+        "prompt_toolkit": "3.0.52",
+        "psutil": "6.1.1",
+        "ptyprocess": "0.7.0",
+        "pure_eval": "0.2.3",
+        "py-cpuinfo": "9.0.0",
+        "pydantic": "2.12.5",
+        "pydantic_core": "2.41.5",
+        "pytest": "8.4.2",
+        "python-dateutil": "2.9.0.post0",
+        "pytz": "2025.2",
+        "pyvis": "0.3.2",
+        "requests": "2.32.5",
+        "rich": "15.0.0",
+        "shellingham": "1.5.4",
+        "six": "1.17.0",
+        "sniffio": "1.3.1",
+        "sortedcontainers": "2.4.0",
+        "soupsieve": "3.0.4",
+        "stack-data": "0.6.3",
+        "standard-imghdr": "3.13.0",
+        "tables": "3.10.2",
+        "tenacity": "9.1.2",
+        "threadpoolctl": "3.7.0",
+        "tqdm": "4.67.1",
+        "traitlets": "5.14.3",
+        "truststore": "0.10.5",
+        "typer-slim": "0.20.0",
+        "typing-inspection": "0.4.2",
+        "typing_extensions": "4.15.0",
+        "tzdata": "2025.2",
+        "urllib3": "2.5.0",
+        "wcwidth": "0.2.14",
+        "wheel": "0.45.1"
+      },
+      "python": "3.13.9 (main, Oct 31 2025, 23:20:42) [Clang 21.1.4 ]"
+    }
+  },
+  "module_cli_failed_latest_pandas31": {
+    "external_seconds": 12.68386704200384,
+    "returncode": 1,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "-B",
+      "-m",
+      "policyengine_uk.utils.import_obr_forecasts",
+      "--file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx",
+      "--receipts-file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/obr_efo_march_2026_receipts.xlsx",
+      "--yaml-path",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer/after/gov/economic_assumptions/yoy_growth.yaml",
+      "--release-month",
+      "March",
+      "--release-year",
+      "2026",
+      "--forecast-start-year",
+      "2025",
+      "--forecast-years",
+      "6"
+    ]
+  },
+  "pin_importer_dependencies": {
+    "external_seconds": 67.7098029589979,
+    "returncode": 0,
+    "argv": [
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "--constraint",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-dependency-constraints.txt",
+      "policyengine-uk==2.145.0",
+      "policyengine-core==3.33.3",
+      "PyYAML",
+      "openpyxl",
+      "beautifulsoup4",
+      "lxml"
+    ]
+  },
+  "source_verification_and_parameter_copy_failed_attempt": {
+    "seconds": 1.4366625409966218,
+    "source_sha256": {
+      "economy": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+      "receipts": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28",
+      "importer": "fa79cb02513362ea9f8621112aedfb307cbb7dab868cc144f07076158c89cf94"
+    }
+  },
+  "source_verification_and_parameter_copy": {
+    "seconds": 2.2119588339992333,
+    "source_sha256": {
+      "economy": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+      "receipts": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28",
+      "importer": "fa79cb02513362ea9f8621112aedfb307cbb7dab868cc144f07076158c89cf94"
+    }
+  },
+  "module_cli": {
+    "external_seconds": 287.02045529199677,
+    "returncode": 0,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/bin/python",
+      "-B",
+      "-m",
+      "policyengine_uk.utils.import_obr_forecasts",
+      "--file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/efo-march-2026-detailed-forecast-tables-economy.xlsx",
+      "--receipts-file",
+      "/Users/maxghenis/reviews/uk-obr-receipts-importer-2341/sources/obr_efo_march_2026_receipts.xlsx",
+      "--yaml-path",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer/after/gov/economic_assumptions/yoy_growth.yaml",
+      "--release-month",
+      "March",
+      "--release-year",
+      "2026",
+      "--forecast-start-year",
+      "2025",
+      "--forecast-years",
+      "6"
+    ],
+    "import_seconds_nonoverlapping_roots": 274.231299,
+    "cli_calculation_and_interpreter_residual_seconds": 12.78915629199679,
+    "importtime_root_modules": [
+      {
+        "module": "_frozen_importlib_external",
+        "cumulative_microseconds": 3136
+      },
+      {
+        "module": "zipimport",
+        "cumulative_microseconds": 178990
+      },
+      {
+        "module": "encodings",
+        "cumulative_microseconds": 378312
+      },
+      {
+        "module": "encodings.utf_8",
+        "cumulative_microseconds": 105357
+      },
+      {
+        "module": "_signal",
+        "cumulative_microseconds": 133
+      },
+      {
+        "module": "io",
+        "cumulative_microseconds": 716
+      },
+      {
+        "module": "site",
+        "cumulative_microseconds": 416301
+      },
+      {
+        "module": "runpy",
+        "cumulative_microseconds": 383465
+      },
+      {
+        "module": "policyengine_uk.utils",
+        "cumulative_microseconds": 272520043
+      },
+      {
+        "module": "encodings.cp437",
+        "cumulative_microseconds": 244846
+      }
+    ],
+    "timing_method": "PYTHONPROFILEIMPORTTIME=1 on exact python -m CLI; only nonnested cumulative import rows summed. External residual includes parser/workbook/renderer/calculation and interpreter overhead; not an independent pure calculation measurement.",
+    "simulation_construction_seconds": 0,
+    "gate_wait_seconds": 0,
+    "importer_only_environment": "UK2.145.0 / Core3.33.3; not asserted certified and never used for simulation"
+  },
+  "reviewed_inputs": {
+    "external_seconds": 19.526375125002232,
+    "returncode": 0,
+    "argv": [
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/bin/python",
+      "-B",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/review_inputs.py",
+      "--before-parameters",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer/before",
+      "--after-parameters",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/importer/after",
+      "--output-dir",
+      "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/scratch/reviewed-inputs"
+    ]
+  }
+}

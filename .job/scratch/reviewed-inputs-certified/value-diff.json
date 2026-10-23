@@ -1,0 +1,314 @@
+{
+  "numerical_changes": [
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2025-07-01",
+      "before": 0.00259,
+      "after": 0.00249
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2026-07-01",
+      "before": 0.00274,
+      "after": 0.00314
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2027-07-01",
+      "before": 0.00027,
+      "after": 0.00067
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2028-07-01",
+      "before": -0.00021,
+      "after": -0.00011
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2029-07-01",
+      "before": -0.00015,
+      "after": -0.00025
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+      "series": "",
+      "date": "2030-07-01",
+      "before": -0.00011,
+      "after": -0.00021
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/cpi_september.yaml",
+      "series": "",
+      "date": "2025-09-01",
+      "before": 0.00411,
+      "after": 0.00441
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/cpi_september.yaml",
+      "series": "",
+      "date": "2027-09-01",
+      "before": 0.00072,
+      "after": 0.00102
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/cpi_september.yaml",
+      "series": "",
+      "date": "2028-09-01",
+      "before": 0.0003,
+      "after": 0.0005
+    },
+    {
+      "file": "statutory_uprating_inputs/forecast_gap/cpi_september.yaml",
+      "series": "",
+      "date": "2029-09-01",
+      "before": 0.00048,
+      "after": 0.00028
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2025-01-01",
+      "before": 0.053,
+      "after": 0.0531
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2026-01-01",
+      "before": 0.034,
+      "after": 0.0336
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2027-01-01",
+      "before": 0.024,
+      "after": 0.0236
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2028-01-01",
+      "before": 0.021,
+      "after": 0.0209
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2029-01-01",
+      "before": 0.022,
+      "after": 0.0221
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.average_earnings",
+      "date": "2030-01-01",
+      "before": 0.024,
+      "after": 0.0241
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.consumer_price_index",
+      "date": "2025-01-01",
+      "before": 0.034,
+      "after": 0.0337
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.consumer_price_index",
+      "date": "2027-01-01",
+      "before": 0.02,
+      "after": 0.0197
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.consumer_price_index",
+      "date": "2028-01-01",
+      "before": 0.02,
+      "after": 0.0198
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.consumer_price_index",
+      "date": "2029-01-01",
+      "before": 0.02,
+      "after": 0.0202
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2025-01-01",
+      "before": 0.028,
+      "after": 0.0279
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2026-01-01",
+      "before": 0.024,
+      "after": 0.0238
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2027-01-01",
+      "before": 0.029,
+      "after": 0.0294
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2028-01-01",
+      "before": 0.027,
+      "after": 0.0272
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2029-01-01",
+      "before": 0.026,
+      "after": 0.0257
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.house_prices",
+      "date": "2030-01-01",
+      "before": 0.024,
+      "after": 0.0242
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2025-01-01",
+      "before": 0.041,
+      "after": 0.0413
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2026-01-01",
+      "before": 0.031,
+      "after": 0.0308
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2027-01-01",
+      "before": 0.03,
+      "after": 0.0298
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2028-01-01",
+      "before": 0.028,
+      "after": 0.0278
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2029-01-01",
+      "before": 0.029,
+      "after": 0.0288
+    },
+    {
+      "file": "yoy_growth.yaml",
+      "series": "obr.rpi",
+      "date": "2030-01-01",
+      "before": 0.023,
+      "after": 0.0226
+    }
+  ],
+  "text_changed_files": [
+    "statutory_uprating_inputs/forecast_gap/awe_total_pay_may_july.yaml",
+    "statutory_uprating_inputs/forecast_gap/cpi_september.yaml",
+    "yoy_growth.yaml"
+  ],
+  "statutory_compensation_checks": [
+    {
+      "series": "cpi_september",
+      "year": 2025,
+      "implied_before": 0.038110000000000005,
+      "implied_after": 0.03811
+    },
+    {
+      "series": "cpi_september",
+      "year": 2026,
+      "implied_before": 0.021159999999999998,
+      "implied_after": 0.021159999999999998
+    },
+    {
+      "series": "cpi_september",
+      "year": 2027,
+      "implied_before": 0.02072,
+      "implied_after": 0.02072
+    },
+    {
+      "series": "cpi_september",
+      "year": 2028,
+      "implied_before": 0.020300000000000002,
+      "implied_after": 0.020300000000000002
+    },
+    {
+      "series": "cpi_september",
+      "year": 2029,
+      "implied_before": 0.02048,
+      "implied_after": 0.020479999999999998
+    },
+    {
+      "series": "cpi_september",
+      "year": 2030,
+      "implied_before": 0.02,
+      "implied_after": 0.02
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2025,
+      "implied_before": 0.05559,
+      "implied_after": 0.05559
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2026,
+      "implied_before": 0.03674,
+      "implied_after": 0.036739999999999995
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2027,
+      "implied_before": 0.02427,
+      "implied_after": 0.02427
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2028,
+      "implied_before": 0.020790000000000003,
+      "implied_after": 0.02079
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2029,
+      "implied_before": 0.021849999999999998,
+      "implied_after": 0.02185
+    },
+    {
+      "series": "awe_total_pay_may_july",
+      "year": 2030,
+      "implied_before": 0.02389,
+      "implied_after": 0.02389
+    }
+  ],
+  "retained_source_gap": {
+    "sheet": "1.7",
+    "cell": "H120",
+    "series": "mortgage_interest",
+    "year": 2030,
+    "value": 0.0553
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "created_utc": "2026-10-23T15:01:45.215632+00:00",
+  "complete": false,
+  "measure": "two_child_limit",
+  "runtime_pid": 68813,
+  "requested_years": [
+    2026,
+    2027,
+    2028,
+    2029,
+    2030
+  ],
+  "result_status": "default_five_year_processor_returned_but_receipt_refused_before_artifact_write",
+  "failure": {
+    "stage": "receipt construction / runtime dataset URI identity",
+    "message": "two_child_limit: REFUSED: The receipt would name data.dataset_uri 'hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71', but the microsimulation loaded '/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/tmp/uk-budget-datasets-48ym8ijo/810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece/microcosm_uk_2024_25.h5'.",
+    "utc": "2026-10-23T14:58:12.194949+00:00",
+    "exit_code": 1,
+    "written_artifacts": {},
+    "timings_json_saved": false,
+    "table_rows_or_shapes_validated": false,
+    "throughput_estimate_allowed": false
+  },
+  "source_evidence": {
+    "events_file": ".job/events/68813.jsonl",
+    "events_sha256": "15bcefc1594940ab9fee14de07cac7e33db4673d4cfe27277e48e1e663764570",
+    "log_file": ".job/logs/serial-two-child.log",
+    "log_sha256": "827260ee47e273fd87eaecd84b6705a03e50de63eec3398b44b25ca8bd70f13b",
+    "phase_file": ".job/phases.jsonl",
+    "phase_line": 4,
+    "phase_line_sha256": "7774d55805baa68fe83146173f09fdbb2b875a802335b278b49d191803d0f6f2",
+    "phase_record": {
+      "label": "serial-two-child",
+      "utc_start": "2026-10-23T14:24:48.902282+00:00",
+      "external_wall_seconds": 2012.027085499998,
+      "supervisor_gate_seconds": 2.13358204200631,
+      "exit_code": 1,
+      "command": [
+        ".job/runtime/.venv/bin/python",
+        "-B",
+        "-u",
+        ".job/generate_e2e6.py",
+        "two_child_limit",
+        ".job/outputs/serial-two-child"
+      ]
+    }
+  },
+  "environment": {
+    "versions": {
+      "policyengine": "6.10.0",
+      "policyengine-uk": "2.132.6",
+      "policyengine-core": "3.33.3"
+    },
+    "python": "3.13.9",
+    "certification_bases": [
+      "exact_build_model_version"
+    ],
+    "fallback": false,
+    "data_manifests": [
+      "49f9fa820db2e6544ff5cdceeb2d868a504843a6a1c1c06b37188621e700066f"
+    ]
+  },
+  "external_wall_seconds": 2012.027085499998,
+  "supervisor_gate_seconds_excluded_from_external": 2.13358204200631,
+  "external_plus_supervisor_gate_seconds": 2014.1606675420044,
+  "disjoint_external_components_seconds": {
+    "imports_excluding_startup_gate_seconds": 463.49524575000396,
+    "registry_seconds": 62.43665554099425,
+    "logged_gate_elapsed_seconds": 18.233396544965217,
+    "root_construction_excluding_gates_seconds": 1108.9207690850453,
+    "build_copy_and_wrapper_overhead_seconds": 60.163143124009366,
+    "calculation_excluding_construction_and_gates_seconds": 247.09044112394622,
+    "uninstrumented_residual_seconds": 51.68743433103373
+  },
+  "disjoint_components_sum_seconds": 2012.027085499998,
+  "residual_note": "Residual is arithmetic remainder, not an isolated receipt duration. It includes unrecorded verification, process startup, generator orchestration, receipt refusal, logging and cleanup. Recovered gate_end elapsed counters exclude their own later logging; the running ledger and per-calculator details were not saved.",
+  "overlapping_diagnostic_totals": {
+    "engine_policyengine_import_seconds_inside_imports": 441.6107443749934,
+    "builds_excluding_gates_seconds": 525.8763957070041,
+    "process_excluding_gates_seconds": 890.2979576259968,
+    "build_root_construction_excluding_gates_seconds": 465.71325258299476,
+    "process_situation_root_construction_excluding_gates_seconds": 643.2075165020506,
+    "individual_builds_excluding_gates_seconds": [
+      287.6504517910071,
+      238.22594391599705
+    ],
+    "individual_root_constructors": [
+      {
+        "phase": "build",
+        "seconds_excluding_gates": 258.0551833329955
+      },
+      {
+        "phase": "build",
+        "seconds_excluding_gates": 207.65806924999924
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 50.99414516599791
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 52.17943987601029
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 42.134700625014375
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 69.09555454201472
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 79.0668507090013
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 87.36035741701198
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 81.95232220899197
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 75.58023374999175
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 50.622775125011685
+      },
+      {
+        "phase": "process",
+        "seconds_excluding_gates": 54.22113708300458
+      }
+    ]
+  },
+  "gate_summary": {
+    "logged_gate_count": 27,
+    "root_constructors": 12,
+    "build_root_constructors": 2,
+    "process_situation_root_constructors": 10,
+    "resource_sleep_seconds": 0.0,
+    "maximum_load1": 108.3994140625,
+    "minimum_free_disk_decimal_gb": 99.96720128,
+    "startup_gate_elapsed_seconds": 1.8354265420057345,
+    "generation_gate_elapsed_seconds": 16.397970002959482
+  },
+  "memory": {
+    "peak_memory_bytes": null,
+    "peak_memory_decimal_gb": null,
+    "status": "Unavailable: process exited before timing result; ru_maxrss cannot be recovered from elapsed times or source logs.",
+    "live_rss_evidence": null,
+    "use_for_concurrency_admission": false
+  },
+  "interpretation": "This is a measured failed full-generation attempt, not a successful receipted measure. Preserve the receipt identity guard. No artifact, saved per-process peak or validated complete table set is established by the completed processor call.",
+  "no_household_rows_persisted_in_this_summary": true
+}

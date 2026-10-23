@@ -1,0 +1,2 @@
+{"utc": "2026-10-23T13:56:31.722794+00:00", "pid": 33628, "event": "gate", "label": "reference", "load1": 75.35498046875, "free_disk_gb": 103.784722432, "free_memory_gb": null, "required_memory_gb": 0.0}
+{"utc": "2026-10-23T13:56:31.774122+00:00", "pid": 33628, "event": "gate_end", "label": "reference", "seconds": 0.6633905839989893, "resource_wait_s": 0.0}

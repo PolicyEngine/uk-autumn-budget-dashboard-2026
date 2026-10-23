@@ -1,0 +1,8 @@
+{
+  "dashboard_sha": "7f87566cfaecea58f0468618127c8c994d147ccf",
+  "setup_command": "UV_CACHE_DIR=$PWD/.job/uv-cache PYTHONDONTWRITEBYTECODE=1 UV_LINK_MODE=symlink uv sync --frozen --project .job/runtime --python 3.13 --offline",
+  "overlays": false,
+  "prepared_before_publication_window": true,
+  "setup_complete_unix": 1792763488.611309,
+  "dependency_cache_note": "Exact locked Plotly5.24.1 package directories are read-only symlinks to pre-existing cache; frozen sync completed, all other packages workspace-cache symlinks. Original cache not written."
+}

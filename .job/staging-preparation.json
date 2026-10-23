@@ -1,0 +1,37 @@
+{
+  "source_dashboard_sha": "7f87566cfaecea58f0468618127c8c994d147ccf",
+  "source_manifest_present": false,
+  "scratch_repo": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo",
+  "scratch_basis": {
+    "forecast": {
+      "status": "updated",
+      "source": "UNPUBLISHED SYNTHETIC REHEARSAL: part 1 forecast.json shock on the certified policyengine-uk 2.132.6 March basis; not an October OBR forecast",
+      "vintage": "2026-10-23 synthetic dry run; local March 2026 workbook round trip reviewed separately",
+      "input_files": [
+        {
+          "name": "efo-march-2026-detailed-forecast-tables-economy.xlsx",
+          "sha256": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510"
+        },
+        {
+          "name": "obr_efo_march_2026_receipts.xlsx",
+          "sha256": "f65b6cb7f96931d4abd85940794eb60f6f65afca8bbf16c74a4548bf92766a28"
+        },
+        {
+          "name": "forecast.json",
+          "sha256": "6ae39003ef6897fa3cc591eb19eeefd45947df77de26eadcd2d602d6550284c3"
+        }
+      ],
+      "retained_series": "All paths outside the six-path synthetic dictionary retain their certified pinned assumptions; no calibration change"
+    },
+    "calibration": {
+      "status": "pre_budget",
+      "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.0, policyengine-uk-data before it",
+      "vintage": "as pinned by the installed bundle"
+    },
+    "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  },
+  "git_metadata": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/staging-repo/.git",
+  "objects_alternate": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/history.git/objects",
+  "scratch_source_clean": false,
+  "source_clean_note": "Partial scratch checkout and explicit synthetic forecast declaration remain dirty; hidden staging only."
+}

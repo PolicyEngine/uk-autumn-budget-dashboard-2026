@@ -1,0 +1,6 @@
+{
+  "utc": "2026-10-23T15:30:17.148730+00:00",
+  "command": "python3 ~/reviews/fleet-ops/tools/reservation.py allowed uk-hub",
+  "exit_code": 1,
+  "output": "held back by route-a-release-rerun-d1811-2026-10-23 (reservation.py status)\n"
+}

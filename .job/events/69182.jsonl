@@ -1,0 +1,2 @@
+{"utc": "2026-10-23T13:51:28.263469+00:00", "pid": 69182, "event": "gate", "label": "certified-preflight", "load1": 57.10986328125, "free_disk_gb": 104.311046144, "free_memory_gb": null, "required_memory_gb": 0.0}
+{"utc": "2026-10-23T13:51:28.309689+00:00", "pid": 69182, "event": "gate_end", "label": "certified-preflight", "seconds": 0.6442920420013252, "resource_wait_s": 0.0}
