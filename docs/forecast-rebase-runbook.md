@@ -355,7 +355,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
 5. **Check the real route and regenerate a registered measure with the forecast in both arms.** This command reads the dataset in place, runs the dashboard's full `ReformProcessor`, and prints only aggregate budgetary rows and timings. It writes a reusable helper script into scratch so the same reviewed gate/merge functions can be used in the artifact step. The macro dict is part of both scenario identities; retain every registered policy change and modifier. `DataConfig.baseline_parameter_changes` alone does not rebase the reform arm and is overridden by a measure's own baseline.
 
-   **Production preflight: check the policy's intended years before the full processor.** The registered dividend measure describes a 2 percentage-point basic/higher rate increase from April 2026, but `_set_pre_budget_dividend_rates` in `src/uk_budget_data/reforms.py` only changes entries dated 2027 onward. UK 2.145.0's fiscal conversion materialises annual entries, including 2026, from each year's April 30 value. The modifier therefore leaves the two 2026 rates equal. The helper below prints the effective rates and requires a 0.02 reform-minus-baseline difference in both brackets for every scored year (2026–2030 in this configuration). It refuses the current period coverage before the full processor; obtain a reviewed registry correction before production generation. Do not remove 2026 or bypass the preflight to conceal the gap. The timed rehearsal retains the unchanged registry for diagnosis and timing; that does not clear this production check. A zero-year costing can satisfy receipts-minus-spending reconciliation, so the budget identity alone cannot establish policy responsiveness.
+   **Production preflight: check the policy's intended years before the full processor.** The registered dividend measure describes a 2 percentage-point basic/higher rate increase from April 2026, but `_set_pre_budget_dividend_rates` in `src/uk_budget_data/reforms.py` only changes entries dated 2027 onward. UK 2.145.0's fiscal conversion materialises annual entries, including 2026, from each year's April 30 value. The modifier therefore leaves the two 2026 rates equal. The helper below prints the effective rates and requires a 0.02 reform-minus-baseline difference in both brackets for every scored year (2026–2030 in this configuration). It refuses the current period coverage before the full processor; obtain a reviewed registry correction before production generation of the dividend measure or any combined artifact containing it. Do not remove 2026 or bypass the preflight to conceal the gap. The timed rehearsal retains the unchanged registry for diagnosis and timing; that does not clear this production check. A zero-year costing can satisfy receipts-minus-spending reconciliation, so the budget identity alone cannot establish policy responsiveness.
 
    ```sh
    cat > "$REBASE_SCRATCH/forecast_helpers.py" <<'PY'
@@ -511,6 +511,15 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
    def process(measure, cfg, baseline, reformed, baseline_scenario):
        if measure.id == "dividend_tax_increase_2pp":
            check_dividend_policy_responsiveness(baseline, reformed, cfg.years)
+       processor = ReformProcessor(measure, cfg)
+       calculate_budget = processor.budgetary_calc.calculate
+       def budget_checkpoint(*args, **kwargs):
+           rows = calculate_budget(*args, **kwargs)
+           print(json.dumps({"checkpoint_only": True,
+                             "full_processor_passed": False,
+                             "budgetary_impact": rows}), flush=True)
+           return rows
+       processor.budgetary_calc.calculate = budget_checkpoint
        original = policyengine_uk.Simulation
        def guarded_situation(*args, **kwargs):
            gate("income-curve situation Simulation")
@@ -518,7 +527,7 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
        # IncomeCurveCalculator imports this class inside calculate().
        with guard_framework_baselines(), \
             patch.object(policyengine_uk, "Simulation", guarded_situation):
-           return ReformProcessor(measure, cfg).process(
+           return processor.process(
                baseline, reformed, baseline_scenario
            )
    PY
@@ -584,7 +593,79 @@ The 22 October rehearsal used dashboard `8a6b8a6d`, policyengine 6.10.0, policye
 
    This runs the whole processor: costing, distribution, winners/losers, metrics, income curve and household scatter. The output above is aggregate only. The internal result also contains household rows; do not print or export them. The gate checks `uptime` and `os.statvfs` before every managed microsimulation, each income-curve household `Simulation` and every recursive framework baseline. Each 5-year measure makes two outer microsimulation calls and ten vectorised household situation calls, plus the internal baselines created by those scenarios; all run sequentially. Per-basis wall time includes every gate and validation; the printed gate total separates that waiting from computation. Cold imports are outside those per-basis counters but inside the script and external command totals. Use the external `real` total once in the critical path, with the counters explaining its components.
 
-   **Then run the national baseline and rebased simulations for one year**, after both subset arms and both registered-measure bases have passed. This invocation checks the gate before each constructor and records national aggregates separately. Use 2027 for this synthetic drill so every changed growth series is exercised; `SMOKE_YEARS` can select another reviewed year. It leaves the shell's `DATASET` pointing at the subset. The rehearsal order is subset comparison → registered measure on both bases → national comparison for one year.
+   **A processor refusal stops production generation.** The strict unchanged-registry rehearsal refused the unshifted subset at FY2027 distribution: `ValueError: Decile 4 has non-positive weighted baseline income (-719095882.8319045) in 2027; a relative change is undefined.` Budgetary calculation and the FY2026 income curve completing beforehand do not constitute a full `ReformResult`, and no artifact was produced. Once the production rate preflight passes, the helper prints an aggregate budget checkpoint immediately after the unchanged budget calculator returns, preserving that diagnostic evidence if a later calculator refuses. The checkpoint is explicitly incomplete. Preserve the denominator guard: do not drop the decile, substitute a denominator or treat a partial result as a successful measure. The dividend period preflight above is a separate production blocker and remains active.
+
+   **Diagnostic continuation is an explicit scratch-only path.** After recording the refusal and confirming the failed process has exited, the following command can diagnose aggregate costings on both bases and then compare the national baseline/rebased inputs for 2027. It retains the dataset, registered modifiers, forecast merge and every constructor gate. It deliberately calls only `BudgetaryImpactCalculator`, rather than `process` or artifact generation, so it cannot satisfy the full-processor check or clear either production blocker. It prints an aggregate checkpoint for each basis, independently reconciles receipts minus spending, and writes only the national smoke script's aggregate JSON in scratch. Its final nonzero exit preserves the failed-generation status; no receipt, artifact, staging or approval is created.
+
+   ```sh
+   DIAGNOSTIC_ONLY=1 PYTHONPATH="$REBASE_SCRATCH${PYTHONPATH:+:$PYTHONPATH}" \
+     /usr/bin/time -p uv run --no-sync python - <<'PY'
+   import gc
+   import json
+   import os
+   import subprocess
+   import sys
+   import time
+   if os.environ.get('DIAGNOSTIC_ONLY') != '1':
+       raise SystemExit('This command is restricted to an explicit scratch diagnosis')
+   started=time.perf_counter()
+   import numpy as np
+   import forecast_helpers as helpers
+   from uk_budget_data.calculators import BudgetaryImpactCalculator
+   from uk_budget_data.reforms import get_reform
+
+   cfg=helpers.config()
+   original=get_reform('dividend_tax_increase_2pp')
+   assert original is not None
+   measures=[('unshifted',original),
+             ('rebased',helpers.rebase_measure(original,helpers.load_forecast()))]
+   with helpers.guard_framework_baselines():
+       for label,measure in measures:
+           basis_started=time.perf_counter()
+           wait_before=helpers.gate_wait_seconds
+           baseline=helpers.build_in_place(
+               str(cfg.dataset_path),measure.baseline_scenario_for(cfg))
+           reformed=helpers.build_in_place(str(cfg.dataset_path),measure.to_scenario())
+           rows=BudgetaryImpactCalculator(years=cfg.years).calculate(
+               baseline,reformed,measure.id,measure.name)
+           for year in cfg.years:
+               for variable in ('employment_income_before_lsr',
+                                'food_and_non_alcoholic_beverages_consumption',
+                                'dividend_income'):
+                   if not np.allclose(np.asarray(baseline.calculate(variable,year)),
+                                      np.asarray(reformed.calculate(variable,year)),
+                                      rtol=1e-6,atol=0.01):
+                       raise RuntimeError(f'Forecast arms disagree: {variable}, {year}')
+           for row in rows:
+               year=row['year']
+               tax_delta=(reformed.calculate('gov_tax',year)
+                          -baseline.calculate('gov_tax',year)).sum()/1e9
+               spending_delta=(reformed.calculate('gov_spending',year)
+                               -baseline.calculate('gov_spending',year)).sum()/1e9
+               if not np.isclose(row['value'],tax_delta-spending_delta,
+                                 rtol=1e-4,atol=1e-5):
+                   raise RuntimeError(f'Diagnostic budget identity failed: {year}')
+           print(json.dumps({'basis':label,'diagnostic_only':True,
+                             'full_processor_passed':False,'artifact_written':False,
+                             'wall_seconds_including_gates':time.perf_counter()-basis_started,
+                             'gate_wait_seconds':helpers.gate_wait_seconds-wait_before,
+                             'budgetary_impact':rows}),flush=True)
+           del rows,baseline,reformed
+           gc.collect()
+   national_env={**os.environ,'DATASET':os.environ['NATIONAL_DATASET'],
+                 'SMOKE_ARMS':'unshifted,rebased','SMOKE_YEARS':'2027',
+                 'SMOKE_OUTPUT':'diagnostic-national-smoke.json'}
+   subprocess.run([sys.executable,
+                   os.path.join(os.environ['REBASE_SCRATCH'],'forecast_smoke.py')],
+                  env=national_env,check=True)
+   print(json.dumps({'diagnostic_only':True,'full_processor_passed':False,
+                     'artifact_written':False,
+                     'diagnostic_command_seconds':time.perf_counter()-started}),flush=True)
+   raise SystemExit('Diagnostics ended; full generation remains refused. No artifact was generated.')
+   PY
+   ```
+
+   **Then run the national baseline and rebased simulations for one year**, after both subset arms and both registered-measure bases have passed in the normal successful path. If full processing was refused, use only the explicitly labelled diagnostic continuation above; its national comparison does not clear the refusal. This invocation checks the gate before each constructor and records national aggregates separately. Use 2027 for this synthetic drill so every changed growth series is exercised; `SMOKE_YEARS` can select another reviewed year. It leaves the shell's `DATASET` pointing at the subset. The rehearsal order is subset comparison → registered measure on both bases → national comparison for one year.
 
    ```sh
    DATASET="$NATIONAL_DATASET" SMOKE_ARMS=unshifted,rebased SMOKE_YEARS=2027 \
