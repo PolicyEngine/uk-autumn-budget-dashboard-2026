@@ -2,7 +2,7 @@
    chart cards in the page's charts grid. */
 
 .young-people-heading {
-  scroll-margin-top: calc(var(--title-row-height) + 16px);
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
 .young-people-section {

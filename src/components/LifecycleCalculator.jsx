@@ -10,6 +10,8 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import GroupedLegend from "./GroupedLegend";
 import { lifecycleSelection, lifecycleTotals } from "../utils/lifecycleSelection";
 import PillSelect from "./PillSelect";
+import { RAISER_KEYS } from "./LifecycleAbout";
+import { METHOD_SECTIONS } from "./MethodologyTab";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import "./LifecycleCalculator.css";
 
@@ -77,27 +79,6 @@ const DEFAULT_INPUTS = {
 };
 
 // Slider configurations
-// Lifetime chart items that raise revenue (the rest cost revenue), for the
-// legend's two groups, as on the population charts
-const RAISER_KEYS = new Set([
-  "impact_threshold_freeze",
-  "impact_unearned_income_tax",
-  "impact_salary_sacrifice_cap",
-  "impact_sl_threshold_freeze",
-]);
-
-// "About this model": what the lifetime model does for each policy (its
-// own values, from uk_budget_data/lifecycle_calculator.py)
-const ABOUT_POLICIES = [
-  { key: "impact_threshold_freeze", text: "income tax thresholds frozen until 2030-31." },
-  { key: "impact_unearned_income_tax", text: "tax on that income up 5%." },
-  { key: "impact_salary_sacrifice_cap", text: "£2,000 a year, from 2029." },
-  { key: "impact_sl_threshold_freeze", text: "Plan 2 frozen at £27,295, 2027-28 to 2029-30." },
-  { key: "impact_two_child_limit", text: "removed from 2026." },
-  { key: "impact_fuel_duty_freeze", text: "the 5p cut kept longer, then phased rises." },
-  { key: "impact_rail_fare_freeze", text: "regulated fares held for one year in 2026." },
-];
-
 // The form's steps: the inputs each one asks for, then the results
 const WIZARD_STEPS = [
   { title: "About you", fields: ["current_age", "retirement_age", "life_expectancy"] },
@@ -233,13 +214,12 @@ const SLIDER_CONFIGS = [
   },
 ];
 
-function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
+function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMethod }) {
   const [inputs, setInputs] = useState(() => savedWizard.inputs ?? DEFAULT_INPUTS);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showRealTerms, setShowRealTerms] = useState(true);
-  const [showAbout, setShowAbout] = useState(false);
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
   // The lifetime series for the policies selected in the title band
@@ -1670,91 +1650,21 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [] }) {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img className="lifecycle-logo" src={CHART_LOGO.href} alt="PolicyEngine" />
                   </div>
-                  {/* About this model: an expandable row, collapsed by default. The
-                      values below are the lifecycle model's own
-                      (uk_budget_data/lifecycle_calculator.py). */}
-                  <div className="methodology">
-                    <button
-                      type="button"
-                      className="methodology-toggle"
-                      aria-expanded={showAbout}
-                      aria-controls="lifecycle-about"
-                      onClick={() => setShowAbout((value) => !value)}
-                    >
-                      About this model
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        style={{ transform: showAbout ? "rotate(180deg)" : "none" }}
+                  {/* How the lifetime model works is on the Methodology view */}
+                  {onShowMethod && (
+                    <p className="lifecycle-method-link">
+                      <a
+                        href={`?tab=methodology#${METHOD_SECTIONS.lifetime}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          onShowMethod(METHOD_SECTIONS.lifetime);
+                        }}
                       >
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </button>
-                    {showAbout && (
-                      <div id="lifecycle-about" className="methodology-content">
-                        <p>
-                          Estimates the lifetime change in take-home pay for a graduate
-                          who starts work at 22, from the selected policies, allowing
-                          for earnings growth, tax thresholds and student loan
-                          repayments.
-                        </p>
-
-                        <div className="about-columns">
-                          <div>
-                            <h4>Policies modelled</h4>
-                            {[
-                              ["Raise revenue", ABOUT_POLICIES.filter((item) => RAISER_KEYS.has(item.key))],
-                              ["Cost revenue", ABOUT_POLICIES.filter((item) => !RAISER_KEYS.has(item.key))],
-                            ].map(([heading, items]) => (
-                              <div key={heading} className="about-group">
-                                <p className="about-group-heading">{heading}</p>
-                                <ul className="about-policies">
-                                  {items.map((item) => (
-                                    <li key={item.key}>
-                                      <span
-                                        className="about-swatch"
-                                        style={{ background: REFORMS.find((r) => r.key === item.key)?.color }}
-                                        aria-hidden="true"
-                                      />
-                                      <span>
-                                        <strong>{REFORMS.find((r) => r.key === item.key)?.label}</strong>
-                                        : {item.text}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ))}
-                          </div>
-                          <div>
-                            <h4>Assumptions</h4>
-                            <ul className="about-bullets">
-                              <li>Work starts at 22 on the chosen salary.</li>
-                              <li>
-                                Earnings rise with age to 2.2 times the starting
-                                salary by 50.
-                              </li>
-                              <li>
-                                CPI and RPI follow the OBR forecast, then 2% and
-                                2.39%.
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                        <p className="about-note">
-                          Positive values mean higher net income under the policies;
-                          negative values mean lower.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                        About this model
+                      </a>{" "}
+                      is on the Methodology tab.
+                    </p>
+                  )}
                 </div>
             </div>
           )}

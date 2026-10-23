@@ -29,23 +29,18 @@ afterEach(() => {
 const band = (container) => container.querySelector(".title-row");
 
 describe("the Living standards view", () => {
-  it("is the third option in the view pill, and switching to it shows the outlook", async () => {
+  it("is the fourth view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
     // The Population view has the year and policy pills
-    expect(band(container).querySelector(".band-year")).not.toBeNull();
+    expect(band(container).querySelector(".band-year")).not.toHaveAttribute("aria-hidden");
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
-    fireEvent.click(screen.getByRole("button", { name: "View: Population impact" }));
-    const options = within(screen.getByRole("listbox", { name: "View" })).getAllByRole("option");
-    expect(options.map((option) => option.textContent.replace("✓", ""))).toEqual([
-      "Population impact",
-      "Personal impact",
-      "Living standards",
-    ]);
-    fireEvent.click(options[2]);
+    const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
+    expect(tabs[3]).toHaveTextContent("Living standards");
+    fireEvent.click(tabs[3]);
 
-    expect(screen.getByRole("button", { name: "View: Living standards" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Living standards" })).toBeInTheDocument();
+    expect(tabs[3]).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "Living standards" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
     // Its engine and data, said once on the view
@@ -56,12 +51,16 @@ describe("the Living standards view", () => {
   it("hides the year and policy pills but keeps the band's layout", () => {
     window.history.replaceState({}, "", "/?tab=living");
     const { container } = render(<App />);
-    expect(band(container).querySelector(".band-year")).toBeNull();
-    const policy = band(container).querySelector(".band-policy");
-    // Still in the band, holding its place, but hidden and out of reach
-    expect(policy).toHaveClass("is-hidden");
-    expect(policy).toHaveAttribute("aria-hidden", "true");
-    expect(policy).toHaveAttribute("inert");
-    expect(screen.getByRole("button", { name: "View: Living standards" })).toBeInTheDocument();
+    for (const selector of [".band-year", ".band-policy"]) {
+      const pill = band(container).querySelector(selector);
+      // Still in the band, holding its place, but hidden and out of reach
+      expect(pill).toHaveClass("is-hidden");
+      expect(pill).toHaveAttribute("aria-hidden", "true");
+      expect(pill).toHaveAttribute("inert");
+    }
+    expect(screen.getByRole("tab", { name: "Living standards" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

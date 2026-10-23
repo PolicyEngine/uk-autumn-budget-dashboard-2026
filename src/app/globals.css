@@ -106,6 +106,11 @@ code {
   --card-radius: 12px;
   --card-padding: 24px;
   --title-row-height: 64px;
+  /* The view tabs under the intro; they stick under the band */
+  --view-tabs-height: 48px;
+  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  /* Solid PolicyEngine dark teal (rgb 40, 94, 97) */
+  --band-teal: #285e61;
 }
 
 body {
@@ -142,8 +147,7 @@ body {
 .hero-chart,
 .charts-grid > div,
 .obr-expandable,
-.policy-details-footer,
-.main-content .geography-methodology {
+.policy-details-footer {
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
@@ -168,12 +172,12 @@ body {
   top: 0;
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
-  /* One row on a wide screen: the title, then the year, view and policy
-     pills at the right (the year first; without it the others keep their
-     places). Narrower screens use two fixed rows (below). */
+  /* One row on a wide screen: the title, then the year and policy pills
+     at the right. A pill that does not apply to the view is hidden but
+     keeps its place. Narrower screens use two fixed rows (below). */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  grid-template-areas: "title year view policy";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "title year policy";
   align-items: center;
   column-gap: 16px;
   row-gap: 8px;
@@ -182,8 +186,8 @@ body {
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
-  /* Solid PolicyEngine dark teal (rgb 40, 94, 97): no alpha, no blur */
-  background: #285e61;
+  /* Solid, no alpha, no blur */
+  background: var(--band-teal);
 }
 
 .title-row.is-stuck {
@@ -214,10 +218,6 @@ body {
   grid-area: policy;
 }
 
-.band-view {
-  grid-area: view;
-}
-
 /* A band control that does not apply to the current view keeps its place
    (so the others do not move) but is not shown */
 .title-row .is-hidden {
@@ -225,7 +225,162 @@ body {
 }
 
 .tab-panel {
-  padding-top: 24px;
+  padding-top: 32px;
+}
+
+/* The view tabs: an underline tab bar under the intro, the chosen view
+   underlined in the band's teal. It sticks under the band. Its background
+   spans the window so nothing shows beside it while it is stuck; the tabs
+   and their one rule keep to the page column. */
+.view-tabs-sentinel {
+  height: 0;
+}
+
+.view-tabs-bar {
+  position: sticky;
+  top: var(--title-row-height);
+  /* Under the band and its pill lists, above the charts */
+  z-index: 1090;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  background: var(--page-bg);
+}
+
+.view-tabs {
+  display: flex;
+  gap: 28px;
+  height: var(--view-tabs-height);
+  border-bottom: 1px solid var(--card-border);
+  /* A narrow screen scrolls the row, never the page */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.view-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tabs out of sight at either end of a scrolling row fade out there */
+.view-tabs.fade-end {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs.fade-start {
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.view-tabs.fade-start.fade-end {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 40px,
+    #000 calc(100% - 40px),
+    transparent
+  );
+}
+
+.view-tab {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 2px;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--pe-gray-600);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.view-tab:hover {
+  color: var(--band-teal);
+}
+
+/* One weight for every tab, so choosing one never moves the others */
+.view-tab[aria-selected="true"] {
+  color: var(--band-teal);
+}
+
+/* The underline sits on the bar's rule */
+.view-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--band-teal);
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Methodology view: one card per note */
+.method-section {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.method-section + .method-section {
+  margin-top: 48px;
+}
+
+.method-card {
+  padding: var(--card-padding);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-card > p + p {
+  margin-top: 12px;
+}
+
+.method-card p {
+  margin: 0;
+}
+
+.method-card .methodology-content {
+  padding: 0;
+}
+
+.method-card a,
+.map-method-link a,
+.lifecycle-method-link a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.method-card a:hover,
+.map-method-link a:hover,
+.lifecycle-method-link a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* One-line pointers from a card to its note on the Methodology view */
+.map-method-link,
+.lifecycle-method-link {
+  margin: 0;
+  padding-top: 16px;
+  font-size: 0.875rem;
+  color: var(--pe-gray-600);
+}
+
+/* Under the lifetime chart, with the card's one rule above it, as under
+   the map */
+.lifecycle-method-link {
+  margin-top: 16px;
+  border-top: 1px solid var(--card-border);
 }
 
 .visually-hidden {
@@ -302,7 +457,7 @@ body {
   font-size: 1.0625rem;
   color: var(--pe-gray-700);
   line-height: 1.6;
-  margin: 8px 0 40px;
+  margin: 24px 0 16px;
 }
 
 .dashboard-intro a {
@@ -317,7 +472,7 @@ body {
 }
 
 .showing-line {
-  margin: -28px 0 40px;
+  margin: 0 0 24px;
   font-size: 0.875rem;
   color: var(--pe-gray-500);
 }
@@ -400,7 +555,7 @@ body {
 
 /* Sections */
 .report-section {
-  scroll-margin-top: calc(var(--title-row-height) + 16px);
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
 .hero-chart {
@@ -504,15 +659,13 @@ body {
 
 /* Disclosure cards: OBR comparison, method notes, policy notes */
 .obr-expandable,
-.policy-details-footer,
-.main-content .geography-methodology {
+.policy-details-footer {
   margin: 0;
   padding: 0 var(--card-padding);
 }
 
 .obr-toggle-button,
-.policy-details-toggle,
-.main-content .geography-methodology-toggle {
+.policy-details-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -532,8 +685,7 @@ body {
 }
 
 .obr-toggle-button:hover,
-.policy-details-toggle:hover,
-.main-content .geography-methodology-toggle:hover {
+.policy-details-toggle:hover {
   background: transparent;
   color: var(--pe-teal-700);
 }
@@ -550,15 +702,6 @@ body {
 
 .obr-content .obr-comparison-section h2 {
   margin-top: 0;
-}
-
-.main-content .geography-methodology-content {
-  margin-top: 0;
-  padding: 0 0 20px;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  font-size: 0.9rem;
 }
 
 .policy-details-content {
@@ -817,7 +960,6 @@ body {
   margin-top: 16px;
 }
 
-.main-content .chart-footer .geography-methodology,
 .main-content .hero-chart .obr-expandable {
   margin: 0;
   padding: 0;
@@ -902,13 +1044,14 @@ body {
     padding: 0 24px 48px;
   }
 
-  .title-row {
+  .title-row,
+  .view-tabs-bar {
     padding-inline: 24px;
   }
 }
 
 /* Below 900px the band has two fixed rows: the title and the policy
-   pill, then the view and year pills. One height, stuck or not. */
+   pill, then the year pill. One height, stuck or not. */
 @media (max-width: 899px) {
   :root {
     --title-row-height: 104px;
@@ -918,16 +1061,12 @@ body {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title policy"
-      "year view";
+      "year .";
     align-content: center;
   }
 
   .band-year {
     justify-self: start;
-  }
-
-  .band-view {
-    justify-self: end;
   }
 }
 
@@ -941,7 +1080,8 @@ body {
     padding: 0 16px 48px;
   }
 
-  .title-row {
+  .title-row,
+  .view-tabs-bar {
     padding-inline: 16px;
   }
 
@@ -960,15 +1100,10 @@ body {
 
   /* The pills' lists span the band */
   .band-policy .policy-selector,
-  .band-year .year-picker,
-  .band-view .pill-select {
+  .band-year .year-picker {
     position: static;
   }
 
-  /* The view pill shows its badge only */
-  .band-view .policy-selector-label {
-    display: none;
-  }
 
   .title-row .policy-selector-toggle {
     width: auto;
@@ -1011,6 +1146,10 @@ body {
 
   .dashboard-intro {
     font-size: 1rem;
+  }
+
+  .view-tabs {
+    gap: 22px;
   }
 
 
@@ -1187,7 +1326,6 @@ body {
 }
 
 .policy-detail-text {
-  max-width: 90ch;
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.55;
