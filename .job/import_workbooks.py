@@ -15,7 +15,8 @@ EXPECTED={'economy':'fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 # These are importer/readback dependencies that are not consistently declared
 # by the UK/core runtime distributions. They stay in this separate venv.
-runner.command('importer_extra_dependencies',['uv','pip','install','--python',str(PYTHON),'PyYAML','openpyxl','beautifulsoup4','lxml'])
+constraint_args = ['--constraint',str(ROOT/'importer-dependency-constraints.txt')] if (ROOT/'importer-dependency-constraints.txt').is_file() else []
+runner.command('importer_extra_dependencies',['uv','pip','install','--python',str(PYTHON),*constraint_args,'PyYAML','openpyxl','beautifulsoup4','lxml'])
 version_code = 'import importlib.metadata as m, json, sys; print(json.dumps({"python": sys.version, "installed": {d.metadata["Name"]: d.version for d in m.distributions()}}, sort_keys=True))'
 version_result = runner.command('versions',[str(PYTHON),'-B','-c',version_code])
 runner.stages['versions']['environment'] = json.loads(version_result.stdout)

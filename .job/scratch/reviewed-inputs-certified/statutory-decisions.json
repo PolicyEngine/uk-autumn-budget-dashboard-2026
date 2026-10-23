@@ -1,0 +1,32 @@
+{
+  "scope": "Published observations replayed from part 1; the annual synthetic shock is not added to observations",
+  "cpi_september_2026": 0.035,
+  "awe_total_pay_may_july_2026": 0.039,
+  "retained_certified_forecast_gaps": {
+    "cpi_september": {
+      "2026": -0.00184,
+      "2027": 0.00072,
+      "2028": 0.0003,
+      "2029": 0.00048,
+      "2030": 0.0,
+      "2031": 0.0
+    },
+    "awe_total_pay_may_july": {
+      "2026": 0.00274,
+      "2027": 0.00027,
+      "2028": -0.00021,
+      "2029": -0.00015,
+      "2030": -0.00011,
+      "2031": 0.0
+    }
+  },
+  "synthetic_2027_proxies": {
+    "cpi_september": 0.02572,
+    "awe_total_pay_may_july": 0.01927
+  },
+  "april_2027_triple_lock_expected": 0.039,
+  "april_2028_triple_lock_expected": 0.026,
+  "human_review_seconds": null,
+  "forecast_gap_decision": "Retain certified-pin gap files in exact isolated synthetic dictionary; importer compensation changes were reviewed separately",
+  "generated_indices_hand_edited": false
+}

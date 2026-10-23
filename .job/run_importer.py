@@ -9,6 +9,10 @@ for key,value in {'UV_CACHE_DIR':ROOT/'uv-cache','UV_PYTHON_INSTALL_DIR':ROOT/'m
     pathlib.Path(value).mkdir(parents=True,exist_ok=True)
     ENV[key]=str(value)
 ENV['PYTHONDONTWRITEBYTECODE']='1'
+ENV['UV_LINK_MODE']='symlink'
+ENV['NUMEXPR_MAX_THREADS']='4'
+ENV['ARROW_NUM_THREADS']='4'
+ENV['RAYON_NUM_THREADS']='4'
 # Existing huggingface-cli login: read into process memory, never print/persist.
 for token_path in [pathlib.Path.home()/'.cache/huggingface/token',pathlib.Path.home()/'.huggingface/token']:
     if token_path.is_file():

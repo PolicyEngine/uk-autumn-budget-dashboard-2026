@@ -1,0 +1,35 @@
+{
+  "scope": "Dependency preparation only, outside Budget route critical path",
+  "plotly_version": "5.24.1",
+  "source_archive_read_only": "/Users/maxghenis/.cache/uv/archive-v0/3Vs9ic-WzlvKEc1vcz4xA",
+  "workspace_archive_symlink": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/uv-cache/archive-v0/3Vs9ic-WzlvKEc1vcz4xA",
+  "source_record_file_count": 15319,
+  "installers_interrupted_for_slow_plotly_download_or_extraction": true,
+  "copy_attempt_interrupted_for_slow_per_file_workspace_IO": true,
+  "global_cache_written": false,
+  "link_mode": "whole top-level dependency directory symlinks; UV_LINK_MODE=symlink and PYTHONDONTWRITEBYTECODE=1 thereafter",
+  "venvs": [
+    {
+      "venv": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/runtime/.venv/lib/python3.13/site-packages",
+      "top_level_plotly_links": [
+        "_plotly_future_",
+        "_plotly_utils",
+        "jupyterlab_plotly",
+        "plotly",
+        "plotly-5.24.1.data",
+        "plotly-5.24.1.dist-info"
+      ]
+    },
+    {
+      "venv": "/Users/maxghenis/.subfleet/worktrees/20261023-091833-budget-rebase-e2e6/.job/importer-runtime/.venv/lib/python3.13/site-packages",
+      "top_level_plotly_links": [
+        "_plotly_future_",
+        "_plotly_utils",
+        "jupyterlab_plotly",
+        "plotly",
+        "plotly-5.24.1.data",
+        "plotly-5.24.1.dist-info"
+      ]
+    }
+  ]
+}
