@@ -1427,17 +1427,49 @@ def test_a_path_the_rows_need_that_cannot_be_read_refuses(
             return lstat(path, *args, **kwargs)
 
         before = snapshot(root / DATA)
+        review = review_bytes(root)
         with monkeypatch.context() as patch:
             patch.setattr(rr.os, "lstat", refuse_the_hidden_one)
             with pytest.raises(rr.ReviewRowsError) as refused:
                 run(root)
         assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
         where = hidden.relative_to(root).as_posix()
     expected = {
         "artifacts": f"{where}: cannot be read",
         "listed artifact": f"{where}: alpha's artifact cannot be read",
     }[unreadable]
     assert refused.value.problems == [expected]
+
+
+@pytest.mark.parametrize("key", ["alpha", LIMITED_KEY])
+def test_a_listed_artifact_that_cannot_be_listed_refuses(
+    base, monkeypatch, key
+):
+    """A displayed or not-computable entry's artifact that can be looked at
+    but not listed is refused by name, not with a traceback."""
+    listdir = os.listdir
+    with repository(base) as (root, manifest):
+        root = Path(os.path.realpath(root))
+        hidden = root / DATA / manifest.entries()[key].artifact
+
+        def refuse_the_hidden_one(path="."):
+            if Path(path) == hidden:
+                raise PermissionError(13, "Permission denied", str(path))
+            return listdir(path)
+
+        before = snapshot(root / DATA)
+        review = review_bytes(root)
+        with monkeypatch.context() as patch:
+            patch.setattr(rr.os, "listdir", refuse_the_hidden_one)
+            with pytest.raises(rr.ReviewRowsError) as refused:
+                run(root)
+        assert snapshot(root / DATA) == before
+        assert review_bytes(root) == review
+        where = hidden.relative_to(root).as_posix()
+    assert refused.value.problems == [
+        f"{where}: {key}'s artifact cannot be listed"
+    ]
 
 
 def test_a_kept_artifact_that_is_a_file_refuses(base):

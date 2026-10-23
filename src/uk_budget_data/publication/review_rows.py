@@ -228,6 +228,26 @@ def _is_link(path: Path) -> bool:
     return stat.S_ISLNK(os.lstat(path).st_mode)
 
 
+def _failed_at(error: OSError, root: Path, fallback: str) -> str:
+    """The repository path an OSError names, or ``fallback``."""
+    try:
+        return Path(error.filename).relative_to(root).as_posix()
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _listing(
+    directory: Path, where: str, key: str, problems: list[str]
+) -> Optional[list[str]]:
+    """The names in a listed entry's artifact, or None, with the
+    refusal, where it can't be listed."""
+    try:
+        return sorted(os.listdir(directory))
+    except OSError:
+        problems.append(f"{where}: {key}'s artifact cannot be listed")
+        return None
+
+
 def _first_link(root: Path, relative: Path) -> Optional[str]:
     """The first component of ``root / relative`` that is a symbolic link.
 
@@ -408,8 +428,9 @@ def _entry_rows(
     where = relative.as_posix()
     try:
         link = _first_link(root, relative)
-    except OSError:
-        problems.append(f"{where}: {key}'s artifact cannot be read")
+    except OSError as error:
+        failed = _failed_at(error, root, where)
+        problems.append(f"{failed}: {key}'s artifact cannot be read")
         return []
     if link is not None:
         problems.append(f"{link}: a symbolic link")
@@ -456,7 +477,10 @@ def _entry_rows(
     problems.extend(_no_kind_problems(receipt_where, data))
 
     if entry.status == m.NOT_COMPUTABLE:
-        for name in sorted(os.listdir(directory)):
+        names = _listing(directory, where, key, problems)
+        if names is None:
+            return []
+        for name in names:
             if name != RECEIPT_FILE:
                 problems.append(
                     f"{where}/{name}: in a not-computable artifact, which "
@@ -489,7 +513,10 @@ def _entry_rows(
         rows.append(Row(file_where, kind, actual, tables_basis))
 
     bound = {RECEIPT_FILE, *listed}
-    for name in sorted(os.listdir(directory)):
+    names = _listing(directory, where, key, problems)
+    if names is None:
+        return []
+    for name in names:
         if name not in bound:
             problems.append(
                 f"{where}/{name}: in a displayed artifact, but its receipt "
@@ -537,8 +564,8 @@ def planned_rows(
     # through a link.
     try:
         link = _first_link(root, relative / ARTIFACTS_DIR)
-    except OSError:
-        where = (relative / ARTIFACTS_DIR).as_posix()
+    except OSError as error:
+        where = _failed_at(error, root, (relative / ARTIFACTS_DIR).as_posix())
         raise ReviewRowsError([f"{where}: cannot be read"]) from None
     if link is not None:
         raise ReviewRowsError([f"{link}: a symbolic link"])
@@ -642,7 +669,8 @@ def _kept_problems(
         try:
             link = _first_link(root, relative)
         except OSError as error:
-            unreadable(Path(error.filename or root / relative), key)
+            failed = _failed_at(error, root, relative.as_posix())
+            problems.append(f"{failed}: {key}'s artifact cannot be read")
             continue
         if link is not None:
             problems.append(f"{link}: a symbolic link on {key}'s artifact")
