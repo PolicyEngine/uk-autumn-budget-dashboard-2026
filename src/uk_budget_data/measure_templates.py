@@ -38,6 +38,8 @@ the measure is published as not computable, never as a figure. A parameter
 the installed model mis-costs (``uk_budget_data.model_limits``, such as the
 State Pension's full rates before policyengine-uk #2336) builds with a
 ``ModelLimitedWarning``: the measure is held at provisional, never approved.
+So does a runtime helper that changes a variable such a limit covers (the
+VAT base template, before policyengine-uk #2187).
 """
 
 import math
@@ -80,7 +82,8 @@ def _warn_if_data_limited(path: str) -> None:
 
 
 class ModelLimitedWarning(UserWarning):
-    """A change built on a parameter the installed model mis-costs."""
+    """A change built on a parameter, or a variable, the installed model
+    mis-costs."""
 
 
 def _warn_if_model_limited(path: str) -> None:
@@ -94,6 +97,24 @@ def _warn_if_model_limited(path: str) -> None:
                 ModelLimitedWarning,
                 # The builder's caller, as for _warn_if_data_limited.
                 stacklevel=4,
+            )
+
+
+def _warn_if_variable_model_limited(name: str) -> None:
+    """Warn when a runtime helper changes a variable the installed model
+    mis-costs: one a model limit covers, without its fix installed."""
+    from uk_budget_data.model_limits import limits_for_paths, variable_path
+
+    for limit in limits_for_paths([variable_path(name)]):
+        if not limit.installed_fixed():
+            warnings.warn(
+                f"{name}: {limit.reason} A measure built on it is held at "
+                "provisional, never approved.",
+                ModelLimitedWarning,
+                # The helper, not the measure's modifier: a warning leaves a
+                # __warningregistry__ in the module it is attributed to, and
+                # a receipt can't bind a measure module that carries one.
+                stacklevel=2,
             )
 
 
@@ -547,6 +568,9 @@ def apply_vat_base_change(
         return current + spending * delta / (1 + old_rate)
 
     _replace_formula(sim, "vat", formula)
+    # Held while the installed model grosses VAT by one factor (the
+    # vat_consumption_coverage limit, until policyengine-uk #2187).
+    _warn_if_variable_model_limited("vat")
     return sim
 
 

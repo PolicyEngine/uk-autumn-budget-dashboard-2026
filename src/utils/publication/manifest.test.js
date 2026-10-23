@@ -30,6 +30,7 @@ describe("parseManifest on the fixture", () => {
       "epsilon",
       "eta",
       "gamma",
+      "iota",
       "theta",
       "zeta",
     ]);

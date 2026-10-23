@@ -6,7 +6,10 @@ payments rise with the full rates, so changing the full rates or triple
 lock moves them too. Until #2533, CPI-linked benefit levels from 2027
 follow lagged calendar-year CPI rather than the September outturn. Until
 the UK hub's earnings fix, the Pension Credit minimum guarantee does too,
-though the law requires it to rise with earnings.
+though the law requires it to rise with earnings. Until #2187, household
+VAT is grossed up to receipts by one factor, so VAT runs high (0.469 /
+0.38, about 23%);
+that limit covers variables as well as parameters.
 """
 
 import copy
@@ -36,6 +39,7 @@ from uk_budget_data.model_limits import (
     limits_touched,
     record,
     record_problems,
+    variable_path,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module
@@ -117,6 +121,14 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
     for limit in MODEL_LIMITS:
         for prefix in limit.parameters:
             assert system.parameters.get_child(prefix) is not None, prefix
+
+
+def test_every_registered_variable_exists_in_the_installed_engine():
+    from policyengine_uk.system import system
+
+    for limit in MODEL_LIMITS:
+        for name in limit.variables:
+            assert name in system.variables, name
 
 
 def test_the_installed_model_still_lacks_the_fix():
@@ -353,8 +365,9 @@ def test_limits_for_paths_matches_prefixes_not_name_fragments():
 
 
 def record_cases(limit):
-    """Exercise every limit while retaining the original nested path."""
-    paths = limit.parameters
+    """Exercise every limit while retaining the original nested path, and
+    each variable the limit covers as its record names it."""
+    paths = (*limit.parameters, *map(variable_path, limit.variables))
     if limit == LIMIT:
         paths = (*paths, TRIPLE_LOCK_MINIMUM)
     return st.tuples(
@@ -409,6 +422,10 @@ BROKEN = [
     lambda r: {**r, "parameters": []},
     lambda r: {**r, "parameters": list(reversed(r["parameters"]))},
     lambda r: {**r, "parameters": r["parameters"] + [INCOME_TAX]},
+    lambda r: {
+        **r,
+        "parameters": sorted(r["parameters"] + ["variable:not_covered"]),
+    },
     lambda r: {**r, "parameters": r["parameters"] + [r["parameters"][0]]},
     lambda r: {**r, "parameters": "not a list"},
 ]
