@@ -35,6 +35,10 @@ its modifier only touches dataset values (``HOUSEHOLD_INERT_MODIFIERS``),
 which a household calculation has none of.
 """
 
+import copy
+import json
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Optional
@@ -182,6 +186,10 @@ class Programme:
     entity: str
     children: tuple = ()
     note: Optional[str] = None
+    # A row that is one variable less another (both summed over
+    # ``entity``s members), in place of ``variable``: what one step of a
+    # calculation took off, such as the benefit cap.
+    difference: Optional[tuple] = None
 
 
 def _row(id_, label, variable, entity):
@@ -253,8 +261,8 @@ PROGRAMMES = (
         "council_tax",
         "household",
         note=(
-            "As entered, not modelled: policyengine-uk takes Council Tax as "
-            "an input (the band does not set it), so no measure changes it."
+            "Estimated from the band and the region's average Band D "
+            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
         ),
     ),
     Programme(
@@ -282,7 +290,7 @@ PROGRAMMES = (
         "universal_credit",
         "Universal Credit",
         "benefit",
-        "universal_credit",
+        "universal_credit_pre_benefit_cap",
         "benunit",
         children=(
             _row(
@@ -310,7 +318,10 @@ PROGRAMMES = (
                 "benunit",
             ),
         ),
-        note="Elements are before the earnings taper and any benefit cap.",
+        note=(
+            "Before the benefit cap, which is its own row. Elements are "
+            "before the earnings taper."
+        ),
     ),
     Programme(
         "child_benefit", "Child Benefit", "benefit", "child_benefit", "benunit"
@@ -326,8 +337,36 @@ PROGRAMMES = (
         "housing_benefit",
         "Housing Benefit",
         "benefit",
-        "housing_benefit",
+        "housing_benefit_pre_benefit_cap",
         "benunit",
+        note="Before the benefit cap, which is its own row.",
+    ),
+    Programme(
+        "benefit_cap",
+        "Benefit cap",
+        "benefit",
+        None,
+        "benunit",
+        note=(
+            "What the benefit cap takes off Universal Credit and Housing "
+            "Benefit, shown as a negative amount, so the rows above it are "
+            "before the cap and the group adds up to what is paid."
+        ),
+        difference=(
+            ("universal_credit", "universal_credit_pre_benefit_cap"),
+            ("housing_benefit", "housing_benefit_pre_benefit_cap"),
+        ),
+    ),
+    Programme(
+        "council_tax_reduction",
+        "Council Tax Reduction",
+        "benefit",
+        "council_tax_benefit",
+        "benunit",
+        note=(
+            "Only where policyengine-uk simulates the local scheme; "
+            "elsewhere none is counted."
+        ),
     ),
     Programme(
         "pension_credit",
@@ -422,6 +461,13 @@ PROGRAMMES = (
         "property_income",
         "person",
     ),
+    Programme(
+        "private_pension_income",
+        "Private pension",
+        "income",
+        "private_pension_income",
+        "person",
+    ),
 )
 
 # Each group's total as policyengine-uk's net income counts it
@@ -472,6 +518,12 @@ DEPENDANTS_NOTE = (
 )
 EXTRA_VARIABLES = sorted(
     {row.variable for row in _all_rows() if row.variable}
+    | {
+        name
+        for row in _all_rows()
+        for pair in (row.difference or ())
+        for name in pair
+    }
     | {name for names in GROUP_TOTALS.values() for name in names}
     | set(DEPENDANT_VARIABLES)
     | {"brma", "local_authority"}
@@ -529,13 +581,17 @@ class HouseholdAnswers:
     monthly_rent: float = 0
     brma: Optional[str] = None
     local_authority: Optional[str] = None
-    council_tax: float = 0
+    # None: estimated from the band and the region (estimated_council_tax)
+    council_tax: Optional[float] = None
     council_tax_band: str = "D"
     monthly_childcare: float = 0
     salary_year: int = SALARY_YEAR
     dividend_income: float = 0
     savings_interest_income: float = 0
     property_income: float = 0
+    # Private and workplace pensions in payment, £ a year
+    private_pension_income: float = 0
+    partner_private_pension_income: float = 0
     petrol_spending: float = 0
     diesel_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
@@ -663,6 +719,99 @@ def state_pensions(
     )
 
 
+# Average Band D Council Tax in 2026-27, £ a year, for a dwelling of two
+# adults, including adult social care, parish/community and police/fire
+# precepts:
+# - England, by region: MHCLG, "Council Tax levels set by local authorities
+#   in England 2026 to 2027", Table 10 (Data_Billing): each billing
+#   authority's line 17 (area Band D including all precepts) weighted by its
+#   line 7 tax base, by region. Weighted over all of England this gives
+#   £2,391.52 and over London £2,068.47, the release's own averages
+#   (Tables 3 and 7).
+#   https://www.gov.uk/government/statistics/council-tax-levels-set-by-local-authorities-in-england-2026-to-2027
+# - Wales: Welsh Government, "Council Tax levels: April 2026 to March 2027",
+#   average Band D £2,283 (county, police and community councils).
+#   https://www.gov.wales/council-tax-levels-april-2026-march-2027-html
+# - Scotland: Scottish Government, Council Tax datasets, "Band D Council Tax
+#   1996-97 to 2026-27": £1,653.44 (excluding water and sewerage).
+#   https://www.gov.scot/publications/council-tax-datasets/
+# Northern Ireland has domestic rates, not Council Tax: none is estimated.
+COUNCIL_TAX_BAND_D = {
+    "NORTH_EAST": 2_534.67,
+    "NORTH_WEST": 2_478.62,
+    "YORKSHIRE": 2_389.55,
+    "EAST_MIDLANDS": 2_460.34,
+    "WEST_MIDLANDS": 2_392.62,
+    "EAST_OF_ENGLAND": 2_393.99,
+    "LONDON": 2_068.47,
+    "SOUTH_EAST": 2_472.41,
+    "SOUTH_WEST": 2_550.04,
+    "WALES": 2_283.00,
+    "SCOTLAND": 1_653.44,
+}
+COUNCIL_TAX_BASE_YEAR = 2026
+
+# Each band's Council Tax as a share of Band D. England and Wales: the
+# Local Government Finance Act 1992 s.5(1) ninths (Wales adds band I,
+# 21/9). Scotland since April 2017: A to D the same, E to H 473, 585, 705
+# and 882 three-hundred-and-sixtieths (Council Tax (Substitution of
+# Proportion) (Scotland) Order 2016).
+_NINTHS = {"A": 6, "B": 7, "C": 8, "D": 9, "E": 11, "F": 13, "G": 15}
+COUNCIL_TAX_BAND_RATIO = {
+    **{band: n / 9 for band, n in _NINTHS.items()},
+    "H": 18 / 9,
+    "I": 21 / 9,
+}
+SCOTTISH_BAND_RATIO = {
+    **COUNCIL_TAX_BAND_RATIO,
+    "E": 473 / 360,
+    "F": 585 / 360,
+    "G": 705 / 360,
+    "H": 882 / 360,
+}
+
+
+def council_tax_growth(region: str, year: int) -> float:
+    """Council Tax growth from 2026-27 to ``year``, compounded from
+    policyengine-uk's own Council Tax growth series for the nation
+    (``gov.economic_assumptions.yoy_growth.obr.council_tax``, the OBR's
+    forecast), read for each year as policyengine-uk uprates a dataset's
+    Council Tax (``uprate_council_tax``)."""
+    from policyengine_uk.data.economic_assumptions import (
+        _COUNCIL_TAX_GROWTH_SERIES,
+    )
+    from policyengine_uk.system import system
+
+    series = _COUNCIL_TAX_GROWTH_SERIES.get(region)
+    if series is None:
+        return 1.0
+    growth = system.parameters.gov.economic_assumptions.yoy_growth.obr
+    rates = growth.council_tax.get_child(series)
+    factor = 1.0
+    for y in range(COUNCIL_TAX_BASE_YEAR + 1, year + 1):
+        factor *= 1 + float(rates(f"{y}-01-01"))
+    return factor
+
+
+def estimated_council_tax(region: str, band: str, year: int) -> float:
+    """A household's Council Tax, £ a year, in ``year``: its region's
+    average Band D for 2026-27 (``COUNCIL_TAX_BAND_D``) times its band's
+    ratio, grown to ``year`` (``council_tax_growth``). Before discounts or
+    Council Tax Reduction (which policyengine-uk works out). None in
+    Northern Ireland (domestic rates): 0."""
+    band_d = COUNCIL_TAX_BAND_D.get(region)
+    if band_d is None:
+        return 0.0
+    ratios = (
+        SCOTTISH_BAND_RATIO
+        if region == "SCOTLAND"
+        else (COUNCIL_TAX_BAND_RATIO)
+    )
+    # Band I is Welsh only; elsewhere the top band is H
+    ratio = ratios.get(band if band != "I" or region == "WALES" else "H")
+    return round(band_d * ratio * council_tax_growth(region, year), 2)
+
+
 def household_entities(
     answers: HouseholdAnswers, year: Optional[int] = None
 ) -> tuple[list, dict, dict]:
@@ -692,6 +841,7 @@ def household_entities(
             "dividend_income": answers.dividend_income,
             "savings_interest_income": answers.savings_interest_income,
             "property_income": answers.property_income,
+            "private_pension_income": answers.private_pension_income,
             "pension_contributions_via_salary_sacrifice": (
                 answers.salary_sacrifice_pension_contributions
             ),
@@ -706,6 +856,9 @@ def household_entities(
             {
                 "age": answers.partner_age,
                 "employment_income": partner_salary,
+                "private_pension_income": (
+                    answers.partner_private_pension_income
+                ),
                 "student_loan_plan": answers.partner_student_loan_plan,
                 "is_claimant_or_partner": True,
             }
@@ -734,7 +887,15 @@ def household_entities(
         "region": answers.region,
         "tenure_type": answers.tenure,
         "rent": answers.monthly_rent * 12 if answers.tenure in RENTING else 0,
-        "council_tax": answers.council_tax,
+        "council_tax": (
+            answers.council_tax
+            if answers.council_tax is not None
+            else estimated_council_tax(
+                answers.region,
+                answers.council_tax_band,
+                answers.salary_year if year is None else year,
+            )
+        ),
         "council_tax_band": answers.council_tax_band,
         "petrol_spending": answers.petrol_spending,
         "diesel_spending": answers.diesel_spending,
@@ -959,7 +1120,19 @@ def _programme_rows(entities: dict) -> dict:
                 [member[child.variable] for member in entities[child.entity]],
                 False,
             )
-        if programme.variable is None:
+        if programme.difference:
+            rows[programme.id] = sum(
+                _summed(
+                    [member[plus] for member in entities[programme.entity]],
+                    False,
+                )
+                - _summed(
+                    [member[minus] for member in entities[programme.entity]],
+                    False,
+                )
+                for plus, minus in programme.difference
+            )
+        elif programme.variable is None:
             rows[programme.id] = sum(
                 rows[child.id] for child in programme.children
             )
@@ -1016,21 +1189,62 @@ def _own_rate(grid: list[float], rates: list[float], income: float):
     return rates[-1]
 
 
+# Runs already done, by their inputs: the breakdown stage asks again for the
+# headline stage's two runs (before and after), which are then reused. Plain
+# data in and out, so a run's inputs are its key.
+_RUNS: "OrderedDict[str, dict]" = OrderedDict()
+_RUNS_LOCK = threading.Lock()
+RUNS_KEPT = 256
+
+
+def clear_runs() -> None:
+    """Forget the runs kept (for tests that stand in for the engine)."""
+    with _RUNS_LOCK:
+        _RUNS.clear()
+
+
+def _run_key(job: tuple) -> str:
+    return json.dumps(job, sort_keys=True, default=str)
+
+
 def _run_all(jobs: list, workers: int) -> list:
     """Every calculation, in worker processes when there are several
-    workers (``personal_impact.run_in_workers``), else here, in turn."""
-    if workers > 1 and len(jobs) > 1:
+    workers (``personal_impact.run_in_workers``, taking the instance's
+    shared slots, so concurrent requests share the processes fairly), else
+    here, in turn. A run already done for the same inputs is reused."""
+    keys = [_run_key(job) for job in jobs]
+    results: list = [None] * len(jobs)
+    with _RUNS_LOCK:
+        for i, key in enumerate(keys):
+            if key in _RUNS:
+                _RUNS.move_to_end(key)
+                results[i] = copy.deepcopy(_RUNS[key])
+    todo = [i for i, result in enumerate(results) if result is None]
+    # With workers, even one run goes to a worker: requests run at once, and
+    # two runs in this process at the same time would share its engine.
+    if workers > 1 and todo:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
+            household_slots,
             run_in_workers,
         )
 
-        return run_in_workers(
+        done = run_in_workers(
             workers,
-            [(run_scenario, job) for job in jobs],
+            [(run_scenario, jobs[i]) for i in todo],
             CALCULATION_TIMEOUT_SECONDS,
+            slots=household_slots(),
         )
-    return [run_scenario(*job) for job in jobs]
+    else:
+        done = [run_scenario(*jobs[i]) for i in todo]
+    with _RUNS_LOCK:
+        for i, result in zip(todo, done):
+            results[i] = result
+            _RUNS[keys[i]] = copy.deepcopy(result)
+            _RUNS.move_to_end(keys[i])
+        while len(_RUNS) > RUNS_KEPT:
+            _RUNS.popitem(last=False)
+    return results
 
 
 def _money(value: float) -> float:
@@ -1140,6 +1354,28 @@ def calculate_household_impact(
             "note": (
                 f"Salary as entered for {answers.salary_year}, grown to "
                 f"{fiscal_year(year)} with the OBR average earnings index."
+            ),
+        },
+        "council_tax_used": {
+            "band": answers.council_tax_band,
+            "council_tax": _money(household["council_tax"]),
+            "source": (
+                "entered" if answers.council_tax is not None else "estimated"
+            ),
+            "note": (
+                "As entered."
+                if answers.council_tax is not None
+                else (
+                    "No Council Tax in Northern Ireland (domestic rates are "
+                    "not modelled)."
+                    if answers.region not in COUNCIL_TAX_BAND_D
+                    else (
+                        f"Band {answers.council_tax_band} at the region's "
+                        "average Band D for 2026-27, grown to "
+                        f"{fiscal_year(year)} with the OBR's Council Tax "
+                        "forecast."
+                    )
+                )
             ),
         },
         "state_pension_used": {

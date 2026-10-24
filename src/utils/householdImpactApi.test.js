@@ -24,6 +24,36 @@ import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
 
 describe("buildHouseholdRequest", () => {
+  it("asks 16- to 19-year-olds' education, yes until answered, and keeps a child of 20 for the API to refuse", () => {
+    const body = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, children_ages: "15, 16, 18, 19, 20", children_in_education: [true, true, false] },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(body.household.children).toEqual([
+      { age: 15 },
+      { age: 16, in_education: true },
+      { age: 18, in_education: false },
+      { age: 19, in_education: true },
+      { age: 20 },
+    ]);
+  });
+
+  it("sends private pensions, the partner's only with a partner", () => {
+    const single = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, private_pension_per_year: 10000, partner_private_pension_per_year: 5000 },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(single.household.private_pension_income).toBe(10000);
+    expect(single.household.partner_private_pension_income).toBe(0);
+    const couple = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, has_partner: true, partner_private_pension_per_year: 5000 },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(couple.household.private_pension_income).toBe(0);
+    expect(couple.household.partner_private_pension_income).toBe(5000);
+  });
+
+
   it("sends rent only for renters and childcare only with children", () => {
     const owner = buildHouseholdRequest(
       { ...WIZARD_DEFAULTS, tenure: "OWNED_OUTRIGHT", monthly_rent: 900, monthly_childcare: 400 },
@@ -70,6 +100,8 @@ describe("buildHouseholdRequest", () => {
         "dividend_income",
         "savings_interest_income",
         "property_income",
+        "private_pension_income",
+        "partner_private_pension_income",
         "petrol_spending",
         "diesel_spending",
         "salary_sacrifice_pension_contributions",

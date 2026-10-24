@@ -90,10 +90,11 @@ const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : 
  * is not included.
  */
 export function SingleYearHeadline({ result, year, policies = [], noPolicies, renting = false }) {
-  const yearLabel = fiscalYearTick(year);
   const { status, data, error, stale, retry } = result;
+  // The figures' own year: while a new year loads, the old figures keep
+  // their year, never the one just chosen
+  const yearLabel = fiscalYearTick(data?.year ?? year);
   const showLoading = useDelayed(status === "loading" && !data);
-  const showUpdating = useDelayed(status === "loading" && Boolean(data));
 
   if (noPolicies) {
     return (
@@ -109,8 +110,13 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
     <div className="single-year-headline" aria-busy={status === "loading"}>
       <p className="single-year-lede">
         Your household&apos;s net income in {yearLabel}, before and after the selected policies.
-        {showUpdating && <span className="single-year-updating"> Updating…</span>}
       </p>
+      {stale && status !== "error" && (
+        <p className="single-year-updating" role="status">
+          Updating for {fiscalYearTick(year)} and the policies now selected; the figures below are the last ones
+          calculated.
+        </p>
+      )}
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
       {status === "loading" && !data && (
         <p className="single-year-quiet" role="status">
@@ -118,7 +124,7 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
         </p>
       )}
       {data && status !== "error" && (
-        <>
+        <div className={stale ? "single-year-stale is-stale" : undefined} aria-busy={stale || undefined}>
           {/* The headline, as Spring Statement 2026 words it: one sentence,
               the change in it; the before and after are in the breakdown */}
           <div className={`single-year-banner ${changeClass(totals.change)} ${stale ? "is-stale" : ""}`}>
@@ -148,7 +154,7 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
               </p>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -172,15 +178,18 @@ function Pending({ text }) {
  * the marginal tax rate in a closed expander).
  */
 export function SingleYearDetails({ result, year, policies }) {
-  const yearLabel = fiscalYearTick(year);
-  const { data, detailStatus, detailError, retry } = result;
+  const { data, detailStatus, detailError, retry, stale } = result;
   if (!data || result.status === "error") return null;
+  // The figures' own year (see SingleYearHeadline)
+  const yearLabel = fiscalYearTick(data.year ?? year);
   const totals = headlineTotals(data.net);
   const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null;
   const detailFailed = detailStatus === "error";
 
+  // While newer inputs load, every section shows the last figures greyed,
+  // under their own year, until the new answer arrives
   return (
-    <div className="single-year-details">
+    <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
       <SectionHeading
         title="Breakdown of household net income"
         subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."

@@ -24,8 +24,10 @@ REQUEST = {
 @pytest.fixture(autouse=True)
 def _fresh_cache():
     api._cached_household_impact.cache_clear()
+    household_impact.clear_runs()
     yield
     api._cached_household_impact.cache_clear()
+    household_impact.clear_runs()
 
 
 def _with(change):
@@ -175,9 +177,13 @@ def test_a_household_answered_in_stages():
         "pension_credit",
         "housing_benefit",
         "council_tax",
+        "council_tax_reduction",
+        "benefit_cap",
+        "private_pension_income",
         "student_loan_repayments",
         "fuel_duty",
     }
+    assert body["council_tax_used"]["source"] == "estimated"
     assert body["engine"]["policyengine"]
     assert body["engine"]["policyengine-uk"]
 
@@ -188,3 +194,52 @@ def test_a_household_answered_in_stages():
     [measure] = rest["by_policy"]["measures"]
     assert measure["change"] == net["change"]
     assert len(rest["sweep"]["points"]) == household_impact.SWEEP_POINTS
+
+
+def test_a_child_aged_20_is_refused_naming_the_children():
+    response = client.post(
+        ROUTE, json=_with({"household": {"children": [{"age": 20}]}})
+    )
+    assert response.status_code == 422
+    [error] = response.json()["detail"]
+    assert error["loc"] == ["body", "household", "children", 0, "age"]
+    assert error["type"] == "less_than_equal"
+
+
+def test_private_pensions_and_education_are_accepted():
+    response = client.post(
+        ROUTE,
+        json=_with(
+            {
+                "household": {
+                    "private_pension_income": 5_000,
+                    "partner_private_pension_income": 0,
+                    "children": [{"age": 17, "in_education": True}],
+                    "council_tax": 1_500,
+                }
+            }
+        ),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["council_tax_used"] == {
+        "band": "D",
+        "council_tax": 1_500,
+        "source": "entered",
+        "note": "As entered.",
+    }
+    pension = next(
+        row
+        for row in body["programmes"]
+        if row["id"] == "private_pension_income"
+    )
+    assert pension["baseline"] == 5_000
+
+
+def test_a_calculation_past_its_limit_is_a_504(monkeypatch):
+    def slow(*args, **kwargs):
+        raise TimeoutError("The worker calls took more than 280 s")
+
+    monkeypatch.setattr(household_impact, "calculate_household_impact", slow)
+    response = client.post(ROUTE, json=REQUEST)
+    assert response.status_code == 504

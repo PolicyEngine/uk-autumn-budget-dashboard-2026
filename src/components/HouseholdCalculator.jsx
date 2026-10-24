@@ -6,6 +6,9 @@ import SectionHeading from "./SectionHeading";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
+  CHILD_AGE_MESSAGE,
+  OLDEST_CHILD_AGE,
+  asksEducation,
   atStatePensionAge,
   isRenting,
   monthlyRent,
@@ -33,6 +36,10 @@ export const WIZARD_DEFAULTS = {
   partner_age: 30,
   partner_salary: DEFAULT_SALARY,
   children_ages: "",
+  // Per child, in the order of children_ages: whether a 16- to 19-year-old
+  // is in full-time non-advanced education (school or college); yes until
+  // answered
+  children_in_education: [],
   // Entitlement: the household claims what it is due
   claims_universal_credit: true,
   council_tax_band: "D",
@@ -42,6 +49,9 @@ export const WIZARD_DEFAULTS = {
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
+  // Private and workplace pensions in payment, £ a year
+  private_pension_per_year: 0,
+  partner_private_pension_per_year: 0,
   monthly_childcare: 0,
   // At State Pension age; null is the full new State Pension for the year
   state_pension_per_year: null,
@@ -70,6 +80,8 @@ export const WIZARD_STEPS = [
         fields: [
           "state_pension_per_year",
           "partner_state_pension_per_year",
+          "private_pension_per_year",
+          "partner_private_pension_per_year",
           "savings_interest_per_year",
           "dividends_per_year",
           "property_income_per_year",
@@ -152,7 +164,7 @@ const CHOICE_CONFIGS = {
     label: "Council tax band",
     layout: "compact",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Band D if you are not sure.",
+    hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), grown with the OBR's forecast. Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Would your household claim Universal Credit if entitled?",
@@ -174,6 +186,23 @@ const NUMBER_CONFIGS = {
   savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  private_pension_per_year: {
+    label: "Your private or workplace pension",
+    min: 0,
+    max: 200000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "Pensions you are paid, before tax, not counting the State Pension.",
+  },
+  partner_private_pension_per_year: {
+    label: "Partner's private or workplace pension",
+    min: 0,
+    max: 200000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+  },
   state_pension_per_year: { label: "Your State Pension", min: 0, max: 25000, step: 10, money: true, suffix: "a year" },
   partner_state_pension_per_year: {
     label: "Partner's State Pension",
@@ -228,6 +257,9 @@ const FIELD_APPLIES = {
   partner_salary: (inputs) => inputs.has_partner,
   children_ages: (inputs, childrenCount) => childrenCount > 0,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
+  partner_private_pension_per_year: (inputs) => inputs.has_partner,
+  // Northern Ireland has domestic rates, not Council Tax
+  council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
   state_pension_per_year: (inputs, childrenCount, year) => atStatePensionAge(inputs.current_age, year),
   partner_state_pension_per_year: (inputs, childrenCount, year) =>
     inputs.has_partner && atStatePensionAge(inputs.partner_age, year),
@@ -360,10 +392,20 @@ function HouseholdCalculator({
   // ("5, 3")
   const childAges = parseChildrenAges(inputs.children_ages);
   const setChildAges = (ages) => handleInputChange("children_ages", ages.join(", "));
+  const childEducation = (index) => inputs.children_in_education?.[index] !== false;
+  const setChildEducation = (index, value) => {
+    const next = childAges.map((_, i) => (i === index ? value : childEducation(i)));
+    handleInputChange("children_in_education", next);
+  };
   const setChildrenCount = (count) => {
     const ages = childAges.slice(0, count);
     while (ages.length < count) ages.push(NEW_CHILD_AGE);
-    setChildAges(ages);
+    setPresetId(null);
+    setInputs((prev) => ({
+      ...prev,
+      children_ages: ages.join(", "),
+      children_in_education: ages.map((_, i) => prev.children_in_education?.[i] !== false),
+    }));
   };
 
   // One question of the form
@@ -384,18 +426,31 @@ function HouseholdCalculator({
       return (
         <div className="field-row children-ages" key={id}>
           {childAges.map((age, index) => (
-            <NumberField
-              key={index}
-              id={`child_age_${index}`}
-              label={`Child ${index + 1}'s age`}
-              value={age}
-              min={0}
-              max={19}
-              step={1}
-              onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
-            />
+            <div className="child-answers" key={index}>
+              <NumberField
+                id={`child_age_${index}`}
+                label={`Child ${index + 1}'s age`}
+                value={age}
+                min={0}
+                max={OLDEST_CHILD_AGE}
+                step={1}
+                outOfRangeMessage={CHILD_AGE_MESSAGE}
+                onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+              />
+              {asksEducation(age) && (
+                <ChoiceTiles
+                  id={`child_in_education_${index}`}
+                  label={`Child ${index + 1} in full-time education (non-advanced)`}
+                  layout="compact"
+                  options={YES_NO.slice().reverse()}
+                  value={childEducation(index)}
+                  onChange={(value) => setChildEducation(index, value)}
+                  hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
+                />
+              )}
+            </div>
           ))}
-          <p className="field-hint field-row-hint">Ages in 2026.</p>
+          <p className="field-hint field-row-hint">Ages in 2026, from 0 to 19.</p>
         </div>
       );
     }

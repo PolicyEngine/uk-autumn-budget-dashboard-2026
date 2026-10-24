@@ -169,6 +169,28 @@ def get_calculator() -> PersonalImpactCalculator:
 # --concurrency.
 CALCULATIONS = anyio.CapacityLimiter(1)
 
+
+def household_request_limit() -> int:
+    """How many household-impact requests an instance works on at once.
+
+    With worker processes, ``HOUSEHOLD_CONCURRENT_REQUESTS`` (default 4):
+    their runs share the instance's worker slots fairly
+    (``personal_impact.FairSlots``), so a later visitor's headline is not
+    held behind an earlier visitor's whole calculation, while CPU and
+    memory stay bounded by the slots. Without workers every run is in this
+    process, so one request at a time.
+    """
+    if household_workers() <= 1:
+        return 1
+    try:
+        return max(1, int(os.environ.get("HOUSEHOLD_CONCURRENT_REQUESTS", 4)))
+    except ValueError:
+        return 4
+
+
+# The household route's own limiter (see household_request_limit).
+HOUSEHOLD_REQUESTS = anyio.CapacityLimiter(household_request_limit())
+
 # Where a container's cgroup reports its peak memory: cgroup v2, then v1.
 MEMORY_PEAK_FILES = (
     Path("/sys/fs/cgroup/memory.peak"),
@@ -331,11 +353,15 @@ class HouseholdAnswersRequest(BaseModel):
             ),
         )
     )
-    council_tax: float = Field(
-        default=0,
+    council_tax: Optional[float] = Field(
+        default=None,
         ge=0,
         le=100_000,
-        description="Council Tax a year, as billed (not modelled)",
+        description=(
+            "Council Tax a year, as billed. Left out: estimated from "
+            "council_tax_band and the region's average Band D for 2026-27, "
+            "grown to the year (none in Northern Ireland)."
+        ),
     )
     council_tax_band: Literal[household_impact.COUNCIL_TAX_BANDS] = "D"
     monthly_childcare: float = Field(
@@ -354,6 +380,18 @@ class HouseholdAnswersRequest(BaseModel):
     dividend_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     savings_interest_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     property_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    private_pension_income: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Private and workplace pensions in payment, £ a year (not the "
+            "State Pension), as policyengine-uk's private_pension_income"
+        ),
+    )
+    partner_private_pension_income: float = Field(
+        default=0, ge=0, le=MAX_AMOUNT
+    )
     petrol_spending: float = Field(default=0, ge=0, le=100_000)
     diesel_spending: float = Field(default=0, ge=0, le=100_000)
     salary_sacrifice_pension_contributions: float = Field(
@@ -473,15 +511,18 @@ async def calculate_household_impact(
     selected measures: the headline, each measure's own effect and the
     interaction residual, the programmes, and the earnings sweep.
 
-    Runs in a worker thread through the same one-at-a-time limiter as
-    ``/api/personal-impact`` (``CALCULATIONS``), so ``/api/health`` keeps
-    answering and two calculations never share the instance's memory.
-    Out-of-range answers are refused with a 422 naming the field.
+    Runs in a worker thread, so ``/api/health`` keeps answering, through
+    its own limiter (``HOUSEHOLD_REQUESTS``): several requests at once
+    share the instance's worker processes run by run
+    (``personal_impact.FairSlots``), so none waits for another's whole
+    calculation and the processes, and so memory, stay bounded. A
+    calculation that passes its time limit is a 504. Out-of-range answers
+    are refused with a 422 naming the field.
     """
     try:
         received = time.perf_counter()
         results, calculating = await anyio.to_thread.run_sync(
-            timed, _household_impact, data, limiter=CALCULATIONS
+            timed, _household_impact, data, limiter=HOUSEHOLD_REQUESTS
         )
         response.headers["Server-Timing"] = server_timing(
             calculating,
@@ -491,6 +532,10 @@ async def calculate_household_impact(
         return results
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except TimeoutError as e:
+        raise HTTPException(
+            status_code=504, detail=f"Calculation timed out: {e}"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
 

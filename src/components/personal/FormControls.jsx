@@ -78,6 +78,9 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param {string} [props.suffix] - A unit after the number ("a month")
  * @param {string} [props.hint]
  * @param {string} [props.inputLabel] - The box's accessible name, when it differs from the visible label
+ * @param {string} [props.outOfRangeMessage] - Said while the typed value is
+ *   outside min to max, and after leaving the box moved it into range, so a
+ *   value is never changed without a word
  */
 export function NumberField({
   id,
@@ -91,14 +94,18 @@ export function NumberField({
   suffix,
   hint,
   inputLabel,
+  outOfRangeMessage,
 }) {
   const hintId = hint ? `hint-${id}` : undefined;
   const fieldId = `field-${id}`;
   const shown = Number.isFinite(value) ? value : min;
+  // The value typed before leaving the box moved it into range
+  const [clampedFrom, setClampedFrom] = useState(null);
   const stepTo = (direction) => {
     // Snap to the step grid, then move one step
     const base = direction > 0 ? Math.floor(shown / step) * step : Math.ceil(shown / step) * step;
     const next = base === shown ? shown + direction * step : direction > 0 ? base + step : base - step;
+    setClampedFrom(null);
     onChange(clamp(next, min, max));
   };
   // What is typed, kept while it is out of range or empty; a value in
@@ -144,12 +151,14 @@ export function NumberField({
             aria-describedby={hintId}
             onChange={(event) => {
               setDraft(event.target.value);
+              setClampedFrom(null);
               const parsed = parseFloat(event.target.value);
               if (Number.isFinite(parsed) && parsed >= min && parsed <= max) onChange(parsed);
             }}
             onBlur={() => {
               const parsed = parseFloat(draft);
               const next = Number.isFinite(parsed) ? clamp(parsed, min, max) : shown;
+              if (Number.isFinite(parsed) && next !== parsed) setClampedFrom(parsed);
               setDraft(String(next));
               if (next !== shown) onChange(next);
             }}
@@ -171,6 +180,20 @@ export function NumberField({
           {hint}
         </p>
       )}
+      {outOfRangeMessage && (outOfRange(draft, min, max) || clampedFrom !== null) && (
+        <p className="field-error" role="alert">
+          {outOfRangeMessage}
+          {clampedFrom !== null && !outOfRange(draft, min, max)
+            ? ` ${clampedFrom.toLocaleString("en-GB")} was changed to ${shown.toLocaleString("en-GB")}.`
+            : ""}
+        </p>
+      )}
     </div>
   );
+}
+
+/** Whether typed text is a number outside min to max. */
+function outOfRange(text, min, max) {
+  const parsed = parseFloat(text);
+  return Number.isFinite(parsed) && (parsed < min || parsed > max);
 }

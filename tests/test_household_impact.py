@@ -36,6 +36,17 @@ from uk_budget_data.runtime_identity import runtime_identity
 
 YEAR = 2029
 Child = household_impact.Child
+
+
+@pytest.fixture(autouse=True)
+def _fresh_runs():
+    """Each test starts with no runs kept (household_impact._RUNS), so a
+    stand-in engine is really asked."""
+    household_impact.clear_runs()
+    yield
+    household_impact.clear_runs()
+
+
 PARAMETERS = system.parameters
 
 
@@ -399,14 +410,16 @@ def test_the_programme_table_adds_up_to_net_income(name):
 # --- the calculation, mocked --------------------------------------------------
 
 
+def _row_variables():
+    for row in household_impact._all_rows():
+        if row.variable:
+            yield row.variable
+        for pair in row.difference or ():
+            yield from pair
+
+
 def _stub(net):
-    member = SimpleNamespace(
-        **{
-            row.variable: 0.0
-            for row in household_impact._all_rows()
-            if row.variable
-        }
-    )
+    member = SimpleNamespace(**{name: 0.0 for name in _row_variables()})
     return SimpleNamespace(
         household=SimpleNamespace(
             household_net_income=net,
@@ -423,11 +436,7 @@ def _stub(net):
                 for name in names
             },
         ),
-        benunit={
-            row.variable: 0.0
-            for row in household_impact._all_rows()
-            if row.variable
-        },
+        benunit={name: 0.0 for name in _row_variables()},
         person=[
             {
                 **vars(member),
@@ -469,17 +478,24 @@ def test_the_runs_it_asks_policyengine_py_for(monkeypatch):
 
     calls.clear()
     result = calculate(Answers(), measures, include=("by_policy", "sweep"))
-    assert len(calls) == 6
-    assert [call["reform"] for call in calls[2:4]] == [
+    # The headline's two runs are reused (household_impact._RUNS): only the
+    # singles and the sweep are asked for
+    assert len(calls) == 4
+    assert [call["reform"] for call in calls[0:2]] == [
         sides.singles[id_] for id_ in sides.included
     ]
-    assert calls[4]["axes"][0]["name"] == "employment_income"
-    assert calls[4]["reform"] == sides.before
+    assert calls[2]["axes"][0]["name"] == "employment_income"
+    assert calls[2]["reform"] == sides.before
     assert result["net_income"] == {
         "baseline": 40_100.0,
         "reform": 40_200.0,
         "change": 100.0,
     }
+
+    household_impact.clear_runs()
+    calls.clear()
+    calculate(Answers(), measures, include=("by_policy", "sweep"))
+    assert len(calls) == 6
     assert result["engine"] == runtime_identity()["packages"]
 
 
@@ -953,3 +969,177 @@ def test_one_entered_stage_leaves_the_others_as_the_engine_derives_them():
         "POST_SECONDARY",
         "POST_SECONDARY",
     ]
+
+
+# --- QA fixes: private pension, benefit cap, Council Tax, education --------
+
+
+def _programme(result, id_):
+    for row in result["programmes"]:
+        if row["id"] == id_:
+            return row
+        for child in row.get("children", []):
+            if child["id"] == id_:
+                return child
+    raise KeyError(id_)
+
+
+def _rows_add_up(result):
+    """Each group's top rows add up to what policyengine-uk counts, so the
+    rows make net income on both sides."""
+    for side in ("baseline", "reform"):
+        totals = {"tax": 0.0, "benefit": 0.0, "income": 0.0}
+        for row in result["programmes"]:
+            totals[row["group"]] += row[side]
+        net = totals["income"] + totals["benefit"] - totals["tax"]
+        assert net == pytest.approx(result["net_income"][side], abs=0.05)
+
+
+def test_a_private_pension_is_income_the_qa_pensioner_couple():
+    """The QA's pensioner couple (70 and 68, the full new State Pension
+    each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
+    tax on top of their £25,907.11, as an independent policyengine-uk run
+    and the public API give: £33,907.11."""
+    answers = household_impact.HouseholdAnswers(
+        age=70,
+        employment_income=0,
+        has_partner=True,
+        partner_age=68,
+        private_pension_income=10_000,
+        region="NORTH_WEST",
+        tenure="OWNED_OUTRIGHT",
+        council_tax=0,
+        salary_year=2027,
+    )
+    result = household_impact.calculate_household_impact(
+        answers, household_impact.measure_ids(), 2027, include=()
+    )
+    assert result["net_income"]["baseline"] == pytest.approx(33_907.11)
+    assert _programme(result, "private_pension_income")["baseline"] == 10_000
+    assert _programme(result, "other_income")["baseline"] == 0
+    _rows_add_up(result)
+    people, _, _ = household_impact.household_entities(
+        Answers(
+            has_partner=True,
+            private_pension_income=1_000,
+            partner_private_pension_income=2_000,
+        )
+    )
+    assert [p["private_pension_income"] for p in people] == [1_000, 2_000]
+
+
+def test_the_benefit_cap_is_its_own_row_so_a_capped_family_reconciles():
+    """The QA's E3b: a London couple with no earnings and six children,
+    capped. Lifting the two-child limit raises the child element by four
+    children's, the benefit cap takes it all back, and every row adds up."""
+    answers = Answers(
+        age=35,
+        employment_income=0,
+        has_partner=True,
+        partner_age=35,
+        children=tuple(Child(age) for age in (14, 12, 10, 8, 6, 4)),
+        region="LONDON",
+        tenure="RENT_PRIVATELY",
+        monthly_rent=2_500,
+        claims_universal_credit=True,
+        council_tax=0,
+    )
+    result = calculate(answers, ["two_child_limit"])
+    child = _programme(result, "uc_child_element")["change"]
+    cap = _programme(result, "benefit_cap")
+    assert child > 10_000
+    assert cap["change"] == pytest.approx(-child, abs=0.02)
+    # Each row is rounded to the penny on its own
+    assert _programme(result, "universal_credit")["change"] == pytest.approx(
+        child, abs=0.02
+    )
+    assert result["net_income"]["change"] == pytest.approx(0, abs=0.01)
+    assert cap["baseline"] < 0
+    _rows_add_up(result)
+
+
+def test_an_uncapped_family_has_no_benefit_cap():
+    result = calculate(PROBES["uc_family"], ["two_child_limit"])
+    assert _programme(result, "benefit_cap")["baseline"] == 0
+    assert _programme(result, "benefit_cap")["reform"] == 0
+    _rows_add_up(result)
+
+
+def test_council_tax_is_estimated_from_the_band_and_region():
+    # 2026-27: the region's average Band D times the band's ratio
+    nw = household_impact.COUNCIL_TAX_BAND_D["NORTH_WEST"]
+    assert household_impact.estimated_council_tax(
+        "NORTH_WEST", "D", 2026
+    ) == pytest.approx(nw, abs=0.01)
+    assert household_impact.estimated_council_tax(
+        "NORTH_WEST", "A", 2026
+    ) == pytest.approx(nw * 6 / 9, abs=0.01)
+    assert household_impact.estimated_council_tax(
+        "NORTH_WEST", "H", 2026
+    ) == pytest.approx(nw * 2, abs=0.01)
+    # Scotland's upper bands since 2017
+    scot = household_impact.COUNCIL_TAX_BAND_D["SCOTLAND"]
+    assert household_impact.estimated_council_tax(
+        "SCOTLAND", "H", 2026
+    ) == pytest.approx(scot * 882 / 360, abs=0.01)
+    # Band I is Welsh only
+    wales = household_impact.COUNCIL_TAX_BAND_D["WALES"]
+    assert household_impact.estimated_council_tax(
+        "WALES", "I", 2026
+    ) == pytest.approx(wales * 21 / 9, abs=0.01)
+    # Northern Ireland: domestic rates, no Council Tax
+    assert (
+        household_impact.estimated_council_tax("NORTHERN_IRELAND", "D", 2029)
+        == 0
+    )
+    # Grown with policyengine-uk's own Council Tax series
+    growth = PARAMETERS.gov.economic_assumptions.yoy_growth.obr.council_tax
+    factor = (1 + growth.england("2027-01-01")) * (
+        1 + growth.england("2028-01-01")
+    )
+    assert household_impact.estimated_council_tax(
+        "NORTH_WEST", "D", 2028
+    ) == pytest.approx(nw * factor, abs=0.01)
+
+
+def test_the_estimated_council_tax_is_taken_off_net_income():
+    estimated = calculate(Answers(region="NORTH_WEST"), ["fuel_duty_freeze"])
+    none = calculate(
+        Answers(region="NORTH_WEST", council_tax=0), ["fuel_duty_freeze"]
+    )
+    tax = _programme(estimated, "council_tax")["baseline"]
+    assert tax == pytest.approx(
+        household_impact.estimated_council_tax("NORTH_WEST", "D", YEAR)
+    )
+    assert estimated["council_tax_used"]["source"] == "estimated"
+    assert none["council_tax_used"]["source"] == "entered"
+    assert estimated["net_income"]["baseline"] == pytest.approx(
+        none["net_income"]["baseline"] - tax, abs=0.01
+    )
+    _rows_add_up(estimated)
+
+
+def test_a_young_person_in_school_counts_as_a_child():
+    """The QA's E4: a £20,000 renter with an 18-year-old. In school or
+    college the child counts for Child Benefit and Universal Credit; left
+    to policyengine-uk's default (university) they do not."""
+    base = dict(
+        employment_income=20_000,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=750,
+        claims_universal_credit=True,
+        council_tax=0,
+    )
+    school = calculate(
+        Answers(**base, children=(Child(18, in_education=True),)),
+        ["fuel_duty_freeze"],
+    )
+    default = calculate(
+        Answers(**base, children=(Child(18),)), ["fuel_duty_freeze"]
+    )
+    assert school["dependants"][0]["counts_for_child_benefit"]
+    assert school["dependants"][0]["counts_for_universal_credit"]
+    assert not default["dependants"][0]["counts_for_child_benefit"]
+    assert school["net_income"]["baseline"] > (
+        default["net_income"]["baseline"] + 5_000
+    )

@@ -51,6 +51,8 @@ export const PROGRAMME_LABELS = {
   uc_child_element: "Child element",
   uc_housing_costs_element: "Housing element",
   uc_childcare_element: "Childcare element",
+  benefit_cap: "Benefit cap",
+  council_tax_reduction: "Council Tax Reduction",
   child_benefit: "Child Benefit",
   tax_free_childcare: "Tax-Free Childcare",
   housing_benefit: "Housing Benefit",
@@ -68,6 +70,7 @@ export const PROGRAMME_LABELS = {
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
+  private_pension_income: "Private pension",
   other_income: "Other income",
 };
 
@@ -84,6 +87,8 @@ const IN_SENTENCE = {
   dividend_income: "dividends",
   savings_interest_income: "savings interest",
   property_income: "property income",
+  private_pension_income: "private pension",
+  benefit_cap: "the benefit cap",
 };
 
 // The breakdown's top rows, in Spring Statement's order: market income,
@@ -422,6 +427,10 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Not modelled for one household",
-    "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only. Council Tax is not taken off: policyengine-uk does not compute it, and no selected policy changes it.",
+    "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only.",
+  ],
+  [
+    "Council Tax",
+    "Estimated from your band and your region's average Band D for 2026-27 (MHCLG for England, tax-base weighted by region; the Welsh and Scottish governments), grown to the chosen year with policyengine-uk's OBR Council Tax forecast, and taken off net income. Northern Ireland has domestic rates, which are not modelled. No selected policy changes it.",
   ],
 ];

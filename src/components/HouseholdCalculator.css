@@ -1026,3 +1026,18 @@
     flex: 1 1 100%;
   }
 }
+
+/* A child's age, and from 16 their education */
+.child-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: #b45309;
+}

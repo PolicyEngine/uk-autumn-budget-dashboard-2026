@@ -117,7 +117,11 @@ Locally, with `HOUSEHOLD_WORKERS=2 PORT=8010 uv run uk-budget-api`, it is `http:
 
 **Answer.** Net income before ("baseline", pre-Budget law for the selected measures) and after ("reform"), and the change; each measure's own change (that measure switched to its Budget setting, the other selected measures held at pre-Budget law), its status ("not_affected" only for exactly £0) and the residual between the combined change and the sum of the singles; the programmes before and after; each child's dependant status; the rent area used; an earnings sweep of 50 points of the head's employment income with marginal effective tax rates and their own point; and the policyengine and policyengine-uk versions.
 
-**Not modelled for one household.** The rail fares freeze (a national cost spread by rail use: it is in the national figures only); Council Tax (an input, as entered: policyengine-uk does not compute it, so no measure changes it); a local authority's choice of BRMA (policyengine-uk reads the BRMA, defaulting to the region's BRMA with the most private-rented households, and reads the local authority only for the few Council Tax Reduction schemes it models).
+**Not modelled for one household.** The rail fares freeze (a national cost spread by rail use: it is in the national figures only); a local authority's choice of BRMA (policyengine-uk reads the BRMA, defaulting to the region's BRMA with the most private-rented households, and reads the local authority only for the few Council Tax Reduction schemes it models).
+
+**Council Tax.** Left out of the request, it is estimated from `council_tax_band` and the region's average Band D for 2026-27 (MHCLG Table 10, tax-base weighted by region; Welsh Government £2,283; Scottish Government £1,653.44), grown with policyengine-uk's OBR Council Tax series; none in Northern Ireland (domestic rates). The answer says which in `council_tax_used`. No measure changes it.
+
+**Concurrency.** See the runbook: requests share the workers run by run, and Cloud Run `--concurrency 4` is the setting to pair with `--cpu 2`.
 
 **Time** (24 October, on a laptop, one household of two earners and three children, warm process): the headline alone about 3 s; every measure with the per-measure split and the sweep about 17 s with 2 workers (the instance's 2 vCPUs, `HOUSEHOLD_WORKERS=2`) and about 10 s with 4. Below 10 s for the whole answer needs 4 vCPUs, and so about 4 GiB (each worker peaks at about 400 MB): `--cpu 4 --memory 4Gi --update-env-vars HOUSEHOLD_WORKERS=4`. That is a cost decision, not made here.
 

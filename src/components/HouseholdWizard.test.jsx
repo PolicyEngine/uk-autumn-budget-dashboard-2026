@@ -129,6 +129,42 @@ describe("the personal impact form", () => {
     expect(screen.queryByRole("spinbutton", { name: "Paid childcare" })).not.toBeInTheDocument();
   });
 
+  it("asks a 16- to 19-year-old's education, yes until answered", () => {
+    render(<HouseholdCalculator />);
+    choose("Number of children", "2");
+    expect(screen.queryByRole("radiogroup", { name: /in full-time education/ })).not.toBeInTheDocument();
+    fireEvent.change(box("Child 2's age"), { target: { value: "17" } });
+    const education = group("Child 2 in full-time education (non-advanced)");
+    expect(within(education).getByRole("radio", { name: "Yes" })).toBeChecked();
+    choose("Child 2 in full-time education (non-advanced)", "No");
+    expect(within(education).getByRole("radio", { name: "No" })).toBeChecked();
+    expect(screen.queryByRole("radiogroup", { name: /Child 1 in full-time/ })).not.toBeInTheDocument();
+  });
+
+  it("says why a child of 20 or over is not taken, never dropping them silently", () => {
+    render(<HouseholdCalculator />);
+    choose("Number of children", "1");
+    fireEvent.change(box("Child 1's age"), { target: { value: "21" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Children are 0 to 19.");
+    fireEvent.blur(box("Child 1's age"));
+    expect(box("Child 1's age")).toHaveValue(19);
+    expect(screen.getByRole("alert")).toHaveTextContent("21 was changed to 19.");
+  });
+
+  it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
+    render(<HouseholdCalculator />);
+    moreDetails();
+    expect(box("Your private or workplace pension")).toHaveValue(0);
+    expect(screen.queryByRole("spinbutton", { name: "Partner's private or workplace pension" })).not.toBeInTheDocument();
+    expect(group("Council tax band")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    choose("Do you live with a partner?", "Yes");
+    choose("Region", "Northern Ireland");
+    moreDetails();
+    expect(box("Partner's private or workplace pension")).toHaveValue(0);
+    expect(screen.queryByRole("radiogroup", { name: "Council tax band" })).not.toBeInTheDocument();
+  });
+
   it("asks the loan plan, never the balance", () => {
     // policyengine-uk's repayment depends on the plan and income; a
     // balance only caps one year's repayment

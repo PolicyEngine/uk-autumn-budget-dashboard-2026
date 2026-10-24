@@ -232,6 +232,77 @@ describe("the household calculation, from the fixture", () => {
   });
 });
 
+describe("while a new answer loads", () => {
+  /** Serve the first answers at once, then hold every later request until released. */
+  function serveSlowly() {
+    const held = [];
+    let slow = false;
+    serve((body) => {
+      if (!slow) return json(householdAnswerFor(body));
+      return new Promise((resolve) => held.push(() => resolve(json(householdAnswerFor(body)))));
+    });
+    return {
+      slowDown: () => {
+        slow = true;
+      },
+      releaseAll: () => held.splice(0).forEach((release) => release()),
+      held,
+    };
+  }
+
+  const banner = () => screen.getByText(HEADLINE).closest(".single-year-banner");
+  const stalePart = () => screen.getByText(HEADLINE).closest(".single-year-stale");
+  const details = (container) => container.querySelector(".single-year-details");
+
+  it("keeps the old figures under their own year, greyed, until the new year's answer arrives", async () => {
+    const server = serveSlowly();
+    const { rerender, container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    expect(banner()).toHaveTextContent("in 2029-30");
+    expect(stalePart()).toBeNull();
+    server.slowDown();
+    const ids = POLICIES_FOR_TEST.map((p) => p.id);
+    rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
+    // At once, and still after the debounce and while the request is held
+    for (const wait of [0, 600]) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
+      expect(banner()).toHaveTextContent("in 2029-30");
+      expect(banner()).not.toHaveTextContent("2030-31");
+      expect(stalePart()).toHaveClass("is-stale");
+      expect(details(container)).toHaveClass("is-stale");
+      expect(screen.getByRole("heading", { name: /Change in net income by policy, 2029-30/ })).toBeInTheDocument();
+      expect(screen.getByText(/Updating for 2030-31/)).toBeInTheDocument();
+    }
+    await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
+    server.releaseAll();
+    await waitFor(() => expect(banner()).toHaveTextContent("in 2030-31"));
+    expect(stalePart()).toBeNull();
+    expect(screen.queryByText(/Updating for/)).not.toBeInTheDocument();
+    // The breakdown stage: the old bars stay greyed under their year until it lands
+    await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
+    expect(details(container)).not.toHaveClass("is-stale");
+    server.releaseAll();
+    await screen.findByRole("heading", { name: /Change in net income by policy, 2030-31/ });
+  });
+
+  it("greys a deselected policy's bar rather than showing it as current", async () => {
+    const server = serveSlowly();
+    const { rerender, container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    server.slowDown();
+    const ids = POLICIES_FOR_TEST.map((p) => p.id).slice(1);
+    rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2029} />);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(stalePart()).toHaveClass("is-stale");
+    expect(details(container)).toHaveClass("is-stale");
+    expect(details(container)).toHaveAttribute("aria-busy", "true");
+    server.releaseAll();
+    await waitFor(() => expect(stalePart()).toBeNull());
+  });
+});
+
 describe("the household calculation's errors", () => {
   it("names a refused child's age as the children's, not yours", async () => {
     serve(() =>
@@ -241,6 +312,28 @@ describe("the household calculation's errors", () => {
     toResults();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Children's ages: Input should be less than or equal to 19");
+  });
+
+  it("says what to do about a child of 20 or over", async () => {
+    serve(() =>
+      json(
+        {
+          detail: [
+            {
+              type: "less_than_equal",
+              loc: ["body", "household", "children", 0, "age"],
+              msg: "Input should be less than or equal to 19",
+            },
+          ],
+        },
+        422,
+      ),
+    );
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Children's ages: Children are 0 to 19.");
+    expect(alert).toHaveTextContent("leave them out");
   });
 
   it("names the answers the API refused", async () => {
