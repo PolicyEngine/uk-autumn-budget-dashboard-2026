@@ -12,7 +12,7 @@
 export const MEASURE_MODELLING = [
   {
     name: "Threshold freeze to 2031-32",
-    how: "Sets the 2031-32 personal allowance and basic rate band to their 2030-31 values. No other threshold is changed.",
+    how: "Sets the 2031-32 personal allowance and basic rate band to their 2030-31 values. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the allowance and higher rate threshold, so they are held too, as they were frozen alongside them to 2030-31. The employer secondary threshold is not held: it rises to £5,100 as in current law.",
     from: 2031,
   },
   {

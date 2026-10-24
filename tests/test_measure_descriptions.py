@@ -169,7 +169,10 @@ DECLARED = {
     "domestic_electricity_zero_vat": {"VAT"},
     # Employer (secondary Class 1) contributions.
     "employer_ni_relief_under_25s": {"National Insurance"},
-    "threshold_freeze_2031_32": {"income tax"},
+    # From 2031-32 the engine sets the NI primary threshold and upper
+    # earnings limit at the allowance and higher rate threshold, so holding
+    # those holds them too.
+    "threshold_freeze_2031_32": {"income tax", "National Insurance"},
     "badr_lifetime_limit_cut": {"capital gains tax"},
     # The excess above the cap is treated as earnings for National
     # Insurance. In the model it also raises some people's income tax:

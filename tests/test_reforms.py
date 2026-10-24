@@ -536,3 +536,136 @@ def test_the_page_names_each_measure_as_the_pipeline_does():
     ).read_text()
     pairs = re.findall(r'id: "([a-z0-9_]+)",\n\s+name: "([^"]+)"', source)
     assert pairs == [(m, get_reform(m).name) for m in CANDIDATES]
+
+
+# --- Every year the policy differs is covered ---------------------------------
+# The 2025 placeholders set their pre-Budget side from a year after
+# policyengine-uk already applied the new rates, so they showed no effect in
+# their first year. Each candidate changes current law directly, in every
+# year it differs; here one household per measure moves in the first year
+# and not in the year before.
+
+
+def _person(year, **inputs):
+    return {key: {year: value} for key, value in {"age": 40, **inputs}.items()}
+
+
+FIRST_YEARS = {
+    # measure: (first year, variable, person inputs, household inputs)
+    "fuel_duty_rise_deferral": (
+        2026,
+        "household_net_income",
+        {"employment_income": 30_000},
+        {"petrol_spending": 1_508.14483},
+    ),
+    "state_pension_income_tax_protection": (
+        2027,
+        "income_tax",
+        {"age": 70, "state_pension": 13_000},
+        {},
+    ),
+    "warm_home_discount_top_up": (
+        2026,
+        "household_net_income",
+        {"age": 75, "state_pension": 8_000},
+        {"country": "ENGLAND"},
+    ),
+    "domestic_electricity_zero_vat": (
+        2026,
+        "household_net_income",
+        {"employment_income": 20_000},
+        {"electricity_consumption": 1_050},
+    ),
+    "employer_ni_relief_under_25s": (
+        2027,
+        "ni_class_1_employer",
+        {"age": 22, "employment_income": 30_000},
+        {},
+    ),
+    "threshold_freeze_2031_32": (
+        2031,
+        "income_tax",
+        {"employment_income": 30_000},
+        {},
+    ),
+    "badr_lifetime_limit_cut": (
+        2027,
+        "capital_gains_tax",
+        {
+            "age": 55,
+            "employment_income": 100_000,
+            "capital_gains": 800_000,
+            "capital_gains_badr": 800_000,
+        },
+        {},
+    ),
+    "salary_sacrifice_cap_2028": (
+        2028,
+        "ni_employee",
+        {
+            "employment_income": 50_000,
+            "pension_contributions_via_salary_sacrifice": 5_000,
+        },
+        {},
+    ),
+    "road_fuel_vat_cut": (
+        2026,
+        "vat",
+        {"employment_income": 30_000},
+        {"petrol_spending": 1_508.14483},
+    ),
+    "plan_2_threshold_unfreeze": (
+        2027,
+        "student_loan_repayment",
+        {
+            "age": 30,
+            "employment_income": 45_000,
+            "student_loan_plan": "PLAN_2",
+            "student_loan_balance": 60_000,
+            "student_loan_repayments": 500,
+        },
+        {},
+    ),
+}
+
+
+def test_every_measure_has_a_first_year_check():
+    assert set(FIRST_YEARS) == set(CANDIDATES)
+
+
+@pytest.mark.parametrize("measure_id", CANDIDATES)
+def test_each_measure_moves_from_its_first_year_and_not_before(measure_id):
+    first, variable, person, household = FIRST_YEARS[measure_id]
+    for year, moves in ((first - 1, False), (first, True)):
+        sit = situation(
+            {"p": _person(year, **person)},
+            {key: {year: value} for key, value in household.items()},
+        )
+        baseline, reformed = change(measure_id, sit, variable, year)
+        if moves:
+            assert abs(reformed - baseline) > 1, (measure_id, year)
+        else:
+            assert reformed == pytest.approx(baseline, abs=PENNY), (
+                measure_id,
+                year,
+            )
+
+
+def test_the_published_revenue_starts_in_each_measures_first_year():
+    """The national figures agree: zero before the first year, not zero
+    in it (budgetary_impact.csv)."""
+    import csv
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / (
+        "public/data/budgetary_impact.csv"
+    )
+    values = {
+        (row["reform_id"], int(row["year"])): float(row["value"])
+        for row in csv.DictReader(path.open())
+    }
+    for measure_id, (first, *_) in FIRST_YEARS.items():
+        assert abs(values[(measure_id, first)]) > 0.01, measure_id
+        for year in POLICY_YEARS:
+            if year < first:
+                assert values[(measure_id, year)] == 0, (measure_id, year)

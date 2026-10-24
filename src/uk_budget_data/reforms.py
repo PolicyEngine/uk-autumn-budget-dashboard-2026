@@ -246,7 +246,11 @@ def _create_threshold_freeze_2031_32() -> Reform:
             "Candidate measure. The income tax personal allowance stays at "
             "£12,570 and the basic rate band at £37,700 (a higher rate "
             "threshold of £50,270) for one more year, 2031-32, instead of "
-            "rising with inflation to £12,830 and £38,500."
+            "rising with inflation to £12,830 and £38,500. From 2031-32 "
+            "policyengine-uk sets the National Insurance primary threshold "
+            "and upper earnings limit at the personal allowance and higher "
+            "rate threshold, so they stay at £12,570 and £50,270 too; the "
+            "employer secondary threshold is not held."
         ),
         parameter_changes=changes,
     )
