@@ -58,6 +58,26 @@ def nested_formula(household, period, parameters):
     return household("main_residence_value", period) * 0 * index()
 
 
+class _GdpNative:
+    """A native channel whose formula reads the GDP per capita index."""
+
+    name = CHANNEL
+
+    def get_formula(self, year):
+        return gdp_formula
+
+
+def foreign_wrapper():
+    """A formula that closes over a ``native``, as the template's band does,
+    but is not the template's: its own code reads neither index."""
+    native = _GdpNative()
+
+    def formula(household, period, parameters):
+        return household("main_residence_value", period) * 0 * (native is None)
+
+    return formula
+
+
 def with_formulas(**formulas):
     """Install exactly these own formulas, as in ``test_model_limits``.
 
@@ -253,3 +273,13 @@ def test_a_class_with_no_own_formulas_retains_the_installed_native_index():
     assert sim.tax_benefit_system.variables[CHANNEL].formulas
     add_band(sim)
     assert float(np.asarray(sim.calculate(CHANNEL, 2028)).sum()) == 900
+
+
+def test_a_foreign_wrapper_is_not_followed_to_what_it_closes_over():
+    """Only the template's own band is followed to the formula it wraps;
+    another wrapper over a ``native`` is classed by its own reads."""
+    formula = foreign_wrapper()
+    assert "native" in formula.__code__.co_freevars
+    sim = simulation(formula=formula)
+    with pytest.raises(ValueError, match="exactly one.*neither"):
+        add_band(sim)
