@@ -61,6 +61,7 @@ export default function InequalitySection({ data }) {
       title="Inequality"
       about="Gini: 0 is perfect equality, 1 is one person holding all income. 90:10: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b."
       summary={summary}
+      boxes={[data.meta.headline_end_year_note]}
       notes={(ineq.notes || []).filter((n) => !/^Outturn is/.test(n))}
       source={<HbaiSource />}
       download={
@@ -87,7 +88,11 @@ export default function InequalitySection({ data }) {
             name="Inequality measure"
             value={measure}
             onChange={setMeasure}
-            options={Object.keys(ineq.measures).map((id) => ({ value: id, label: ineq.measures[id] }))}
+            options={Object.keys(ineq.measures).map((id) => ({
+              value: id,
+              label: ineq.measures[id],
+              badge: ineq.measures[id].replace(/ coefficient$/, ""),
+            }))}
           />
           <PillSelect
             variant="light"
@@ -95,7 +100,7 @@ export default function InequalitySection({ data }) {
             name="Housing costs"
             value={basis}
             onChange={setBasis}
-            options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)" }))}
+            options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
           />
           <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
         </>

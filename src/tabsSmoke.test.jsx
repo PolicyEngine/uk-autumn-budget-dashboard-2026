@@ -58,8 +58,8 @@ const LOADED = {
   personal: (panel) => within(panel).findAllByText(/Step 1 of 7/),
   // The head count comes from age_impact.csv.
   young: (panel) => within(panel).findAllByText(/young people aged 16 to 24 in the UK/),
-  // The provenance line comes from the outlook's meta.
-  living: (panel) => within(panel).findAllByText(/Baseline from policyengine \d/),
+  // The Incomes heading shows once the outlook is read.
+  living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 

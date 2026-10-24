@@ -1,37 +1,11 @@
 /* Living standards view: the dashboard's cards, section headings and chart
    theme (globals.css), plus the few parts the other views do not have:
-   in-card notes and source lines, the dot plot, forecast tiles and tables,
-   and the provenance line. Colours come from the PolicyEngine tokens. */
+   in-card notes and source lines, the dot plot, and forecast tiles and
+   tables. Colours come from the PolicyEngine tokens. */
 
-/* Provenance: the view's engine, data and demo status, said once */
-.ls-provenance {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 8px 0 0;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.ls-demo-badge {
-  flex: 0 0 auto;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.6;
-  color: #92400e;
-  background: #fef3c7;
-}
-
-/* Sections: two-up rows of cards, 20px apart, and notes under them */
+/* Sections: two-up rows of cards, 20px apart */
 .ls-section > .charts-grid + .charts-grid {
   margin-top: 20px;
-}
-
-.ls-section > .note {
-  margin-top: 16px;
 }
 
 /* Cards */
@@ -46,15 +20,29 @@
   color: var(--pe-gray-800);
 }
 
+/* Controls: compact pills on one row; they wrap only on a phone */
 .ls-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin: 4px 0 12px;
 }
 
 .ls-controls:empty {
   margin: 0;
+}
+
+.ls-controls .pill-select-light .pill-select-toggle {
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  font-size: var(--fs-micro);
+}
+
+.ls-controls .pill-select-light .pill-select-badge {
+  height: 22px;
+  padding: 0 7px;
+  font-size: var(--fs-micro);
 }
 
 /* In-card pill lists open from the pill's left edge, inside the card */
@@ -77,7 +65,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 24px;
+  line-height: 22px;
   flex-shrink: 1;
 }
 
@@ -86,10 +74,46 @@
   flex-shrink: 0;
 }
 
+@media (min-width: 769px) {
+  .ls-controls {
+    flex-wrap: nowrap;
+  }
+
+  .ls-controls > .pill-select {
+    flex: 0 1 auto;
+  }
+}
+
 .ls-card-footer {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* Boxed notes: the series notes a card needs, inside the card */
+.ls-card-box {
+  margin-top: 12px;
+  padding: 8px 12px 10px;
+  border-radius: var(--pe-radius-md, 8px);
+  background: var(--pe-gray-50);
+}
+
+.ls-card-box > .note {
+  font-size: var(--fs-micro);
+}
+
+/* Reading notes inside "About this chart", under the definition */
+.ls-about-notes {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.ls-about-notes li + li {
+  margin-top: 6px;
 }
 
 /* "About this chart" sits at the foot of the card, so in two cards side
@@ -160,24 +184,6 @@
   color: var(--pe-gray-600);
 }
 
-/* What the baseline leaves out: the caveats as body text */
-.main-content .ls-caveats {
-  padding: var(--card-padding);
-}
-
-.ls-caveats ul {
-  margin: 0;
-  padding-left: 18px;
-  list-style: disc;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.ls-caveats li + li {
-  margin-top: 6px;
-}
-
 .stat-sub.change-positive,
 .ls-table td.change-positive {
   color: var(--pe-teal-700);
@@ -236,57 +242,6 @@
 .ls-table td.pending {
   color: var(--pe-gray-500);
   font-style: italic;
-}
-
-/* About this data */
-.ls-meta-list {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 16px;
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.6;
-  color: var(--pe-gray-600);
-}
-
-.ls-meta-list dt {
-  font-weight: 600;
-  color: var(--pe-gray-800);
-}
-
-.ls-meta-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.ls-meta-list a,
-.ls-meta-notes a {
-  color: var(--pe-teal-700);
-}
-
-.ls-meta-notes {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  list-style: disc;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-.ls-meta-notes li + li {
-  margin-top: 4px;
-}
-
-.ls-technical-notes {
-  margin-top: 12px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-.ls-technical-notes summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--pe-gray-800);
 }
 
 /* Poverty and income by group: a dot plot drawn in HTML */
@@ -464,24 +419,18 @@
 }
 
 @media (max-width: 768px) {
-  .ls-provenance {
-    font-size: var(--fs-caption);
-  }
-
   .ls-section-controls {
     justify-content: flex-start;
   }
+}
 
-  .ls-meta-list {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
+/* A narrow card (a phone, or one of a pair): label on its own line, then
+   the plot and the values */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  container-type: inline-size;
+}
 
-  .ls-meta-list dd {
-    margin-bottom: 8px;
-  }
-
-  /* Phones: label on its own line, then the plot and the values */
+@container (max-width: 640px) {
   .ls-dot-plot {
     --dot-cols: minmax(0, 1fr) 150px;
   }

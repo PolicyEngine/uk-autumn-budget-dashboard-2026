@@ -45,12 +45,13 @@ describe("the Living standards view", () => {
     // Baseline outlook is the sub-tab it opens on
     expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByRole("heading", { name: "Forecast changes" })).toBeNull();
-    // Its engine and data, said once on the view
-    expect(screen.getAllByText(/Baseline from policyengine 6\.8\.0/)).toHaveLength(1);
+    // Its engine and data are said in Methodology, not on this view
+    expect(screen.queryByText(/policyengine 6\.8\.0/)).toBeNull();
+    expect(screen.queryByText("Demo")).toBeNull();
     expect(window.location.search).toBe("?tab=living");
   });
 
-  it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro and data shared", async () => {
+  it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro shared", async () => {
     window.history.replaceState({}, "", "/?tab=living");
     render(<App />);
     const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
@@ -59,9 +60,22 @@ describe("the Living standards view", () => {
 
     const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
     expect(panel()).toHaveAccessibleName("Baseline outlook");
-    for (const name of ["Incomes", "Poverty", "Child poverty", "What the baseline leaves out"]) {
+    for (const name of ["Incomes", "Poverty"]) {
       expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
     }
+    // Child poverty by family sits beside Poverty by family type; the
+    // two-child limit card, the caveats and the data notes are gone
+    const byGroup = await within(panel()).findByRole("heading", { level: 3, name: "Poverty by family type" });
+    const byFamily = within(panel()).getByRole("heading", { level: 3, name: "Child poverty by family" });
+    expect(byGroup.closest(".charts-grid")).toBe(byFamily.closest(".charts-grid"));
+    for (const name of ["Child poverty", "What the baseline leaves out", "Data"]) {
+      expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
+    }
+    expect(screen.queryByRole("heading", { name: "Two-child limit" })).toBeNull();
+    // Series notes sit in the cards, not between sections
+    const income = within(panel()).getByRole("heading", { level: 3, name: "Household income" }).closest(".ls-card");
+    expect(within(income).getByText(/^Series end in 2029-30/)).toBeInTheDocument();
+    expect(panel().querySelector(".ls-section > .note")).toBeNull();
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
 
     fireEvent.click(forecast);
@@ -72,10 +86,6 @@ describe("the Living standards view", () => {
     expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
 
-    // Shared by both: the provenance line above, the Data section below
-    expect(screen.getAllByText(/Baseline from policyengine 6\.8\.0/)).toHaveLength(1);
-    expect(screen.getAllByRole("heading", { name: "Data" })).toHaveLength(1);
-    expect(within(panel()).queryByRole("heading", { name: "Data" })).toBeNull();
 
     fireEvent.click(baseline);
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
@@ -104,6 +114,17 @@ describe("the Living standards view", () => {
     render(<App />);
     expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
     expect(window.location.search).toBe("?tab=living");
+  });
+
+  it("states its engine, data, status, notes and gaps once, in Methodology", async () => {
+    window.history.replaceState({}, "", "/?tab=methodology");
+    render(<App />);
+    const section = await screen.findByRole("region", { name: "Living standards" });
+    expect(await within(section).findByText("policyengine 6.8.0 (policyengine-uk 2.130.1)")).toBeInTheDocument();
+    expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
+    expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
+    expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
+    expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 
   it("hides the year and policy pills but keeps the band's layout", () => {

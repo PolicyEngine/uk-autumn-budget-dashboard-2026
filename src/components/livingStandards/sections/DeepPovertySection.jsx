@@ -1,13 +1,21 @@
 // Depth of poverty: people below 40%, 40-50% and 50-60% of median income
 // (AHC), stacked by year. The 40% and 50% lines come from deep_poverty; the
 // 60% line is the relative AHC poverty rate for all people. Ported from
-// PolicyEngine/uk-living-standards-outlook; text and figures unchanged.
+// PolicyEngine/uk-living-standards-outlook. The change runs from 2026-27.
 
 import { useMemo } from "react";
 import LsCard from "../LsCard";
 import { LsBarChart } from "../LsCharts";
 import { PALETTE, niceAxis } from "../../../utils/livingStandards/baseline";
-import { changeVerb, fyDash, fyStart, formatPct, formatPctAxis, headlineYear } from "../../../utils/livingStandards/outlook";
+import {
+  changeVerb,
+  fyDash,
+  fyStart,
+  formatPct,
+  formatPctAxis,
+  headlineStartYear,
+  headlineYear,
+} from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
 
@@ -39,7 +47,7 @@ export default function DeepPovertySection({ data }) {
     { key: "band4050", name: "40–50%", colour: PALETTE.teal },
     { key: "band5060", name: "50–60%", colour: PALETTE.light },
   ];
-  const first = rows[0];
+  const first = rows.find((r) => r.fy === headlineStartYear(data)) || rows[0];
   const end = rows.find((r) => r.fy === headlineYear(data)) || rows[rows.length - 1];
   const verb = changeVerb(end.below40 - first.below40, "pp");
 

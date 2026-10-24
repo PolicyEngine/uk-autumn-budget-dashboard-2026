@@ -1,6 +1,6 @@
 // Lower- vs higher-income half of non-pensioners: mean equivalised AHC income
 // in real terms (income_by_decile.non_pensioner_split). Ported from
-// PolicyEngine/uk-living-standards-outlook; text and figures unchanged.
+// PolicyEngine/uk-living-standards-outlook. Change runs from 2026-27.
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
@@ -13,7 +13,9 @@ import {
   formatOneDp,
   formatPounds,
   formatPoundsKAxis,
+  fyStart,
   headlineSpan,
+  headlineStartYear,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
@@ -27,13 +29,20 @@ export default function NonPensionerSplitSection({ data }) {
   const lower = split.series.below_middle;
   const upper = split.series.above_middle;
 
+  // Change runs from 2026-27 (as the summary does), from the real means;
+  // the level shows every year.
+  const start = headlineStartYear(data);
   const rows = useMemo(() => {
-    const pick = view === "change" ? (d) => d.cumulative_growth * 100 : (d) => d.real_mean;
+    const series = (s) => {
+      if (view !== "change") return [s, (d) => d.real_mean];
+      const base = s.find((d) => d.year === start) || s[0];
+      return [s.filter((d) => fyStart(d.year) >= fyStart(base.year)), (d) => (d.real_mean / base.real_mean - 1) * 100];
+    };
     return joinSeries([
-      ["lower", lower, pick],
-      ["upper", upper, pick],
+      ["lower", ...series(lower)],
+      ["upper", ...series(upper)],
     ]);
-  }, [lower, upper, view]);
+  }, [lower, upper, view, start]);
   const values = rows.flatMap((r) => [r.lower, r.upper]);
   const axis = view === "change" ? rangeAxis(values, { includeZero: true, pad: 0.15 }) : niceAxis(Math.max(...values));
 
@@ -88,7 +97,7 @@ export default function NonPensionerSplitSection({ data }) {
           value={view}
           onChange={setView}
           options={[
-            { value: "change", label: `Change since ${fyDash(lower[0]?.year)}` },
+            { value: "change", label: `Change since ${fyDash((lower.find((d) => d.year === start) || lower[0])?.year)}` },
             { value: "level", label: `Level (${fyDash(base)} prices)` },
           ]}
         />

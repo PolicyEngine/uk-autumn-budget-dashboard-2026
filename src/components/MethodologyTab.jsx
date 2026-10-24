@@ -1,5 +1,6 @@
 import GeographyMethodology from "./GeographyMethodology";
 import LifecycleAbout from "./LifecycleAbout";
+import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING } from "./methodology/measures";
@@ -139,7 +140,8 @@ function SectionLink({ id, children }) {
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the Living standards view keeps its own provenance line.
+ * impact. Living standards states the engine, data, notes and gaps of
+ * that view's own baseline.
  *
  * @param {Object} props
  * @param {(tab: string) => void} props.onShowTab - Switch to another view
@@ -461,17 +463,22 @@ function MethodologyTab({ onShowTab }) {
           </div>
         </MethodSection>
 
-        <MethodSection id={METHOD_SECTIONS.living} title="Living standards">
+        <MethodSection
+          id={METHOD_SECTIONS.living}
+          title="Living standards"
+          subtitle="The separate baseline behind the Living standards tab."
+        >
           <div className="card method-card">
             <p>
               The{" "}
               <ViewLink tab="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
-              view uses a separate baseline, with its engine and data noted on
-              that tab.
+              view runs on a separate baseline from the Budget views, set out
+              below.
             </p>
           </div>
+          <LivingStandardsMethod />
         </MethodSection>
 
         <MethodSection
