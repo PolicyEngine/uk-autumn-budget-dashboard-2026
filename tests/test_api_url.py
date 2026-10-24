@@ -1,30 +1,24 @@
-"""Test that PersonalImpactTab uses the integrated lifecycle calculator."""
+"""The Personal impact tab runs on the household route, not on a
+hand-typed model."""
+
+from pathlib import Path
+
+COMPONENTS = Path("src/components")
 
 
-def test_lifecycle_calculator_integrated():
-    """Test that the frontend uses the native lifecycle calculator component."""
-    with open("src/components/PersonalImpactTab.jsx") as f:
-        content = f.read()
-
-    # The component should import and use the LifecycleCalculator component
-    assert (
-        "LifecycleCalculator" in content
-    ), "Should import and use the LifecycleCalculator component"
-
-    # Should NOT use an iframe anymore
-    assert (
-        "<iframe" not in content
-    ), "Should use native component instead of iframe"
+def test_personal_impact_uses_the_household_calculator():
+    content = (COMPONENTS / "PersonalImpactTab.jsx").read_text()
+    assert "HouseholdCalculator" in content
+    assert "<iframe" not in content
 
 
-def test_lifecycle_calculator_exists():
-    """Test that the LifecycleCalculator component file exists."""
-    with open("src/components/LifecycleCalculator.jsx") as f:
-        content = f.read()
+def test_the_household_calculator_calls_the_household_route():
+    content = (COMPONENTS / "HouseholdCalculator.jsx").read_text()
+    assert "useHouseholdImpact" in content
+    api = Path("src/utils/householdImpactApi.js").read_text()
+    assert "NEXT_PUBLIC_HOUSEHOLD_API_URL" in api
 
-    # Should have key elements of the lifecycle calculator
-    assert (
-        "lifecycle-calculator" in content
-    ), "Should have lifecycle-calculator class"
-    assert "REFORMS" in content, "Should define policy reforms"
-    assert "fetchData" in content, "Should have data fetching logic"
+
+def test_the_hand_typed_model_is_gone():
+    assert not Path("src/uk_budget_data/lifecycle_calculator.py").exists()
+    assert not (COMPONENTS / "LifecycleCalculator.jsx").exists()

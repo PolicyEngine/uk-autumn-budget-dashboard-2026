@@ -21,6 +21,7 @@ import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
@@ -30,13 +31,11 @@ import PolicyCards from "./components/PolicyCards";
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them. On
-// Personal impact the year pill applies to its Single-year effect sub-tab
-// only (yearShown, below), not to the lifetime results.
+// outlook, and Methodology is text: neither pill applies to them. Young
+// people is a sub-tab of Population impact (PopulationImpactView).
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "personal", label: "Personal impact", year: false, policies: true },
-  { value: "young", label: "Young people", year: true, policies: true },
+  { value: "personal", label: "Personal impact", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
@@ -47,23 +46,30 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 const DEFAULT_VIEW = "dashboard";
 
 // Views whose links keep the chosen policies in the URL
-const POLICY_PARAM_VIEWS = new Set(["dashboard", "young"]);
+const POLICY_PARAM_VIEWS = new Set(["dashboard"]);
 
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
 
-/**
- * Whether the band's year pill applies: on the views that use a year, and
- * on Personal impact while its Single-year effect sub-tab is open.
- */
-export function yearPillShown(view, personalSubTab) {
-  if (view === "personal") return personalSubTab === "single";
+/** Whether the band's year pill applies: on the views that use a year. */
+export function yearPillShown(view) {
   return Boolean(VIEW_BY_KEY[view]?.year);
 }
 
-/** The view a page address opens: #young-people, else ?tab=, else the default. */
+/**
+ * Whether a page address is an old link to the Young people view
+ * (#young-people or ?tab=young), now Population impact's Young people
+ * sub-tab.
+ */
+export function opensYoungPeople({ search, hash }) {
+  return (
+    hash === `#${YOUNG_PEOPLE_ANCHOR}` || new URLSearchParams(search).get("tab") === "young"
+  );
+}
+
+/** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
-  if (hash === `#${YOUNG_PEOPLE_ANCHOR}`) return "young";
+  if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
   const tab = new URLSearchParams(search).get("tab");
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
@@ -124,11 +130,12 @@ function parseCSV(csvText) {
   return data;
 }
 
-/** Take the open sub-tab (?sub=) out of the address. */
-function dropSubTab() {
+/** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
+function dropSubTab(sub) {
   const params = new URLSearchParams(window.location.search);
-  if (!params.has(SUB_TAB_PARAM)) return;
-  params.delete(SUB_TAB_PARAM);
+  if (!sub && !params.has(SUB_TAB_PARAM)) return;
+  if (sub) params.set(SUB_TAB_PARAM, sub);
+  else params.delete(SUB_TAB_PARAM);
   const search = params.toString();
   window.history.replaceState(
     {},
@@ -151,8 +158,6 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
-  // Personal impact's open sub-tab, as PersonalImpactTab reports it
-  const [personalSubTab, setPersonalSubTab] = useState("single");
 
   // Valid policy IDs from POLICIES
   const validPolicyIds = POLICIES.map((p) => p.id);
@@ -161,6 +166,9 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const policiesParam = params.get("policies");
+    // An old link to the Young people view opens its sub-tab; the hash
+    // stays, so the page scrolls to the section
+    if (opensYoungPeople(window.location)) dropSubTab("young");
     setActiveTab(viewFromLocation(window.location));
 
     if (policiesParam) {
@@ -402,12 +410,13 @@ function App() {
     }
   }, []);
 
-  // A link to #young-people from elsewhere on the page opens its view
+  // A link to #young-people from elsewhere on the page opens Population
+  // impact's Young people sub-tab (PopulationImpactView shows it if open)
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
-        dropSubTab();
-        setActiveTab("young");
+        dropSubTab("young");
+        setActiveTab(DEFAULT_VIEW);
       }
     };
     window.addEventListener("hashchange", onHashChange);
@@ -423,14 +432,15 @@ function App() {
   // no year pill), so this runs once the new view is laid out.
   const appRef = useRef(null);
   const tabScrollPending = useRef(false);
-  const handleTabChange = (tab) => {
+  // `sub` opens the new view at one of its sub-tabs (Methodology's links).
+  const handleTabChange = (tab, sub) => {
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
-    if (tab !== activeTab) dropSubTab();
+    if (tab !== activeTab) dropSubTab(sub);
     setActiveTab(tab);
-    // A hash that belongs to the Young people view goes when another view
+    // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
-    if (tab !== "young" && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
+    if (tab !== DEFAULT_VIEW && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
       window.history.replaceState({}, "", window.location.pathname + window.location.search);
     }
     // Choosing the open view changes nothing, so there is nothing to keep
@@ -447,16 +457,21 @@ function App() {
     if (window.scrollY > top) window.scrollTo({ top });
   }, [activeTab]);
 
-  // Open the Methodology view at one of its sections
-  const showMethod = (sectionId) => {
-    handleTabChange("methodology");
-    setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
-  const yearShown = yearPillShown(activeTab, personalSubTab);
+  const yearShown = yearPillShown(activeTab);
+
+  // Which policies the charts show, when not all (under Population
+  // impact's sub-tabs)
+  const showingLine = selectedPolicies.length > 0 &&
+    selectedPolicies.length < POLICIES.length && (
+      <p className="showing-line">
+        {selectedPolicies.length === 1
+          ? `Showing: ${
+              POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
+            }`
+          : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
+      </p>
+    );
 
   // With no policies chosen, the policy-driven views offer the full Budget
   const emptyState = (
@@ -491,8 +506,8 @@ function App() {
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <h1>UK Autumn Budget 2026</h1>
 
-          {/* The year applies to every chart on the Population and Young
-              people views and to Personal impact's Single-year effect, and
+          {/* The year applies to every chart on Population impact (both
+              sub-tabs) and to Personal impact, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Personal impact. A pill that does
@@ -525,10 +540,9 @@ function App() {
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
           How ten candidate Autumn Budget 2026 measures would affect the
-          public finances, households across the income distribution,
-          regions and constituencies, example households and individuals,
-          and young people, with the living standards baseline. Choose a
-          year and policies in the bar above.
+          public finances and households: by income, area and age, and for
+          your own household, alongside the living standards outlook. Choose
+          a year and policies in the bar above.
         </p>
 
         {/* Said once, under the intro, on the views that show the
@@ -555,18 +569,6 @@ function App() {
           aria-labelledby={tabId(activeTab)}
           className="tab-panel"
         >
-        {/* Which policies the charts below show, when not all */}
-        {POLICY_PARAM_VIEWS.has(activeTab) &&
-          selectedPolicies.length > 0 &&
-          selectedPolicies.length < POLICIES.length && (
-            <p className="showing-line">
-              {selectedPolicies.length === 1
-                ? `Showing: ${
-                    POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
-                  }`
-                : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
-            </p>
-          )}
         {activeTab === "living" ? (
           <LivingStandardsTab />
         ) : activeTab === "methodology" ? (
@@ -575,11 +577,12 @@ function App() {
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
-            onShowMethod={showMethod}
             year={distributionalYear}
-            onSubTabChange={setPersonalSubTab}
           />
-        ) : activeTab === "young" ? (
+        ) : (
+          // Population impact: All households and Young people sub-tabs
+          <PopulationImpactView note={showingLine}>
+          {(sub) => sub === "young" ? (
           selectedPolicies.length === 0 ? (
             emptyState
           ) : (
@@ -717,6 +720,8 @@ function App() {
               </div>
             )}
           </>
+        )}
+          </PopulationImpactView>
         )}
         </div>
         <ReplicationLine />

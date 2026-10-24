@@ -23,7 +23,6 @@ import PovertyByGroupSection from "./sections/PovertyByGroupSection";
 import ChildPovertyFamilySection from "./sections/ChildPovertyFamilySection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
-import RhdiSection from "./sections/RhdiSection";
 import "./LivingStandards.css";
 
 // The baseline sections, in order. blocks: [A, B] is a two-up row whose
@@ -122,20 +121,6 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
             </div>
           </section>
           <ForecastSeriesSection data={data} view={forecastView} />
-        </>
-      )}
-
-      {data.obr_rhdi && (
-        <>
-          <SectionHeading
-            title="Household income"
-            subtitle="The OBR's national-accounts measure of household income per person."
-          />
-          <section id="living-rhdi" className="report-section">
-            <div className="charts-grid">
-              <RhdiSection data={data} />
-            </div>
-          </section>
         </>
       )}
     </>

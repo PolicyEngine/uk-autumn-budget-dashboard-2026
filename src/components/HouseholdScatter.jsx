@@ -49,7 +49,7 @@ const AXIS_TITLE = { fontSize: 12, fill: "#374151" };
 // Below the side-by-side layout the plot keeps the 2025 chart's height; in
 // it, the plot fills the rows the map beside it uses for its controls, map
 // and colour scale (see HouseholdScatterTemplate.css).
-const STACKED_HEIGHT = 500;
+const STACKED_HEIGHT = 400;
 
 const KEY = [
   { label: "Gains", color: "#319795" },

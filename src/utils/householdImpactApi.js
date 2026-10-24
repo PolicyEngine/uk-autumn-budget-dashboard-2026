@@ -1,5 +1,5 @@
 /**
- * The Single-year effect's API: one household, one year, before and after
+ * The Personal impact view's API: one household, one year, before and after
  * the selected policies. Everything that knows the API's shape is in this
  * module (the URL, the request, the errors and the response), so a change
  * to the backend's contract is a change here only.
@@ -88,7 +88,7 @@ export function householdApiUrl() {
   return url ? url.trim() : null;
 }
 
-/** An error the Single-year view can explain: `kind` says which. */
+/** An error the Personal impact view can explain: `kind` says which. */
 export class HouseholdApiError extends Error {
   /**
    * @param {"config"|"timeout"|"network"|"invalid"|"server"} kind
@@ -119,7 +119,7 @@ export const isRenting = (tenure) => RENTING.has(tenure);
 /**
  * The request body for the wizard's answers.
  *
- * @param {Object} inputs - The wizard's state (LifecycleCalculator)
+ * @param {Object} inputs - The wizard's state (HouseholdCalculator)
  * @param {{ year: number, policies: string[], include?: string[] }} options
  */
 export function buildHouseholdRequest(inputs, { year, policies, include = HEADLINE_INCLUDE }) {
@@ -212,7 +212,7 @@ export async function postHouseholdImpact(
   if (!url) {
     throw new HouseholdApiError(
       "config",
-      `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a single year.`,
+      `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
     );
   }
   const doFetch = fetchImpl ?? globalThis.fetch;

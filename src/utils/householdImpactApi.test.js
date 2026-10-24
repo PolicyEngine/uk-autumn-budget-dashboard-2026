@@ -18,7 +18,7 @@ import {
   roundProgrammeGroups,
 } from "./singleYear";
 import { headlineTotals } from "../components/personal/SingleYearResults";
-import { WIZARD_DEFAULTS } from "../components/LifecycleCalculator";
+import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { DEFAULT_SALARY, REGIONAL_RENT } from "./householdDefaults";
 import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";

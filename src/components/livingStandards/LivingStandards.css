@@ -165,7 +165,48 @@
 
 /* An empty plot keeps the height of the chart it stands in for */
 .ls-card .plot-empty {
-  min-height: 330px;
+  min-height: 318px;
+}
+
+/* A Recharts plot is at least its chart's height (set inline) and fills
+   its row: beside a taller plot it stretches, so the two x axes stay on
+   one line. The drawing is placed absolutely, so it adds no height of its
+   own and the row never grows from it. */
+.ls-plot-fill {
+  position: relative;
+}
+
+.ls-plot-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* The dot plot fills its row too, its axis at the foot: the axis rule
+   level with the x axis of the chart beside it (48px above the plot's
+   foot, as LsCharts' x axis with its title room) */
+.ls-card .chart-plot:has(> .ls-dot-plot) {
+  display: flex;
+  flex-direction: column;
+}
+
+.ls-card .chart-plot > .ls-dot-plot {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.ls-card .ls-dot-plot .dot-axis {
+  margin-top: auto;
+  min-height: 48px;
+}
+
+/* The head holds only the "All people" label, which sits on the first
+   row's rule; kept 10px tall (the room the charts keep above their plot),
+   the first row starts level with the plot beside it */
+.ls-card .ls-dot-plot .dot-head,
+.ls-card .ls-dot-plot .dot-head .dot-plot-area {
+  min-height: 10px;
 }
 
 .ls-source {
@@ -247,7 +288,7 @@
 /* Poverty and income by group: a dot plot drawn in HTML */
 .ls-dot-plot {
   --dot-cols: minmax(150px, 250px) minmax(0, 1fr) 170px;
-  margin: 8px 0 4px;
+  margin: 0;
   font-size: var(--fs-caption);
   color: var(--pe-gray-700);
 }
@@ -308,15 +349,16 @@
   white-space: nowrap;
 }
 
-.ls-dot-plot .dot-legend {
+/* The two years' dots, in the legend row under the plot */
+.ls-card .dot-legend {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  font-size: var(--fs-micro);
-  color: var(--pe-gray-500);
+  justify-content: center;
+  gap: 20px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
 }
 
-.ls-dot-plot .dot-legend i {
+.ls-card .dot-legend i {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -324,12 +366,12 @@
   margin-right: 3px;
 }
 
-.ls-dot-plot .dot-legend i.from,
+.ls-card .dot-legend i.from,
 .ls-dot-plot .dot.from {
   background: var(--pe-gray-400);
 }
 
-.ls-dot-plot .dot-legend i.to,
+.ls-card .dot-legend i.to,
 .ls-dot-plot .dot.to {
   background: var(--pe-teal-500);
 }
@@ -459,12 +501,6 @@
     display: none;
   }
 
-  .ls-dot-plot .dot-head .dot-legend {
-    grid-row: 1;
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    margin-bottom: 18px;
-  }
 
   .ls-dot-plot .dot-head .dot-plot-area {
     grid-row: 2;

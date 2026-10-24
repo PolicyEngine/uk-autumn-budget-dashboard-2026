@@ -26,7 +26,6 @@ const SECTIONS = [
   "inequality",
   "deep_poverty",
   "poverty_by_group",
-  "obr_rhdi",
 ];
 
 // Collects every problem with a path, so one run lists them all.
@@ -375,9 +374,11 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
     }),
   );
 
+  // Not shown any more: tolerated in the file, checked only when present
   it(
-    "obr_rhdi",
+    "obr_rhdi (optional)",
     run(() => {
+      if (data.obr_rhdi === undefined) return;
       const rhdi = object(data.obr_rhdi, "obr_rhdi");
       for (const key of ["label", "unit", "source"]) string(rhdi[key], `obr_rhdi.${key}`);
       series(rhdi.series, "obr_rhdi.series", (p, where) => {

@@ -1,10 +1,4 @@
-/* Personal impact: the Single-year effect, and the sub-tabs' place in the
-   wizard's results */
-
-/* The sub-tabs sit under the results header, in the form card */
-.wizard-results-tabs .sub-tabs {
-  margin: 0 0 16px;
-}
+/* Personal impact: the household's results */
 
 .personal-lede,
 .single-year-lede {
@@ -217,35 +211,6 @@
   font-size: var(--fs-body) !important;
 }
 
-.single-year-about {
-  margin-top: 32px;
-}
-
-.single-year-method {
-  margin: 0;
-  padding-left: 18px;
-  font-size: var(--fs-small);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.single-year-method li + li {
-  margin-top: 4px;
-}
-
-/* The programme table's notes, under it */
-.programme-notes {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-.programme-notes li + li {
-  margin-top: 4px;
-}
-
 /* Wizard: choices and the optional details */
 .select-input {
   flex: 1;
@@ -305,15 +270,6 @@
 
   .single-year-details {
     margin-top: 32px;
-  }
-
-  .wizard-results-tabs .sub-tabs {
-    display: flex;
-    width: 100%;
-  }
-
-  .wizard-results-tabs .sub-tab {
-    flex: 1 1 0;
   }
 
   .select-input {
@@ -438,24 +394,37 @@
   padding-left: 46px;
 }
 
-.breakdown-method {
-  margin-top: 12px;
-}
-
-.breakdown-method summary {
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-500);
-  cursor: pointer;
-}
-
-.breakdown-method summary:hover {
+/* "About these figures" under the breakdown: the rows' notes, then the
+   method, each as term then text */
+.breakdown-about-heading {
+  margin: 4px 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
   color: var(--pe-gray-700);
 }
 
-.breakdown-method .single-year-method {
-  margin-top: 8px;
-  font-size: var(--fs-caption);
+.breakdown-notes + .breakdown-about-heading {
+  margin-top: 16px;
+}
+
+.breakdown-notes {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
   color: var(--pe-gray-600);
+}
+
+.breakdown-notes > div + div {
+  margin-top: 8px;
+}
+
+.breakdown-notes dt {
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.breakdown-notes dd {
+  margin: 2px 0 0;
 }
 
 @media (max-width: 768px) {

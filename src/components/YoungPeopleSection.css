@@ -11,23 +11,13 @@
   gap: 20px;
 }
 
-/* The choice box above a plot */
+/* The choice box above a plot, with room before the plot's top tick; both
+   cards of the first pair have one, so their plots still start level */
 .young-people-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
-}
-
-/* With a choice box in row 3, the plot (one Recharts SVG for plot, legend
-   and logo) takes rows 4 to 6 of the paired card's grid */
-@media (min-width: 1025px) {
-  .charts-grid > div:not(:only-child) > .young-people-plot {
-    grid-column: 1 / -1;
-    grid-row: 4 / span 3;
-    align-self: start;
-    min-width: 0;
-  }
+  margin: 12px 0 16px;
 }
 
 /* The outcome legend: one centred row, no group headings */

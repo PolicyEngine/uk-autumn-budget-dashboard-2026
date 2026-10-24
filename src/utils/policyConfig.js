@@ -6,6 +6,8 @@
  * - Amber/orange spectrum: policies that are BAD for households (revenue raisers)
  */
 
+import { POLICIES } from "./policies";
+
 // Policy colours by display name (used in population impact charts).
 // Raise revenue: amber, darkest to lightest. Cost revenue: teal, with the
 // chart palette's blue-grey, steel blue and mint between, so that adjacent
@@ -26,19 +28,10 @@ export const POLICY_COLORS = {
   "Plan 2 student loan threshold unfrozen": "#99F6E4", // Teal 200
 };
 
-// Policy colours by API key (lifecycle calculator and personal impact).
-// The lifecycle model still costs last year's measures (its own
-// hand-typed policy values), so its keys keep their colours until it is
-// rebuilt on the candidates.
-export const POLICY_COLORS_BY_KEY = {
-  impact_two_child_limit: "#0D9488",
-  impact_fuel_duty_freeze: "#14B8A6",
-  impact_rail_fare_freeze: "#2DD4BF",
-  impact_threshold_freeze: "#78350F",
-  impact_unearned_income_tax: "#B45309",
-  impact_salary_sacrifice_cap: "#F59E0B",
-  impact_sl_threshold_freeze: "#FBBF24",
-};
+// Policy colours by measure id (personal impact), the same as by name
+export const POLICY_COLORS_BY_KEY = Object.fromEntries(
+  POLICIES.map((policy) => [policy.id, POLICY_COLORS[policy.name]]),
+);
 
 // Order: revenue raisers first (positive for gov), then costs (negative for gov)
 export const ALL_POLICY_NAMES = [
@@ -70,50 +63,6 @@ export const REVENUE_RAISING_NAMES = new Set([
 // it when every policy is selected.
 export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 
-// Lifecycle calculator reform configuration
-// Note: In lifecycle view, we show impact FROM HOUSEHOLD PERSPECTIVE
-// (positive = good for household, negative = bad)
-export const LIFECYCLE_REFORMS = [
-  // The dashboard's policy names, in its legend order: raisers, then costs.
-  // The lifecycle model taxes dividends, savings and property income as one
-  // item, so they share one entry.
-  {
-    key: "impact_threshold_freeze",
-    label: "Threshold freeze extension",
-    color: POLICY_COLORS_BY_KEY.impact_threshold_freeze,
-  },
-  {
-    key: "impact_unearned_income_tax",
-    label: "Dividend, savings and property income tax increase",
-    color: POLICY_COLORS_BY_KEY.impact_unearned_income_tax,
-  },
-  {
-    key: "impact_salary_sacrifice_cap",
-    label: "Salary sacrifice cap",
-    color: POLICY_COLORS_BY_KEY.impact_salary_sacrifice_cap,
-  },
-  {
-    key: "impact_sl_threshold_freeze",
-    label: "Freeze student loan repayment thresholds",
-    color: POLICY_COLORS_BY_KEY.impact_sl_threshold_freeze,
-  },
-  {
-    key: "impact_two_child_limit",
-    label: "2 child limit repeal",
-    color: POLICY_COLORS_BY_KEY.impact_two_child_limit,
-  },
-  {
-    key: "impact_fuel_duty_freeze",
-    label: "Fuel duty freeze extension",
-    color: POLICY_COLORS_BY_KEY.impact_fuel_duty_freeze,
-  },
-  {
-    key: "impact_rail_fare_freeze",
-    label: "Rail fares freeze",
-    color: POLICY_COLORS_BY_KEY.impact_rail_fare_freeze,
-  },
-];
-
 // Personal impact (household API) policy order: the candidate measures
 export const PERSONAL_IMPACT_POLICY_ORDER = [
   "fuel_duty_rise_deferral",
@@ -132,26 +81,3 @@ export const PERSONAL_IMPACT_POLICY_ORDER = [
 export function getPolicyColor(key) {
   return POLICY_COLORS_BY_KEY[key] || POLICY_COLORS[key] || "#9CA3AF";
 }
-
-// Which lifecycle (Personal impact) series each population policy maps to.
-// The lifecycle model still costs last year's measures by their old ids,
-// none of which is a candidate measure, so every candidate selected is
-// listed as not covered by the lifetime model until it is rebuilt.
-// The lifecycle model costs the dividend, savings and property income tax
-// increases as one series, so it needs all three.
-export const LIFECYCLE_KEY_BY_POLICY = {
-  two_child_limit: "impact_two_child_limit",
-  fuel_duty_freeze: "impact_fuel_duty_freeze",
-  rail_fares_freeze: "impact_rail_fare_freeze",
-  threshold_freeze_extension: "impact_threshold_freeze",
-  freeze_student_loan_thresholds: "impact_sl_threshold_freeze",
-  salary_sacrifice_cap: "impact_salary_sacrifice_cap",
-};
-export const LIFECYCLE_COMBINED = {
-  key: "impact_unearned_income_tax",
-  policies: [
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
-  ],
-};

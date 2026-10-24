@@ -3,15 +3,13 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Customized,
-  Legend,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../../utils/chartLogo";
+import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -24,14 +22,13 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
-  chartMargin,
-  legendWrapperStyle,
   fiscalYearTick,
 } from "../../utils/chartTheme";
 import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds, wrapWords } from "./youngPeopleData";
 import { chartMotion } from "../../utils/chartMotion";
+import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
@@ -104,6 +101,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     title,
     description,
     logo: CHART_LOGO,
+    reservedLegendHeight: 0,
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = [
@@ -154,7 +152,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           stableWidth
         />
       </div>
-      <div ref={chartRef} className="young-people-plot">
+      <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : shown.length ? (
@@ -162,7 +160,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             <BarChart
               data={shown}
               layout="vertical"
-              margin={chartMargin(narrow, { top: 8 })}
+              margin={plotMargin(narrow)}
               barCategoryGap="22%"
               barGap={2}
             >
@@ -175,7 +173,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                 tick={TICK_STYLE}
                 axisLine={AXIS_LINE}
                 tickLine={false}
-                height={44}
+                height={X_AXIS_HEIGHT}
                 label={{ value: UNIT, position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
               />
               <YAxis
@@ -193,10 +191,6 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
                 content={<ChartTooltip format={pounds} grouped={false} showPlus />}
               />
-              <Legend
-                wrapperStyle={legendWrapperStyle(narrow)}
-                content={<GroupedLegend items={GROUPS} />}
-              />
               {GROUPS.map((group) => (
                 <Bar
                   key={group.key}
@@ -207,7 +201,6 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                   {...chartMotion()}
                 />
               ))}
-              <Customized component={PolicyEngineLogo} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -215,6 +208,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             <p>None of the selected policies changes household incomes in {yearLabel}.</p>
           </div>
         )}
+      </div>
+      <div className="chart-legend">
+        {published && shown.length > 0 && <GroupedLegend items={GROUPS} />}
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
     </div>

@@ -62,24 +62,6 @@ class TestCLI:
         args = parse_args([])
         assert args.command is None
 
-    def test_parse_args_lifetime(self):
-        """parse_args accepts lifetime subcommand."""
-        from uk_budget_data.cli import parse_args
-
-        args = parse_args(["lifetime"])
-        assert args.command == "lifetime"
-        assert args.income == "p50"  # default
-
-    def test_parse_args_lifetime_with_options(self):
-        """parse_args accepts lifetime options."""
-        from uk_budget_data.cli import parse_args
-
-        args = parse_args(
-            ["lifetime", "--income", "p75", "--student-loan", "60000"]
-        )
-        assert args.income == "p75"
-        assert args.student_loan == 60000
-
 
 class TestReformSelection:
     """Tests for reform selection logic."""

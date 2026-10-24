@@ -1,5 +1,4 @@
 import GeographyMethodology from "./GeographyMethodology";
-import LifecycleAbout from "./LifecycleAbout";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
@@ -20,8 +19,8 @@ const RESEARCH = [
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
- * views link with these (the map to `geography`, the lifetime chart to
- * `lifetime`), so a key's id must not change.
+ * views link with these (the map to `geography`, Personal impact to
+ * `singleYear`), so a key's id must not change.
  */
 export const METHOD_SECTIONS = {
   overview: "method-overview",
@@ -31,14 +30,13 @@ export const METHOD_SECTIONS = {
   geography: "method-area",
   young: "method-young",
   personal: "method-personal",
-  lifetime: "method-lifetime",
   singleYear: "method-single-year",
   living: "method-living",
   limitations: "method-limitations",
   versions: "method-versions",
 };
 
-/** The sections in the contents, in page order (the lifetime and single-year blocks sit inside Personal impact). */
+/** The sections in the contents, in page order (the household calculation's block sits inside Personal impact). */
 export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.overview, title: "At a glance" },
   { id: METHOD_SECTIONS.data, title: "Data" },
@@ -99,14 +97,15 @@ function MethodSection({ id, title, subtitle, children }) {
   );
 }
 
-/** A link to another view, switched to in place. */
-function ViewLink({ tab, hash, onShowTab, children }) {
+/** A link to another view (at one of its sub-tabs), switched to in place. */
+function ViewLink({ tab, sub, hash, onShowTab, children }) {
   return (
     <a
-      href={`?tab=${tab}${hash ? `#${hash}` : ""}`}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        onShowTab(tab);
+        if (sub) onShowTab(tab, sub);
+        else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
             document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
@@ -142,7 +141,7 @@ function SectionLink({ id, children }) {
  * that view's own baseline.
  *
  * @param {Object} props
- * @param {(tab: string) => void} props.onShowTab - Switch to another view
+ * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
   const policyNotes = (text) => (
@@ -348,7 +347,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "OBR comparison",
-                  "Not available until the OBR publishes its costings with the Budget on 28 October. Our figures are static; the OBR's post-behavioural costings include its estimate of behavioural responses.",
+                  "Shown once the OBR publishes its costings for these measures. Our figures are static; the OBR's post-behavioural costings include its estimate of behavioural responses.",
                 ],
               ]}
             />
@@ -435,7 +434,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.young}
           title="Young people"
-          subtitle="The definitions behind the Young people tab."
+          subtitle="The definitions behind Population impact's Young people results."
         >
           <div className="card method-card">
             <FactList
@@ -475,8 +474,8 @@ function MethodologyTab({ onShowTab }) {
               ]}
             />
             <p className="method-more">
-              <ViewLink tab="young" onShowTab={onShowTab}>
-                See the Young people tab
+              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
+                See Young people under Population impact
               </ViewLink>
               .
             </p>
@@ -486,14 +485,10 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.personal}
           title="Personal impact"
-          subtitle="The models behind Personal impact."
+          subtitle="The calculation behind Personal impact."
         >
-          <div id={METHOD_SECTIONS.lifetime} className="card method-card method-anchor">
-            <h3 className="method-card-title">Lifetime model</h3>
-            <LifecycleAbout />
-          </div>
           <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
-            <h3 className="method-card-title">Single-year calculation</h3>
+            <h3 className="method-card-title">Household calculation</h3>
             <FactList items={SINGLE_YEAR_METHOD} />
             <p className="method-more">
               <ViewLink tab="personal" onShowTab={onShowTab}>
@@ -544,13 +539,6 @@ function MethodologyTab({ onShowTab }) {
                     Surveys miss or under-record some incomes. The{" "}
                     {policyNotes("policy notes")} say where this affects a
                     measure.
-                  </>,
-                ],
-                [
-                  "Lifetime model",
-                  <>
-                    Personal impact uses a simpler model with its own values
-                    (see <SectionLink id={METHOD_SECTIONS.lifetime}>lifetime model</SectionLink>).
                   </>,
                 ],
               ]}

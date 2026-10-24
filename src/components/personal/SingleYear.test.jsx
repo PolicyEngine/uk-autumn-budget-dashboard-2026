@@ -1,17 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
-import { resetSavedWizard } from "../LifecycleCalculator";
+import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
-const LIFECYCLE_API = "https://api.test/api/lifecycle";
 
 let household;
 
-/** Answer the household API with `respond(body)`; the lifecycle API empty. */
+/** Answer the household API with `respond(body)`; any other URL is a 404. */
 function serve(respond) {
   household = [];
   vi.stubGlobal(
@@ -22,7 +21,7 @@ function serve(respond) {
         household.push(body);
         return respond(body, init);
       }
-      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+      return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
     }),
   );
 }
@@ -35,7 +34,6 @@ beforeEach(() => {
   clearHouseholdImpactCache();
   window.history.replaceState({}, "", "/?tab=personal");
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
-  vi.stubEnv("NEXT_PUBLIC_LIFECYCLE_API_URL", LIFECYCLE_API);
 });
 
 afterEach(() => {
@@ -45,17 +43,14 @@ afterEach(() => {
 });
 
 function renderTab(props = {}) {
-  const onSubTabChange = vi.fn();
-  const utils = render(
+  return render(
     <PersonalImpactTab
       selectedPolicies={POLICIES_FOR_TEST.map((policy) => policy.id)}
       policies={POLICIES_FOR_TEST}
       year={2029}
-      onSubTabChange={onSubTabChange}
       {...props}
     />,
   );
-  return { ...utils, onSubTabChange };
 }
 
 // Straight from step 1: every answer has a default
@@ -65,46 +60,26 @@ function toResults() {
 
 const HEADLINE = /The selected policies would/;
 
-const subTabs = () => within(screen.getByRole("tablist", { name: "Personal impact results" }));
+// The form's last step, headed "Results"
+const results = () => screen.findByRole("region", { name: "Results" });
 
-describe("Personal impact's result sub-tabs", () => {
-  it("open on Single-year effect, and keep the choice in ?sub=", async () => {
-    serve((body) => json(householdAnswerFor(body)));
-    const { onSubTabChange } = renderTab();
-    toResults();
-    expect(subTabs().getByRole("tab", { name: "Single-year effect" })).toHaveAttribute("aria-selected", "true");
-    expect(onSubTabChange).toHaveBeenLastCalledWith("single");
-    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    // The prices pill is the lifetime chart's
-    expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
-
-    fireEvent.click(subTabs().getByRole("tab", { name: "Multi-year effect" }));
-    expect(new URLSearchParams(window.location.search).get("sub")).toBe("multi");
-    expect(onSubTabChange).toHaveBeenLastCalledWith("multi");
-    expect(screen.getByRole("tabpanel", { name: "Multi-year effect" })).toHaveTextContent(
-      "The lifetime model does not use your region, home, partner",
-    );
-    expect(screen.getByRole("button", { name: /Prices/ })).toBeInTheDocument();
-    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
-
-    fireEvent.click(subTabs().getByRole("tab", { name: "Single-year effect" }));
-    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
-  });
-
-  it("open on Multi-year effect from a link, without asking the household API", async () => {
+describe("Personal impact's results", () => {
+  it("show the household calculation alone: no sub-tabs (an old ?sub= link is ignored), only the household route", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     serve((body) => json(householdAnswerFor(body)));
-    const { onSubTabChange } = renderTab();
-    expect(onSubTabChange).toHaveBeenLastCalledWith("multi");
+    renderTab();
     toResults();
-    expect(subTabs().getByRole("tab", { name: "Multi-year effect" })).toHaveAttribute("aria-selected", "true");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    expect(household).toEqual([]);
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
+    const urls = fetch.mock.calls.map(([url]) => url);
+    expect(urls.length).toBeGreaterThan(0);
+    expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
   });
 });
 
-describe("the Single-year effect, from the fixture", () => {
+describe("the household calculation, from the fixture", () => {
   it("asks for the headline first, then the breakdown, with the wizard's answers", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
@@ -136,7 +111,7 @@ describe("the Single-year effect, from the fixture", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    const panel = await screen.findByRole("tabpanel", { name: "Single-year effect" });
+    const panel = await results();
     const banner = (await within(panel).findByText(HEADLINE)).closest(".single-year-banner");
     expect(banner).toHaveTextContent(
       "The selected policies would raise your household's annual net income by £3,765 (+5.8%) in 2029-30",
@@ -205,7 +180,6 @@ describe("the Single-year effect, from the fixture", () => {
     // And a programme to its parts
     fireEvent.click(within(table).getByRole("button", { name: /Income tax/ }));
     expect(within(table).getByText("On earnings")).toBeInTheDocument();
-    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
 
     // The top rows add up to net income, in every column
     const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
@@ -215,10 +189,20 @@ describe("the Single-year effect, from the fixture", () => {
     const sums = [0, 1, 2].map((col) => top.reduce((acc, row) => acc + row[col], 0));
     expect(sums).toEqual([65371, 69136, 3765]);
 
-    // How it is calculated: closed, under the table
-    const method = screen.getByText("How is this calculated?").closest("details");
-    expect(method).not.toHaveAttribute("open");
-    expect(within(method).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    // About these figures: closed under the table, then the rows' notes
+    // and the method as definition lists
+    const about = screen.getByRole("button", { name: "About these figures" });
+    expect(about).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/Elements are before the earnings taper/)).not.toBeInTheDocument();
+    fireEvent.click(about);
+    expect(about).toHaveAttribute("aria-expanded", "true");
+    const panel = about.closest(".disclosure");
+    expect(panel).toHaveClass("disclosure-in-card");
+    const terms = [...panel.querySelectorAll("dt")].map((term) => term.textContent);
+    expect(terms).toContain("Universal Credit");
+    expect(terms).toContain("Change by policy");
+    expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
+    expect(within(panel).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
   });
 
   it("marks you on the earnings chart, with the marginal rate in a closed expander", async () => {
@@ -248,7 +232,7 @@ describe("the Single-year effect, from the fixture", () => {
   });
 });
 
-describe("the Single-year effect's errors", () => {
+describe("the household calculation's errors", () => {
   it("names a refused child's age as the children's, not yours", async () => {
     serve(() =>
       json({ detail: [{ loc: ["body", "household", "children", 0, "age"], msg: "Input should be less than or equal to 19" }] }, 422),

@@ -6,7 +6,6 @@ import {
   formatCsvNumber,
   householdChangeCsv,
   householdIncomeCsv,
-  lifecycleCsv,
   revenueCsv,
   unpublishedCsv,
 } from "./chartCsv";
@@ -115,20 +114,6 @@ describe("chart CSV downloads", () => {
     );
     expect(change[1]).toContain(renter.definition);
     expect(change.slice(2)).toEqual(["Employment income,Change in net income", "80000,-512.4"]);
-  });
-
-  it("write the lifetime calculator's rows with the net impact summed", () => {
-    const text = lifecycleCsv(
-      [{ age: 22, year: 2026, impact_rail_fare_freeze: 10.5, impact_fuel_duty_freeze: -2.25 }],
-      ["impact_rail_fare_freeze", "impact_fuel_duty_freeze"],
-      { real: true },
-    );
-    const [, units, header, row] = lines(text);
-    expect(units).toMatch(/2026 prices/);
-    expect(header.split(",")[0]).toBe("age");
-    expect(header.split(",").at(-1)).toBe("net_policy_impact");
-    expect(row.split(",")[0]).toBe("22");
-    expect(row.split(",").at(-1)).toBe("8.25");
   });
 });
 

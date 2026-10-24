@@ -22,7 +22,7 @@ export function clearHouseholdImpactCache() {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Single-year effect for the wizard's answers, in two stages: the
+ * The Personal impact results for the wizard's answers, in two stages: the
  * headline and programmes, then the per-policy split and earnings sweep.
  *
  * @param {Object} params

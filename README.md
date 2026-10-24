@@ -33,7 +33,7 @@ bun run dev
 
 The dashboard is a Next.js app, served at `http://localhost:3000/uk/autumn-budget-2026` by default: `next.config.ts` sets that base path unless `NEXT_PUBLIC_BASE_PATH` is defined. Set `NEXT_PUBLIC_BASE_PATH=` (empty) to serve it at the root.
 
-The Personal impact tab calls the lifecycle API at `${NEXT_PUBLIC_LIFECYCLE_API_URL}/calculate`, so set `NEXT_PUBLIC_LIFECYCLE_API_URL` to the API's URL followed by `/api/lifecycle` (locally, `http://localhost:5001/api/lifecycle`; see `.env.example`). The build fails on a value in any other form, and a Vercel production build fails without one (`scripts/lifecycle-api-env.mjs`); other builds warn.
+The Personal impact tab POSTs to `${NEXT_PUBLIC_HOUSEHOLD_API_URL}` itself, so set `NEXT_PUBLIC_HOUSEHOLD_API_URL` to the API's URL followed by `/api/household-impact` (locally, `http://localhost:8010/api/household-impact`; see `.env.example`). The build fails on a value in any other form, and a Vercel production build fails without one (`scripts/household-api-env.mjs`); other builds warn.
 
 ### Building for production
 

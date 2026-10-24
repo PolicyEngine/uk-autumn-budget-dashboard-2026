@@ -17,7 +17,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Business Asset Disposal Relief restricted",
-    how: "Sets the relief's lifetime limit to £500,000 (an assumed value). The model applies it to each year's qualifying gains, as if none of the limit had been used before; capital gains are imputed.",
+    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). The model applies it to each year's qualifying gains, as if none of the limit had been used before; capital gains are imputed.",
     from: 2027,
   },
   {

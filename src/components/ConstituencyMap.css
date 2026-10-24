@@ -253,7 +253,7 @@
   line-height: 1.4;
 }
 
-/* Kept as they were: LifecycleCalculator shares these global names. */
+/* Kept as they were: other views share these global names. */
 .tooltip-value {
   font-size: var(--fs-xl);
   font-weight: 700;
@@ -438,7 +438,7 @@
 
 @media (min-width: 1025px) {
   .constituency-body {
-    height: 560px;
+    height: 440px;
     /* Never clip: a narrow card's longer names scroll within it */
     overflow-y: auto;
   }

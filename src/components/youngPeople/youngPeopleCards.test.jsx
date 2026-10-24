@@ -2,7 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
-import { changeByYear, measureComparison, niceRange, wrapWords } from "./youngPeopleData";
+import {
+  SINGLE_AGE_FIRST,
+  SINGLE_AGE_LAST,
+  changeByYear,
+  fitRange,
+  measureComparison,
+  niceRange,
+  singleAgeBars,
+  wrapWords,
+} from "./youngPeopleData";
 import { MIN_SAMPLE_SIZE } from "../../utils/ageImpact";
 import { DISPLAY_YEARS } from "../../utils/displayYears";
 
@@ -143,5 +152,39 @@ describe("young people cards", () => {
     expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download chart: Change by year/ })).toBeInTheDocument();
     expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
+  });
+});
+
+describe("single-year bars", () => {
+  const aged = (age_band, mean_change, people = 100, sample_size = 500) => ({
+    reform_id: "two_child_limit",
+    year: 2029,
+    age_band,
+    mean_change,
+    people,
+    sample_size,
+  });
+  it("has one bar per age from 10 to 40, and none outside them", () => {
+    const rows = [aged("9", 5), aged("10", -20), aged("22", 150), aged("40", 7), aged("41", 9), aged("90+", 30)];
+    const bars = singleAgeBars(rows, POLICIES, ["two_child_limit"], 2029);
+    expect([SINGLE_AGE_FIRST, SINGLE_AGE_LAST]).toEqual([10, 40]);
+    expect(bars).toHaveLength(31);
+    expect(bars[0]).toMatchObject({ age: 10, label: "10", netChange: -20 });
+    expect(bars[12]).toMatchObject({ age: 22, label: "22", netChange: 150 });
+    expect(bars[30]).toMatchObject({ age: 40, label: "40", netChange: 7 });
+    expect(bars[11].netChange).toBeNull();
+  });
+
+  it("leaves an age out when its row is thin", () => {
+    const thin = [aged("22", 150, 100, MIN_SAMPLE_SIZE - 1)];
+    expect(singleAgeBars(thin, POLICIES, ["two_child_limit"], 2029)[12].netChange).toBeNull();
+  });
+
+  it("fits the axis to the data with a little headroom", () => {
+    expect(fitRange(21, 944)).toEqual({ domain: [0, 1000], ticks: [0, 200, 400, 600, 800, 1000] });
+    expect(fitRange(-1118, 821).domain).toEqual([-1200, 1200]);
+    expect(fitRange(-1118, 821).ticks).toContain(0);
+    // A maximum on a step still gets room above it
+    expect(fitRange(0, 800).domain[1]).toBeGreaterThan(800);
   });
 });

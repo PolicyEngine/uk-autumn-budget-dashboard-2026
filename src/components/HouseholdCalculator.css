@@ -1,101 +1,7 @@
-.lifecycle-calculator {
+.household-calculator {
   width: 100%;
   font-family: var(--pe-font-family-primary);
   color: var(--pe-gray-700);
-}
-
-.control-group {
-  margin-bottom: 16px;
-}
-
-.control-group label {
-  display: block;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: #475569;
-  margin-bottom: 6px;
-  cursor: help;
-}
-
-.slider-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.slider-container input[type="range"] {
-  flex: 1;
-  height: 6px;
-  background: #e2e8f0;
-  border-radius: 3px;
-  appearance: none;
-  cursor: pointer;
-}
-
-.slider-container input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  background: var(--pe-teal-500);
-  border-radius: 50%;
-  cursor: pointer;
-  transition:
-    transform 0.15s,
-    box-shadow 0.15s;
-}
-
-.slider-container input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 0 4px rgba(49, 151, 149, 0.2);
-}
-
-.slider-container input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  background: var(--pe-teal-500);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-/* The value sits right after its track, so every track ends at its value */
-.slider-value {
-  min-width: 64px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-teal-500);
-  text-align: left;
-  font-variant-numeric: tabular-nums;
-}
-
-.text-input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: var(--fs-small);
-  font-family: inherit;
-}
-
-.text-input::placeholder {
-  color: var(--pe-gray-500);
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: var(--pe-teal-500);
-  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
-}
-
-.children-count {
-  min-width: 0;
-  white-space: nowrap;
-}
-
-/* Summary cards */
-.lifecycle-summary {
-  margin-bottom: 24px;
 }
 
 /* Chart container */
@@ -158,47 +64,10 @@
   stroke: var(--pe-gray-200);
 }
 
-.chart .age-group {
-  cursor: pointer;
-}
-
-.chart .age-group:hover rect {
-  filter: brightness(1.1);
-}
-
 /* Tooltip */
-.lifecycle-tooltip {
-  position: fixed;
-  pointer-events: none;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid #e2e8f0;
-  border-radius: var(--pe-radius-md);
-  padding: 12px;
-  font-size: var(--fs-small);
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 1000;
-  max-width: 300px;
-}
-
-.tooltip-title {
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f1f5f9;
-}
 
 .tooltip-section {
   margin-bottom: 8px;
-}
-
-.tooltip-reforms {
-  padding-top: 8px;
-  border-top: 1px dashed #e2e8f0;
 }
 
 .tooltip-row {
@@ -223,13 +92,6 @@
 
 .tooltip-value.negative {
   color: #b45309;
-}
-
-.tooltip-total {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
-  font-weight: 600;
 }
 
 /* Methodology section */
@@ -287,228 +149,6 @@
 
 }
 
-/* On a phone the value stays beside its track, as on desktop */
-
-/* Modal styles */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-overlay.active {
-  display: flex;
-}
-
-.modal {
-  background: #fff;
-  border-radius: var(--card-radius);
-  max-width: 900px;
-  width: 95%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.modal-title {
-  font-size: var(--fs-section);
-  font-weight: 600;
-  flex: 1;
-  text-align: center;
-}
-
-.modal-nav {
-  background: var(--pe-gray-100);
-  border: 1px solid var(--pe-gray-200);
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: var(--fs-card-title);
-  cursor: pointer;
-  color: var(--pe-gray-700);
-  transition: all 0.15s ease;
-}
-
-.modal-nav:hover:not(:disabled) {
-  background: var(--pe-gray-200);
-}
-
-.modal-nav:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: var(--fs-xl);
-  cursor: pointer;
-  color: #888;
-  margin-left: 8px;
-}
-
-.modal-close:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 24px;
-}
-
-.modal-panel {
-  min-height: 450px;
-  max-height: 450px;
-  overflow-y: auto;
-}
-
-/* Modal tabs */
-.tab-bar {
-  display: flex;
-  border-bottom: 2px solid #e2e8f0;
-  margin: -24px -24px 24px -24px;
-  padding: 0 24px;
-  overflow-x: auto;
-}
-
-.detail-tab {
-  padding: 10px 18px;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: #64748b;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.detail-tab:hover {
-  color: var(--pe-teal-700);
-  background: var(--pe-teal-50);
-}
-
-.detail-tab.active {
-  color: var(--pe-teal-700);
-  font-weight: 600;
-  border-bottom-color: var(--pe-teal-700);
-  background: transparent;
-}
-
-/* Modal calculation sections */
-.calc-section {
-  margin-bottom: 24px;
-}
-
-.calc-section:last-child {
-  margin-bottom: 0;
-}
-
-.calc-title {
-  font-weight: 600;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.calc-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-}
-
-.calc-table {
-  width: 100%;
-  font-size: var(--fs-small);
-  border-collapse: collapse;
-}
-
-.calc-table td {
-  padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.calc-table td:last-child {
-  text-align: right;
-  font-family: monospace;
-}
-
-.calc-result {
-  font-weight: 600;
-  border-top: 2px solid #e5e5e5 !important;
-}
-
-.calc-result.positive {
-  color: var(--pe-teal-700);
-}
-
-.calc-result.negative {
-  color: #b45309;
-}
-
-/* Modal responsive */
-@media (max-width: 768px) {
-  .modal {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    border-radius: 0;
-  }
-
-  .tab-bar {
-    padding: 0 12px;
-  }
-
-  .detail-tab {
-    padding: 8px 12px;
-    font-size: var(--fs-caption);
-  }
-
-  .modal-panel {
-    max-height: none;
-  }
-}
-
-/* Chart footer: downloads on the left, the PolicyEngine logo on the right */
-.lifecycle-chart-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.lifecycle-chart-footer .chart-download-menu {
-  right: auto;
-  left: 0;
-}
-
-.lifecycle-logo {
-  display: block;
-  width: 80px;
-  height: auto;
-  margin-left: auto;
-}
-
 /* About this model: an in-card expander, with the one rule above it */
 .chart-container .methodology {
   margin-top: 16px;
@@ -517,10 +157,6 @@
   border: none;
   border-top: 1px solid var(--card-border);
   border-radius: 0;
-}
-
-.methodology-content {
-  padding: 0 0 20px;
 }
 
 /* ---------- Step-by-step form ---------- */
@@ -624,14 +260,6 @@
   outline-offset: 4px;
 }
 
-.wizard-fields .control-group {
-  margin-bottom: 20px;
-}
-
-.wizard-fields .control-group label {
-  cursor: default;
-}
-
 .field-hint {
   margin: 6px 0 0;
   font-size: var(--fs-caption);
@@ -650,10 +278,6 @@
   padding: 0;
   border: none;
   border-radius: 0;
-}
-
-.wizard-results .lifecycle-summary {
-  margin-bottom: 16px;
 }
 
 /* Back / Next */
@@ -688,7 +312,7 @@
 }
 
 /* The API-not-set message, tidy inside the results */
-.wizard-results .lifecycle-error {
+.wizard-results .household-error {
   position: static;
   transform: none;
   margin: 8px 0 16px;
@@ -701,12 +325,12 @@
   border-radius: var(--pe-radius-md);
 }
 
-.lifecycle-error p {
+.household-error p {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.lifecycle-error .lifecycle-error-title {
+.household-error .household-error-title {
   margin-bottom: 4px;
   font-weight: 600;
   color: var(--pe-gray-800);
@@ -751,55 +375,6 @@
   .wizard-actions .light-pill-button:disabled {
     display: none;
   }
-}
-
-.lifecycle-summary[hidden] {
-  display: none;
-}
-
-/* No results: the chart's empty space collapses */
-.wizard-results .chart-empty {
-  min-height: 0;
-}
-
-.lifecycle-chart-footer[hidden] {
-  display: none;
-}
-
-/* Lifetime chart: title row with the Download icon, grouped legend, logo
-   bottom right */
-.lifecycle-chart-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.lifecycle-chart-header h4 {
-  margin: 0;
-  font-size: var(--fs-body-lg);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.lifecycle-legend {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--pe-gray-700);
-}
-
-.lifecycle-legend[hidden] {
-  display: none;
-}
-
-.lifecycle-chart-footer {
-  justify-content: flex-end;
 }
 
 /* ---------- Connected stepper ---------- */
@@ -896,7 +471,6 @@
   border-radius: 6px;
 }
 
-/* ---------- Round 8: full-width card, edge-aligned stepper ---------- */
 /* The stepper: circles at fixed positions from the left edge to the
    right edge; one line behind them, teal up to the current step */
 .wizard-steps ol {
@@ -969,7 +543,7 @@
   text-align: right;
 }
 
-/* Results header: "Results" left; Edit details and Prices right, centred
+/* Results header: "Results" left; Edit details right, centred
    with the heading; the summary on its own line below */
 .wizard-step-header {
   display: flex;
@@ -996,16 +570,9 @@
   margin: 12px 0 20px;
 }
 
-.lifecycle-note,
-.lifecycle-empty {
-  margin: -4px 0 16px;
-  font-size: var(--fs-caption);
-  line-height: 1.5;
-  color: var(--pe-gray-500);
-}
-
-.lifecycle-empty {
+.household-empty {
   margin: 0 0 16px;
+  line-height: 1.5;
   padding: 16px;
   font-size: var(--fs-small);
   color: var(--pe-gray-700);
@@ -1023,10 +590,6 @@
 .wizard-results .methodology {
   margin-left: 0;
   margin-right: 0;
-}
-
-.wizard-results .lifecycle-legend {
-  align-items: stretch;
 }
 
 @media (max-width: 768px) {
@@ -1078,12 +641,6 @@
   }
 }
 
-/* Lifetime chart tooltip: dark text, sign carries direction */
-.tooltip-value.positive,
-.tooltip-value.negative {
-  color: var(--pe-gray-900);
-}
-
 @media (max-width: 768px) {
   /* Phone: "Step N of 7" and the progress bar replace the circles */
   .wizard-steps ol {
@@ -1091,95 +648,9 @@
   }
 }
 
-/* About this model: policies | assumptions, proper lists */
-/* One column: policies modelled, then assumptions, then the note */
-.about-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-
-.methodology-content h4 {
-  margin: 16px 0 8px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.about-group + .about-group {
-  margin-top: 10px;
-}
-
-.about-group-heading {
-  margin: 0 0 6px !important;
-  font-size: 0.75rem !important;
-  font-weight: 600;
-  color: var(--pe-gray-500) !important;
-}
-
-.methodology-content .about-policies,
-.methodology-content .about-bullets {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-700);
-}
-
-.about-policies li {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  gap: 8px;
-  align-items: baseline;
-}
-
-.about-swatch {
-  width: 10px;
-  height: 10px;
-}
-
-.about-policies strong {
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-/* Small teal round bullets with a hanging indent */
-.about-bullets li {
-  position: relative;
-  padding-left: 16px;
-}
-
-.about-bullets li::before {
-  content: "";
-  position: absolute;
-  left: 2px;
-  top: 0.62em;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pe-teal-500);
-}
-
-.methodology-content .about-note {
-  margin: 16px 0 0;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-@media (max-width: 768px) {
-  .about-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 /* "Start from an example": young-person presets on the first step */
-.wizard-examples {
-  margin: 0 0 20px;
-  padding: 0 0 20px;
-  border-bottom: 1px solid var(--card-border, var(--pe-gray-200));
+.wizard-examples.wizard-box {
+  margin: 0 0 16px;
 }
 
 .wizard-examples-label {
@@ -1215,21 +686,67 @@
   color: var(--pe-gray-600);
 }
 
-.wizard-group {
-  padding: 20px 0;
-  border-top: 1px solid var(--pe-gray-100);
+/* Each question group in its own box: two columns on a desktop, one on a
+   phone; the boxes in a row share a height */
+.wizard-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 
-.wizard-group:first-child {
-  padding-top: 4px;
-  border-top: none;
+.wizard-box {
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
 }
 
+/* The legend as the box heading, inside the border rather than on it */
 .wizard-group-title {
+  float: left;
+  width: 100%;
   margin: 0 0 12px;
-  font-size: var(--fs-small);
+  padding: 0;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-gray-900);
+}
+
+.wizard-group-title + * {
+  clear: both;
+}
+
+/* The 12 regions: a compact tile grid that fits a half-width box */
+.wizard-box .choice-grid .choice-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.wizard-box .choice-grid .choice-tile {
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
+/* On the question steps the boxes sit on the page background, not in a
+   card of their own */
+.wizard.is-form {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.wizard.is-form .wizard-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .wizard-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .wizard-group-fields {

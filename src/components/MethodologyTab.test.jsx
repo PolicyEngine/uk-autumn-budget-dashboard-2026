@@ -13,10 +13,9 @@ const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onS
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the lifetime chart's "About this model") link to
-    // these
+    // Other views (e.g. the map and Personal impact) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
-    expect(METHOD_SECTIONS.lifetime).toBe("method-lifetime");
+    expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
     for (const id of Object.values(METHOD_SECTIONS)) {
       expect(container.querySelector(`#${id}`)).not.toBeNull();
@@ -99,11 +98,11 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("describes the single-year calculation in its slot", () => {
+  it("describes the household calculation in its slot", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
-      "Single-year calculation",
+      "Household calculation",
     );
     expect(slot).not.toHaveTextContent("To follow");
     expect(slot).toHaveTextContent("same measures as the national figures");
@@ -119,7 +118,9 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");
-    fireEvent.click(screen.getByRole("link", { name: "See the Young people tab" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("young");
+    const young = screen.getByRole("link", { name: "See Young people under Population impact" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    fireEvent.click(young);
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
   });
 });
