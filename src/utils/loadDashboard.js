@@ -1,5 +1,6 @@
-import { loadManifest, loadPublication } from "./publication/load";
+import { loadArtifact, loadManifest, loadPublication } from "./publication/load";
 import { parseCsv } from "./publication/csv";
+import { isDisplayable } from "./publication/manifest";
 import { buildMeasureCatalogue, isCatalogueRowDisplayable } from "./measureCatalogue";
 
 export function parseDashboardCsv(text) {
@@ -13,12 +14,39 @@ export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal }
   const manifest = await loadManifest(basePath, { fetchImpl, signal });
   const data = { budgetary: [], distributional: [], winnersLosers: [], metrics: [] };
   if (!manifest) return { status: "no-manifest", catalogue: buildMeasureCatalogue(), ...data };
-  const publication = await loadPublication(basePath, Object.keys(manifest.measures), { fetchImpl, signal, manifest });
+  // The package is every displayable measure: a held or not-computable
+  // measure is shown as unavailable, so the combined run that describes the
+  // page's figures is the one of the displayable measures.
+  const packageIds = Object.keys(manifest.measures).filter((id) => isDisplayable(manifest.measures[id]));
+  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest });
   const names = { budgetary: "budgetary_impact", distributional: "distributional_impact", winnersLosers: "winners_losers", metrics: "metrics" };
   for (const [name, table] of Object.entries(names)) data[name] = Object.values(publication.tablesByKey).flatMap((tables) => tables[table] ?? []);
   const catalogue = buildMeasureCatalogue({ manifest, ...data, tablesByKey: publication.tablesByKey, failures: publication.failures });
   for (const name of Object.keys(names)) data[name] = data[name].filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
   return { status: "ready", catalogue, ...data };
+}
+
+/**
+ * One table from every artifact the page verified (#20's receipt route).
+ *
+ * The keys are the measures and combined run whose artifacts verified when
+ * the page loaded. Each is read again through the same receipt checks, so a
+ * key whose artifact now fails, or that carries no such table, contributes
+ * no rows: its figures are unavailable, never taken from another file.
+ */
+export async function loadVerifiedTable(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
+  const manifest = catalogue?.manifest;
+  if (!manifest || !catalogue.tablesByKey) throw new Error("No Budget results are published yet");
+  const loaded = await Promise.all(Object.keys(catalogue.tablesByKey).map(async (key) => {
+    const entry = Object.hasOwn(manifest.measures, key) ? manifest.measures[key] : Object.hasOwn(manifest.combined, key) ? manifest.combined[key] : undefined;
+    try {
+      return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table] }))[table] ?? [];
+    } catch (error) {
+      if (error?.name === "AbortError") throw error;
+      return [];
+    }
+  }));
+  return loaded.flat().filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
 }
 
 /** Null is an unavailable figure, never a zero standing in for a missing row. */

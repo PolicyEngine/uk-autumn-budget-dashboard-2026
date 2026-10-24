@@ -56,7 +56,16 @@ export function measureCatalogueFixture({ held = true } = {}) {
     "reform_id,reform_name,year,age_band,people,sample_size,mean_change,mean_equivalised_change,pct_better_off,pct_worse_off,pct_unchanged,people_directly_affected",
     ...ageRows,
   ].join("\n");
-  return { manifest, budgetary, distributional, winnersLosers, household, ageCsv };
+  // The tables loadPublication would return for the displayable keys: the
+  // keys whose artifacts verified (a not-computable entry has none)
+  const tablesByKey = Object.fromEntries(
+    [...measures.filter((measure) => measure.id !== HELD).map((measure) => measure.id), COMBINED].map((id) => [id, {
+      budgetary_impact: budgetary.filter((row) => row.reform_id === id),
+      distributional_impact: distributional.filter((row) => row.reform_id === id),
+      winners_losers: winnersLosers.filter((row) => row.reform_id === id),
+    }]),
+  );
+  return { manifest, budgetary, distributional, winnersLosers, household, ageCsv, tablesByKey };
 }
 
 /**

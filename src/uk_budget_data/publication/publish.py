@@ -864,10 +864,14 @@ def check(
     """
     from uk_budget_data.publication.release_index import (
         identity_problems,
+        manifest_identity_problems,
         release_index_problems,
     )
 
-    failures = identity_problems(manifest)
+    # The manifest and the file the page reads both name this Budget
+    failures = identity_problems(manifest) + manifest_identity_problems(
+        data_root
+    )
     if check_flat_index:
         failures += release_index_problems(data_root, manifest)
     for key, entry in sorted(manifest.entries().items()):

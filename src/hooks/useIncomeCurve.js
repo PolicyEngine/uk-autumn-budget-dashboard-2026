@@ -1,67 +1,78 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadVerifiedFlatCsv } from "../utils/publication/flat";
 import { parseTable } from "../utils/publication/csv";
-import { isCombinedId, isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { loadVerifiedTable } from "../utils/loadDashboard";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 
-// Cache only within an immutable loaded snapshot, never across revisions.
-const curveRows = new WeakMap();
-function loadCurve(catalogue) {
-  if (!curveRows.has(catalogue)) {
-    curveRows.set(catalogue, loadVerifiedFlatCsv("income_curve.csv", catalogue).then(parseCurve));
-  }
-  return curveRows.get(catalogue);
-}
-
-/** Rows are parsed with the real publication schema, including quoted cells. */
-export function parseCurve(csvText) {
-  return parseTable("income_curve", csvText).map((row) => ({
+/** Curve rows from typed income_curve rows. */
+const curveRows = (rows) =>
+  rows.map((row) => ({
     reformId: row.reform_id, year: row.year, household: row.household,
     income: row.income, baseline: row.baseline_net_income, reformNet: row.reform_net_income,
   }));
+
+/** Rows are parsed with the real publication schema, including quoted cells. */
+export function parseCurve(csvText) {
+  return curveRows(parseTable("income_curve", csvText));
+}
+
+// Cache only within one loaded snapshot, never across revisions.
+const loads = new WeakMap();
+function loadCurve(catalogue) {
+  if (!loads.has(catalogue)) {
+    loads.set(catalogue, loadVerifiedTable(catalogue, "income_curve").then(curveRows));
+  }
+  return loads.get(catalogue);
 }
 
 /**
- * One household's net income across its income grid in one year: before
- * the Budget, and after the selected measures.
+ * One household's net income across its income grid in one year: the
+ * change from the selected measures, and, where the approved package
+ * baseline is published, net income before and after.
  *
  * "Before the Budget" is the combined package's baseline, where every
  * measure is at its pre-Budget setting (a measure's own baseline differs:
  * it reverses that measure alone). After the Budget adds each selected
- * measure's change to it, as the population charts do.
+ * measure's change to it, as the population charts do. Without the
+ * package's own row at every point, `baseline` and `reform` are null: a
+ * member's baseline never stands in for it.
  *
- * @returns {Array<{income: number, baseline: number, reform: number,
- *   difference: number}>} in income order; empty when the file has no
- *   rows for the household and year
+ * @returns {Array<{income: number, baseline: number|null,
+ *   reform: number|null, difference: number}>} in income order; empty
+ *   unless every selected measure has a row at every point
  */
-export function curveFor(rows, { household, year, policies, combinedId }) {
+export function curveFor(rows, { household, year, policies, combinedId = null }) {
   const points = new Map();
   for (const row of rows) {
     if (row.household !== household || row.year !== year) continue;
-    if (!policies.includes(row.reformId) && !(combinedId === undefined ? isCombinedId(row.reformId) : row.reformId === combinedId)) continue;
+    const isPackage = typeof combinedId === "string" && row.reformId === combinedId;
+    const isMember = policies.includes(row.reformId);
+    if (!isPackage && !isMember) continue;
     let point = points.get(row.income);
     if (!point) {
-      point = { income: row.income, baseline: null, combined: false, difference: 0, present: new Set() };
+      point = { income: row.income, baseline: null, difference: 0, present: new Set() };
       points.set(row.income, point);
     }
-    if ((combinedId === undefined ? isCombinedId(row.reformId) : row.reformId === combinedId) && !point.combined && Number.isFinite(row.baseline)) {
-      point.baseline = row.baseline;
-      point.combined = true;
-    }
-    if (policies.includes(row.reformId) && Number.isFinite(row.reformNet) && Number.isFinite(row.baseline)) {
+    if (isPackage && Number.isFinite(row.baseline)) point.baseline = row.baseline;
+    if (isMember && !point.present.has(row.reformId) && Number.isFinite(row.reformNet) && Number.isFinite(row.baseline)) {
       point.difference += row.reformNet - row.baseline;
       point.present.add(row.reformId);
     }
   }
-  if ([...points.values()].some((point) => !point.combined || policies.some((id) => !point.present.has(id)))) return [];
-  return [...points.values()]
+  const all = [...points.values()];
+  if (!all.length || all.some((point) => policies.some((id) => !point.present.has(id)))) return [];
+  const levels = all.every((point) => point.baseline !== null);
+  return all
     .sort((a, b) => a.income - b.income)
     .map(({ income, baseline, difference }) => ({
       income,
-      baseline,
+      baseline: levels ? baseline : null,
       difference,
-      reform: baseline + difference,
+      reform: levels ? baseline + difference : null,
     }));
 }
+
+/** True when a curve can be drawn as net income levels, not just changes. */
+export const hasLevels = (curve) => curve.length > 0 && curve.every((point) => Number.isFinite(point.baseline) && Number.isFinite(point.reform));
 
 /** The chart data for a household, year and selection of measures. */
 export default function useIncomeCurve({ household, year, policies }) {
@@ -69,15 +80,13 @@ export default function useIncomeCurve({ household, year, policies }) {
   const { combinedId } = catalogue;
   const [loaded, setLoaded] = useState(null);
   const rows = loaded?.catalogue === catalogue ? loaded.rows : null;
-  const [failed, setFailed] = useState(false);
+  const failed = loaded?.catalogue === catalogue && loaded.failed;
 
   useEffect(() => {
     let live = true;
     loadCurve(catalogue)
-      .then((loaded) => live && setLoaded({ catalogue, rows: loaded }))
-      .catch(() => {
-        if (live) setFailed(true);
-      });
+      .then((curve) => live && setLoaded({ catalogue, rows: curve, failed: false }))
+      .catch(() => live && setLoaded({ catalogue, rows: null, failed: true }));
     return () => {
       live = false;
     };
@@ -85,8 +94,8 @@ export default function useIncomeCurve({ household, year, policies }) {
 
   const loading = rows === null && !failed;
   const data = useMemo(
-    () => (rows ? curveFor(rows.filter((row) => isCatalogueRowDisplayable(catalogue, row.reformId, row.year)), { household, year, policies, combinedId }) : []),
-    [rows, household, year, policies, combinedId, catalogue],
+    () => (rows ? curveFor(rows, { household, year, policies, combinedId }) : []),
+    [rows, household, year, policies, combinedId],
   );
-  return { loading, data };
+  return { loading, data, levels: hasLevels(data) };
 }

@@ -16,14 +16,14 @@ export function measureColor(id, direction) {
   return palette[hash % palette.length];
 }
 
-export const isCombinedId = (id) => typeof id === "string" && id.endsWith("_combined");
 const finite = (value) => value !== "" && value != null && Number.isFinite(Number(value));
 const compareIds = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 
 /** Apply the same publication and year gate to every independently loaded table. */
 export function isCatalogueRowDisplayable(catalogue, id, year) {
-  if (!catalogue.manifest) return false;
-  if (catalogue.tablesByKey !== null && !Object.hasOwn(catalogue.tablesByKey, id)) return false;
+  // Only a key whose artifact verified against this manifest snapshot can
+  // supply a figure: a catalogue built without verified tables authorises none.
+  if (!catalogue.manifest || !catalogue.tablesByKey || !Object.hasOwn(catalogue.tablesByKey, id)) return false;
   if (id !== catalogue.combinedId && !catalogue.byId.get(id)?.displayable) return false;
   const entry = catalogue.manifest.measures[id] ?? catalogue.manifest.combined[id];
   if (!isDisplayable(entry) || !isSupported(entry, Number(year))) return false;
@@ -58,7 +58,8 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   measures.sort((a, b) => rank[a.direction] - rank[b.direction] || compareIds(a.id, b.id));
   measures.forEach((measure, index) => { measure.order = index; });
   const displayable = measures.filter((measure) => measure.displayable);
-  const combined = manifest ? combinedEntryFor(manifest, measures.map((measure) => measure.id)) : null;
+  // The package combined run is the one of exactly the displayable measures
+  const combined = manifest ? combinedEntryFor(manifest, displayable.map((measure) => measure.id)) : null;
   const combinedIds = combined && !combined.single ? [combined.key] : [];
   return {
     measures, displayable, manifest, tablesByKey, failures,

@@ -2,6 +2,8 @@
 
 import csv
 import json
+import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -16,11 +18,14 @@ from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.release_index import (
+    FLAT_VIEW_FILES,
     INDEX_FILE,
+    manifest_identity_problems,
     release_index_problems,
     write_release_index,
 )
 from uk_budget_data.publication.review_rows import REVIEW_COLUMNS, review_rows
+from uk_budget_data.publication.tables import sha256_bytes
 from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES, get_reform
 
 DESCRIPTION = 'A public explanation, including punctuation and "quotes".'
@@ -65,7 +70,9 @@ def test_save_all_keeps_canonical_columns_and_round_trips_through_real_js_parser
     assert published.iloc[0]["reform_name"] == measure.name
     assert "reform_description" not in frame
     bun = shutil.which("bun")
-    assert bun is not None, "The _save_all parser contract requires bun"
+    if bun is None:
+        # CI's Python job has no bun; the fixture pair below covers it there
+        pytest.skip("bun is not installed")
     parsed = subprocess.run(
         [
             bun,
@@ -86,6 +93,84 @@ def test_save_all_keeps_canonical_columns_and_round_trips_through_real_js_parser
             "value": -1,
         }
     ]
+
+
+# The tables _save_all writes, and the fixture they must equal byte for
+# byte. src/utils/publication/savedFlat.test.js parses the same fixture
+# with the page's real CSV parser, so together the two tests carry the
+# regenerated files to the parser without bun in the Python job.
+SAVED_FLAT_FIXTURE = (
+    Path(__file__).resolve().parents[1] / "src" / "test" / "fixtures" / "flat"
+)
+SAVED_TABLES = (
+    "budgetary_impact",
+    "distributional_impact",
+    "winners_losers",
+    "metrics",
+    "income_curve",
+    "age_impact",
+)
+OBR_COLUMNS = (
+    ("reform_id", "str"),
+    ("reform_name", "str"),
+    ("year", "int"),
+    ("policyengine_value", "float"),
+    ("obr_static_value", "float"),
+    ("obr_post_behavioural_value", "float"),
+)
+# TEST DATA ONLY: one synthetic row per table, with the cells a regenerated
+# file can carry that need quoting
+TEXT = {
+    "reform_id": "ab2026_mock_alpha",
+    "reform_name": 'Mock, "alpha"\nwith a second line, \u00a3 and \u00e9',
+    "decile": "1st",
+    "household": "single_renter",
+    "x_variable": "employment_income",
+    "age_band": "16-24",
+}
+
+
+def _saved_frames():
+    from uk_budget_data.publication.tables import TABLES
+
+    def row(columns):
+        values = {"str": None, "int": 2026, "float": -1.25, "bool": True}
+        return {
+            name: TEXT.get(name, "text") if kind == "str" else values[kind]
+            for name, kind in columns
+        }
+
+    frames = {
+        name: pd.DataFrame([row(TABLES[name].columns)])
+        for name in SAVED_TABLES
+    }
+    frames["obr_comparison"] = pd.DataFrame([row(OBR_COLUMNS)])
+    return frames
+
+
+def test_save_all_output_is_the_fixture_the_js_parser_reads(tmp_path):
+    measure = Reform(
+        id=TEXT["reform_id"], name=TEXT["reform_name"], description=DESCRIPTION
+    )
+    DataPipeline(
+        reforms=[measure], config=DataConfig(output_dir=tmp_path)
+    )._save_all(_saved_frames())
+    written = sorted(path.name for path in tmp_path.glob("*.csv"))
+    assert written == sorted(
+        [f"{name}.csv" for name in SAVED_TABLES] + ["obr_comparison.csv"]
+    )
+    if os.environ.get("REGENERATE_FLAT_FIXTURE") == "1":
+        SAVED_FLAT_FIXTURE.mkdir(parents=True, exist_ok=True)
+        for name in written:
+            shutil.copyfile(tmp_path / name, SAVED_FLAT_FIXTURE / name)
+    for name in written:
+        assert (tmp_path / name).read_bytes() == (
+            SAVED_FLAT_FIXTURE / name
+        ).read_bytes(), (
+            f"{name} differs from src/test/fixtures/flat; regenerate with "
+            "REGENERATE_FLAT_FIXTURE=1 uv run pytest "
+            "tests/test_publication_metadata.py -k fixture_the_js_parser"
+        )
 
 
 def test_description_is_bound_through_staging_approval_and_review(world):
@@ -265,25 +350,46 @@ def test_personal_contract_rejects_ambiguous_parameters(change):
         m.PersonalSeries.model_validate(contract)
 
 
+OBR_HEADER = (
+    "reform_id,reform_name,year,policyengine_value,"
+    "obr_static_value,obr_post_behavioural_value\n"
+)
+KEY = "ab2026_mock_alpha"
+
+
 def _flat_snapshot(world):
-    key = "ab2026_mock_alpha"
-    reference = world.ready(key, {2027: -1.0})
+    """An approved measure, its saved manifest, and an OBR file to bind.
+
+    budgetary_impact.csv is copied to the root as well, as the flat
+    pipeline leaves it: no view reads it, so the index never binds it.
+    """
+    reference = world.ready(KEY, {2027: -1.0})
     manifest = m.Manifest()
     args = {"data_root": world.data_root, "inputs": world.inputs}
     stage(manifest, reference.path, **args)
-    approve(manifest, key, "Reviewer", **args)
+    approve(manifest, KEY, "Reviewer", **args)
     m.save_manifest(manifest, world.data_root)
     shutil.copyfile(
         reference.path / "budgetary_impact.csv",
         world.data_root / "budgetary_impact.csv",
     )
+    # The flat pipeline's own combined run is no manifest key: allowed
+    (world.data_root / "obr_comparison.csv").write_text(
+        OBR_HEADER
+        + f"{KEY},Alpha,2027,-1.0,-1.1,-1.2\n"
+        + "autumn_budget_2026_combined,Package,2027,-1.0,,\n"
+    )
     return manifest, args
 
 
 def _build_index_problems(world):
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed (CI has it)")
     result = subprocess.run(
         [
-            shutil.which("bun"),
+            node,
+            "--input-type=module",
             "-e",
             'import { checkReleaseIndex } from "./scripts/check-public-files.mjs"; console.log(JSON.stringify(checkReleaseIndex(process.argv[1])));',
             str(world.root),
@@ -296,7 +402,18 @@ def _build_index_problems(world):
     return json.loads(result.stdout)
 
 
-def test_release_index_binds_manifest_revision_and_every_csv_byte(world):
+def test_flat_view_files_are_the_same_in_python_and_the_build_check():
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "check-public-files.mjs"
+    ).read_text()
+    match = re.search(r"FLAT_VIEW_FILES = \[([^\]]*)\]", script)
+    assert match is not None
+    assert tuple(re.findall(r'"([^"]+)"', match.group(1))) == FLAT_VIEW_FILES
+
+
+def test_release_index_binds_the_manifest_and_only_the_flat_view_files(world):
     manifest, args = _flat_snapshot(world)
     revision = manifest.revision
     write_release_index(manifest, **args)
@@ -305,13 +422,17 @@ def test_release_index_binds_manifest_revision_and_every_csv_byte(world):
     assert index["release"] == m.CURRENT_RELEASE
     assert index["budget"] == m.CURRENT_BUDGET
     assert index["files"] == manifest.flat_files
-    assert set(index["files"]) == {"budgetary_impact.csv"}
+    assert set(index["files"]) == {"obr_comparison.csv"}
+    saved = m.manifest_path(world.data_root).read_bytes()
+    assert index["manifest_sha256"] == sha256_bytes(saved)
+    assert json.loads(saved)["flat_files"] == index["files"]
     assert check(manifest, **args) == []
     assert _build_index_problems(world) == []
 
 
-def test_review_rows_signs_the_bound_index_and_national_flat_tables(world):
+def test_review_rows_signs_the_bound_index_and_view_files(world):
     manifest, args = _flat_snapshot(world)
+    (world.data_root / "budgetary_impact.csv").unlink()
     write_release_index(manifest, **args)
     for entry in manifest.entries().values():
         (world.data_root / entry.artifact / "reconciliation.json").unlink(
@@ -325,67 +446,114 @@ def test_review_rows_signs_the_bound_index_and_national_flat_tables(world):
         reviewer="Reviewer", data_root=world.data_root, review_csv=review_csv
     )
     assert "public/data/release-index.json" in report.added
-    assert "public/data/budgetary_impact.csv" in report.added
+    assert "public/data/obr_comparison.csv" in report.added
     assert not report.unreviewed
 
 
 @pytest.mark.parametrize(
-    "mutation", ["csv", "revision", "output_digest", "unbound_csv"]
+    "mutation",
+    ["csv", "revision", "output_digest", "unbound_view_file", "unread_file"],
 )
 def test_publication_and_public_file_gates_refuse_mixed_snapshots(
     world, mutation
 ):
     manifest, args = _flat_snapshot(world)
     write_release_index(manifest, **args)
+    path = m.manifest_path(world.data_root)
+    raw = json.loads(path.read_bytes())
     if mutation == "csv":
-        path = world.data_root / "budgetary_impact.csv"
-        path.write_text(path.read_text().replace("-1.0", "-2.0"))
-    elif mutation == "unbound_csv":
-        (world.data_root / "age_impact.csv").write_text("reform_id,year\n")
+        obr = world.data_root / "obr_comparison.csv"
+        obr.write_text(obr.read_text().replace("-1.1", "-2.1"))
+    elif mutation == "unbound_view_file":
+        (world.data_root / "regional.csv").write_text("reform,year\n")
+    elif mutation == "unread_file":
+        index_path = world.data_root / INDEX_FILE
+        index = json.loads(index_path.read_bytes())
+        digest = sha256_bytes(
+            (world.data_root / "budgetary_impact.csv").read_bytes()
+        )
+        index["files"]["budgetary_impact.csv"] = digest
+        raw["flat_files"]["budgetary_impact.csv"] = digest
+        path.write_text(json.dumps(raw))
+        index["manifest_sha256"] = sha256_bytes(path.read_bytes())
+        index_path.write_text(json.dumps(index))
     else:
-        path = m.manifest_path(world.data_root)
-        raw = json.loads(path.read_bytes())
         if mutation == "revision":
             raw["revision"] += 1
         else:
-            raw["measures"]["ab2026_mock_alpha"]["outputs_sha256"] = "f" * 64
+            raw["measures"][KEY]["outputs_sha256"] = "f" * 64
         path.write_text(json.dumps(raw))
-    assert release_index_problems(world.data_root, manifest)
-    assert check(manifest, **args)
+    reloaded = m.load_manifest(world.data_root)
+    assert release_index_problems(world.data_root, reloaded)
+    assert check(reloaded, **args)
     assert _build_index_problems(world)
 
 
-def test_index_writer_refuses_stale_flat_figures_even_after_new_approval(
-    world,
+def test_a_later_approval_makes_the_index_stale_until_reindexed(world):
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    m.save_manifest(manifest, world.data_root)  # e.g. a later stage or approve
+    assert "release index: manifest revision differs" in check(
+        manifest, **args
+    )
+    assert _build_index_problems(world)
+    write_release_index(manifest, **args)
+    assert check(manifest, **args) == []
+    assert _build_index_problems(world) == []
+
+
+@pytest.mark.parametrize("status", [m.STAGED, m.WITHDRAWN, m.STALE])
+def test_index_writer_refuses_a_view_file_with_a_held_entrys_figures(
+    world, status
 ):
     from uk_budget_data.publication.publish import PublishError
 
     manifest, args = _flat_snapshot(world)
     before = m.manifest_path(world.data_root).read_bytes()
-    path = world.data_root / "budgetary_impact.csv"
-    path.write_text(path.read_text().replace("-1.0", "-2.0"))
-    with pytest.raises(
-        PublishError, match="rows differ from approved artifact"
-    ):
+    manifest.measures[KEY].status = status
+    with pytest.raises(PublishError, match=f"which is {status}"):
         write_release_index(manifest, **args)
     assert m.manifest_path(world.data_root).read_bytes() == before
     assert not (world.data_root / INDEX_FILE).exists()
 
 
-@pytest.mark.parametrize("year,held", [(2026, False), (2027, True)])
-def test_index_writer_refuses_unsupported_years_and_held_entries(
-    world, year, held
-):
+def test_index_writer_needs_a_view_file_and_a_saved_current_manifest(world):
     from uk_budget_data.publication.publish import PublishError
 
     manifest, args = _flat_snapshot(world)
-    if held:
-        manifest.measures["ab2026_mock_alpha"].status = m.STAGED
-    path = world.data_root / "budgetary_impact.csv"
-    path.write_text(path.read_text().replace("2027", str(year)))
-    with pytest.raises(
-        PublishError,
-        match="unsupported year|absent from the displayable manifest",
-    ):
+    (world.data_root / "obr_comparison.csv").unlink()
+    with pytest.raises(PublishError, match="no flat view file to bind"):
+        write_release_index(manifest, **args)
+    manifest, args = _flat_snapshot(world)
+    path = m.manifest_path(world.data_root)
+    raw = json.loads(path.read_bytes())
+    del raw["release"]
+    path.write_text(json.dumps(raw))
+    with pytest.raises(PublishError, match="current 2026 Budget"):
         write_release_index(manifest, **args)
     assert not (world.data_root / INDEX_FILE).exists()
+
+
+@pytest.mark.parametrize(
+    "identity",
+    [
+        {"release": None},
+        {"budget": None},
+        {"release": "uk-autumn-budget-2025"},
+        {"budget": {"id": "uk-autumn-budget-2026", "date": "2025-11-26"}},
+    ],
+)
+def test_every_gate_reads_the_manifest_files_own_identity(world, identity):
+    """The model fills a missing identity; the page reads the file."""
+    manifest, args = _flat_snapshot(world)
+    path = m.manifest_path(world.data_root)
+    raw = json.loads(path.read_bytes())
+    for field, value in identity.items():
+        if value is None:
+            del raw[field]
+        else:
+            raw[field] = value
+    path.write_text(json.dumps(raw))
+    assert manifest_identity_problems(world.data_root)
+    assert check(manifest, **args)
+    assert _build_index_problems(world)

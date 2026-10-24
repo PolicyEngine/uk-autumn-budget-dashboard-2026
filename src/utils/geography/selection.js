@@ -6,8 +6,10 @@
  * measure's figure to another's could narrow a withheld one. So:
  *
  * - one measure selected: that measure's reform;
- * - every measure selected: the package, the one `_combined` reform in
- *   the published data;
+ * - every measure selected: the package. The page names it: the combined
+ *   run of exactly the displayable measures in the approved manifest
+ *   (`packageId`). Without that name, the one `_combined` reform in the
+ *   published data;
  * - anything else: nothing, and the page asks for one measure or all.
  */
 
@@ -21,8 +23,10 @@ export const packageReforms = (reforms) =>
 
 /**
  * @param {{selectedIds: Array<string>, policyIds: Array<string>,
- *   reforms: Iterable<string>}} options - The selected measure ids, every
- *   measure the page offers, and the reforms the published data carries.
+ *   reforms: Iterable<string>, packageId?: string|null}} options - The
+ *   selected measure ids, every measure the page offers, the reforms the
+ *   published data carries, and the package's id (null when no package is
+ *   published; omitted only outside the page).
  * @returns {{kind: "none"}
  *   | {kind: "measure", reform: string}
  *   | {kind: "package", reform: string}
@@ -31,7 +35,7 @@ export const packageReforms = (reforms) =>
  *   selected; `no-package` when all are, but the data has no single
  *   package reform.
  */
-export function chooseReform({ selectedIds, policyIds, reforms }) {
+export function chooseReform({ selectedIds, policyIds, reforms, packageId }) {
   const selected = new Set(selectedIds ?? []);
   if (selected.size === 0) return { kind: "none" };
   if (selected.size === 1) return { kind: "measure", reform: [...selected][0] };
@@ -39,7 +43,9 @@ export function chooseReform({ selectedIds, policyIds, reforms }) {
   const everyMeasure =
     selected.size === all.size && [...selected].every((id) => all.has(id));
   if (!everyMeasure) return { kind: "pick" };
-  const packages = packageReforms(reforms);
+  const packages = packageId === undefined
+    ? packageReforms(reforms)
+    : packageId !== null && [...(reforms ?? [])].includes(packageId) ? [packageId] : [];
   // Two package reforms would leave the page guessing which one is this
   // selection's, so it shows neither.
   if (packages.length !== 1) return { kind: "no-package" };
