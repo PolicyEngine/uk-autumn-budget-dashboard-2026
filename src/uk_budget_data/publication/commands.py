@@ -311,9 +311,12 @@ def run_review_rows(parsed: argparse.Namespace, out=print) -> int:
 
 
 def run_generate_artifacts(
-    parsed, config, reforms, get_reform, out=print
+    parsed, config, reforms, get_reform, out=print, runner=None
 ) -> int:
-    """Run ``generate --artifacts``. Returns the process exit code."""
+    """Run ``generate --artifacts``. Returns the process exit code.
+
+    ``runner`` runs the artifacts (see ``generate_artifacts``); one after
+    another by default."""
     from uk_budget_data.publication.generate import generate_artifacts
 
     combined_sets = []
@@ -331,6 +334,7 @@ def run_generate_artifacts(
         artifacts_root=parsed.artifacts_root,
         generator_argv=sys.argv,
         on_progress=out,
+        runner=runner,
     )
     out(
         f"{len(report.written)} artifacts written, "
