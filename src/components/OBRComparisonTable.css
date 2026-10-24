@@ -228,41 +228,7 @@
   margin-left: auto;
 }
 
-.obr-view-switch {
-  display: inline-flex;
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  overflow: hidden;
-}
-
-.obr-view-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  /* With the switch's 1px border, as tall as the 36px OBR basis pill */
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  background: transparent;
-  color: var(--pe-gray-600);
-  font: inherit;
-  font-size: var(--fs-small);
-  cursor: pointer;
-}
-
-.obr-view-option + .obr-view-option {
-  border-left: 1px solid var(--card-border);
-}
-
-.obr-view-option[aria-pressed="true"] {
-  background: var(--band-teal);
-  color: #fff;
-}
-
-.obr-view-option:focus-visible {
-  outline: 2px solid var(--band-teal);
-  outline-offset: -2px;
-}
+/* .obr-view-switch and .obr-view-option live in ViewSwitch.css */
 
 .comparison-table-wrapper[hidden],
 .comparison-legend[hidden] {

@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
+import ViewSwitch, { ListIcon, MapIcon } from "./ViewSwitch";
+import ConstituencyRankings, { TABLE_SIZE } from "./ConstituencyRankings";
+import {
+  APPROXIMATE_MARK,
+  APPROXIMATE_NOTE,
+  isApproximate,
+} from "./ConstituencyRankingTable";
+import {
+  buildRankingCsv,
+  rankConstituencies,
+  rankingEntries,
+  selectTopAndBottom,
+} from "../utils/constituencyRanking";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { useConstituencyView } from "../hooks/useConstituencyView";
 import { CHART_LOGO } from "../utils/chartLogo";
@@ -50,6 +63,43 @@ import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 
 const CHART_TITLE = "Constituency-level impacts";
+
+// The card's two views, and the URL parameter that opens the second.
+const PANELS = ["map", "rankings"];
+const PANEL_PARAM = "map";
+const PANEL_OPTIONS = [
+  { value: "map", label: "Map", icon: <MapIcon /> },
+  { value: "rankings", label: "Rankings", icon: <ListIcon /> },
+];
+
+// Excel reads a CSV as UTF-8 only with a byte-order mark ("Ynys Môn").
+const UTF8_BOM = "\uFEFF";
+
+// Drill builds set NEXT_PUBLIC_MOCK=1; their numbers must never read as real.
+const isMockBuild = () => process.env.NEXT_PUBLIC_MOCK === "1";
+
+/**
+ * The card's view, kept in the URL as ?map=rankings (the map, the default,
+ * leaves the URL alone), as the sub-tabs keep theirs.
+ */
+function usePanelParam() {
+  const [panel, setPanel] = useState(() => {
+    if (typeof window === "undefined") return PANELS[0];
+    const value = new URLSearchParams(window.location.search).get(PANEL_PARAM);
+    return PANELS.includes(value) ? value : PANELS[0];
+  });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (panel === PANELS[0]) params.delete(PANEL_PARAM);
+    else params.set(PANEL_PARAM, panel);
+    const search = params.toString();
+    const url = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState({}, "", url);
+    }
+  }, [panel]);
+  return [panel, setPanel];
+}
 
 /** CSV text of every constituency's published row for a reform and year. */
 function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, label, names }) {
@@ -259,6 +309,7 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
+  const [panel, setPanel] = usePanelParam();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
@@ -268,7 +319,8 @@ export default function ConstituencyMap({
   const selectedRef = useRef(null);
   const statesRef = useRef(null);
 
-  // The rankings under the map read the same state (useConstituencyView).
+  // The map and the rankings read one state (useConstituencyView), so they
+  // have figures together, from the same rows, under the same gate.
   const {
     view,
     choice,
@@ -297,6 +349,20 @@ export default function ConstituencyMap({
         : null,
     [features, constituencyTable, reform, selectedYear, outcome],
   );
+
+  // The Rankings view: every seat's figures for the reform and year, ranked
+  // by the outcome the map shows.
+  const metric = outcome === "average_change" ? "gbp" : "pct";
+  const rankingEntriesForView = useMemo(
+    () => rankingEntries(features, constituencyTable, { reform, year: selectedYear }),
+    [features, constituencyTable, reform, selectedYear],
+  );
+  const rankingShown = useMemo(() => {
+    const ranked = rankConstituencies(rankingEntriesForView, metric);
+    const { top, bottom } = selectTopAndBottom(ranked, TABLE_SIZE);
+    return [...top, ...bottom];
+  }, [rankingEntriesForView, metric]);
+  const rankingsReady = Boolean(reform) && rankingShown.length > 0;
 
   const featuresByCode = useMemo(
     () => new Map((features ?? []).map((feature) => [seatCode(feature), feature])),
@@ -551,7 +617,7 @@ export default function ConstituencyMap({
       );
     }
   };
-  const downloads = {
+  const mapDownloads = {
     csv: handleExportCsv,
     png: async () => {
       if (!svgNode) return;
@@ -559,6 +625,35 @@ export default function ConstituencyMap({
     },
     svg: handleExportSvg,
   };
+  // The Rankings view's CSV: every constituency on the map, ranked.
+  const handleExportRankings = () => {
+    const mock = isMockBuild();
+    const text = buildRankingCsv(rankingEntriesForView, {
+      metric,
+      year: selectedYear,
+      yearLabel,
+      measures: choiceMeasureNames(choice, policies),
+      mock,
+    });
+    downloadFile(
+      `${UTF8_BOM}${text}`,
+      `${mock ? "MOCK-" : ""}constituency-rankings-${reform}-${selectedYear}-by-${metric}.csv`,
+      "text/csv;charset=utf-8",
+    );
+  };
+  const onMap = panel === "map";
+  const downloadsReady = onMap ? view.kind === "rows" : rankingsReady;
+  const downloads = onMap ? mapDownloads : { csv: handleExportRankings };
+  const notice =
+    view.kind === "notice" ? (
+      <UnavailableNotice reason={view.reason}>
+        {regionalHasChoice && showRegionLink && (
+          <p>
+            <a href={`#${REGION_VIEW_ID}`}>See the results by region.</a>
+          </p>
+        )}
+      </UnavailableNotice>
+    ) : null;
 
   return (
     <div className="constituency-map-wrapper">
@@ -569,18 +664,26 @@ export default function ConstituencyMap({
               {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
             </h3>
             <p className="chart-description">
-              The average change in household net income in each constituency.
-              {!notRouted && (
+              {notRouted ? (
+                "The average change in household net income in each constituency."
+              ) : onMap ? (
                 <>
-                  {" "}
-                  Each one is coloured by the size of its change when its 90%
-                  interval is narrow enough to tell.
+                  The average change in household net income in each
+                  constituency. Each one is coloured by the size of its change
+                  when its 90% interval is narrow enough to tell.
+                </>
+              ) : (
+                <>
+                  The {TABLE_SIZE} constituencies with the largest gains and
+                  the {TABLE_SIZE} with the largest losses, ranked by{" "}
+                  {OUTCOME_LABELS[outcome]}.
                 </>
               )}
             </p>
           </div>
-          {view.kind === "rows" ? (
+          {downloadsReady ? (
             <ChartDownloadMenu
+              key={panel}
               formats={downloads}
               chartTitle={`${CHART_TITLE}, ${yearLabel}`}
             />
@@ -597,14 +700,42 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
-        {view.kind === "rows" ? (
-          <div className="map-top-bar">
-            <div className="map-search-section">
-              <label className="map-search-label" htmlFor="constituency-search">
-                Search constituency
-              </label>
-              <div className="search-container">
+        <div className="map-top-bar">
+          <ViewSwitch
+            label="Show constituencies as"
+            options={PANEL_OPTIONS}
+            value={panel}
+            onChange={setPanel}
+          />
+          {view.kind === "rows" &&
+            (onMap ? (
+              <OutcomeToggle value={outcome} onChange={setOutcome} />
+            ) : (
+              <OutcomeToggle
+                value={outcome}
+                onChange={setOutcome}
+                label="Rank by"
+                prefix="Rank by"
+              />
+            ))}
+        </div>
+      </div>
+
+      <div className="chart-plot constituency-body">
+        {view.kind === "loading" && (
+          <p className="constituency-loading">Loading map…</p>
+        )}
+
+        {/* The map view: the search box, then the map */}
+        {onMap && view.kind !== "loading" && (
+          <div className="map-search-section">
+            <label className="map-search-label" htmlFor="constituency-search">
+              Search constituency
+            </label>
+            <div className="search-container">
+              {view.kind === "rows" ? (
                 <input
+                  key="search"
                   id="constituency-search"
                   type="text"
                   value={searchQuery}
@@ -613,67 +744,62 @@ export default function ConstituencyMap({
                   className="constituency-search"
                   autoComplete="off"
                 />
-                {searchResults.length > 0 && (
-                  <div className="search-results">
-                    {searchResults.map((result) => (
-                      <button
-                        key={result.code}
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery("");
-                          selectSeat(result.code);
-                        }}
-                        className="search-result-item"
-                      >
-                        <div className="result-name">{result.name}</div>
-                        <div className="result-value">{result.summary}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <OutcomeToggle value={outcome} onChange={setOutcome} />
-          </div>
-        ) : (
-          <div className="map-top-bar">
-            <div className="map-search-section">
-              <label className="map-search-label" htmlFor="constituency-search">
-                Search constituency
-              </label>
-              <div className="search-container">
+              ) : (
                 <input
+                  key="search-disabled"
                   id="constituency-search"
                   type="text"
                   placeholder="Search or select a constituency"
                   className="constituency-search"
                   disabled
                 />
-              </div>
+              )}
+              {view.kind === "rows" && searchResults.length > 0 && (
+                <div className="search-results">
+                  {searchResults.map((result) => (
+                    <button
+                      key={result.code}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery("");
+                        selectSeat(result.code);
+                      }}
+                      className="search-result-item"
+                    >
+                      <div className="result-name">{result.name}</div>
+                      <div className="result-value">{result.summary}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
-      </div>
-
-      <div className="chart-plot">
-        {view.kind === "loading" && (
-          <p className="constituency-loading">Loading map…</p>
+        {/* The one notice, over whichever view is shown */}
+        {view.kind === "notice" && onMap && (
+          <MapTemplate features={boundariesReady ? features : null}>{notice}</MapTemplate>
         )}
 
-        {view.kind === "notice" && (
-          <MapTemplate features={boundariesReady ? features : null}>
-            <UnavailableNotice reason={view.reason}>
-              {regionalHasChoice && showRegionLink && (
-                <p>
-                  <a href={`#${REGION_VIEW_ID}`}>See the results by region.</a>
-                </p>
-              )}
-            </UnavailableNotice>
-          </MapTemplate>
+        {!onMap && view.kind !== "loading" && (
+          <div className="rankings-panel">
+            <ConstituencyRankings
+              entries={view.kind === "rows" ? rankingEntriesForView : []}
+              metric={metric}
+              outcome={outcome}
+              yearLabel={yearLabel}
+            />
+            {notice && <div className="map-template-overlay">{notice}</div>}
+            {rankingsReady && rankingShown.some(isApproximate) && (
+              <p className="rankings-note">
+                {APPROXIMATE_MARK} {APPROXIMATE_NOTE}
+              </p>
+            )}
+          </div>
         )}
 
+        {/* Kept mounted in the Rankings view, so the map keeps its zoom */}
         {view.kind === "rows" && (
-          <div className="map-content">
+          <div className="map-content" hidden={!onMap}>
             <div className="map-canvas">
               <svg
                 ref={setSvgNode}
@@ -764,11 +890,17 @@ export default function ConstituencyMap({
       </div>
 
       <div className="chart-legend">
-        {view.kind !== "rows" && <MapScalePlaceholder />}
+        {/* Kept, unseen, in the Rankings view, so the card keeps its height */}
+        {view.kind !== "rows" && (
+          <div style={{ visibility: onMap ? "visible" : "hidden" }}>
+            <MapScalePlaceholder />
+          </div>
+        )}
       </div>
 
       <div className="chart-logo">
-        {view.kind !== "rows" && (
+        {/* The drawn map carries its own logo */}
+        {!(onMap && view.kind === "rows") && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={CHART_LOGO.href} alt="PolicyEngine" />
         )}

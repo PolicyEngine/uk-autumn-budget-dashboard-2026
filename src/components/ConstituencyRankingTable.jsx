@@ -34,34 +34,37 @@ function Figure({ row, outcome }) {
  */
 export default function ConstituencyRankingTable({ position, rows, metric, tie, size }) {
   const sort = position === "top" ? "descending" : "ascending";
-  const sortFor = (key) => (rows.length && metric === key ? sort : undefined);
-  const ranked = (key) => (rows.length && metric === key ? "ranked" : "");
+  const { outcome } = RANK_METRICS[metric];
   const heading = position === "top" ? "Top" : "Bottom";
+  const unit = metric === "gbp" ? "£" : "%";
 
+  // Half a card wide, so one figure: the one ranked by. The CSV has both.
   return (
     <div className="ranking-table-wrapper">
       <h4>
         {heading} {rows.length || size}
+        {rows.length > 0 && (
+          <span className="ranking-table-kind">
+            : {describeList(rows, metric, position).toLowerCase()}
+          </span>
+        )}
       </h4>
       <table className="ranking-table">
         {rows.length > 0 && (
-          <caption>
-            {describeList(rows, metric, position)} (
-            {OUTCOME_LABELS[RANK_METRICS[metric].outcome]})
+          <caption className="visually-hidden">
+            {describeList(rows, metric, position)} ({OUTCOME_LABELS[outcome]})
           </caption>
         )}
         <thead>
           <tr>
             <th scope="col">Rank</th>
             <th scope="col">Constituency</th>
-            <th scope="col" className="col-region">
-              Region or country
-            </th>
-            <th scope="col" className={`number ${ranked("gbp")}`} aria-sort={sortFor("gbp")}>
-              Change (£)
-            </th>
-            <th scope="col" className={`number ${ranked("pct")}`} aria-sort={sortFor("pct")}>
-              Change (%)
+            <th
+              scope="col"
+              className="number"
+              aria-sort={rows.length ? sort : undefined}
+            >
+              Change ({unit})
             </th>
           </tr>
         </thead>
@@ -69,7 +72,7 @@ export default function ConstituencyRankingTable({ position, rows, metric, tie, 
           {rows.length === 0 &&
             Array.from({ length: size }, (_, index) => (
               <tr key={index} className="ranking-placeholder-row" aria-hidden="true">
-                <td colSpan={5}>
+                <td colSpan={3}>
                   <span className="ranking-placeholder-bar" />
                 </td>
               </tr>
@@ -87,18 +90,14 @@ export default function ConstituencyRankingTable({ position, rows, metric, tie, 
               </td>
               <th scope="row">
                 {row.constituency_name}
-                {/* Narrow screens drop the region column and show it here */}
+                {/* The region or country, under the name */}
                 <span className="region-inline">
                   <span className="visually-hidden">, </span>
                   {row.region}
                 </span>
               </th>
-              <td className="col-region">{row.region}</td>
-              <td className={`number ${ranked("gbp")}`}>
-                <Figure row={row.rows.average_change} outcome="average_change" />
-              </td>
-              <td className={`number ${ranked("pct")}`}>
-                <Figure row={row.rows.relative_change} outcome="relative_change" />
+              <td className="number">
+                <Figure row={row.rows[outcome]} outcome={outcome} />
               </td>
             </tr>
           ))}

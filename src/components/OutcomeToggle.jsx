@@ -8,12 +8,17 @@ const OPTIONS = ["relative_change", "average_change"];
  * Switches results by area between % of income and £ per household: the
  * light in-card pill, like every other in-card switch.
  */
-function OutcomeToggle({ value, onChange, label = "Show the change as" }) {
+function OutcomeToggle({
+  value,
+  onChange,
+  label = "Show the change as",
+  prefix = "Show as",
+}) {
   return (
     <PillSelect
       variant="light"
       name={label}
-      prefix="Show as"
+      prefix={prefix}
       value={value}
       onChange={onChange}
       options={OPTIONS.map((outcome) => ({

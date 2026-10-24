@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
-import ConstituencyRankings from "./ConstituencyRankings";
 import { downloadFile } from "../utils/downloadFile";
 import { parseCsv } from "../utils/publication/csv";
 import { RANKING_CSV_COLUMNS } from "../utils/constituencyRanking";
@@ -28,6 +27,7 @@ const FIGURES = /[+-]£|[+-][\d.]+%/;
 
 beforeEach(() => {
   resetGeographyCache();
+  window.history.replaceState({}, "", "/");
   vi.stubGlobal("fetch", geographyFetch());
 });
 afterEach(() => {
@@ -36,15 +36,12 @@ afterEach(() => {
   vi.mocked(downloadFile).mockClear();
 });
 
-const renderRankings = (props = {}) =>
-  render(
-    <ConstituencyRankings
-      selectedPolicies={ALL}
-      selectedYear={2029}
-      policies={POLICIES}
-      {...props}
-    />,
-  );
+const renderCard = () =>
+  render(<ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
+
+const switchButton = (name) => screen.getByRole("button", { name, exact: true });
+
+const showRankings = () => fireEvent.click(switchButton("Rankings"));
 
 const bodyRows = (table) =>
   within(table)
@@ -52,11 +49,79 @@ const bodyRows = (table) =>
     .slice(1)
     .map((row) => within(row).getByRole("rowheader").firstChild.textContent);
 
-describe("ConstituencyRankings", () => {
+async function renderRankings() {
+  const utils = renderCard();
+  // Wait for the map's rows, then switch
+  await waitFor(() =>
+    expect(utils.container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
+  );
+  showRankings();
+  return utils;
+}
+
+describe("The map card's Map / Rankings switch", () => {
+  it("is a group of two pressed buttons, Map first", () => {
+    renderCard();
+    const group = screen.getByRole("group", { name: "Show constituencies as" });
+    const buttons = within(group).getAllByRole("button");
+    expect(buttons.map((button) => button.textContent)).toEqual(["Map", "Rankings"]);
+    expect(switchButton("Map")).toHaveAttribute("aria-pressed", "true");
+    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "false");
+    // Real buttons: Tab reaches them, Enter and Space press them.
+    buttons.forEach((button) => {
+      expect(button.tagName).toBe("BUTTON");
+      button.focus();
+      expect(button).toHaveFocus();
+    });
+  });
+
+  it("switches the description, the controls and the body, and keeps one title", async () => {
+    const { container } = await renderRankings();
+    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "true");
+    expect(switchButton("Map")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent(
+      "Constituency-level impacts, 2029-30",
+    );
+    expect(
+      screen.getByText(
+        /The 10 constituencies with the largest gains and the 10 with the largest losses, ranked by % of income/,
+      ),
+    ).toBeInTheDocument();
+    // Search is the map's; Rank by is the rankings'.
+    expect(screen.queryByLabelText("Search constituency")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Rank by/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Show the change as/ })).toBeNull();
+    // The map stays mounted, hidden, so it keeps its zoom.
+    expect(container.querySelector(".map-content")).toHaveAttribute("hidden");
+
+    fireEvent.click(switchButton("Map"));
+    expect(screen.getByLabelText("Search constituency")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Rank by/ })).toBeNull();
+    expect(container.querySelector(".map-content")).not.toHaveAttribute("hidden");
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("keeps the view in the URL as ?map=rankings, and opens on it", async () => {
+    window.history.replaceState({}, "", "/?policies=a&tab=x");
+    const { unmount } = await renderRankings();
+    expect(new URLSearchParams(window.location.search).get("map")).toBe("rankings");
+    expect(new URLSearchParams(window.location.search).get("policies")).toBe("a");
+    fireEvent.click(switchButton("Map"));
+    expect(new URLSearchParams(window.location.search).has("map")).toBe(false);
+    unmount();
+
+    window.history.replaceState({}, "", "/?map=rankings");
+    renderCard();
+    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("table", { name: /Highest average change/ })).toBeInTheDocument();
+  });
+});
+
+describe("The Rankings view", () => {
   it("ranks the seats with a published figure, by % of income first", async () => {
-    renderRankings();
+    await renderRankings();
     const table = await screen.findByRole("table");
-    // Westmoor is withheld and Z14000006 has no row: neither is ranked.
+    // Westmoor is withheld and Lough Side has no row: neither is ranked.
     expect(bodyRows(table)).toEqual([
       "Northfield East",
       "Harbour, Mill and Quay",
@@ -66,30 +131,38 @@ describe("ConstituencyRankings", () => {
       "Glen Ardoch",
     ]);
     expect(within(table).getByText("+1.12%")).toBeInTheDocument();
-    expect(within(table).getByText("+£310")).toBeInTheDocument();
     expect(within(table).getAllByText("North East").length).toBeGreaterThan(0);
-    // The approximate seat is marked, and the mark explained once.
-    expect(screen.getByText(/few survey households, so the interval understates/)).toBeInTheDocument();
-  });
-
-  it("re-ranks by £ per household", async () => {
-    renderRankings();
-    await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: /Rank by/ }));
-    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
-    const table = screen.getByRole("table");
-    expect(within(table).getByRole("columnheader", { name: "Change (£)" })).toHaveAttribute(
+    expect(within(table).getByRole("columnheader", { name: "Change (%)" })).toHaveAttribute(
       "aria-sort",
       "descending",
     );
-    expect(bodyRows(table)[0]).toBe("Northfield East");
+    // The approximate seat is marked, and the mark explained once.
+    expect(
+      screen.getByText(/few survey households, so the interval understates/),
+    ).toBeInTheDocument();
+  });
+
+  it("re-ranks by £ per household, and the map follows", async () => {
+    await renderRankings();
+    fireEvent.click(screen.getByRole("button", { name: /Rank by/ }));
+    fireEvent.click(screen.getByRole("option", { name: /£ per household/ }));
+    const table = screen.getByRole("table");
+    expect(within(table).getByRole("columnheader", { name: "Change (£)" })).toBeInTheDocument();
+    expect(within(table).getByText("+£310")).toBeInTheDocument();
     expect(bodyRows(table).at(-1)).toBe("Glen Ardoch");
+    fireEvent.click(switchButton("Map"));
+    expect(screen.getByRole("button", { name: /Show the change as/ })).toHaveTextContent(
+      "£ per household",
+    );
   });
 
   it("downloads every constituency on the map as CSV, the unranked ones last", async () => {
-    renderRankings();
-    await screen.findByRole("table");
-    fireEvent.click(screen.getByRole("button", { name: /Download all 8 constituencies/ }));
+    await renderRankings();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }),
+    );
+    // The rankings' download is the CSV alone
+    expect(screen.queryByRole("button", { name: /^PNG/ })).toBeNull();
     fireEvent.click(await screen.findByRole("button", { name: /^CSV/ }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [text, name] = vi.mocked(downloadFile).mock.calls[0];
@@ -114,58 +187,58 @@ describe("ConstituencyRankings", () => {
   });
 });
 
-describe("ConstituencyRankings with the map: one gate, one notice", () => {
-  const renderBoth = () =>
-    render(
-      <>
-        <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />
-        <ConstituencyRankings selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />
-      </>,
-    );
-
+describe("Unpublished: one gate, one notice, in either view", () => {
   const expectEmptyRankings = (container) => {
-    const card = container.querySelector(".constituency-rankings");
-    expect(card).not.toBeNull();
-    expect(within(card).queryByRole("status")).toBeNull();
-    expect(card.textContent).not.toMatch(FIGURES);
-    expect(card.querySelectorAll("tbody th")).toHaveLength(0);
-    expect(within(card).getByRole("button", { name: /Download chart/ })).toBeDisabled();
-    expect(within(card).queryByRole("button", { name: /Rank by/ })).toBeNull();
+    const panel = container.querySelector(".rankings-panel");
+    expect(panel).not.toBeNull();
+    expect(panel.textContent).not.toMatch(FIGURES);
+    expect(panel.querySelectorAll("tbody th")).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: /Download chart: Constituency-level impacts/ }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Rank by/ })).toBeNull();
   };
 
   it.each([
-    ["the release routes no results by area", { [AREA_ROUTING_URL]: areaRouting("not_available") }, "Results by constituency are not available on this release."],
-    ["the routing can't be read", { [AREA_ROUTING_URL]: 404 }, "Results by constituency could not be loaded."],
-    ["no constituency file is published", { "/data/constituency.csv": 404 }, "Results by constituency are not yet published."],
-  ])("shows no rankings, and the map's notice alone, when %s", async (_, overrides, notice) => {
-    vi.stubGlobal("fetch", geographyFetch(overrides));
-    const { container } = renderBoth();
-    expect(await screen.findByText(notice)).toBeInTheDocument();
-    expect(screen.getAllByRole("status")).toHaveLength(1);
-    expectEmptyRankings(container);
-  });
+    [
+      "the release routes no results by area",
+      { [AREA_ROUTING_URL]: areaRouting("not_available") },
+      "Results by constituency are not available on this release.",
+    ],
+    [
+      "the routing can't be read",
+      { [AREA_ROUTING_URL]: 404 },
+      "Results by constituency could not be loaded.",
+    ],
+    [
+      "no constituency file is published",
+      { "/data/constituency.csv": 404 },
+      "Results by constituency are not yet published.",
+    ],
+  ])(
+    "shows the same single notice on the map and the rankings when %s",
+    async (_, overrides, notice) => {
+      vi.stubGlobal("fetch", geographyFetch(overrides));
+      const { container } = renderCard();
+      expect(await screen.findByText(notice)).toBeInTheDocument();
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+      showRankings();
+      expect(screen.getByText(notice)).toBeInTheDocument();
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+      expectEmptyRankings(container);
+    },
+  );
 
   it("requests no constituency file the build does not publish", async () => {
     vi.stubEnv("NEXT_PUBLIC_PUBLISHED_GEOGRAPHY", "regional.csv");
     const fetchImpl = geographyFetch();
     vi.stubGlobal("fetch", fetchImpl);
-    const { container } = renderBoth();
-    expect(await screen.findByText("Results by constituency are not yet published.")).toBeInTheDocument();
+    const { container } = renderCard();
+    expect(
+      await screen.findByText("Results by constituency are not yet published."),
+    ).toBeInTheDocument();
+    showRankings();
     expect(fetchImpl.calls).not.toContain("/data/constituency.csv");
     expectEmptyRankings(container);
-  });
-
-  it("ranks exactly the seats the map draws", async () => {
-    const { container } = renderBoth();
-    await screen.findByRole("table");
-    await waitFor(() =>
-      expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
-    );
-    const drawn = [...container.querySelectorAll("path.constituency-path")]
-      .filter((path) => ["reported", "approximate"].includes(path.getAttribute("data-state")))
-      .map((path) => path.getAttribute("data-code"))
-      .sort();
-    expect(drawn).toHaveLength(6);
-    expect(container.querySelectorAll(".constituency-rankings tbody tr")).toHaveLength(6);
   });
 });

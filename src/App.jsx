@@ -6,7 +6,6 @@ import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
 import WaterfallChart from "./components/WaterfallChart";
 import ConstituencyMap from "./components/ConstituencyMap";
-import ConstituencyRankings from "./components/ConstituencyRankings";
 import EmploymentIncomeChart from "./components/EmploymentIncomeChart";
 import EmploymentIncomeDiffChart from "./components/EmploymentIncomeDiffChart";
 import OBRComparisonTable from "./components/OBRComparisonTable";
@@ -730,22 +729,6 @@ function App() {
                         selectedPolicies={selectedPolicies}
                         policies={POLICIES}
                         selectedYear={distributionalYear}
-                      />
-                    </section>
-
-                    {/* The map's figures ranked: a full-width card under the
-                        pair, with the top and bottom 10 constituencies side
-                        by side and a CSV of all of them. It has figures
-                        exactly when the map does, and adds no notice of
-                        its own. */}
-                    <section
-                      id="constituency-rankings"
-                      className="report-section charts-grid constituency-rankings-section"
-                    >
-                      <ConstituencyRankings
-                        selectedPolicies={selectedPolicies}
-                        selectedYear={distributionalYear}
-                        policies={POLICIES}
                       />
                     </section>
 

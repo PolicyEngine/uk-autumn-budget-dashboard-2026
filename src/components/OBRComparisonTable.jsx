@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
+import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
