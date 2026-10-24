@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import fc from "fast-check";
+import { meanChangeByBand } from "../utils/ageImpact";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
@@ -18,6 +20,9 @@ import {
 
 // Exercise each chart's actual data preparation and series wiring in jsdom.
 // Geometry and animation are Recharts' responsibility; no browser is launched.
+// Multiple chart cards and accessible queries need room in the shared jsdom runner.
+vi.setConfig({ testTimeout: 30000 });
+
 vi.mock("recharts", async () => {
   const React = await import("react");
   const ChartData = React.createContext([]);
@@ -29,7 +34,7 @@ vi.mock("recharts", async () => {
       </ChartData.Provider>
     );
   };
-  const Bar = ({ dataKey, fill, hide }) => hide ? null : <span data-testid="measure-series" data-measure={dataKey} data-color={fill} />;
+  const Bar = ({ dataKey, name, fill, hide }) => hide ? null : <span data-testid="measure-series" data-measure={dataKey} data-label={name} data-color={fill} />;
   const Tooltip = ({ content }) => {
     const rows = React.useContext(ChartData);
     return content?.type?.name === "CustomTooltip" && rows.length
@@ -47,6 +52,9 @@ vi.mock("recharts", async () => {
   };
 });
 vi.mock("./ChartDownloadMenu", () => ({ default: () => null }));
+vi.mock("../utils/publication/flat", () => ({
+  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
+}));
 vi.mock("../utils/chartLogo", () => ({
   PolicyEngineLogo: () => null,
   CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17 },
@@ -65,7 +73,7 @@ describe("published measure catalogue in population views", () => {
     const fixture = measureCatalogueFixture();
     const catalogue = catalogueFor(fixture);
     const selected = [ALPHA, BETA];
-    const revenue = [{ year: YEAR, netImpact: 1, ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.name, measure.direction === "cost" ? -2 : 3])) }];
+    const revenue = [{ year: YEAR, netImpact: 1, ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, measure.direction === "cost" ? -2 : 3])) }];
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: async () => fixture.ageCsv })));
     const { container } = render(withCatalogue(catalogue, <>
       <div data-testid="revenue"><BudgetaryImpactChart data={revenue} selectedYear={YEAR} /></div>
@@ -78,7 +86,7 @@ describe("published measure catalogue in population views", () => {
       const region = within(screen.getByTestId(chart));
       const series = region.getAllByTestId("measure-series");
       for (const measure of catalogue.displayable) {
-        expect(series.find((node) => node.dataset.measure === measure.name)?.dataset.color).toBe(measure.color);
+        expect(series.find((node) => node.dataset.measure === measure.seriesKey)?.dataset.color).toBe(measure.color);
         expect(region.getAllByText(measure.label).length).toBeGreaterThan(0);
       }
       expect(region.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
@@ -133,7 +141,19 @@ describe("published measure catalogue in population views", () => {
     ));
     expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
     const points = chartRows(container);
-    expect(points.every((point) => point["Mock beta contribution"] === null && point.netChange === null)).toBe(true);
+    expect(points.every((point) => point[`measure:${BETA}`] === null && point.netChange === null)).toBe(true);
+  });
+
+  it.each([
+    ["relative", DistributionalChart, "distributional"],
+    ["absolute", WaterfallChart, "winnersLosers"],
+  ])("enforces unsupported years in the %s view", (_name, Chart, source) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    fixture.manifest.measures[ALPHA].unsupported_years = [YEAR];
+    const catalogue = catalogueFor(fixture);
+    const { container } = render(withCatalogue(catalogue, <Chart rawData={fixture[source]} selectedPolicies={[ALPHA]} selectedYear={YEAR} />));
+    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
+    expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
   });
 
   it("shares the catalogue's colours between standalone legends and tooltips", () => {
@@ -141,7 +161,7 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue, <>
       <GroupedLegend names={catalogue.allPolicyNames} />
       <ChartTooltip active payload={catalogue.displayable.map((measure) => ({
-        dataKey: measure.name, name: measure.name, value: 1, color: "wrong colour",
+        dataKey: measure.seriesKey, name: measure.label, value: 1, color: "wrong colour",
       }))} format={(value) => `£${value}`} />
     </>));
     for (const measure of catalogue.displayable) {
@@ -163,7 +183,7 @@ describe("published measure catalogue in population views", () => {
     ));
     expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
     expect(screen.getByText("directly affected: shown for a single policy or for all policies")).toBeInTheDocument();
-    expect(screen.getAllByTestId("chart-rows")).toHaveLength(1);
+    expect(screen.getAllByTestId("chart-rows")).toHaveLength(3);
   });
 
   it("keeps an unsupported year's age figures null and refuses the combined run", async () => {
@@ -175,7 +195,7 @@ describe("published measure catalogue in population views", () => {
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
     expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
-    expect(chartRows(container).every((point) => point["Mock alpha support"] === null && point.netChange === null)).toBe(true);
+    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
     expect(screen.getByText(/These shares come from one simulation/)).toBeInTheDocument();
   });
 
@@ -183,5 +203,63 @@ describe("published measure catalogue in population views", () => {
     const catalogue = catalogueFor(measureCatalogueFixture({ held: false }));
     expect(catalogue.combinedId).toBe(COMBINED);
     expect(catalogue.byId.has(COMBINED)).toBe(false);
+  });
+});
+
+
+describe("measure chart keys", () => {
+  it.each(["unpublished", "incomplete", "year", "netImpact"])("keeps the published label %s independent of every chart's metadata", async (label) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    fixture.manifest.measures[ALPHA].name = label;
+    const catalogue = catalogueFor(fixture);
+    const measure = catalogue.byId.get(ALPHA);
+    expect(measure.seriesKey).toBe(`measure:${ALPHA}`);
+    const revenue = [{ year: YEAR, unpublished: false, netImpact: 2, [measure.seriesKey]: 2 }];
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: async () => fixture.ageCsv })));
+    const { container } = render(withCatalogue(catalogue, <>
+      <BudgetaryImpactChart data={revenue} selectedYear={YEAR} />
+      <DistributionalChart rawData={fixture.distributional} selectedPolicies={[ALPHA]} selectedYear={YEAR} />
+      <WaterfallChart rawData={fixture.winnersLosers} selectedPolicies={[ALPHA]} selectedYear={YEAR} />
+      <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA]} selectedYear={YEAR} />
+    </>));
+    await screen.findByRole("heading", { name: /Average change by age/ });
+    const series = screen.getAllByTestId("measure-series").filter((node) => node.dataset.measure === measure.seriesKey);
+    expect(series).toHaveLength(4);
+    expect(series.every((node) => node.dataset.label === measure.label)).toBe(true);
+    const rows = [...container.querySelectorAll('[data-testid="chart-rows"]')].map((node) => JSON.parse(node.dataset.rows));
+    expect(rows[0][0]).toEqual({ year: YEAR, unpublished: false, netImpact: 2, [measure.seriesKey]: 2 });
+    expect(rows[1][0][measure.seriesKey]).toBe(0.5);
+    expect(rows[1][0].incomplete).toBe(false);
+    expect(rows[2][0][measure.seriesKey]).toBe(100);
+    expect(rows[2][0].netChange).toBe(100);
+    expect(rows[3][0][measure.seriesKey]).toBe(100);
+    expect(rows[3][0].band).toBe("0-15");
+  });
+
+  it("preserves all age-chart metadata and individual values for arbitrary labels", () => {
+    fc.assert(fc.property(
+      fc.array(fc.record({ label: fc.string(), value: fc.integer({ min: -100000, max: 100000 }) }), { minLength: 1, maxLength: 15 }),
+      (entries) => {
+        const policies = entries.map((entry, index) => ({ id: String(index), name: entry.label, seriesKey: `measure:${index}` }));
+        const rows = entries.map((entry, index) => ({ reform_id: String(index), year: YEAR, age_band: "16-24", mean_change: entry.value, sample_size: 5000 }));
+        const point = meanChangeByBand(rows, policies, policies.map((policy) => policy.id), YEAR).find((candidate) => candidate.band === "16-24");
+        expect(point.label).toBe("16 to 24");
+        expect(point.incomplete).toBe(false);
+        expect(point.suppressed).toBe(false);
+        expect(point.netChange).toBe(entries.reduce((sum, entry) => sum + entry.value, 0));
+        policies.forEach((policy, index) => expect(point[policy.seriesKey]).toBe(entries[index].value));
+      },
+    ), { numRuns: 100 });
+  });
+
+  it("groups neutral measures as Other measures in catalogue order", () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    fixture.budgetary.forEach((row) => { if (row.reform_id === ALPHA) row.value = 0; });
+    const catalogue = catalogueFor(fixture);
+    const { container } = render(withCatalogue(catalogue, <ChartTooltip active payload={catalogue.displayable.map((measure) => ({ dataKey: measure.seriesKey, name: "untrusted display label", value: 1 }))} format={String} />));
+    const headings = [...container.querySelectorAll(".chart-tooltip-heading")].map((node) => node.textContent);
+    expect(headings).toEqual(["Raise revenue", "Other measures"]);
+    expect(screen.getByText(catalogue.byId.get(ALPHA).label)).toBeInTheDocument();
+    expect(screen.queryByText("Cost revenue")).not.toBeInTheDocument();
   });
 });

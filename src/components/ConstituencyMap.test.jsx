@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
@@ -24,6 +24,18 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", () => ({
+  loadVerifiedFlatCsv: async (name, _catalogue, { fetchImpl = fetch, basePath = "" } = {}) => {
+    const response = await fetchImpl(`${basePath}/data/${name}`);
+    if (!response.ok) throw new Error(`${name} is unavailable`);
+    return new TextDecoder("utf-8", { fatal: true }).decode(await response.arrayBuffer());
+  },
+}));
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),

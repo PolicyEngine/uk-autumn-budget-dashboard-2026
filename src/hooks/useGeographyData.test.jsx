@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook as renderHookReact, waitFor } from "@testing-library/react";
 import { AREA_ROUTING_CONTENTS } from "../../scripts/check-public-files.mjs";
 import {
   loadAreaRouting,
@@ -18,6 +18,18 @@ import {
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
+
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+vi.mock("../utils/publication/flat", () => ({
+  loadVerifiedFlatCsv: async (name, _catalogue, { fetchImpl = fetch, basePath = "" } = {}) => {
+    const response = await fetchImpl(`${basePath}/data/${name}`);
+    if (!response.ok) throw new Error(`${name} is unavailable`);
+    return new TextDecoder("utf-8", { fatal: true }).decode(await response.arrayBuffer());
+  },
+}));
+
+const renderHook = (callback, options = {}) => renderHookReact(callback, { wrapper: GeographyCatalogueProvider, ...options });
 
 // Written by uk_budget_data.area_routing from the installed bundle.
 const PUBLIC_AREA_ROUTING = readFileSync(
@@ -56,14 +68,14 @@ describe("useGeographyData", () => {
     // A component mounted later reads the cache at once.
     const third = renderHook(() => useGeographyData("regional"));
     expect(third.result.current.status).toBe("ready");
-    expect(third.result.current.table).toBe(first.result.current.table);
+    expect(third.result.current.table).toEqual(first.result.current.table);
     expect(fetchImpl.calls).toEqual(["/data/regional.csv"]);
   });
 
-  it("says a missing file is unavailable", async () => {
+  it("withholds every row when the published file cannot be loaded", async () => {
     vi.stubGlobal("fetch", geographyFetch({ "/data/regional.csv": 404 }));
     const { result } = renderHook(() => useGeographyData("regional"));
-    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current.table).toBeNull();
   });
 

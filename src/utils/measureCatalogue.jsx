@@ -20,27 +20,22 @@ export const isCombinedId = (id) => typeof id === "string" && id.endsWith("_comb
 const finite = (value) => value !== "" && value != null && Number.isFinite(Number(value));
 const compareIds = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 
-function csvPersonal(rows) {
-  const text = rows.find((row) => row.reform_personal)?.reform_personal;
-  return text ? JSON.parse(text) : undefined;
-}
-
 /** Apply the same publication and year gate to every independently loaded table. */
 export function isCatalogueRowDisplayable(catalogue, id, year) {
-  if (!catalogue.manifest && !catalogue.measures.length) return true;
+  if (!catalogue.manifest) return false;
+  if (catalogue.tablesByKey !== null && !Object.hasOwn(catalogue.tablesByKey, id)) return false;
   if (id !== catalogue.combinedId && !catalogue.byId.get(id)?.displayable) return false;
-  if (!catalogue.manifest) return true;
   const entry = catalogue.manifest.measures[id] ?? catalogue.manifest.combined[id];
   if (!isDisplayable(entry) || !isSupported(entry, Number(year))) return false;
   if (id === catalogue.combinedId) return entry.measures.every((member) => isSupported(catalogue.manifest.measures[member], Number(year)));
   return true;
 }
 
-/** One catalogue: manifest metadata wins; absent manifests use reviewed CSVs. */
-export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [] } = {}) {
+/** Only an explicit publication manifest supplies catalogue membership. */
+export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetary = [], distributional = [], winnersLosers = [], metrics = [], tablesByKey = null, failures = {} } = {}) {
   const rows = [...budgetary, ...distributional, ...winnersLosers, ...metrics];
-  const ids = manifest ? Object.keys(manifest.measures) : [...new Set(rows.map((row) => row.reform_id).filter(Boolean))];
-  const measures = ids.filter((id) => !isCombinedId(id)).sort(compareIds).map((id, order) => {
+  const ids = manifest ? Object.keys(manifest.measures) : [];
+  const measures = ids.sort(compareIds).map((id, order) => {
     const entry = manifest?.measures[id];
     const receipt = receipts[id]?.dashboard ?? receipts[id];
     const ownRows = rows.filter((row) => row.reform_id === id);
@@ -49,18 +44,14 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     const direction = impact === null || impact === 0 ? "neutral" : impact < 0 ? "cost" : "revenue";
     const name = entry?.name || receipt?.name || ownRows.find((row) => row.reform_name)?.reform_name || id;
     const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "A public description has not yet been published.";
-    const availability = manifest ? measureAvailability(manifest, id) : { available: true, status: "published", reason: "" };
-    return { id, name, label: name, description, explanation: description, direction, order, color: measureColor(id, direction), displayable: manifest ? isDisplayable(entry) : true, availability, personal: entry?.personal ?? receipt?.personal ?? csvPersonal(ownRows) };
+    const availability = measureAvailability(manifest, id);
+    if (failures[id]) { availability.available = false; availability.reason = `Results unavailable: ${failures[id]}`; }
+    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, color: measureColor(id, direction), displayable: isDisplayable(entry), availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal };
   });
   const labelCounts = new Map();
   for (const measure of measures) labelCounts.set(measure.name, (labelCounts.get(measure.name) ?? 0) + 1);
   for (const measure of measures) {
     if (labelCounts.get(measure.name) > 1) measure.name = measure.label = `${measure.name} (${measure.id})`;
-  }
-  const usedLabels = new Set(["year", "decile", "netImpact", "netChange", "band", "label", "short", "suppressed", "__proto__", "constructor", "prototype"]);
-  for (const measure of measures) {
-    while (usedLabels.has(measure.name)) measure.name = measure.label = `${measure.name} (${measure.id})`;
-    usedLabels.add(measure.name);
   }
   // Revenue first, then cost, then measures without a published costing.
   const rank = { revenue: 0, cost: 1, neutral: 2 };
@@ -68,17 +59,16 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   measures.forEach((measure, index) => { measure.order = index; });
   const displayable = measures.filter((measure) => measure.displayable);
   const combined = manifest ? combinedEntryFor(manifest, measures.map((measure) => measure.id)) : null;
-  const combinedIds = manifest
-    ? combined && !combined.single ? [combined.key] : []
-    : [...new Set(rows.map((row) => row.reform_id).filter(isCombinedId))];
+  const combinedIds = combined && !combined.single ? [combined.key] : [];
   return {
-    measures, displayable, manifest,
+    measures, displayable, manifest, tablesByKey, failures,
     byId: new Map(measures.map((measure) => [measure.id, measure])),
     byName: new Map(measures.map((measure) => [measure.name, measure])),
-    policyColors: Object.fromEntries(displayable.map((measure) => [measure.name, measure.color])),
+    bySeriesKey: new Map(measures.map((measure) => [measure.seriesKey, measure])),
+    policyColors: Object.fromEntries(displayable.map((measure) => [measure.seriesKey, measure.color])),
     policyColorsByKey: Object.fromEntries(displayable.map((measure) => [measure.id, measure.color])),
-    allPolicyNames: displayable.map((measure) => measure.name),
-    revenueRaisingNames: new Set(displayable.filter((measure) => measure.direction === "revenue").map((measure) => measure.name)),
+    allPolicyNames: displayable.map((measure) => measure.seriesKey),
+    revenueRaisingNames: new Set(displayable.filter((measure) => measure.direction === "revenue").map((measure) => measure.seriesKey)),
     combinedId: combinedIds.length === 1 ? combinedIds[0] : null,
   };
 }

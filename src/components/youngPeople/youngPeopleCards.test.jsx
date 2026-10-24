@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import fc from "fast-check";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
@@ -97,8 +98,8 @@ describe("young people data", () => {
     const points = changeByYear(ROWS, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029, 2031]);
     expect(points[0]).toMatchObject({ year: 2028, published: true, "16-24": 30, all: 80 });
     expect(points[1]).toMatchObject({ "16-24": -110, all: -40 });
-    // A group with no rows adds up to zero; a thin one is null
-    expect(points[1]["0-15"]).toBe(0);
+    // Missing group rows and thin rows are both unavailable.
+    expect(points[1]["0-15"]).toBeNull();
     expect(points[2]).toMatchObject({ year: 2031, published: false, "16-24": null, all: null });
     const thin = changeByYear(
       [...ROWS, row("two_child_limit", 2029, "65+", 5, MIN_SAMPLE_SIZE - 1)],
@@ -108,6 +109,20 @@ describe("young people data", () => {
     );
     expect(thin[0]["65+"]).toBeNull();
     expect(thin[0].suppressed).toEqual(["65+"]);
+  });
+
+  it("never adds a missing, held or unknown selected measure as zero", () => {
+    fc.assert(fc.property(fc.integer({ min: -10000, max: 10000 }), (value) => {
+      const policies = [{ id: "alpha", name: "Alpha" }, { id: "beta", name: "Beta" }];
+      const rows = [row("alpha", 2029, "16-24", value), row("alpha", 2029, "22", value)];
+      expect(changeByYear(rows, policies, ["alpha", "beta"], [2029])[0]["16-24"]).toBeNull();
+      expect(changeByYear(rows, policies, ["alpha", "unknown"], [2029])[0]["16-24"]).toBeNull();
+      expect(singleAgeBars(rows, policies, ["alpha", "unknown"], 2029)[12].netChange).toBeNull();
+      const held = [{ ...policies[0], displayable: false }];
+      expect(changeByYear(rows, held, ["alpha"], [2029])[0]["16-24"]).toBeNull();
+      expect(singleAgeBars(rows, held, ["alpha"], 2029)[12].netChange).toBeNull();
+      expect(measureComparison(rows, held, ["alpha"], 2029).shown).toEqual([]);
+    }));
   });
 
   it("picks nice ticks that include zero", () => {

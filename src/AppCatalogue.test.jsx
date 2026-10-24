@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import App from "./App";
-import { fixtureJson } from "./test/publicationFixture";
-import { ALPHA, BETA, HELD, YEAR, measureCatalogueFixture } from "./test/measureCatalogueFixture";
+import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 vi.mock("./components/BudgetaryImpactChart", () => ({
   default: ({ data }) => <div data-testid="budget-figures" data-rows={JSON.stringify(data)} />,
@@ -21,92 +23,60 @@ vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_P
 vi.mock("./components/MethodologyTab", () => ({ default: () => null, METHOD_SECTIONS: { geography: "geography" } }));
 vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => null }));
 
-function csv(rows) {
-  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
-  const cell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  return [columns.join(","), ...rows.map((row) => columns.map((column) => cell(row[column])).join(","))].join("\n");
-}
-
-function validManifest(metadata) {
-  const base = fixtureJson("manifest.json");
-  return {
-    ...base,
-    measures: Object.fromEntries(Object.entries(metadata.measures).map(([id, entry]) => [id, { ...base.measures.alpha, ...entry }])),
-    combined: {},
-  };
-}
-function serve(fixture, manifest) {
-  const files = {
-    "budgetary_impact.csv": csv(fixture.budgetary),
-    "distributional_impact.csv": csv(fixture.distributional),
-    "winners_losers.csv": csv(fixture.winnersLosers),
-    "metrics.csv": csv(fixture.budgetary),
-  };
-  return vi.fn(async (url) => {
-    const file = String(url).split("/").at(-1);
-    if (file === "manifest.json") return manifest === null
-      ? new Response(null, { status: 404 })
-      : new Response(JSON.stringify(manifest), { headers: { "Content-Type": "application/json" } });
-    return files[file] === undefined ? new Response(null, { status: 404 }) : new Response(files[file]);
-  });
-}
-function openDescriptions(container) {
-  fireEvent.click(screen.getByRole("button", { name: "About selected policies" }));
-  return within(container.querySelector(".policy-details-content"));
-}
-
 beforeEach(() => { window.history.replaceState({}, "", "/"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe("the page's published measure catalogue", () => {
-  it("loads unseen approved ids, their labels and descriptions, and lists a held measure only as unavailable", async () => {
-    const fixture = measureCatalogueFixture();
-    fixture.distributional.push({ reform_id: "unpublished_stale", reform_name: "Unpublished stale row", year: YEAR, decile: "1st", value: 999 });
-    vi.stubGlobal("fetch", serve(fixture, validManifest(fixture.manifest)));
+describe("the page's verified publication catalogue", () => {
+  it("shows approved unseen IDs and metadata while excluding held rows", async () => {
+    const manifest = fixtureJson("manifest.json");
+    manifest.measures = Object.fromEntries(["alpha", "beta", "epsilon"].map((id) => [id, manifest.measures[id]]));
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest) } }));
     const { container } = render(<App />);
-    expect(screen.getByRole("status")).toHaveTextContent("Loading published measures");
     const figures = await screen.findByTestId("distributional-figures");
-    expect(new Set(JSON.parse(figures.dataset.selected))).toEqual(new Set([ALPHA, BETA]));
-    expect(new Set(JSON.parse(figures.dataset.rows).map((row) => row.reform_id))).toEqual(new Set([ALPHA, BETA]));
-    expect(screen.getByText(/Mock held measure: Not computable on current data/).closest('[role="status"]')).toHaveTextContent("Synthetic data limit");
-    const budgetRows = JSON.parse(screen.getByTestId("budget-figures").dataset.rows);
-    expect(budgetRows.find((point) => point.year === YEAR)).toMatchObject({ netImpact: 1, "Mock alpha support": -2, "Mock beta contribution": 3 });
-    expect(JSON.stringify(budgetRows)).not.toContain("Mock held measure");
-
-    const descriptions = openDescriptions(container);
-    for (const id of [ALPHA, BETA]) {
-      expect(descriptions.getByText(fixture.manifest.measures[id].name)).toBeInTheDocument();
-      expect(descriptions.getByText(fixture.manifest.measures[id].description)).toBeInTheDocument();
-    }
-    expect(descriptions.queryByText(fixture.manifest.measures[HELD].name)).not.toBeInTheDocument();
+    expect(new Set(JSON.parse(figures.dataset.selected))).toEqual(new Set(["alpha", "beta"]));
+    const rows = JSON.parse(figures.dataset.rows);
+    expect(new Set(rows.map((row) => row.reform_id))).toEqual(new Set(["alpha", "beta"]));
+    expect(rows.every((row) => row.year === IN_DATA)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
     const selector = within(container.querySelector(".policy-selector-dropdown"));
     expect(selector.getAllByRole("checkbox")).toHaveLength(2);
-    expect(selector.queryByText(fixture.manifest.measures[HELD].name)).not.toBeInTheDocument();
-    for (const id of [ALPHA, BETA]) expect(selector.getByText(fixture.manifest.measures[id].description)).toBeInTheDocument();
+    expect(selector.getByText("Alpha")).toBeInTheDocument();
+    expect(selector.getByText("Beta")).toBeInTheDocument();
+    expect(selector.queryByText("Epsilon")).toBeNull();
   });
 
-  it("fails closed when a present manifest is invalid", async () => {
-    vi.stubGlobal("fetch", serve(measureCatalogueFixture(), {}));
+  it.each([{}, { ...fixtureJson("manifest.json"), release: "uk-autumn-budget-2025" }])("fails closed on invalid/current-release identity", async (manifest) => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest) } }));
     render(<App />);
     expect(await screen.findByText("Published results are unavailable")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("invalid");
-    expect(screen.queryByTestId("budget-figures")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Select policies" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 
-  it("uses reviewed flat CSV metadata when the manifest is absent", async () => {
-    const fixture = measureCatalogueFixture({ held: false });
-    fixture.budgetary.find((row) => row.reform_id === ALPHA).reform_name = "CSV alpha award";
-    fixture.budgetary.find((row) => row.reform_id === ALPHA).reform_description = "An explanation published in the reviewed CSV.";
-    vi.stubGlobal("fetch", serve(fixture, null));
-    const { container } = render(<App />);
+  it("loads today's real public/data and renders no historical figure without a manifest", async () => {
+    const historic = readFileSync(join(process.cwd(), "public/data/budgetary_impact.csv"), "utf8");
+    expect(historic).toContain("two_child_limit");
+    expect(readFileSync(join(process.cwd(), "public/data/obr_comparison.csv"), "utf8")).toContain("2025_combined");
+    vi.stubGlobal("fetch", async (url) => {
+      try { return new Response(readFileSync(join(process.cwd(), "public", String(url)))); }
+      catch { return new Response(null, { status: 404 }); }
+    });
+    render(<App />);
+    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    expect(screen.queryByText(/9\.486/)).toBeNull();
+  });
+
+  it("never displays a stale flat figure when an approved output digest differs", async () => {
+    const manifest = fixtureJson("manifest.json");
+    manifest.measures = { alpha: { ...manifest.measures.alpha, outputs_sha256: "0".repeat(64) } };
+    manifest.combined = {};
+    const artifact = manifest.measures.alpha.artifact;
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest), "budgetary_impact.csv": fixtureText(`${artifact}/budgetary_impact.csv`) } }));
+    render(<App />);
     const figures = await screen.findByTestId("distributional-figures");
-    expect(new Set(JSON.parse(figures.dataset.selected))).toEqual(new Set([ALPHA, BETA]));
-    const descriptions = openDescriptions(container);
-    expect(descriptions.getByText("CSV alpha award")).toBeInTheDocument();
-    expect(descriptions.getByText("An explanation published in the reviewed CSV.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
-    expect(within(container.querySelector(".policy-selector-dropdown")).getByText("CSV alpha award")).toBeInTheDocument();
+    expect(JSON.parse(figures.dataset.rows)).toEqual([]);
+    expect(JSON.parse(screen.getByTestId("budget-figures").dataset.rows).every((row) => row.netImpact === null)).toBe(true);
+    expect(screen.getByText(/Alpha: Results unavailable/)).toBeInTheDocument();
   });
 });

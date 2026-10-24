@@ -16,11 +16,71 @@
 // which is what a deploy serves, and prints paths and rule names only.
 
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
+const CURRENT_RELEASE = "uk-autumn-budget-2026";
+const CURRENT_BUDGET = { id: CURRENT_RELEASE, date: "2026-10-28" };
+const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const isMap = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+const sameMap = (left, right) => isMap(left) && isMap(right) &&
+  Object.keys(left).sort().join() === Object.keys(right).sort().join() &&
+  Object.entries(left).every(([key, value]) => right[key] === value);
+
+/** Flat views must refer to exactly the manifest and CSV bytes reviewed. */
+export function checkReleaseIndex(root) {
+  const directory = join(root, "public", "data");
+  const manifestPath = join(directory, "manifest.json");
+  const indexPath = join(directory, "release-index.json");
+  if (!existsSync(indexPath) && !existsSync(manifestPath)) return [];
+  const problems = [];
+  try {
+    const bytes = readFileSync(manifestPath);
+    const manifest = JSON.parse(bytes);
+    if (!existsSync(indexPath) && !Object.keys(manifest.flat_files ?? {}).length) return [];
+    const index = JSON.parse(readFileSync(indexPath));
+    if (lstatSync(manifestPath).isSymbolicLink() || lstatSync(indexPath).isSymbolicLink()) {
+      problems.push("release index: symbolic link");
+    }
+    if (manifest.schema !== "uk-budget-dashboard/publication-manifest/v1" ||
+        manifest.release !== CURRENT_RELEASE || !sameMap(manifest.budget, CURRENT_BUDGET)) {
+      problems.push("release index: manifest is not explicitly for the current 2026 Budget release");
+    }
+    if (index.schema !== "uk-budget-release-index/v1") problems.push("release index: unknown schema");
+    if (index.release !== manifest.release || !sameMap(index.budget, manifest.budget)) {
+      problems.push("release index: release or Budget identity differs");
+    }
+    if (!Number.isInteger(manifest.revision) || manifest.revision < 1 ||
+        index.manifest_revision !== manifest.revision) {
+      problems.push("release index: manifest revision differs");
+    }
+    if (index.manifest_sha256 !== digest(bytes)) problems.push("release index: manifest bytes differ");
+    const files = index.files;
+    if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
+    if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
+    const names = readdirSync(directory).filter((name) => name.endsWith(".csv")).sort();
+    if (Object.keys(files).sort().join() !== names.join()) {
+      problems.push("release index: file map does not cover every flat CSV");
+    }
+    for (const [name, expected] of Object.entries(files).sort()) {
+      if (!/^[a-z][a-z0-9_]*\.csv$/.test(name) || typeof expected !== "string" || !/^[0-9a-f]{64}$/.test(expected)) {
+        problems.push("release index: unsafe filename or invalid SHA-256");
+        continue;
+      }
+      const path = join(directory, name);
+      if (!existsSync(path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) {
+        problems.push(`release index: ${name}: not a regular file`);
+      } else if (digest(readFileSync(path)) !== expected) {
+        problems.push(`release index: ${name}: bytes differ`);
+      }
+    }
+  } catch {
+    problems.push("release index: manifest or index cannot be read");
+  }
+  return problems;
+}
 
 // As scripts/check_public_data.py: every text the area routing file may hold
 // (tests/test_check_public_files_build.py checks the two sets are equal).
@@ -104,7 +164,7 @@ export function checkPublicFiles(root, today = new Date()) {
   const allowed = new Set([...required, ...optional]);
   const review = readReview(root);
   const day = today.toISOString().slice(0, 10);
-  const problems = [];
+  const problems = checkReleaseIndex(root);
   for (const [path, stat] of walk(join(root, "public"))) {
     const name = relative(root, path).split(sep).join("/");
     if (stat.isSymbolicLink()) {

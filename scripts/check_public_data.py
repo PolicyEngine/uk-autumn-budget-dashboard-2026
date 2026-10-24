@@ -246,6 +246,9 @@ def check(root: Path, today: Optional[date] = None) -> Report:
     """Run every check on the repository at ``root``."""
     today = today or datetime.now(timezone.utc).date()
     report = Report()
+    from uk_budget_data.publication.release_index import release_index_problems
+
+    report.problems.extend(release_index_problems(root / "public" / "data"))
     files = tracked_files(root)
     review, problems = read_review(root)
     report.problems.extend(problems)

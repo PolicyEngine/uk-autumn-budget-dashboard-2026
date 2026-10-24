@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
 import { indexRows } from "../utils/geography/rows";
 import { FILES } from "../utils/geography/columns";
 import { parseGeographyTable } from "../utils/geography/parse";
@@ -80,23 +81,13 @@ const failure = (status, error) =>
  */
 export async function loadGeographyFile(
   name,
-  { fetchImpl = fetch, base = basePath(), published = publishedFiles() } = {},
+  { fetchImpl = fetch, base = basePath(), published = publishedFiles(), catalogue } = {},
 ) {
   const { file, level } = FILES[name];
   // Not in this build: not published, and not requested
   if (published && !published.includes(file)) return failure("unavailable", null);
-  const url = `${base}/data/${file}`;
-  let response;
   try {
-    response = await fetchImpl(url, { cache: "no-cache" });
-  } catch {
-    return failure("error", `${file} could not be fetched`);
-  }
-  if (response.status === 404) return failure("unavailable", null);
-  if (!response.ok) return failure("error", `${file}: HTTP ${response.status}`);
-  try {
-    const bytes = await response.arrayBuffer();
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const text = await loadVerifiedFlatCsv(file, catalogue, { fetchImpl, basePath: base });
     const table = parseGeographyTable(text, { level });
     return Object.freeze({ status: "ready", table, features: null, error: null });
   } catch (error) {
@@ -181,8 +172,8 @@ export async function loadAreaRouting({
 }
 
 const LOADERS = {
-  regional: () => loadGeographyFile("regional"),
-  constituency: () => loadGeographyFile("constituency"),
+  regional: (catalogue) => loadGeographyFile("regional", { catalogue }),
+  constituency: (catalogue) => loadGeographyFile("constituency", { catalogue }),
   boundaries: () => loadBoundaries(),
   routing: () => loadAreaRouting(),
 };
@@ -190,7 +181,7 @@ const LOADERS = {
 // One entry per resource and base path: its settled state, and who to tell.
 const entries = new Map();
 
-function entryFor(key, name) {
+function entryFor(key, name, catalogue) {
   let entry = entries.get(key);
   if (!entry) {
     entry = { state: null, listeners: new Set() };
@@ -202,22 +193,22 @@ function entryFor(key, name) {
     const load = Object.hasOwn(LOADERS, name)
       ? LOADERS[name]
       : async () => failure("error", `${name} is not a geography resource`);
-    load().then(settle, () =>
+    load(catalogue).then(settle, () =>
       settle(failure("error", "the file could not be loaded")),
     );
   }
   return entry;
 }
 
-function useCachedResource(name) {
-  const key = `${basePath()}|${name}`;
+function useCachedResource(name, catalogue) {
+  const key = `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
   const subscribe = useCallback(
     (onChange) => {
-      const entry = entryFor(key, name);
+      const entry = entryFor(key, name, catalogue);
       entry.listeners.add(onChange);
       return () => entry.listeners.delete(onChange);
     },
-    [key, name],
+    [key, name, catalogue],
   );
   const getSnapshot = () => entries.get(key)?.state ?? LOADING;
   return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
@@ -231,10 +222,11 @@ function useCachedResource(name) {
  *   table: Object|null, error: string|null}}
  */
 export function useGeographyData(name) {
-  const state = useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`);
   const catalogue = useMeasureCatalogue();
+  const state = useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`, catalogue);
   return useMemo(() => {
-    if (state.status !== "ready" || (!catalogue.manifest && catalogue.measures.length === 0)) return state;
+    if (!catalogue.manifest) return failure("unavailable", "No Budget results are published yet");
+    if (state.status !== "ready") return state;
     const rows = state.table.rows.filter((row) =>
       isCatalogueRowDisplayable(catalogue, row.reform, row.year),
     );

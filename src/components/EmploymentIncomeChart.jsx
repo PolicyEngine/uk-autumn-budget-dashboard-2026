@@ -16,6 +16,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import NoBreakYear from "./NoBreakYear";
 import HouseholdPicker from "./HouseholdPicker";
 import useIncomeCurve from "../hooks/useIncomeCurve";
@@ -133,6 +134,7 @@ function EmploymentIncomeChart({
       {picker}
 
       <div ref={chartRef} className="chart-plot">
+        {!published && <UnavailableNotice reason="Absolute household income is unavailable. An approved combined package baseline and every selected measure are required." />}
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 420 : 430}>
             <LineChart

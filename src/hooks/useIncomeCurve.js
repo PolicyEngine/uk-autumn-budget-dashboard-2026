@@ -1,53 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import { parseTable } from "../utils/publication/csv";
 import { isCombinedId, isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 
-// One fetch of income_curve.csv for the page, shared by both household
-// charts: the file covers every household, measure and year.
-let curveRows = null;
-
-function loadCurve() {
-  if (!curveRows) {
-    curveRows = fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/income_curve.csv`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`income_curve.csv: HTTP ${response.status}`);
-        return response.text();
-      })
-      .then(parseCurve)
-      .catch((error) => {
-        curveRows = null;
-        throw error;
-      });
+// Cache only within an immutable loaded snapshot, never across revisions.
+const curveRows = new WeakMap();
+function loadCurve(catalogue) {
+  if (!curveRows.has(catalogue)) {
+    curveRows.set(catalogue, loadVerifiedFlatCsv("income_curve.csv", catalogue).then(parseCurve));
   }
-  return curveRows;
+  return curveRows.get(catalogue);
 }
 
-/** Rows of income_curve.csv, typed. */
+/** Rows are parsed with the real publication schema, including quoted cells. */
 export function parseCurve(csvText) {
-  const lines = csvText.trim().split("\n");
-  const headers = lines[0].trim().split(",");
-  const column = (name) => headers.indexOf(name);
-  const at = {
-    reformId: column("reform_id"),
-    year: column("year"),
-    household: column("household"),
-    income: column("income"),
-    baseline: column("baseline_net_income"),
-    reformNet: column("reform_net_income"),
-  };
-  return lines.slice(1).map((line) => {
-    // reform_name may hold a comma inside quotes, so read the columns
-    // after it from the end of the line
-    const values = line.trim().split(",");
-    const fromEnd = (index) => values[values.length - (headers.length - index)];
-    return {
-      reformId: values[at.reformId],
-      year: Number(fromEnd(at.year)),
-      household: fromEnd(at.household),
-      income: Number(fromEnd(at.income)),
-      baseline: Number(fromEnd(at.baseline)),
-      reformNet: Number(fromEnd(at.reformNet)),
-    };
-  });
+  return parseTable("income_curve", csvText).map((row) => ({
+    reformId: row.reform_id, year: row.year, household: row.household,
+    income: row.income, baseline: row.baseline_net_income, reformNet: row.reform_net_income,
+  }));
 }
 
 /**
@@ -70,10 +40,10 @@ export function curveFor(rows, { household, year, policies, combinedId }) {
     if (!policies.includes(row.reformId) && !(combinedId === undefined ? isCombinedId(row.reformId) : row.reformId === combinedId)) continue;
     let point = points.get(row.income);
     if (!point) {
-      point = { income: row.income, baseline: row.baseline, combined: false, difference: 0, present: new Set() };
+      point = { income: row.income, baseline: null, combined: false, difference: 0, present: new Set() };
       points.set(row.income, point);
     }
-    if ((combinedId === undefined ? isCombinedId(row.reformId) : row.reformId === combinedId) && !point.combined) {
+    if ((combinedId === undefined ? isCombinedId(row.reformId) : row.reformId === combinedId) && !point.combined && Number.isFinite(row.baseline)) {
       point.baseline = row.baseline;
       point.combined = true;
     }
@@ -82,7 +52,7 @@ export function curveFor(rows, { household, year, policies, combinedId }) {
       point.present.add(row.reformId);
     }
   }
-  if ([...points.values()].some((point) => policies.some((id) => !point.present.has(id)))) return [];
+  if ([...points.values()].some((point) => !point.combined || policies.some((id) => !point.present.has(id)))) return [];
   return [...points.values()]
     .sort((a, b) => a.income - b.income)
     .map(({ income, baseline, difference }) => ({
@@ -97,21 +67,21 @@ export function curveFor(rows, { household, year, policies, combinedId }) {
 export default function useIncomeCurve({ household, year, policies }) {
   const catalogue = useMeasureCatalogue();
   const { combinedId } = catalogue;
-  const [rows, setRows] = useState(null);
+  const [loaded, setLoaded] = useState(null);
+  const rows = loaded?.catalogue === catalogue ? loaded.rows : null;
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let live = true;
-    loadCurve()
-      .then((loaded) => live && setRows(loaded))
-      .catch((error) => {
-        console.error("Error loading income curve data:", error);
+    loadCurve(catalogue)
+      .then((loaded) => live && setLoaded({ catalogue, rows: loaded }))
+      .catch(() => {
         if (live) setFailed(true);
       });
     return () => {
       live = false;
     };
-  }, []);
+  }, [catalogue]);
 
   const loading = rows === null && !failed;
   const data = useMemo(

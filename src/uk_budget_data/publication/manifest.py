@@ -11,6 +11,7 @@ one step and raises the revision.
 
 import json
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,8 @@ from pydantic import (
     Field,
     field_validator,
     model_validator,
+    StrictBool,
+    StrictInt,
 )
 
 from uk_budget_data.publication.attestations import Attestation
@@ -29,6 +32,8 @@ from uk_budget_data.publication.attestations import Attestation
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
 MANIFEST_FILE = "manifest.json"
+CURRENT_RELEASE = "uk-autumn-budget-2026"
+CURRENT_BUDGET = {"id": CURRENT_RELEASE, "date": "2026-10-28"}
 
 STAGED = "staged"
 PROVISIONAL = "provisional"
@@ -75,17 +80,48 @@ class ReconciliationSummary(_Strict):
 
 
 class PersonalSeries(_Strict):
-    """An existing lifetime response column and its indivisible group."""
+    """A reviewed per-model response contract, distinct from national scoring.
+
+    Optional fields retain old receipts for inspection. A legacy key-only
+    mapping never authorizes figures in either personal frontend.
+    """
 
     key: str = Field(min_length=1)
     policies: Optional[list[str]] = Field(default=None, min_length=1)
+    model: Optional[Literal["lifecycle", "personal"]] = None
+    reviewed: Optional[StrictBool] = None
+    description: Optional[str] = Field(default=None, min_length=1)
+    years: Optional[list[StrictInt]] = Field(default=None, min_length=1)
+    unsupported_years: Optional[list[StrictInt]] = None
 
     @field_validator("policies")
     @classmethod
-    def _group_ids_are_not_empty(cls, value):
-        if value is not None and any(not item for item in value):
-            raise ValueError("personal group ids cannot be empty")
+    def _group_ids_are_unique_and_not_empty(cls, value):
+        if value is not None and (
+            any(not item for item in value) or len(value) != len(set(value))
+        ):
+            raise ValueError("personal group ids must be unique and nonempty")
         return value
+
+    @field_validator("description")
+    @classmethod
+    def _description_is_not_blank(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("personal model description cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def _years_are_explicit_and_consistent(self):
+        if self.model is not None and not re.fullmatch(
+            r"impact_[A-Za-z0-9][A-Za-z0-9_]*", self.key
+        ):
+            raise ValueError("personal mapping key must name an impact series")
+        for values in (self.years, self.unsupported_years):
+            if values is not None and len(values) != len(set(values)):
+                raise ValueError("personal model years must be unique")
+        if set(self.years or []) & set(self.unsupported_years or []):
+            raise ValueError("personal supported and unsupported years overlap")
+        return self
 
 
 class Entry(_Strict):
@@ -169,6 +205,11 @@ class Execution(_Strict):
 
 class Manifest(_Strict):
     schema_id: str = Field(default=SCHEMA, alias="schema")
+    release: str = CURRENT_RELEASE
+    budget: dict[str, str] = Field(default_factory=lambda: dict(CURRENT_BUDGET))
+    # A flat table may only be read through the separately verified release
+    # index. These digests are part of this exact publication snapshot.
+    flat_files: dict[str, str] = Field(default_factory=dict)
     revision: int = 0
     updated_at: Optional[str] = None
     basis: Optional[dict] = None
