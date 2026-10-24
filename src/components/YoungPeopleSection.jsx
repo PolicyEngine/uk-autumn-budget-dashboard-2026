@@ -24,14 +24,11 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import SectionHeading from "./SectionHeading";
 import Note from "./Note";
 import StatTiles from "./StatTiles";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
-} from "../utils/policyConfig";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -150,6 +147,11 @@ function AgeTick({ x, y, payload, narrow }) {
 }
 
 function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow }) {
+  const {
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    revenueRaisingNames: REVENUE_RAISING_NAMES,
+  } = useMeasureCatalogue();
   const chartRef = useRef(null);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
@@ -179,6 +181,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   );
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
+  const incomplete = data.some((point) => point.incomplete);
 
   const title = `Average change by age, ${yearLabel}`;
   const exportName = `young-people-change-by-age-${selectedYear}`;
@@ -237,6 +240,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div ref={chartRef}>
+        {published && incomplete && (
+          <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
+        )}
         {published ? (
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={data} margin={chartMargin(narrow)} stackOffset="sign">
@@ -320,11 +326,11 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   );
 }
 
-function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) {
+function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, combinedId }) {
   const chartRef = useRef(null);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const pair = youngAndAll(rows, policies, selectedPolicies, selectedYear);
+  const pair = youngAndAll(rows, policies, selectedPolicies, selectedYear, combinedId);
   const data = pair
     ? [
         { group: "Aged 16 to 24", ...pick(pair.young) },
@@ -461,9 +467,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
 const pick = (row) =>
   Object.fromEntries(OUTCOMES.map((outcome) => [outcome.key, row[outcome.key]]));
 
-function Headline({ rows, policies, selectedPolicies, selectedYear }) {
+function Headline({ rows, policies, selectedPolicies, selectedYear, combinedId }) {
   const population = youngPopulation(rows, selectedYear);
-  const pair = youngAndAll(rows, policies, selectedPolicies, selectedYear);
+  const pair = youngAndAll(rows, policies, selectedPolicies, selectedYear, combinedId);
   const direct = pair ? pair.young.people_directly_affected : null;
   return (
     <StatTiles
@@ -495,7 +501,12 @@ function Headline({ rows, policies, selectedPolicies, selectedYear }) {
  */
 function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
-  const { status, rows } = useAgeImpactRows();
+  const { status, rows: publishedRows } = useAgeImpactRows();
+  const catalogue = useMeasureCatalogue();
+  const { combinedId } = catalogue;
+  const rows = useMemo(() => publishedRows?.filter((row) =>
+    isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+  ) ?? null, [publishedRows, catalogue]);
 
   // A link to #young-people: the section renders after the page's data
   // loads, too late for the browser's own jump, so scroll once it is here.
@@ -508,7 +519,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
     }
   }, [status]);
 
-  const props = { rows, policies, selectedPolicies, selectedYear, narrow };
+  const props = { rows, policies, selectedPolicies, selectedYear, narrow, combinedId };
   return (
     <>
       <SectionHeading

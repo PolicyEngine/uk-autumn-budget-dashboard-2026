@@ -2,13 +2,6 @@ import GeographyMethodology from "./GeographyMethodology";
 import LifecycleAbout from "./LifecycleAbout";
 import SectionHeading from "./SectionHeading";
 
-const RESEARCH = [
-  ["https://policyengine.org/uk/research/uk-two-child-limit", "two-child limit"],
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty freeze"],
-  ["https://policyengine.org/uk/research/rail-fares-freeze-2025", "rail fares freeze"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
-];
-
 /** The ids of the Methodology view's sections, for links to them. */
 export const METHOD_SECTIONS = {
   geography: "figures-by-area",
@@ -55,16 +48,8 @@ function MethodologyTab({ onShowTab }) {
         />
         <section className="report-section card method-card">
           <p>
-            Methods and sources: our research on the{" "}
-            {RESEARCH.map(([href, label], index) => (
-              <span key={href}>
-                <a href={href} target="_blank" rel="noopener noreferrer">
-                  {label}
-                </a>
-                {index < RESEARCH.length - 2 ? ", " : index === RESEARCH.length - 2 ? " and " : ""}
-              </span>
-            ))}
-            .
+            Methods and sources are published with each measure's description. See the{" "}
+            <a href="https://policyengine.org/uk/research" target="_blank" rel="noopener noreferrer">PolicyEngine research library</a>.
           </p>
           <p>
             The replication code and the engine version behind these figures

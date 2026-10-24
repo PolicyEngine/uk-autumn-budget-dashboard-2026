@@ -1,4 +1,6 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { indexRows } from "../utils/geography/rows";
 import { FILES } from "../utils/geography/columns";
 import { parseGeographyTable } from "../utils/geography/parse";
 
@@ -153,7 +155,15 @@ function useCachedResource(name) {
  *   table: Object|null, error: string|null}}
  */
 export function useGeographyData(name) {
-  return useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`);
+  const state = useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`);
+  const catalogue = useMeasureCatalogue();
+  return useMemo(() => {
+    if (state.status !== "ready" || (!catalogue.manifest && catalogue.measures.length === 0)) return state;
+    const rows = state.table.rows.filter((row) =>
+      isCatalogueRowDisplayable(catalogue, row.reform, row.year),
+    );
+    return { ...state, table: indexRows(state.table.level, rows) };
+  }, [state, catalogue]);
 }
 
 /** The constituency boundaries: `{status, features, error}`. */

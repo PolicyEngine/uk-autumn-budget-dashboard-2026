@@ -1,57 +1,64 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import { lifecycleSelection, lifecycleTotals } from "./lifecycleSelection";
 
-const ALL = [
-  "two_child_limit",
-  "fuel_duty_freeze",
-  "rail_fares_freeze",
-  "threshold_freeze_extension",
-  "dividend_tax_increase_2pp",
-  "savings_tax_increase_2pp",
-  "property_tax_increase_2pp",
-  "freeze_student_loan_thresholds",
-  "salary_sacrifice_cap",
+const alpha = { id: "ab2026_mock_alpha", label: "Mock alpha", description: "Alpha public description.", displayable: true, color: "#0D9488" };
+const beta = { id: "ab2026_mock_beta", label: "Mock beta", description: "Beta public description.", displayable: true, color: "#78350F" };
+const rows = [
+  { impact_ab2026_mock_alpha: 10, ab2026_mock_beta: -200 },
+  { impact_ab2026_mock_alpha: 12, ab2026_mock_beta: -250 },
 ];
-const keys = (selection) => selection.reforms.map((r) => r.key);
+const keys = (selection) => selection.reforms.map((reform) => reform.key);
 
-describe("lifetime series for the selected policies", () => {
-  it("maps every policy when all are selected", () => {
-    const selection = lifecycleSelection(ALL);
-    expect(keys(selection)).toHaveLength(7);
-    expect(selection.partialCombined).toBe(false);
+describe("lifetime series for published measures", () => {
+  it("matches unfamiliar ids to response keys and keeps catalogue colours", () => {
+    const selection = lifecycleSelection([alpha.id, beta.id], [alpha, beta], rows);
+    expect(keys(selection)).toEqual(["impact_ab2026_mock_alpha", "ab2026_mock_beta"]);
+    expect(selection.reforms.map((reform) => reform.color)).toEqual([alpha.color, beta.color]);
+    expect(lifecycleSelection([beta.id, alpha.id], [alpha, beta], rows).reforms)
+      .toEqual(selection.reforms);
     expect(selection.unmodelled).toEqual([]);
+    expect(lifecycleTotals(rows, selection.reforms)).toEqual({ netTotal: -428, avgPerYear: -214 });
   });
 
-  it("shows only the rail series for rail fares alone", () => {
-    expect(keys(lifecycleSelection(["rail_fares_freeze"]))).toEqual([
-      "impact_rail_fare_freeze",
-    ]);
-  });
-
-  it("needs all three income tax increases for the combined series", () => {
-    const partial = lifecycleSelection(["dividend_tax_increase_2pp", "savings_tax_increase_2pp"]);
+  it("requires every member of a published shared series", () => {
+    const measures = [alpha, beta].map((measure) => ({
+      ...measure, personal: { key: "shared_impact", policies: [alpha.id, beta.id] },
+    }));
+    const data = [{ shared_impact: 30 }];
+    const partial = lifecycleSelection([alpha.id], measures, data);
     expect(keys(partial)).toEqual([]);
     expect(partial.partialCombined).toBe(true);
-    const full = lifecycleSelection([
-      "dividend_tax_increase_2pp",
-      "savings_tax_increase_2pp",
-      "property_tax_increase_2pp",
-    ]);
-    expect(keys(full)).toEqual(["impact_unearned_income_tax"]);
+    expect(partial.unmodelled).toEqual([alpha.label]);
+    const full = lifecycleSelection([alpha.id, beta.id], measures, data);
+    expect(keys(full)).toEqual(["shared_impact"]);
+    expect(full.reforms[0].description).toBe(`${alpha.description} ${beta.description}`);
+    expect(lifecycleTotals(data, full.reforms).netTotal).toBe(30);
+    const heldMember = lifecycleSelection([alpha.id, beta.id], [measures[0], { ...measures[1], displayable: false }], data);
+    expect(keys(heldMember)).toEqual([]);
+    expect(heldMember.unmodelled).toEqual([alpha.label, beta.label]);
   });
 
-  it("names selected policies the model does not cover", () => {
-    const selection = lifecycleSelection(["new_measure"], [{ id: "new_measure", name: "New measure" }]);
-    expect(selection.unmodelled).toEqual(["New measure"]);
+  it("names unsupported, held and incomplete measures instead of inserting zero", () => {
+    const held = { ...beta, displayable: false };
+    expect(lifecycleSelection([alpha.id, beta.id], [alpha, held], rows).unmodelled).toEqual([beta.label]);
+    expect(lifecycleSelection([alpha.id], [alpha], [{}, ...rows]).unmodelled).toEqual([alpha.label]);
+    expect(lifecycleSelection([alpha.id], [{ ...alpha, personal: { key: "missing_published_series" } }], rows).unmodelled)
+      .toEqual([alpha.label]);
+    const unknown = lifecycleSelection(["unknown"], [], rows);
+    expect(unknown.unmodelled).toEqual(["unknown"]);
+    expect(unknown.partialCombined).toBe(false);
+    expect(lifecycleTotals([{}], [{ key: "missing" }])).toEqual({ netTotal: null, avgPerYear: null });
+    expect(lifecycleTotals(rows, [])).toEqual({ netTotal: null, avgPerYear: null });
   });
 
-  it("totals only the selected series", () => {
-    const rows = [
-      { impact_rail_fare_freeze: 10, impact_threshold_freeze: -200 },
-      { impact_rail_fare_freeze: 12, impact_threshold_freeze: -250 },
-    ];
-    const rail = lifecycleSelection(["rail_fares_freeze"]).reforms;
-    expect(lifecycleTotals(rows, rail)).toEqual({ netTotal: 22, avgPerYear: 11 });
-    expect(lifecycleTotals(rows, [])).toEqual({ netTotal: 0, avgPerYear: 0 });
+  it("never totals unrelated API columns for an arbitrary published id", () => {
+    fc.assert(fc.property(fc.string({ minLength: 1 }), (id) => {
+      const measure = { id, label: `Measure ${id}`, displayable: true };
+      const data = [{ unrelated_api_column: 100 }];
+      const selection = lifecycleSelection([id], [measure], data);
+      if (id === "unrelated_api_column") expect(keys(selection)).toEqual([id]);
+      else expect(selection.unmodelled).toEqual([measure.label]);
+    }));
   });
 });

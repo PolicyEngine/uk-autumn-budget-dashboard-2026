@@ -29,7 +29,7 @@ const LIFECYCLE_API = "https://lifecycle-api.test/api/lifecycle";
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv"]);
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/manifest.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -116,7 +116,7 @@ describe("each of the five tabs, on the real data", () => {
     async (label, value) => {
       window.history.replaceState({}, "", value === "dashboard" ? "/" : `/?tab=${value}`);
       render(<App />);
-      const panel = screen.getByRole("tabpanel", { name: label });
+      const panel = await screen.findByRole("tabpanel", { name: label });
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.
       await new Promise((resolve) => setTimeout(resolve, 50));

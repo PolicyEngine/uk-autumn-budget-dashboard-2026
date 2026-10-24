@@ -1,63 +1,33 @@
-import { LIFECYCLE_REFORMS } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./LifecycleCalculator.css";
 
-// Lifetime chart items that raise revenue (the rest cost revenue), for the
-// legend's two groups, as on the population charts
-export const RAISER_KEYS = new Set([
-  "impact_threshold_freeze",
-  "impact_unearned_income_tax",
-  "impact_salary_sacrifice_cap",
-  "impact_sl_threshold_freeze",
-]);
-
-// What the lifetime model does for each policy (its own values, from
-// uk_budget_data/lifecycle_calculator.py)
-const ABOUT_POLICIES = [
-  { key: "impact_threshold_freeze", text: "income tax thresholds frozen until 2030-31." },
-  { key: "impact_unearned_income_tax", text: "tax on that income up 5%." },
-  { key: "impact_salary_sacrifice_cap", text: "£2,000 a year, from 2029." },
-  { key: "impact_sl_threshold_freeze", text: "Plan 2 frozen at £27,295, 2027-28 to 2029-30." },
-  { key: "impact_two_child_limit", text: "removed from 2026." },
-  { key: "impact_fuel_duty_freeze", text: "the 5p cut kept longer, then phased rises." },
-  { key: "impact_rail_fare_freeze", text: "regulated fares held for one year in 2026." },
-];
-
-const reform = (key) => LIFECYCLE_REFORMS.find((r) => r.key === key);
-
-/**
- * The lifetime model behind the Personal impact view: what it estimates,
- * the policies as it models them, and its assumptions. Shown on the
- * Methodology view.
- */
+/** Public descriptions are shared with the measure selector and charts. */
 function LifecycleAbout() {
+  const { displayable } = useMeasureCatalogue();
   return (
     <div className="methodology-content lifecycle-about">
       <p>
-        Estimates the lifetime change in take-home pay for a graduate who starts
-        work at 22, from the selected policies, allowing for earnings growth, tax
-        thresholds and student loan repayments.
+        Estimates the lifetime change in take-home pay from selected published
+        measures that the lifetime model can calculate, allowing for earnings
+        growth, tax thresholds and student loan repayments. Measures without a
+        matching model result are listed as not modelled. A total is available
+        only when every selected measure is modelled.
       </p>
-
       <div className="about-columns">
         <div>
-          <h4>Policies modelled</h4>
+          <h4>Published measures</h4>
           {[
-            ["Raise revenue", ABOUT_POLICIES.filter((item) => RAISER_KEYS.has(item.key))],
-            ["Cost revenue", ABOUT_POLICIES.filter((item) => !RAISER_KEYS.has(item.key))],
-          ].map(([heading, items]) => (
+            ["Raise revenue", displayable.filter((measure) => measure.direction === "revenue")],
+            ["Cost revenue", displayable.filter((measure) => measure.direction === "cost")],
+            ["Other measures", displayable.filter((measure) => measure.direction === "neutral")],
+          ].filter(([, items]) => items.length).map(([heading, items]) => (
             <div key={heading} className="about-group">
               <p className="about-group-heading">{heading}</p>
               <ul className="about-policies">
-                {items.map((item) => (
-                  <li key={item.key}>
-                    <span
-                      className="about-swatch"
-                      style={{ background: reform(item.key)?.color }}
-                      aria-hidden="true"
-                    />
-                    <span>
-                      <strong>{reform(item.key)?.label}</strong>: {item.text}
-                    </span>
+                {items.map((measure) => (
+                  <li key={measure.id}>
+                    <span className="about-swatch" style={{ background: measure.color }} aria-hidden="true" />
+                    <span><strong>{measure.label}</strong>{measure.description ? `: ${measure.description}` : ""}</span>
                   </li>
                 ))}
               </ul>
@@ -73,10 +43,7 @@ function LifecycleAbout() {
           </ul>
         </div>
       </div>
-      <p className="about-note">
-        Positive values mean higher net income under the policies; negative values
-        mean lower.
-      </p>
+      <p className="about-note">Positive values mean higher net income under the measures; negative values mean lower.</p>
     </div>
   );
 }

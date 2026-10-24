@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as renderReact, screen } from "@testing-library/react";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
@@ -8,6 +8,7 @@ import {
   MIN_SAMPLE_SIZE,
 } from "../utils/ageImpact";
 import { COMBINED_REFORM_ID } from "../utils/policyConfig";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
@@ -49,6 +50,16 @@ const CSV = [
   row(COMBINED_REFORM_ID, "16-24", { people: 7_500_000, mean: 40, better: 4, worse: 18, direct: 1_500_000 }),
   row(COMBINED_REFORM_ID, "all", { people: 70_000_000, mean: -80, better: 5, worse: 38, direct: 30_000_000 }),
 ].join("\n");
+
+const catalogue = buildMeasureCatalogue({
+  budgetary: [
+    ...POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, value: index === 0 ? -1 : 1 })),
+    { reform_id: COMBINED_REFORM_ID, reform_name: "All measures", value: 0 },
+  ],
+});
+const render = (element) => renderReact(
+  <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
+);
 
 beforeEach(() => {
   vi.stubGlobal(

@@ -48,19 +48,23 @@ export function meanChangeByBand(rows, policies, selected, year) {
     const point = { band: band.key, label: band.label, short: band.short };
     let net = 0;
     let suppressed = false;
+    let incomplete = false;
     for (const policy of policies) {
-      const row = selected.includes(policy.id)
+      const isSelected = selected.includes(policy.id);
+      const row = isSelected
         ? yearRows.find((r) => r.reform_id === policy.id && r.age_band === band.key)
         : null;
       if (row && row.sample_size < MIN_SAMPLE_SIZE) suppressed = true;
-      const value = row ? row.mean_change : 0;
+      const value = row && Number.isFinite(row.mean_change) ? row.mean_change : null;
+      if (isSelected && value === null) incomplete = true;
       point[policy.name] = value;
-      net += value;
+      if (value !== null) net += value;
     }
-    point.netChange = net;
+    point.netChange = incomplete ? null : net;
+    point.incomplete = incomplete;
     point.suppressed = suppressed;
     if (suppressed) {
-      for (const policy of policies) point[policy.name] = 0;
+      for (const policy of policies) point[policy.name] = null;
       point.netChange = null;
     }
     return point;
@@ -72,10 +76,13 @@ export function meanChangeByBand(rows, policies, selected, year) {
  * policy's own run when one is selected, the combined run when all are,
  * else null.
  */
-export function wholeSelectionRun(policies, selected) {
-  if (selected.length === 1) return selected[0];
-  if (selected.length > 1 && policies.every((policy) => selected.includes(policy.id))) {
-    return COMBINED_REFORM_ID;
+export function wholeSelectionRun(policies, selected, combinedId = COMBINED_REFORM_ID) {
+  if (selected.length === 1) {
+    const policy = policies.find((candidate) => candidate.id === selected[0]);
+    return policy && policy.displayable !== false ? selected[0] : null;
+  }
+  if (selected.length > 1 && selected.length === policies.length && policies.every((policy) => selected.includes(policy.id))) {
+    return policies.every((policy) => policy.displayable !== false) ? combinedId : null;
   }
   return null;
 }
@@ -85,8 +92,12 @@ export function wholeSelectionRun(policies, selected) {
  * selection's run, or null when the selection has no such run or its
  * rows are missing or too thin.
  */
-export function youngAndAll(rows, policies, selected, year) {
-  const run = wholeSelectionRun(policies, selected);
+export function youngAndAll(rows, policies, selected, year, combinedId) {
+  const combinedRows = [...new Set((rows ?? []).map((row) => row.reform_id).filter((id) => id?.endsWith("_combined")))];
+  const publishedCombined = combinedId === undefined
+    ? combinedRows.length === 1 ? combinedRows[0] : null
+    : combinedId;
+  const run = wholeSelectionRun(policies, selected, publishedCombined);
   if (!run) return null;
   const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
   const young = yearRows.find((row) => row.age_band === YOUNG_BAND);

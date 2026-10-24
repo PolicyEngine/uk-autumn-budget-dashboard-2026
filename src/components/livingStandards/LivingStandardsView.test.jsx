@@ -16,7 +16,7 @@ beforeEach(() => {
     vi.fn(async (url) =>
       String(url).endsWith("living_standards_outlook.json")
         ? new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } })
-        : new Response("reform_id,year,value\n", { status: 200 }),
+        : String(url).endsWith("manifest.json") ? new Response(null, { status: 404 }) : new Response("reform_id,year,value\n", { status: 200 }),
     ),
   );
   window.history.replaceState({}, "", "/");
@@ -31,6 +31,7 @@ const band = (container) => container.querySelector(".title-row");
 describe("the Living standards view", () => {
   it("is the fourth view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     // The Population view has the year and policy pills
     expect(band(container).querySelector(".band-year")).not.toHaveAttribute("aria-hidden");
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
@@ -48,9 +49,10 @@ describe("the Living standards view", () => {
     expect(window.location.search).toBe("?tab=living");
   });
 
-  it("hides the year and policy pills but keeps the band's layout", () => {
+  it("hides the year and policy pills but keeps the band's layout", async () => {
     window.history.replaceState({}, "", "/?tab=living");
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     for (const selector of [".band-year", ".band-policy"]) {
       const pill = band(container).querySelector(selector);
       // Still in the band, holding its place, but hidden and out of reach

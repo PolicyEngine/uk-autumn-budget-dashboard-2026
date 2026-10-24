@@ -3,8 +3,12 @@ import "./OBRComparisonTable.css";
 import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { parseDashboardCsv } from "../utils/loadDashboard";
 
 function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
+  const catalogue = useMeasureCatalogue();
+  const { byId } = catalogue;
   const [comparisonData, setComparisonData] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
   const [showTable, setShowTable] = useState(false);
@@ -16,55 +20,28 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
       fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`).then((res) => res.text()),
     ])
       .then(([obrCsvText, peCsvText]) => {
-        // Parse OBR data
-        const obrLines = obrCsvText.trim().split("\n");
-        const obrHeaders = obrLines[0].split(",");
-        const staticIdx = obrHeaders.indexOf("obr_static_value");
-        const behaviouralIdx = obrHeaders.indexOf("obr_post_behavioural_value");
-
-        const obrData = {};
-        for (let i = 1; i < obrLines.length; i++) {
-          const values = obrLines[i].split(",");
-          const reform_id = values[0];
-          const year = parseInt(values[2]);
-          const key = `${reform_id}_${year}`;
+        const obrData = Object.create(null);
+        const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+        for (const row of parseDashboardCsv(obrCsvText)) {
+          const key = `${row.reform_id}_${row.year}`;
           obrData[key] = {
-            reform_id,
-            reform_name: values[1],
-            year,
-            obr_static: staticIdx >= 0 ? parseFloat(values[staticIdx]) : null,
-            obr_behavioural:
-              behaviouralIdx >= 0 ? parseFloat(values[behaviouralIdx]) : null,
+            reform_id: row.reform_id,
+            reform_name: row.reform_name,
+            year: Number(row.year),
+            obr_static: numeric(row.obr_static_value),
+            obr_behavioural: numeric(row.obr_post_behavioural_value),
           };
         }
-
-        // Parse PolicyEngine budgetary impact data
-        const peLines = peCsvText.trim().split("\n");
-        const peHeaders = peLines[0].split(",");
-        const reformIdIdx = peHeaders.indexOf("reform_id");
-        const reformNameIdx = peHeaders.indexOf("reform_name");
-        const yearIdx = peHeaders.indexOf("year");
-        const valueIdx = peHeaders.indexOf("value");
-
-        for (let i = 1; i < peLines.length; i++) {
-          const values = peLines[i].split(",");
-          const reform_id = values[reformIdIdx];
-          const year = parseInt(values[yearIdx]);
-          const pe_value = parseFloat(values[valueIdx]);
-          const key = `${reform_id}_${year}`;
-
-          // A year the OBR didn't cost (2031-32): PolicyEngine's figure,
-          // with the OBR's left blank ("—")
-          if (!obrData[key]) {
-            obrData[key] = {
-              reform_id,
-              reform_name: values[reformNameIdx],
-              year,
-              obr_static: null,
-              obr_behavioural: null,
-            };
-          }
-          obrData[key].policyengine_value = pe_value;
+        for (const row of parseDashboardCsv(peCsvText)) {
+          const key = `${row.reform_id}_${row.year}`;
+          if (!obrData[key]) obrData[key] = {
+            reform_id: row.reform_id,
+            reform_name: row.reform_name,
+            year: Number(row.year),
+            obr_static: null,
+            obr_behavioural: null,
+          };
+          obrData[key].policyengine_value = numeric(row.value);
         }
 
         // Convert to array
@@ -78,7 +55,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
   // Filter to selected policies
   const filteredData = comparisonData.filter((row) =>
-    selectedPolicies.includes(row.reform_id),
+    selectedPolicies.includes(row.reform_id) && isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
   );
 
   if (filteredData.length === 0) return null;
@@ -93,7 +70,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   filteredData.forEach((row) => {
     if (!policiesMap[row.reform_id]) {
       policiesMap[row.reform_id] = {
-        name: row.reform_name,
+        name: byId.get(row.reform_id)?.name ?? row.reform_name,
         years: {},
       };
     }
