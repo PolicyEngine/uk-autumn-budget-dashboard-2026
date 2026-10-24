@@ -17,6 +17,11 @@ that:
   path are checked only on an image whose calculator declares its input
   year (``lifecycle_calculator.INPUT_YEAR``), so a rollback to a revision
   older than that fix is still checked for shape but not refused for it.
+- ``/api/household-impact``, the Personal impact tab's single-year view,
+  answers one household's headline with finite numbers and a change equal
+  to reform minus baseline. Checked only on an image that has the route
+  (``expected_household_impact``), so a rollback to a revision older than
+  it is not refused for lacking it.
 
 It does not check that the answers are right; the household fixtures do
 that (``household_route``), once the team has written them.
@@ -34,6 +39,7 @@ Usage::
 """
 
 import argparse
+import importlib.util
 import json
 import math
 import sys
@@ -266,6 +272,54 @@ def lifecycle_problems(body: Any, input_year: Optional[int]) -> list[str]:
     return problems
 
 
+HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
+# The headline alone (no per-measure runs, no sweep): two runs, a few
+# seconds on a warm instance.
+SMOKE_HOUSEHOLD_IMPACT = {
+    "year": 2029,
+    "policies": ["threshold_freeze_extension"],
+    "household": {"employment_income": 30_000, "salary_year": 2029},
+    "include": [],
+}
+
+
+def expected_household_impact() -> dict:
+    """Whether this build has the single-year household route: an image
+    older than it declares none, and is not checked for it."""
+    return {
+        "declared": importlib.util.find_spec("uk_budget_data.household_impact")
+        is not None
+    }
+
+
+def household_impact_problems(body: Any) -> list[str]:
+    """Ways a single-year answer for ``SMOKE_HOUSEHOLD_IMPACT`` is not a
+    complete calculation: an object reporting no failure, every number
+    finite, a finite baseline, reform and change with the change equal to
+    reform minus baseline (to the penny), and the engine's versions named.
+    Whether the numbers are right is for the tests, not this check."""
+    route = HOUSEHOLD_IMPACT_ROUTE
+    if not isinstance(body, dict):
+        return [f"{route} did not return an object"]
+    markers = error_markers(body)
+    if markers:
+        return [f"{route} reported a failure at {', '.join(markers)}"]
+    if not all(math.isfinite(n) for n in numbers(body)):
+        return [f"{route} returned a non-finite number"]
+    net = body.get("net_income")
+    if not isinstance(net, dict) or not all(
+        _finite(net.get(key)) for key in ("baseline", "reform", "change")
+    ):
+        return [f"{route} has no baseline, reform and change"]
+    problems = []
+    if abs(net["reform"] - net["baseline"] - net["change"]) > 0.011:
+        problems.append(f"{route}: the change is not reform minus baseline")
+    engine = body.get("engine")
+    if not isinstance(engine, dict) or not engine.get("policyengine-uk"):
+        problems.append(f"{route} does not name its policyengine-uk version")
+    return problems
+
+
 def identity_problems(
     reported: Any, expected_git_sha: str, expected: dict
 ) -> list[str]:
@@ -316,12 +370,15 @@ def run_smoke(
     years: Optional[list[str]] = None,
     policies: Optional[list[str]] = None,
     lifecycle: Optional[dict] = None,
+    household_impact: Optional[dict] = None,
 ) -> dict:
     """Run every check. Returns ``{"pass": bool, "problems": [...]}``.
 
     ``expected`` is the image's identity, ``years``/``policies`` its
-    calculator's coverage and ``lifecycle`` what its lifecycle calculator
-    declares (``expected_lifecycle``); each defaults to this process's own.
+    calculator's coverage, ``lifecycle`` what its lifecycle calculator
+    declares (``expected_lifecycle``) and ``household_impact`` whether it
+    has the single-year route (``expected_household_impact``); each
+    defaults to this process's own.
     """
     expected = expected or runtime_identity()
     problems: list[str] = []
@@ -352,6 +409,19 @@ def run_smoke(
         problems += lifecycle_problems(
             answer.json(), lifecycle.get("input_year")
         )
+
+    if household_impact is None:
+        household_impact = expected_household_impact()
+    if household_impact.get("declared"):
+        single = _request(
+            client,
+            "POST",
+            HOUSEHOLD_IMPACT_ROUTE,
+            problems,
+            json=SMOKE_HOUSEHOLD_IMPACT,
+        )
+        if single is not None:
+            problems += household_impact_problems(single.json())
 
     return {"pass": not problems, "problems": problems, "version": reported}
 
@@ -401,6 +471,7 @@ def print_expectations() -> dict:
         "years": years,
         "policies": policies,
         "lifecycle": expected_lifecycle(),
+        "household_impact": expected_household_impact(),
     }
 
 
@@ -442,6 +513,13 @@ def read_expectations(path: str, expected_git_sha: str) -> dict:
         )
     ):
         problems.append("names a lifecycle input year that is not a year")
+    # Optional too: a file written before the single-year route names none,
+    # and the route is then not checked.
+    single = data.get("household_impact") if isinstance(data, dict) else None
+    if single is not None and not (
+        isinstance(single, dict) and isinstance(single.get("declared"), bool)
+    ):
+        problems.append("names a household_impact entry that is not declared")
     if problems:
         raise ValueError(
             f"the expectations file {path} " + "; ".join(problems)
@@ -475,6 +553,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             data["years"],
             data["policies"],
             data.get("lifecycle") or {},
+            data.get("household_impact") or {},
         )
     else:
         result = run_smoke(StdlibClient(args.base_url, args.timeout), sha)

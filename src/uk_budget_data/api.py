@@ -4,20 +4,24 @@ This module provides a REST API endpoint for calculating how Autumn Budget
 policies affect individual households over time.
 """
 
+import copy
+import functools
 import json
 import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import anyio
 import numpy as np
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from uk_budget_data import household_impact
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.lifecycle_calculator import (
     LifecycleInputs,
     run_lifecycle_model,
@@ -25,6 +29,7 @@ from uk_budget_data.lifecycle_calculator import (
 from uk_budget_data.personal_impact import (
     HouseholdInput,
     PersonalImpactCalculator,
+    household_workers,
     stop_workers,
 )
 from uk_budget_data.runtime_identity import runtime_identity
@@ -263,6 +268,212 @@ async def calculate_personal_impact_stream(data: APIHouseholdInput):
                 "Connection": "keep-alive",
             },
         )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation error: {e}")
+
+
+# --- One household, one year: POST /api/household-impact -------------------
+
+# The largest amount a field takes, in £ a year
+MAX_AMOUNT = 10_000_000
+
+
+class HouseholdChildRequest(BaseModel):
+    """A child: a dependant under policyengine-uk's rules, which count
+    everyone under 16 and a 16- to 19-year-old in full-time non-advanced
+    education (school or college). ``in_education`` says which a 16- to
+    19-year-old is; left out, policyengine-uk places a 16- or 17-year-old in
+    school and an 18- or 19-year-old at university (not a dependant)."""
+
+    model_config = {"extra": "forbid"}
+
+    age: int = Field(..., ge=0, le=household_impact.OLDEST_CHILD_AGE)
+    in_education: Optional[bool] = None
+
+
+class HouseholdAnswersRequest(BaseModel):
+    """A household, as the Personal impact view asks about it. Amounts are
+    £ a year, except the monthly rent."""
+
+    model_config = {"extra": "forbid"}
+
+    age: int = Field(default=40, ge=16, le=100)
+    employment_income: float = Field(default=35_000, ge=0, le=MAX_AMOUNT)
+    student_loan_plan: Literal[household_impact.STUDENT_LOAN_PLANS] = "NONE"
+    has_partner: bool = False
+    partner_age: int = Field(default=40, ge=16, le=100)
+    partner_employment_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    partner_student_loan_plan: Literal[household_impact.STUDENT_LOAN_PLANS] = (
+        "NONE"
+    )
+    children: list[HouseholdChildRequest] = Field(
+        default_factory=list, max_length=10
+    )
+    region: Literal[household_impact.REGIONS] = "LONDON"
+    claims_universal_credit: bool = False
+    tenure: Literal[household_impact.TENURES] = "OWNED_WITH_MORTGAGE"
+    monthly_rent: float = Field(default=0, ge=0, le=100_000)
+    brma: Optional[Literal[household_impact.BRMAS]] = Field(
+        default=None,
+        description=(
+            "Broad Rental Market Area, for Local Housing Allowance. Left "
+            "out: the region's BRMA with the most private-rented households "
+            "(policyengine-uk's default)."
+        ),
+    )
+    local_authority: Optional[Literal[household_impact.LOCAL_AUTHORITIES]] = (
+        Field(
+            default=None,
+            description=(
+                "Local authority. policyengine-uk reads it only for the few "
+                "Council Tax Reduction schemes it models, so it matters only "
+                "with council_tax entered; it does not choose the BRMA."
+            ),
+        )
+    )
+    council_tax: float = Field(
+        default=0,
+        ge=0,
+        le=100_000,
+        description="Council Tax a year, as billed (not modelled)",
+    )
+    council_tax_band: Literal[household_impact.COUNCIL_TAX_BANDS] = "D"
+    monthly_childcare: float = Field(
+        default=0,
+        ge=0,
+        le=10_000,
+        description="Childcare costs a month, with children only",
+    )
+    salary_year: int = Field(
+        default=household_impact.SALARY_YEAR,
+        description=(
+            "The year the salaries are entered for; they are grown to the "
+            "chosen year with the OBR average earnings index"
+        ),
+    )
+    dividend_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    savings_interest_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    property_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    petrol_spending: float = Field(default=0, ge=0, le=100_000)
+    diesel_spending: float = Field(default=0, ge=0, le=100_000)
+    salary_sacrifice_pension_contributions: float = Field(
+        default=0, ge=0, le=MAX_AMOUNT
+    )
+
+    def answers(self) -> household_impact.HouseholdAnswers:
+        values = self.model_dump()
+        values["children"] = tuple(
+            household_impact.Child(**child) for child in values["children"]
+        )
+        return household_impact.HouseholdAnswers(**values)
+
+
+class HouseholdImpactRequest(BaseModel):
+    """A household, a policy year, and the measures to compare it under
+    (every measure the calculation knows when none are named)."""
+
+    model_config = {"extra": "forbid"}
+
+    year: int
+    policies: Optional[list[str]] = Field(default=None, min_length=1)
+    household: HouseholdAnswersRequest = Field(
+        default_factory=HouseholdAnswersRequest
+    )
+    include: list[Literal[household_impact.PARTS]] = Field(
+        default_factory=lambda: list(household_impact.PARTS),
+        description=(
+            "The slower parts to compute besides the headline and the "
+            "programmes: by_policy (one more run per measure) and sweep "
+            "(two runs). Send [] for the headline alone, then ask for the "
+            "rest."
+        ),
+    )
+
+    @field_validator("household")
+    @classmethod
+    def _salary_year(cls, household: "HouseholdAnswersRequest"):
+        if household.salary_year not in POLICY_YEARS:
+            raise ValueError(
+                f"household.salary_year: choose a year from "
+                f"{POLICY_YEARS[0]} to {POLICY_YEARS[-1]}"
+            )
+        return household
+
+    @model_validator(mode="after")
+    def _salary_not_after_year(self):
+        if self.household.salary_year > self.year:
+            raise ValueError(
+                "household.salary_year must not be after year: salaries are "
+                "grown forward to the chosen year"
+            )
+        return self
+
+    @field_validator("year")
+    @classmethod
+    def _policy_year(cls, year: int) -> int:
+        if year not in POLICY_YEARS:
+            raise ValueError(
+                f"Choose a year from {POLICY_YEARS[0]} to {POLICY_YEARS[-1]}"
+            )
+        return year
+
+    @field_validator("policies")
+    @classmethod
+    def _known_measures(cls, policies: Optional[list[str]]):
+        if policies is None:
+            return policies
+        unknown = sorted(set(policies) - set(household_impact.measure_ids()))
+        if unknown:
+            raise ValueError(f"Unknown measures: {', '.join(unknown)}")
+        return policies
+
+
+@functools.lru_cache(maxsize=64)
+def _cached_household_impact(request_json: str) -> dict:
+    """Answers by request, so moving the year or measures back and forth
+    reuses them. A refused request raises, and is not kept."""
+    data = HouseholdImpactRequest.model_validate_json(request_json)
+    return household_impact.calculate_household_impact(
+        data.household.answers(),
+        data.policies or household_impact.measure_ids(),
+        data.year,
+        include=tuple(data.include),
+        workers=household_workers(),
+    )
+
+
+def _household_impact(data: HouseholdImpactRequest) -> dict:
+    # Canonical JSON: the same request in another key order is one entry.
+    key = json.dumps(data.model_dump(mode="json"), sort_keys=True)
+    return copy.deepcopy(_cached_household_impact(key))
+
+
+@app.post("/api/household-impact")
+async def calculate_household_impact(
+    data: HouseholdImpactRequest, response: Response
+):
+    """One household's net income in one year before and after the
+    selected measures: the headline, each measure's own effect and the
+    interaction residual, the programmes, and the earnings sweep.
+
+    Runs in a worker thread through the same one-at-a-time limiter as
+    ``/api/personal-impact`` (``CALCULATIONS``), so ``/api/health`` keeps
+    answering and two calculations never share the instance's memory.
+    Out-of-range answers are refused with a 422 naming the field.
+    """
+    try:
+        received = time.perf_counter()
+        results, calculating = await anyio.to_thread.run_sync(
+            timed, _household_impact, data, limiter=CALCULATIONS
+        )
+        response.headers["Server-Timing"] = server_timing(
+            calculating,
+            time.perf_counter() - received - calculating,
+            memory_peak_bytes(),
+        )
+        return results
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
