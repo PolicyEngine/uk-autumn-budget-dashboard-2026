@@ -14,26 +14,21 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
 a{color:var(--teal2);text-decoration:none}a:hover{text-decoration:underline}
-header{background:var(--teal);color:#fff;padding:20px 0}
+header{background:var(--teal);color:#fff;padding:14px 0}
 .wrap{max-width:1240px;margin:0 auto;padding-left:16px;padding-right:16px}
-.logo{font-weight:700;font-size:15px}.logo span{color:#81e6d9}
-h1{margin:6px 0 4px;font-size:23px;font-weight:600;line-height:1.25}
+h1{margin:0;font-size:22px;font-weight:600;line-height:1.3}
+.lede{margin:0 0 6px;font-size:14.5px;max-width:880px}
+.ikey{font-size:12.5px;color:var(--muted);margin-bottom:16px;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.ikey .pill{font-size:11.5px;padding:0 7px}
+details.info{display:inline}
+details.info summary{display:inline;cursor:pointer;list-style:none;color:var(--teal2);font-weight:600}
+details.info summary::-webkit-details-marker{display:none}
+details.info[open] .itext{display:block;margin:4px 0;padding:6px 9px;background:#fff;border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:12px;font-weight:400;text-align:left;white-space:normal}
+.gnote{padding:10px 18px;font-size:13px;color:var(--text);background:#fffaf5;border-bottom:1px solid var(--line)}
 .sub{opacity:.88;font-size:13px}
 .mock{display:inline-block;background:#fff;color:var(--teal);font-weight:700;font-size:11px;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
 main.wrap{padding-top:20px;padding-bottom:8px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
-.intro{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-bottom:14px}
-@media(max-width:900px){.intro{grid-template-columns:1fr}}
-.intro h2{font-size:15px;margin:0 0 8px;color:var(--teal);font-weight:600}
-.intro ul{margin:0;padding-left:18px}.intro li{margin:4px 0}
-.key{display:flex;flex-direction:column;gap:7px;font-size:13px}
-.key div{display:flex;gap:8px;align-items:baseline}
-.callouts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
-@media(max-width:900px){.callouts{grid-template-columns:1fr}}
-.callout{font-size:13px;border-left:4px solid var(--teal2);scroll-margin-top:12px}
-.callout.w{border-left-color:#ea580c}
-.callout b{display:block;margin-bottom:3px}
-.callout:target{box-shadow:0 0 0 3px #81e6d9}
 .controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:14px}
 .controls label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
 input[type=search]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:230px}
@@ -56,7 +51,24 @@ input[type=search]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid
 @media(max-width:760px){.dhead{grid-template-columns:auto 1fr}.dstats{grid-column:1/-1;text-align:left;flex-wrap:wrap}}
 .dbody{display:none;border-top:1px solid var(--line)}
 .open>.dbody,.open>.mbody,.open>.gbody{display:block}
-.cols,.mhead,.yrow{display:grid;grid-template-columns:minmax(0,2.4fr) 92px 90px 90px minmax(0,1.25fr) 120px;gap:10px;align-items:start}
+.cols,.mhead,.yrow{display:grid;grid-template-columns:minmax(0,2fr) 76px minmax(0,2.1fr) 128px 112px;gap:12px;align-items:start}
+.dumb>svg{display:block;width:100%;height:auto;overflow:visible}
+.dumb text{font-family:Inter,system-ui,sans-serif;font-size:11px;fill:#334155;font-variant-numeric:tabular-nums}
+.dumb text.o{fill:#94a3b8}.dumb text.n{fill:var(--teal);font-weight:600}.dumb text.s{fill:#1a202c}
+.bars{padding:2px 18px 14px 78px}
+.brow{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr) 64px;gap:8px;align-items:center;font-size:12px;padding:2px 0}
+.brow .bl{color:var(--text);line-height:1.25}
+.track{position:relative;height:12px;background:#f1f5f9;border-radius:3px}
+.track .z{position:absolute;top:-2px;bottom:-2px;width:1px;background:#94a3b8}
+.track i{position:absolute;top:2px;height:8px;border-radius:2px}
+.track i.closer{background:#22c55e}.track i.further{background:#f59e0b}.track i.none{background:#94a3b8}
+.brow .bv{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.bnote{font-size:11.5px;color:var(--muted);margin-top:4px}
+.bkey{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.ychart{padding:10px 18px 4px 30px}
+.ychart>svg{display:block;width:100%;max-width:680px;height:auto}
+.ychart text{font-family:Inter,system-ui,sans-serif;font-size:11px;fill:#64748b}
+.lg{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:2px}
 .cols{padding:8px 18px;font-size:11.5px;color:var(--muted);font-weight:600;background:#fafbfc;border-bottom:1px solid var(--line)}
 .cols .n,.n{text-align:right;font-variant-numeric:tabular-nums}
 .measure{border-bottom:1px solid var(--line)}
@@ -102,6 +114,10 @@ input[type=search]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid
  .num,.off{text-align:left}
  .yrow{padding-left:18px}
  .chg{grid-column:span 2}
+ .dumb{grid-column:1/-1}
+ .bars{padding:2px 16px 14px}
+ .brow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 52px}
+ .ychart{padding-left:16px;padding-right:16px}
  .bar{max-width:none}
  .yr small{display:block}
 }
@@ -110,36 +126,11 @@ footer{font-size:12px;color:var(--muted);padding:12px 0 36px}
 </head>
 <body>
 <header><div class="wrap">
-  <div class="logo">Policy<span>Engine</span></div>
   <h1>Drill reruns: drill day vs policyengine 6.10.2 <span class="mock">MOCK</span></h1>
-  <div class="sub">The four mock-Budget drills, rerun on 24 October 2026 on today's engine and the certified Microcosm data. Rehearsal measures, not a real Budget.</div>
 </div></header>
 <main class="wrap">
-  <div class="intro">
-    <div class="card">
-      <h2>How to read this</h2>
-      <ul>
-        <li><b>A drill</b> was a timed rehearsal of Budget day: we scored a set of invented ("mock") measures as if they had just been announced.</li>
-        <li><b>Drill-day estimate</b> is what we published on the day, on that day's engine and data. <b>Rerun today</b> is the same measure code run again on policyengine 6.10.2 and the certified Microcosm data.</li>
-        <li><b>Official costing (static)</b> is the mock Treasury/OBR costing in each drill's packet, before behavioural effects, as recorded in the drill's filled scoring sheet. Drill 1 has none.</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>Signs and colours</h2>
-      <div class="key">
-        <div><span class="pill none">−1.20</span> a negative £bn figure is a cost to the Exchequer; a positive one raises money.</div>
-        <div><span class="pill none">+0.22</span> change = rerun minus drill day, in £bn, then as a % of the drill-day figure.</div>
-        <div><span class="pill closer">green</span> the rerun is closer to the official static costing.</div>
-        <div><span class="pill further">amber</span> the rerun is further from it.</div>
-        <div><span class="pill none">grey</span> no like-for-like costing (none, different basis, or not a valid rerun).</div>
-      </div>
-    </div>
-  </div>
-  <div class="callouts">
-    <div class="card callout w" id="fuel"><b>Fuel duty in drills 1–3: not valid reruns</b>Those drills set fuel duty month by month. pe-uk 2.132.6 ignores month-dated rates, so only the VAT part of each measure is scored now (drills 2 and 3 fall by 82.9% in every year). Drill 4 used open-ended dates and is unaffected. See the <a href="https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md" target="_blank" rel="noopener">README finding</a>.</div>
-    <div class="card callout" id="decile1"><b>Decile 1 moves on its own</b><a href="https://github.com/PolicyEngine/policyengine-uk/blob/main/CHANGELOG.md#21324---2026-10-15" target="_blank" rel="noopener">pe-uk 2.132.4</a> resets negative household income to zero and now counts those households in the bottom decile instead of leaving them out. Decile 1 figures from before and after that version are not comparable, even where revenue is unchanged.</div>
-    <div class="card callout" id="basis"><b>Different basis: no colour</b>Our figures are tax-year liabilities (some time-limited measures by calendar year); the costings are fiscal-year cash. Where the drill team had to convert our number before comparing (cash timing for CGT and Class 4, in-year shares, prorating), the row shows their converted figure and is not coloured.</div>
-  </div>
+  <p class="lede">Each drill scored mock Budget measures on the day. This page reruns the same code on policyengine 6.10.2 with the certified Microcosm data and compares it with the drill-day estimate and the official costing.</p>
+  <div class="ikey">Figures in £bn: negative = cost, positive = raises money · <span class="pill closer">closer</span> to the official costing · <span class="pill further">further</span> from it · <span class="pill none">grey</span> no like-for-like costing</div>
   <div class="controls">
     <span class="seg" id="view"><button class="btn on" data-v="m">By measure</button><button class="btn" data-v="t">Every year</button></span>
     <button class="btn" id="expand">Expand all</button>
@@ -153,12 +144,15 @@ footer{font-size:12px;color:var(--muted);padding:12px 0 36px}
     (<a href="https://pypi.org/project/policyengine-uk/2.132.6/" target="_blank" rel="noopener">policyengine-uk 2.132.6</a>, policyengine-core 3.33.3)
     with Microcosm national file microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71 (SHA-256 810ba980…0951ece).
     Drill-day figures come from each drill branch's committed results; official costings from each drill's filled national scoring sheet (each figure links to its row).
-    Model year Y is shown as fiscal year Y–Y+1, as the drill teams did.
+    Model year Y is shown as fiscal year Y–Y+1, as the drill teams did. Rows marked "different basis" are ones the drill team converted before comparing with the costing; they are not counted as closer or further.
     · <a href="https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/114" target="_blank" rel="noopener">PR #114</a>
     · <a href="https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md" target="_blank" rel="noopener">README</a>
   </footer>
 </main>
 <script>
+const README='https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md';
+const BASIS='The drill team converted our figure before comparing it with the costing (cash timing, in-year share or fiscal-year proration), so the raw figures are not like-for-like and the row is not coloured. Their converted figure is shown.';
+const DEC1='pe-uk 2.132.4 resets negative household income to zero and counts those households in decile 1, so decile 1 moves even where revenue does not. Figures from before and after it are not comparable.';
 const st={view:'m',hideZero:true,q:'',open:new Set(['d1'])};
 let D,BY;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -168,33 +162,78 @@ const pc=v=>v==null?'':(v>0.05?'+':v<-0.05?'−':'')+Math.abs(v).toFixed(1)+'%';
 const ext=(t,u)=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`;
 const zero=r=>Math.abs(r.old||0)<5e-3&&Math.abs(r.new||0)<5e-3;
 const cls=r=>r.vs==='closer'||r.vs==='further'?r.vs:'none';
+const KEY=`drill day <svg width="9" height="9"><circle cx="4.5" cy="4.5" r="3.5" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/></svg> → rerun <svg width="9" height="9"><circle cx="4.5" cy="4.5" r="4" fill="#319795"/></svg> · official <svg width="10" height="10"><path d="M5 0L10 5L5 10L0 5Z" fill="#1a202c"/></svg>`;
+const n2=v=>(v<0?'−':'')+Math.abs(v).toFixed(2);
+function tip(r){return `${r.fy}: drill day ${n2(r.old)}, rerun ${n2(r.new)}`+(r.static!=null?`, official static ${n2(r.static)}`:'')+(r.post!=null?`, post-behavioural ${n2(r.post)}`:'')+(r.aligned===false&&!r.invalid?`, drill team's converted figure ${n2(r.team)}`:'')+' (£bn)'}
+function dumb(r){
+  const W=320,H=50,L=30,Rr=30,cy=26;
+  const vals=[r.old,r.new];if(r.static!=null)vals.push(r.static);if(r.post!=null)vals.push(r.post);const showTeam=r.aligned===false&&!r.invalid&&r.team!=null;if(showTeam)vals.push(r.team);
+  let lo=Math.min(...vals),hi=Math.max(...vals);const mag=Math.max(Math.abs(lo),Math.abs(hi));const minSpan=Math.max(0.04,mag*0.12);
+  if(hi-lo<minSpan){const m=(hi+lo)/2;lo=m-minSpan/2;hi=m+minSpan/2}
+  const pad=(hi-lo)*0.08;lo-=pad;hi+=pad;
+  const x=v=>L+(v-lo)/(hi-lo)*(W-L-Rr);
+  let g='';
+  g+=`<line x1="${L}" x2="${W-Rr}" y1="${cy}" y2="${cy}" stroke="#e2e8f0"/>`;
+  if(lo<0&&hi>0)g+=`<line x1="${x(0)}" x2="${x(0)}" y1="${cy-12}" y2="${cy+12}" stroke="#94a3b8" stroke-dasharray="2 2"/>`;
+  const dia=(v,sz,fill,stroke,dash)=>{const X=x(v);return `<path d="M${X} ${cy-sz}L${X+sz} ${cy}L${X} ${cy+sz}L${X-sz} ${cy}Z" fill="${fill}" stroke="${stroke}" stroke-width="1.4"${dash?' stroke-dasharray="2 1.5"':''}/>`};
+  if(r.post!=null)g+=dia(r.post,4.5,'#fff','#1a202c');
+  if(showTeam)g+=dia(r.team,6,'none','#64748b',true);
+  if(r.static!=null)g+=dia(r.static,5.5,'#1a202c','#1a202c');
+  const xo=x(r.old),xn=x(r.new);
+  if(Math.abs(xn-xo)>9){const dir=xn>xo?1:-1;g+=`<line x1="${xo+dir*5}" y1="${cy}" x2="${xn-dir*7}" y2="${cy}" stroke="#319795" stroke-width="2"/><path d="M${xn-dir*5} ${cy}l${-dir*5} -4v8z" fill="#319795"/>`}
+  g+=`<circle cx="${xo}" cy="${cy}" r="4.5" fill="#fff" stroke="#94a3b8" stroke-width="1.8"/><circle cx="${xn}" cy="${cy}" r="4.5" fill="#319795"/>`;
+  // labels: rerun above, drill day below, official above if room else below
+  const lab=(X,y,t,c)=>{const a=X<L+18?'start':X>W-Rr-18?'end':'middle';return `<text x="${X}" y="${y}" text-anchor="${a}" class="${c}">${t}</text>`};
+  g+=lab(xn,cy-10,n2(r.new),'n');g+=lab(xo,cy+19,n2(r.old),'o');
+  if(r.static!=null){const xs=x(r.static);if(Math.abs(xs-xn)>40)g+=lab(xs,cy-10,n2(r.static),'s');else if(Math.abs(xs-xo)>40)g+=lab(xs,cy+19,n2(r.static),'s')}
+  return `<div class="dumb"><span class="lbl">${KEY}</span><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(tip(r))}"><title>${esc(tip(r))}</title>${g}</svg></div>`}
+function bars(g,ok,bad){
+  const items=ok.map(([id,rs])=>headline(rs)).filter(h=>!zero(h));
+  if(!items.length)return '';
+  const span=Math.max(5,...items.map(h=>Math.abs(h.pct??0)))*1.05;
+  items.sort((a,b)=>Math.abs(b.pct??0)-Math.abs(a.pct??0));
+  const rows=items.map(h=>{const p=h.pct;let bar='';if(p!=null){const w=Math.abs(p)/span*50;bar=`<i class="${cls(h)}" style="left:${p<0?50-w:50}%;width:${Math.max(w,0.6)}%"></i>`}
+    return `<div class="brow" title="${esc(tip(h))}"><div class="bl">${esc(h.name)} <span class="muted">${h.fy}</span></div><div class="track"><span class="z" style="left:50%"></span>${bar}</div><div class="bv">${p==null?'from £0':pc(p)}</div></div>`}).join('');
+  return `<div class="bars"><div class="bkey">Change in each measure's headline year, rerun vs drill day (axis ±${span.toFixed(0)}%)</div>${rows}${bad.length?`<div class="bnote">Fuel duty is left out: it is not a valid rerun.</div>`:''}</div>`}
+function ychart(rs){
+  const sm=innerWidth<600,W=sm?360:640,H=sm?150:170,L=sm?40:48,Rr=sm?26:34,T=12,B=26;
+  const ys=rs.map(r=>r.fy);const vals=[];rs.forEach(r=>{vals.push(r.old,r.new);if(r.static!=null)vals.push(r.static)});
+  let lo=Math.min(0,...vals),hi=Math.max(0,...vals);const p=(hi-lo)*0.08||0.1;lo-=p;hi+=p;
+  const x=i=>L+(rs.length===1?0.5:i/(rs.length-1))*(W-L-Rr),y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  let g='';const raw=(hi-lo)/3,mg=Math.pow(10,Math.floor(Math.log10(raw))),stp=[1,2,5,10].map(k=>k*mg).find(k=>k>=raw);const ticks=[];for(let v=Math.ceil(lo/stp)*stp;v<=hi+1e-9;v+=stp)ticks.push(Math.round(v/stp)*stp);
+  ticks.forEach(v=>{if(v<lo||v>hi)return;g+=`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?'#94a3b8':'#eef2f6'}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${Math.abs(v)<1e-9?'0':n2(v)}</text>`});
+  rs.forEach((r,i)=>g+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${sm&&rs.length>4?r.fy.slice(2):r.fy}</text>`);
+  const line=(k,c,dash)=>`<polyline points="${rs.map((r,i)=>x(i)+','+y(r[k])).join(' ')}" fill="none" stroke="${c}" stroke-width="2"${dash?' stroke-dasharray="4 3"':''}/>`;
+  g+=line('old','#94a3b8',true)+line('new','#319795');
+  rs.forEach((r,i)=>{const X=x(i);
+    if(r.static!=null){const Y=y(r.static);g+=`<path d="M${X} ${Y-5}L${X+5} ${Y}L${X} ${Y+5}L${X-5} ${Y}Z" fill="${r.aligned===false?'none':'#1a202c'}" stroke="#1a202c" stroke-width="1.3"${r.aligned===false?' stroke-dasharray="2 1.5"':''}><title>${esc(tip(r))}</title></path>`}
+    g+=`<circle cx="${X}" cy="${y(r.old)}" r="4" fill="#fff" stroke="#94a3b8" stroke-width="1.8"><title>${esc(tip(r))}</title></circle><circle cx="${X}" cy="${y(r.new)}" r="4" fill="#319795"><title>${esc(tip(r))}</title></circle>`});
+  return `<div class="ychart"><div class="lg"><span>${KEY}</span><span>£bn by fiscal year; open diamond = costing on a different basis</span></div><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`}
 function headline(rs){let b=null;for(const r of rs){if(zero(r))continue;if(!b||Math.abs(r.diff)>Math.abs(b.diff)+1e-9)b=r}return b||rs[0]}
 function change(r){
   const p=r.pct==null?(Math.abs(r.diff||0)>=5e-3?'from £0':''):pc(r.pct);
-  const w=r.pct==null?0:Math.min(Math.abs(r.pct),25)/25*100;
-  return `<div class="chg"><span class="lbl">Change</span><span class="pill ${cls(r)}" title="${r.vs?'Against the official costing: '+r.vs:'No like-for-like costing'}">${sbn(r.diff)}${p?' · '+p:''}</span><span class="bar" title="bar full at 25%"><i class="${cls(r)}" style="left:0;width:${w}%"></i></span></div>`}
+  return `<div class="chg"><span class="lbl">Change</span><span class="pill ${cls(r)}" title="${r.vs?'Against the official costing: '+r.vs:'No like-for-like costing'}">${sbn(r.diff)}${p?' · '+p:''}</span></div>`}
 function official(r){
   if(r.static==null)return `<div class="off"><span class="lbl">Official costing</span><span class="muted">—</span></div>`;
   const src=r.sheet?` title="${esc(r.sheet.file)}, line ${r.sheet.line}"`:'';
   let h=`<div class="off"><span class="lbl">Official costing (static)</span><a href="${r.sheet.url}" target="_blank" rel="noopener"${src}>${bn(r.static)}</a>`;
   if(r.post!=null)h+=`<small>post-behavioural ${bn(r.post)}</small>`;
-  if(r.aligned===false&&!r.invalid)h+=`<small><a href="#basis" class="tag">different basis</a> team figure ${bn(r.team)}</small>`;
+  if(r.aligned===false&&!r.invalid)h+=`<small><details class="info"><summary><span class="tag" title="${BASIS}">different basis ⓘ</span></summary><span class="itext">${BASIS}</span></details> team figure ${bn(r.team)}</small>`;
   return h+'</div>'}
 function note(r){
-  if(r.invalid)return `<a href="#fuel" class="tag warn">⚠ not a valid rerun</a>`;
+  if(r.invalid)return `<span class="tag warn">⚠ not a valid rerun</span>`;
   let h=esc(r.note);if(r.links.length)h+=' ('+r.links.map(l=>ext(l[0],l[1])).join(', ')+')';
-  if(/decile/.test(r.note))h=h.replace('see decile note','<a href="#decile1">see decile note</a>');
   return h}
-function dec(r){const f=a=>a.map(x=>x==null?'—':x.toFixed(1)).join(' → ');const d=r.d;
-  return `<div class="dec">Average change per household (£/yr), drill day → rerun: decile 1 <b>${f(d.d1_avg_change)}</b> · decile 5 <b>${f(d.d5_avg_change)}</b> · decile 10 <b>${f(d.d10_avg_change)}</b> · people affected <b>${f(d.people_affected_pct)}%</b></div>`}
+const gbp=x=>{if(x==null)return '—';const n=Math.round(x);return (n<0?'−':'')+'£'+Math.abs(n).toLocaleString('en-GB')};
+const pct1=x=>x==null?'—':x.toFixed(1)+'%';
+function dec(r){const f=(a,g)=>a.map(g).join(' → ');const d=r.d;
+  return `<div class="dec">Average change per household a year, drill day → rerun: decile 1 <details class="info"><summary title="${DEC1}">ⓘ</summary><span class="itext">${DEC1}</span></details> <b>${f(d.d1_avg_change,gbp)}</b> · decile 5 <b>${f(d.d5_avg_change,gbp)}</b> · decile 10 <b>${f(d.d10_avg_change,gbp)}</b> · people affected <b>${f(d.people_affected_pct,pct1)}</b></div>`}
 function yrow(r,who){
   return `<div class="yrow">
    <div class="mname">${who?`<div class="who">Drill ${r.drill} · <b>${esc(r.name)}</b></div>`:''}<div class="mnote">${note(r)}</div></div>
    <div class="yr ylab"><span class="lbl">Year</span>${r.fy}</div>
-   <div class="num"><span class="lbl">Drill-day estimate</span>${bn(r.old)}</div>
-   <div class="num"><span class="lbl">Rerun today</span>${bn(r.new)}</div>
-   ${change(r)}${official(r)}${dec(r)}</div>`}
-const COLS=`<div class="cols"><div>Measure</div><div>Year</div><div class="n">Drill-day estimate (£bn)</div><div class="n">Rerun today (£bn)</div><div>Change</div><div class="n">Official costing, static (£bn)</div></div>`;
+   ${dumb(r)}${change(r)}${official(r)}${dec(r)}</div>`}
+const COLS=`<div class="cols"><div>Measure</div><div>Year</div><div>${KEY} (£bn)</div><div>Change</div><div class="n">Official costing, static (£bn)</div></div>`;
 function measure(id,rs){
   const vis=rs.filter(r=>!(st.hideZero&&zero(r)));const h=headline(rs);const k='m:'+id;
   const others=vis.length-(vis.includes(h)?1:0);
@@ -203,10 +242,8 @@ function measure(id,rs){
     <div class="mname"><div class="nm">${esc(h.name)}</div><div class="ds">${esc(h.desc)}</div>
      <div class="mnote">${note(h)}</div><div class="more"><span class="chev">▶</span> ${others>0?`+${others} more year${others>1?'s':''}, deciles`:'deciles and people affected'}</div></div>
     <div class="yr"><span class="lbl">Year</span>${h.fy}<small>largest move</small></div>
-    <div class="num"><span class="lbl">Drill-day estimate</span>${bn(h.old)}</div>
-    <div class="num"><span class="lbl">Rerun today</span>${bn(h.new)}</div>
-    ${change(h)}${official(h)}</div>
-   <div class="mbody">${vis.map(r=>yrow(r)).join('')||'<div class="empty">All years are £0.</div>'}</div></div>`}
+    ${dumb(h)}${change(h)}${official(h)}</div>
+   <div class="mbody">${st.open.has(k)&&vis.length>1?ychart(vis):''}${vis.map(r=>yrow(r)).join('')||'<div class="empty">All years are £0.</div>'}</div></div>`}
 function match(rs){const q=st.q.toLowerCase();return !q||rs.some(r=>(r.name+' '+r.desc+' '+r.id+' '+(r.note||'')).toLowerCase().includes(q))}
 function stat(v,l){return `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`}
 function drill(g){
@@ -223,9 +260,9 @@ function drill(g){
      <div class="dlinks">${ext('PR #'+g.pr,g.pr_url)} · ${ext(g.issue_label+' #'+g.issue,g.issue_url)} · engine ${esc(g.engine)} → 6.10.2 · ${esc(g.data)}</div>
      <div class="dwhat">${esc(g.what)}</div></div>
     <div class="dstats">${stat(g.median<0.005?'0.00%':g.median.toFixed(2)+'%','median change in size')}${stat(g.max.toFixed(1)+'%','largest change')}${vs}</div>
-   </div>
+   </div>${bars(g,ok,bad)}
    <div class="dbody">${COLS}${ok.map(([id,rs])=>measure(id,rs)).join('')||'<div class="empty">No measures match.</div>'}
-    ${bad.length?`<div class="group ${st.open.has(gk)?'open':''}"><div class="ghead" data-t="${gk}"><span class="chev">▶</span> Not valid reruns (${bad.length}) · fuel duty, <a href="#fuel">why</a></div><div class="gbody">${bad.map(([id,rs])=>measure(id,rs)).join('')}</div></div>`:''}
+    ${bad.length?`<div class="group ${st.open.has(gk)?'open':''}"><div class="ghead" data-t="${gk}"><span class="chev">▶</span> Not valid reruns (${bad.length}): fuel duty</div><div class="gbody"><div class="gnote">This drill set fuel duty month by month, and pe-uk 2.132.6 ignores month-dated rates, so the rerun scores only the VAT part of the measure. Drill 4 used open-ended dates and is unaffected; see the ${ext('README finding',README)}.</div>${bad.map(([id,rs])=>measure(id,rs)).join('')}</div></div>`:''}
    </div></section>`}
 function flat(){
   const rs=D.rows.filter(r=>!(st.hideZero&&zero(r))&&match([r]))
@@ -235,7 +272,7 @@ function render(){
   const y=scrollY;
   document.getElementById('root').innerHTML=st.view==='m'?D.drills.map(drill).join(''):flat();
   scrollTo(0,y)}
-document.getElementById('root').onclick=e=>{if(e.target.closest('a'))return;const t=e.target.closest('[data-t]');if(!t)return;const k=t.dataset.t;st.open.has(k)?st.open.delete(k):st.open.add(k);render()};
+document.getElementById('root').onclick=e=>{if(e.target.closest('a,details'))return;const t=e.target.closest('[data-t]');if(!t)return;const k=t.dataset.t;st.open.has(k)?st.open.delete(k):st.open.add(k);render()};
 document.getElementById('expand').onclick=()=>{D.drills.forEach(g=>{st.open.add('d'+g.drill);st.open.add('g'+g.drill)});Object.keys(BY).forEach(id=>st.open.add('m:'+id));render()};
 document.getElementById('collapse').onclick=()=>{st.open.clear();render()};
 document.getElementById('view').onclick=e=>{const v=e.target.dataset.v;if(!v)return;st.view=v;document.querySelectorAll('#view .btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render()};

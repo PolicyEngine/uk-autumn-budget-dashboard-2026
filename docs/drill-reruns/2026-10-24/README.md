@@ -78,17 +78,17 @@ The median and maximum are taken over "material" cells: those where the drill-da
 | Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the official static costing |
 |---|---|---|---|---|
 | 1 | 17 (4) | 9.98% | 20.3% | n/a: no filled national sheet with costings on the branch |
-| 2 | 23 (4) | 2.95% | 17.4% | 8 closer / 7 further |
-| 3 | 41 (5) | 1.95% | 14.6% | 22 closer / 14 further |
-| 4 | 51 (0) | 0.00% | 0.36% | 6 closer / 0 further (all moves are under 0.4%) |
+| 2 | 23 (4) | 2.95% | 17.4% | 7 closer / 7 further |
+| 3 | 41 (5) | 1.95% | 14.6% | 13 closer / 10 further |
+| 4 | 51 (0) | 0.00% | 0.36% | None moved (all moves are under 0.4%) |
 
-"Closer/further" compares the flat CSV figure with `costing_static` in the drill's filled sheet, with model year Y read as fiscal year Y–Y+1. The flat CSV is calendar-year net budgetary impact, while the costings are fiscal-year gross tax heads. Read the column as the direction of movement, not as a reconciliation.
+"Closer/further" compares the flat CSV figure with `costing_static` in the drill's filled sheet, with model year Y read as fiscal year Y–Y+1. The flat CSV is calendar-year net budgetary impact, while the costings are fiscal-year gross tax heads. Read the column as the direction of movement, not as a reconciliation. It counts like-for-like rows only: where the sheet's team figure differs from the drill-day figure, the drill team converted it before comparing (cash timing for CGT and Class 4, in-year shares, fiscal-year proration), so those rows are marked `different_basis` in `comparison.csv` and left out (drill 2: 2 rows, drill 3: 13, drill 4: 15).
 
 ### Largest movers and their causes
 
 | Drill | Measure | Drill day → rerun (£bn) | Size change | Cause |
 |---|---|---|---|---|
-| 1 | NICs PT/LPL to £13,000, 2027 | −0.789 → −0.949 | +20.3% | The drill-1 retro (#6) recorded −0.79bn against about −0.985bn, caused by the UEL/UPL baseline bug (policyengine-uk#1878). On 2.132.6 the 2027 figure is in line with 2028–30 (−0.96 to −0.97), and decile 10's 2027 change rises from £14 to £49, as in later years. This is consistent with the fix; it is not separately bisected |
+| 1 | NICs PT/LPL to £13,000, 2027 | −0.789 → −0.949 | +20.3% | The drill-1 retro (#6) recorded −0.79bn against about −0.985bn, caused by the Class 4 NI additional-band bug at non-round thresholds (policyengine-uk#1878). On 2.132.6 the 2027 figure is in line with 2028–30 (−0.96 to −0.97), and decile 10's 2027 change rises from £14 to £49, as in later years. This is consistent with the fix; it is not separately bisected |
 | 1 | Child Benefit £30/£20, 2027–30 | −1.21 → −0.98 (2027) | −18.5% | Mainly the dataset (enhanced FRS → Microcosm). Decile 10's gain falls from about £5 to £0.5. Engine HICBC changes (2.121.0 opted-out claimants; 2.126.11 HICBC rounding) also apply. Not decomposed |
 | 1 | Energy VAT zero rate, 2027–28 | −1.88 → −1.69 (2027) | −10 to −12% | Dataset energy spending (enhanced FRS → Microcosm). Not decomposed |
 | 1 | HVCTS from £1.5m, 2028–30 | 0.269 → 0.249 | −7.4% | pe-uk 2.123.1 charges the surcharge only on owner-occupiers. Decile 1's average loss falls from £27 to £9 and decile 10's rises from £8 to £41, the pattern expected when renters drop out. The dataset change also applies |

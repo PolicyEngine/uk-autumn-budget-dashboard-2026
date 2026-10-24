@@ -597,8 +597,19 @@ def cmd_compare(args) -> None:
                 ):
                     gap_old = abs(old_rev - off)
                     gap_new = abs(new_rev - off)
+                    team = s.get("sheet_team_bn")
+                    # Like-for-like only: where the drill team's reconciled
+                    # figure differs from the drill-day figure, they
+                    # converted it (cash timing, in-year share, fiscal-year
+                    # proration) before comparing, so the raw figure is on
+                    # a different basis from the costing.
+                    same_basis = team is not None and abs(old_rev - team) <= max(
+                        0.005, 0.02 * abs(old_rev)
+                    )
                     row["vs_official_static"] = (
-                        "unchanged"
+                        "different_basis"
+                        if not same_basis
+                        else "unchanged"
                         if abs(gap_new - gap_old) < 0.0005
                         else "closer" if gap_new < gap_old else "further"
                     )

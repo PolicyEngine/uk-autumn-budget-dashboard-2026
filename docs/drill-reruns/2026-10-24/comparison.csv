@@ -30,7 +30,7 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 2,mock2_cgt_rates,Capital Gains Tax rate rise,,2029,4.76596,4.73012,-0.035832,-0.751832,-0.751832,-16.2208,-23.462,-9.42655,-22.0009,-1261.33,-1265.84,1.8959,1.80213,2029-30,2.18,1.25,4.76596,closer
 2,mock2_cgt_rates,Capital Gains Tax rate rise,,2030,4.95657,4.91887,-0.0376981,-0.760568,-0.760568,-16.4409,-24.2835,-9.52119,-26.0065,-1299.36,-1315.21,1.90164,1.80846,2030-31,2.3,1.32,4.95657,closer
 2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
-2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2027,-0.936668,-1.03545,-0.0987803,-10.5459,10.5459,28.5009,30.9869,31.0566,34.6735,37.21,43.6436,89.0938,94.7114,2027-28,-1.76,-1.72,-1.25014,closer
+2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2027,-0.936668,-1.03545,-0.0987803,-10.5459,10.5459,28.5009,30.9869,31.0566,34.6735,37.21,43.6436,89.0938,94.7114,2027-28,-1.76,-1.72,-1.25014,different_basis
 2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2028,-0.313472,-0.346532,-0.0330602,-10.5465,10.5465,9.55616,10.343,10.3216,11.5252,12.4109,14.5528,61.7346,73.0862,2028-29,0,0,0,
 2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2029,0,0,0,0,0,0,0,0,0,0,0,0,0,2029-30,0,0,0,
 2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,,2030,0,0,0,0,0,0,0,0,0,0,0,0,0,2030-31,0,0,0,
@@ -44,11 +44,11 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 2,mock2_energy_price_payment,Energy Price Protection Payment,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0,0,0,
 2,mock2_energy_price_payment,Energy Price Protection Payment,,2029,0,0,0,0,0,0,0,0,0,0,0,0,0,2029-30,0,0,0,
 2,mock2_energy_price_payment,Energy Price Protection Payment,,2030,0,0,0,0,0,0,0,0,0,0,0,0,0,2030-31,0,0,0,
-2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,-0.395,-0.385,-0.20478,unchanged
-2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2027,-1.37903,-0.235739,1.14329,82.9054,-82.9054,31.9209,5.17433,45.8493,8.26508,56.3088,10.1922,58.6563,53.9395,2027-28,-2.245,-2.19,-1.16014,further
-2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2028,-1.06096,-0.181368,0.879588,82.9052,-82.9052,24.1913,3.95467,35.0211,6.29543,43.3123,7.78421,58.2584,43.0675,2028-29,-1.745,-1.705,-0.882888,further
-2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2029,-1.05216,-0.179863,0.8723,82.9054,-82.9054,23.5925,3.90535,35.1015,6.20347,42.8482,7.7232,58.2277,41.74,2029-30,-1.775,-1.74,-0.871548,further
-2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2030,-1.02576,-0.17535,0.850411,82.9054,-82.9054,23.0439,3.66905,32.6971,6.12996,41.8373,7.49794,58.1172,39.567,2030-31,-1.8,-1.77,-0.860751,further
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,-0.395,-0.385,-0.20478,different_basis
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2027,-1.37903,-0.235739,1.14329,82.9054,-82.9054,31.9209,5.17433,45.8493,8.26508,56.3088,10.1922,58.6563,53.9395,2027-28,-2.245,-2.19,-1.16014,different_basis
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2028,-1.06096,-0.181368,0.879588,82.9052,-82.9052,24.1913,3.95467,35.0211,6.29543,43.3123,7.78421,58.2584,43.0675,2028-29,-1.745,-1.705,-0.882888,different_basis
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2029,-1.05216,-0.179863,0.8723,82.9054,-82.9054,23.5925,3.90535,35.1015,6.20347,42.8482,7.7232,58.2277,41.74,2029-30,-1.775,-1.74,-0.871548,different_basis
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,duty change dropped by engine (month-dated ranges); VAT modifier only,2030,-1.02576,-0.17535,0.850411,82.9054,-82.9054,23.0439,3.66905,32.6971,6.12996,41.8373,7.49794,58.1172,39.567,2030-31,-1.8,-1.77,-0.860751,different_basis
 2,mock2_hvcts_band,Council tax surcharge band from £1.5m,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,-0.005,0,
 2,mock2_hvcts_band,Council tax surcharge band from £1.5m,,2027,0,0,0,0,0,0,0,0,0,0,0,0,0,2027-28,0,-0.02,0,
 2,mock2_hvcts_band,Council tax surcharge band from £1.5m,,2028,0.149552,0.149335,-0.000217772,-0.145616,-0.145616,-0.353885,-5.34001,-1.74896,-0.0542199,-30.1864,-24.7405,0.469576,0.400896,2028-29,0.21,0.185,0.149552,unchanged
@@ -65,35 +65,35 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 2,mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,,2029,0,0,0,0,0,0,0,0,0,0,0,0,0,2029-30,0,0,0,
 2,mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,,2030,0.992232,0.989717,-0.00251474,-0.253442,-0.253442,-19.8638,-16.8993,-35.2073,-42.4705,-21.3498,-21.6767,18.8471,18.5065,2030-31,1.66,1.15,1.00812,further
 3,mock3_additional_rate_threshold,Lower additional rate threshold,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
-3,mock3_additional_rate_threshold,Lower additional rate threshold,,2027,1.64825,1.66071,0.0124574,0.755797,0.755797,-0.719468,-2.8803,-0.646328,-3.6849,-493.726,-460.605,6.38644,6.59002,2027-28,1.46,0.76,1.3186,further
+3,mock3_additional_rate_threshold,Lower additional rate threshold,,2027,1.64825,1.66071,0.0124574,0.755797,0.755797,-0.719468,-2.8803,-0.646328,-3.6849,-493.726,-460.605,6.38644,6.59002,2027-28,1.46,0.76,1.3186,different_basis
 3,mock3_additional_rate_threshold,Lower additional rate threshold,,2028,1.7391,1.74494,0.00584143,0.335888,0.335888,-0.369867,-2.8906,-0.37094,-2.42838,-511.202,-479.978,6.59589,6.92459,2028-29,1.885,0.98,1.7209,closer
 3,mock3_additional_rate_threshold,Lower additional rate threshold,,2029,1.84992,1.85698,0.00705993,0.381635,0.381635,-0.365399,-2.83632,-0.991375,-3.09051,-536.05,-501.464,7.07436,7.48409,2029-30,1.96,1.02,1.8278,closer
 3,mock3_additional_rate_threshold,Lower additional rate threshold,,2030,1.97981,1.9814,0.00158487,0.0800513,0.0800513,-0.388292,-2.80389,-0.986215,-3.35343,-568.362,-531.105,7.48146,7.84076,2030-31,2.04,1.06,1.9538,closer
 3,mock3_additional_rate_threshold,Lower additional rate threshold,,2031,2.16768,2.135,-0.0326764,-1.50744,-1.50744,-0.921637,-2.84499,-1.7918,-3.62324,-612.557,-565.381,7.93,8.19249,2031-32,2.12,1.1,2.1301,closer
 3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0.095,0,
-3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2027,4.48563,4.45282,-0.0328125,-0.731502,-0.731502,-13.9804,-20.5242,-9.67207,-19.6491,-1192.02,-1209.25,2.14436,2.04673,2027-28,0.115,1.26,0.314,closer
-3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2028,4.65983,4.62577,-0.0340574,-0.730872,-0.730872,-14.3199,-21.0499,-10.6099,-17.577,-1232.77,-1250.8,2.14685,2.04903,2028-29,1.655,-0.285,4.4978,closer
-3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2029,4.83546,4.80012,-0.035338,-0.73081,-0.73081,-14.9039,-21.8396,-10.9959,-22.0842,-1271.21,-1283.72,2.14875,2.05077,2029-30,1.725,0.535,4.6721,closer
-3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2030,5.02877,4.99166,-0.0371032,-0.73782,-0.73782,-15.2693,-22.6433,-11.4336,-26.1371,-1320.31,-1333.36,2.1502,2.05297,2030-31,1.795,0.945,4.849,closer
-3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2031,5.22521,5.18338,-0.0418276,-0.800496,-0.800496,-19.5241,-23.3241,-10.7275,-27.1589,-1321.99,-1379.53,2.15139,2.05621,2031-32,1.87,0.98,5.0425,closer
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2027,4.48563,4.45282,-0.0328125,-0.731502,-0.731502,-13.9804,-20.5242,-9.67207,-19.6491,-1192.02,-1209.25,2.14436,2.04673,2027-28,0.115,1.26,0.314,different_basis
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2028,4.65983,4.62577,-0.0340574,-0.730872,-0.730872,-14.3199,-21.0499,-10.6099,-17.577,-1232.77,-1250.8,2.14685,2.04903,2028-29,1.655,-0.285,4.4978,different_basis
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2029,4.83546,4.80012,-0.035338,-0.73081,-0.73081,-14.9039,-21.8396,-10.9959,-22.0842,-1271.21,-1283.72,2.14875,2.05077,2029-30,1.725,0.535,4.6721,different_basis
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2030,5.02877,4.99166,-0.0371032,-0.73782,-0.73782,-15.2693,-22.6433,-11.4336,-26.1371,-1320.31,-1333.36,2.1502,2.05297,2030-31,1.795,0.945,4.849,different_basis
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,,2031,5.22521,5.18338,-0.0418276,-0.800496,-0.800496,-19.5241,-23.3241,-10.7275,-27.1589,-1321.99,-1379.53,2.15139,2.05621,2031-32,1.87,0.98,5.0425,different_basis
 3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
-3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2027,0.349841,0.367135,0.0172943,4.94347,4.94347,-1.79113,-0.904825,-12.0142,-10.7905,-28.3035,-27.0865,10.2339,10.4763,2027-28,0.155,0.13,0.0875,further
-3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2028,0.371906,0.36938,-0.00252578,-0.679146,-0.679146,-2.09866,-1.04733,-12.9095,-12.4938,-30.2956,-28.161,10.4291,10.8174,2028-29,0.615,0.525,0.3554,further
-3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2029,0.392108,0.412038,0.0199297,5.08271,5.08271,-2.38358,-1.16178,-13.8747,-12.6516,-31.0313,-29.0884,10.5113,11.0502,2029-30,0.635,0.54,0.377,closer
-3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2030,0.414221,0.43205,0.0178291,4.30426,4.30426,-2.46093,-1.37468,-14.63,-13.4807,-32.0004,-29.3234,10.6472,11.1898,2030-31,0.65,0.555,0.3976,closer
-3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2031,0.438694,0.453258,0.0145643,3.31993,3.31993,-2.92943,-1.31775,-16.8929,-14.8909,-31.8703,-30.6558,10.6536,11.2406,2031-32,0.67,0.57,0.4203,closer
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2027,0.349841,0.367135,0.0172943,4.94347,4.94347,-1.79113,-0.904825,-12.0142,-10.7905,-28.3035,-27.0865,10.2339,10.4763,2027-28,0.155,0.13,0.0875,different_basis
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2028,0.371906,0.36938,-0.00252578,-0.679146,-0.679146,-2.09866,-1.04733,-12.9095,-12.4938,-30.2956,-28.161,10.4291,10.8174,2028-29,0.615,0.525,0.3554,different_basis
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2029,0.392108,0.412038,0.0199297,5.08271,5.08271,-2.38358,-1.16178,-13.8747,-12.6516,-31.0313,-29.0884,10.5113,11.0502,2029-30,0.635,0.54,0.377,different_basis
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2030,0.414221,0.43205,0.0178291,4.30426,4.30426,-2.46093,-1.37468,-14.63,-13.4807,-32.0004,-29.3234,10.6472,11.1898,2030-31,0.65,0.555,0.3976,different_basis
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,,2031,0.438694,0.453258,0.0145643,3.31993,3.31993,-2.92943,-1.31775,-16.8929,-14.8909,-31.8703,-30.6558,10.6536,11.2406,2031-32,0.67,0.57,0.4203,different_basis
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2027,-1.3318,-1.35729,-0.0254943,-1.91427,1.91427,0,0,0,0,0,0,0,0,2027-28,-1.395,-1.145,-1.3318,closer
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2028,-1.3728,-1.3988,-0.0260027,-1.89414,1.89414,0,0,0,0,0,0,0,0,2028-29,-1.445,-1.04,-1.3728,closer
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2029,-1.41432,-1.44115,-0.0268328,-1.89722,1.89722,0,0,0,0,0,0,0,0,2029-30,-1.495,-1.015,-1.4143,closer
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2030,-1.46355,-1.49085,-0.0273036,-1.86558,1.86558,0,0,0,0,0,0,0,0,2030-31,-1.545,-1.02,-1.4635,closer
 3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,,2031,-1.52299,-1.55033,-0.027337,-1.79495,1.79495,0,0,0,0,0,0,0,0,2031-32,-1.6,-1.04,-1.523,closer
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,-0.395,-0.385,-0.2048,unchanged
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2027,-0.909894,-0.155543,0.754351,82.9054,-82.9054,20.9969,3.41403,30.5884,5.45347,37.2079,6.72531,58.003,36.7861,2027-28,-1.28,-1.24,-0.6605,further
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2028,-0.525588,-0.089848,0.43574,82.9052,-82.9052,11.9479,1.95907,17.3443,3.1186,21.5161,3.85599,55.9153,14.9324,2028-29,-0.88,-0.855,-0.4371,further
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2029,-0.521058,-0.0890714,0.431987,82.9057,-82.9057,11.6846,1.93402,17.3885,3.0721,21.2079,3.82494,55.7534,13.9949,2029-30,-0.905,-0.88,-0.4316,further
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2030,-0.50812,-0.0868612,0.421259,82.9054,-82.9054,11.4187,1.81747,16.1828,3.03662,20.418,3.71465,55.457,12.6373,2030-31,-0.935,-0.905,-0.4264,further
-3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2031,-0.522401,-0.089302,0.433099,82.9055,-82.9055,11.8081,1.85736,16.5359,3.12395,20.674,3.79265,55.5655,12.7304,2031-32,-0.965,-0.935,-0.4383,further
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,-0.395,-0.385,-0.2048,different_basis
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2027,-0.909894,-0.155543,0.754351,82.9054,-82.9054,20.9969,3.41403,30.5884,5.45347,37.2079,6.72531,58.003,36.7861,2027-28,-1.28,-1.24,-0.6605,different_basis
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2028,-0.525588,-0.089848,0.43574,82.9052,-82.9052,11.9479,1.95907,17.3443,3.1186,21.5161,3.85599,55.9153,14.9324,2028-29,-0.88,-0.855,-0.4371,different_basis
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2029,-0.521058,-0.0890714,0.431987,82.9057,-82.9057,11.6846,1.93402,17.3885,3.0721,21.2079,3.82494,55.7534,13.9949,2029-30,-0.905,-0.88,-0.4316,different_basis
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2030,-0.50812,-0.0868612,0.421259,82.9054,-82.9054,11.4187,1.81747,16.1828,3.03662,20.418,3.71465,55.457,12.6373,2030-31,-0.935,-0.905,-0.4264,different_basis
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,duty change dropped by engine (month-dated ranges); VAT modifier only,2031,-0.522401,-0.089302,0.433099,82.9055,-82.9055,11.8081,1.85736,16.5359,3.12395,20.674,3.79265,55.5655,12.7304,2031-32,-0.965,-0.935,-0.4383,different_basis
 3,mock3_hvcts_top_bands,Council tax surcharge top bands,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 3,mock3_hvcts_top_bands,Council tax surcharge top bands,,2027,0,0,0,0,0,0,0,0,0,0,0,0,0,2027-28,0,0,0,
 3,mock3_hvcts_top_bands,Council tax surcharge top bands,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0.055,0.045,0,unchanged
@@ -111,7 +111,7 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 3,mock3_pensioner_allowance,Pensioner Allowance,,2028,-1.95762,-2.01443,-0.0568109,-2.90203,2.90203,29.7265,23.8337,78.8872,104.294,19.0097,15.8,10.8882,10.8754,2028-29,-0.62,-0.615,-1.9576,further
 3,mock3_pensioner_allowance,Pensioner Allowance,,2029,-2.38878,-2.44928,-0.0604928,-2.53237,2.53237,39.6253,29.974,96.3203,130.134,22.0852,18.5209,11.6765,11.7149,2029-30,-1.02,-1.01,-2.3888,further
 3,mock3_pensioner_allowance,Pensioner Allowance,,2030,-2.85032,-2.90719,-0.0568627,-1.99496,1.99496,46.5445,36.0725,119.888,156.856,25.4156,22.0821,12.4289,12.4168,2030-31,-1.48,-1.465,-2.8503,further
-3,mock3_pensioner_allowance,Pensioner Allowance,,2031,-2.99269,-3.09358,-0.100894,-3.37134,3.37134,47.3527,40.1082,148.844,163.387,24.8404,23.5174,12.4704,12.5023,2031-32,-1.855,-1.835,-3.3112,further
+3,mock3_pensioner_allowance,Pensioner Allowance,,2031,-2.99269,-3.09358,-0.100894,-3.37134,3.37134,47.3527,40.1082,148.844,163.387,24.8404,23.5174,12.4704,12.5023,2031-32,-1.855,-1.835,-3.3112,different_basis
 3,mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 3,mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,,2027,0,0,0,0,0,0,0,0,0,0,0,0,0,2027-28,0,0,0,
 3,mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0,0,0,
@@ -123,7 +123,7 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0,0,0,
 3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,,2029,0,0,0,0,0,0,0,0,0,0,0,0,0,2029-30,0,0,0,
 3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,,2030,0,0,0,0,0,0,0,0,0,0,0,0,0,2030-31,0,0,0,
-3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,,2031,4.45548,4.33217,-0.12331,-2.7676,-2.7676,-31.0194,-26.8942,-113.965,-117.416,-307.969,-307.321,88.9435,87.5366,2031-32,2.945,2.83,4.1054,closer
+3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,,2031,4.45548,4.33217,-0.12331,-2.7676,-2.7676,-31.0194,-26.8942,-113.965,-117.416,-307.969,-307.321,88.9435,87.5366,2031-32,2.945,2.83,4.1054,different_basis
 3,mock3_whd_top_up,Warm Home Discount £100 top-up,,2026,-0.721427,-0.680095,0.0413325,5.72927,-5.72927,36.3494,39.3417,27.2257,25.3654,3.3148,2.65764,26.2319,25.5553,2026-27,-0.51,-0.51,-0.7214,closer
 3,mock3_whd_top_up,Warm Home Discount £100 top-up,,2027,-0.721765,-0.680038,0.0417265,5.78117,-5.78117,36.8854,38.7332,26.5837,25.1248,3.45675,2.63284,26.2264,25.5021,2027-28,-0.52,-0.52,-0.7218,closer
 3,mock3_whd_top_up,Warm Home Discount £100 top-up,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0,0,0,
@@ -143,11 +143,11 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 4,mock4_cb_early_years_addition,Child Benefit Early Years Addition,,2030,-0.198449,-0.198449,0,0,0,7.81653,7.47493,10.9606,10.9448,0.00785368,0.00787259,2.2554,2.24798,2030-31,-0.28,-0.28,-0.198,unchanged
 4,mock4_cb_early_years_addition,Child Benefit Early Years Addition,,2031,-0.195555,-0.195555,0,0,0,7.86797,7.51845,10.8135,10.8216,0.00783391,0.00784852,2.21805,2.21075,2031-32,-0.28,-0.28,-0.196,unchanged
 4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0.015,0,
-4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2027,2.15547,2.15538,-8.81807e-05,-0.00409102,-0.00409102,-5.10208,-9.24149,-8.70645,-8.76384,-596.662,-594.17,1.41703,1.42056,2027-28,0.07,0.69,0.194,unchanged
-4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2028,2.24144,2.24135,-9.16043e-05,-0.00408685,-0.00408685,-5.25673,-9.53619,-7.32867,-7.78624,-614.433,-614.909,1.44343,1.44675,2028-29,0.775,-0.22,2.163,unchanged
-4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2029,2.32792,2.32782,-9.51163e-05,-0.00408589,-0.00408589,-5.49259,-9.92487,-9.90552,-9.95215,-630.204,-631.373,1.4601,1.46336,2029-30,0.805,0.49,2.249,unchanged
-4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2030,2.42302,2.42292,-9.88251e-05,-0.0040786,-0.0040786,-5.72005,-10.3253,-11.9623,-11.9451,-654.527,-656.104,1.48698,1.49008,2030-31,0.835,0.51,2.336,unchanged
-4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2031,2.51837,2.51827,-0.000102728,-0.00407914,-0.00407914,-5.91679,-10.6632,-12.4335,-12.4428,-677.805,-679.069,1.4934,1.49649,2031-32,0.87,0.53,2.432,unchanged
+4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2027,2.15547,2.15538,-8.81807e-05,-0.00409102,-0.00409102,-5.10208,-9.24149,-8.70645,-8.76384,-596.662,-594.17,1.41703,1.42056,2027-28,0.07,0.69,0.194,different_basis
+4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2028,2.24144,2.24135,-9.16043e-05,-0.00408685,-0.00408685,-5.25673,-9.53619,-7.32867,-7.78624,-614.433,-614.909,1.44343,1.44675,2028-29,0.775,-0.22,2.163,different_basis
+4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2029,2.32792,2.32782,-9.51163e-05,-0.00408589,-0.00408589,-5.49259,-9.92487,-9.90552,-9.95215,-630.204,-631.373,1.4601,1.46336,2029-30,0.805,0.49,2.249,different_basis
+4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2030,2.42302,2.42292,-9.88251e-05,-0.0040786,-0.0040786,-5.72005,-10.3253,-11.9623,-11.9451,-654.527,-656.104,1.48698,1.49008,2030-31,0.835,0.51,2.336,different_basis
+4,mock4_cgt_higher_rate,MOCK: CGT higher rate 26%,,2031,2.51837,2.51827,-0.000102728,-0.00407914,-0.00407914,-5.91679,-10.6632,-12.4335,-12.4428,-677.805,-679.069,1.4934,1.49649,2031-32,0.87,0.53,2.432,different_basis
 4,mock4_combined,MOCK: drill 4 package,,2026,-1.52773,-1.52773,1.34089e-08,8.77705e-07,-8.77705e-07,63.5473,61.8426,56.043,55.9147,33.9238,33.9053,85.3171,85.2761,,,,,
 4,mock4_combined,MOCK: drill 4 package,,2027,-3.89882,-3.89798,0.000841508,0.0215836,-0.0215836,146.07,136.879,149.204,149.94,-542.047,-539.761,84.6414,84.6012,,,,,
 4,mock4_combined,MOCK: drill 4 package,,2028,-3.26362,-3.26241,0.00120737,0.036995,-0.036995,138.231,127.707,124.793,122.132,-602.22,-602.7,82.6009,82.5684,,,,,
@@ -160,9 +160,9 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 4,mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,,2029,-2.33244,-2.33244,0,0,0,0,0,0,0,0,0,0,0,2029-30,-1.77,-1.095,-2.332,unchanged
 4,mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,,2030,-2.37077,-2.37077,0,0,0,0,0,0,0,0,0,0,0,2030-31,-1.83,-1.115,-2.371,unchanged
 4,mock4_employer_ni_under23,MOCK: Employer NI relief for under-23s,,2031,-2.40448,-2.40448,0,0,0,0,0,0,0,0,0,0,0,2031-32,-1.895,-1.135,-2.404,unchanged
-4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2026,-0.199587,-0.199587,8.40209e-09,4.20974e-06,-4.20974e-06,4.32546,4.39968,7.06441,7.05292,8.69516,8.69006,48.0873,48.2321,2026-27,-0.21,-0.195,-0.183,unchanged
-4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2027,-0.876158,-0.876158,8.02976e-09,9.16474e-07,-9.16474e-07,18.8319,19.231,30.5552,30.7184,38.0223,37.8807,76.5238,76.5081,2027-28,-1.7,-1.58,-0.82,unchanged
-4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2028,-0.653498,-0.653498,2.07264e-08,3.1716e-06,-3.1716e-06,14.0005,14.2495,22.8896,22.6843,28.0403,28.049,75.0596,75.0485,2028-29,-1.275,-1.185,-0.672,unchanged
+4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2026,-0.199587,-0.199587,8.40209e-09,4.20974e-06,-4.20974e-06,4.32546,4.39968,7.06441,7.05292,8.69516,8.69006,48.0873,48.2321,2026-27,-0.21,-0.195,-0.183,different_basis
+4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2027,-0.876158,-0.876158,8.02976e-09,9.16474e-07,-9.16474e-07,18.8319,19.231,30.5552,30.7184,38.0223,37.8807,76.5238,76.5081,2027-28,-1.7,-1.58,-0.82,different_basis
+4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2028,-0.653498,-0.653498,2.07264e-08,3.1716e-06,-3.1716e-06,14.0005,14.2495,22.8896,22.6843,28.0403,28.049,75.0596,75.0485,2028-29,-1.275,-1.185,-0.672,different_basis
 4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2029,-0.64841,-0.64841,-3.38199e-10,-5.21583e-08,5.21583e-08,13.8217,14.0788,22.3591,22.3639,27.8526,27.8428,74.8001,74.7899,2029-30,-1.315,-1.225,-0.649,unchanged
 4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2030,-0.630833,-0.630833,-1.60791e-08,-2.54887e-06,2.54887e-06,12.9429,13.1996,22.169,22.0539,26.9889,26.9736,74.4033,74.3961,2030-31,-1.355,-1.26,-0.632,unchanged
 4,mock4_fuel_duty,MOCK: fuel duty rises cancelled and restaged,,2031,-0.646882,-0.646882,-3.09372e-09,-4.78251e-07,4.78251e-07,13.167,13.4544,22.7173,22.6288,27.4831,27.4733,74.4032,74.3959,2031-32,-1.395,-1.295,-0.646,unchanged
@@ -180,22 +180,22 @@ drill,measure_id,measure_name,rerun_note,year,revenue_bn_drill_day,revenue_bn_re
 4,mock4_lha_reset,MOCK: LHA reset to 30th percentile,,2031,-1.68338,-1.6831,0.000282368,0.0167739,-0.0167739,93.4446,89.2153,44.8642,44.3398,1.32238,1.32484,4.27576,4.25971,2031-32,-1.925,-2,-1.683,unchanged
 4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2027,0,0,0,0,0,0,0,0,0,0,0,0,0,2027-28,0,0,0,
-4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2028,0.280935,0.280935,1.28085e-09,4.55924e-07,4.55924e-07,-0.609982,-1.12766,-17.9407,-17.7651,-20.4022,-20.418,2.02799,2.03975,2028-29,0.055,0.05,0.14,unchanged
+4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2028,0.280935,0.280935,1.28085e-09,4.55924e-07,4.55924e-07,-0.609982,-1.12766,-17.9407,-17.7651,-20.4022,-20.418,2.02799,2.03975,2028-29,0.055,0.05,0.14,different_basis
 4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2029,0.290767,0.290767,0,0,0,-0.630947,-1.24415,-15.6364,-15.7987,-19.7914,-19.8281,2.12691,2.13835,2029-30,0.115,0.105,0.286,unchanged
 4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2030,0.299129,0.299129,1.91072e-09,6.38763e-07,6.38763e-07,-0.615458,-1.37916,-16.2126,-16.1893,-18.9794,-19.0251,2.39389,2.41083,2030-31,0.115,0.105,0.295,unchanged
 4,mock4_savings_starting_band,"MOCK: savings starting-rate band £2,000",,2031,0.31054,0.31054,-1.43181e-09,-4.6107e-07,-4.6107e-07,-0.694965,-1.53376,-16.8262,-16.9939,-19.0481,-19.0836,2.3223,2.33947,2031-32,0.115,0.105,0.305,unchanged
 4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
-4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2027,-0.219349,-0.218565,0.000784156,0.357492,-0.357492,6.33385,5.85883,8.26323,8.04696,1.52452,1.51815,3.78951,3.75864,2027-28,-0.07,-0.07,-0.132,closer
-4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2028,-0.32083,-0.319735,0.0010951,0.341333,-0.341333,9.55899,8.85548,11.973,11.8959,2.12676,2.12841,4.19764,4.16513,2028-29,-0.125,-0.125,-0.28,closer
-4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2029,-0.443723,-0.442307,0.00141599,0.319115,-0.319115,13.6307,12.6482,16.2225,16.28,2.75302,2.75812,4.65421,4.62028,2029-30,-0.14,-0.14,-0.395,closer
-4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2030,-0.581226,-0.579478,0.00174816,0.300771,-0.300771,18.3414,17.0914,21.427,21.3567,3.52491,3.5334,5.21631,5.18025,2030-31,-0.16,-0.16,-0.526,closer
-4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2031,-0.62973,-0.627901,0.00182906,0.290452,-0.290452,20.8438,19.4534,22.3226,22.0353,3.76846,3.77549,5.33073,5.29429,2031-32,-0.31,-0.31,-0.61,closer
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2027,-0.219349,-0.218565,0.000784156,0.357492,-0.357492,6.33385,5.85883,8.26323,8.04696,1.52452,1.51815,3.78951,3.75864,2027-28,-0.07,-0.07,-0.132,different_basis
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2028,-0.32083,-0.319735,0.0010951,0.341333,-0.341333,9.55899,8.85548,11.973,11.8959,2.12676,2.12841,4.19764,4.16513,2028-29,-0.125,-0.125,-0.28,different_basis
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2029,-0.443723,-0.442307,0.00141599,0.319115,-0.319115,13.6307,12.6482,16.2225,16.28,2.75302,2.75812,4.65421,4.62028,2029-30,-0.14,-0.14,-0.395,different_basis
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2030,-0.581226,-0.579478,0.00174816,0.300771,-0.300771,18.3414,17.0914,21.427,21.3567,3.52491,3.5334,5.21631,5.18025,2030-31,-0.16,-0.16,-0.526,different_basis
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,,2031,-0.62973,-0.627901,0.00182906,0.290452,-0.290452,20.8438,19.4534,22.3226,22.0353,3.76846,3.77549,5.33073,5.29429,2031-32,-0.31,-0.31,-0.61,different_basis
 4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2027,0,0,0,0,0,0,0,0,0,0,0,0,0,2027-28,0,0,0,
 4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2028,0,0,0,0,0,0,0,0,0,0,0,0,0,2028-29,0,0,0,
 4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2029,0,0,0,0,0,0,0,0,0,0,0,0,0,2029-30,0,0,0,
 4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2030,0,0,0,0,0,0,0,0,0,0,0,0,0,2030-31,0,0,0,
-4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2031,4.80381,4.80228,-0.0015286,-0.0318205,-0.0318205,-30.8023,-30.428,-133.597,-133.223,-328.107,-328.1,88.6045,88.3919,2031-32,3.705,3.555,4.41,closer
+4,mock4_threshold_freeze_2032,MOCK: thresholds frozen to April 2032,,2031,4.80381,4.80228,-0.0015286,-0.0318205,-0.0318205,-30.8023,-30.428,-133.597,-133.223,-328.107,-328.1,88.6045,88.3919,2031-32,3.705,3.555,4.41,different_basis
 4,mock4_uc_child_element,MOCK: UC child element +£12.50 a month,,2026,0,0,0,0,0,0,0,0,0,0,0,0,0,2026-27,0,0,0,
 4,mock4_uc_child_element,MOCK: UC child element +£12.50 a month,,2027,-0.763089,-0.763089,0,0,0,31.0223,29.7059,24.3061,24.6359,0.431489,0.429687,14.2768,14.2336,2027-28,-0.615,-0.615,-0.763,unchanged
 4,mock4_uc_child_element,MOCK: UC child element +£12.50 a month,,2028,-0.788582,-0.788582,7.03603e-11,8.92238e-09,-8.92238e-09,30.018,28.7347,24.4779,24.3466,0.377804,0.378096,14.3314,14.2868,2028-29,-0.64,-0.64,-0.789,unchanged

@@ -150,7 +150,7 @@ def cause(drill: str, mid: str, year: int):
         return ("2031-32 is now a real data year; on drill day it reused 2030 data",
                 [["pe-uk 2.128.0", L21280]])
     if mid in ("mock4_cgt_higher_rate", "mock4_savings_starting_band"):
-        return ("Revenue unchanged; decile 1 moves (see decile note)",
+        return ("Revenue unchanged; decile 1 moves with the negative-income change",
                 [["pe-uk 2.132.4", L21324]])
     if mid == "mock4_state_pension_topup_allowance":
         return ("About 0.3% move; cause not identified", [])
