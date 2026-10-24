@@ -1,5 +1,5 @@
-/* Legend: never wider than its container; the columns are chosen from
-   measured widths in GroupedLegend.jsx (utils/legendLayout.js) */
+/* Legend: never wider than its container; the layout (split / columns /
+   stacked) is chosen from measured widths in GroupedLegend.jsx */
 .grouped-legend {
   position: relative;
   display: flex;
@@ -31,24 +31,26 @@
   white-space: nowrap;
 }
 
-/* One grid for every group: the columns (count and width set from the
-   measured items in GroupedLegend.jsx) line up from group to group */
 .grouped-legend-groups {
-  display: grid;
+  display: flex;
   justify-content: center;
-  row-gap: 10px;
+  align-items: flex-start;
+  gap: 12px 32px;
   max-width: 100%;
   min-width: 0;
 }
 
-/* A group's heading spans the grid; its items flow into the shared
-   columns */
+.grouped-legend.is-stacked .grouped-legend-groups {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .grouped-legend-group {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: subgrid;
-  row-gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .grouped-legend-heading {
@@ -57,10 +59,6 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--pe-gray-500);
-}
-
-.grouped-legend-group > .grouped-legend-heading {
-  grid-column: 1 / -1;
 }
 
 .grouped-legend-items {
@@ -75,10 +73,8 @@
   max-width: 100%;
 }
 
-.grouped-legend-group > .grouped-legend-items {
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  column-gap: normal;
+.grouped-legend-items.is-split {
+  grid-template-columns: repeat(2, minmax(0, max-content));
 }
 
 .grouped-legend-items li {
@@ -90,7 +86,7 @@
 
 .grouped-legend-label {
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .grouped-legend-swatch {

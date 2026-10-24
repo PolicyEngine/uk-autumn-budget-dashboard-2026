@@ -1,7 +1,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
-import { legendGrid, LEGEND_COLUMN_GAP } from "../utils/legendLayout";
 import "./GroupedLegend.css";
+
+// A group with more items than this may split into two sub-columns
+const SPLIT_ABOVE = 5;
+// Gaps, as in GroupedLegend.css
+const COLUMN_GAP = 32;
+const SUB_GAP = 24;
 
 /**
  * Split legend items into the two groups, "Raise revenue" then "Cost
@@ -63,10 +68,9 @@ function Swatch({ item, measure = false }) {
 }
 
 /**
- * A chart legend: each group's heading spans the legend, and its items flow
- * into even columns shared by every group (two or three across a card, one
- * on a phone; see legendGrid). The net line sits centred under them and the
- * whole block is centred under the plot.
+ * A chart legend: the groups side by side as columns (each a tidy list,
+ * one item a line), the net line centred under them, the whole block
+ * centred under the plot. Narrow containers stack the groups.
  *
  * Pass `names` (dashboard policy names) or `items`.
  */
@@ -75,32 +79,40 @@ function GroupedLegend({ names, items, netLabel }) {
   const groups = legendGroups(all);
   const ref = useRef(null);
   const measureRef = useRef(null);
-  // Columns and their width, from the measured widths, on every resize;
-  // one natural-width column until measured
-  const [grid, setGrid] = useState(null);
+  // "split": the first group in two sub-columns beside the others;
+  // "columns": one column per group, side by side; "stacked": groups
+  // one under another. Chosen from the measured widths, on every resize.
+  const [layout, setLayout] = useState("stacked");
 
   useLayoutEffect(() => {
     const node = ref.current;
     const measure = measureRef.current;
     if (!node || !measure) return undefined;
     const decide = () => {
-      const widths = [...measure.querySelectorAll("[data-measure]")].map(
-        (item) => item.getBoundingClientRect().width,
+      const available = node.clientWidth;
+      const widths = [...measure.querySelectorAll("[data-group]")].map((group) =>
+        Math.max(
+          0,
+          ...[...group.querySelectorAll("[data-measure]")].map(
+            (item) => item.getBoundingClientRect().width,
+          ),
+        ),
       );
-      const itemWidth = Math.ceil(Math.max(0, ...widths)) + 1;
-      if (itemWidth <= 1 || node.clientWidth <= 0) return;
-      const next = legendGrid({
-        available: node.clientWidth,
-        itemWidth,
-        counts: groups.map(([, groupItems]) => groupItems.length),
-      });
-      setGrid((current) =>
-        current &&
-        current.columns === next.columns &&
-        Math.abs(current.columnWidth - next.columnWidth) < 0.5
-          ? current
-          : next,
-      );
+      const counts = groups.map(([, groupItems]) => groupItems.length);
+      const columnsWidth =
+        widths.reduce((sum, width) => sum + width, 0) + COLUMN_GAP * (widths.length - 1);
+      const splitWidth =
+        columnsWidth + widths.reduce(
+          (sum, width, index) => sum + (counts[index] > SPLIT_ABOVE ? width + SUB_GAP : 0),
+          0,
+        );
+      const next =
+        counts.some((count) => count > SPLIT_ABOVE) && splitWidth <= available
+          ? "split"
+          : columnsWidth <= available
+            ? "columns"
+            : "stacked";
+      setLayout((current) => (current === next ? current : next));
     };
     decide();
     if (typeof ResizeObserver === "undefined") return undefined;
@@ -109,39 +121,41 @@ function GroupedLegend({ names, items, netLabel }) {
     return () => observer.disconnect();
   });
 
-  const columns = grid?.columns ?? 1;
-  const template = grid
-    ? `repeat(${grid.columns}, ${Math.floor(grid.columnWidth)}px)`
-    : "minmax(0, max-content)";
-
   return (
-    <div ref={ref} className="grouped-legend" data-columns={columns}>
+    <div ref={ref} className={`grouped-legend is-${layout}`}>
       {/* Off-screen copy, one line per item, to measure natural widths */}
       <div ref={measureRef} className="grouped-legend-measure" aria-hidden="true">
-        {all.map((item) => (
-          <span key={item.label} data-measure className="grouped-legend-measure-item">
-            <Swatch item={item} measure />
-            {item.label}
-          </span>
-        ))}
-      </div>
-      <div
-        className="grouped-legend-groups"
-        style={{ gridTemplateColumns: template, columnGap: LEGEND_COLUMN_GAP }}
-      >
         {groups.map(([heading, groupItems]) => (
-          <div key={heading ?? "items"} className="grouped-legend-group">
-            {heading && <p className="grouped-legend-heading">{heading}</p>}
-            <ul className="grouped-legend-items">
-              {groupItems.map((item) => (
-                <li key={item.label}>
-                  <Swatch item={item} />
-                  <span className="grouped-legend-label">{item.label}</span>
-                </li>
-              ))}
-            </ul>
+          <div key={heading ?? "items"} data-group>
+            {heading && (
+              <span data-measure className="grouped-legend-heading">{heading}</span>
+            )}
+            {groupItems.map((item) => (
+              <span key={item.label} data-measure className="grouped-legend-measure-item">
+                <Swatch item={item} measure />
+                {item.label}
+              </span>
+            ))}
           </div>
         ))}
+      </div>
+      <div className="grouped-legend-groups">
+        {groups.map(([heading, groupItems]) => {
+          const split = layout === "split" && groupItems.length > SPLIT_ABOVE;
+          return (
+            <div key={heading ?? "items"} className="grouped-legend-group">
+              {heading && <p className="grouped-legend-heading">{heading}</p>}
+              <ul className={`grouped-legend-items ${split ? "is-split" : ""}`}>
+                {groupItems.map((item) => (
+                  <li key={item.label}>
+                    <Swatch item={item} />
+                    <span className="grouped-legend-label">{item.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </div>
       {netLabel && (
         <p className="grouped-legend-net">

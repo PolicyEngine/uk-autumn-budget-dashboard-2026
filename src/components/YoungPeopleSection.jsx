@@ -225,7 +225,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     csv: csvText,
     published,
   };
-  const height = narrow ? 560 : 460;
+  const height = narrow ? 560 : 440;
 
   return (
     <div className="young-people-mean">
@@ -525,7 +525,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             <Headline {...props} />
             <div className="charts-grid">
               <MeanChangeCard {...props} />
-              <MeasuresCard {...props} height={narrow ? 600 : 460} />
+              <MeasuresCard {...props} height={narrow ? 600 : 440} />
             </div>
             <div className="charts-grid">
               <SharesCard {...props} />
