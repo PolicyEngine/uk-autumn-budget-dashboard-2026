@@ -5,7 +5,7 @@ import { useGeographyData, resetGeographyCache } from "./useGeographyData";
 import { useHouseholdScatterData, resetHouseholdScatterCache } from "./useHouseholdScatterData";
 import { chooseReform } from "../utils/geography/selection";
 import { scatterView } from "../utils/householdScatter";
-import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { ALPHA, BETA, COMBINED, YEAR, bindFlatFiles, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 const geography = (level) => [
   "level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator",
@@ -13,12 +13,24 @@ const geography = (level) => [
     [level, level === "region" ? "E12000001" : "Z14000001", "Synthetic area", id, year, "relative_change", "0.01", "0.005", "0.015", "gain", "reported", "", "30+", "False", "direct"].join(","),
   )),
 ].join("\n");
-const scatter = [
-  "reform_id,reform_name,year,income_band,change_band,households",
-  ...[ALPHA, BETA, COMBINED].flatMap((id) => [YEAR, YEAR + 1].map((year) =>
-    [id, "Synthetic measure", year, 25000, 100, 1000].join(","),
-  )),
-].join("\n");
+// Receipt-verified scatter tables, keyed by artifact as loadPublication returns them
+const scatterTables = () => Object.fromEntries([ALPHA, BETA, COMBINED].map((id) => [id, {
+  household_scatter_binned: [YEAR, YEAR + 1].map((year) => ({
+    reform_id: id, reform_name: "Synthetic measure", year, income_band: 25000, change_band: 100, households: 1000,
+  })),
+}]));
+
+/** A catalogue as the page builds it, with the geography files bound to its manifest. */
+async function verifiedCatalogue(fixture) {
+  const served = await bindFlatFiles(fixture.manifest, {
+    "regional.csv": geography("region"), "constituency.csv": geography("constituency"),
+  });
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    const name = String(url).slice(String(url).lastIndexOf("/") + 1);
+    return Object.hasOwn(served, name) ? new Response(served[name]) : new Response(null, { status: 404 });
+  }));
+  return buildMeasureCatalogue({ ...fixture, tablesByKey: scatterTables() });
+}
 
 function wrapperFor(catalogue) {
   return function CatalogueWrapper({ children }) {
@@ -28,11 +40,6 @@ function wrapperFor(catalogue) {
 beforeEach(() => {
   resetGeographyCache();
   resetHouseholdScatterCache();
-  vi.stubGlobal("fetch", vi.fn(async (url) => {
-    const text = url.endsWith("household_scatter_binned.csv") ? scatter
-      : url.endsWith("regional.csv") ? geography("region") : geography("constituency");
-    return new Response(text);
-  }));
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -41,7 +48,7 @@ describe("catalogue gates on additional population files", () => {
     const fixture = measureCatalogueFixture({ held: false });
     fixture.manifest.combined[COMBINED].status = status;
     for (const entry of [...Object.values(fixture.manifest.measures), ...Object.values(fixture.manifest.combined)]) entry.years = [YEAR];
-    const catalogue = buildMeasureCatalogue(fixture);
+    const catalogue = await verifiedCatalogue(fixture);
     const { result } = renderHook(() => ({
       regional: useGeographyData("regional"),
       constituency: useGeographyData("constituency"),
@@ -69,7 +76,7 @@ describe("catalogue gates on additional population files", () => {
     fixture.manifest.measures[ALPHA].unsupported_years = [YEAR + 1];
     fixture.manifest.measures[BETA].years = [YEAR, YEAR + 1];
     fixture.manifest.combined[COMBINED].years = [YEAR, YEAR + 1];
-    const catalogue = buildMeasureCatalogue(fixture);
+    const catalogue = await verifiedCatalogue(fixture);
     const { result } = renderHook(() => ({
       regional: useGeographyData("regional"), scatter: useHouseholdScatterData(),
     }), { wrapper: wrapperFor(catalogue) });

@@ -306,7 +306,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The student loan threshold freeze counts the change in loan repayments. The rail fares freeze counts the Treasury's cost estimate.",
+                  "A measure whose published description says it is costed another way, such as from a Treasury cost estimate or from the change in loan repayments, follows that description.",
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
