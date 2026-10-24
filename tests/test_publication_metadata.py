@@ -18,10 +18,14 @@ from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.release_index import (
+    AREA_FILES,
+    AREA_PROVENANCE_FILE,
     FLAT_VIEW_FILES,
     INDEX_FILE,
+    area_problems,
     manifest_identity_problems,
     release_index_problems,
+    write_area_provenance,
     write_release_index,
 )
 from uk_budget_data.publication.review_rows import REVIEW_COLUMNS, review_rows
@@ -350,18 +354,52 @@ def test_personal_contract_rejects_ambiguous_parameters(change):
         m.PersonalSeries.model_validate(contract)
 
 
-OBR_HEADER = (
-    "reform_id,reform_name,year,policyengine_value,"
-    "obr_static_value,obr_post_behavioural_value\n"
-)
 KEY = "ab2026_mock_alpha"
+# TEST DATA ONLY: the area run's alias for a package (geography.PACKAGES)
+ALIAS = "synthetic_area_package"
+AREA_HEADER = (
+    "level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,"
+    "tier,reason,support_band,noise,estimator\n"
+)
+
+
+def _area_rows(*reforms):
+    return AREA_HEADER + "".join(
+        f"region,E12000001,Synthetic area,{reform},2027,relative_change,"
+        "0.01,0.005,0.015,gain,reported,,30+,False,direct\n"
+        for reform in reforms
+    )
+
+
+def _area_run(world, manifest, reforms):
+    """What the area run writes: regional.csv and its provenance.
+
+    ``reforms`` maps each id the table uses to the manifest key it stands
+    for, as geography.area_provenance records it.
+    """
+    path = world.data_root / "regional.csv"
+    path.write_text(_area_rows(*reforms))
+    raw = m.manifest_path(world.data_root).read_bytes()
+    provenance = {
+        "manifest_revision": manifest.revision,
+        "manifest_sha256": sha256_bytes(raw),
+        "reforms": {
+            reform: {
+                "key": key,
+                "outputs_sha256": manifest.entries()[key].outputs_sha256,
+            }
+            for reform, key in reforms.items()
+        },
+    }
+    return write_area_provenance(world.data_root, provenance, [path])
 
 
 def _flat_snapshot(world):
-    """An approved measure, its saved manifest, and an OBR file to bind.
+    """An approved measure, its saved manifest, and an area run to bind.
 
-    budgetary_impact.csv is copied to the root as well, as the flat
-    pipeline leaves it: no view reads it, so the index never binds it.
+    The flat pipeline's files are copied to the root as well: no view reads
+    budgetary_impact.csv, and obr_comparison.csv is never bindable, so the
+    index binds neither.
     """
     reference = world.ready(KEY, {2027: -1.0})
     manifest = m.Manifest()
@@ -373,12 +411,12 @@ def _flat_snapshot(world):
         reference.path / "budgetary_impact.csv",
         world.data_root / "budgetary_impact.csv",
     )
-    # The flat pipeline's own combined run is no manifest key: allowed
     (world.data_root / "obr_comparison.csv").write_text(
-        OBR_HEADER
-        + f"{KEY},Alpha,2027,-1.0,-1.1,-1.2\n"
-        + "autumn_budget_2026_combined,Package,2027,-1.0,,\n"
+        "reform_id,reform_name,year,policyengine_value,"
+        "obr_static_value,obr_post_behavioural_value\n"
+        f"{KEY},Alpha,2027,-1.0,-1.1,-1.2\n"
     )
+    _area_run(world, manifest, {KEY: KEY})
     return manifest, args
 
 
@@ -411,9 +449,12 @@ def test_flat_view_files_are_the_same_in_python_and_the_build_check():
     match = re.search(r"FLAT_VIEW_FILES = \[([^\]]*)\]", script)
     assert match is not None
     assert tuple(re.findall(r'"([^"]+)"', match.group(1))) == FLAT_VIEW_FILES
+    # Results by area only: the OBR file holds the November 2025 costings
+    assert FLAT_VIEW_FILES == AREA_FILES
+    assert "obr_comparison.csv" not in FLAT_VIEW_FILES
 
 
-def test_release_index_binds_the_manifest_and_only_the_flat_view_files(world):
+def test_release_index_binds_the_manifest_and_only_the_area_files(world):
     manifest, args = _flat_snapshot(world)
     revision = manifest.revision
     write_release_index(manifest, **args)
@@ -422,7 +463,8 @@ def test_release_index_binds_the_manifest_and_only_the_flat_view_files(world):
     assert index["release"] == m.CURRENT_RELEASE
     assert index["budget"] == m.CURRENT_BUDGET
     assert index["files"] == manifest.flat_files
-    assert set(index["files"]) == {"obr_comparison.csv"}
+    assert set(index["files"]) == {"regional.csv"}
+    assert index["aliases"] == {}
     saved = m.manifest_path(world.data_root).read_bytes()
     assert index["manifest_sha256"] == sha256_bytes(saved)
     assert json.loads(saved)["flat_files"] == index["files"]
@@ -430,9 +472,49 @@ def test_release_index_binds_the_manifest_and_only_the_flat_view_files(world):
     assert _build_index_problems(world) == []
 
 
-def test_review_rows_signs_the_bound_index_and_view_files(world):
+def test_an_area_alias_maps_to_the_combined_run_it_stands_for(world):
+    """The area run labels a package by its alias (geography.PACKAGES);
+    publish index records which manifest key that is, for the page."""
+    manifest, _ = _flat_snapshot(world)
+    package = "combined--" + KEY
+    manifest.combined[package] = manifest.measures[KEY].model_copy(deep=True)
+    _area_run(world, manifest, {KEY: KEY, ALIAS: package})
+    files = {"regional.csv": (world.data_root / "regional.csv").read_bytes()}
+    problems, aliases = area_problems(manifest, files, world.data_root)
+    assert problems == []
+    assert aliases == {ALIAS: package}
+    # A package held back is refused through its alias
+    manifest.combined[package].status = m.STALE
+    problems, _ = area_problems(manifest, files, world.data_root)
+    assert any("which is stale" in problem for problem in problems)
+
+
+@pytest.mark.parametrize(
+    "aliases",
+    [{ALIAS: "combined--not-listed"}, {KEY: KEY}, None],
+)
+def test_the_gates_refuse_index_aliases_that_name_no_manifest_key(
+    world, aliases
+):
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    index_path = world.data_root / INDEX_FILE
+    index = json.loads(index_path.read_bytes())
+    index["aliases"] = aliases
+    index_path.write_text(json.dumps(index))
+    assert any(
+        "aliases" in problem
+        for problem in release_index_problems(world.data_root, manifest)
+    )
+    assert any(
+        "aliases" in problem for problem in _build_index_problems(world)
+    )
+
+
+def test_review_rows_sign_the_bound_index_and_the_area_provenance(world):
     manifest, args = _flat_snapshot(world)
     (world.data_root / "budgetary_impact.csv").unlink()
+    (world.data_root / "obr_comparison.csv").unlink()
     write_release_index(manifest, **args)
     for entry in manifest.entries().values():
         (world.data_root / entry.artifact / "reconciliation.json").unlink(
@@ -446,8 +528,11 @@ def test_review_rows_signs_the_bound_index_and_view_files(world):
         reviewer="Reviewer", data_root=world.data_root, review_csv=review_csv
     )
     assert "public/data/release-index.json" in report.added
-    assert "public/data/obr_comparison.csv" in report.added
-    assert not report.unreviewed
+    assert f"public/data/{AREA_PROVENANCE_FILE}" in report.added
+    # Disclosure tables keep their own review process
+    assert {path for path, _ in report.unreviewed} <= {
+        "public/data/regional.csv"
+    }
 
 
 @pytest.mark.parametrize(
@@ -462,18 +547,18 @@ def test_publication_and_public_file_gates_refuse_mixed_snapshots(
     path = m.manifest_path(world.data_root)
     raw = json.loads(path.read_bytes())
     if mutation == "csv":
-        obr = world.data_root / "obr_comparison.csv"
-        obr.write_text(obr.read_text().replace("-1.1", "-2.1"))
+        area = world.data_root / "regional.csv"
+        area.write_text(area.read_text().replace("0.01,", "0.02,"))
     elif mutation == "unbound_view_file":
-        (world.data_root / "regional.csv").write_text("reform,year\n")
+        (world.data_root / "constituency.csv").write_text(_area_rows(KEY))
     elif mutation == "unread_file":
         index_path = world.data_root / INDEX_FILE
         index = json.loads(index_path.read_bytes())
         digest = sha256_bytes(
-            (world.data_root / "budgetary_impact.csv").read_bytes()
+            (world.data_root / "obr_comparison.csv").read_bytes()
         )
-        index["files"]["budgetary_impact.csv"] = digest
-        raw["flat_files"]["budgetary_impact.csv"] = digest
+        index["files"]["obr_comparison.csv"] = digest
+        raw["flat_files"]["obr_comparison.csv"] = digest
         path.write_text(json.dumps(raw))
         index["manifest_sha256"] = sha256_bytes(path.read_bytes())
         index_path.write_text(json.dumps(index))
@@ -502,10 +587,47 @@ def test_a_later_approval_makes_the_index_stale_until_reindexed(world):
     assert _build_index_problems(world) == []
 
 
+def test_index_refuses_area_results_made_for_an_earlier_version(world):
+    """Round-2 review: a correction restages and reapproves a measure; the
+    area run is not rerun; publish index must not bind the old tables."""
+    from uk_budget_data.publication.publish import PublishError
+
+    manifest, args = _flat_snapshot(world)
+    corrected = world.ready(KEY, {2027: -3.0})
+    stage(manifest, corrected.path, **args)
+    approve(manifest, KEY, "Reviewer", **args)
+    m.save_manifest(manifest, world.data_root)
+    with pytest.raises(PublishError, match="made for an earlier"):
+        write_release_index(manifest, **args)
+    assert not (world.data_root / INDEX_FILE).exists()
+    # The area run again, for the corrected entry: now it binds
+    _area_run(world, manifest, {KEY: KEY})
+    write_release_index(manifest, **args)
+    assert check(manifest, **args) == []
+
+
+@pytest.mark.parametrize(
+    "change", ["no provenance", "edited table", "unrecorded reform"]
+)
+def test_index_refuses_area_tables_the_area_run_did_not_write(world, change):
+    from uk_budget_data.publication.publish import PublishError
+
+    manifest, args = _flat_snapshot(world)
+    if change == "no provenance":
+        (world.data_root / AREA_PROVENANCE_FILE).unlink()
+    elif change == "edited table":
+        area = world.data_root / "regional.csv"
+        area.write_text(area.read_text().replace("0.01,", "0.02,"))
+    else:
+        area = world.data_root / "regional.csv"
+        area.write_text(_area_rows(KEY, "unrecorded_measure"))
+    with pytest.raises(PublishError, match="area"):
+        write_release_index(manifest, **args)
+    assert not (world.data_root / INDEX_FILE).exists()
+
+
 @pytest.mark.parametrize("status", [m.STAGED, m.WITHDRAWN, m.STALE])
-def test_index_writer_refuses_a_view_file_with_a_held_entrys_figures(
-    world, status
-):
+def test_index_writer_refuses_area_figures_for_a_held_entry(world, status):
     from uk_budget_data.publication.publish import PublishError
 
     manifest, args = _flat_snapshot(world)
@@ -517,11 +639,11 @@ def test_index_writer_refuses_a_view_file_with_a_held_entrys_figures(
     assert not (world.data_root / INDEX_FILE).exists()
 
 
-def test_index_writer_needs_a_view_file_and_a_saved_current_manifest(world):
+def test_index_writer_needs_an_area_file_and_a_saved_current_manifest(world):
     from uk_budget_data.publication.publish import PublishError
 
     manifest, args = _flat_snapshot(world)
-    (world.data_root / "obr_comparison.csv").unlink()
+    (world.data_root / "regional.csv").unlink()
     with pytest.raises(PublishError, match="no flat view file to bind"):
         write_release_index(manifest, **args)
     manifest, args = _flat_snapshot(world)

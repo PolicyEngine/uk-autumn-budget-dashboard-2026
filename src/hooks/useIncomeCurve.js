@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { parseTable } from "../utils/publication/csv";
-import { loadVerifiedTable } from "../utils/loadDashboard";
+import { loadVerifiedTables } from "../utils/loadDashboard";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 
 /** Curve rows from typed income_curve rows. */
@@ -15,11 +15,18 @@ export function parseCurve(csvText) {
   return curveRows(parseTable("income_curve", csvText));
 }
 
-// Cache only within one loaded snapshot, never across revisions.
+// Cache only within one loaded snapshot, never across revisions, and only
+// a load in which every artifact verified: after a failure the next chart to
+// mount loads again.
 const loads = new WeakMap();
 function loadCurve(catalogue) {
   if (!loads.has(catalogue)) {
-    loads.set(catalogue, loadVerifiedTable(catalogue, "income_curve").then(curveRows));
+    const load = loadVerifiedTables(catalogue, "income_curve").then(({ rows, failures }) => {
+      if (failures.length) loads.delete(catalogue);
+      return curveRows(rows);
+    });
+    load.catch(() => loads.delete(catalogue));
+    loads.set(catalogue, load);
   }
   return loads.get(catalogue);
 }

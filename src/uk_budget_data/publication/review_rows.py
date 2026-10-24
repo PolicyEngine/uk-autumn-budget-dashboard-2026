@@ -613,6 +613,27 @@ def planned_rows(
         )
     ]
     problems.extend(_no_kind_problems(where, raw))
+    from uk_budget_data.publication.release_index import AREA_PROVENANCE_FILE
+
+    # What the area run was made from: ids, keys and digests, no figures
+    provenance_path = data_root / AREA_PROVENANCE_FILE
+    if provenance_path.exists():
+        provenance_where = provenance_path.relative_to(root).as_posix()
+        provenance_bytes = _read_file(
+            provenance_path, provenance_where, problems
+        )
+        if provenance_bytes is not None:
+            problems.extend(
+                _no_kind_problems(provenance_where, provenance_bytes)
+            )
+            rows.append(
+                Row(
+                    provenance_where,
+                    STATIC_ASSET,
+                    sha256_bytes(provenance_bytes),
+                    "What the area run was made from, for publish index",
+                )
+            )
     if manifest.flat_files or (data_root / "release-index.json").exists():
         from uk_budget_data.publication.release_index import (
             INDEX_FILE,

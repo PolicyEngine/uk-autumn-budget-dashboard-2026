@@ -7,9 +7,9 @@ import { chooseReform } from "../utils/geography/selection";
 import { scatterView } from "../utils/householdScatter";
 import { ALPHA, BETA, COMBINED, YEAR, bindFlatFiles, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
-const geography = (level) => [
+const geography = (level, packageAs = COMBINED) => [
   "level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator",
-  ...[ALPHA, BETA, COMBINED].flatMap((id) => [YEAR, YEAR + 1].map((year) =>
+  ...[ALPHA, BETA, packageAs].flatMap((id) => [YEAR, YEAR + 1].map((year) =>
     [level, level === "region" ? "E12000001" : "Z14000001", "Synthetic area", id, year, "relative_change", "0.01", "0.005", "0.015", "gain", "reported", "", "30+", "False", "direct"].join(","),
   )),
 ].join("\n");
@@ -21,10 +21,11 @@ const scatterTables = () => Object.fromEntries([ALPHA, BETA, COMBINED].map((id) 
 }]));
 
 /** A catalogue as the page builds it, with the geography files bound to its manifest. */
-async function verifiedCatalogue(fixture) {
+async function verifiedCatalogue(fixture, { packageAs = COMBINED } = {}) {
+  const aliases = packageAs === COMBINED ? {} : { [packageAs]: COMBINED };
   const served = await bindFlatFiles(fixture.manifest, {
-    "regional.csv": geography("region"), "constituency.csv": geography("constituency"),
-  });
+    "regional.csv": geography("region", packageAs), "constituency.csv": geography("constituency", packageAs),
+  }, aliases);
   vi.stubGlobal("fetch", vi.fn(async (url) => {
     const name = String(url).slice(String(url).lastIndexOf("/") + 1);
     return Object.hasOwn(served, name) ? new Response(served[name]) : new Response(null, { status: 404 });
@@ -64,10 +65,10 @@ describe("catalogue gates on additional population files", () => {
       const table = result.current[name].table;
       expect(table.reforms).toEqual([ALPHA, BETA]);
       expect(table.rows.every((row) => row.year === YEAR)).toBe(true);
-      expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms }).kind).toBe("no-package");
+      expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId }).kind).toBe("no-package");
     }
     expect(result.current.scatter.rows.every((row) => row.reform_id !== COMBINED && row.year === YEAR)).toBe(true);
-    expect(scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR }).kind).toBe("notice");
+    expect(scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId }).kind).toBe("notice");
   });
 
   it("keeps supported approved rows and removes unsupported years including a combined member's year", async () => {
@@ -91,4 +92,43 @@ describe("catalogue gates on additional population files", () => {
     expect(geographyRows.some((row) => row.reform === COMBINED && row.year === YEAR + 1)).toBe(false);
     expect(result.current.scatter.rows.some((row) => row.reform_id === COMBINED && row.year === YEAR + 1)).toBe(false);
   });
+
+  it("reads the area run's package alias as the combined run the index names", async () => {
+    // TEST DATA ONLY: the area run labels the package with its own alias
+    const ALIAS = "synthetic_area_package";
+    const fixture = measureCatalogueFixture({ held: false });
+    const catalogue = await verifiedCatalogue(fixture, { packageAs: ALIAS });
+    expect(catalogue.combinedId).toBe(COMBINED);
+    const { result } = renderHook(() => ({
+      regional: useGeographyData("regional"), constituency: useGeographyData("constituency"),
+    }), { wrapper: wrapperFor(catalogue) });
+    await waitFor(() => {
+      expect(result.current.regional.status).toBe("ready");
+      expect(result.current.constituency.status).toBe("ready");
+    });
+    for (const name of ["regional", "constituency"]) {
+      const table = result.current[name].table;
+      expect(table.reforms).toContain(COMBINED);
+      expect(table.reforms).not.toContain(ALIAS);
+      expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId }))
+        .toEqual({ kind: "package", reform: COMBINED });
+    }
+  });
+
+  it("shows no area figure when the index does not match the loaded manifest", async () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const catalogue = await verifiedCatalogue(fixture);
+    // A later deploy: a new manifest revision, index rebound to it
+    const next = structuredClone(fixture.manifest);
+    next.revision += 1;
+    const served = await bindFlatFiles(next, { "regional.csv": geography("region") });
+    vi.stubGlobal("fetch", vi.fn(async (url) => {
+      const name = String(url).slice(String(url).lastIndexOf("/") + 1);
+      return Object.hasOwn(served, name) ? new Response(served[name]) : new Response(null, { status: 404 });
+    }));
+    const { result } = renderHook(() => useGeographyData("regional"), { wrapper: wrapperFor(catalogue) });
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current.table ?? null).toBeNull();
+  });
 });
+

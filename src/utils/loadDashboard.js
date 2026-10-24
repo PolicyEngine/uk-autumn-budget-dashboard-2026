@@ -32,21 +32,32 @@ export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal }
  * The keys are the measures and combined run whose artifacts verified when
  * the page loaded. Each is read again through the same receipt checks, so a
  * key whose artifact now fails, or that carries no such table, contributes
- * no rows: its figures are unavailable, never taken from another file.
+ * no rows: its figures are unavailable, never taken from another file. The
+ * keys that failed are listed in `failures`.
+ *
+ * @returns {Promise<{rows: Array<Object>, failures: Array<string>}>}
  */
-export async function loadVerifiedTable(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
+export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
   const manifest = catalogue?.manifest;
   if (!manifest || !catalogue.tablesByKey) throw new Error("No Budget results are published yet");
+  const failures = [];
   const loaded = await Promise.all(Object.keys(catalogue.tablesByKey).map(async (key) => {
     const entry = Object.hasOwn(manifest.measures, key) ? manifest.measures[key] : Object.hasOwn(manifest.combined, key) ? manifest.combined[key] : undefined;
     try {
       return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table] }))[table] ?? [];
     } catch (error) {
       if (error?.name === "AbortError") throw error;
+      failures.push(key);
       return [];
     }
   }));
-  return loaded.flat().filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
+  const rows = loaded.flat().filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
+  return { rows, failures };
+}
+
+/** As loadVerifiedTables, the rows only. */
+export async function loadVerifiedTable(catalogue, table, options) {
+  return (await loadVerifiedTables(catalogue, table, options)).rows;
 }
 
 /** Null is an unavailable figure, never a zero standing in for a missing row. */

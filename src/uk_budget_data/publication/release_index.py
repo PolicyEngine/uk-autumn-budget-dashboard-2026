@@ -1,15 +1,21 @@
 """Bind the flat files a view reads to one reviewed publication snapshot.
 
 Every national figure the page shows comes from a receipt-verified
-artifact. Two views read flat files that no artifact carries: the OBR
-comparison (``obr_comparison.csv``) and results by area (``regional.csv``
-and ``constituency.csv``, from the disclosure layer). ``publish index``
-binds those files to the manifest: the manifest records each file's SHA-256
-(``flat_files``), and ``release-index.json`` names the manifest's revision
-and the SHA-256 of its exact bytes. The page reads a flat file only when the
-index matches the manifest it loaded and the file's bytes match their
-digest, so replacing either file first fails closed until both belong to the
-same snapshot. Only ``publish index`` writes these bindings.
+artifact. Results by area (``regional.csv`` and ``constituency.csv``, from
+the disclosure layer) are the one view that reads flat files no artifact
+carries. ``publish index`` binds them to the manifest: the manifest records
+each file's SHA-256 (``flat_files``), and ``release-index.json`` names the
+manifest's revision and the SHA-256 of its exact bytes. The page reads a
+flat file only when the index matches the manifest it loaded and the file's
+bytes match their digest, so replacing either file first fails closed until
+both belong to the same snapshot. Only ``publish index`` writes these
+bindings.
+
+The area run records what it was made from (``area_provenance.json``): the
+manifest key each reform in its tables stands for, and that entry's approved
+outputs. ``publish index`` refuses the tables once any of those entries has
+changed, and passes the package alias the tables use (``PACKAGES`` in
+geography.py) to the page as the manifest key it stands for.
 """
 
 import csv
@@ -28,11 +34,17 @@ INDEX_SCHEMA = "uk-budget-release-index/v1"
 DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 CSV_FILE = re.compile(r"[a-z][a-z0-9_]*\.csv\Z")
 
-# The flat files a view reads directly (OBRComparisonTable.jsx, and
-# useGeographyData.js through utils/geography/columns.js). Every other flat
-# CSV under public/data is read by no view: the figures it would carry come
-# from the artifacts.
-FLAT_VIEW_FILES = ("constituency.csv", "obr_comparison.csv", "regional.csv")
+# The flat files a view reads directly (useGeographyData.js, through
+# utils/geography/columns.js). Every other flat CSV under public/data is read
+# by no view: the figures it would carry come from the artifacts. The OBR
+# comparison's file is not bindable: the pipeline builds it from
+# data_inputs/obr_estimates.csv, the November 2025 costings, under ids the
+# 2026 registry reuses, so that view stays unavailable until a 2026 OBR
+# source exists.
+FLAT_VIEW_FILES = ("constituency.csv", "regional.csv")
+AREA_FILES = ("constituency.csv", "regional.csv")
+AREA_PROVENANCE_FILE = "area_provenance.json"
+AREA_PROVENANCE_SCHEMA = "uk-budget-area-provenance/v1"
 # The column naming each row's measure or combined run, by file
 ID_COLUMNS = ("reform_id", "reform")
 
@@ -69,6 +81,116 @@ def manifest_identity_problems(data_root: Path) -> list[str]:
     except (OSError, ValueError):
         return ["manifest cannot be read"]
     return identity_problems(raw)
+
+
+def write_area_provenance(out_dir, provenance: dict, written) -> Path:
+    """Write what an area run was made from beside its tables.
+
+    ``provenance`` is geography.area_provenance's: the manifest revision and
+    SHA-256 read, and each reform's manifest key and approved outputs. The
+    SHA-256 of each table written is added here.
+    """
+    out_dir = Path(out_dir)
+    document = {
+        "schema": AREA_PROVENANCE_SCHEMA,
+        **provenance,
+        "files": {
+            Path(path).name: sha256_bytes(Path(path).read_bytes())
+            for path in written
+        },
+    }
+    path = out_dir / AREA_PROVENANCE_FILE
+    handle, temporary = tempfile.mkstemp(
+        prefix=".area-provenance-", suffix=".json", dir=out_dir
+    )
+    try:
+        with os.fdopen(handle, "w") as stream:
+            stream.write(json.dumps(document, indent=2, sort_keys=True) + "\n")
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+    return path
+
+
+def _reform_ids(content: bytes) -> set[str]:
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8"), newline=""))
+    column = next(
+        (c for c in ID_COLUMNS if c in (reader.fieldnames or [])), None
+    )
+    if column is None:
+        raise ValueError("no measure id column")
+    return {row[column] for row in reader}
+
+
+def area_problems(
+    manifest: m.Manifest, files: dict[str, bytes], data_root: Path
+) -> tuple[list[str], dict[str, str]]:
+    """Refuse area tables made for other entries than those now approved.
+
+    Returns the problems, and the aliases the tables use for manifest keys
+    (a package alias for its combined run). Problems name files, ids and
+    statuses, never values.
+    """
+    present = {name: files[name] for name in AREA_FILES if name in files}
+    if not present:
+        return [], {}
+    try:
+        document = json.loads((data_root / AREA_PROVENANCE_FILE).read_bytes())
+    except (OSError, ValueError):
+        return [
+            f"area results: no readable {AREA_PROVENANCE_FILE}; "
+            "rerun the area run"
+        ], {}
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != AREA_PROVENANCE_SCHEMA
+    ):
+        return [f"area results: {AREA_PROVENANCE_FILE} has another schema"], {}
+    problems = []
+    digests = {
+        name: sha256_bytes(content) for name, content in present.items()
+    }
+    if document.get("files") != digests:
+        problems.append(
+            "area results: the tables are not the ones the area run wrote"
+        )
+    reforms = document.get("reforms")
+    if not isinstance(reforms, dict):
+        return problems + ["area results: no reforms recorded"], {}
+    used = set()
+    for name, content in present.items():
+        try:
+            used |= _reform_ids(content)
+        except (UnicodeError, ValueError, csv.Error):
+            problems.append(f"{name}: not a readable CSV with a reform column")
+    entries = manifest.entries()
+    aliases = {}
+    for reform_id in sorted(used):
+        record = reforms.get(reform_id)
+        if (
+            not isinstance(record, dict)
+            or not isinstance(record.get("key"), str)
+            or not isinstance(record.get("outputs_sha256"), str)
+        ):
+            problems.append(
+                f"area results: {reform_id} is not recorded by the area run"
+            )
+            continue
+        key = record["key"]
+        entry = entries.get(key)
+        if entry is None or entry.status not in m.DISPLAYABLE:
+            status = entry.status if entry is not None else "not listed"
+            problems.append(
+                f"area results: {reform_id} stands for {key}, which is {status}"
+            )
+        elif entry.outputs_sha256 != record["outputs_sha256"]:
+            problems.append(
+                f"area results for {reform_id} were made for an earlier "
+                f"{key}; rerun the area run"
+            )
+        if key != reform_id:
+            aliases[reform_id] = key
+    return problems, aliases
 
 
 def release_index_problems(data_root: Path, manifest=None) -> list[str]:
@@ -125,6 +247,18 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         problems.append("release index: manifest revision differs")
     if index.get("manifest_sha256") != sha256_bytes(manifest_bytes):
         problems.append("release index: manifest bytes differ")
+    aliases = index.get("aliases")
+    keys = set(raw.get("measures") or {}) | set(raw.get("combined") or {})
+    if not isinstance(aliases, dict) or any(
+        not isinstance(alias, str)
+        or alias in keys
+        or not isinstance(key, str)
+        or key not in keys
+        for alias, key in aliases.items()
+    ):
+        problems.append(
+            "release index: aliases must name manifest keys, and only them"
+        )
     files = index.get("files")
     if not isinstance(files, dict) or not files:
         return problems + ["release index: no flat CSV digests"]
@@ -160,15 +294,16 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
     return problems
 
 
-def _flat_problems(manifest: m.Manifest, files: dict[str, bytes]) -> list[str]:
+def _flat_problems(
+    manifest: m.Manifest, files: dict[str, bytes], aliases: dict[str, str]
+) -> list[str]:
     """Refuse a flat view file that carries a held entry's figures.
 
-    A row whose measure or combined run the manifest lists but does not
-    display (staged, stale, withdrawn or not computable) means the file was
-    made for another snapshot, or publishes a figure the page must not show.
-    A row for an id the manifest does not list is allowed: the page shows
-    only rows whose id has a verified artifact in this snapshot. Problems
-    name files, ids and statuses, never values.
+    A row whose measure or combined run (through its alias) the manifest
+    lists but does not display (staged, stale, withdrawn or not computable)
+    means the file was made for another snapshot, or publishes a figure the
+    page must not show. Every year must be an integer. Problems name files,
+    ids and statuses, never values.
     """
     problems = []
     entries = manifest.entries()
@@ -185,7 +320,9 @@ def _flat_problems(manifest: m.Manifest, files: dict[str, bytes]) -> list[str]:
                 continue
             for row in reader:
                 int(row["year"])
-                entry = entries.get(row[id_column])
+                entry = entries.get(
+                    aliases.get(row[id_column], row[id_column])
+                )
                 if entry is not None and entry.status not in m.DISPLAYABLE:
                     problems.append(
                         f"{filename}: has figures for {row[id_column]}, "
@@ -225,7 +362,8 @@ def write_release_index(
         problems.append(
             "no flat view file to bind (" + ", ".join(FLAT_VIEW_FILES) + ")"
         )
-    problems += _flat_problems(manifest, files)
+    found, aliases = area_problems(manifest, files, data_root)
+    problems += found + _flat_problems(manifest, files, aliases)
     if problems:
         raise PublishError("release index", problems)
     working = manifest.model_copy(deep=True)
@@ -249,6 +387,8 @@ def write_release_index(
         "manifest_revision": working.revision,
         "manifest_sha256": sha256_bytes(manifest_bytes),
         "files": working.flat_files,
+        # The ids the bound tables use for manifest keys (a package alias)
+        "aliases": aliases,
     }
     index_bytes = (json.dumps(index, indent=2, sort_keys=True) + "\n").encode()
     staged = []

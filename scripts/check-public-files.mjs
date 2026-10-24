@@ -30,8 +30,9 @@ const sameMap = (left, right) => isMap(left) && isMap(right) &&
   Object.entries(left).every(([key, value]) => right[key] === value);
 
 // As FLAT_VIEW_FILES in uk_budget_data/publication/release_index.py: the
-// flat files a view reads directly. Every other figure comes from an artifact.
-export const FLAT_VIEW_FILES = ["constituency.csv", "obr_comparison.csv", "regional.csv"];
+// flat files a view reads directly (results by area). Every other figure
+// comes from an artifact.
+export const FLAT_VIEW_FILES = ["constituency.csv", "regional.csv"];
 
 const isCurrentManifest = (manifest) =>
   manifest?.schema === "uk-budget-dashboard/publication-manifest/v1" &&
@@ -69,6 +70,10 @@ export function checkReleaseIndex(root) {
       problems.push("release index: manifest revision differs");
     }
     if (index.manifest_sha256 !== digest(bytes)) problems.push("release index: manifest bytes differ");
+    const keys = new Set([...Object.keys(manifest.measures ?? {}), ...Object.keys(manifest.combined ?? {})]);
+    if (!isMap(index.aliases) || Object.entries(index.aliases).some(([alias, key]) => keys.has(alias) || !keys.has(key))) {
+      problems.push("release index: aliases must name manifest keys, and only them");
+    }
     const files = index.files;
     if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
