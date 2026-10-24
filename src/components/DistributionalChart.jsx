@@ -319,7 +319,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
                     format={(value) => `${value.toFixed(2)}%`}
 
-                    labelFormat={(label) => `Income decile ${String(label).replace(/st|nd|rd|th/g, "")}`}
+                    labelFormat={(label) =>
+                      `Income decile ${String(label).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`
+                    }
 
                     netKey="netChange"
 

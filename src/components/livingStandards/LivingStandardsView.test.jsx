@@ -139,6 +139,17 @@ describe("the Living standards view", () => {
     // Couples with children: 19.8% in both years
     const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".dot-row");
     expect(couples).toHaveTextContent("19.8% → 19.8%no change");
+    // Its tooltip, on hover or keyboard focus: both years, the change and
+    // the reference group
+    const area = couples.querySelector(".dot-plot-area");
+    fireEvent.focus(area);
+    const tip = within(who).getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("2026-2719.8%");
+    expect(tip).toHaveTextContent("ChangeNo change");
+    expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
+    fireEvent.blur(area);
+    expect(within(who).queryByRole("tooltip")).toBeNull();
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);

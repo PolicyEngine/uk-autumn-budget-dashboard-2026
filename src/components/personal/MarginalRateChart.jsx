@@ -45,7 +45,7 @@ function EdgeMarker({ cx, cy, payload, dataKey, stroke }) {
 }
 
 /** The shared tooltip with the true rates, not the clipped ones. */
-function RateTooltip(props) {
+function RateTooltip({ yearLabel, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!props.active || !point) return null;
   return (
@@ -55,10 +55,10 @@ function RateTooltip(props) {
       grouped={false}
       showZero
       format={(value) => `${Math.round(value * 100)}%`}
-      labelFormat={(value) => `Salary ${formatPounds(value)}`}
+      labelFormat={(value) => `Salary ${formatPounds(value)}, ${yearLabel}`}
       payload={[
-        { dataKey: "before", name: "Before", value: point.beforeRaw, color: BEFORE_COLOUR },
-        { dataKey: "after", name: "After", value: point.afterRaw, color: AFTER_COLOUR },
+        { dataKey: "before", name: "Marginal rate before", value: point.beforeRaw, color: BEFORE_COLOUR },
+        { dataKey: "after", name: "Marginal rate after", value: point.afterRaw, color: AFTER_COLOUR },
       ]}
     />
   );
@@ -172,7 +172,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               tickFormatter={pct}
               width={axisWidth(Y_TICKS, pct)}
             />
-            <Tooltip {...TOOLTIP_PROPS} content={<RateTooltip />} />
+            <Tooltip {...TOOLTIP_PROPS} content={<RateTooltip yearLabel={yearLabel} />} />
             {salary !== null && (
               <ReferenceLine
                 x={salary}

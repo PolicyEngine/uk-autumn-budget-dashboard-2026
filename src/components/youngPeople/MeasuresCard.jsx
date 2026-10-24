@@ -190,7 +190,14 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={<ChartTooltip format={pounds} grouped={false} showPlus />}
+                content={
+                  <ChartTooltip
+                    format={(value) => `${pounds(value)} a year`}
+                    grouped={false}
+                    showPlus
+                    labelFormat={(label) => `${label}, ${yearLabel}`}
+                  />
+                }
               />
               {GROUPS.map((group) => (
                 <Bar

@@ -220,7 +220,7 @@ function SingleAgeTick({ x, y, payload }) {
 }
 
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
-function SingleAgeTooltip(props) {
+function SingleAgeTooltip({ yearLabel, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!point || point.netChange === null) return null;
   return (
@@ -229,7 +229,7 @@ function SingleAgeTooltip(props) {
       format={(value) => `${pounds(value)} a year`}
       showPlus
       showZero
-      labelFormat={(label) => `Age ${label}`}
+      labelFormat={(label) => `Age ${label}, ${yearLabel}`}
       single={{ key: "netChange", label: "Net change", color: signColour(point.netChange) }}
     />
   );
@@ -390,7 +390,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={<SingleAgeTooltip />}
+                content={<SingleAgeTooltip yearLabel={yearLabel} />}
               />
               <Bar dataKey="netChange" name="Net change" {...chartMotion()}>
                 {singleData.map((point) => (
@@ -430,7 +430,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 content={
                   <ChartTooltip
                     format={pounds}
-                    labelFormat={(label) => `Aged ${label.toLowerCase()}`}
+                    labelFormat={(label) => `Aged ${label.toLowerCase()}, ${yearLabel}`}
                     netKey="netChange"
                     netLabel="Net change"
                   />
@@ -633,7 +633,9 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   <ChartTooltip
                     format={percent}
                     grouped={false}
-                    labelFormat={(label) => (label === "All ages" ? label : `Aged ${label.toLowerCase()}`)}
+                    labelFormat={(label) =>
+                      `${label === "All ages" ? label : `Aged ${label.toLowerCase()}`}, ${yearLabel}`
+                    }
                   />
                 }
               />

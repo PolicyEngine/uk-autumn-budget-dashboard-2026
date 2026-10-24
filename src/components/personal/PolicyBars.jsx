@@ -4,6 +4,7 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import { CHART_COLOURS } from "../../utils/chartTheme";
 
 const ZERO_LINE = CHART_COLOURS.text;
@@ -30,6 +31,11 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
   const chartRef = useRef(null);
   const width = measured > 0 ? measured : 640;
   const title = `Change in net income by policy, ${yearLabel}`;
+  // Cleared when the year or the figures change, so it never shows old ones
+  const { tip, handlers } = useFloatingTooltip(
+    wrapperRef,
+    `${yearLabel}:${rows.map((row) => `${row.id}=${row.rounded}`).join(",")}`,
+  );
 
   const fontSize = 13;
   const valueRoom = Math.max(64, ...rows.map((row) => approxWidth(signedMoney(row.rounded), fontSize) + 12));
@@ -83,7 +89,7 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
         <ChartDownloadMenu download={rows.length ? download : undefined} chartTitle={title} />
       </div>
       {rows.length > 0 ? (
-        <div ref={wrapperRef} className="policy-bars-plot">
+        <div ref={wrapperRef} className="policy-bars-plot" style={{ position: "relative" }}>
           <div ref={chartRef}>
             <svg
               width={width}
@@ -97,7 +103,29 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
                 const x0 = Math.min(zero, x(row.rounded));
                 const w = Math.max(Math.abs(x(row.rounded) - zero), 1.5);
                 return (
-                  <g key={row.id} className="policy-bar" data-policy={row.id}>
+                  <g
+                    key={row.id}
+                    className="policy-bar has-tooltip"
+                    data-policy={row.id}
+                    tabIndex={0}
+                    aria-label={`${row.name}: ${signedMoney(row.rounded)} a year in ${yearLabel}`}
+                    {...handlers(
+                      row.id,
+                      <TooltipRows
+                        label={`${row.name}, ${yearLabel}`}
+                        rows={[
+                          {
+                            key: "change",
+                            name: "Change in net income",
+                            text: `${signedMoney(row.rounded)} a year`,
+                            color: row.color,
+                          },
+                        ]}
+                      />,
+                    )}
+                  >
+                    {/* The whole row answers the pointer, not just its bar */}
+                    <rect x={0} y={y} width={width} height={rowHeight} fill="transparent" />
                     <text x={plotLeft} y={y + 13} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
@@ -140,6 +168,7 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={CHART_LOGO.href} alt="PolicyEngine" />
           </div>
+          <FloatingTooltip tip={tip} />
         </div>
       ) : (
         <p className="single-year-quiet">None of the selected policies changes your household&apos;s net income.</p>

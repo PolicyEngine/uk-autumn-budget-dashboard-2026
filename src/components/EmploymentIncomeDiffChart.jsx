@@ -194,7 +194,7 @@ function EmploymentIncomeDiffChart({
 
                     format={formatPounds}
 
-                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}`}
+                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}, ${formatYearRange(selectedYear)}`}
 
                     single={{ key: "difference", label: "Change in net income", color: CHART_COLOURS.gain }}
 

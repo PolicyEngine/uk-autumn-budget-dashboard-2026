@@ -6,6 +6,7 @@ import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { useNarrowViewport, TICK_STYLE, CHART_COLOURS } from "../utils/chartTheme";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import NoBreakYear from "./NoBreakYear";
 import useElementWidth from "../hooks/useElementWidth";
 import "./OBRDumbbellChart.css";
@@ -114,6 +115,9 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   const yearLabel = fiscalYear(year);
   const obrKind = showBehavioural ? "post-behavioural" : "static";
+  // Cleared when the year or the OBR basis changes, so it never shows the
+  // last year's figures while the year pill plays
+  const { tip, handlers } = useFloatingTooltip(wrapperRef, `${year}-${showBehavioural}`);
   const chartTitle = `PolicyEngine and OBR estimates, ${yearLabel}`;
   // Only in exported images, which carry no surrounding text
   const description = `Each row shows a measure's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the OBR's ${obrKind} costing. Positive values raise revenue or reduce spending; negative values do the opposite.`;
@@ -449,9 +453,54 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       pePart ? formatBn(row.pe) : "not yet published"
     }, OBR ${obrPart ? formatBn(row.obr) : "not yet published"}`;
 
+    const tooltip = (
+      <TooltipRows
+        label={`${row.name}, ${yearLabel}`}
+        rows={[
+          {
+            key: "pe",
+            name: "PolicyEngine (static)",
+            text: pePart ? formatBn(row.pe) : "Not yet published",
+            color: PE_COLOUR,
+          },
+          {
+            key: "obr",
+            name: `OBR (${obrKind})`,
+            text: obrPart ? formatBn(row.obr) : "Not yet published",
+            color: OBR_COLOUR,
+          },
+          ...(row.band
+            ? [
+                {
+                  key: "difference",
+                  name: "Difference (PolicyEngine − OBR)",
+                  text: formatBn(row.pe - row.obr),
+                  color: row.band.colour,
+                },
+              ]
+            : []),
+        ]}
+      />
+    );
+
     return (
-      <g key={row.id} className="obr-dumbbell-row" data-policy={row.id}>
-        <title>{summary}</title>
+      <g
+        key={row.id}
+        className="obr-dumbbell-row has-tooltip"
+        data-policy={row.id}
+        tabIndex={0}
+        aria-label={`${summary}, ${yearLabel}`}
+        {...handlers(row.id, tooltip)}
+      >
+        {/* The whole row answers the pointer, not just its dots */}
+        <rect
+          className="obr-dumbbell-hit"
+          x={0}
+          y={top + index * rowHeight}
+          width={width}
+          height={rowHeight}
+          fill="transparent"
+        />
         {narrow && backing(0, nameY, approxWidth(row.name, fontSize))}
         <text
           className="obr-dumbbell-name"
@@ -488,7 +537,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
         />
       </div>
 
-      <div ref={wrapperRef} className="obr-dumbbell-plot">
+      <div ref={wrapperRef} className="obr-dumbbell-plot" style={{ position: "relative" }}>
         {hasData ? (
           <div ref={chartRef}>
             <svg
@@ -534,6 +583,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
         ) : (
           <p className="obr-dumbbell-empty">Not yet published</p>
         )}
+        {hasData && <FloatingTooltip tip={tip} />}
       </div>
 
       {hasData && (

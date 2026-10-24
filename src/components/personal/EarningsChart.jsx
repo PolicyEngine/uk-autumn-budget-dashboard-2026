@@ -299,7 +299,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => `Salary ${formatPounds(v)}`}
+                labelFormat={(v) => `Salary ${formatPounds(v)}, ${yearLabel}`}
                 grouped={false}
                 netKey="change"
                 netLabel="Change"

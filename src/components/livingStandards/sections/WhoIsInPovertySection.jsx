@@ -6,8 +6,10 @@
 // by lone parent or couple from child_poverty_by_family. Replaces the
 // Poverty by group and Child poverty by family cards.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import LsCard from "../LsCard";
+import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
+import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import PillSelect from "../../PillSelect";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
@@ -125,6 +127,10 @@ export default function WhoIsInPovertySection({ data }) {
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
   const [measureChoice, setMeasure] = useState("relative_ahc");
+  const plotRef = useRef(null);
+  // Cleared when the breakdown or measure changes, so it never shows a row
+  // that has gone
+  const { tip, handlers } = useFloatingTooltip(plotRef, `${breakdownChoice}-${measureChoice}`);
   if (!ids.length) return null;
   const breakdown = breakdowns[breakdownChoice] ? breakdownChoice : ids[0];
   const b = breakdowns[breakdown];
@@ -227,6 +233,8 @@ export default function WhoIsInPovertySection({ data }) {
     >
       <div className="chart-plot">
         <div
+          ref={plotRef}
+          style={{ position: "relative" }}
           className="dot-plot ls-dot-plot"
           role="table"
           aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(from)} and ${fyDash(to)}`}
@@ -255,9 +263,54 @@ export default function WhoIsInPovertySection({ data }) {
                   {r.label}
                 </span>
                 <span
-                  className="dot-plot-area"
+                  className="dot-plot-area has-tooltip"
                   role="cell"
+                  tabIndex={0}
                   aria-label={`${fyDash(from)} ${r.a == null ? "n/a" : formatPct(r.a)}, ${fyDash(to)} ${r.z == null ? "n/a" : formatPct(r.z)}`}
+                  {...handlers(
+                    r.id,
+                    <TooltipRows
+                      label={`${r.label}: ${m.label.charAt(0).toLowerCase()}${m.label.slice(1)}`}
+                      rows={[
+                        {
+                          key: "from",
+                          name: fyDash(from),
+                          text: r.a == null ? "n/a" : formatPct(r.a),
+                          color: CHART_COLOURS.before,
+                        },
+                        {
+                          key: "to",
+                          name: fyDash(to),
+                          text: r.z == null ? "n/a" : formatPct(r.z),
+                          color: CHART_COLOURS.after,
+                        },
+                        ...(r.d == null
+                          ? []
+                          : [
+                              {
+                                key: "change",
+                                name: "Change",
+                                text: flat(r.d) ? "No change" : signedChange(r.d, "pp"),
+                                color: flat(r.d)
+                                  ? CHART_COLOURS.noChange
+                                  : r.d < 0
+                                    ? CHART_COLOURS.gain
+                                    : CHART_COLOURS.loss,
+                              },
+                            ]),
+                        ...(allValue == null
+                          ? []
+                          : [
+                              {
+                                key: "all",
+                                name: `${b.reference}, ${fyDash(to)}`,
+                                text: formatPct(allValue),
+                                color: CHART_COLOURS.reference,
+                              },
+                            ]),
+                      ]}
+                    />,
+                  )}
                 >
                   {axis.ticks.map((t) => (
                     <span key={t} className="dot-grid" style={{ left: pos(t) }} />
@@ -268,12 +321,8 @@ export default function WhoIsInPovertySection({ data }) {
                       {scale(hi) - scale(lo) > 6 && <span className={`dot-arrow ${rising ? "right" : "left"}`} />}
                     </span>
                   )}
-                  {r.a != null && (
-                    <span className="dot from" style={{ left: pos(r.a) }} title={`${fyDash(from)}: ${formatPct(r.a)}`} />
-                  )}
-                  {r.z != null && (
-                    <span className="dot to" style={{ left: pos(r.z) }} title={`${fyDash(to)}: ${formatPct(r.z)}`} />
-                  )}
+                  {r.a != null && <span className="dot from" style={{ left: pos(r.a) }} />}
+                  {r.z != null && <span className="dot to" style={{ left: pos(r.z) }} />}
                 </span>
                 <span className="dot-values" role="cell">
                   <span className="dot-nums">
@@ -295,6 +344,7 @@ export default function WhoIsInPovertySection({ data }) {
             </span>
             <span className="dot-values" />
           </div>
+          <FloatingTooltip tip={tip} />
         </div>
       </div>
       {/* In the legend row, level with the legend of the card beside it */}

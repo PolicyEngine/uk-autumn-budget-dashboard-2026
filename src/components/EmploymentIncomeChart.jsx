@@ -177,7 +177,7 @@ function EmploymentIncomeChart({
 
                     format={formatPounds}
 
-                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}`}
+                    labelFormat={(label) => `${household.x_label} ${formatPounds(label)}, ${formatYearRange(selectedYear)}`}
 
                     grouped={false}
 

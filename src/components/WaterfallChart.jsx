@@ -311,7 +311,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
                     format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
 
-                    labelFormat={(label) => `Income decile ${label}`}
+                    labelFormat={(label) => `Income decile ${label}, ${formatYearRange(selectedYear)}`}
 
                     netKey="netChange"
 

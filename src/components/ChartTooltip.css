@@ -73,3 +73,20 @@
     min-width: 0;
   }
 }
+
+/* A hand-drawn chart's tooltip (FloatingTooltip.jsx), placed in its plot */
+.floating-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* A point that shows a tooltip on keyboard focus */
+.has-tooltip:focus {
+  outline: none;
+}
+
+.has-tooltip:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 2px;
+}
