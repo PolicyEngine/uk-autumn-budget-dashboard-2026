@@ -753,46 +753,74 @@ def limits_touched(sim_baseline, sim_reform) -> list[dict]:
                 continue
             differing = []
             for prefix in limit.parameters:
-                if _rebound(base_system, prefix) or _rebound(
-                    reform_system, prefix
-                ):
-                    differing.append(prefix)
-                    continue
-                before = data_limits._structure(base_system.parameters, prefix)
-                after = data_limits._structure(
-                    reform_system.parameters, prefix
+                differing += _differing(
+                    base_system,
+                    reform_system,
+                    prefix,
+                    behaviour,
+                    from_year=limit.from_year,
                 )
-                found = [
-                    path
-                    for path in before.keys() | after.keys()
-                    if not data_limits._same_effect(
-                        before.get(path),
-                        after.get(path),
-                        from_year=limit.from_year,
-                    )
-                ]
-                if not found and not data_limits._equal(
-                    data_limits._views(
-                        base_system,
-                        prefix,
-                        behaviour,
-                        from_year=limit.from_year,
-                    ),
-                    data_limits._views(
-                        reform_system,
-                        prefix,
-                        behaviour,
-                        from_year=limit.from_year,
-                    ),
-                ):
-                    found = [prefix]
-                differing += found
             differing += _variables_differing(
                 sim_baseline, sim_reform, limit.variables, behaviour
             )
             if differing:
                 touched.append(record(limit, differing))
     return touched
+
+
+def _differing(
+    base_system, reform_system, prefix: str, behaviour, *, from_year=None
+) -> list:
+    """Where two built systems' parameters differ at or under ``prefix``:
+    the stored leaves that differ by position and effective value; with
+    none, the prefix itself if what formulas read there differs; and the
+    prefix itself if a node on the way is rebound (failing closed). Run
+    inside :func:`data_limits._caches_left_as_found` for both systems."""
+    if _rebound(base_system, prefix) or _rebound(reform_system, prefix):
+        return [prefix]
+    before = data_limits._structure(base_system.parameters, prefix)
+    after = data_limits._structure(reform_system.parameters, prefix)
+    found = [
+        path
+        for path in before.keys() | after.keys()
+        if not data_limits._same_effect(
+            before.get(path), after.get(path), from_year=from_year
+        )
+    ]
+    if not found and not data_limits._equal(
+        data_limits._views(
+            base_system, prefix, behaviour, from_year=from_year
+        ),
+        data_limits._views(
+            reform_system, prefix, behaviour, from_year=from_year
+        ),
+    ):
+        found = [prefix]
+    return found
+
+
+def parameters_differing(sim_baseline, sim_reform, prefixes) -> list:
+    """Where two built simulations' parameters differ under any of
+    ``prefixes``, compared as :func:`limits_touched` compares a limit's
+    parameters in every year: sorted, each path once."""
+    base_system = sim_baseline.tax_benefit_system
+    reform_system = sim_reform.tax_benefit_system
+    behaviour = data_limits._Behaviour(
+        main_systems=(base_system, reform_system)
+    )
+    with (
+        data_limits._caches_left_as_found(base_system),
+        data_limits._caches_left_as_found(reform_system),
+    ):
+        return sorted(
+            {
+                path
+                for prefix in prefixes
+                for path in _differing(
+                    base_system, reform_system, prefix, behaviour
+                )
+            }
+        )
 
 
 # What, beside its formulas and what the fingerprint reads, decides how a
