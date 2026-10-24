@@ -52,7 +52,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Employer NI relief for under-25s",
-    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline; apprentices are not identified.",
+    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (HMRC puts that relief at about £0.57bn in 2025-26). The figure is static and gross: no pay response and no corporation tax effect.",
     from: 2027,
   },
   {

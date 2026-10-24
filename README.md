@@ -182,7 +182,7 @@ The dashboard analyses ten candidate measures for the Autumn Budget on 28 Octobe
 | `state_pension_income_tax_protection` | An allowance of the full new State Pension for people over State Pension age, from April 2027 |
 | `warm_home_discount_top_up` | Warm Home Discount from £150 to £250, winter 2026-27 |
 | `domestic_electricity_zero_vat` | 0% VAT on domestic electricity, October 2026 to March 2028 |
-| `employer_ni_relief_under_25s` | No employer NI up to the upper earnings limit for employees under 25, from April 2027 |
+| `employer_ni_relief_under_25s` | No employer NI up to the upper earnings limit for employees aged 21 to 24 (extending the under-21 relief), from April 2027 |
 | `threshold_freeze_2031_32` | Personal allowance and basic rate band frozen in 2031-32 |
 | `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit from £1m to £500,000, from April 2027 |
 | `salary_sacrifice_cap_2028` | The £2,000 salary sacrifice cap from April 2028 |
