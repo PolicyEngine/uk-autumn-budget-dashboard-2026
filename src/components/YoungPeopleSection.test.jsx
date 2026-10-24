@@ -8,15 +8,31 @@ import {
   MIN_SAMPLE_SIZE,
 } from "../utils/ageImpact";
 import { changeByYear } from "./youngPeople/youngPeopleData";
-import { COMBINED_REFORM_ID } from "../utils/policyConfig";
+// TEST DATA ONLY: the package run's id in these synthetic rows
+const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // Multiple chart cards and accessible queries need room in the shared jsdom runner.
 vi.setConfig({ testTimeout: 30000 });
 
-vi.mock("../utils/publication/flat", () => ({
-  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
-}));
+// The receipt route itself is tested in src/utils/publication/flat.test.js
+// and src/hooks/useIncomeCurve.test.js; here the age table is served as the
+// verified rows that route returns.
+vi.mock("../utils/loadDashboard", async (importOriginal) => {
+  const actual = await importOriginal();
+  const { parseTable } = await import("../utils/publication/csv");
+  const { isCatalogueRowDisplayable } = await import("../utils/measureCatalogue");
+  return {
+    ...actual,
+    loadVerifiedTable: async (catalogue, table) => {
+      const response = await fetch(`/data/${table}.csv`);
+      if (!response.ok) throw new Error(`${table} is unavailable`);
+      return parseTable(table, await response.text()).filter((row) =>
+        isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+      );
+    },
+  };
+});
 
 vi.mock("recharts", () => {
   const Empty = () => null;
@@ -68,6 +84,8 @@ const catalogue = buildMeasureCatalogue({
     ...POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, year: 2029, value: index === 0 ? -1 : 1 })),
     { reform_id: COMBINED_REFORM_ID, reform_name: "All measures", value: 0 },
   ],
+  // Every key here stands for an artifact that verified
+  tablesByKey: Object.fromEntries([...ALL, COMBINED_REFORM_ID].map((id) => [id, {}])),
 });
 const render = (element) => renderReact(
   <MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>,
@@ -100,7 +118,8 @@ describe("results by age", () => {
 
   it("reads shares from one policy's run or the combined run only", () => {
     expect(wholeSelectionRun(POLICIES, ["two_child_limit"])).toBe("two_child_limit");
-    expect(wholeSelectionRun(POLICIES, ALL)).toBe(COMBINED_REFORM_ID);
+    expect(wholeSelectionRun(POLICIES, ALL, COMBINED_REFORM_ID)).toBe(COMBINED_REFORM_ID);
+    expect(wholeSelectionRun(POLICIES, ALL)).toBeNull();
     const three = [...POLICIES, { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" }];
     expect(wholeSelectionRun(three, ALL)).toBeNull();
     expect(youngAndAll([], three, ALL, 2029)).toBeNull();

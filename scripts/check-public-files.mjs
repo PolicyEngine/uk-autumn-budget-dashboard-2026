@@ -29,7 +29,18 @@ const sameMap = (left, right) => isMap(left) && isMap(right) &&
   Object.keys(left).sort().join() === Object.keys(right).sort().join() &&
   Object.entries(left).every(([key, value]) => right[key] === value);
 
-/** Flat views must refer to exactly the manifest and CSV bytes reviewed. */
+// As FLAT_VIEW_FILES in uk_budget_data/publication/release_index.py: the
+// flat files a view reads directly. Every other figure comes from an artifact.
+export const FLAT_VIEW_FILES = ["constituency.csv", "obr_comparison.csv", "regional.csv"];
+
+const isCurrentManifest = (manifest) =>
+  manifest?.schema === "uk-budget-dashboard/publication-manifest/v1" &&
+  manifest.release === CURRENT_RELEASE && sameMap(manifest.budget, CURRENT_BUDGET);
+
+/**
+ * A manifest names this Budget, and the flat files a view reads are bound
+ * to exactly that manifest's bytes and revision (release-index.json).
+ */
 export function checkReleaseIndex(root) {
   const directory = join(root, "public", "data");
   const manifestPath = join(directory, "manifest.json");
@@ -39,13 +50,14 @@ export function checkReleaseIndex(root) {
   try {
     const bytes = readFileSync(manifestPath);
     const manifest = JSON.parse(bytes);
-    if (!existsSync(indexPath) && !Object.keys(manifest.flat_files ?? {}).length) return [];
+    if (!existsSync(indexPath) && !Object.keys(manifest.flat_files ?? {}).length) {
+      return isCurrentManifest(manifest) ? [] : ["manifest is not explicitly for the current 2026 Budget release"];
+    }
     const index = JSON.parse(readFileSync(indexPath));
     if (lstatSync(manifestPath).isSymbolicLink() || lstatSync(indexPath).isSymbolicLink()) {
       problems.push("release index: symbolic link");
     }
-    if (manifest.schema !== "uk-budget-dashboard/publication-manifest/v1" ||
-        manifest.release !== CURRENT_RELEASE || !sameMap(manifest.budget, CURRENT_BUDGET)) {
+    if (!isCurrentManifest(manifest)) {
       problems.push("release index: manifest is not explicitly for the current 2026 Budget release");
     }
     if (index.schema !== "uk-budget-release-index/v1") problems.push("release index: unknown schema");
@@ -60,10 +72,10 @@ export function checkReleaseIndex(root) {
     const files = index.files;
     if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
-    const names = readdirSync(directory).filter((name) => name.endsWith(".csv")).sort();
-    if (Object.keys(files).sort().join() !== names.join()) {
-      problems.push("release index: file map does not cover every flat CSV");
-    }
+    const unread = Object.keys(files).filter((name) => !FLAT_VIEW_FILES.includes(name)).sort();
+    if (unread.length) problems.push(`release index: binds files no view reads: ${unread.join(", ")}`);
+    const unbound = FLAT_VIEW_FILES.filter((name) => existsSync(join(directory, name)) && !Object.hasOwn(files, name));
+    if (unbound.length) problems.push(`release index: flat view files published but not bound: ${unbound.join(", ")}`);
     for (const [name, expected] of Object.entries(files).sort()) {
       if (!/^[a-z][a-z0-9_]*\.csv$/.test(name) || typeof expected !== "string" || !/^[0-9a-f]{64}$/.test(expected)) {
         problems.push("release index: unsafe filename or invalid SHA-256");

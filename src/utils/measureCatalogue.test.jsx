@@ -13,7 +13,8 @@ function fromRows(budgetary) {
     name: row.reform_name, status: "approved", years: [2029], unsupported_years: [],
   }]));
   fixture.manifest.combined = {};
-  return buildMeasureCatalogue({ ...fixture, budgetary });
+  const tablesByKey = Object.fromEntries(budgetary.map((row) => [row.reform_id, { budgetary_impact: [row] }]));
+  return buildMeasureCatalogue({ ...fixture, budgetary, tablesByKey });
 }
 
 describe("published measure catalogue", () => {

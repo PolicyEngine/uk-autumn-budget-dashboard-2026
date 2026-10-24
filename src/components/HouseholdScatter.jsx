@@ -37,6 +37,7 @@ import {
   axisWidth,
 } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "./ChartTooltip";
@@ -122,11 +123,14 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const data = useHouseholdScatterData();
+  const { combinedId } = useMeasureCatalogue();
   const view = scatterView({
     data,
     selectedIds: selectedPolicies,
-    policyIds: (policies ?? []).map((policy) => policy.id),
+    // The package is every measure the page can show, held ones excluded
+    policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     year: selectedYear,
+    packageId: combinedId,
   });
   const yearLabel = fiscalYearLabel(selectedYear);
   const chartTitle = `${CHART_TITLE}, ${yearLabel}`;

@@ -52,9 +52,24 @@ vi.mock("recharts", async () => {
   };
 });
 vi.mock("./ChartDownloadMenu", () => ({ default: () => null }));
-vi.mock("../utils/publication/flat", () => ({
-  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
-}));
+// The receipt route is tested in src/hooks/useIncomeCurve.test.js and
+// src/utils/publication/flat.test.js; here the age table arrives as the
+// verified, gated rows that route returns.
+vi.mock("../utils/loadDashboard", async (importOriginal) => {
+  const actual = await importOriginal();
+  const { parseTable } = await import("../utils/publication/csv");
+  const { isCatalogueRowDisplayable } = await import("../utils/measureCatalogue");
+  return {
+    ...actual,
+    loadVerifiedTable: async (catalogue, table) => {
+      const response = await fetch(`/data/${table}.csv`);
+      if (!response.ok) throw new Error(`${table} is unavailable`);
+      return parseTable(table, await response.text()).filter((row) =>
+        isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+      );
+    },
+  };
+});
 vi.mock("../utils/chartLogo", () => ({
   PolicyEngineLogo: () => null,
   CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17 },

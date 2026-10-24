@@ -21,10 +21,10 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    field_validator,
-    model_validator,
     StrictBool,
     StrictInt,
+    field_validator,
+    model_validator,
 )
 
 from uk_budget_data.publication.attestations import Attestation
@@ -120,7 +120,9 @@ class PersonalSeries(_Strict):
             if values is not None and len(values) != len(set(values)):
                 raise ValueError("personal model years must be unique")
         if set(self.years or []) & set(self.unsupported_years or []):
-            raise ValueError("personal supported and unsupported years overlap")
+            raise ValueError(
+                "personal supported and unsupported years overlap"
+            )
         return self
 
 
@@ -206,7 +208,9 @@ class Execution(_Strict):
 class Manifest(_Strict):
     schema_id: str = Field(default=SCHEMA, alias="schema")
     release: str = CURRENT_RELEASE
-    budget: dict[str, str] = Field(default_factory=lambda: dict(CURRENT_BUDGET))
+    budget: dict[str, str] = Field(
+        default_factory=lambda: dict(CURRENT_BUDGET)
+    )
     # A flat table may only be read through the separately verified release
     # index. These digests are part of this exact publication snapshot.
     flat_files: dict[str, str] = Field(default_factory=dict)

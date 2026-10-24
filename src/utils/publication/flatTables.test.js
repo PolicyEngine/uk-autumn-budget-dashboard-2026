@@ -12,7 +12,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseCsv, parseTable } from "./csv";
 import { AGE_BANDS } from "../ageImpact";
-import { COMBINED_REFORM_ID } from "../policyConfig";
+// The flat files' own combined run (not a manifest key)
+const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { csvField } from "../geography/exportTable";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "../../../public/data");

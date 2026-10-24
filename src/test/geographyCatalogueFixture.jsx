@@ -18,7 +18,10 @@ const manifest = {
 
 // These tests exercise geography parsing and presentation; byte verification is
 // covered by the release-index integration tests, and mocked at its boundary.
-export const geographyCatalogue = buildMeasureCatalogue({ manifest });
+export const geographyCatalogue = buildMeasureCatalogue({
+  manifest,
+  tablesByKey: Object.fromEntries([...ids, "autumn_budget_2026_combined"].map((id) => [id, {}])),
+});
 export function GeographyCatalogueProvider({ children }) {
   return <MeasureCatalogueProvider catalogue={geographyCatalogue}>{children}</MeasureCatalogueProvider>;
 }

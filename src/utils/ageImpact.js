@@ -11,7 +11,6 @@
  * from a single policy's row or, with every policy selected, from the
  * combined run; any other selection has none.
  */
-import { COMBINED_REFORM_ID } from "./policyConfig";
 
 /** The age bands, in order, with a label for the page and a short one. */
 export const AGE_BANDS = [
@@ -73,16 +72,17 @@ export function meanChangeByBand(rows, policies, selected, year) {
 
 /**
  * The run whose rows hold non-additive statistics for this selection: the
- * policy's own run when one is selected, the combined run when all are,
- * else null.
+ * policy's own run when one is selected, the package's combined run
+ * (`combinedId`, the catalogue's) when every displayable measure is, else
+ * null. A held measure is never part of the package.
  */
-export function wholeSelectionRun(policies, selected, combinedId = COMBINED_REFORM_ID) {
+export function wholeSelectionRun(policies, selected, combinedId = null) {
+  const offered = policies.filter((policy) => policy.displayable !== false);
   if (selected.length === 1) {
-    const policy = policies.find((candidate) => candidate.id === selected[0]);
-    return policy && policy.displayable !== false ? selected[0] : null;
+    return offered.some((policy) => policy.id === selected[0]) ? selected[0] : null;
   }
-  if (selected.length > 1 && selected.length === policies.length && policies.every((policy) => selected.includes(policy.id))) {
-    return policies.every((policy) => policy.displayable !== false) ? combinedId : null;
+  if (selected.length > 1 && selected.length === offered.length && offered.every((policy) => selected.includes(policy.id))) {
+    return combinedId ?? null;
   }
   return null;
 }
@@ -93,11 +93,7 @@ export function wholeSelectionRun(policies, selected, combinedId = COMBINED_REFO
  * rows are missing or too thin.
  */
 export function youngAndAll(rows, policies, selected, year, combinedId) {
-  const combinedRows = [...new Set((rows ?? []).map((row) => row.reform_id).filter((id) => id?.endsWith("_combined")))];
-  const publishedCombined = combinedId === undefined
-    ? combinedRows.length === 1 ? combinedRows[0] : null
-    : combinedId;
-  const run = wholeSelectionRun(policies, selected, publishedCombined);
+  const run = wholeSelectionRun(policies, selected, combinedId ?? null);
   if (!run) return null;
   const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
   const young = yearRows.find((row) => row.age_band === YOUNG_BAND);

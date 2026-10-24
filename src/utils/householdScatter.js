@@ -121,18 +121,19 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   rows: Array<Object>|null}} options.data
  * @param {Array<string>} options.selectedIds
  * @param {Array<string>} options.policyIds - Every measure the page offers.
+ * @param {string|null} [options.packageId] - The package's combined run.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
  *   points: Array<Object>}}
  */
-export function scatterView({ data, selectedIds, policyIds, year }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  const choice = chooseReform({ selectedIds, policyIds, reforms });
+  const choice = chooseReform({ selectedIds, policyIds, reforms, packageId });
   if (choice.kind === "none") {
     return notice("Select a measure to see household results.");
   }

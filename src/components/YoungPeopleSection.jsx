@@ -17,8 +17,7 @@ import {
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { parseTable } from "../utils/publication/csv";
-import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import { loadVerifiedTable } from "../utils/loadDashboard";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
@@ -86,14 +85,19 @@ function niceDomain(maxAbs) {
   return { domain: [-top, top], ticks };
 }
 
-/** Load age_impact.csv once per mount, typed by the publication contract. */
+/**
+ * The age table from each verified artifact (#20's receipt route), typed by
+ * the publication contract. A measure whose artifact carries no age table
+ * has no rows, so its figures by age are unavailable.
+ */
 function useAgeImpactRows(catalogue) {
   const [state, setState] = useState({ catalogue, status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
-    loadVerifiedFlatCsv("age_impact.csv", catalogue)
-      .then((text) => {
-        if (!cancelled) setState({ catalogue, status: "ready", rows: parseTable("age_impact", text) });
+    loadVerifiedTable(catalogue, "age_impact")
+      .then((rows) => {
+        // No verified age table at all reads as unavailable, not as empty charts
+        if (!cancelled) setState({ catalogue, status: rows.length ? "ready" : "unavailable", rows: rows.length ? rows : null });
       })
       .catch(() => {
         if (!cancelled) setState({ catalogue, status: "error", rows: null });
@@ -493,8 +497,8 @@ function Headline({ rows, policies, selectedPolicies, selectedYear, combinedId }
 /**
  * "Young people (under 25)": how the selected policies change household
  * incomes by age, with young people aged 16 to 24 highlighted. It loads
- * public/data/age_impact.csv itself and follows the page's policy and
- * year pills.
+ * the age table from the verified artifacts itself and follows the page's
+ * policy and year pills.
  */
 function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();

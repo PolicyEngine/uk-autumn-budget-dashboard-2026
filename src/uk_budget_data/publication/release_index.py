@@ -1,9 +1,15 @@
-"""Bind supplementary flat tables to one reviewed publication snapshot.
+"""Bind the flat files a view reads to one reviewed publication snapshot.
 
-The manifest owns the CSV digests; the index repeats that map and binds the
-exact manifest bytes and revision. Replacing either file first fails closed
-until both belong to the same snapshot. Only ``publish index`` writes these
-bindings, after checking the receipts and comparing receipted flat rows.
+Every national figure the page shows comes from a receipt-verified
+artifact. Two views read flat files that no artifact carries: the OBR
+comparison (``obr_comparison.csv``) and results by area (``regional.csv``
+and ``constituency.csv``, from the disclosure layer). ``publish index``
+binds those files to the manifest: the manifest records each file's SHA-256
+(``flat_files``), and ``release-index.json`` names the manifest's revision
+and the SHA-256 of its exact bytes. The page reads a flat file only when the
+index matches the manifest it loaded and the file's bytes match their
+digest, so replacing either file first fails closed until both belong to the
+same snapshot. Only ``publish index`` writes these bindings.
 """
 
 import csv
@@ -15,22 +21,20 @@ import tempfile
 from pathlib import Path
 
 from uk_budget_data.publication import manifest as m
-from uk_budget_data.publication.artifacts import (
-    capture,
-    captured_file_problems,
-    captured_tables,
-)
-from uk_budget_data.publication.tables import (
-    TABLES,
-    canonical_csv,
-    parse_csv,
-    sha256_bytes,
-)
+from uk_budget_data.publication.tables import sha256_bytes
 
 INDEX_FILE = "release-index.json"
 INDEX_SCHEMA = "uk-budget-release-index/v1"
 DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 CSV_FILE = re.compile(r"[a-z][a-z0-9_]*\.csv\Z")
+
+# The flat files a view reads directly (OBRComparisonTable.jsx, and
+# useGeographyData.js through utils/geography/columns.js). Every other flat
+# CSV under public/data is read by no view: the figures it would carry come
+# from the artifacts.
+FLAT_VIEW_FILES = ("constituency.csv", "obr_comparison.csv", "regional.csv")
+# The column naming each row's measure or combined run, by file
+ID_COLUMNS = ("reform_id", "reform")
 
 
 def identity_problems(manifest) -> list[str]:
@@ -50,11 +54,29 @@ def identity_problems(manifest) -> list[str]:
     return []
 
 
-def release_index_problems(data_root: Path, manifest=None) -> list[str]:
-    """Verify index identity, snapshot, complete file map and every CSV byte.
+def manifest_identity_problems(data_root: Path) -> list[str]:
+    """The manifest file itself names this Budget and release.
 
-    No index means that no supplementary flat view is published. It is
-    permitted for an artifact-only manifest; it never authorizes a figure.
+    The model fills a missing identity with the current one, so a manifest
+    written before the identity existed would pass a check of the parsed
+    model. The page reads the file, so the file is what is checked.
+    """
+    path = m.manifest_path(data_root)
+    if not path.exists():
+        return []
+    try:
+        raw = json.loads(path.read_bytes())
+    except (OSError, ValueError):
+        return ["manifest cannot be read"]
+    return identity_problems(raw)
+
+
+def release_index_problems(data_root: Path, manifest=None) -> list[str]:
+    """Verify the index's identity and snapshot, its file map, and each
+    bound file's bytes.
+
+    No index means that no flat view is published: those views show as
+    unavailable. That is allowed; it never authorises a figure.
     """
     index_path = data_root / INDEX_FILE
     manifest_path = m.manifest_path(data_root)
@@ -108,16 +130,23 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         return problems + ["release index: no flat CSV digests"]
     if files != raw.get("flat_files"):
         problems.append("release index: file map differs from manifest")
-    actual_names = {path.name for path in data_root.glob("*.csv")}
-    if set(files) != actual_names:
+    unread = sorted(set(files) - set(FLAT_VIEW_FILES))
+    if unread:
         problems.append(
-            "release index: file map does not cover every flat CSV"
+            "release index: binds files no view reads: " + ", ".join(unread)
+        )
+    unbound = sorted(
+        name
+        for name in FLAT_VIEW_FILES
+        if (data_root / name).exists() and name not in files
+    )
+    if unbound:
+        problems.append(
+            "release index: flat view files published but not bound: "
+            + ", ".join(unbound)
         )
     for name, digest in sorted(files.items()):
-        if (
-            not isinstance(name, str)
-            or not CSV_FILE.fullmatch(name)
-        ):
+        if not isinstance(name, str) or not CSV_FILE.fullmatch(name):
             problems.append("release index: unsafe CSV filename")
             continue
         if not isinstance(digest, str) or not DIGEST.fullmatch(digest):
@@ -131,102 +160,72 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
     return problems
 
 
-def _flat_problems(
-    manifest: m.Manifest, files: dict[str, bytes], data_root: Path
-) -> list[str]:
-    """Refuse held/unpublished years and stale copies of receipted rows."""
-    from uk_budget_data.publication.publish import binding_problems
+def _flat_problems(manifest: m.Manifest, files: dict[str, bytes]) -> list[str]:
+    """Refuse a flat view file that carries a held entry's figures.
 
+    A row whose measure or combined run the manifest lists but does not
+    display (staged, stale, withdrawn or not computable) means the file was
+    made for another snapshot, or publishes a figure the page must not show.
+    A row for an id the manifest does not list is allowed: the page shows
+    only rows whose id has a verified artifact in this snapshot. Problems
+    name files, ids and statuses, never values.
+    """
     problems = []
-    artifacts = {}
-    for key, entry in manifest.entries().items():
-        if entry.status not in m.DISPLAYABLE:
-            continue
-        try:
-            captured = capture(data_root / entry.artifact)
-            found = captured_file_problems(captured)
-            tables = captured_tables(captured)
-            found += binding_problems(captured.document, tables, entry, key)
-            if found:
-                problems.extend(f"{key}: {p}" for p in found)
-            else:
-                artifacts[key] = tables
-        except (OSError, ValueError) as error:
-            problems.append(
-                f"{key}: artifact cannot be verified ({type(error).__name__})"
-            )
+    entries = manifest.entries()
     for filename, content in sorted(files.items()):
-        if not CSV_FILE.fullmatch(filename):
-            problems.append(f"{filename}: unsupported flat CSV filename")
-            continue
         try:
-            rows = list(
-                csv.DictReader(
-                    io.StringIO(content.decode("utf-8-sig"), newline="")
-                )
+            reader = csv.DictReader(
+                io.StringIO(content.decode("utf-8"), newline="")
             )
-            for row in rows:
-                key = row.get("reform_id", row.get("reform"))
-                if key is None:
-                    continue  # A reviewed reference table, without figures by policy.
-                entry = manifest.entries().get(key)
-                year = int(row.get("year", ""))
-                if entry is None or entry.status not in m.DISPLAYABLE:
+            id_column = next(
+                (c for c in ID_COLUMNS if c in (reader.fieldnames or [])), None
+            )
+            if id_column is None or "year" not in reader.fieldnames:
+                problems.append(f"{filename}: no measure id or year column")
+                continue
+            for row in reader:
+                int(row["year"])
+                entry = entries.get(row[id_column])
+                if entry is not None and entry.status not in m.DISPLAYABLE:
                     problems.append(
-                        f"{filename}: row is absent from the displayable manifest"
+                        f"{filename}: has figures for {row[id_column]}, "
+                        f"which is {entry.status}"
                     )
-                elif (
-                    year not in entry.years or year in entry.unsupported_years
-                ):
-                    problems.append(f"{filename}: row has an unsupported year")
-            name = filename.removesuffix(".csv")
-            if name in TABLES:
-                flat_rows = parse_csv(name, content)
-                # Compare every receipted policy represented in the flat
-                # table. An optional table absent from all receipts has a
-                # separately reviewed flat contract instead.
-                for key in {row["reform_id"] for row in flat_rows}:
-                    expected = artifacts.get(key, {}).get(name)
-                    if expected is not None and canonical_csv(
-                        name, expected
-                    ) != canonical_csv(
-                        name,
-                        [row for row in flat_rows if row["reform_id"] == key],
-                    ):
-                        problems.append(
-                            f"{filename}: rows differ from approved artifact for {key}"
-                        )
-        except (UnicodeError, ValueError, TypeError, KeyError):
-            problems.append(f"{filename}: invalid flat CSV contract")
+        except (UnicodeError, ValueError, TypeError, csv.Error):
+            problems.append(
+                f"{filename}: not a readable CSV with integer years"
+            )
     return sorted(set(problems))
 
 
 def write_release_index(
     manifest: m.Manifest, *, data_root: Path, inputs: Path
 ) -> m.Manifest:
-    """Gate, bind and write a new manifest/index pair; never bless old rows."""
+    """Gate, bind and write a new manifest and index pair.
+
+    Every publication gate runs first, on the manifest and on the file on
+    disk; only the index being replaced is skipped. The flat view files
+    present are bound as they are: regenerate them for this snapshot first.
+    """
     from uk_budget_data.publication.publish import PublishError, check
 
-    # Reindexing replaces an old binding after the figures have regenerated.
-    # All receipt/approval gates still run; only the obsolete index is skipped.
     problems = identity_problems(manifest) + check(
         manifest, data_root=data_root, inputs=inputs, check_flat_index=False
     )
-    try:
-        problems += identity_problems(
-            json.loads(m.manifest_path(data_root).read_bytes())
-        )
-    except (OSError, ValueError):
-        problems.append("an explicit current manifest must be saved before indexing")
+    if not m.manifest_path(data_root).exists():
+        problems.append("save the manifest before indexing it")
     files = {}
-    for path in sorted(data_root.glob("*.csv")):
+    for name in FLAT_VIEW_FILES:
+        path = data_root / name
         if path.is_symlink():
-            problems.append(f"{path.name}: a symbolic link")
-        else:
-            files[path.name] = path.read_bytes()
+            problems.append(f"{name}: a symbolic link")
+        elif path.is_file():
+            files[name] = path.read_bytes()
     if not files:
-        problems.append("no flat CSVs to bind")
-    problems += _flat_problems(manifest, files, data_root)
+        problems.append(
+            "no flat view file to bind (" + ", ".join(FLAT_VIEW_FILES) + ")"
+        )
+    problems += _flat_problems(manifest, files)
     if problems:
         raise PublishError("release index", problems)
     working = manifest.model_copy(deep=True)
@@ -264,8 +263,8 @@ def write_release_index(
             staged.append((Path(temporary), data_root / filename))
             with os.fdopen(handle, "wb") as stream:
                 stream.write(content)
-        # Each replacement is atomic. Between them the old/new revision and
-        # digest mismatch, so consumers refuse every supplementary figure.
+        # Each replacement is atomic. Between them the revision and digest
+        # disagree, so the page refuses every flat view until both land.
         for temporary, destination in staged:
             os.replace(temporary, destination)
     finally:
