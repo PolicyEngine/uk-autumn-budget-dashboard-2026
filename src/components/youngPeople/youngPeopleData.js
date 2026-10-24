@@ -12,16 +12,16 @@ import { AGE_GROUPS, ALL_BAND, MIN_SAMPLE_SIZE, YOUNG_BAND } from "../../utils/a
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
- * page's teal, the other bands a blue ramp from youngest to oldest, and
- * all ages in grey (dashed where drawn as a line).
+ * page's teal, the other bands blues under 50 and purples from 50, each
+ * darker with age, and all ages in grey (dashed where drawn as a line).
  */
 export const GROUP_STYLES = {
-  "0-15": { color: "#93C5FD" },
+  "0-15": { color: "#8DB8E3" },
   "16-24": { color: "#319795" },
-  "25-34": { color: "#60A5FA" },
-  "35-49": { color: "#2563EB" },
-  "50-64": { color: "#1E40AF" },
-  "65+": { color: "#172554" },
+  "25-34": { color: "#5A8FCB" },
+  "35-49": { color: "#3165A8" },
+  "50-64": { color: "#7C5CB8" },
+  "65+": { color: "#2E1F5E" },
   all: { color: "#6B7280", dash: "5 3" },
 };
 

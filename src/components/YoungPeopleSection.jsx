@@ -456,7 +456,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
 function GroupTick({ x, y, payload, narrow }) {
   const band = AGE_BANDS.find((candidate) => candidate.label === payload.value);
   const young = band?.key === YOUNG_BAND;
-  const label = narrow && band ? band.short : payload.value;
+  const label = narrow ? (band ? band.short : "All") : payload.value;
   return (
     <text
       x={x - 6}
