@@ -15,7 +15,7 @@ Drafts for PolicyEngine UK's LinkedIn page and @PolicyEngineUK on X, for the day
 
 | When | Post |
 |---|---|
-| Mon 26 Oct | [P1 Budget-day plans](#p1-what-we-publish-on-budget-day), then [1 council tax surcharge](#1-high-value-council-tax-surcharge-by-constituency) |
+| Mon 26 Oct | [1 council tax surcharge](#1-high-value-council-tax-surcharge-by-constituency) |
 | Mon 26 Oct | [2 triple lock](#2-replacing-the-triple-lock-from-2030), [3 energy bills](#3-energy-bills-and-the-autumn-budget-2026) |
 | Tue 27 Oct | [P2 webinar](#p2-budget-day-webinar), [4 targeted energy discount](#4-targeted-energy-bill-discount), [6 free childcare](#6-free-childcare-hours-and-a-75-subsidy) |
 | Tue 27 Oct | [5 Middle East war](#5-the-middle-east-war-and-uk-living-standards), [7 electricity VAT](#7-temporary-vat-cut-on-domestic-electricity), [8 bus fares](#8-2-bus-fare-cap) |
@@ -25,32 +25,6 @@ Drafts for PolicyEngine UK's LinkedIn page and @PolicyEngineUK on X, for the day
 ---
 
 ## Pre-Budget posts
-
-### P1. What we publish on Budget day
-
-**X**
-
-> On Wednesday the Chancellor delivers the Autumn Budget. PolicyEngine UK will publish the measures we can model as they are announced: the cost of each, and how it changes household incomes by income decile, region and constituency.
-
-Reply: `Follow along: [DASHBOARD URL — TO CONFIRM]`
-
-**LinkedIn**
-
-> The Chancellor delivers the Autumn Budget on Wednesday 28 October. PolicyEngine UK will publish its analysis of the announced measures on the day.
->
-> For each measure we can model, the dashboard will show:
-> • its cost or revenue in each year to 2030-31
-> • how it changes household net income by income decile
-> • results by region and constituency
-> • the effect on your own household
->
-> Measures the model cannot cost yet will be listed as not modelled, with the reason.
->
-> Follow along: [DASHBOARD URL — TO CONFIRM]
->
-> #AutumnBudget #UKBudget
-
-**Before posting:** the public route `policyengine.org/uk/autumn-budget-2026` is a draft (policyengine-app-v2 #1249), and `main` of this repo still charts last year's measures until the 2026 numbers are generated. Confirm the URL, and that every bullet above is live on the day, before posting.
 
 ### P2. Budget-day webinar
 
@@ -70,7 +44,7 @@ Reply: `Register: https://us06web.zoom.us/meeting/register/2DLUeZAbRwKkKEK-2JrFr
 >
 > #AutumnBudget
 
-Source: the event entry in policyengine-app-v2 #1279 (draft). The time and link come from that entry; confirm them with Max before posting.
+Time and link confirmed 24 October: Wednesday 28 October, 4:30pm.
 
 ### P3. What we have modelled ahead of the Budget
 
@@ -415,5 +389,5 @@ Reply: `Try it: https://www.policyengine.org/uk/marriage`
 |---|---|
 | Scrapping the childcare £100k limit (`/uk/childcare-100k-threshold`) | Taken down on 21 October while the costing is revised. `uk-childcare-100k-threshold.vercel.app` still serves the old figures publicly. |
 | Capital gains tax reform (`/uk/cgt-reform`) | Not merged (policyengine-app-v2 #1318, draft). `uk-cgt-reform.vercel.app` is publicly reachable. |
-| Autumn Budget 2026 dashboard | Covered by P1 once the route is live. |
+| Autumn Budget 2026 dashboard | No post until the dashboard is live. |
 | SSRN papers on the research page (#1160) | Not merged. |
