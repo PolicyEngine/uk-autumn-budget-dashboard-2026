@@ -539,7 +539,7 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          How ten candidate Autumn Budget 2026 measures would affect the
+          How nine candidate Autumn Budget 2026 measures would affect the
           public finances and households: by income, area and age, and for
           your own household, alongside the living standards outlook. Choose
           a year and policies in the bar above.

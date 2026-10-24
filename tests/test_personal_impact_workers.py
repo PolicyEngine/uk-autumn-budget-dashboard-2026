@@ -35,7 +35,6 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         "POLICY_IDS",
         [
             "fuel_duty_rise_deferral",
-            "salary_sacrifice_cap_2028",
             "badr_lifetime_limit_cut",
             # A measure whose modifier changes households: it must reach
             # the workers (pickled by reference) and act there.
@@ -79,14 +78,9 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         ]
         for year in [2025, 2026, 2028, 2030]
     )
-    assert any(
-        serial["policies"][policy_id]["years"][year]["net_income_change"]
-        for policy_id in [
-            "fuel_duty_rise_deferral",
-            "salary_sacrifice_cap_2028",
-        ]
-        for year in [2025, 2026, 2028, 2030]
-    )
+    # No parameter-change measure left moves this household in these years
+    # (the salary sacrifice cap's haircut did, before that measure was
+    # dropped); the warm home discount above shows a measure acting there.
 
 
 @pytest.mark.parametrize(

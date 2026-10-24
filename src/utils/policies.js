@@ -107,17 +107,6 @@ export const POLICIES = [
     },
   },
   {
-    id: "salary_sacrifice_cap_2028",
-    name: "Salary sacrifice cap from 2028",
-    description: "Start the £2,000 salary sacrifice cap a year early",
-    summary:
-      "Starts the £2,000 cap on National Insurance-free salary sacrifice pension contributions in April 2028, a year early.",
-    starts: "April 2028",
-    type: "National Insurance",
-    details:
-      "Contributions above the cap pay employee and employer National Insurance. Assumes employers spread the cost over all workers' pay and employees keep their contributions.",
-  },
-  {
     id: "road_fuel_vat_cut",
     name: "VAT cut on road fuel",
     description: "Cut VAT on petrol and diesel to 15% for six months",

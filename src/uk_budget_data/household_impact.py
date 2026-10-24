@@ -22,7 +22,7 @@ household is built as policyengine.py's household calculation
 side runs as a ``policyengine_uk.Simulation`` with a ``Scenario`` holding the
 side's parameter changes and its measures' simulation modifiers, the path
 the national run and ``personal_impact`` take. policyengine.py's household
-calculation takes parameter changes only, so six of the ten measures (those
+calculation takes parameter changes only, so six of the nine measures (those
 whose modifiers change a formula) could not be applied through it; on this
 path every measure is. The sweep is one simulation per side, with the
 situation's ``axes``: the modifiers change formulas, which act on every

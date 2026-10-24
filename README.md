@@ -1,6 +1,6 @@
 # UK Autumn Budget 2026 dashboard
 
-PolicyEngine's dashboard for the UK Autumn Budget on 28 October 2026. It shows how ten candidate Budget measures would change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. The measures are candidates modelled before the Budget, not announced policy, and the page says so on every tab that shows them. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
+PolicyEngine's dashboard for the UK Autumn Budget on 28 October 2026. It shows how nine candidate Budget measures would change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. The measures are candidates modelled before the Budget, not announced policy, and the page says so on every tab that shows them. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
 
 Live: <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026>
 
@@ -19,7 +19,7 @@ Every chart downloads as CSV, PNG, SVG or plain text.
 
 ## Measures
 
-Ten candidate measures, each compared against current law in policyengine-uk. They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures.py`](src/uk_budget_data/budget_measures.py). `autumn_budget_2026_combined` simulates all ten together, with their interactions.
+Nine candidate measures, each compared against current law in policyengine-uk. They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures.py`](src/uk_budget_data/budget_measures.py). `autumn_budget_2026_combined` simulates all nine together, with their interactions.
 
 | Id | Measure |
 |---|---|
@@ -30,9 +30,10 @@ Ten candidate measures, each compared against current law in policyengine-uk. Th
 | `employer_ni_relief_under_25s` | Employer NI relief for under-25s: none up to the upper earnings limit, from April 2027 |
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
 | `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit cut from £1m to £500,000, from April 2027 |
-| `salary_sacrifice_cap_2028` | Salary sacrifice cap of £2,000 from April 2028, a year early |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+
+A tenth candidate, the £2,000 salary sacrifice cap brought forward to April 2028, was dropped on 24 October: on policyengine-uk 2.132.6 its revenue included spurious income tax, because adjusted net income does not deduct the excess redirected into the pension.
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 

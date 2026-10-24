@@ -20,7 +20,6 @@ export const POLICY_COLORS = {
   // Raise revenue (amber)
   "Threshold freeze to 2031-32": "#78350F", // Amber 900
   "Business Asset Disposal Relief restricted": "#B45309", // Amber 700
-  "Salary sacrifice cap from 2028": "#F59E0B", // Amber 500
 
   // Cost revenue (teal)
   "Fuel duty rises deferred": "#115E59", // Teal 800
@@ -42,7 +41,6 @@ export const ALL_POLICY_NAMES = [
   // Raise revenue
   "Threshold freeze to 2031-32",
   "Business Asset Disposal Relief restricted",
-  "Salary sacrifice cap from 2028",
   // Cost revenue
   "Fuel duty rises deferred",
   "VAT cut on road fuel",
@@ -58,7 +56,6 @@ export const ALL_POLICY_NAMES = [
 export const REVENUE_RAISING_NAMES = new Set([
   "Threshold freeze to 2031-32",
   "Business Asset Disposal Relief restricted",
-  "Salary sacrifice cap from 2028",
 ]);
 
 // The id of the run that simulates every measure together
@@ -76,7 +73,6 @@ export const PERSONAL_IMPACT_POLICY_ORDER = [
   "employer_ni_relief_under_25s",
   "threshold_freeze_2031_32",
   "badr_lifetime_limit_cut",
-  "salary_sacrifice_cap_2028",
   "road_fuel_vat_cut",
   "plan_2_threshold_unfreeze",
 ];

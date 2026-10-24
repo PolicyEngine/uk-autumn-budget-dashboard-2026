@@ -178,7 +178,7 @@ HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 # seconds on a warm instance.
 SMOKE_HOUSEHOLD_IMPACT = {
     "year": 2028,
-    "policies": ["salary_sacrifice_cap_2028"],
+    "policies": ["badr_lifetime_limit_cut"],
     "household": {"employment_income": 30_000, "salary_year": 2028},
     "include": [],
 }

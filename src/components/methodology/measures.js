@@ -21,11 +21,6 @@ export const MEASURE_MODELLING = [
     from: 2027,
   },
   {
-    name: "Salary sacrifice cap from 2028",
-    how: "Sets the £2,000 cap for 2028-29 as well as later years. The behavioural assumption is described in its policy note.",
-    from: 2028,
-  },
-  {
     name: "Fuel duty rises deferred",
     how: "Sets the duty rate in each year to the deferred path, weighted by days from 6 April as the model blends it, and lowers VAT by 20% of the duty change on each litre bought. Fuel spending is held fixed.",
     from: 2026,
