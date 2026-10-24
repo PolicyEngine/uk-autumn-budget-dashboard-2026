@@ -1,9 +1,11 @@
+/* Calm spacing, as in the other cards: title row, then the chooser, then
+   its description, then the plot */
 .household-picker {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  margin: 12px 0 8px;
+  gap: 14px;
+  margin: 20px 0 24px;
 }
 
 .household-picker .household-definition {

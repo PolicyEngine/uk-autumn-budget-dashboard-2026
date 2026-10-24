@@ -17,7 +17,11 @@ from uk_budget_data.example_households import (
     HOUSEHOLD_IDS,
     X_VARIABLES,
 )
-from uk_budget_data.publication.tables import SCATTER_SAMPLE_SIZE, TABLES
+from uk_budget_data.publication.tables import (
+    SCATTER_BINS,
+    SCATTER_SAMPLE_SIZE,
+    TABLES,
+)
 
 ROWS_PER_YEAR = {
     "budgetary_impact": 1,
@@ -36,6 +40,17 @@ KEY_SETS = {
     "distributional_impact": ("decile", DECILES),
     "winners_losers": ("decile", WINNERS_GROUPS),
 }
+# The change bands a binned scatter cell may name, as (lower, upper): the
+# bands between consecutive edges, except the one across zero, which is
+# (-1, 1), and the open-ended bands beyond the outermost edges, named by
+# that edge on both sides (tables.change_band).
+_EDGES = SCATTER_BINS["change_edges"]
+SCATTER_CHANGE_BANDS = frozenset(
+    {(lower, upper) for lower, upper in zip(_EDGES, _EDGES[1:])}
+    | {(_EDGES[0], _EDGES[0]), (_EDGES[-1], _EDGES[-1])}
+)
+
+
 # How each table expresses a change, for the before-start check.
 NO_EFFECT_TOLERANCE = 1e-4
 
@@ -149,6 +164,19 @@ def table_problems(
                     f"{name}: an effect in {year}, before the measure "
                     f"starts in {effective_from_year}"
                 )
+
+    binned = tables.get("household_scatter_binned") or []
+    unknown = {
+        (row["change_band"], row["change_band_upper"])
+        for row in binned
+        if (row["change_band"], row["change_band_upper"])
+        not in SCATTER_CHANGE_BANDS
+    }
+    if unknown:
+        problems.append(
+            f"household_scatter_binned: {len(unknown)} change bands not in "
+            "the contract's change_edges"
+        )
 
     sample = tables.get("household_scatter")
     if sample:

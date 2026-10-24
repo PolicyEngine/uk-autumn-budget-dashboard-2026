@@ -15,7 +15,13 @@
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
 import { chooseReform } from "./geography/selection";
-import { bandLabel, SCATTER_BINS } from "./publication/scatter";
+import {
+  bandLabel,
+  changeBandLabel as describeChangeBand,
+  changeBandMiddle,
+  openEdge,
+  SCATTER_BINS,
+} from "./publication/scatter";
 
 export const SCATTER_FILE = "household_scatter_binned.csv";
 
@@ -25,9 +31,16 @@ const COLUMNS = [
   "year",
   "income_band",
   "change_band",
+  "change_band_upper",
   "households",
 ];
-const NUMERIC = new Set(["year", "income_band", "change_band", "households"]);
+const NUMERIC = new Set([
+  "year",
+  "income_band",
+  "change_band",
+  "change_band_upper",
+  "households",
+]);
 
 function splitCsvLine(line) {
   const fields = [];
@@ -63,7 +76,8 @@ function splitCsvLine(line) {
  *
  * @param {string} text
  * @returns {Array<{reform_id: string, reform_name: string, year: number,
- *   income_band: number, change_band: number, households: number}>}
+ *   income_band: number, change_band: number, change_band_upper: number,
+ *   households: number}>}
  */
 export function parseScatterCsv(text) {
   const lines = text
@@ -139,10 +153,11 @@ export function scatterView({ data, selectedIds, policyIds, year }) {
     )
     .map((row) => ({
       income: row.income_band + bins.income_band_width / 2,
-      change: row.change_band + bins.change_band_width / 2,
+      change: changeBandMiddle(row.change_band, row.change_band_upper),
       households: row.households,
       incomeBand: row.income_band,
       changeBand: row.change_band,
+      changeBandUpper: row.change_band_upper,
     }));
   if (points.length === 0) {
     return notice(
@@ -167,15 +182,12 @@ export const incomeBandLabel = (lower) =>
     wholePounds,
   );
 
-/** A cell's income change band, as words (outer bands open-ended). */
-export const changeBandLabel = (lower) =>
-  bandLabel(
-    lower,
-    SCATTER_BINS.change_band_width,
-    SCATTER_BINS.change_min,
-    SCATTER_BINS.change_max,
-    signedPounds,
-  );
+/**
+ * A cell's income change band, as words: "No change", "£100 to £150",
+ * "−£150 to −£100", "£5,000 or more" (outer bands open-ended).
+ */
+export const changeBandLabel = (lower, upper) =>
+  describeChangeBand(lower, upper, signedPounds);
 
 /** The cells a chart shows, as a CSV download. */
 export function scatterCsv(points, { title }) {
@@ -186,36 +198,53 @@ export function scatterCsv(points, { title }) {
     columns: [
       { key: "income", label: "Baseline income band" },
       { key: "change", label: "Change band" },
+      { key: "changeLower", label: "Change band lower edge", decimals: 0 },
+      { key: "changeUpper", label: "Change band upper edge", decimals: 0 },
       { key: "households", label: "Households", decimals: 0 },
     ],
     rows: [...points]
-      .sort((a, b) => a.incomeBand - b.incomeBand || a.changeBand - b.changeBand)
+      .sort(
+        (a, b) =>
+          a.incomeBand - b.incomeBand ||
+          a.changeBand - b.changeBand ||
+          a.changeBandUpper - b.changeBandUpper,
+      )
       .map((point) => ({
         income: incomeBandLabel(point.incomeBand),
-        change: changeBandLabel(point.changeBand),
+        change: changeBandLabel(point.changeBand, point.changeBandUpper),
+        changeLower: point.changeBand,
+        changeUpper: point.changeBandUpper,
         households: point.households,
       })),
     notes: [
       `Groups with fewer than ${SCATTER_BINS.min_households} surveyed households are not shown; the outer bands include everything beyond them.`,
+      "Gains fall in [lower, upper) and losses in (lower, upper]; the no-change band is (−£1, £1); a band whose two edges are equal is open beyond that edge.",
     ],
   });
 }
 
-/** Households each dot of the scatter stands for. */
-export const HOUSEHOLDS_PER_DOT = 20000;
-
 /**
- * Where the open-ended outer change bands are drawn: a strip beyond the
- * plotted range at each end, marked as "£1,900 or more", so the clamped
- * cells never read as households at exactly that change.
+ * Dots in the cloud: the 2025 dashboard drew 500 households, sampled at
+ * random with probability in proportion to their weight, so each dot stood
+ * for about the same number of households. The cloud keeps that density.
  */
-export const EDGE_STRIP = 300;
+export const SCATTER_DOTS = 500;
+
+/** The change axis, as in 2025: fixed at ±£5,000, linear. */
+export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
+
+/** The income axis, as in 2025: £0 to £150,000. */
+export const INCOME_AXIS_DOMAIN = [0, 150000];
 
 /** Whether a cell is an open-ended outer change band ("lower" or "upper"). */
-export function edgeOf(changeBand, bins = SCATTER_BINS) {
-  if (changeBand <= bins.change_min) return "lower";
-  if (changeBand + bins.change_band_width >= bins.change_max) return "upper";
-  return null;
+export function edgeOf(changeBand, changeBandUpper) {
+  return openEdge(changeBand, changeBandUpper);
+}
+
+/** Households each dot stands for: every cell's households over the dots. */
+export function householdsPerDot(cells, total = SCATTER_DOTS) {
+  const households = cells.reduce((sum, cell) => sum + cell.households, 0);
+  return households / total;
 }
 
 // A small seeded generator (mulberry32), so the dots sit in the same
@@ -240,52 +269,72 @@ function hash(text) {
   return h >>> 0;
 }
 
+const cellKey = (cell) => `${cell.incomeBand}:${cell.changeBand}:${cell.changeBandUpper}`;
+
 /**
- * The cells as a dot cloud: each cell becomes about one dot per
- * `perDot` households (at least one), placed at random, deterministically,
- * inside the cell's own rectangle, so the cloud reads as density. A dot is
- * never a household: it carries its cell's band and count, and its place
- * within the cell is arbitrary.
- *
- * The outer change bands, which hold every change beyond them, are drawn
- * in a strip of `EDGE_STRIP` beyond the plotted range instead of at their
- * band, and marked `edge`.
- *
- * @param {Array<{incomeBand: number, changeBand: number, households: number}>} cells
- * @returns {Array<Object>} dots with `income`, `change`, `edge` and the cell's fields
+ * How many of `total` dots each cell gets: in proportion to its households
+ * (largest remainder), as a weighted sample of `total` households would
+ * give on average. The dots add up to `total` exactly; a cell too small for
+ * half a dot may get none, as it would mostly be missed by such a sample.
  */
-export function scatterDots(cells, { perDot = HOUSEHOLDS_PER_DOT, bins = SCATTER_BINS } = {}) {
-  const inset = 0.08;
+export function allocateDots(cells, total = SCATTER_DOTS) {
+  const households = cells.reduce((sum, cell) => sum + cell.households, 0);
+  if (!(households > 0)) return cells.map(() => 0);
+  const quotas = cells.map((cell) => (cell.households / households) * total);
+  const counts = quotas.map(Math.floor);
+  let left = total - counts.reduce((sum, n) => sum + n, 0);
+  const order = cells
+    .map((cell, i) => ({ i, rest: quotas[i] - counts[i], key: cellKey(cell) }))
+    .sort((a, b) => b.rest - a.rest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  for (const { i } of order) {
+    if (left <= 0) break;
+    counts[i] += 1;
+    left -= 1;
+  }
+  return counts;
+}
+
+/**
+ * The cells as a cloud of about `total` dots, drawn as the 2025 scatter of
+ * sampled households was: income on one axis and change on the other, both
+ * in £ and linear. Each cell gets its share of the dots (allocateDots),
+ * placed at random, deterministically, inside the cell's own extent: its
+ * £5,000 income band and its change band. A dot is never a household: it
+ * carries its cell's bands and count, and its place within the cell is
+ * arbitrary.
+ *
+ * The open-ended outer change bands (beyond ±£5,000) count towards the
+ * dots, so the density matches, but are not drawn: as in 2025, changes
+ * beyond the axis leave the plot.
+ *
+ * @param {Array<{incomeBand: number, changeBand: number,
+ *   changeBandUpper: number, households: number}>} cells
+ * @returns {Array<Object>} dots with `income`, `change` (£) and the
+ *   cell's fields
+ */
+export function scatterDots(cells, { total = SCATTER_DOTS, bins = SCATTER_BINS } = {}) {
+  const counts = allocateDots(cells, total);
   const dots = [];
-  for (const cell of cells) {
-    const count = Math.max(1, Math.round(cell.households / perDot));
-    const random = seeded(hash(`${cell.incomeBand}:${cell.changeBand}`));
-    const edge = edgeOf(cell.changeBand, bins);
-    let low;
-    let high;
-    if (edge === "upper") {
-      low = bins.change_max - bins.change_band_width;
-      high = low + EDGE_STRIP;
-    } else if (edge === "lower") {
-      high = bins.change_min + bins.change_band_width;
-      low = high - EDGE_STRIP;
-    } else {
-      low = cell.changeBand;
-      high = cell.changeBand + bins.change_band_width;
-    }
+  cells.forEach((cell, index) => {
+    if (edgeOf(cell.changeBand, cell.changeBandUpper)) return;
+    const random = seeded(hash(cellKey(cell)));
     const incomeLow = cell.incomeBand;
-    const incomeWidth = bins.income_band_width;
-    for (let i = 0; i < count; i += 1) {
-      const u = inset + (1 - 2 * inset) * random();
-      const v = inset + (1 - 2 * inset) * random();
+    const incomeWidth = Math.min(
+      bins.income_band_width,
+      bins.income_max - cell.incomeBand,
+    );
+    const low = cell.changeBand;
+    const high = cell.changeBandUpper;
+    for (let i = 0; i < counts[index]; i += 1) {
+      const u = random();
+      const v = random();
       dots.push({
         ...cell,
         income: incomeLow + u * incomeWidth,
         change: low + v * (high - low),
-        edge,
-        key: `${cell.incomeBand}:${cell.changeBand}:${i}`,
+        key: `${cellKey(cell)}:${i}`,
       });
     }
-  }
+  });
   return dots;
 }

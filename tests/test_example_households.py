@@ -242,3 +242,10 @@ def test_the_validator_wants_each_household_on_its_own_axis():
         "income_curve: pensioner_couple in 2027 is not on "
         "private_pension_income"
     ]
+
+
+def test_income_curve_defaults_to_every_policy_year():
+    from uk_budget_data.budget_years import POLICY_YEARS
+    from uk_budget_data.cli import parse_args
+
+    assert parse_args(["income-curve"]).years == list(POLICY_YEARS)

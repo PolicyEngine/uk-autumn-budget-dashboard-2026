@@ -4,7 +4,17 @@ import fc from "fast-check";
 import contract from "./contract.json";
 import { parseTable } from "./csv";
 import { parseManifest } from "./manifest";
-import { bandLabel, scatterSeries, SCATTER_BINS } from "./scatter";
+import {
+  bandLabel,
+  changeBandLabel,
+  changeBandMiddle,
+  changeKind,
+  fromChangeAxis,
+  openEdge,
+  scatterSeries,
+  SCATTER_BINS,
+  toChangeAxis,
+} from "./scatter";
 import { REASONS } from "./select";
 import {
   BEYOND_DATA,
@@ -68,10 +78,11 @@ describe("scatterSeries", () => {
     expect(series.points).toEqual([
       {
         income: 20000 + SCATTER_BINS.income_band_width / 2,
-        change: -100 + SCATTER_BINS.change_band_width / 2,
+        change: changeBandMiddle(-75, -50),
         households: 1000,
         incomeBand: 20000,
-        changeBand: -100,
+        changeBand: -75,
+        changeBandUpper: -50,
       },
     ]);
   });
@@ -121,5 +132,59 @@ describe("bandLabel", () => {
         );
       }),
     );
+  });
+});
+
+describe("change bands", () => {
+  const pounds = (v) => `£${v}`;
+  const edges = SCATTER_BINS.change_edges;
+
+  it("are mirrored about zero, with a no-change band and open outer bands", () => {
+    expect(edges).toEqual([...edges].map((edge) => -edge).reverse());
+    expect(edges).toContain(-1);
+    expect(edges).toContain(1);
+    expect(edges[edges.length - 1]).toBe(5000);
+  });
+
+  it("classifies the no-change, gain, loss and open bands", () => {
+    expect(changeKind(-1, 1)).toBe("zero");
+    expect(changeKind(1, 10)).toBe("gain");
+    expect(changeKind(-10, -1)).toBe("loss");
+    expect(changeKind(5000, 5000)).toBe("gain");
+    expect(changeKind(-5000, -5000)).toBe("loss");
+    expect(openEdge(5000, 5000)).toBe("upper");
+    expect(openEdge(-5000, -5000)).toBe("lower");
+    expect(openEdge(3000, 5000)).toBeNull();
+  });
+
+  it("labels each band as a range", () => {
+    expect(changeBandLabel(-1, 1, pounds)).toBe("No change");
+    expect(changeBandLabel(100, 150, pounds)).toBe("£100 to £150");
+    expect(changeBandLabel(-150, -100, pounds)).toBe("£-150 to £-100");
+    expect(changeBandLabel(5000, 5000, pounds)).toBe("£5000 or more");
+    expect(changeBandLabel(-5000, -5000, pounds)).toBe("£-5000 or less");
+  });
+
+  it("puts every inner band's middle between its edges", () => {
+    for (let i = 0; i < edges.length - 1; i += 1) {
+      const [lower, upper] = [edges[i], edges[i + 1]];
+      const middle = changeBandMiddle(lower, upper);
+      if (changeKind(lower, upper) === "zero") {
+        expect(middle).toBe(0);
+      } else {
+        expect(middle).toBeGreaterThan(lower);
+        expect(middle).toBeLessThan(upper);
+      }
+    }
+  });
+
+  it("maps the symlog axis back to pounds", () => {
+    fc.assert(
+      fc.property(fc.double({ min: -1e5, max: 1e5, noNaN: true }), (value) => {
+        expect(fromChangeAxis(toChangeAxis(value))).toBeCloseTo(value, 6);
+      }),
+    );
+    expect(toChangeAxis(0)).toBe(0);
+    expect(toChangeAxis(-250)).toBe(-toChangeAxis(250));
   });
 });

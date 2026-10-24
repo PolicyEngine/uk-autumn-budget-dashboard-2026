@@ -1,12 +1,12 @@
 /* PolicyEngine and OBR estimates: dumbbell chart */
 
 .obr-dumbbell {
-  margin: 8px 0 20px;
+  margin: 0 0 20px;
 }
 
 .obr-dumbbell-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 12px;
@@ -81,6 +81,15 @@
   border-radius: 50%;
 }
 
+/* The OBR's key: a hollow ring, as in the chart */
+.obr-dumbbell-key-ring {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 2px solid;
+  border-radius: 50%;
+}
+
 .obr-dumbbell-legend .obr-dumbbell-legend-title {
   color: var(--pe-gray-600);
 }
@@ -92,9 +101,10 @@
 }
 
 @media (max-width: 768px) {
+  /* The title wraps beside the Download button, as in the other cards */
   .obr-dumbbell-header {
-    flex-direction: column;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .obr-dumbbell-legend {

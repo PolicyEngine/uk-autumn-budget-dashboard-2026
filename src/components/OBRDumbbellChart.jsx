@@ -12,9 +12,11 @@ import "./OBRDumbbellChart.css";
 
 /**
  * PolicyEngine and OBR estimates for one fiscal year as a dumbbell chart:
- * one row per selected policy, a teal dot for PolicyEngine, a grey dot for
- * the OBR and a line between them coloured by the size of the gap (the same
- * three bands as the comparison table).
+ * one row per selected policy, a solid teal dot for PolicyEngine, a hollow
+ * grey ring (a little larger) for the OBR, and a line between them coloured
+ * by the size of the gap (the same three bands as the comparison table).
+ * Where the two estimates coincide the dot sits inside the ring, so both
+ * stay visible, and the two value labels become one ("£0.5bn (both)").
  *
  * `policies` is the comparison table's own grouped data, in its order:
  * [[reformId, { name, years: { [year]: { policyengine, obr_static,
@@ -28,6 +30,10 @@ const OBR_LABEL_COLOUR = "#6B7280";
 const ZERO_LINE = "#374151";
 const GRID = "#E5E7EB";
 const NAME_COLOUR = "#374151";
+const BOTH_LABEL_COLOUR = "#374151";
+// The PolicyEngine dot sits inside the OBR ring when the two coincide
+export const PE_RADIUS = 5;
+export const OBR_RADIUS = 8;
 // A white outline so labels stay legible where they cross a gridline
 const HALO = {
   stroke: "#ffffff",
@@ -142,7 +148,8 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   // Layout
   const fontSize = narrow ? 12 : 13;
-  const labelGap = 8;
+  // Clear of the OBR ring
+  const labelGap = OBR_RADIUS + 5;
   const labelRoom = narrow ? 54 : 62;
   const nameWidth = narrow
     ? 0
@@ -172,8 +179,8 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     top + index * rowHeight + (narrow ? 38 : rowHeight / 2);
 
   const legendItems = [
-    { color: PE_COLOUR, label: "PolicyEngine", type: "rect" },
-    { color: OBR_COLOUR, label: `OBR (${obrKind})`, type: "rect" },
+    { color: PE_COLOUR, label: "PolicyEngine", type: "dot" },
+    { color: OBR_COLOUR, label: `OBR (${obrKind})`, type: "ring" },
     ...BANDS.map((band) => ({
       color: band.colour,
       label: `Difference from OBR ${band.label}`,
@@ -238,13 +245,17 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill="#ffffff" />
   );
 
-  const valueLabel = (value, side, cx, cy, colour, key) => {
-    const text = formatBn(value);
+  const fits = (text, side, cx) => {
+    const w = approxWidth(text, 12);
+    return side === "left" ? cx - labelGap - w >= 0 : cx + labelGap + w <= width;
+  };
+
+  const valueLabel = (value, side, cx, cy, colour, key, suffix = "") => {
+    const text = `${formatBn(value)}${suffix}`;
     const tx = side === "left" ? cx - labelGap : cx + labelGap;
     const w = approxWidth(text, 12);
     // Only where it fits inside the chart
-    if ((side === "left" && tx - w < 0) || (side === "right" && tx + w > width))
-      return null;
+    if (!fits(text, side, cx)) return null;
     return (
       <g key={key}>
         {backing(side === "left" ? tx - w : tx, cy, w)}
@@ -307,7 +318,26 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
         />,
       );
       const peLeft = row.pe < row.obr || (row.pe === row.obr && row.pe < 0);
-      parts.push(
+      if (formatBn(row.pe) === formatBn(row.obr)) {
+        // The same to one decimal: one label for both, on the outer side
+        const cx = (xPe + xObr) / 2;
+        const outer = row.pe < 0 ? "left" : "right";
+        const inner = outer === "left" ? "right" : "left";
+        const side = fits(`${formatBn(row.pe)} (both)`, outer, cx)
+          ? outer
+          : inner;
+        parts.push(
+          valueLabel(
+            row.pe,
+            side,
+            side === "left" ? Math.min(xPe, xObr) : Math.max(xPe, xObr),
+            cy,
+            BOTH_LABEL_COLOUR,
+            "both-label",
+            " (both)",
+          ),
+        );
+      } else parts.push(
         valueLabel(
           row.pe,
           peLeft ? "left" : "right",
@@ -359,17 +389,16 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       );
     }
 
+    // A white disc behind the ring keeps lines out of it; the teal dot
+    // goes over the disc and the ring over both, so neither hides the other
     if (obrPart) {
       parts.push(
         <circle
-          key="obr"
-          className="obr-dumbbell-dot obr"
+          key="obr-backing"
           cx={x(row.obr)}
           cy={cy}
-          r={6}
-          fill={OBR_COLOUR}
-          stroke="#ffffff"
-          strokeWidth={1.5}
+          r={OBR_RADIUS}
+          fill="#ffffff"
         />,
       );
     }
@@ -380,10 +409,22 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
           className="obr-dumbbell-dot pe"
           cx={x(row.pe)}
           cy={cy}
-          r={6}
+          r={PE_RADIUS}
           fill={PE_COLOUR}
-          stroke="#ffffff"
-          strokeWidth={1.5}
+        />,
+      );
+    }
+    if (obrPart) {
+      parts.push(
+        <circle
+          key="obr"
+          className="obr-dumbbell-dot obr"
+          cx={x(row.obr)}
+          cy={cy}
+          r={OBR_RADIUS - 1}
+          fill="none"
+          stroke={OBR_COLOUR}
+          strokeWidth={2}
         />,
       );
     }
@@ -491,8 +532,8 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
             </li>
             <li>
               <span
-                className="obr-dumbbell-key-dot"
-                style={{ background: OBR_COLOUR }}
+                className="obr-dumbbell-key-ring"
+                style={{ borderColor: OBR_COLOUR }}
               />
               OBR
             </li>

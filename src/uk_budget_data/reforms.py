@@ -246,7 +246,8 @@ def _create_threshold_freeze_extension() -> Reform:
     policyengine-uk 2.60.0+ has frozen thresholds (Autumn Budget policy).
     This reform compares against the pre-budget baseline (CPI uprating).
     - Baseline: CPI-indexed from 2028 (pre-budget)
-    - Reform: Frozen at £12,570 PA and £37,700 threshold (policyengine-uk default)
+    - Reform: Frozen at £12,570 PA and £37,700 basic rate band, so a
+      £50,270 higher rate threshold (policyengine-uk default)
     """
     baseline = get_pre_autumn_budget_baseline()
     return Reform(
@@ -255,7 +256,7 @@ def _create_threshold_freeze_extension() -> Reform:
         description=(
             "Extends the freeze on income tax thresholds from April 2028 to "
             "April 2031. Personal allowance remains at £12,570 and the higher "
-            "rate threshold at £37,700. Compares Autumn Budget policy (freeze) "
+            "rate threshold at £50,270. Compares Autumn Budget policy (freeze) "
             "against pre-budget baseline (inflation uprating from 2028)."
         ),
         baseline_parameter_changes={
@@ -638,9 +639,44 @@ def create_salary_sacrifice_cap_reform() -> Reform:
     from April 2029 is in current law. This reform compares against the pre-budget
     baseline where there was no cap (infinity).
 
-    policyengine-uk handles the cap calculation internally including:
-    - Excess above cap returned to employment income
-    - Broad-base haircut (employers spread NI costs across all workers)
+    Under the policy, pay sacrificed above the cap is treated as earnings
+    for National Insurance, and the OBR describes the measure as raising
+    NICs. policyengine-uk handles the cap calculation internally including:
+    - Excess above the cap added to employment income, so it attracts
+      employee and employer National Insurance, and to employee pension
+      contributions, which get income tax relief up to the annual allowance
+    - Broad-base haircut (employers spread NI costs across all workers),
+      which lowers every worker's employment income, and so their income
+      tax and NI, a little
+
+    In the model the excess also raises some people's income tax, in two
+    ways:
+    - Adjusted net income doesn't deduct the relief, so it rises by the
+      excess, and with it the High Income Child Benefit Charge, on
+      adjusted net income from £60,000, and the personal allowance taper,
+      from £100,000.
+    - The model relieves employee pension contributions only up to the
+      person's annual allowance, so any excess above the allowance is
+      taxed, whatever the person's income. It tapers the allowance from
+      £60,000 by half the net income above £260,000, to £10,000 from
+      £360,000. Where the higher net income tapers it further below the
+      person's pension savings, the model also charges more annual
+      allowance charge, on the savings above the new allowance; and as the
+      charge is levied at the person's marginal rate, it also rises where
+      the higher income lifts that rate. The charge counts sacrificed
+      contributions too, so savings above the allowance were charged
+      before the cap; now the excess above it also goes unrelieved.
+
+    Which part dominates depends on the person. On policyengine-uk 2.132.6
+    in 2029, on £300,000 with £30,000 sacrificed, the allowance falls from
+    £40,000 to £26,240, and £1,692 of a £2,268 rise in income tax is the
+    charge. On £400,000 with £40,000 sacrificed, the allowance is £10,000
+    either way, so the charge doesn't move: the £12,312 rise is relief
+    withheld on the £28,000 of the excess above the allowance, less the
+    haircut.
+
+    The description names only National Insurance
+    (tests/test_measure_descriptions.py).
 
     Returns:
         Reform object configured with the specified parameters.
@@ -664,10 +700,11 @@ def create_salary_sacrifice_cap_reform() -> Reform:
         name="Salary sacrifice cap",
         description=(
             f"Caps salary sacrifice pension contributions at £{cap_amount:,.0f} "
-            f"per year from April 2029. Contributions above the cap become "
-            f"employment income subject to income tax and NICs. Includes "
-            f"broad-base haircut ({haircut_rate:.2%}) where employers spread "
-            f"increased NI costs across all workers."
+            f"per year from April 2029. The excess above the cap is treated "
+            f"as earnings for National Insurance, so it attracts employee "
+            f"and employer National Insurance. Includes broad-base haircut "
+            f"({haircut_rate:.2%}) where employers spread increased NI costs "
+            f"across all workers."
         ),
         # Baseline: Pre-budget (no cap)
         baseline_parameter_changes={

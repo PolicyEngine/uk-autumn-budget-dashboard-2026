@@ -15,7 +15,7 @@ import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
-import MethodologyTab, { METHOD_SECTIONS } from "./components/MethodologyTab";
+import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
@@ -741,19 +741,6 @@ function App() {
                         selectedYear={distributionalYear}
                         policies={POLICIES}
                         showRegionLink={false}
-                        footer={
-                          <p className="map-method-link">
-                            <a
-                              href={`?tab=methodology#${METHOD_SECTIONS.geography}`}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                showMethod(METHOD_SECTIONS.geography);
-                              }}
-                            >
-                              How these figures are estimated
-                            </a>
-                          </p>
-                        }
                       />
                       <HouseholdScatter
                         selectedPolicies={selectedPolicies}
