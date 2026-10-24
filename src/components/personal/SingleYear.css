@@ -233,6 +233,19 @@
   margin-top: 4px;
 }
 
+/* The programme table's notes, under it */
+.programme-notes {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.programme-notes li + li {
+  margin-top: 4px;
+}
+
 /* Wizard: choices and the optional details */
 .select-input {
   flex: 1;

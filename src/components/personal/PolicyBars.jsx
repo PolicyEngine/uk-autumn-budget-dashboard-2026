@@ -12,17 +12,19 @@ const NAME_COLOUR = "#374151";
 const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
 
 /**
- * Change by policy: one bar per measure that changes the household, from
- * zero, with the measure's name above it and its change at the right. No
- * total row: the total is the headline tile. The rows are the rounded
- * figures from policyRows, so they add up to that tile.
+ * Change by policy: one bar per measure that changes the household (that
+ * measure on its own), from zero, with the measure's name above it and its
+ * change at the right, and the interaction between them as a grey bar when
+ * it is £1 or more. No total row: the total is the headline tile. The rows
+ * are the rounded figures from policyRows, so they add up to that tile.
  *
  * @param {Object} props
  * @param {Array<{id, name, color, rounded}>} props.rows
- * @param {string[]} props.noEffect - Names of measures worth £0
+ * @param {string[]} props.noEffect - Names of measures that do not move the household
+ * @param {string[]} [props.underAPound] - Names of measures worth under £1
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function PolicyBars({ rows, noEffect, yearLabel }) {
+export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel }) {
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const width = measured > 0 ? measured : 640;
@@ -66,7 +68,7 @@ export default function PolicyBars({ rows, noEffect, yearLabel }) {
         ],
         rows: [
           ...rows.map((row) => ({ name: row.name, change: row.rounded })),
-          ...noEffect.map((name) => ({ name, change: 0 })),
+          ...[...underAPound, ...noEffect].map((name) => ({ name, change: 0 })),
         ],
       }),
   };
@@ -115,15 +117,22 @@ export default function PolicyBars({ rows, noEffect, yearLabel }) {
                   </g>
                 );
               })}
-              {/* Zero, under the bars */}
-              <line
-                x1={zero}
-                x2={zero}
-                y1={top + 18}
-                y2={height - 2}
-                stroke={ZERO_LINE}
-                strokeWidth={1}
-              />
+              {/* Zero, beside each bar only, so it never crosses a name */}
+              {rows.map((row, index) => {
+                const barY = top + index * rowHeight + 22;
+                return (
+                  <line
+                    key={`zero-${row.id}`}
+                    className="policy-bar-zero"
+                    x1={zero}
+                    x2={zero}
+                    y1={barY - 4}
+                    y2={barY + barHeight + 4}
+                    stroke={ZERO_LINE}
+                    strokeWidth={1}
+                  />
+                );
+              })}
             </svg>
           </div>
           <div className="card-logo">
@@ -133,6 +142,9 @@ export default function PolicyBars({ rows, noEffect, yearLabel }) {
         </div>
       ) : (
         <p className="single-year-quiet">None of the selected policies changes your household&apos;s net income.</p>
+      )}
+      {underAPound.length > 0 && rows.length > 0 && (
+        <p className="single-year-quiet">Less than £1 a year: {underAPound.join(", ")}.</p>
       )}
       {noEffect.length > 0 && rows.length > 0 && (
         <p className="single-year-quiet">No effect on your household: {noEffect.join(", ")}.</p>

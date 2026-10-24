@@ -122,8 +122,9 @@ describe("the Single-year effect, from the fixture", () => {
       claims_universal_credit: false,
       council_tax_band: "D",
       salary_year: 2026,
-      children_ages: [],
+      children: [],
     });
+    expect(first.household).not.toHaveProperty("children_ages");
   });
 
   it("shows the three tiles, the salary used and what is not included", async () => {
@@ -133,10 +134,17 @@ describe("the Single-year effect, from the fixture", () => {
     const panel = await screen.findByRole("tabpanel", { name: "Single-year effect" });
     await within(panel).findByText("Net income before");
     const values = [...panel.querySelectorAll(".single-year-tiles .stat-value")].map((node) => node.textContent);
-    expect(values).toEqual(["£42,992", "£42,705", "−£287 (−0.7%)"]);
-    expect(panel.querySelector(".single-year-change")).toHaveClass("is-loss");
-    expect(panel).toHaveTextContent("Your salary in 2029-30: £32,940");
+    expect(values).toEqual(["£65,371", "£69,136", "+£3,765 (+5.8%)"]);
+    expect(panel.querySelector(".single-year-change")).toHaveClass("is-gain");
+    expect(panel).toHaveTextContent(
+      "Your salary in 2029-30: £34,192, and your partner's £12,822, grown from 2026",
+    );
     expect(panel).toHaveTextContent("Not included in this view: Rail fares freeze.");
+    // Renting (the wizard's default): the rent area the API used, once
+    expect(panel).toHaveTextContent("Rent area: Central Greater Manchester, the region's default.");
+    expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
+    // No child of 16 or over: no note on who counts as a child
+    expect(panel).not.toHaveTextContent("Who counts as a child");
   });
 
   it("draws one bar per policy that changes the household, adding up to the change", async () => {
@@ -146,10 +154,10 @@ describe("the Single-year effect, from the fixture", () => {
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
     const bars = [...container.querySelectorAll(".policy-bar")];
     expect(bars.map((bar) => bar.dataset.policy)).toEqual([
-      "freeze_student_loan_thresholds",
+      "two_child_limit",
       "threshold_freeze_extension",
-      "fuel_duty_freeze",
       "salary_sacrifice_cap",
+      "fuel_duty_freeze",
     ]);
     const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
     const sum = bars
@@ -157,8 +165,9 @@ describe("the Single-year effect, from the fixture", () => {
       .reduce((a, b) => a + b, 0);
     const tile = container.querySelector(".single-year-change .stat-value").firstChild.textContent;
     expect(sum).toBe(parse(tile));
-    expect(sum).toBe(-287);
-    expect(screen.getByText(/No effect on your household: 2 child limit repeal, Dividend tax increase/)).toBeInTheDocument();
+    expect(sum).toBe(3765);
+    expect(screen.getByText(/No effect on your household: Dividend tax increase/)).toBeInTheDocument();
+    expect(container.querySelector('[data-policy="interaction"]')).toBeNull();
   });
 
   it("lists taxes and benefits before and after, with no total row", async () => {
@@ -170,17 +179,18 @@ describe("the Single-year effect, from the fixture", () => {
     expect(rowNames).toEqual([
       "Income tax",
       "National Insurance",
-      "Student loan repayment",
-      "Council tax",
       "Fuel duty",
+      "TV licence",
       "Universal Credit",
       "Child Benefit",
+      "Free childcare hours",
       "Employment income",
     ]);
-    expect(screen.getByText("The largest changes are to income tax and Universal Credit.")).toBeInTheDocument();
+    expect(screen.getByText("The largest changes are to Universal Credit and income tax.")).toBeInTheDocument();
     const incomeTax = within(table).getByRole("row", { name: /Income tax/ });
-    expect(incomeTax).toHaveTextContent("−£3,846−£4,074−£228");
-    expect(within(incomeTax).getByText("−£228")).toHaveClass("is-loss");
+    expect(incomeTax).toHaveTextContent("−£4,164−£4,360−£196");
+    expect(within(incomeTax).getByText("−£196")).toHaveClass("is-loss");
+    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
     expect(within(table).queryByText(/Net income/)).not.toBeInTheDocument();
     // Parts open on demand
     expect(within(table).queryByText("On earnings")).not.toBeInTheDocument();
@@ -197,8 +207,12 @@ describe("the Single-year effect, from the fixture", () => {
     const expander = screen.getByRole("button", { name: "Marginal tax rate across earnings" });
     expect(expander).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(expander);
-    expect(screen.getByText(/At £32,940 your marginal tax rate is \d+% before and \d+% after\./)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "How this is calculated" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
+    const method = screen.getByRole("button", { name: "How this is calculated" });
+    expect(method).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(method);
+    expect(screen.getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
   it("asks again for another year, and shows nothing without a policy", async () => {
@@ -216,6 +230,16 @@ describe("the Single-year effect, from the fixture", () => {
 });
 
 describe("the Single-year effect's errors", () => {
+  it("names a refused child's age as the children's, not yours", async () => {
+    serve(() =>
+      json({ detail: [{ loc: ["body", "household", "children", 0, "age"], msg: "Input should be less than or equal to 19" }] }, 422),
+    );
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Children's ages: Input should be less than or equal to 19");
+  });
+
   it("names the answers the API refused", async () => {
     serve(() =>
       json(
@@ -289,12 +313,29 @@ describe("the Single-year effect's errors", () => {
 });
 
 describe("the fixture", () => {
-  it("is shaped as the contract, with per-policy rows that add up to the change", () => {
-    const total = HOUSEHOLD_FIXTURE.by_policy.reduce((sum, row) => sum + row.change, 0);
-    expect(Math.abs(total - HOUSEHOLD_FIXTURE.net_income.change)).toBeLessThan(0.02);
+  it("is a real answer: per-policy rows plus the residual make the change", () => {
+    const { by_policy: byPolicy, net_income: net } = HOUSEHOLD_FIXTURE;
+    const singles = byPolicy.measures.reduce((sum, row) => sum + row.change, 0);
+    expect(singles + byPolicy.residual).toBeCloseTo(net.change, 1);
+    expect(byPolicy.combined).toBe(net.change);
     expect(Object.keys(HOUSEHOLD_FIXTURE).sort()).toEqual(
-      ["by_policy", "measures", "net_income", "programmes", "salary_used", "sweep", "versions", "year"].sort(),
+      [
+        "area",
+        "by_policy",
+        "dependants",
+        "dependants_note",
+        "engine",
+        "fiscal_year",
+        "included",
+        "net_income",
+        "not_in_breakdown",
+        "not_modelled",
+        "programmes",
+        "salary_used",
+        "sweep",
+        "year",
+      ].sort(),
     );
-    expect(HOUSEHOLD_FIXTURE.sweep.income).toHaveLength(HOUSEHOLD_FIXTURE.sweep.count);
+    expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
   });
 });

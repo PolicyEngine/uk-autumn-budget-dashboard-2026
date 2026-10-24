@@ -4,26 +4,18 @@
  * module (the URL, the request, the errors and the response), so a change
  * to the backend's contract is a change here only.
  *
- * Contract: single-year-spec.md §6 (the design spec for this sub-tab).
+ * The contract is the backend's: `HouseholdImpactRequest` in
+ * src/uk_budget_data/api.py (it refuses unknown fields with a 422) and the
+ * answer `calculate_household_impact` in household_impact.py builds.
  *
  *   POST NEXT_PUBLIC_HOUSEHOLD_API_URL   (…/api/household-impact)
  *   { year, policies, household: {…}, include: [...] }
  *
  * The page asks in two stages: first `include: []` (the headline and the
- * programmes), then `include: ["by_policy", "sweep"]` (the per-policy split
- * and the earnings sweep), which are slower. A response may carry more than
- * was asked for; `normaliseHouseholdImpact` reads whatever is there.
- *
- * Response (§6.2), as `normaliseHouseholdImpact` reads it:
- *   year, salary_used,
- *   net_income: { before, after, change },
- *   measures: { included: [id], not_affected: [id], not_modelled: [{ id, reason }] },
- *   programmes: [{ id, group: "tax" | "benefit" | "income", before, after,
- *                  label?, children?: [{ id, before, after, label? }] }],
- *     (taxes as the positive amounts paid; the page shows them as negative)
- *   by_policy: [{ id, change }]   (cumulative in the publication's order)
- *   sweep: { variable, min, max, count, income: [], before: [], after: [] },
- *   versions: { … }
+ * programmes), then `include: ["by_policy", "sweep"]` (each policy's own
+ * effect and the earnings sweep), which are slower. A part a stage did not
+ * compute comes back as null; `normaliseHouseholdImpact` turns the answer
+ * into the page's own shape.
  */
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
@@ -47,7 +39,7 @@ export const FIELD_LABELS = {
   has_partner: "Partner",
   partner_age: "Partner's age",
   partner_employment_income: "Partner's salary",
-  children_ages: "Children's ages",
+  children: "Children's ages",
   region: "Region",
   claims_universal_credit: "Universal Credit",
   tenure: "Housing",
@@ -116,7 +108,7 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       has_partner: Boolean(inputs.has_partner),
       partner_age: inputs.partner_age,
       partner_employment_income: inputs.has_partner ? inputs.partner_salary : 0,
-      children_ages: children,
+      children: children.map((age) => ({ age })),
       region: inputs.region,
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
@@ -148,7 +140,10 @@ function fieldErrors(detail) {
   if (!Array.isArray(detail)) return [];
   return detail.map((item) => {
     const loc = (item?.loc ?? []).filter((part) => part !== "body");
-    const name = [...loc].reverse().find((part) => typeof part === "string") ?? "";
+    // A child's answer is the children's, not the head's (children.0.age)
+    const name = loc.includes("children")
+      ? "children"
+      : ([...loc].reverse().find((part) => typeof part === "string") ?? "");
     return {
       field: loc.join("."),
       label: FIELD_LABELS[name] ?? (name ? name.replace(/_/g, " ") : "Answer"),
@@ -246,53 +241,106 @@ export async function postHouseholdImpact(
 }
 
 const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
+const numOrNull = (value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
 
 function normaliseProgramme(row) {
   return {
     id: String(row.id),
     group: row.group ?? "benefit",
     label: row.label ?? null,
-    before: num(row.before),
-    after: num(row.after),
+    note: row.note ?? null,
+    before: num(row.baseline),
+    after: num(row.reform),
     children: Array.isArray(row.children) ? row.children.map(normaliseProgramme) : [],
   };
 }
 
+function normaliseByPolicy(raw) {
+  if (!raw || !Array.isArray(raw.measures)) return null;
+  return {
+    measures: raw.measures.map((row) => ({
+      id: String(row.id),
+      name: row.name ?? null,
+      change: num(row.change),
+      status: row.status === "not_affected" ? "not_affected" : "affected",
+    })),
+    combined: num(raw.combined),
+    sumOfSingles: num(raw.sum_of_singles),
+    residual: num(raw.residual),
+  };
+}
+
+function normaliseSweep(raw) {
+  if (!raw || !Array.isArray(raw.points) || raw.points.length < 2) return null;
+  const points = raw.points.map((point) => ({
+    income: num(point.employment_income),
+    before: num(point.baseline),
+    after: num(point.reform),
+    change: num(point.change),
+  }));
+  const own = raw.own_point;
+  return {
+    points,
+    rates: (raw.marginal_rates ?? []).map((rate) => ({
+      income: num(rate.from),
+      to: num(rate.to),
+      before: num(rate.baseline),
+      after: num(rate.reform),
+    })),
+    own: own
+      ? {
+          income: num(own.employment_income),
+          before: num(own.baseline),
+          after: num(own.reform),
+          beforeRate: numOrNull(own.baseline_marginal_rate),
+          afterRate: numOrNull(own.reform_marginal_rate),
+        }
+      : null,
+    min: points[0].income,
+    max: points[points.length - 1].income,
+  };
+}
+
 /**
- * The page's own shape for a response (§6.2). Parts a stage did not
- * return are null, so the page can tell "not yet" from "none".
+ * The page's own shape for an answer. Parts a stage did not compute are
+ * null, so the page can tell "not yet" from "none".
  */
 export function normaliseHouseholdImpact(raw) {
-  const measures = raw.measures ?? {};
-  const sweep = raw.sweep;
+  const salary = raw.salary_used ?? {};
+  const area = raw.area ?? null;
   return {
     year: raw.year,
-    salaryUsed: typeof raw.salary_used === "number" ? raw.salary_used : null,
+    salaryUsed: numOrNull(salary.employment_income),
+    partnerSalaryUsed: numOrNull(salary.partner_employment_income),
+    salaryYear: salary.salary_year ?? SALARY_YEAR,
     net: {
-      before: num(raw.net_income?.before),
-      after: num(raw.net_income?.after),
+      before: num(raw.net_income?.baseline),
+      after: num(raw.net_income?.reform),
       change: num(raw.net_income?.change),
     },
-    included: measures.included ?? [],
-    notAffected: measures.not_affected ?? [],
-    notModelled: (measures.not_modelled ?? []).map((item) =>
-      typeof item === "string" ? { id: item, reason: "" } : { id: item.id, reason: item.reason ?? "" },
-    ),
+    included: raw.included ?? [],
+    notModelled: (raw.not_modelled ?? []).map((item) => ({
+      id: String(item.id),
+      name: item.name ?? null,
+      reason: item.reason ?? "",
+    })),
     programmes: Array.isArray(raw.programmes) ? raw.programmes.map(normaliseProgramme) : null,
-    byPolicy: Array.isArray(raw.by_policy)
-      ? raw.by_policy.map((row) => ({ id: String(row.id), change: num(row.change) }))
+    byPolicy: normaliseByPolicy(raw.by_policy),
+    sweep: normaliseSweep(raw.sweep),
+    dependants: (raw.dependants ?? []).map((child) => ({
+      age: num(child.age),
+      countsForChildBenefit: Boolean(child.counts_for_child_benefit),
+      countsForUniversalCredit: Boolean(child.counts_for_universal_credit),
+    })),
+    dependantsNote: raw.dependants_note ?? null,
+    area: area
+      ? {
+          region: area.region ?? null,
+          brma: area.brma ?? null,
+          brmaDefault: area.brma_source === "region default",
+        }
       : null,
-    sweep:
-      sweep && Array.isArray(sweep.income) && sweep.income.length > 1
-        ? {
-            income: sweep.income.map(num),
-            before: sweep.before.map(num),
-            after: sweep.after.map(num),
-            min: num(sweep.min ?? sweep.income[0]),
-            max: num(sweep.max ?? sweep.income[sweep.income.length - 1]),
-          }
-        : null,
-    versions: raw.versions ?? {},
+    engine: raw.engine ?? {},
   };
 }
 

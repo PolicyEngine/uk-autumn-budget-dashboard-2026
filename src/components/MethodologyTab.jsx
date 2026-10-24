@@ -9,6 +9,7 @@ import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
@@ -445,30 +446,7 @@ function MethodologyTab({ onShowTab }) {
           </div>
           <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
             <h3 className="method-card-title">Single-year calculation</h3>
-            <FactList
-              items={[
-                [
-                  "Engine and measures",
-                  "The same engine (policyengine.py and policyengine-uk) and the same measures as the national figures, applied to one household's answers.",
-                ],
-                [
-                  "One year",
-                  "The year chosen in the bar above. Net income is before housing costs, under pre-Budget law and with the selected policies.",
-                ],
-                [
-                  "Salary",
-                  "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
-                ],
-                [
-                  "Change by policy",
-                  "The policies are added one at a time in the publication's order, so the rows add up to the total change.",
-                ],
-                [
-                  "Not modelled for one household",
-                  "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show. It is in the national figures only.",
-                ],
-              ]}
-            />
+            <FactList items={SINGLE_YEAR_METHOD} />
             <p className="method-more">
               <ViewLink tab="personal" onShowTab={onShowTab}>
                 See the Personal impact tab

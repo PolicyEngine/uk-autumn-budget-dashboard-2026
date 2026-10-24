@@ -91,7 +91,14 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
   }, [rates]);
   const title = `Marginal tax rate across earnings, ${yearLabel}`;
   const xTicks = roundTicks(sweep.max);
-  const yours = salary !== null ? rateAt(rates, salary) : null;
+  // The API's own rates at your salary, else the step that holds it
+  const own = sweep.own;
+  const yours =
+    own && own.beforeRate !== null && own.afterRate !== null
+      ? { before: own.beforeRate, after: own.afterRate }
+      : salary !== null
+        ? rateAt(rates, salary)
+        : null;
 
   const download = {
     chartRef,

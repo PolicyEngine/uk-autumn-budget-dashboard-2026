@@ -3,7 +3,14 @@ import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
 import { METHOD_SECTIONS } from "../MethodologyTab";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import { money, policyRows, signedMoney, signedPercent } from "../../utils/singleYear";
+import {
+  SINGLE_YEAR_METHOD,
+  areaName,
+  money,
+  policyRows,
+  signedMoney,
+  signedPercent,
+} from "../../utils/singleYear";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -60,6 +67,29 @@ export function headlineTotals(net) {
   return { before, after, change: after - before };
 }
 
+/**
+ * The salaries used, grown to the year; nothing when there are none (a
+ * pensioner with no earnings).
+ */
+export function salaryNote(data, yearLabel) {
+  const own = data.salaryUsed ?? 0;
+  const partner = data.partnerSalaryUsed ?? 0;
+  if (own <= 0 && partner <= 0) return null;
+  const partnerText = data.partnerSalaryUsed !== null ? `, and your partner's ${money(partner)}` : "";
+  return `Your salary in ${yearLabel}: ${money(own)}${partnerText}, grown from ${data.salaryYear} with the OBR's average earnings forecast.`;
+}
+
+/**
+ * The note on who counts as a child, only where it matters: a child of 16
+ * or over, or one Child Benefit and Universal Credit count differently.
+ */
+export function showDependantsNote(data) {
+  if (!data.dependantsNote) return false;
+  return data.dependants.some(
+    (child) => child.age >= 16 || child.countsForChildBenefit !== child.countsForUniversalCredit,
+  );
+}
+
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
 /**
@@ -67,7 +97,7 @@ const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : 
  * tiles (the only place the totals appear), the salary used and what is
  * not included.
  */
-export function SingleYearHeadline({ result, year, policies = [], noPolicies }) {
+export function SingleYearHeadline({ result, year, policies = [], noPolicies, renting = false }) {
   const yearLabel = fiscalYearTick(year);
   const { status, data, error, stale, retry } = result;
   const showLoading = useDelayed(status === "loading" && !data);
@@ -120,15 +150,15 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies }) 
             </div>
           </div>
           <div className="single-year-notes">
-            {data.salaryUsed !== null && (
-              <p>
-                Your salary in {yearLabel}: {money(data.salaryUsed)}, grown from 2026 with the OBR&apos;s
-                average earnings forecast.
-              </p>
+            {salaryNote(data, yearLabel) && <p>{salaryNote(data, yearLabel)}</p>}
+            {renting && data.area?.brmaDefault && data.area.brma && (
+              <p>Rent area: {areaName(data.area.brma)}, the region&apos;s default.</p>
             )}
+            {showDependantsNote(data) && <p>{data.dependantsNote}</p>}
             {data.notModelled.map((item) => (
               <p key={item.id}>
-                Not included in this view: {policies.find((policy) => policy.id === item.id)?.name ?? item.id}. {item.reason}
+                Not included in this view:{" "}
+                {policies.find((policy) => policy.id === item.id)?.name ?? item.name ?? item.id}. {item.reason}
               </p>
             ))}
           </div>
@@ -170,7 +200,7 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
       />
       <section className="report-section">
         {bars ? (
-          <PolicyBars rows={bars.rows} noEffect={bars.noEffect} yearLabel={yearLabel} />
+          <PolicyBars rows={bars.rows} noEffect={bars.noEffect} underAPound={bars.underAPound} yearLabel={yearLabel} />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
@@ -222,21 +252,15 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
       <section className="report-section single-year-about">
         <Disclosure title="How this is calculated">
           <ul className="single-year-method">
-            <li>One household and one year ({yearLabel}), on the same engine and measures as the national figures.</li>
-            <li>
-              Net income is before housing costs: rent is not taken off, and the change is the same
-              either way, as no selected policy changes rent.
-            </li>
-            <li>Your salary is entered for 2026 and grown to {yearLabel} with the OBR&apos;s average earnings forecast.</li>
-            <li>
-              Change by policy adds the policies one at a time in the publication&apos;s order, so the rows
-              add up to the change in the tiles; where policies interact, the order matters.
-            </li>
-            <li>The marginal tax rate is the share of an extra pound of salary lost to taxes and withdrawn benefits.</li>
-            {data.versions?.policyengine && (
+            {SINGLE_YEAR_METHOD.map(([term, text]) => (
+              <li key={term}>
+                <strong>{term}.</strong> {text}
+              </li>
+            ))}
+            {data.engine?.policyengine && (
               <li>
-                Engine: policyengine {data.versions.policyengine}
-                {data.versions.policyengine_uk ? `, policyengine-uk ${data.versions.policyengine_uk}` : ""}.
+                <strong>Versions.</strong> policyengine {data.engine.policyengine}
+                {data.engine["policyengine-uk"] ? `, policyengine-uk ${data.engine["policyengine-uk"]}` : ""}.
               </li>
             )}
           </ul>

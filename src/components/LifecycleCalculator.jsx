@@ -1846,6 +1846,7 @@ function LifecycleCalculator({
                 year={year}
                 policies={policies}
                 noPolicies={noneSelected}
+                renting={isRenting(inputs.tenure)}
               />
             </SubTabPanel>
           )}

@@ -38,10 +38,14 @@ export const PROGRAMME_LABELS = {
   savings_income_tax: "On savings",
   dividend_income_tax: "On dividends",
   property_income_tax: "On property income",
+  child_benefit_charge: "High Income Child Benefit Charge",
   national_insurance: "National Insurance",
-  student_loan_repayment: "Student loan repayment",
+  student_loan_repayments: "Student loan repayment",
   council_tax: "Council tax",
   fuel_duty: "Fuel duty",
+  tv_licence: "TV licence",
+  pension_contributions: "Pension contributions from pay",
+  other_taxes: "Other taxes",
   universal_credit: "Universal Credit",
   uc_standard_allowance: "Standard allowance",
   uc_child_element: "Child element",
@@ -52,18 +56,30 @@ export const PROGRAMME_LABELS = {
   housing_benefit: "Housing Benefit",
   pension_credit: "Pension Credit",
   state_pension: "State Pension",
+  winter_fuel_payment: "Winter Fuel Payment",
+  scottish_child_payment: "Scottish Child Payment",
+  free_childcare: "Free childcare hours",
+  universal_childcare_entitlement: "Universal hours (3- and 4-year-olds)",
+  extended_childcare_entitlement: "Working parents' hours",
+  targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
+  other_benefits: "Other benefits",
   employment_income: "Employment income",
+  salary_sacrifice_haircut: "Salary sacrifice cap: broad-base pay cut",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
+  other_income: "Other income",
 };
 
 /** How "the largest changes are to …" names a programme mid-sentence. */
 const IN_SENTENCE = {
   income_tax: "income tax",
-  student_loan_repayment: "student loan repayments",
+  student_loan_repayments: "student loan repayments",
   council_tax: "council tax",
   fuel_duty: "fuel duty",
+  tv_licence: "the TV licence",
+  pension_contributions: "pension contributions",
+  free_childcare: "free childcare hours",
   employment_income: "employment income",
   dividend_income: "dividends",
   savings_interest_income: "savings interest",
@@ -76,8 +92,10 @@ export const GROUPS = [
   { id: "income", label: "Earnings and other income" },
 ];
 
+// The dashboard's sentence-case names first; the API's labels ("Income
+// Tax") for a row this list does not know
 const programmeLabel = (row) =>
-  row.label ?? PROGRAMME_LABELS[row.id] ?? row.id.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  PROGRAMME_LABELS[row.id] ?? row.label ?? row.id.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
 /**
  * The table's rows, grouped: taxes as negative amounts, a row only where
@@ -90,6 +108,7 @@ export function programmeGroups(programmes) {
     return {
       id: row.id,
       label: programmeLabel(row),
+      note: row.note ?? null,
       before,
       after,
       change: after - before,
@@ -122,32 +141,56 @@ export function largestChangesSentence(groups) {
   return `The largest changes are to ${name(changed[0])} and ${name(changed[1])}.`;
 }
 
+// Notes about one part of a row, shown only when that part is: income
+// tax's is about the High Income Child Benefit Charge, employment income's
+// about the salary sacrifice cap's pay cut
+const NOTE_PART = {
+  income_tax: "child_benefit_charge",
+  employment_income: "salary_sacrifice_haircut",
+};
+
+/** The notes of the rows the table shows, once each: [{id, label, note}]. */
+export function programmeNotes(groups) {
+  return groups
+    .flatMap((group) => group.rows)
+    .filter((row) => row.note)
+    .filter((row) => !NOTE_PART[row.id] || row.children.some((child) => child.id === NOTE_PART[row.id]))
+    .map((row) => ({ id: row.id, label: row.label, note: row.note }));
+}
+
+/** The interaction row shows only from this size (£), so bars add up. */
+export const INTERACTION_THRESHOLD = 1;
+
 /**
- * The per-policy rows: each measure that changes the household, sorted by
- * size, in whole pounds that add up to the headline change (largest
- * remainder). Measures worth £0 to the household are listed by name. If
- * the API's rows do not add up to the change (an interaction left over),
- * that is a row of its own, so the bars still add up.
+ * The per-policy rows (the API's single-measure method): each measure's own
+ * change, that measure alone at its Budget setting with the other selected
+ * measures at pre-Budget law. Where the combined change differs from the
+ * sum of those by £1 or more, the difference is a row of its own,
+ * "Interaction between policies", so the bars add up to the change. In
+ * whole pounds that add up to the headline tile (largest remainder), sorted
+ * by size. Measures that do not move the household at all are listed by
+ * name, and measures worth under £1 separately.
  *
- * @param {Array<{id: string, change: number}>} byPolicy
- * @param {number} total - The headline change
- * @param {Array<{id: string, name: string}>} policies - Names, by id
+ * @param {{measures: Array<{id, name, change, status}>, residual: number}} byPolicy
+ * @param {number} total - The headline change, as the tile shows it
+ * @param {Array<{id: string, name: string}>} policies - The dashboard's names, by id
  */
 export function policyRows(byPolicy, total, policies) {
-  const nameOf = (id) => policies.find((policy) => policy.id === id)?.name ?? id.replace(/_/g, " ");
-  const sum = byPolicy.reduce((acc, row) => acc + row.change, 0);
-  const rows = byPolicy.map((row) => ({
+  const nameOf = (row) =>
+    policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+  const affected = byPolicy.measures.filter((row) => row.status !== "not_affected");
+  const rows = affected.map((row) => ({
     id: row.id,
-    name: nameOf(row.id),
+    name: nameOf(row),
     color: getPolicyColor(row.id),
     change: row.change,
   }));
-  if (Math.abs(sum - total) >= 1) {
+  if (Math.abs(byPolicy.residual) >= INTERACTION_THRESHOLD) {
     rows.push({
       id: "interaction",
       name: "Interaction between policies",
       color: "#9CA3AF",
-      change: total - sum,
+      change: byPolicy.residual,
     });
   }
   const rounded = consistentRound(
@@ -161,41 +204,23 @@ export function policyRows(byPolicy, total, policies) {
     rows: rows
       .filter((row) => row.rounded !== 0)
       .sort((a, b) => Math.abs(b.rounded) - Math.abs(a.rounded)),
-    noEffect: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
+    noEffect: byPolicy.measures.filter((row) => row.status === "not_affected").map(nameOf),
+    underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
 
-/**
- * The sweep's points: salary, net income before and after, and the change.
- */
+/** The sweep's points: salary, net income before and after, and the change. */
 export function sweepPoints(sweep) {
-  if (!sweep) return [];
-  return sweep.income.map((income, index) => ({
-    income,
-    before: sweep.before[index],
-    after: sweep.after[index],
-    change: sweep.after[index] - sweep.before[index],
-  }));
+  return sweep?.points ?? [];
 }
 
 /**
- * Marginal tax rates between sweep points: 1 − Δnet / Δearnings, before and
- * after, on each step from one point to the next (plotted at its start).
+ * Marginal tax rates between sweep points, as the API works them out:
+ * 1 − Δnet / Δearnings, before and after, on each step from one point to
+ * the next (plotted at its start).
  */
 export function marginalRates(sweep) {
-  const points = sweepPoints(sweep);
-  const rates = [];
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const step = points[i + 1].income - points[i].income;
-    if (step <= 0) continue;
-    rates.push({
-      income: points[i].income,
-      to: points[i + 1].income,
-      before: 1 - (points[i + 1].before - points[i].before) / step,
-      after: 1 - (points[i + 1].after - points[i].after) / step,
-    });
-  }
-  return rates;
+  return sweep?.rates ?? [];
 }
 
 /** The marginal rate on the step that holds `income`. */
@@ -216,3 +241,47 @@ export function netIncomeDrops(points, threshold = 100) {
   }
   return drops;
 }
+
+/** "Inner South East London" from the API's BRMA name. */
+export function areaName(brma) {
+  if (!brma) return null;
+  const small = new Set(["AND", "OF", "THE", "UPON", "ON"]);
+  return String(brma)
+    .split("_")
+    .map((word, index) =>
+      index > 0 && small.has(word) ? word.toLowerCase() : word.charAt(0) + word.slice(1).toLowerCase(),
+    )
+    .join(" ");
+}
+
+/**
+ * How the single-year calculation works, in one place: the Methodology
+ * tab's single-year card and the page's "How this is calculated" expander
+ * both show these, as [term, text].
+ */
+export const SINGLE_YEAR_METHOD = [
+  [
+    "Engine and measures",
+    "The same engine (policyengine.py and policyengine-uk) and the same measures as the national figures, applied to one household's answers.",
+  ],
+  [
+    "One year",
+    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under pre-Budget law and with the selected policies.",
+  ],
+  [
+    "Salary",
+    "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+  ],
+  [
+    "Change by policy",
+    "Each policy's bar is that policy on its own: switched to its Budget setting, with every other selected policy held at pre-Budget law, against the same baseline. Policies can interact, so their own effects need not add up to the combined change; a difference of £1 or more is shown as “Interaction between policies”, so the bars add up to the change in the tiles.",
+  ],
+  [
+    "Marginal tax rate",
+    "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
+  ],
+  [
+    "Not modelled for one household",
+    "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only. Council Tax is not taken off: policyengine-uk does not compute it, and no selected policy changes it.",
+  ],
+];

@@ -1,7 +1,7 @@
 import { Fragment, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { useNarrowViewport } from "../../utils/chartTheme";
-import { largestChangesSentence, money, programmeGroups, signedMoney } from "../../utils/singleYear";
+import { largestChangesSentence, money, programmeGroups, programmeNotes, signedMoney } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { downloadFile } from "../../utils/downloadFile";
 
@@ -28,6 +28,7 @@ export default function ProgrammeTable({ programmes, yearLabel }) {
   const narrow = useNarrowViewport();
   const [open, setOpen] = useState(() => new Set());
   const groups = programmeGroups(programmes);
+  const notes = programmeNotes(groups);
   const title = `Taxes and benefits before and after, ${yearLabel}`;
   const toggle = (id) =>
     setOpen((prev) => {
@@ -148,6 +149,15 @@ export default function ProgrammeTable({ programmes, yearLabel }) {
           ))}
         </table>
       </div>
+      {notes.length > 0 && (
+        <ul className="programme-notes">
+          {notes.map((item) => (
+            <li key={item.id}>
+              <strong>{item.label}:</strong> {item.note}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="single-year-quiet">Totals are in the tiles above.</p>
     </div>
   );
