@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import "./PolicySelector.css";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 
-function PolicySelector({ policies, selectedPolicies, onPolicyToggle, disabledReason }) {
+function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason }) {
+  const { displayable } = useMeasureCatalogue();
+  const policies = (providedPolicies ?? displayable).filter(
+    (policy) => policy.displayable !== false,
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const dropdownRef = useRef(null);
 

@@ -2,21 +2,14 @@ import GeographyMethodology from "./GeographyMethodology";
 import LifecycleAbout from "./LifecycleAbout";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { measureModelling } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./methodology/Methodology.css";
-
-const RESEARCH = [
-  ["https://policyengine.org/uk/research/uk-two-child-limit", "two-child limit"],
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty freeze"],
-  ["https://policyengine.org/uk/research/rail-fares-freeze-2025", "rail fares freeze"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
-];
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
@@ -144,6 +137,9 @@ function SectionLink({ id, children }) {
  * @param {(tab: string) => void} props.onShowTab - Switch to another view
  */
 function MethodologyTab({ onShowTab }) {
+  const catalogue = useMeasureCatalogue();
+  const MEASURE_MODELLING = measureModelling(catalogue);
+  const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
       {text}
@@ -247,7 +243,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Static",
-                  "Households do not change their behaviour in response to a measure, except where a measure's modelling says otherwise (the salary sacrifice cap).",
+                  "Households do not change their behaviour in response to a measure, except where a published measure's description states otherwise.",
                 ],
                 [
                   "Years",
@@ -258,12 +254,12 @@ function MethodologyTab({ onShowTab }) {
           </div>
 
           <div className="card method-card method-table-card">
-            <h3 className="method-card-title">How each measure is modelled</h3>
+            <h3 className="method-card-title">Published measure descriptions</h3>
             <table className="method-measures">
               <thead>
                 <tr>
                   <th scope="col">Measure</th>
-                  <th scope="col">How it is modelled</th>
+                  <th scope="col">Published description</th>
                   <th scope="col">From</th>
                 </tr>
               </thead>
@@ -281,7 +277,7 @@ function MethodologyTab({ onShowTab }) {
                     <td>{measure.how}</td>
                     <td className="method-measure-year">
                       <span className="method-cell-label">From </span>
-                      {fiscalYearTick(measure.from)}
+                      {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
                     </td>
                   </tr>
                 ))}
@@ -520,16 +516,8 @@ function MethodologyTab({ onShowTab }) {
               are in the line at the foot of the page.
             </p>
             <p>
-              Methods and sources: our research on the{" "}
-              {RESEARCH.map(([href, label], index) => (
-                <span key={href}>
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    {label}
-                  </a>
-                  {index < RESEARCH.length - 2 ? ", " : index === RESEARCH.length - 2 ? " and " : ""}
-                </span>
-              ))}
-              .
+              Methods and sources are published with each measure's description. See the{" "}
+              <a href="https://policyengine.org/uk/research" target="_blank" rel="noopener noreferrer">PolicyEngine research library</a>.
             </p>
           </div>
         </MethodSection>

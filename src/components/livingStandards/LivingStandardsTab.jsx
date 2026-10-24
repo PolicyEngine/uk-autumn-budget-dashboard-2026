@@ -22,7 +22,7 @@ import PovertySection from "./sections/PovertySection";
 import DeepPovertySection from "./sections/DeepPovertySection";
 import PovertyByGroupSection from "./sections/PovertyByGroupSection";
 import ChildPovertyFamilySection from "./sections/ChildPovertyFamilySection";
-import TwoChildLimitSection from "./sections/TwoChildLimitSection";
+import ChildPovertyComparisonSection from "./sections/ChildPovertyComparisonSection";
 import CaveatsSection from "./sections/CaveatsSection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
@@ -52,9 +52,9 @@ const BASELINE_ROWS = [
   {
     id: "child-poverty",
     title: "Child poverty",
-    subtitle: "Child poverty by family, and with the two-child limit kept.",
+    subtitle: "Child poverty by family and under the published comparison.",
     requires: "child_poverty_by_family",
-    blocks: [[ChildPovertyFamilySection, TwoChildLimitSection]],
+    blocks: [[ChildPovertyFamilySection, ChildPovertyComparisonSection]],
   },
 ];
 

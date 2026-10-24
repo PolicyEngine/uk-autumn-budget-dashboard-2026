@@ -172,21 +172,36 @@ units start on separate workers, and the rest follow as each worker's next
 unit (tests that share one household, through an `xdist_group`, count as one
 unit). Each slow unit added lengthens the run.
 
-## Available reforms
+## Published measures
 
-The dashboard analyses these November 2025 Autumn Budget policies:
+The page builds one measure catalogue from the publication manifest, or from
+`reform_id` and `reform_name` in the reviewed flat CSVs when the manifest is
+absent (HTTP 404). The frontend contains no measure list. Labels, descriptions,
+selection, legends and chart colours all use the catalogue. Colours depend only
+on the measure id and the sign of its supported budgetary impact; the order is
+revenue, cost, then other measures, with ids sorted within each group.
 
-| Reform | Description |
-|--------|-------------|
-| `two_child_limit` | Repeal of the two-child limit on benefits |
-| `fuel_duty_freeze` | Extension of the fuel duty freeze |
-| `threshold_freeze_extension` | Extension of income tax threshold freeze |
-| `dividend_tax_increase_2pp` | +2pp on dividend tax rates |
-| `savings_tax_increase_2pp` | +2pp on savings income tax |
-| `property_tax_increase_2pp` | +2pp on property income tax |
-| `rail_fares_freeze` | One-year freeze on regulated rail fares |
-| `freeze_student_loan_thresholds` | Freeze Plan 2 repayment thresholds |
-| `salary_sacrifice_cap` | Cap NI-free salary sacrifice at £2,000 |
+This change keeps the rehearsed flat CSV figure route. When present, the manifest
+gates every view by status and supported year; combined results also require
+current member fingerprints. An invalid or unreachable manifest fails closed.
+This route does not verify flat-file bytes against artifact receipts: the public
+file review and build checks remain required. Complete receipt-verified artifact
+loading is a separate integration.
+
+Generation publishes public descriptions in the budgetary CSV and in receipts
+and staged manifest entries. It also publishes personal API response mappings,
+including inseparable shared series, so the old household API keeps working
+without frontend aliases. Regenerate and review outputs to add this metadata to
+existing flat files; older files show an explicit missing-description fallback
+and list unmatched personal series as not modelled. Missing selected figures
+never become zero or a partial total. Held measures are listed with an
+unavailable notice and excluded from the figures.
+
+Frontend tests include unfamiliar measures, publication gates, legacy household
+compatibility and fast-check properties for catalogue membership and colours.
+Run `bun run test` (Vitest is capped at four workers) and `bun run build`. The
+legacy-name guard covers frontend source; Python reform definitions remain
+unchanged apart from publication metadata.
 
 ## Technology stack
 

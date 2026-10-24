@@ -18,6 +18,7 @@ export default defineConfig([
     },
   },
   globalIgnores([
+    '.venv/**',
     '.next/**',
     'out/**',
     'build/**',

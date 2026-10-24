@@ -155,14 +155,6 @@ const LIFECYCLE_COLUMNS = [
   "student_loan_payment",
   "student_loan_debt_remaining",
   "baseline_net_income",
-  "impact_rail_fare_freeze",
-  "impact_fuel_duty_freeze",
-  "impact_threshold_freeze",
-  "impact_unearned_income_tax",
-  "impact_salary_sacrifice_cap",
-  "impact_sl_threshold_freeze",
-  "impact_two_child_limit",
-  "net_policy_impact",
 ];
 
 /**
@@ -170,20 +162,22 @@ const LIFECYCLE_COLUMNS = [
  * calculator's CSV has always had, with the net impact summed over
  * `reformKeys`.
  */
-export function lifecycleCsv(data, reformKeys, { real }) {
+export function lifecycleCsv(data, reformKeys, { real, complete = true }) {
   return buildChartCsv({
     title: "Lifetime policy impact, year by year",
     units: real
       ? "£ per year in 2026 prices (age and year are plain numbers)"
       : "£ per year in cash terms (age and year are plain numbers)",
-    columns: LIFECYCLE_COLUMNS.map((key) => ({
+    columns: [...LIFECYCLE_COLUMNS, ...reformKeys, "net_policy_impact"].map((key) => ({
       key,
       label: key,
       decimals: key === "age" || key === "year" ? 0 : 2,
     })),
     rows: data.map((row) => ({
       ...row,
-      net_policy_impact: reformKeys.reduce((sum, key) => sum + (row[key] || 0), 0),
+      net_policy_impact: complete && reformKeys.length && reformKeys.every((key) => Number.isFinite(row[key]))
+        ? reformKeys.reduce((sum, key) => sum + row[key], 0)
+        : null,
     })),
   });
 }
