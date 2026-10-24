@@ -1,0 +1,114 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import MeasuresCard from "./MeasuresCard";
+import TrendCard from "./TrendCard";
+import { changeByYear, measureComparison, niceRange, wrapWords } from "./youngPeopleData";
+import { MIN_SAMPLE_SIZE } from "../../utils/ageImpact";
+import { DISPLAY_YEARS } from "../../utils/displayYears";
+
+vi.mock("recharts", async () => {
+  const actual = await vi.importActual("recharts");
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }) => (
+      <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
+        {children}
+      </div>
+    ),
+  };
+});
+
+const POLICIES = [
+  { id: "two_child_limit", name: "2 child limit repeal" },
+  { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
+  { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
+];
+const ALL = POLICIES.map((policy) => policy.id);
+
+const row = (reform_id, year, age_band, mean_change, sample_size = 5000) => ({
+  reform_id,
+  year,
+  age_band,
+  mean_change,
+  sample_size,
+});
+
+const ROWS = [
+  row("two_child_limit", 2028, "16-24", 190),
+  row("two_child_limit", 2028, "all", 230),
+  row("threshold_freeze_extension", 2028, "16-24", -160),
+  row("threshold_freeze_extension", 2028, "all", -150),
+  row("salary_sacrifice_cap", 2028, "16-24", 0),
+  row("salary_sacrifice_cap", 2028, "all", 0),
+  row("two_child_limit", 2029, "16-24", 220),
+  row("two_child_limit", 2029, "all", 260),
+  row("threshold_freeze_extension", 2029, "16-24", -330),
+  row("threshold_freeze_extension", 2029, "all", -300),
+  row("salary_sacrifice_cap", 2029, "16-24", -120),
+  row("salary_sacrifice_cap", 2029, "all", -110),
+];
+
+describe("young people data", () => {
+  it("compares each policy's own figures, largest effect on young people first", () => {
+    const { shown, noEffect } = measureComparison(ROWS, POLICIES, ALL, 2029);
+    expect(shown.map((point) => point.name)).toEqual([
+      "Threshold freeze extension",
+      "2 child limit repeal",
+      "Salary sacrifice cap",
+    ]);
+    expect(shown[0]).toMatchObject({ young: -330, all: -300 });
+    expect(noEffect).toEqual([]);
+  });
+
+  it("lists policies with no effect and hides thin rows", () => {
+    const thin = [...ROWS.filter((r) => !(r.reform_id === "two_child_limit" && r.age_band === "16-24" && r.year === 2028)), row("two_child_limit", 2028, "16-24", 190, MIN_SAMPLE_SIZE - 1)];
+    const { shown, noEffect, suppressed } = measureComparison(thin, POLICIES, ALL, 2028);
+    expect(shown.map((point) => point.name)).toEqual(["Threshold freeze extension"]);
+    expect(noEffect).toEqual(["Salary sacrifice cap"]);
+    expect(suppressed).toEqual(["2 child limit repeal"]);
+  });
+
+  it("adds up mean changes by year and never reads a missing year as zero", () => {
+    const points = changeByYear(ROWS, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029, 2031]);
+    expect(points[0]).toMatchObject({ year: 2028, published: true, young: 30, all: 80 });
+    expect(points[1]).toMatchObject({ young: -110, all: -40 });
+    expect(points[2]).toMatchObject({ year: 2031, published: false, young: null, all: null });
+  });
+
+  it("picks nice ticks that include zero", () => {
+    expect(niceRange(-516, 0)).toEqual({ domain: [-600, 0], ticks: [-600, -400, -200, 0] });
+    expect(niceRange(-330, 260).ticks).toContain(0);
+    expect(wrapWords("Freeze student loan repayment thresholds", 16)).toEqual([
+      "Freeze student",
+      "loan repayment",
+      "thresholds",
+    ]);
+  });
+});
+
+describe("young people cards", () => {
+  const props = { rows: ROWS, policies: POLICIES, selectedPolicies: ALL, narrow: false, height: 400 };
+
+  it("draws the policy comparison with a download menu and notes no-effect policies", () => {
+    render(<MeasuresCard {...props} selectedYear={2028} />);
+    expect(screen.getByRole("heading", { level: 3, name: /Effect of each policy, 2028-29/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Download chart: Effect of each policy/ })).toBeInTheDocument();
+    expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
+    expect(screen.getByText(/No effect in 2028-29: Salary sacrifice cap/)).toBeInTheDocument();
+  });
+
+  it("shows a year with no rows as not yet published", () => {
+    render(<MeasuresCard {...props} selectedYear={2031} />);
+    expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
+  });
+
+  it("draws every year shown, whatever year is selected", () => {
+    render(<TrendCard {...props} selectedYear={2029} />);
+    const first = DISPLAY_YEARS[0];
+    const last = DISPLAY_YEARS[DISPLAY_YEARS.length - 1];
+    const title = new RegExp(`Change by year, ${first}-${String(first + 1).slice(-2)} to ${last}-${String(last + 1).slice(-2)}`);
+    expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Download chart: Change by year/ })).toBeInTheDocument();
+    expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
+  });
+});

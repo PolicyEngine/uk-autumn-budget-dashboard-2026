@@ -27,6 +27,8 @@ import NoBreakYear from "./NoBreakYear";
 import SectionHeading from "./SectionHeading";
 import Note from "./Note";
 import StatTiles from "./StatTiles";
+import MeasuresCard from "./youngPeople/MeasuresCard";
+import TrendCard from "./youngPeople/TrendCard";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -68,9 +70,9 @@ const OUTCOMES = [
 ];
 
 const MEAN_DESCRIPTION =
-  "Average change in household net income per person, by age, in pounds a year. Each person counts their household's change, so people in households that gain more pull their age group's average up. Bars add up each selected policy's own effect.";
+  "Average change in household net income per person, by age, in pounds a year. Each person counts their household's change; bars add up each selected policy's own effect.";
 const SHARES_DESCRIPTION =
-  "The share of people whose household net income rises or falls by more than 0.01%, for young people aged 16 to 24 and for people of all ages.";
+  "The share of people whose household net income rises or falls by more than 0.01%, for young people aged 16 to 24 and for all ages.";
 
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const signedPounds = (value) =>
@@ -515,7 +517,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
         id={YOUNG_PEOPLE_ANCHOR}
         className="young-people-heading"
         title="Young people (under 25)"
-        subtitle="How the selected policies change the household incomes of young people aged 16 to 24, compared with other ages, in the selected year."
+        subtitle="How the selected policies change the household incomes of young people aged 16 to 24, compared with other ages."
       />
       <section className="report-section young-people-section" aria-label="Young people (under 25)">
         {status === "ready" ? (
@@ -523,7 +525,11 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
             <Headline {...props} />
             <div className="charts-grid">
               <MeanChangeCard {...props} />
+              <MeasuresCard {...props} height={narrow ? 600 : 440} />
+            </div>
+            <div className="charts-grid">
               <SharesCard {...props} />
+              <TrendCard {...props} height={narrow ? 320 : 300} />
             </div>
           </>
         ) : (

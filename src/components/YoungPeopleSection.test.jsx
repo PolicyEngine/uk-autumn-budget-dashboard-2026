@@ -95,7 +95,7 @@ describe("YoungPeopleSection", () => {
     expect(screen.getByText(/20\.0% of them/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Average change by age, 2029-30/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(4);
   });
 
   it("says when the selection has no whole run, never showing zero", async () => {
@@ -109,12 +109,12 @@ describe("YoungPeopleSection", () => {
     );
     expect(await screen.findByText(/shown for a single policy or for all policies\./)).toBeInTheDocument();
     expect(screen.getByText(/directly affected: shown for a single policy/)).toBeInTheDocument();
-    // Only the mean change chart is drawn
-    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(1);
+    // Every chart but the shares is drawn
+    expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
   });
 
   it("shows a year with no rows as not yet published", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2031} policies={POLICIES} />);
-    expect(await screen.findAllByText("Results for 2031-32 are not yet published.")).toHaveLength(2);
+    expect(await screen.findAllByText("Results for 2031-32 are not yet published.")).toHaveLength(3);
   });
 });
