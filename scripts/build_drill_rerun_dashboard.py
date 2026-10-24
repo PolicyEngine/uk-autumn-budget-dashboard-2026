@@ -1,9 +1,11 @@
 """Build data.json for the drill-rerun comparison dashboard.
 
-MOCK DATA. Reads ``comparison.csv`` and ``summary.csv`` written by
-``scripts/rerun_drills.py compare`` and writes ``dashboard/data.json`` next
-to them, adding a one-line description per mock measure and the attributed
-cause of each move (from the README in the same folder).
+MOCK DATA. Reads ``comparison.csv`` (written by ``scripts/rerun_drills.py
+compare``) and each drill's filled national scoring sheet straight from git,
+and writes ``<dir>/dashboard/data.json``. It adds a one-line description per
+mock measure, the attributed cause of each move (from the README in the same
+folder), the exact sheet row behind every official costing, and whether the
+drill-day figure and the official costing are on the same basis.
 
 Usage (from the repository root)::
 
@@ -17,101 +19,198 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.util
+import io
 import json
+import statistics
+import subprocess
 from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+GH = "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026"
+PEUK_CHANGELOG = (
+    "https://github.com/PolicyEngine/policyengine-uk/blob/main/CHANGELOG.md"
+)
 
 # One line per measure, condensed from the `description` of each Reform on
 # the drill branches (src/uk_budget_data/reforms.py, mock_drill2_structural.py
-# and mock_drill3_*.py on origin/drill{1,2,3,4}-mock-budget).
+# and mock_drill3_*.py on origin/drill{1,2,3,4}-mock-budget; the drill 3
+# Pensioner Allowance text is from src/utils/policyConfig.js there).
 DESCRIPTIONS = {
     # Drill 1
-    "mock_fuel_duty_freeze": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
-    "mock_energy_vat_zero_rate": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
-    "mock_child_benefit_increase": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
-    "mock_nics_threshold_rise": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
-    "mock_hvcts_extension": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+    "mock_fuel_duty_freeze": "Cancels the 1 March 2027 2p rise and the April 2027 inflation rise; main rates held at 55.95p a litre to 31 March 2028.",
+    "mock_energy_vat_zero_rate": "Zero rate of VAT on domestic electricity and gas in Great Britain, 1 April 2027 to 31 March 2028.",
+    "mock_child_benefit_increase": "Child Benefit to £30.00 a week for the eldest child and £20.00 for each other child from April 2027.",
+    "mock_nics_threshold_rise": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from 6 April 2027, held until April 2031.",
+    "mock_hvcts_extension": "High Value Council Tax Surcharge extended to homes in England worth £1.5 million or more from 1 April 2028.",
     # Drill 2
-    "mock2_fuel_duty_hold": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
-    "mock2_electricity_vat_zero": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+    "mock2_fuel_duty_hold": "The 3p (1 January 2027) and 2p (1 March 2027) rises do not go ahead; 52.95p a litre to 31 August 2027, then 55.95p.",
+    "mock2_electricity_vat_zero": "Zero VAT on domestic electricity in Great Britain continues from 1 April 2027 to 31 March 2028; gas stays at 5%.",
     "mock2_employer_ni_threshold": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
-    "mock2_cgt_rates": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
-    "mock2_hvcts_band": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
-    "mock2_state_pension_uprating": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
-    "mock2_state_pension_personal_allowance": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
-    "mock2_energy_price_payment": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+    "mock2_cgt_rates": "Capital Gains Tax rates rise from 18% to 20% and from 24% to 28% from 6 April 2027, including residential property.",
+    "mock2_hvcts_band": "New £1,500 High Value Council Tax Surcharge band for homes in England worth £1.5 million to £2 million from April 2028.",
+    "mock2_state_pension_uprating": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; average earnings leave the triple lock.",
+    "mock2_state_pension_personal_allowance": "£13,100 personal allowance at State Pension age from April 2027, withdrawn at £1 per £2 of income above £20,000.",
+    "mock2_energy_price_payment": "One-off £150 per household in Great Britain on Universal Credit or Pension Credit guarantee credit, paid January 2027.",
     # Drill 3
-    "mock3_fuel_duty_phasing": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
-    "mock3_whd_top_up": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+    "mock3_fuel_duty_phasing": "The January and March 2027 rises are deferred: 52.95p a litre to 31 March 2027, 55.95p from 1 April, 57.95p from 1 October 2027.",
+    "mock3_whd_top_up": "Extra £100 per Warm Home Discount household in England and Wales in winters 2026-27 and 2027-28.",
     "mock3_lha_30th_percentile": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
-    "mock3_pensioner_allowance": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
-    "mock3_employer_ni_under_22": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
-    "mock3_additional_rate_threshold": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
-    "mock3_cgt_higher_rate_aea": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
-    "mock3_salary_sacrifice_cap": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
-    "mock3_hvcts_top_bands": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
-    "mock3_threshold_freeze_2032": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
-    "mock3_class4_main_rate": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+    "mock3_pensioner_allowance": "Allowance equal to the State Pension where above the Personal Allowance, from April 2027, withdrawn above £30,000 of income.",
+    "mock3_employer_ni_under_22": "No employer National Insurance on earnings of employees aged under 22, up to the upper earnings limit, from April 2027.",
+    "mock3_additional_rate_threshold": "The 45p additional rate starts at £100,000 of taxable income instead of £125,140 from April 2027.",
+    "mock3_cgt_higher_rate_aea": "Capital Gains Tax higher rate from 24% to 28% and annual exempt amount from £3,000 to £2,000, from 6 April 2027.",
+    "mock3_salary_sacrifice_cap": "Pension salary sacrifice exempt from National Insurance falls from £2,000 to £1,000 a year from 6 April 2029.",
+    "mock3_hvcts_top_bands": "High Value Council Tax Surcharge of £10,000 for homes in England worth £5 million to £10 million and £15,000 above, from April 2028.",
+    "mock3_threshold_freeze_2032": "Personal Allowance (£12,570), basic rate limit (£37,700), NI Primary Threshold, UEL and Class 4 limits stay at 2030-31 levels in 2031-32.",
+    "mock3_class4_main_rate": "Class 4 National Insurance main rate for the self-employed rises from 6% to 7% from April 2027.",
     # Drill 4
-    "mock4_cb_early_years_addition": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
-    "mock4_state_pension_topup_allowance": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
-    "mock4_fuel_vat_cut": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
-    "mock4_employer_ni_under23": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
-    "mock4_fuel_duty": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
-    "mock4_uc_child_element": "UC child element up £12.50 a month per child from April 2027.",
-    "mock4_lha_reset": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+    "mock4_cb_early_years_addition": "Child Benefit Early Years Addition of £10 a week for each child under 1 from April 2027.",
+    "mock4_state_pension_topup_allowance": "Income tax allowance for State Pension recipients equal to the amount their State Pension exceeds their personal allowance, from April 2027.",
+    "mock4_fuel_vat_cut": "VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027.",
+    "mock4_employer_ni_under23": "No employer Class 1 National Insurance on earnings up to £25,000 a year for employees under 23, from April 2027.",
+    "mock4_fuel_duty": "Fuel duty stays at 52.95p to 22 February 2027, 54.95p from 23 February 2027 and 56.95p from 1 October 2027.",
+    "mock4_uc_child_element": "Universal Credit child element up £12.50 a month per child from April 2027.",
+    "mock4_lha_reset": "Local Housing Allowance rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
     "mock4_carers_allowance_limit": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
-    "mock4_cgt_higher_rate": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+    "mock4_cgt_higher_rate": "Capital Gains Tax higher rate from 24% to 26% from 6 April 2027, including residential property.",
     "mock4_savings_starting_band": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
-    "mock4_threshold_freeze_2032": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
-    "mock4_combined": "All drill 4 coded measures together.",
+    "mock4_threshold_freeze_2032": "Personal Allowance, basic rate limit, NI thresholds and Class 4 limits held at 2030-31 levels for 2031-32.",
+    "mock4_combined": "All twelve coded drill 4 measures scored together.",
+    "mock4_whd_topup": "Winter 2026-27 only: a further £125 for Warm Home Discount households on means-tested benefits and £75 for Pension Credit households, England and Wales.",
 }
 
-# What changed between drill day and the rerun, per drill (README "What each
-# drill isolates").
-DRILL_CHANGE = {
-    "1": "Engine 6.0.0 → 6.10.2 and data enhanced FRS → Microcosm",
-    "2": "Engine 6.2.1 → 6.10.2 and Microcosm aa31bdf6 → 810ba980",
-    "3": "Engine 6.2.7 → 6.10.2 and Microcosm aa31bdf6 → 810ba980",
-    "4": "Engine only: 6.7.6 → 6.10.2, same Microcosm 810ba980",
+# Sentence-case display names where the drill's own name has a MOCK tag or an
+# odd case.
+NAMES = {
+    "mock4_combined": "Drill 4 package (all measures)",
+    "mock4_threshold_freeze_2032": "Thresholds frozen to April 2032",
+    "mock4_savings_starting_band": "Savings starting-rate band £2,000",
+    "mock4_fuel_duty": "Fuel duty rises cancelled and restaged",
+    "mock4_fuel_vat_cut": "VAT cut on road fuel",
+    "mock4_lha_reset": "LHA reset to 30th percentile",
+    "mock4_employer_ni_under23": "Employer NI relief for under-23s",
+    "mock4_whd_topup": "Warm Home Discount top-up",
 }
 
-DEFAULT_CAUSE = {
-    "1": "Engine and dataset together; not decomposed",
-    "2": "Engine and dataset together; not decomposed",
-    "3": "Engine and dataset together; not decomposed",
-    "4": "Engine only; same dataset",
+DRILL_META = {
+    "1": {"date": "28 September 2026", "pr": 4, "issue": 6, "issue_label": "retro",
+          "engine": "6.0.0 (pe-uk 2.90.2)",
+          "data": "Enhanced FRS → Microcosm 810ba980",
+          "what": "Engine and data both changed; their effects are not split."},
+    "2": {"date": "5 October 2026", "pr": 7, "issue": 8, "issue_label": "drill issue",
+          "engine": "6.2.1 (pe-uk 2.120.0)",
+          "data": "Microcosm aa31bdf6 → 810ba980",
+          "what": "Engine and data both changed; their effects are not split."},
+    "3": {"date": "12 October 2026", "pr": 9, "issue": 10, "issue_label": "drill issue",
+          "engine": "6.2.7 (pe-uk 2.125.1)",
+          "data": "Microcosm aa31bdf6 → 810ba980",
+          "what": "Engine and data both changed; their effects are not split."},
+    "4": {"date": "19 October 2026", "pr": 52, "issue": 53, "issue_label": "drill issue",
+          "engine": "6.7.6 (pe-uk 2.130.1)",
+          "data": "Same Microcosm 810ba980",
+          "what": "Same Microcosm data; engine-only change 6.7.6 → 6.10.2, so close to zero change is expected. It did rerun: the State Pension Top-up Allowance and the package move by about 0.3%, and decile 1 moves with pe-uk 2.132.4."},
 }
 
-INVALID_NOTE = "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)"
+
+def peuk(v: str, date: str) -> str:
+    return f"{PEUK_CHANGELOG}#{v.replace('.', '')}---{date}"
 
 
-def cause(drill: str, mid: str, year: int) -> str:
-    """Attributed cause of the move, from the README's largest-movers table."""
+# Links for the pe-uk changes cited in notes (verified to exist in the pe-uk
+# CHANGELOG; 2.128.0 is in the changelog but was first published to PyPI in
+# 2.130.1).
+L1878 = "https://github.com/PolicyEngine/policyengine-uk/issues/1878"
+L21231 = peuk("2.123.1", "2026-10-07")
+L21262 = peuk("2.126.2", "2026-10-10")
+L21280 = peuk("2.128.0", "2026-10-12")
+L21311 = peuk("2.131.1", "2026-10-14")
+L21324 = peuk("2.132.4", "2026-10-15")
+
+
+def cause(drill: str, mid: str, year: int):
+    """Attributed cause of the move (README largest-movers table) + links."""
     if mid == "mock_nics_threshold_rise" and year == 2027:
-        return "NICs UEL/UPL baseline fix (policyengine-uk#1878); consistent with the fix, not bisected"
+        return ("Matches the Class 4 NI band fix the drill 1 retro flagged; not bisected",
+                [["policyengine-uk#1878", L1878]])
     if mid == "mock_child_benefit_increase":
-        return "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply"
+        return ("Mostly the data change (enhanced FRS → Microcosm)", [])
     if mid == "mock_energy_vat_zero_rate":
-        return "Dataset energy spending (enhanced FRS → Microcosm); not decomposed"
+        return ("Energy spending in the new data (enhanced FRS → Microcosm)", [])
     if mid == "mock_hvcts_extension":
-        return "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies"
+        return ("Surcharge now charged on owner-occupiers only; data change too",
+                [["pe-uk 2.123.1", L21231]])
     if mid == "mock2_state_pension_personal_allowance" and year == 2026:
-        return "Now −£0.024bn where drill day had £0; possibly pe-uk 2.131.1 parameter dating, not confirmed"
+        return ("New −£0.02bn in 2026-27 where drill day had £0; possibly how pe-uk dates bare-year keys; not confirmed",
+                [["pe-uk 2.131.1", L21311]])
     if drill == "3" and year == 2031:
-        if mid == "mock3_lha_30th_percentile":
-            return "2031 projection: pe-uk 2.128.0 projects data to 2032; drill day served 2031 from 2030 data"
         if mid == "mock3_threshold_freeze_2032":
-            return "2031 is now a real dataset year (2.128.0); 2.126.2 changed 2031-32 PA/BRL indexation"
-        return "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)"
+            return ("2031-32 is now a real data year, and its PA/basic rate limit indexation changed",
+                    [["pe-uk 2.128.0", L21280], ["pe-uk 2.126.2", L21262]])
+        return ("2031-32 is now a real data year; on drill day it reused 2030 data",
+                [["pe-uk 2.128.0", L21280]])
     if mid in ("mock4_cgt_higher_rate", "mock4_savings_starting_band"):
-        return "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)"
+        return ("Revenue unchanged; decile 1 moves (see decile note)",
+                [["pe-uk 2.132.4", L21324]])
     if mid == "mock4_state_pension_topup_allowance":
-        return "About 0.3% move; not attributed"
-    return DEFAULT_CAUSE[drill]
+        return ("About 0.3% move; cause not identified", [])
+    if drill == "4":
+        return ("Engine only; same data", [])
+    return ("Engine and data both changed; not split", [])
 
 
-def num(v: str):
+def num(v):
     return None if v in ("", None) else float(v)
+
+
+def git(*a) -> str:
+    return subprocess.check_output(["git", *a], cwd=REPO).decode()
+
+
+def load_drills():
+    spec = importlib.util.spec_from_file_location(
+        "rerun_drills", REPO / "scripts" / "rerun_drills.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.DRILLS
+
+
+def sheet_rows(cfg) -> dict:
+    """(measure_id, model year) -> source row of the filled national sheet."""
+    s = cfg["sheet"]
+    if s is None:
+        return {}
+    sha = git("rev-parse", cfg["sha"]).strip()
+    text = git("show", f"{sha}:{s['path']}")
+    lines = text.splitlines()
+    out = {}
+    reader = csv.DictReader(io.StringIO("\n".join(lines[1:])))
+    for i, row in enumerate(reader):
+        rid = s["map"].get(str(row[s["key"]]).strip())
+        if rid is None:
+            continue
+        fy = row["fiscal_year"].strip()
+        line = i + 3  # line 1 = note, line 2 = header
+
+        def v(col):
+            x = row.get(col, "")
+            try:
+                return float(x) * s["unit"]
+            except ValueError:
+                return None
+
+        out[(rid, int(fy[:4]))] = {
+            "fy": fy,
+            "line": line,
+            "static": v(s["static"]),
+            "post": v(s["post"]),
+            "team": v(s["team"]),
+            "file": s["path"],
+            "url": f"{GH}/blob/{sha}/{s['path']}?plain=1#L{line}",
+            "cols": [s["static"], s["post"], s["team"]],
+        }
+    return out
 
 
 def main() -> None:
@@ -119,72 +218,70 @@ def main() -> None:
     p.add_argument("--dir", default="docs/drill-reruns/2026-10-24")
     args = p.parse_args()
     base = Path(args.dir)
+    drills = load_drills()
+    sheets = {str(c["drill"]): sheet_rows(c) for c in drills.values()}
 
     with open(base / "comparison.csv", newline="") as f:
         comp = list(csv.DictReader(f))
-    with open(base / "summary.csv", newline="") as f:
-        summ = {r["drill"]: r for r in csv.DictReader(f)}
 
     rows = []
     for r in comp:
-        y = int(r["year"])
+        d, mid, y = r["drill"], r["measure_id"], int(r["year"])
         invalid = bool(r["rerun_note"])
-        vs = r["vs_official_static"] or None
-        rows.append(
-            {
-                "drill": r["drill"],
-                "id": r["measure_id"],
-                "name": r["measure_name"].removeprefix("MOCK: "),
-                "desc": DESCRIPTIONS.get(r["measure_id"], ""),
-                "year": y,
-                "fy": f"{y}-{(y + 1) % 100:02d}",
-                "old": num(r["revenue_bn_drill_day"]),
-                "new": num(r["revenue_bn_rerun"]),
-                "diff": num(r["revenue_bn_diff"]),
-                "pct": num(r["revenue_pct_diff"]),
-                "size_pct": num(r["magnitude_pct_diff"]),
-                "static": num(r["official_static_bn"]),
-                "post": num(r["official_post_behavioural_bn"]),
-                "vs": None if invalid else vs,
-                "invalid": invalid,
-                "note": INVALID_NOTE if invalid else cause(r["drill"], r["measure_id"], y),
-                "d": {
-                    k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
-                    for k in (
-                        "d1_avg_change",
-                        "d5_avg_change",
-                        "d10_avg_change",
-                        "people_affected_pct",
-                    )
-                },
-            }
-        )
+        old, new = num(r["revenue_bn_drill_day"]), num(r["revenue_bn_rerun"])
+        sh = sheets[d].get((mid, y))
+        static = sh["static"] if sh else None
+        post = sh["post"] if sh else None
+        team = sh["team"] if sh else None
+        # Same basis: the drill team compared our figure with the costing as
+        # it stood. Where their reconciled figure differs from the drill-day
+        # figure, they converted it first (cash timing, fiscal-year
+        # proration, in-year share), so the raw figure is not like-for-like.
+        aligned = None
+        if sh and static is not None:
+            aligned = team is not None and abs(old - team) <= max(0.005, 0.02 * abs(old))
+        vs = None
+        if sh and static is not None and not invalid and aligned and abs(static) > 1e-9:
+            go, gn = abs(old - static), abs(new - static)
+            vs = "same" if abs(gn - go) < 0.0005 else ("closer" if gn < go else "further")
+        note, links = (None, []) if invalid else cause(d, mid, y)
+        name = NAMES.get(mid, r["measure_name"].removeprefix("MOCK: ").replace(" (MOCK)", ""))
+        rows.append({
+            "drill": d, "id": mid, "name": name[0].upper() + name[1:],
+            "desc": DESCRIPTIONS.get(mid, ""), "year": y,
+            "fy": f"{y}-{(y + 1) % 100:02d}",
+            "old": old, "new": new, "diff": num(r["revenue_bn_diff"]),
+            "pct": num(r["revenue_pct_diff"]), "size_pct": num(r["magnitude_pct_diff"]),
+            "static": static, "post": post, "team": team,
+            "sheet": None if not sh else {"url": sh["url"], "file": sh["file"], "line": sh["line"]},
+            "aligned": aligned, "vs": vs, "invalid": invalid,
+            "note": note, "links": links,
+            "d": {k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
+                  for k in ("d1_avg_change", "d5_avg_change", "d10_avg_change", "people_affected_pct")},
+        })
 
-    tiles = []
-    for drill in sorted(summ):
-        s = summ[drill]
-        has_sheet = any(
-            r["drill"] == drill and r["static"] is not None for r in rows
-        )
-        tiles.append(
-            {
-                "drill": drill,
-                "median": float(s["median_abs_pct_diff"]),
-                "max": float(s["max_abs_pct_diff"]),
-                "material": int(s["material_cells"]),
-                "invalid": int(s["invalid_cells_excluded"]),
-                "changed": DRILL_CHANGE[drill],
-                "closer": int(s["closer_to_official"]) if has_sheet else None,
-                "further": int(s["further_from_official"]) if has_sheet else None,
-            }
-        )
+    groups = []
+    for d in sorted({r["drill"] for r in rows}):
+        g = [r for r in rows if r["drill"] == d]
+        mat = [r for r in g if abs(r["old"]) >= 0.01 and not r["invalid"]]
+        sizes = [abs(r["size_pct"]) for r in mat]
+        has_sheet = any(r["sheet"] for r in g)
+        m = DRILL_META[d]
+        groups.append({
+            "drill": d, **m,
+            "pr_url": f"{GH}/pull/{m['pr']}", "issue_url": f"{GH}/issues/{m['issue']}",
+            "median": statistics.median(sizes), "max": max(sizes), "n": len(mat),
+            "closer": sum(r["vs"] == "closer" for r in g) if has_sheet else None,
+            "further": sum(r["vs"] == "further" for r in g) if has_sheet else None,
+            "basis_diff": sum(r["aligned"] is False and not r["invalid"] for r in g),
+        })
 
     out = base / "dashboard"
     out.mkdir(exist_ok=True)
-    (out / "data.json").write_text(
-        json.dumps({"tiles": tiles, "rows": rows}, ensure_ascii=False, indent=0)
-    )
-    print(f"wrote {out / 'data.json'}: {len(rows)} rows, {len(tiles)} tiles")
+    (out / "data.json").write_text(json.dumps({"drills": groups, "rows": rows}, ensure_ascii=False))
+    print(f"wrote {out / 'data.json'}: {len(rows)} rows")
+    for g in groups:
+        print(g["drill"], round(g["median"], 3), round(g["max"], 3), g["n"], g["closer"], g["further"], g["basis_diff"])
 
 
 if __name__ == "__main__":
