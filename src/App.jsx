@@ -567,11 +567,11 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          How the UK Autumn Budget 2026 measures affect the public finances,
+          How the Autumn Budget 2026 measures affect the public finances,
           households across the income distribution, regions and
           constituencies, example households and individuals, and young
-          people, alongside the baseline outlook for living standards. Choose
-          a year and policies in the bar above.
+          people, with the living standards baseline. Choose a year and
+          policies in the bar above.
         </p>
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
