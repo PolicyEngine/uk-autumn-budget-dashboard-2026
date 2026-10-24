@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>Drill reruns comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#285e61;--teal2:#319795;--bg:#f4f6f8;--card:#fff;--text:#1a202c;--muted:#64748b;--line:#e2e8f0;
+--green:#15803d;--greenbg:#dcfce7;--amber:#b45309;--amberbg:#fef3c7;--grey:#475569;--greybg:#f1f5f9;--warn:#9a3412;--warnbg:#ffedd5}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.45}
+header{background:var(--teal);color:#fff;padding:18px 16px}
+.wrap{max-width:1360px;margin:0 auto;padding:0 16px}
+header .wrap{padding:0}
+.logo{font-weight:700;letter-spacing:.2px;font-size:15px;opacity:.95}
+.logo span{color:#81e6d9}
+h1{margin:6px 0 4px;font-size:22px;font-weight:600}
+.sub{opacity:.85;font-size:13px}
+.mock{display:inline-block;background:#fff;color:var(--teal);font-weight:700;font-size:11px;padding:2px 7px;border-radius:4px;margin-left:8px;vertical-align:middle}
+main.wrap{padding-top:20px;padding-bottom:8px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.tiles{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.tile h3{margin:0 0 6px;font-size:13px;color:var(--teal);font-weight:600}
+.big{font-size:26px;font-weight:700;color:var(--teal)}
+.big small{font-size:12px;color:var(--muted);font-weight:500}
+.tile .kv{font-size:12.5px;color:var(--muted);margin-top:4px}
+.tile .kv b{color:var(--text);font-weight:600}
+.caption{font-size:12px;color:var(--muted);margin:8px 2px 16px}
+.callouts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:900px){.callouts{grid-template-columns:1fr}}
+.callout{font-size:13px;border-left:4px solid var(--teal2)}
+.callout.w{border-left-color:#ea580c}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+.controls label{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+select,input[type=search]{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+input[type=search]{min-width:200px}
+.seg button{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;padding:5px 10px;cursor:pointer;margin-right:-1px}
+.seg button:first-child{border-radius:6px 0 0 6px}.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.count{font-size:12.5px;color:var(--muted);margin-left:auto}
+.tablecard{padding:0;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1060px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;font-weight:600;color:var(--muted);background:#fafbfc;cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+th .arr{color:var(--teal2)}
+td .nm{font-weight:600}
+td .ds{color:var(--muted);font-size:12px;max-width:340px}
+tr.main:hover{background:#f8fafc;cursor:pointer}
+.chg{display:inline-block;padding:2px 7px;border-radius:5px;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.chg.closer{background:var(--greenbg);color:var(--green)}
+.chg.further{background:var(--amberbg);color:var(--amber)}
+.chg.none{background:var(--greybg);color:var(--grey)}
+.badge{display:inline-block;background:var(--warnbg);color:var(--warn);font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;margin-bottom:3px}
+.note{font-size:12px;color:var(--muted);max-width:300px}
+.drill{font-weight:600;color:var(--teal)}
+tr.detail td{background:#fafbfc;font-size:12.5px}
+.det{display:flex;flex-wrap:wrap;gap:8px 28px}
+.det div b{font-weight:600}
+.muted{color:var(--muted)}
+.legend{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin:10px 2px}
+footer{font-size:12px;color:var(--muted);padding:16px 0 32px}
+footer a,.callout a{color:var(--teal2)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="logo">Policy<span>Engine</span></div>
+  <h1>Drill reruns: drill day vs policyengine 6.10.2 <span class="mock">MOCK</span></h1>
+  <div class="sub">Mock-Budget drills 1–4 rerun on 24 October 2026 on the certified Microcosm. Rehearsal measures, not a real Budget.</div>
+</div></header>
+<main class="wrap">
+  <div class="tiles" id="tiles"></div>
+  <div class="caption">Median and max are absolute changes in the size of each measure, over material cells (drill-day revenue at least £0.01bn), excluding invalid fuel duty rows. Closer/further compares each figure with the official static costing in the drill's filled sheet.</div>
+  <div class="callouts">
+    <div class="card callout w"><b>Fuel duty rows in drills 1–3 are not valid reruns.</b> Those drills set fuel duty with month-dated ranges, which pe-uk 2.132.6 ignores, so only the pump-VAT part is scored (drills 2 and 3 fall by 82.9% in every year). Drill 4 used open-ended steps and is unaffected.</div>
+    <div class="card callout"><b>Decile 1 is not comparable across pe-uk 2.132.4.</b> That version resets negative HBAI income to zero and puts those households in decile 1 instead of excluding them, so decile 1 moves even where revenue does not (open a row to see deciles).</div>
+  </div>
+  <div class="controls">
+    <label>Drill <span class="seg" id="drillSeg"></span></label>
+    <label>Year <select id="year"></select></label>
+    <label><input type="checkbox" id="hideZero" checked> Hide rows where both are £0</label>
+    <label><input type="search" id="q" placeholder="Search measures or notes"></label>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="card tablecard">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span><span class="chg closer">±x</span> moves closer to the official static costing</span>
+    <span><span class="chg further">±x</span> moves further from it</span>
+    <span><span class="chg none">±x</span> no benchmark, unchanged, or invalid</span>
+    <span>Positive £bn change = the rerun raises more or costs less. Click a row for deciles and people affected.</span>
+  </div>
+  <footer>
+    Rerun: policyengine 6.10.2 (policyengine-uk 2.132.6, policyengine-core 3.33.3), Microcosm national file microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71 (SHA-256 810ba980…0951ece). Drill-day figures from each drill branch's public/data CSVs; official costings from the filled national scoring sheets. Model year Y is shown as fiscal year Y–Y+1; the flat CSVs are calendar-year net impacts and the costings fiscal-year gross tax heads, so read closer/further as a direction only.<br>
+    <a href="https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/114">PR #114</a> ·
+    <a href="https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md">README</a>
+  </footer>
+</main>
+<script>
+const COLS=[
+ {k:'drill',t:'Drill'},{k:'name',t:'Measure'},{k:'year',t:'Year'},
+ {k:'old',t:'Drill day (£bn)',n:1},{k:'new',t:'New, 6.10.2 (£bn)',n:1},
+ {k:'chg',t:'Change (£bn, %)',n:1},{k:'static',t:'Benchmark (£bn)',n:1},{k:'note',t:'Note'}];
+const st={drill:'All',year:'All',hideZero:true,q:'',sort:null,dir:1,open:new Set()};
+let D;
+const f3=v=>v==null?'—':(v<0?'−':'')+Math.abs(v).toFixed(3);
+const f2=v=>v==null?'—':(v<0?'−':'')+Math.abs(v).toFixed(2);
+const sg=v=>v==null?'—':(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(3);
+const pc=v=>v==null?'':(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1)+'%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const key=r=>r.drill+'|'+r.id+'|'+r.year;
+const isZero=r=>Math.abs(r.old||0)<5e-4&&Math.abs(r.new||0)<5e-4;
+function absPct(r){return r.pct==null?(Math.abs(r.diff||0)>5e-4?-1:-2):Math.abs(r.pct)}
+function sortVal(r,k){if(k==='chg')return absPct(r);if(k==='drill')return +r.drill;return r[k]}
+function tiles(){document.getElementById('tiles').innerHTML=D.tiles.map(t=>`<div class="card tile">
+ <h3>Drill ${t.drill}</h3>
+ <div class="big">${t.median<0.01?'0.00':t.median.toFixed(2)}% <small>median change</small></div>
+ <div class="kv">Max <b>${t.max.toFixed(2)}%</b> · ${t.material} material cells${t.invalid?`, ${t.invalid} invalid excluded`:''}</div>
+ <div class="kv">${esc(t.changed)}</div>
+ <div class="kv">${t.closer==null?'Official costings: <b>n/a</b>, no filled sheet':`Against official: <b style="color:var(--green)">${t.closer} closer</b> · <b style="color:var(--amber)">${t.further} further</b>${t.drill==='4'?' (all under 0.4%)':''}`}</div>
+</div>`).join('')}
+function controls(){
+ const s=document.getElementById('drillSeg');
+ s.innerHTML=['All','1','2','3','4'].map(d=>`<button data-d="${d}" class="${st.drill===d?'on':''}">${d}</button>`).join('');
+ s.onclick=e=>{const d=e.target.dataset.d;if(!d)return;st.drill=d;controls();render()};
+ const ys=[...new Set(D.rows.map(r=>r.fy))].sort();
+ const y=document.getElementById('year');
+ if(!y.options.length){y.innerHTML=['All',...ys].map(v=>`<option>${v}</option>`).join('');y.onchange=()=>{st.year=y.value;render()}}
+}
+function head(){document.getElementById('head').innerHTML=COLS.map(c=>`<th data-k="${c.k}" class="${c.n?'num':''}">${c.t}${st.sort===c.k?` <span class="arr">${st.dir>0?'▲':'▼'}</span>`:''}</th>`).join('');}
+document.getElementById('head').onclick=e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;
+ if(st.sort===k)st.dir=-st.dir;else{st.sort=k;st.dir=(k==='chg'?-1:1)}render()};
+function rows(){
+ const q=st.q.toLowerCase();
+ let rs=D.rows.filter(r=>(st.drill==='All'||r.drill===st.drill)&&(st.year==='All'||r.fy===st.year)&&!(st.hideZero&&isZero(r))
+  &&(!q||(r.name+' '+r.desc+' '+r.note+' '+r.id).toLowerCase().includes(q)));
+ if(!st.sort) rs.sort((a,b)=>(+a.drill-+b.drill)||(a.invalid-b.invalid)||(absPct(b)-absPct(a))||(a.year-b.year));
+ else rs.sort((a,b)=>{const x=sortVal(a,st.sort),y=sortVal(b,st.sort);if(x==null)return 1;if(y==null)return -1;return (x<y?-1:x>y?1:0)*st.dir||(+a.drill-+b.drill)});
+ return rs}
+function render(){
+ head();const rs=rows();
+ document.getElementById('count').textContent=`${rs.length} of ${D.rows.length} rows`;
+ document.getElementById('body').innerHTML=rs.map(r=>{
+  const cls=r.invalid||!r.vs||r.vs==='unchanged'?'none':r.vs;
+  const pctTxt=r.pct==null?(Math.abs(r.diff||0)>5e-4?'from £0':''):pc(r.pct);
+  const bench=r.static==null?'<span class="muted">—</span>':`${f2(r.static)}${r.post!=null?`<div class="muted" style="font-size:11.5px">post-behavioural ${f2(r.post)}</div>`:''}`;
+  const k=key(r);
+  let h=`<tr class="main" data-k="${esc(k)}">
+   <td class="drill">${r.drill}</td>
+   <td><div class="nm">${esc(r.name)}</div><div class="ds">${esc(r.desc)}</div></td>
+   <td style="white-space:nowrap">${r.fy}</td>
+   <td class="num">${f3(r.old)}</td><td class="num">${f3(r.new)}</td>
+   <td class="num"><span class="chg ${cls}" title="${r.vs?'vs official: '+r.vs:'no benchmark'}">${sg(r.diff)}${pctTxt?' · '+pctTxt:''}</span></td>
+   <td class="num">${bench}</td>
+   <td class="note">${r.invalid?'<span class="badge">⚠ Invalid</span><br>':''}${esc(r.note)}</td></tr>`;
+  if(st.open.has(k)){const d=r.d,p=a=>`${a[0]==null?'—':a[0].toFixed(2)} → ${a[1]==null?'—':a[1].toFixed(2)}`;
+   h+=`<tr class="detail"><td></td><td colspan="7"><div class="det">
+    <div><span class="muted">Decile 1 avg change (£/yr)</span><br><b>${p(d.d1_avg_change)}</b></div>
+    <div><span class="muted">Decile 5</span><br><b>${p(d.d5_avg_change)}</b></div>
+    <div><span class="muted">Decile 10</span><br><b>${p(d.d10_avg_change)}</b></div>
+    <div><span class="muted">People affected (%)</span><br><b>${p(d.people_affected_pct)}</b></div>
+    <div><span class="muted">Measure id</span><br><code>${esc(r.id)}</code></div></div></td></tr>`}
+  return h}).join('')}
+document.getElementById('body').onclick=e=>{const tr=e.target.closest('tr.main');if(!tr)return;const k=tr.dataset.k;st.open.has(k)?st.open.delete(k):st.open.add(k);render()};
+document.getElementById('hideZero').onchange=e=>{st.hideZero=e.target.checked;render()};
+document.getElementById('q').oninput=e=>{st.q=e.target.value;render()};
+fetch('data.json').then(r=>r.json()).then(j=>{D=j;tiles();controls();render()});
+</script>
+</body>
+</html>

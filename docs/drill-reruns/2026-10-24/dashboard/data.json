@@ -1,0 +1,7570 @@
+{
+"tiles": [
+{
+"drill": "1",
+"median": 9.98,
+"max": 20.26,
+"material": 17,
+"invalid": 4,
+"changed": "Engine 6.0.0 → 6.10.2 and data enhanced FRS → Microcosm",
+"closer": null,
+"further": null
+},
+{
+"drill": "2",
+"median": 2.953,
+"max": 17.42,
+"material": 23,
+"invalid": 4,
+"changed": "Engine 6.2.1 → 6.10.2 and Microcosm aa31bdf6 → 810ba980",
+"closer": 8,
+"further": 7
+},
+{
+"drill": "3",
+"median": 1.955,
+"max": 14.63,
+"material": 41,
+"invalid": 5,
+"changed": "Engine 6.2.7 → 6.10.2 and Microcosm aa31bdf6 → 810ba980",
+"closer": 22,
+"further": 14
+},
+{
+"drill": "4",
+"median": 2.549e-06,
+"max": 0.3575,
+"material": 51,
+"invalid": 0,
+"changed": "Engine only: 6.7.6 → 6.10.2, same Microcosm 810ba980",
+"closer": 6,
+"further": 0
+}
+],
+"rows": [
+{
+"drill": "1",
+"id": "mock_child_benefit_increase",
+"name": "Child Benefit increase",
+"desc": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_child_benefit_increase",
+"name": "Child Benefit increase",
+"desc": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.20673,
+"new": -0.983465,
+"diff": 0.223263,
+"pct": 18.5015,
+"size_pct": -18.5015,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply",
+"d": {
+"d1_avg_change": [
+32.9992,
+32.0821
+],
+"d5_avg_change": [
+47.9446,
+42.3279
+],
+"d10_avg_change": [
+5.07967,
+0.544925
+],
+"people_affected_pct": [
+38.2298,
+32.5308
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_child_benefit_increase",
+"name": "Child Benefit increase",
+"desc": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.22863,
+"new": -1.00203,
+"diff": 0.226591,
+"pct": 18.4427,
+"size_pct": -18.4427,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply",
+"d": {
+"d1_avg_change": [
+33.8103,
+32.1136
+],
+"d5_avg_change": [
+49.5382,
+43.3031
+],
+"d10_avg_change": [
+5.18488,
+0.512652
+],
+"people_affected_pct": [
+37.8041,
+32.1457
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_child_benefit_increase",
+"name": "Child Benefit increase",
+"desc": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.2499,
+"new": -1.01417,
+"diff": 0.235726,
+"pct": 18.8597,
+"size_pct": -18.8597,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply",
+"d": {
+"d1_avg_change": [
+33.9825,
+32.5287
+],
+"d5_avg_change": [
+49.413,
+44.9144
+],
+"d10_avg_change": [
+4.94124,
+0.429976
+],
+"people_affected_pct": [
+37.6165,
+31.7213
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_child_benefit_increase",
+"name": "Child Benefit increase",
+"desc": "Child Benefit to £30 a week for the eldest child and £20 for others from April 2027, then CPI.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.26806,
+"new": -1.02926,
+"diff": 0.238803,
+"pct": 18.8321,
+"size_pct": -18.8321,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Mainly the dataset (enhanced FRS → Microcosm); HICBC engine changes also apply",
+"d": {
+"d1_avg_change": [
+34.0297,
+32.251
+],
+"d5_avg_change": [
+47.1416,
+46.8618
+],
+"d10_avg_change": [
+4.80649,
+0.408989
+],
+"people_affected_pct": [
+37.3244,
+31.4598
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_energy_vat_zero_rate",
+"name": "VAT zero rate on household energy",
+"desc": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Dataset energy spending (enhanced FRS → Microcosm); not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_energy_vat_zero_rate",
+"name": "VAT zero rate on household energy",
+"desc": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.88146,
+"new": -1.6937,
+"diff": 0.187765,
+"pct": 9.97973,
+"size_pct": -9.97973,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Dataset energy spending (enhanced FRS → Microcosm); not decomposed",
+"d": {
+"d1_avg_change": [
+46.7895,
+48.7549
+],
+"d5_avg_change": [
+55.2456,
+56.6855
+],
+"d10_avg_change": [
+65.445,
+72.0029
+],
+"people_affected_pct": [
+86.5332,
+95.9542
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_energy_vat_zero_rate",
+"name": "VAT zero rate on household energy",
+"desc": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.642254,
+"new": -0.566825,
+"diff": 0.0754285,
+"pct": 11.7443,
+"size_pct": -11.7443,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Dataset energy spending (enhanced FRS → Microcosm); not decomposed",
+"d": {
+"d1_avg_change": [
+15.4182,
+16.2413
+],
+"d5_avg_change": [
+18.7681,
+18.792
+],
+"d10_avg_change": [
+22.2879,
+23.9954
+],
+"people_affected_pct": [
+71.1992,
+89.6442
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_energy_vat_zero_rate",
+"name": "VAT zero rate on household energy",
+"desc": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Dataset energy spending (enhanced FRS → Microcosm); not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_energy_vat_zero_rate",
+"name": "VAT zero rate on household energy",
+"desc": "Zero rate of VAT on domestic electricity and gas in Great Britain, April 2027 to March 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Dataset energy spending (enhanced FRS → Microcosm); not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_fuel_duty_freeze",
+"name": "Fuel duty freeze",
+"desc": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_fuel_duty_freeze",
+"name": "Fuel duty freeze",
+"desc": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.71841,
+"new": -0.901638,
+"diff": 0.816772,
+"pct": 47.5307,
+"size_pct": -47.5307,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+46.3239,
+19.7901
+],
+"d5_avg_change": [
+46.4047,
+31.6118
+],
+"d10_avg_change": [
+64.3052,
+38.982
+],
+"people_affected_pct": [
+51.2183,
+76.5704
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_fuel_duty_freeze",
+"name": "Fuel duty freeze",
+"desc": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": -2.16958,
+"new": -1.13836,
+"diff": 1.03122,
+"pct": 47.5307,
+"size_pct": -47.5307,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+55.8648,
+24.8218
+],
+"d5_avg_change": [
+58.3435,
+39.5148
+],
+"d10_avg_change": [
+80.9638,
+48.8597
+],
+"people_affected_pct": [
+51.3503,
+77.6151
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_fuel_duty_freeze",
+"name": "Fuel duty freeze",
+"desc": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": -2.15006,
+"new": -1.12812,
+"diff": 1.02194,
+"pct": 47.5308,
+"size_pct": -47.5308,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+54.9642,
+24.4947
+],
+"d5_avg_change": [
+58.3049,
+38.9095
+],
+"d10_avg_change": [
+78.1129,
+48.4415
+],
+"people_affected_pct": [
+51.3431,
+77.4254
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_fuel_duty_freeze",
+"name": "Fuel duty freeze",
+"desc": "Cancels the March 2027 2p rise and April 2027 RPI rise; main rates held at 55.95p a litre to March 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": -2.09706,
+"new": -1.10031,
+"diff": 0.996746,
+"pct": 47.5307,
+"size_pct": -47.5307,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+53.3623,
+23.023
+],
+"d5_avg_change": [
+55.6121,
+38.4665
+],
+"d10_avg_change": [
+75.9492,
+47.048
+],
+"people_affected_pct": [
+51.3077,
+77.218
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_hvcts_extension",
+"name": "Council tax surcharge from £1.5m",
+"desc": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_hvcts_extension",
+"name": "Council tax surcharge from £1.5m",
+"desc": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_hvcts_extension",
+"name": "Council tax surcharge from £1.5m",
+"desc": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.268714,
+"new": 0.248891,
+"diff": -0.0198228,
+"pct": -7.37693,
+"size_pct": -7.37693,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies",
+"d": {
+"d1_avg_change": [
+-26.7919,
+-8.90001
+],
+"d5_avg_change": [
+-7.18005,
+-0.0903665
+],
+"d10_avg_change": [
+-8.19207,
+-41.2342
+],
+"people_affected_pct": [
+0.465882,
+0.400943
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_hvcts_extension",
+"name": "Council tax surcharge from £1.5m",
+"desc": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.275294,
+"new": 0.254986,
+"diff": -0.0203082,
+"pct": -7.37691,
+"size_pct": -7.37691,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies",
+"d": {
+"d1_avg_change": [
+-27.1093,
+-9.08175
+],
+"d5_avg_change": [
+-7.21191,
+-0.0918767
+],
+"d10_avg_change": [
+-8.18424,
+-41.8339
+],
+"people_affected_pct": [
+0.465895,
+0.400943
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_hvcts_extension",
+"name": "Council tax surcharge from £1.5m",
+"desc": "High Value Council Tax Surcharge extended to English homes worth £1.5m+ from April 2028 (£2,500 band to £2.5m).",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.282063,
+"new": 0.261255,
+"diff": -0.0208077,
+"pct": -7.37696,
+"size_pct": -7.37696,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "HVCTS charged on owner-occupiers only (pe-uk 2.123.1); dataset change also applies",
+"d": {
+"d1_avg_change": [
+-27.5062,
+-9.24204
+],
+"d5_avg_change": [
+-11.4956,
+-0.0952674
+],
+"d10_avg_change": [
+-8.39851,
+-42.8719
+],
+"people_affected_pct": [
+0.4659,
+0.400943
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_nics_threshold_rise",
+"name": "National Insurance threshold rise",
+"desc": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_nics_threshold_rise",
+"name": "National Insurance threshold rise",
+"desc": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.78893,
+"new": -0.948789,
+"diff": -0.159859,
+"pct": -20.2627,
+"size_pct": 20.2627,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "NICs UEL/UPL baseline fix (policyengine-uk#1878); consistent with the fix, not bisected",
+"d": {
+"d1_avg_change": [
+5.40578,
+6.44542
+],
+"d5_avg_change": [
+29.0217,
+30.1396
+],
+"d10_avg_change": [
+14.0762,
+49.3199
+],
+"people_affected_pct": [
+66.5808,
+69.6272
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_nics_threshold_rise",
+"name": "National Insurance threshold rise",
+"desc": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.940263,
+"new": -0.960805,
+"diff": -0.0205424,
+"pct": -2.18475,
+"size_pct": 2.18475,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+5.70021,
+6.50459
+],
+"d5_avg_change": [
+30.8723,
+30.1732
+],
+"d10_avg_change": [
+50.8643,
+49.7169
+],
+"people_affected_pct": [
+66.7575,
+69.76
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_nics_threshold_rise",
+"name": "National Insurance threshold rise",
+"desc": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.95888,
+"new": -0.964801,
+"diff": -0.00592107,
+"pct": -0.617499,
+"size_pct": 0.617499,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+6.94411,
+6.66384
+],
+"d5_avg_change": [
+31.7082,
+30.5496
+],
+"d10_avg_change": [
+48.7154,
+49.7016
+],
+"people_affected_pct": [
+67.4097,
+69.8824
+]
+}
+},
+{
+"drill": "1",
+"id": "mock_nics_threshold_rise",
+"name": "National Insurance threshold rise",
+"desc": "Primary Threshold and Lower Profits Limit from £12,570 to £13,000 from April 2027, held to April 2031.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.01541,
+"new": -0.973509,
+"diff": 0.0418997,
+"pct": 4.12639,
+"size_pct": -4.12639,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+7.06645,
+6.5319
+],
+"d5_avg_change": [
+33.6701,
+31.5244
+],
+"d10_avg_change": [
+53.607,
+49.7158
+],
+"people_affected_pct": [
+67.8205,
+69.977
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_cgt_rates",
+"name": "Capital Gains Tax rate rise",
+"desc": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.45,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_cgt_rates",
+"name": "Capital Gains Tax rate rise",
+"desc": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
+"year": 2027,
+"fy": "2027-28",
+"old": 4.42154,
+"new": 4.3877,
+"diff": -0.0338388,
+"pct": -0.765316,
+"size_pct": -0.765316,
+"static": 1.85,
+"post": 0.25,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-15.2411,
+-22.0571
+],
+"d5_avg_change": [
+-8.25631,
+-19.6427
+],
+"d10_avg_change": [
+-1175.82,
+-1191.64
+],
+"people_affected_pct": [
+1.88239,
+1.78844
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_cgt_rates",
+"name": "Capital Gains Tax rate rise",
+"desc": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
+"year": 2028,
+"fy": "2028-29",
+"old": 4.59305,
+"new": 4.55836,
+"diff": -0.0346902,
+"pct": -0.755275,
+"size_pct": -0.755275,
+"static": 2.05,
+"post": 1.15,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-15.5741,
+-22.6532
+],
+"d5_avg_change": [
+-8.87371,
+-17.4814
+],
+"d10_avg_change": [
+-1215.33,
+-1233.0
+],
+"people_affected_pct": [
+1.88759,
+1.79725
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_cgt_rates",
+"name": "Capital Gains Tax rate rise",
+"desc": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
+"year": 2029,
+"fy": "2029-30",
+"old": 4.76596,
+"new": 4.73012,
+"diff": -0.035832,
+"pct": -0.751832,
+"size_pct": -0.751832,
+"static": 2.18,
+"post": 1.25,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-16.2208,
+-23.462
+],
+"d5_avg_change": [
+-9.42655,
+-22.0009
+],
+"d10_avg_change": [
+-1261.33,
+-1265.84
+],
+"people_affected_pct": [
+1.8959,
+1.80213
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_cgt_rates",
+"name": "Capital Gains Tax rate rise",
+"desc": "CGT rates rise from 18% to 20% and 24% to 28% from 6 April 2027, including residential property.",
+"year": 2030,
+"fy": "2030-31",
+"old": 4.95657,
+"new": 4.91887,
+"diff": -0.0376981,
+"pct": -0.760568,
+"size_pct": -0.760568,
+"static": 2.3,
+"post": 1.32,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-16.4409,
+-24.2835
+],
+"d5_avg_change": [
+-9.52119,
+-26.0065
+],
+"d10_avg_change": [
+-1299.36,
+-1315.21
+],
+"people_affected_pct": [
+1.90164,
+1.80846
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_electricity_vat_zero",
+"name": "No VAT on household electricity to March 2028",
+"desc": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_electricity_vat_zero",
+"name": "No VAT on household electricity to March 2028",
+"desc": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.936668,
+"new": -1.03545,
+"diff": -0.0987803,
+"pct": -10.5459,
+"size_pct": 10.5459,
+"static": -1.76,
+"post": -1.72,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+28.5009,
+30.9869
+],
+"d5_avg_change": [
+31.0566,
+34.6735
+],
+"d10_avg_change": [
+37.21,
+43.6436
+],
+"people_affected_pct": [
+89.0938,
+94.7114
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_electricity_vat_zero",
+"name": "No VAT on household electricity to March 2028",
+"desc": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.313472,
+"new": -0.346532,
+"diff": -0.0330602,
+"pct": -10.5465,
+"size_pct": 10.5465,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+9.55616,
+10.343
+],
+"d5_avg_change": [
+10.3216,
+11.5252
+],
+"d10_avg_change": [
+12.4109,
+14.5528
+],
+"people_affected_pct": [
+61.7346,
+73.0862
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_electricity_vat_zero",
+"name": "No VAT on household electricity to March 2028",
+"desc": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_electricity_vat_zero",
+"name": "No VAT on household electricity to March 2028",
+"desc": "Zero VAT on domestic electricity in Great Britain continues April 2027 to March 2028; gas stays at 5%.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_employer_ni_threshold",
+"name": "Employer National Insurance threshold rise",
+"desc": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_employer_ni_threshold",
+"name": "Employer National Insurance threshold rise",
+"desc": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.31737,
+"new": -1.27028,
+"diff": 0.0470842,
+"pct": 3.57412,
+"size_pct": -3.57412,
+"static": -2.25,
+"post": -1.85,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+15.2907,
+13.9596
+],
+"d5_avg_change": [
+48.7287,
+40.1349
+],
+"d10_avg_change": [
+58.9289,
+55.8081
+],
+"people_affected_pct": [
+72.7355,
+70.3482
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_employer_ni_threshold",
+"name": "Employer National Insurance threshold rise",
+"desc": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.32758,
+"new": -1.16938,
+"diff": 0.158202,
+"pct": 11.9166,
+"size_pct": -11.9166,
+"static": -2.3,
+"post": -1.89,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+15.3395,
+13.2387
+],
+"d5_avg_change": [
+48.4072,
+39.775
+],
+"d10_avg_change": [
+60.1934,
+34.7339
+],
+"people_affected_pct": [
+72.7678,
+70.4166
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_employer_ni_threshold",
+"name": "Employer National Insurance threshold rise",
+"desc": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.32249,
+"new": -1.25802,
+"diff": 0.0644712,
+"pct": 4.875,
+"size_pct": -4.875,
+"static": -2.35,
+"post": -1.93,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+15.6219,
+13.4242
+],
+"d5_avg_change": [
+44.0426,
+40.9686
+],
+"d10_avg_change": [
+59.7068,
+54.4845
+],
+"people_affected_pct": [
+72.6955,
+70.3253
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_employer_ni_threshold",
+"name": "Employer National Insurance threshold rise",
+"desc": "Employer NI Secondary Threshold from £5,000 to £5,500 a year from April 2027, held flat to 2030-31.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.31382,
+"new": -1.08498,
+"diff": 0.228841,
+"pct": 17.418,
+"size_pct": -17.418,
+"static": -2.4,
+"post": -1.97,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+15.168,
+12.7429
+],
+"d5_avg_change": [
+48.6667,
+41.5154
+],
+"d10_avg_change": [
+59.0469,
+53.5977
+],
+"people_affected_pct": [
+72.6823,
+70.3912
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_energy_price_payment",
+"name": "Energy Price Protection Payment",
+"desc": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": -1.05863,
+"new": -0.994696,
+"diff": 0.0639324,
+"pct": 6.03917,
+"size_pct": -6.03917,
+"static": -0.87,
+"post": -0.87,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+57.9794,
+60.2045
+],
+"d5_avg_change": [
+41.1285,
+37.6102
+],
+"d10_avg_change": [
+5.54238,
+4.04927
+],
+"people_affected_pct": [
+26.7436,
+26.1103
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_energy_price_payment",
+"name": "Energy Price Protection Payment",
+"desc": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_energy_price_payment",
+"name": "Energy Price Protection Payment",
+"desc": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_energy_price_payment",
+"name": "Energy Price Protection Payment",
+"desc": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_energy_price_payment",
+"name": "Energy Price Protection Payment",
+"desc": "One-off £150 per household on UC or Pension Credit guarantee credit, paid January 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_fuel_duty_hold",
+"name": "Fuel duty held until September 2027",
+"desc": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.395,
+"post": -0.385,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_fuel_duty_hold",
+"name": "Fuel duty held until September 2027",
+"desc": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.37903,
+"new": -0.235739,
+"diff": 1.14329,
+"pct": 82.9054,
+"size_pct": -82.9054,
+"static": -2.245,
+"post": -2.19,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+31.9209,
+5.17433
+],
+"d5_avg_change": [
+45.8493,
+8.26508
+],
+"d10_avg_change": [
+56.3088,
+10.1922
+],
+"people_affected_pct": [
+58.6563,
+53.9395
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_fuel_duty_hold",
+"name": "Fuel duty held until September 2027",
+"desc": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.06096,
+"new": -0.181368,
+"diff": 0.879588,
+"pct": 82.9052,
+"size_pct": -82.9052,
+"static": -1.745,
+"post": -1.705,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+24.1913,
+3.95467
+],
+"d5_avg_change": [
+35.0211,
+6.29543
+],
+"d10_avg_change": [
+43.3123,
+7.78421
+],
+"people_affected_pct": [
+58.2584,
+43.0675
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_fuel_duty_hold",
+"name": "Fuel duty held until September 2027",
+"desc": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.05216,
+"new": -0.179863,
+"diff": 0.8723,
+"pct": 82.9054,
+"size_pct": -82.9054,
+"static": -1.775,
+"post": -1.74,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+23.5925,
+3.90535
+],
+"d5_avg_change": [
+35.1015,
+6.20347
+],
+"d10_avg_change": [
+42.8482,
+7.7232
+],
+"people_affected_pct": [
+58.2277,
+41.74
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_fuel_duty_hold",
+"name": "Fuel duty held until September 2027",
+"desc": "January and March 2027 rises cancelled; 52.95p to August 2027, 55.95p from September 2027, RPI from April 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.02576,
+"new": -0.17535,
+"diff": 0.850411,
+"pct": 82.9054,
+"size_pct": -82.9054,
+"static": -1.8,
+"post": -1.77,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+23.0439,
+3.66905
+],
+"d5_avg_change": [
+32.6971,
+6.12996
+],
+"d10_avg_change": [
+41.8373,
+7.49794
+],
+"people_affected_pct": [
+58.1172,
+39.567
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_hvcts_band",
+"name": "Council tax surcharge band from £1.5m",
+"desc": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": -0.005,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_hvcts_band",
+"name": "Council tax surcharge band from £1.5m",
+"desc": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": -0.02,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_hvcts_band",
+"name": "Council tax surcharge band from £1.5m",
+"desc": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.149552,
+"new": 0.149335,
+"diff": -0.000217772,
+"pct": -0.145616,
+"size_pct": -0.145616,
+"static": 0.21,
+"post": 0.185,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.353885,
+-5.34001
+],
+"d5_avg_change": [
+-1.74896,
+-0.0542199
+],
+"d10_avg_change": [
+-30.1864,
+-24.7405
+],
+"people_affected_pct": [
+0.469576,
+0.400896
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_hvcts_band",
+"name": "Council tax surcharge band from £1.5m",
+"desc": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.153214,
+"new": 0.152991,
+"diff": -0.000223014,
+"pct": -0.145557,
+"size_pct": -0.145557,
+"static": 0.216,
+"post": 0.195,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.361728,
+-5.44904
+],
+"d5_avg_change": [
+-1.77935,
+-0.055126
+],
+"d10_avg_change": [
+-30.9114,
+-25.1003
+],
+"people_affected_pct": [
+0.469576,
+0.400896
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_hvcts_band",
+"name": "Council tax surcharge band from £1.5m",
+"desc": "New £1,500 High Value Council Tax Surcharge band for English homes worth £1.5m to £2m from April 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.156982,
+"new": 0.156753,
+"diff": -0.000228591,
+"pct": -0.145617,
+"size_pct": -0.145617,
+"static": 0.221,
+"post": 0.2,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.366647,
+-5.54522
+],
+"d5_avg_change": [
+-1.84386,
+-0.0571604
+],
+"d10_avg_change": [
+-31.416,
+-25.7231
+],
+"people_affected_pct": [
+0.469574,
+0.400896
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_personal_allowance",
+"name": "State Pension personal allowance",
+"desc": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": -0.0238865,
+"diff": -0.0238865,
+"pct": null,
+"size_pct": null,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Now −£0.024bn where drill day had £0; possibly pe-uk 2.131.1 parameter dating, not confirmed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.00456328
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+6.98311
+],
+"people_affected_pct": [
+0.0,
+0.115742
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_personal_allowance",
+"name": "State Pension personal allowance",
+"desc": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.348415,
+"new": -0.387596,
+"diff": -0.039181,
+"pct": -11.2455,
+"size_pct": 11.2455,
+"static": -0.56,
+"post": -0.54,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+11.9117,
+10.3965
+],
+"d5_avg_change": [
+12.3752,
+15.7891
+],
+"d10_avg_change": [
+2.47084,
+9.3314
+],
+"people_affected_pct": [
+9.03687,
+9.24016
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_personal_allowance",
+"name": "State Pension personal allowance",
+"desc": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.667531,
+"new": -0.704848,
+"diff": -0.0373173,
+"pct": -5.59035,
+"size_pct": 5.59035,
+"static": -0.715,
+"post": -0.69,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+23.7121,
+17.8394
+],
+"d5_avg_change": [
+22.6579,
+28.7231
+],
+"d10_avg_change": [
+4.67646,
+11.6249
+],
+"people_affected_pct": [
+9.50909,
+9.45782
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_personal_allowance",
+"name": "State Pension personal allowance",
+"desc": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.00982,
+"new": -1.03965,
+"diff": -0.0298248,
+"pct": -2.95347,
+"size_pct": 2.95347,
+"static": -0.85,
+"post": -0.82,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+37.0093,
+25.9138
+],
+"d5_avg_change": [
+32.8491,
+43.3592
+],
+"d10_avg_change": [
+6.98813,
+14.9553
+],
+"people_affected_pct": [
+10.2038,
+10.0737
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_personal_allowance",
+"name": "State Pension personal allowance",
+"desc": "£13,100 personal allowance at State Pension age from April 2027, tapered at £1 per £2 above £20,000.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.34502,
+"new": -1.3571,
+"diff": -0.0120811,
+"pct": -0.898213,
+"size_pct": 0.898213,
+"static": -0.985,
+"post": -0.95,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+48.5478,
+33.6208
+],
+"d5_avg_change": [
+45.5987,
+59.5314
+],
+"d10_avg_change": [
+9.3333,
+18.0535
+],
+"people_affected_pct": [
+10.4915,
+10.3615
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_uprating",
+"name": "State Pension uprating: higher of CPI and 2.5%",
+"desc": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_uprating",
+"name": "State Pension uprating: higher of CPI and 2.5%",
+"desc": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_uprating",
+"name": "State Pension uprating: higher of CPI and 2.5%",
+"desc": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_uprating",
+"name": "State Pension uprating: higher of CPI and 2.5%",
+"desc": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "2",
+"id": "mock2_state_pension_uprating",
+"name": "State Pension uprating: higher of CPI and 2.5%",
+"desc": "From April 2030 the State Pension rises by the higher of CPI and 2.5%; earnings leave the triple lock.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.992232,
+"new": 0.989717,
+"diff": -0.00251474,
+"pct": -0.253442,
+"size_pct": -0.253442,
+"static": 1.66,
+"post": 1.15,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-19.8638,
+-16.8993
+],
+"d5_avg_change": [
+-35.2073,
+-42.4705
+],
+"d10_avg_change": [
+-21.3498,
+-21.6767
+],
+"people_affected_pct": [
+18.8471,
+18.5065
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2027,
+"fy": "2027-28",
+"old": 1.64825,
+"new": 1.66071,
+"diff": 0.0124574,
+"pct": 0.755797,
+"size_pct": 0.755797,
+"static": 1.46,
+"post": 0.76,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.719468,
+-2.8803
+],
+"d5_avg_change": [
+-0.646328,
+-3.6849
+],
+"d10_avg_change": [
+-493.726,
+-460.605
+],
+"people_affected_pct": [
+6.38644,
+6.59002
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2028,
+"fy": "2028-29",
+"old": 1.7391,
+"new": 1.74494,
+"diff": 0.00584143,
+"pct": 0.335888,
+"size_pct": 0.335888,
+"static": 1.885,
+"post": 0.98,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.369867,
+-2.8906
+],
+"d5_avg_change": [
+-0.37094,
+-2.42838
+],
+"d10_avg_change": [
+-511.202,
+-479.978
+],
+"people_affected_pct": [
+6.59589,
+6.92459
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2029,
+"fy": "2029-30",
+"old": 1.84992,
+"new": 1.85698,
+"diff": 0.00705993,
+"pct": 0.381635,
+"size_pct": 0.381635,
+"static": 1.96,
+"post": 1.02,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.365399,
+-2.83632
+],
+"d5_avg_change": [
+-0.991375,
+-3.09051
+],
+"d10_avg_change": [
+-536.05,
+-501.464
+],
+"people_affected_pct": [
+7.07436,
+7.48409
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2030,
+"fy": "2030-31",
+"old": 1.97981,
+"new": 1.9814,
+"diff": 0.00158487,
+"pct": 0.0800513,
+"size_pct": 0.0800513,
+"static": 2.04,
+"post": 1.06,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-0.388292,
+-2.80389
+],
+"d5_avg_change": [
+-0.986215,
+-3.35343
+],
+"d10_avg_change": [
+-568.362,
+-531.105
+],
+"people_affected_pct": [
+7.48146,
+7.84076
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_additional_rate_threshold",
+"name": "Lower additional rate threshold",
+"desc": "45p additional rate starts at £100,000 instead of £125,140 from April 2027 (rUK and dividends).",
+"year": 2031,
+"fy": "2031-32",
+"old": 2.16768,
+"new": 2.135,
+"diff": -0.0326764,
+"pct": -1.50744,
+"size_pct": -1.50744,
+"static": 2.12,
+"post": 1.1,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+-0.921637,
+-2.84499
+],
+"d5_avg_change": [
+-1.7918,
+-3.62324
+],
+"d10_avg_change": [
+-612.557,
+-565.381
+],
+"people_affected_pct": [
+7.93,
+8.19249
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.095,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": 4.48563,
+"new": 4.45282,
+"diff": -0.0328125,
+"pct": -0.731502,
+"size_pct": -0.731502,
+"static": 0.115,
+"post": 1.26,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-13.9804,
+-20.5242
+],
+"d5_avg_change": [
+-9.67207,
+-19.6491
+],
+"d10_avg_change": [
+-1192.02,
+-1209.25
+],
+"people_affected_pct": [
+2.14436,
+2.04673
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": 4.65983,
+"new": 4.62577,
+"diff": -0.0340574,
+"pct": -0.730872,
+"size_pct": -0.730872,
+"static": 1.655,
+"post": -0.285,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-14.3199,
+-21.0499
+],
+"d5_avg_change": [
+-10.6099,
+-17.577
+],
+"d10_avg_change": [
+-1232.77,
+-1250.8
+],
+"people_affected_pct": [
+2.14685,
+2.04903
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": 4.83546,
+"new": 4.80012,
+"diff": -0.035338,
+"pct": -0.73081,
+"size_pct": -0.73081,
+"static": 1.725,
+"post": 0.535,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-14.9039,
+-21.8396
+],
+"d5_avg_change": [
+-10.9959,
+-22.0842
+],
+"d10_avg_change": [
+-1271.21,
+-1283.72
+],
+"people_affected_pct": [
+2.14875,
+2.05077
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": 5.02877,
+"new": 4.99166,
+"diff": -0.0371032,
+"pct": -0.73782,
+"size_pct": -0.73782,
+"static": 1.795,
+"post": 0.945,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-15.2693,
+-22.6433
+],
+"d5_avg_change": [
+-11.4336,
+-26.1371
+],
+"d10_avg_change": [
+-1320.31,
+-1333.36
+],
+"people_affected_pct": [
+2.1502,
+2.05297
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_cgt_higher_rate_aea",
+"name": "Capital Gains Tax higher rate and annual exempt amount",
+"desc": "CGT higher rate 24% to 28% and a lower annual exempt amount from 6 April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": 5.22521,
+"new": 5.18338,
+"diff": -0.0418276,
+"pct": -0.800496,
+"size_pct": -0.800496,
+"static": 1.87,
+"post": 0.98,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+-19.5241,
+-23.3241
+],
+"d5_avg_change": [
+-10.7275,
+-27.1589
+],
+"d10_avg_change": [
+-1321.99,
+-1379.53
+],
+"people_affected_pct": [
+2.15139,
+2.05621
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.349841,
+"new": 0.367135,
+"diff": 0.0172943,
+"pct": 4.94347,
+"size_pct": 4.94347,
+"static": 0.155,
+"post": 0.13,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-1.79113,
+-0.904825
+],
+"d5_avg_change": [
+-12.0142,
+-10.7905
+],
+"d10_avg_change": [
+-28.3035,
+-27.0865
+],
+"people_affected_pct": [
+10.2339,
+10.4763
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.371906,
+"new": 0.36938,
+"diff": -0.00252578,
+"pct": -0.679146,
+"size_pct": -0.679146,
+"static": 0.615,
+"post": 0.525,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-2.09866,
+-1.04733
+],
+"d5_avg_change": [
+-12.9095,
+-12.4938
+],
+"d10_avg_change": [
+-30.2956,
+-28.161
+],
+"people_affected_pct": [
+10.4291,
+10.8174
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.392108,
+"new": 0.412038,
+"diff": 0.0199297,
+"pct": 5.08271,
+"size_pct": 5.08271,
+"static": 0.635,
+"post": 0.54,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-2.38358,
+-1.16178
+],
+"d5_avg_change": [
+-13.8747,
+-12.6516
+],
+"d10_avg_change": [
+-31.0313,
+-29.0884
+],
+"people_affected_pct": [
+10.5113,
+11.0502
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.414221,
+"new": 0.43205,
+"diff": 0.0178291,
+"pct": 4.30426,
+"size_pct": 4.30426,
+"static": 0.65,
+"post": 0.555,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-2.46093,
+-1.37468
+],
+"d5_avg_change": [
+-14.63,
+-13.4807
+],
+"d10_avg_change": [
+-32.0004,
+-29.3234
+],
+"people_affected_pct": [
+10.6472,
+11.1898
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_class4_main_rate",
+"name": "Class 4 National Insurance main rate rise",
+"desc": "Class 4 NI main rate for the self-employed rises from 6% to 7% from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.438694,
+"new": 0.453258,
+"diff": 0.0145643,
+"pct": 3.31993,
+"size_pct": 3.31993,
+"static": 0.67,
+"post": 0.57,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+-2.92943,
+-1.31775
+],
+"d5_avg_change": [
+-16.8929,
+-14.8909
+],
+"d10_avg_change": [
+-31.8703,
+-30.6558
+],
+"people_affected_pct": [
+10.6536,
+11.2406
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.3318,
+"new": -1.35729,
+"diff": -0.0254943,
+"pct": -1.91427,
+"size_pct": 1.91427,
+"static": -1.395,
+"post": -1.145,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.3728,
+"new": -1.3988,
+"diff": -0.0260027,
+"pct": -1.89414,
+"size_pct": 1.89414,
+"static": -1.445,
+"post": -1.04,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.41432,
+"new": -1.44115,
+"diff": -0.0268328,
+"pct": -1.89722,
+"size_pct": 1.89722,
+"static": -1.495,
+"post": -1.015,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.46355,
+"new": -1.49085,
+"diff": -0.0273036,
+"pct": -1.86558,
+"size_pct": 1.86558,
+"static": -1.545,
+"post": -1.02,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_employer_ni_under_22",
+"name": "Employer National Insurance relief for under-22s",
+"desc": "No employer NI on earnings of employees aged under 22, up to the UEL, from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -1.52299,
+"new": -1.55033,
+"diff": -0.027337,
+"pct": -1.79495,
+"size_pct": 1.79495,
+"static": -1.6,
+"post": -1.04,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.395,
+"post": -0.385,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.909894,
+"new": -0.155543,
+"diff": 0.754351,
+"pct": 82.9054,
+"size_pct": -82.9054,
+"static": -1.28,
+"post": -1.24,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+20.9969,
+3.41403
+],
+"d5_avg_change": [
+30.5884,
+5.45347
+],
+"d10_avg_change": [
+37.2079,
+6.72531
+],
+"people_affected_pct": [
+58.003,
+36.7861
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.525588,
+"new": -0.089848,
+"diff": 0.43574,
+"pct": 82.9052,
+"size_pct": -82.9052,
+"static": -0.88,
+"post": -0.855,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+11.9479,
+1.95907
+],
+"d5_avg_change": [
+17.3443,
+3.1186
+],
+"d10_avg_change": [
+21.5161,
+3.85599
+],
+"people_affected_pct": [
+55.9153,
+14.9324
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.521058,
+"new": -0.0890714,
+"diff": 0.431987,
+"pct": 82.9057,
+"size_pct": -82.9057,
+"static": -0.905,
+"post": -0.88,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+11.6846,
+1.93402
+],
+"d5_avg_change": [
+17.3885,
+3.0721
+],
+"d10_avg_change": [
+21.2079,
+3.82494
+],
+"people_affected_pct": [
+55.7534,
+13.9949
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.50812,
+"new": -0.0868612,
+"diff": 0.421259,
+"pct": 82.9054,
+"size_pct": -82.9054,
+"static": -0.935,
+"post": -0.905,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+11.4187,
+1.81747
+],
+"d5_avg_change": [
+16.1828,
+3.03662
+],
+"d10_avg_change": [
+20.418,
+3.71465
+],
+"people_affected_pct": [
+55.457,
+12.6373
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_fuel_duty_phasing",
+"name": "Fuel duty rises phased",
+"desc": "January and March 2027 rises deferred: 52.95p to March 2027, 55.95p from April, 57.95p from October 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.522401,
+"new": -0.089302,
+"diff": 0.433099,
+"pct": 82.9055,
+"size_pct": -82.9055,
+"static": -0.965,
+"post": -0.935,
+"vs": null,
+"invalid": true,
+"note": "Month-dated fuel duty ignored by pe-uk 2.132.6; VAT part only (see callout)",
+"d": {
+"d1_avg_change": [
+11.8081,
+1.85736
+],
+"d5_avg_change": [
+16.5359,
+3.12395
+],
+"d10_avg_change": [
+20.674,
+3.79265
+],
+"people_affected_pct": [
+55.5655,
+12.7304
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.055,
+"post": 0.045,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.055,
+"post": 0.045,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.055,
+"post": 0.045,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_hvcts_top_bands",
+"name": "Council tax surcharge top bands",
+"desc": "Higher High Value Council Tax Surcharge bands for English homes worth £5m+ from April 2028.",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.06,
+"post": 0.045,
+"vs": "unchanged",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.479663,
+"new": -0.479126,
+"diff": 0.000537378,
+"pct": 0.112032,
+"size_pct": -0.112032,
+"static": -1.7,
+"post": -1.75,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+21.1762,
+20.8463
+],
+"d5_avg_change": [
+24.9781,
+30.6513
+],
+"d10_avg_change": [
+2.05619,
+1.8926
+],
+"people_affected_pct": [
+3.56873,
+3.07202
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.646368,
+"new": -0.630317,
+"diff": 0.0160518,
+"pct": 2.48338,
+"size_pct": -2.48338,
+"static": -1.895,
+"post": -1.95,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+26.4673,
+27.6211
+],
+"d5_avg_change": [
+28.983,
+37.0158
+],
+"d10_avg_change": [
+1.64546,
+2.06546
+],
+"people_affected_pct": [
+3.87326,
+3.25474
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.822011,
+"new": -0.790952,
+"diff": 0.0310592,
+"pct": 3.77844,
+"size_pct": -3.77844,
+"static": -2.045,
+"post": -2.105,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+32.4105,
+36.0142
+],
+"d5_avg_change": [
+34.912,
+48.6086
+],
+"d10_avg_change": [
+1.51801,
+2.25699
+],
+"people_affected_pct": [
+3.95829,
+3.43912
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.01788,
+"new": -0.958513,
+"diff": 0.0593675,
+"pct": 5.83246,
+"size_pct": -5.83246,
+"static": -2.19,
+"post": -2.255,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+39.127,
+44.6654
+],
+"d5_avg_change": [
+34.2704,
+54.5397
+],
+"d10_avg_change": [
+1.86064,
+2.52022
+],
+"people_affected_pct": [
+3.96552,
+3.52343
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_lha_30th_percentile",
+"name": "Local Housing Allowance restored to 30th percentile",
+"desc": "Local Housing Allowance rates in Great Britain return to the 30th percentile of local rents from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.992435,
+"new": -1.13764,
+"diff": -0.145201,
+"pct": -14.6308,
+"size_pct": 14.6308,
+"static": -2.335,
+"post": -2.405,
+"vs": "closer",
+"invalid": false,
+"note": "2031 projection: pe-uk 2.128.0 projects data to 2032; drill day served 2031 from 2030 data",
+"d": {
+"d1_avg_change": [
+46.3694,
+53.0841
+],
+"d5_avg_change": [
+38.2713,
+45.7901
+],
+"d10_avg_change": [
+1.24378,
+1.38158
+],
+"people_affected_pct": [
+3.54057,
+3.58046
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.56622,
+"new": -1.62125,
+"diff": -0.0550288,
+"pct": -3.51348,
+"size_pct": 3.51348,
+"static": -0.29,
+"post": -0.285,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+22.2283,
+17.368
+],
+"d5_avg_change": [
+56.397,
+83.0195
+],
+"d10_avg_change": [
+15.8018,
+13.7437
+],
+"people_affected_pct": [
+9.96452,
+10.1755
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.95762,
+"new": -2.01443,
+"diff": -0.0568109,
+"pct": -2.90203,
+"size_pct": 2.90203,
+"static": -0.62,
+"post": -0.615,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+29.7265,
+23.8337
+],
+"d5_avg_change": [
+78.8872,
+104.294
+],
+"d10_avg_change": [
+19.0097,
+15.8
+],
+"people_affected_pct": [
+10.8882,
+10.8754
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2029,
+"fy": "2029-30",
+"old": -2.38878,
+"new": -2.44928,
+"diff": -0.0604928,
+"pct": -2.53237,
+"size_pct": 2.53237,
+"static": -1.02,
+"post": -1.01,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+39.6253,
+29.974
+],
+"d5_avg_change": [
+96.3203,
+130.134
+],
+"d10_avg_change": [
+22.0852,
+18.5209
+],
+"people_affected_pct": [
+11.6765,
+11.7149
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2030,
+"fy": "2030-31",
+"old": -2.85032,
+"new": -2.90719,
+"diff": -0.0568627,
+"pct": -1.99496,
+"size_pct": 1.99496,
+"static": -1.48,
+"post": -1.465,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+46.5445,
+36.0725
+],
+"d5_avg_change": [
+119.888,
+156.856
+],
+"d10_avg_change": [
+25.4156,
+22.0821
+],
+"people_affected_pct": [
+12.4289,
+12.4168
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_pensioner_allowance",
+"name": "Pensioner Allowance",
+"desc": "Allowance equal to the State Pension where above the PA, from April 2027, withdrawn above £30,000 of income.",
+"year": 2031,
+"fy": "2031-32",
+"old": -2.99269,
+"new": -3.09358,
+"diff": -0.100894,
+"pct": -3.37134,
+"size_pct": 3.37134,
+"static": -1.855,
+"post": -1.835,
+"vs": "further",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+47.3527,
+40.1082
+],
+"d5_avg_change": [
+148.844,
+163.387
+],
+"d10_avg_change": [
+24.8404,
+23.5174
+],
+"people_affected_pct": [
+12.4704,
+12.5023
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.971033,
+"new": 0.998192,
+"diff": 0.0271587,
+"pct": 2.79688,
+"size_pct": 2.79688,
+"static": 0.78,
+"post": 0.69,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-2.13739,
+-0.771481
+],
+"d5_avg_change": [
+-7.71162,
+-11.4402
+],
+"d10_avg_change": [
+-36.9275,
+-33.8602
+],
+"people_affected_pct": [
+18.7942,
+18.9311
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.98346,
+"new": 0.999211,
+"diff": 0.0157515,
+"pct": 1.60164,
+"size_pct": 1.60164,
+"static": 0.815,
+"post": 0.72,
+"vs": "further",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+-1.54682,
+-0.72128
+],
+"d5_avg_change": [
+-7.96678,
+-11.3063
+],
+"d10_avg_change": [
+-38.9423,
+-34.5097
+],
+"people_affected_pct": [
+18.7497,
+18.8748
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_salary_sacrifice_cap",
+"name": "Lower pension salary sacrifice limit",
+"desc": "NI-exempt pension salary sacrifice limit falls from £2,000 to £1,000 a year from April 2029.",
+"year": 2031,
+"fy": "2031-32",
+"old": 1.09638,
+"new": 1.03692,
+"diff": -0.0594579,
+"pct": -5.42311,
+"size_pct": -5.42311,
+"static": 0.85,
+"post": 0.75,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+-1.5475,
+-0.776455
+],
+"d5_avg_change": [
+-9.59397,
+-11.4202
+],
+"d10_avg_change": [
+-52.5173,
+-36.893
+],
+"people_affected_pct": [
+19.4192,
+19.1894
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_threshold_freeze_2032",
+"name": "Threshold freeze extended to April 2032",
+"desc": "PA, basic rate limit, NI PT/UEL and Class 4 limits frozen for one more year, to April 2032.",
+"year": 2031,
+"fy": "2031-32",
+"old": 4.45548,
+"new": 4.33217,
+"diff": -0.12331,
+"pct": -2.7676,
+"size_pct": -2.7676,
+"static": 2.945,
+"post": 2.83,
+"vs": "closer",
+"invalid": false,
+"note": "2031 is now a real dataset year (2.128.0); 2.126.2 changed 2031-32 PA/BRL indexation",
+"d": {
+"d1_avg_change": [
+-31.0194,
+-26.8942
+],
+"d5_avg_change": [
+-113.965,
+-117.416
+],
+"d10_avg_change": [
+-307.969,
+-307.321
+],
+"people_affected_pct": [
+88.9435,
+87.5366
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2026,
+"fy": "2026-27",
+"old": -0.721427,
+"new": -0.680095,
+"diff": 0.0413325,
+"pct": 5.72927,
+"size_pct": -5.72927,
+"static": -0.51,
+"post": -0.51,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+36.3494,
+39.3417
+],
+"d5_avg_change": [
+27.2257,
+25.3654
+],
+"d10_avg_change": [
+3.3148,
+2.65764
+],
+"people_affected_pct": [
+26.2319,
+25.5553
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.721765,
+"new": -0.680038,
+"diff": 0.0417265,
+"pct": 5.78117,
+"size_pct": -5.78117,
+"static": -0.52,
+"post": -0.52,
+"vs": "closer",
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+36.8854,
+38.7332
+],
+"d5_avg_change": [
+26.5837,
+25.1248
+],
+"d10_avg_change": [
+3.45675,
+2.63284
+],
+"people_affected_pct": [
+26.2264,
+25.5021
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine and dataset together; not decomposed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "3",
+"id": "mock3_whd_top_up",
+"name": "Warm Home Discount £100 top-up",
+"desc": "Extra £100 per Warm Home Discount household in England and Wales, winters 2026-27 and 2027-28.",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "2031 is now a real dataset year (pe-uk 2.128.0 projects to 2032)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.00530294,
+"new": -0.00530294,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.28,
+"post": -0.28,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.170814,
+0.170101
+],
+"people_affected_pct": [
+0.00729823,
+0.00727526
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.00531866,
+"new": -0.00531866,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.27,
+"post": -0.27,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.171414,
+0.171547
+],
+"people_affected_pct": [
+0.00729884,
+0.00727526
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.0119865,
+"new": -0.0119865,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.26,
+"post": -0.26,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0167588,
+0.0167046
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.00908191,
+"new": -0.00908191,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.25,
+"post": -0.25,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0116946,
+0.0116561
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_carers_allowance_limit",
+"name": "Carer's Allowance earnings limit £230",
+"desc": "Carer's Allowance earnings limit from £204 to £230 a week from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.00923107,
+"new": -0.00923107,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.235,
+"post": -0.235,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0116946,
+0.0116561
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.205554,
+"new": -0.205554,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.285,
+"post": -0.285,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+8.11013,
+7.77215
+],
+"d5_avg_change": [
+10.6181,
+10.6879
+],
+"d10_avg_change": [
+0.129522,
+0.128981
+],
+"people_affected_pct": [
+2.38496,
+2.37746
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.203678,
+"new": -0.203678,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.28,
+"post": -0.28,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+8.03183,
+7.68302
+],
+"d5_avg_change": [
+11.2013,
+11.1248
+],
+"d10_avg_change": [
+0.0274914,
+0.0275127
+],
+"people_affected_pct": [
+2.33283,
+2.32529
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.199883,
+"new": -0.199883,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.28,
+"post": -0.28,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+8.092,
+7.7272
+],
+"d5_avg_change": [
+10.4113,
+10.4286
+],
+"d10_avg_change": [
+0.0195548,
+0.0195911
+],
+"people_affected_pct": [
+2.2576,
+2.2503
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.198449,
+"new": -0.198449,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.28,
+"post": -0.28,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+7.81653,
+7.47493
+],
+"d5_avg_change": [
+10.9606,
+10.9448
+],
+"d10_avg_change": [
+0.00785368,
+0.00787259
+],
+"people_affected_pct": [
+2.2554,
+2.24798
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cb_early_years_addition",
+"name": "Child Benefit Early Years Addition",
+"desc": "Child Benefit Early Years Addition of £10 a week per child under 1 from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.195555,
+"new": -0.195555,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.28,
+"post": -0.28,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+7.86797,
+7.51845
+],
+"d5_avg_change": [
+10.8135,
+10.8216
+],
+"d10_avg_change": [
+0.00783391,
+0.00784852
+],
+"people_affected_pct": [
+2.21805,
+2.21075
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.015,
+"vs": null,
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2027,
+"fy": "2027-28",
+"old": 2.15547,
+"new": 2.15538,
+"diff": -8.81807e-05,
+"pct": -0.00409102,
+"size_pct": -0.00409102,
+"static": 0.07,
+"post": 0.69,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-5.10208,
+-9.24149
+],
+"d5_avg_change": [
+-8.70645,
+-8.76384
+],
+"d10_avg_change": [
+-596.662,
+-594.17
+],
+"people_affected_pct": [
+1.41703,
+1.42056
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2028,
+"fy": "2028-29",
+"old": 2.24144,
+"new": 2.24135,
+"diff": -9.16043e-05,
+"pct": -0.00408685,
+"size_pct": -0.00408685,
+"static": 0.775,
+"post": -0.22,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-5.25673,
+-9.53619
+],
+"d5_avg_change": [
+-7.32867,
+-7.78624
+],
+"d10_avg_change": [
+-614.433,
+-614.909
+],
+"people_affected_pct": [
+1.44343,
+1.44675
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2029,
+"fy": "2029-30",
+"old": 2.32792,
+"new": 2.32782,
+"diff": -9.51163e-05,
+"pct": -0.00408589,
+"size_pct": -0.00408589,
+"static": 0.805,
+"post": 0.49,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-5.49259,
+-9.92487
+],
+"d5_avg_change": [
+-9.90552,
+-9.95215
+],
+"d10_avg_change": [
+-630.204,
+-631.373
+],
+"people_affected_pct": [
+1.4601,
+1.46336
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2030,
+"fy": "2030-31",
+"old": 2.42302,
+"new": 2.42292,
+"diff": -9.88251e-05,
+"pct": -0.0040786,
+"size_pct": -0.0040786,
+"static": 0.835,
+"post": 0.51,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-5.72005,
+-10.3253
+],
+"d5_avg_change": [
+-11.9623,
+-11.9451
+],
+"d10_avg_change": [
+-654.527,
+-656.104
+],
+"people_affected_pct": [
+1.48698,
+1.49008
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_cgt_higher_rate",
+"name": "CGT higher rate 26%",
+"desc": "CGT higher rate from 24% to 26% from 6 April 2027, including residential property.",
+"year": 2031,
+"fy": "2031-32",
+"old": 2.51837,
+"new": 2.51827,
+"diff": -0.000102728,
+"pct": -0.00407914,
+"size_pct": -0.00407914,
+"static": 0.87,
+"post": 0.53,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-5.91679,
+-10.6632
+],
+"d5_avg_change": [
+-12.4335,
+-12.4428
+],
+"d10_avg_change": [
+-677.805,
+-679.069
+],
+"people_affected_pct": [
+1.4934,
+1.49649
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2026,
+"fy": "2026-27",
+"old": -1.52773,
+"new": -1.52773,
+"diff": 1.34089e-08,
+"pct": 8.77705e-07,
+"size_pct": -8.77705e-07,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+63.5473,
+61.8426
+],
+"d5_avg_change": [
+56.043,
+55.9147
+],
+"d10_avg_change": [
+33.9238,
+33.9053
+],
+"people_affected_pct": [
+85.3171,
+85.2761
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2027,
+"fy": "2027-28",
+"old": -3.89882,
+"new": -3.89798,
+"diff": 0.000841508,
+"pct": 0.0215836,
+"size_pct": -0.0215836,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+146.07,
+136.879
+],
+"d5_avg_change": [
+149.204,
+149.94
+],
+"d10_avg_change": [
+-542.047,
+-539.761
+],
+"people_affected_pct": [
+84.6414,
+84.6012
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2028,
+"fy": "2028-29",
+"old": -3.26362,
+"new": -3.26241,
+"diff": 0.00120737,
+"pct": 0.036995,
+"size_pct": -0.036995,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+138.231,
+127.707
+],
+"d5_avg_change": [
+124.793,
+122.132
+],
+"d10_avg_change": [
+-602.22,
+-602.7
+],
+"people_affected_pct": [
+82.6009,
+82.5684
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2029,
+"fy": "2029-30",
+"old": -3.34766,
+"new": -3.34608,
+"diff": 0.00157994,
+"pct": 0.0471954,
+"size_pct": -0.0471954,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+143.446,
+131.842
+],
+"d5_avg_change": [
+126.196,
+128.77
+],
+"d10_avg_change": [
+-617.414,
+-618.621
+],
+"people_affected_pct": [
+82.5539,
+82.5215
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2030,
+"fy": "2030-31",
+"old": -3.45346,
+"new": -3.45151,
+"diff": 0.00194932,
+"pct": 0.0564456,
+"size_pct": -0.0564456,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+149.669,
+137.87
+],
+"d5_avg_change": [
+109.719,
+108.584
+],
+"d10_avg_change": [
+-641.155,
+-642.78
+],
+"people_affected_pct": [
+82.3747,
+82.3436
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_combined",
+"name": "drill 4 package",
+"desc": "All drill 4 coded measures together.",
+"year": 2031,
+"fy": "2031-32",
+"old": 1.17822,
+"new": 1.17898,
+"diff": 0.000752856,
+"pct": 0.0638975,
+"size_pct": 0.0638975,
+"static": null,
+"post": null,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+130.664,
+118.321
+],
+"d5_avg_change": [
+-31.893,
+-33.3177
+],
+"d10_avg_change": [
+-991.138,
+-992.429
+],
+"people_affected_pct": [
+95.8552,
+95.7852
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -2.26516,
+"new": -2.26516,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -1.65,
+"post": -1.12,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -2.29902,
+"new": -2.29902,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -1.71,
+"post": -1.095,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -2.33244,
+"new": -2.33244,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -1.77,
+"post": -1.095,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -2.37077,
+"new": -2.37077,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -1.83,
+"post": -1.115,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_employer_ni_under23",
+"name": "Employer NI relief for under-23s",
+"desc": "No employer Class 1 NI on earnings up to £25,000 for employees under 23 from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -2.40448,
+"new": -2.40448,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -1.895,
+"post": -1.135,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": -0.199587,
+"new": -0.199587,
+"diff": 8.40209e-09,
+"pct": 4.20974e-06,
+"size_pct": -4.20974e-06,
+"static": -0.21,
+"post": -0.195,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+4.32546,
+4.39968
+],
+"d5_avg_change": [
+7.06441,
+7.05292
+],
+"d10_avg_change": [
+8.69516,
+8.69006
+],
+"people_affected_pct": [
+48.0873,
+48.2321
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.876158,
+"new": -0.876158,
+"diff": 8.02976e-09,
+"pct": 9.16474e-07,
+"size_pct": -9.16474e-07,
+"static": -1.7,
+"post": -1.58,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+18.8319,
+19.231
+],
+"d5_avg_change": [
+30.5552,
+30.7184
+],
+"d10_avg_change": [
+38.0223,
+37.8807
+],
+"people_affected_pct": [
+76.5238,
+76.5081
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.653498,
+"new": -0.653498,
+"diff": 2.07264e-08,
+"pct": 3.1716e-06,
+"size_pct": -3.1716e-06,
+"static": -1.275,
+"post": -1.185,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+14.0005,
+14.2495
+],
+"d5_avg_change": [
+22.8896,
+22.6843
+],
+"d10_avg_change": [
+28.0403,
+28.049
+],
+"people_affected_pct": [
+75.0596,
+75.0485
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.64841,
+"new": -0.64841,
+"diff": -3.38199e-10,
+"pct": -5.21583e-08,
+"size_pct": 5.21583e-08,
+"static": -1.315,
+"post": -1.225,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+13.8217,
+14.0788
+],
+"d5_avg_change": [
+22.3591,
+22.3639
+],
+"d10_avg_change": [
+27.8526,
+27.8428
+],
+"people_affected_pct": [
+74.8001,
+74.7899
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.630833,
+"new": -0.630833,
+"diff": -1.60791e-08,
+"pct": -2.54887e-06,
+"size_pct": 2.54887e-06,
+"static": -1.355,
+"post": -1.26,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+12.9429,
+13.1996
+],
+"d5_avg_change": [
+22.169,
+22.0539
+],
+"d10_avg_change": [
+26.9889,
+26.9736
+],
+"people_affected_pct": [
+74.4033,
+74.3961
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_duty",
+"name": "fuel duty rises cancelled and restaged",
+"desc": "Fuel duty rises cancelled and restaged: 52.95p to February 2027, 54.95p, then 56.95p from October 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.646882,
+"new": -0.646882,
+"diff": -3.09372e-09,
+"pct": -4.78251e-07,
+"size_pct": 4.78251e-07,
+"static": -1.395,
+"post": -1.295,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+13.167,
+13.4544
+],
+"d5_avg_change": [
+22.7173,
+22.6288
+],
+"d10_avg_change": [
+27.4831,
+27.4733
+],
+"people_affected_pct": [
+74.4032,
+74.3959
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": -0.506752,
+"new": -0.506752,
+"diff": 6.35899e-09,
+"pct": 1.25485e-06,
+"size_pct": -1.25485e-06,
+"static": -0.4,
+"post": -0.39,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+11.0063,
+11.2021
+],
+"d5_avg_change": [
+17.9414,
+17.9157
+],
+"d10_avg_change": [
+21.9275,
+21.9092
+],
+"people_affected_pct": [
+73.1913,
+73.185
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.249295,
+"new": -0.249295,
+"diff": 1.10013e-08,
+"pct": 4.41298e-06,
+"size_pct": -4.41298e-06,
+"static": -0.21,
+"post": -0.205,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+5.37094,
+5.48786
+],
+"d5_avg_change": [
+8.69621,
+8.74159
+],
+"d10_avg_change": [
+10.7442,
+10.7041
+],
+"people_affected_pct": [
+55.6245,
+55.6893
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_fuel_vat_cut",
+"name": "VAT cut on road fuel",
+"desc": "VAT on petrol and diesel cut from 20% to 15%, 1 December 2026 to 31 May 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2027,
+"fy": "2027-28",
+"old": -1.47327,
+"new": -1.47313,
+"diff": 0.000145526,
+"pct": 0.00987775,
+"size_pct": -0.00987775,
+"static": -1.805,
+"post": -1.875,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+81.7999,
+78.3496
+],
+"d5_avg_change": [
+75.0916,
+75.4902
+],
+"d10_avg_change": [
+3.30228,
+3.28849
+],
+"people_affected_pct": [
+3.92175,
+3.90942
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2028,
+"fy": "2028-29",
+"old": -1.51991,
+"new": -1.51971,
+"diff": 0.000203856,
+"pct": 0.0134124,
+"size_pct": -0.0134124,
+"static": -1.835,
+"post": -1.91,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+83.0491,
+79.3846
+],
+"d5_avg_change": [
+79.3757,
+77.488
+],
+"d10_avg_change": [
+1.71536,
+1.71669
+],
+"people_affected_pct": [
+3.95835,
+3.94557
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2029,
+"fy": "2029-30",
+"old": -1.56726,
+"new": -1.567,
+"diff": 0.000259069,
+"pct": 0.01653,
+"size_pct": -0.01653,
+"static": -1.865,
+"post": -1.94,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+85.0166,
+80.9181
+],
+"d5_avg_change": [
+78.9326,
+81.3932
+],
+"d10_avg_change": [
+1.58078,
+1.58371
+],
+"people_affected_pct": [
+3.99293,
+3.98003
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2030,
+"fy": "2030-31",
+"old": -1.62499,
+"new": -1.6247,
+"diff": 0.00028915,
+"pct": 0.017794,
+"size_pct": -0.017794,
+"static": -1.895,
+"post": -1.97,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+88.7141,
+84.756
+],
+"d5_avg_change": [
+55.6256,
+54.6734
+],
+"d10_avg_change": [
+1.45027,
+1.45376
+],
+"people_affected_pct": [
+4.10548,
+4.09197
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_lha_reset",
+"name": "LHA reset to 30th percentile",
+"desc": "LHA rates in Great Britain reset to the 30th percentile in April 2027, then frozen.",
+"year": 2031,
+"fy": "2031-32",
+"old": -1.68338,
+"new": -1.6831,
+"diff": 0.000282368,
+"pct": 0.0167739,
+"size_pct": -0.0167739,
+"static": -1.925,
+"post": -2.0,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+93.4446,
+89.2153
+],
+"d5_avg_change": [
+44.8642,
+44.3398
+],
+"d10_avg_change": [
+1.32238,
+1.32484
+],
+"people_affected_pct": [
+4.27576,
+4.25971
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.280935,
+"new": 0.280935,
+"diff": 1.28085e-09,
+"pct": 4.55924e-07,
+"size_pct": 4.55924e-07,
+"static": 0.055,
+"post": 0.05,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-0.609982,
+-1.12766
+],
+"d5_avg_change": [
+-17.9407,
+-17.7651
+],
+"d10_avg_change": [
+-20.4022,
+-20.418
+],
+"people_affected_pct": [
+2.02799,
+2.03975
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.290767,
+"new": 0.290767,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.115,
+"post": 0.105,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-0.630947,
+-1.24415
+],
+"d5_avg_change": [
+-15.6364,
+-15.7987
+],
+"d10_avg_change": [
+-19.7914,
+-19.8281
+],
+"people_affected_pct": [
+2.12691,
+2.13835
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.299129,
+"new": 0.299129,
+"diff": 1.91072e-09,
+"pct": 6.38763e-07,
+"size_pct": 6.38763e-07,
+"static": 0.115,
+"post": 0.105,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-0.615458,
+-1.37916
+],
+"d5_avg_change": [
+-16.2126,
+-16.1893
+],
+"d10_avg_change": [
+-18.9794,
+-19.0251
+],
+"people_affected_pct": [
+2.39389,
+2.41083
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_savings_starting_band",
+"name": "savings starting-rate band £2,000",
+"desc": "Starting rate band for savings cut from £5,000 to £2,000 from April 2028.",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.31054,
+"new": 0.31054,
+"diff": -1.43181e-09,
+"pct": -4.6107e-07,
+"size_pct": -4.6107e-07,
+"static": 0.115,
+"post": 0.105,
+"vs": "unchanged",
+"invalid": false,
+"note": "Revenue unchanged; decile 1 moves with the negative-income change (pe-uk 2.132.4)",
+"d": {
+"d1_avg_change": [
+-0.694965,
+-1.53376
+],
+"d5_avg_change": [
+-16.8262,
+-16.9939
+],
+"d10_avg_change": [
+-19.0481,
+-19.0836
+],
+"people_affected_pct": [
+2.3223,
+2.33947
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.219349,
+"new": -0.218565,
+"diff": 0.000784156,
+"pct": 0.357492,
+"size_pct": -0.357492,
+"static": -0.07,
+"post": -0.07,
+"vs": "closer",
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+6.33385,
+5.85883
+],
+"d5_avg_change": [
+8.26323,
+8.04696
+],
+"d10_avg_change": [
+1.52452,
+1.51815
+],
+"people_affected_pct": [
+3.78951,
+3.75864
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.32083,
+"new": -0.319735,
+"diff": 0.0010951,
+"pct": 0.341333,
+"size_pct": -0.341333,
+"static": -0.125,
+"post": -0.125,
+"vs": "closer",
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+9.55899,
+8.85548
+],
+"d5_avg_change": [
+11.973,
+11.8959
+],
+"d10_avg_change": [
+2.12676,
+2.12841
+],
+"people_affected_pct": [
+4.19764,
+4.16513
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.443723,
+"new": -0.442307,
+"diff": 0.00141599,
+"pct": 0.319115,
+"size_pct": -0.319115,
+"static": -0.14,
+"post": -0.14,
+"vs": "closer",
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+13.6307,
+12.6482
+],
+"d5_avg_change": [
+16.2225,
+16.28
+],
+"d10_avg_change": [
+2.75302,
+2.75812
+],
+"people_affected_pct": [
+4.65421,
+4.62028
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.581226,
+"new": -0.579478,
+"diff": 0.00174816,
+"pct": 0.300771,
+"size_pct": -0.300771,
+"static": -0.16,
+"post": -0.16,
+"vs": "closer",
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+18.3414,
+17.0914
+],
+"d5_avg_change": [
+21.427,
+21.3567
+],
+"d10_avg_change": [
+3.52491,
+3.5334
+],
+"people_affected_pct": [
+5.21631,
+5.18025
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_state_pension_topup_allowance",
+"name": "State Pension Top-up Allowance",
+"desc": "Income tax allowance for State Pension recipients equal to the excess of State Pension over the PA, from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.62973,
+"new": -0.627901,
+"diff": 0.00182906,
+"pct": 0.290452,
+"size_pct": -0.290452,
+"static": -0.31,
+"post": -0.31,
+"vs": "closer",
+"invalid": false,
+"note": "About 0.3% move; not attributed",
+"d": {
+"d1_avg_change": [
+20.8438,
+19.4534
+],
+"d5_avg_change": [
+22.3226,
+22.0353
+],
+"d10_avg_change": [
+3.76846,
+3.77549
+],
+"people_affected_pct": [
+5.33073,
+5.29429
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_threshold_freeze_2032",
+"name": "thresholds frozen to April 2032",
+"desc": "PA, basic rate limit, NI thresholds, UEL and Class 4 limits held at 2030-31 levels for 2031-32.",
+"year": 2031,
+"fy": "2031-32",
+"old": 4.80381,
+"new": 4.80228,
+"diff": -0.0015286,
+"pct": -0.0318205,
+"size_pct": -0.0318205,
+"static": 3.705,
+"post": 3.555,
+"vs": "closer",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+-30.8023,
+-30.428
+],
+"d5_avg_change": [
+-133.597,
+-133.223
+],
+"d10_avg_change": [
+-328.107,
+-328.1
+],
+"people_affected_pct": [
+88.6045,
+88.3919
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2026,
+"fy": "2026-27",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2027,
+"fy": "2027-28",
+"old": -0.763089,
+"new": -0.763089,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.615,
+"post": -0.615,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+31.0223,
+29.7059
+],
+"d5_avg_change": [
+24.3061,
+24.6359
+],
+"d10_avg_change": [
+0.431489,
+0.429687
+],
+"people_affected_pct": [
+14.2768,
+14.2336
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2028,
+"fy": "2028-29",
+"old": -0.788582,
+"new": -0.788582,
+"diff": 7.03603e-11,
+"pct": 8.92238e-09,
+"size_pct": -8.92238e-09,
+"static": -0.64,
+"post": -0.64,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+30.018,
+28.7347
+],
+"d5_avg_change": [
+24.4779,
+24.3466
+],
+"d10_avg_change": [
+0.377804,
+0.378096
+],
+"people_affected_pct": [
+14.3314,
+14.2868
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2029,
+"fy": "2029-30",
+"old": -0.76275,
+"new": -0.76275,
+"diff": 7.06698e-11,
+"pct": 9.26514e-09,
+"size_pct": -9.26514e-09,
+"static": -0.655,
+"post": -0.655,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+29.5168,
+28.1171
+],
+"d5_avg_change": [
+23.6607,
+23.9027
+],
+"d10_avg_change": [
+0.374921,
+0.375617
+],
+"people_affected_pct": [
+14.2618,
+14.2174
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2030,
+"fy": "2030-31",
+"old": -0.760299,
+"new": -0.760288,
+"diff": 1.08503e-05,
+"pct": 0.00142711,
+"size_pct": -0.00142711,
+"static": -0.66,
+"post": -0.66,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+28.6667,
+27.5087
+],
+"d5_avg_change": [
+27.5389,
+27.5164
+],
+"d10_avg_change": [
+0.376512,
+0.377419
+],
+"people_affected_pct": [
+14.2125,
+14.1727
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_uc_child_element",
+"name": "UC child element +£12.50 a month",
+"desc": "UC child element up £12.50 a month per child from April 2027.",
+"year": 2031,
+"fy": "2031-32",
+"old": -0.759056,
+"new": -0.759056,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.67,
+"post": -0.67,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+28.6426,
+27.4648
+],
+"d5_avg_change": [
+26.4838,
+26.2436
+],
+"d10_avg_change": [
+0.370847,
+0.371539
+],
+"people_affected_pct": [
+14.1615,
+14.1224
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2026,
+"fy": "2026-27",
+"old": -0.821391,
+"new": -0.821391,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": -0.49,
+"post": -0.49,
+"vs": "unchanged",
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+48.2155,
+46.2408
+],
+"d5_avg_change": [
+31.0373,
+30.9463
+],
+"d10_avg_change": [
+3.30122,
+3.3062
+],
+"people_affected_pct": [
+25.635,
+25.5576
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2027,
+"fy": "2027-28",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2028,
+"fy": "2028-29",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2029,
+"fy": "2029-30",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2030,
+"fy": "2030-31",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+},
+{
+"drill": "4",
+"id": "mock4_whd_topup",
+"name": "Warm Home Discount top-up (MOCK)",
+"desc": "",
+"year": 2031,
+"fy": "2031-32",
+"old": 0.0,
+"new": 0.0,
+"diff": 0.0,
+"pct": 0.0,
+"size_pct": 0.0,
+"static": 0.0,
+"post": 0.0,
+"vs": null,
+"invalid": false,
+"note": "Engine only; same dataset",
+"d": {
+"d1_avg_change": [
+0.0,
+0.0
+],
+"d5_avg_change": [
+0.0,
+0.0
+],
+"d10_avg_change": [
+0.0,
+0.0
+],
+"people_affected_pct": [
+0.0,
+0.0
+]
+}
+}
+]
+}
