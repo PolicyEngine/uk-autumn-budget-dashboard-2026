@@ -41,14 +41,18 @@ from typing import Callable, Optional, Protocol, Sequence
 
 GB = 1024**3
 
-# Peak resident memory of one unit (a measure's two simulations, the parent
-# process included), measured on 24 October 2026 with policyengine 6.10.2
-# and the pinned Microcosm national dataset: 18.3 GB for one measure over
-# two years (the flat CSVs, sampled every 2 s), and about 20 GB over six
-# (the serial flat run's peak). The peak grows a little with the years
-# read, so it is estimated per year.
-UNIT_BASE_GB = 17.1
-UNIT_PER_YEAR_GB = 0.6
+# Peak memory footprint of one unit (a measure's two simulations, in a
+# process of its own; macOS's footprint counts compressed pages, which
+# resident size leaves out), measured on 24 October 2026 with policyengine
+# 6.10.2 and the pinned Microcosm national dataset (``/usr/bin/time -l``):
+# 19.1 GB over two years and 22.5 GB over six. The peak grows a little with
+# the years read, so it is estimated per year.
+UNIT_BASE_GB = 17.4
+UNIT_PER_YEAR_GB = 0.85
+# A unit's memory grows over its first minutes (the two builds, then the
+# calculation), so a unit that started less than this long ago still counts
+# as needing its whole estimate when the next is admitted.
+RAMP_S = 180.0
 # Memory left for the system and everything else running.
 RESERVE_GB = 6.0
 # How often a waiting unit re-reads the free memory.
@@ -235,6 +239,7 @@ class ProcessRunner:
         reserve_gb: float = RESERVE_GB,
         available: Callable[[], int] = available_memory_bytes,
         poll_s: float = ADMISSION_POLL_S,
+        ramp_s: float = RAMP_S,
         on_wait: Callable[[str], None] = lambda message: None,
         context=None,
     ):
@@ -245,11 +250,16 @@ class ProcessRunner:
         self.reserve_gb = reserve_gb
         self.available = available
         self.poll_s = poll_s
+        self.ramp_s = ramp_s
         self.on_wait = on_wait
         self.context = context
 
-    def _room(self) -> bool:
-        return self.available() / GB - self.reserve_gb >= self.unit_gb
+    def _room(self, ramping: int = 0) -> bool:
+        """Whether one more unit fits: the free memory, less the reserve
+        and the whole estimate of each unit still ramping up (whose memory
+        the free figure does not show yet), holds one more unit."""
+        free = self.available() / GB - self.reserve_gb
+        return free - ramping * self.unit_gb >= self.unit_gb
 
     def map(self, function, units, on_result=lambda i, r: None) -> list:
         units = list(units)
@@ -258,6 +268,7 @@ class ProcessRunner:
         reported = 0
         pending = list(enumerate(units))
         running: dict[Future, int] = {}
+        started: dict[Future, float] = {}
         context = self.context or _context()
         with ProcessPoolExecutor(
             max_workers=self.jobs,
@@ -267,7 +278,13 @@ class ProcessRunner:
             try:
                 while pending or running:
                     while pending and len(running) < self.jobs:
-                        if running and not self._room():
+                        now = time.monotonic()
+                        ramping = sum(
+                            1
+                            for future in running
+                            if now - started[future] < self.ramp_s
+                        )
+                        if running and not self._room(ramping):
                             break
                         if not running:
                             waited = 0.0
@@ -280,15 +297,18 @@ class ProcessRunner:
                                 time.sleep(self.poll_s)
                                 waited += self.poll_s
                         index, unit = pending.pop(0)
-                        running[pool.submit(function, unit)] = index
-                        # Let the new worker's memory show before the next
-                        # admission check reads it.
-                        if pending and len(running) < self.jobs:
-                            time.sleep(min(self.poll_s, 1.0))
+                        future = pool.submit(function, unit)
+                        running[future] = index
+                        started[future] = time.monotonic()
+                    # Wake on a finished unit, or to look at the memory
+                    # again once a unit may have finished ramping up.
                     finished, _ = wait_futures(
-                        list(running), return_when=FIRST_COMPLETED
+                        list(running),
+                        timeout=self.poll_s if pending else None,
+                        return_when=FIRST_COMPLETED,
                     )
                     for future in finished:
+                        started.pop(future, None)
                         index = running.pop(future)
                         results[index] = future.result()
                         done[index] = True

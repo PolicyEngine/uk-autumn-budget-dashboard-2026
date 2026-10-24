@@ -87,8 +87,8 @@ def test_auto_takes_no_more_than_the_cores_less_one_or_the_units():
 
 
 def test_a_measure_s_memory_grows_with_its_years():
-    assert parallel.unit_memory_gb(2) == pytest.approx(18.3)
-    assert parallel.unit_memory_gb(6) == pytest.approx(20.7)
+    assert parallel.unit_memory_gb(2) == pytest.approx(19.1)
+    assert parallel.unit_memory_gb(6) == pytest.approx(22.5)
 
 
 def test_one_job_is_the_serial_runner():
@@ -563,3 +563,28 @@ def test_jobs_must_be_a_whole_number_or_auto():
         cli.runner_for(parsed, 3, 2)
     assert cli.parse_args(["generate", "--jobs", "auto"]).jobs == "auto"
     assert cli.parse_args(["geography", "--jobs", "3"]).jobs == "3"
+
+
+def test_a_unit_still_ramping_up_counts_at_its_whole_estimate():
+    # 30 GB free, 6 kept back: room for one 14 GB unit with room to spare,
+    # and for a second only if the first is counted at what it uses now; the
+    # first has not grown yet, so the second waits until it has had
+    # time to (here, until it ends: ramp_s is long).
+    runner = ProcessRunner(
+        2,
+        14.0,
+        available=lambda: 30 * GB,
+        poll_s=0.01,
+        ramp_s=60.0,
+        context=_context(),
+    )
+    (start_a, end_a), (start_b, _) = runner.map(
+        parallel_helpers.timed_echo, [0.3, 0.0]
+    )
+    assert start_b >= end_a
+    # With the ramp over at once, both run side by side.
+    runner.ramp_s = 0.0
+    (start_a, end_a), (start_b, _) = runner.map(
+        parallel_helpers.timed_echo, [0.5, 0.0]
+    )
+    assert start_b < end_a
