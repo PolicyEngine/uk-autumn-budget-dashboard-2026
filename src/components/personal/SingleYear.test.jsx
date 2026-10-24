@@ -126,7 +126,7 @@ describe("the household calculation, from the fixture", () => {
       "Salary in 2029-30: £34,192, partner £12,822 (grown from 2026 with OBR earnings)",
     );
     expect(assumptions).toHaveTextContent("Rent area: Central Greater Manchester (region default)");
-    expect(assumptions).toHaveTextContent("Rail fares freeze: not shown (national figures only)");
+    expect(assumptions).toHaveTextContent("Rail fares freeze: not shown (not modelled for one household)");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child

@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fireEvent,
-  render,
+  render as renderReact,
   screen,
   waitFor,
   within,
@@ -9,6 +9,13 @@ import {
 import OBRComparisonTable from "./OBRComparisonTable";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { geographyFetch } from "../test/geographyFixture";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { parseDashboardCsv } from "../utils/loadDashboard";
+import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
+
+vi.mock("../utils/publication/flat", () => ({
+  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
+}));
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -29,7 +36,15 @@ const BUDGETARY_IMPACT = [
   "reform_id,reform_name,year,value",
   "two_child_limit,2 child limit repeal,2030,-3.4",
   "two_child_limit,2 child limit repeal,2031,-3.6",
-].join("\n");
+ ].join("\n");
+
+let artifactRows;
+beforeEach(() => { artifactRows = parseDashboardCsv(BUDGETARY_IMPACT); });
+const render = (element) => {
+  const manifest = { measures: { two_child_limit: { name: "2 child limit repeal", status: "approved", years: DISPLAY_YEARS, unsupported_years: [] } }, combined: {} };
+  const catalogue = buildMeasureCatalogue({ manifest, budgetary: artifactRows, tablesByKey: { two_child_limit: { budgetary_impact: artifactRows } } });
+  return renderReact(<MeasureCatalogueProvider catalogue={catalogue}>{element}</MeasureCatalogueProvider>);
+};
 
 describe("the OBR comparison table", () => {
   it("shows a PolicyEngine figure for a year the OBR didn't cost, with a dash for the OBR", async () => {
@@ -153,7 +168,8 @@ describe("the OBR comparison at 2031-32", () => {
   });
 
   it("reads 'Not yet published' when no file covers 2031-32, never £0", async () => {
-    // Today's placeholder files stop at 2030-31
+    artifactRows = artifactRows.filter((row) => Number(row.year) !== 2031);
+    // A receipt-verified snapshot which stops at 2030-31
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -189,19 +205,15 @@ describe("the OBR comparison at 2031-32", () => {
 
 describe("before the OBR costs the measures", () => {
   it("says the comparison is not available and pairs nothing", async () => {
-    vi.stubGlobal(
-      "fetch",
-      geographyFetch({
-        // Last year's costings, under last year's ids
-        "/data/obr_comparison.csv": OBR_COMPARISON,
-        "/data/budgetary_impact.csv": [
-          "reform_id,reform_name,year,value",
-          "threshold_freeze_2031_32,Threshold freeze to 2031-32,2031,3.1",
-        ].join("\n"),
-      }),
-    );
-    render(
-      <OBRComparisonTable selectedPolicies={["threshold_freeze_2031_32"]} />,
+    // Last year's costings, under last year's ids: none pairs with a
+    // published measure, so nothing is compared
+    const fixture = measureCatalogueFixture({ held: false });
+    const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: { [ALPHA]: { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === ALPHA) } } });
+    vi.stubGlobal("fetch", geographyFetch({ "/data/obr_comparison.csv": OBR_COMPARISON }));
+    renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <OBRComparisonTable selectedPolicies={[ALPHA]} selectedYear={YEAR} />
+      </MeasureCatalogueProvider>,
     );
     expect(
       await screen.findByText(
@@ -211,4 +223,15 @@ describe("before the OBR costs the measures", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Table" })).not.toBeInTheDocument();
   });
+});
+
+it("orders OBR rows from the catalogue rather than CSV insertion order", async () => {
+  const fixture = measureCatalogueFixture({ held: false });
+  const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: Object.fromEntries([ALPHA, BETA].map((id) => [id, { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === id) }])) });
+  const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-1,-2`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
+  const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
+  fireEvent.click(await screen.findByRole("button", { name: "Table" }));
+  expect([...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent)).toEqual(catalogue.displayable.map((measure) => measure.label));
+  expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA, ALPHA]);
 });

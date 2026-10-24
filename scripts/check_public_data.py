@@ -246,6 +246,16 @@ def check(root: Path, today: Optional[date] = None) -> Report:
     """Run every check on the repository at ``root``."""
     today = today or datetime.now(timezone.utc).date()
     report = Report()
+    from uk_budget_data.publication.release_index import (
+        manifest_identity_problems,
+        release_index_problems,
+    )
+
+    # A manifest must name this Budget; flat view files must be bound to it
+    report.problems.extend(
+        manifest_identity_problems(root / "public" / "data")
+    )
+    report.problems.extend(release_index_problems(root / "public" / "data"))
     files = tracked_files(root)
     review, problems = read_review(root)
     report.problems.extend(problems)

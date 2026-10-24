@@ -97,8 +97,10 @@ describe("young people data", () => {
     const points = changeByYear(ROWS, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029, 2031]);
     expect(points[0]).toMatchObject({ year: 2028, published: true, "16-24": 30, all: 80 });
     expect(points[1]).toMatchObject({ "16-24": -110, all: -40 });
-    // A group with no rows adds up to zero; a thin one is null
-    expect(points[1]["0-15"]).toBe(0);
+    // A group with no rows is unavailable, never zero (#104); a thin one
+    // is null and listed as suppressed
+    expect(points[1]["0-15"]).toBeNull();
+    expect(points[1].incomplete).toBe(true);
     expect(points[2]).toMatchObject({ year: 2031, published: false, "16-24": null, all: null });
     const thin = changeByYear(
       [...ROWS, row("two_child_limit", 2029, "65+", 5, MIN_SAMPLE_SIZE - 1)],

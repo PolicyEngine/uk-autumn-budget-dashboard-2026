@@ -1,19 +1,27 @@
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App, { CANDIDATE_BANNER, VIEWS, opensYoungPeople, viewFromLocation } from "./App";
 
 beforeEach(() => {
-  // An empty CSV for every data file: these tests are about the views
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => new Response("reform_id,year,value\n", { status: 200 })),
-  );
+  vi.stubGlobal("fetch", vi.fn(dashboardFixtureFetch()));
   window.history.replaceState({}, "", "/");
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+async function renderApp() {
+  const rendered = render(<App />);
+  // The first render verifies the whole fixture (Web Crypto); allow for a busy host
+  await screen.findByRole("tablist", { name: "Views" }, { timeout: 15000 });
+  // Population impact's sub-tabs render from the first client effect on
+  if (screen.getByRole("tab", { name: "Population impact" }).getAttribute("aria-selected") === "true") {
+    await screen.findByRole("tablist", { name: "Population impact sections" });
+  }
+  return rendered;
+}
 
 const viewList = () => screen.getByRole("tablist", { name: "Views" });
 const tabs = () => within(viewList()).getAllByRole("tab");
@@ -23,8 +31,8 @@ const band = (container) => container.querySelector(".title-row");
 const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
 
 describe("the view tabs", () => {
-  it("are four tabs under the intro, in order, with no view pill in the band", () => {
-    const { container } = render(<App />);
+  it("are four tabs under the intro, in order, with no view pill in the band", async () => {
+    const { container } = await renderApp();
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
       "Personal impact",
@@ -47,8 +55,8 @@ describe("the view tabs", () => {
     expect(screen.getByRole("tabpanel", { name: "Population impact" })).toBeInTheDocument();
   });
 
-  it("say once, under the intro, that the measures are candidates, except on Living standards and Methodology", () => {
-    const { container } = render(<App />);
+  it("say once, under the intro, that the measures are candidates, except on Living standards and Methodology", async () => {
+    const { container } = await renderApp();
     const withBanner = { dashboard: true, personal: true, living: false, methodology: false };
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
@@ -65,8 +73,8 @@ describe("the view tabs", () => {
     );
   });
 
-  it("show the year and policy pills only where they apply", () => {
-    const { container } = render(<App />);
+  it("show the year and policy pills only where they apply", async () => {
+    const { container } = await renderApp();
     const expected = {
       dashboard: [true, true],
       // The year drives Personal impact's household calculation
@@ -83,15 +91,15 @@ describe("the view tabs", () => {
     });
   });
 
-  it("show the year pill on Personal impact, whatever an old ?sub= link says", () => {
+  it("show the year pill on Personal impact, whatever an old ?sub= link says", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
-    const { container } = render(<App />);
+    const { container } = await renderApp();
     expect(shown(band(container).querySelector(".band-year"))).toBe(true);
     expect(container.querySelector(".app")).not.toHaveAttribute("data-band");
   });
 
-  it("keep ?tab= in step, with the policies only on the views they drive", () => {
-    render(<App />);
+  it("keep ?tab= in step, with the policies only on the views they drive", async () => {
+    await renderApp();
     const search = () => new URLSearchParams(window.location.search);
     const expected = {
       dashboard: [null, true],
@@ -105,7 +113,7 @@ describe("the view tabs", () => {
     });
   });
 
-  it("open the view an old or new link names", () => {
+  it("open the view an old or new link names", async () => {
     for (const [url, label] of [
       ["/?tab=personal", "Personal impact"],
       ["/?tab=living", "Living standards"],
@@ -114,7 +122,7 @@ describe("the view tabs", () => {
       ["/?tab=nonsense", "Population impact"],
     ]) {
       window.history.replaceState({}, "", url);
-      const { unmount } = render(<App />);
+      const { unmount } = await renderApp();
       expect(screen.getByRole("tab", { name: label })).toHaveAttribute("aria-selected", "true");
       unmount();
     }
@@ -124,8 +132,8 @@ describe("the view tabs", () => {
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
   });
 
-  it("move with the arrow keys, Home and End", () => {
-    render(<App />);
+  it("move with the arrow keys, Home and End", async () => {
+    await renderApp();
     const list = viewList();
     fireEvent.keyDown(list, { key: "ArrowRight" });
     expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
@@ -140,7 +148,7 @@ describe("the view tabs", () => {
   });
 
   it("split Population impact into All households and Young people sub-tabs", async () => {
-    render(<App />);
+    await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Population impact" });
     // The pill sits directly under the view tabs, inside the view's panel
     expect(panel.firstElementChild).toBe(subList());
@@ -169,14 +177,14 @@ describe("the view tabs", () => {
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
   });
 
-  it("open the Young people sub-tab from the old links, keeping the hash", () => {
+  it("open the Young people sub-tab from the old links, keeping the hash", async () => {
     for (const [url, hash] of [
       ["/?tab=young", ""],
       ["/#young-people", "#young-people"],
       ["/?sub=young", ""],
     ]) {
       window.history.replaceState({}, "", url);
-      const { unmount } = render(<App />);
+      const { unmount } = await renderApp();
       expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute(
         "aria-selected",
         "true",
@@ -195,9 +203,9 @@ describe("the view tabs", () => {
     }
   });
 
-  it("open Young people from a #young-people link on another view, and drop the hash on leaving", () => {
+  it("open Young people from a #young-people link on another view, and drop the hash on leaving", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
-    render(<App />);
+    await renderApp();
     window.history.replaceState({}, "", "/?tab=methodology#young-people");
     fireEvent(window, new HashChangeEvent("hashchange"));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute(
@@ -214,9 +222,9 @@ describe("the view tabs", () => {
     expect(window.location.search).not.toContain("sub=");
   });
 
-  it("open Young people from Methodology's link", () => {
+  it("open Young people from Methodology's link", async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
-    render(<App />);
+    await renderApp();
     fireEvent.click(screen.getByRole("link", { name: "See Young people under Population impact" }));
     expect(screen.getByRole("tab", { name: "Young people" })).toHaveAttribute(
       "aria-selected",
@@ -225,8 +233,8 @@ describe("the view tabs", () => {
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
   });
 
-  it("gather the method notes on Methodology, each said once", () => {
-    const { container } = render(<App />);
+  it("gather the method notes on Methodology, each said once", async () => {
+    const { container } = await renderApp();
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     const panel = screen.getByRole("tabpanel", { name: "Methodology" });
     for (const name of [
@@ -246,7 +254,7 @@ describe("the view tabs", () => {
     expect(within(panel).getByRole("heading", { level: 3, name: "Household calculation" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    expect(panel).toHaveTextContent("Methods and sources: our research on the");
+    expect(panel).toHaveTextContent("Methods and sources are published with each measure's description.");
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
     // Said once on the page

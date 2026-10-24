@@ -48,6 +48,332 @@ SALARY_SACRIFICE_ID = "salary_sacrifice_cap_2028"
 FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
 
+# No legacy lifetime response column has been reviewed as implementing the
+# published registry parameters and years. An empty mapping keeps all current
+# measures unavailable in personal views without changing any calculation.
+PUBLIC_PERSONAL_SERIES: dict[str, dict] = {}
+
+# How the page shows each measure, published with it (receipt and manifest
+# entry, covered by the artifact digest) so the frontend holds no measure
+# list: its chart colour (the Autumn Budget 2025 dashboard's palette: raise
+# revenue in amber, darkest to lightest; cost revenue in teal, alternating
+# dark and light so neighbouring bars stay apart), its place in the
+# legends within its revenue group, the selector's short description, the
+# policy card (summary, start, type, details, source) and the Methodology
+# table's modelling note and first modelled year. Display only: nothing
+# here changes a calculation.
+PUBLIC_DISPLAY: dict[str, dict] = {
+    "fuel_duty_rise_deferral": {
+        "color": "#115E59",
+        "order": 3,
+        "short_description": "Defer the January and "
+        "March 2027 fuel duty "
+        "rises",
+        "summary": "Keeps fuel duty at 52.95p a litre "
+        "through winter 2026-27, restoring "
+        "the 5p in two steps in autumn 2027.",
+        "starts": "January 2027",
+        "type": "Fuel duty",
+        "details": "Assumes no RPI rise in April 2027, "
+        "3p back on 1 September and 2p on 1 "
+        "December 2027, then RPI from April "
+        "2028 on 57.95p. Includes the VAT on "
+        "the lower pump price; fuel spending "
+        "is held fixed.",
+        "source": {
+            "label": "HMRC fuel duty rates 2026 " "to 2027",
+            "href": "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
+        },
+        "modelling": "Sets the duty rate in each year "
+        "to the deferred path, weighted by "
+        "days from 6 April as the model "
+        "blends it, and lowers VAT by 20% "
+        "of the duty change on each litre "
+        "bought. Fuel spending is held "
+        "fixed.",
+        "modelled_from": 2026,
+    },
+    "state_pension_income_tax_protection": {
+        "color": "#0D9488",
+        "order": 7,
+        "short_description": "No income tax "
+        "for "
+        "pensioners "
+        "whose only "
+        "income is the "
+        "State Pension",
+        "summary": "People whose only "
+        "income is the full new "
+        "State Pension pay no "
+        "income tax.",
+        "starts": "April 2027",
+        "type": "Income tax",
+        "details": "Modelled as an "
+        "allowance for people "
+        "over State Pension age "
+        "equal to the full new "
+        "State Pension (£13,040 "
+        "in 2027-28), withdrawn "
+        "£1 for £1 of other "
+        "income down to the "
+        "standard personal "
+        "allowance. The "
+        "mechanism is not yet "
+        "published.",
+        "modelling": "Gives people over "
+        "State Pension age a "
+        "personal allowance of "
+        "the full new State "
+        "Pension, rounded up "
+        "to £10, withdrawn £1 "
+        "for £1 above it down "
+        "to the standard "
+        "allowance.",
+        "modelled_from": 2027,
+    },
+    "warm_home_discount_top_up": {
+        "color": "#5EEAD4",
+        "order": 6,
+        "short_description": "Raise the Warm Home "
+        "Discount from £150 to "
+        "£250 for one winter",
+        "summary": "Raises the Warm Home Discount "
+        "from £150 to £250 for winter "
+        "2026-27.",
+        "starts": "Winter 2026-27",
+        "type": "Benefit",
+        "details": "Paid to households in Great "
+        "Britain on Universal Credit or "
+        "Pension Credit. The model has no "
+        "high-cost-to-heat test or legacy "
+        "benefits, so eligibility is "
+        "approximate. Its only year, "
+        "2026-27, comes before the charts' "
+        "first year.",
+        "source": {
+            "label": "Warm Home Discount",
+            "href": "https://www.gov.uk/the-warm-home-discount-scheme",
+        },
+        "modelling": "Adds £100 to households in "
+        "Great Britain receiving "
+        "Universal Credit or Pension "
+        "Credit in 2026-27, as a "
+        "benefit. There is no "
+        "high-cost-to-heat test, and "
+        "legacy benefits are not "
+        "counted.",
+        "modelled_from": 2026,
+    },
+    "domestic_electricity_zero_vat": {
+        "color": "#0F766E",
+        "order": 5,
+        "short_description": "Zero-rate VAT on "
+        "domestic "
+        "electricity to "
+        "March 2028",
+        "summary": "Charges no VAT on household "
+        "electricity bills, instead of "
+        "5%, from October 2026 to "
+        "March 2028.",
+        "starts": "October 2026",
+        "type": "VAT",
+        "details": "The zero rate to March 2027 "
+        "is already planned but not in "
+        "the model's baseline; the "
+        "year to March 2028 is the "
+        "candidate extension. Applied "
+        "to electricity spending only.",
+        "source": {
+            "label": "Temporary zero rate "
+            "of VAT for domestic "
+            "electricity",
+            "href": "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
+        },
+        "modelling": "Removes the 5% VAT from "
+        "electricity spending: for "
+        "182 days of 2026-27 and all "
+        "of 2027-28. Gas and other "
+        "reduced-rate goods are "
+        "unchanged.",
+        "modelled_from": 2026,
+    },
+    "employer_ni_relief_under_25s": {
+        "color": "#99F6E4",
+        "order": 8,
+        "short_description": "No employer National "
+        "Insurance for "
+        "employees under 25",
+        "summary": "Employers pay no National "
+        "Insurance on earnings up to "
+        "£50,270 for employees under "
+        "25.",
+        "starts": "April 2027",
+        "type": "National Insurance",
+        "details": "Extends the existing under-21 "
+        "relief to ages 21 to 24. Wages "
+        "are held fixed, so the measure "
+        "changes revenue but not "
+        "household incomes, and shows "
+        "no change in the household "
+        "charts.",
+        "modelling": "Removes employer National "
+        "Insurance on earnings "
+        "between the secondary "
+        "threshold and the upper "
+        "earnings limit for employees "
+        "aged 21 to 24. The model "
+        "charges under-21s in full, "
+        "so the existing under-21 "
+        "relief is not in its "
+        "baseline; apprentices are "
+        "not identified.",
+        "modelled_from": 2027,
+    },
+    "threshold_freeze_2031_32": {
+        "color": "#78350F",
+        "order": 0,
+        "short_description": "Keep income tax "
+        "thresholds frozen in "
+        "2031-32",
+        "summary": "Keeps the income tax personal "
+        "allowance and basic rate band "
+        "frozen for one more year, to "
+        "2031-32.",
+        "starts": "April 2031",
+        "type": "Income tax",
+        "details": "The personal allowance stays at "
+        "£12,570 and the higher rate "
+        "threshold at £50,270, instead of "
+        "rising with inflation to £12,830 "
+        "and £51,330. The National "
+        "Insurance primary threshold and "
+        "upper earnings limit, which the "
+        "model ties to them from 2031-32, "
+        "stay at the same levels; the "
+        "employer threshold is not held.",
+        "modelling": "Sets the 2031-32 personal "
+        "allowance and basic rate band to "
+        "their 2030-31 values. From "
+        "2031-32 policyengine-uk sets the "
+        "National Insurance primary "
+        "threshold and upper earnings "
+        "limit at the allowance and "
+        "higher rate threshold, so they "
+        "are held too, as they were "
+        "frozen alongside them to "
+        "2030-31. The employer secondary "
+        "threshold is not held: it rises "
+        "to £5,100 as in current law.",
+        "modelled_from": 2031,
+    },
+    "badr_lifetime_limit_cut": {
+        "color": "#B45309",
+        "order": 1,
+        "short_description": "Halve the Business Asset "
+        "Disposal Relief lifetime "
+        "limit",
+        "summary": "Halves the lifetime limit on gains "
+        "taxed at the 18% Business Asset "
+        "Disposal Relief rate, from £1 "
+        "million to £500,000.",
+        "starts": "April 2027",
+        "type": "Capital gains tax",
+        "details": "The value is an assumption: "
+        "reporting says the relief may be "
+        "restricted, not how. The model "
+        "applies the limit to each year's "
+        "gains, as if none had been used "
+        "before.",
+        "source": {
+            "label": "Business Asset Disposal " "Relief",
+            "href": "https://www.gov.uk/business-asset-disposal-relief",
+        },
+        "modelling": "Sets the cap on the gains a "
+        "person can claim the relief on to "
+        "£500,000, from £1 million (an "
+        "assumed value). The model applies "
+        "it to each year's qualifying "
+        "gains, as if none of the limit "
+        "had been used before; capital "
+        "gains are imputed.",
+        "modelled_from": 2027,
+    },
+    "salary_sacrifice_cap_2028": {
+        "color": "#F59E0B",
+        "order": 2,
+        "short_description": "Start the £2,000 salary "
+        "sacrifice cap a year "
+        "early",
+        "summary": "Starts the £2,000 cap on National "
+        "Insurance-free salary sacrifice "
+        "pension contributions in April "
+        "2028, a year early.",
+        "starts": "April 2028",
+        "type": "National Insurance",
+        "details": "Contributions above the cap pay "
+        "employee and employer National "
+        "Insurance. Assumes employers "
+        "spread the cost over all workers' "
+        "pay and employees keep their "
+        "contributions.",
+        "modelling": "Sets the £2,000 cap for 2028-29 "
+        "as well as later years. The "
+        "behavioural assumption is "
+        "described in its policy note.",
+        "modelled_from": 2028,
+    },
+    "road_fuel_vat_cut": {
+        "color": "#2DD4BF",
+        "order": 4,
+        "short_description": "Cut VAT on petrol and diesel to "
+        "15% for six months",
+        "summary": "Cuts VAT on petrol and diesel from 20% to "
+        "15% from December 2026 to May 2027.",
+        "starts": "December 2026",
+        "type": "VAT",
+        "details": "Assumes the cut is passed through in full "
+        "to pump prices and fuel spending is "
+        "unchanged. The rate and dates are "
+        "assumptions; reporting names the option, "
+        "not its design.",
+        "modelling": "Lowers VAT on petrol and diesel "
+        "spending by 5 points for the days the "
+        "cut is in force in each fiscal year "
+        "(121 days of 2026-27, 61 of 2027-28), "
+        "with spending held fixed.",
+        "modelled_from": 2026,
+    },
+    "plan_2_threshold_unfreeze": {
+        "color": "#14B8A6",
+        "order": 9,
+        "short_description": "Uprate the Plan 2 "
+        "repayment threshold "
+        "with RPI again",
+        "summary": "Raises the Plan 2 student loan "
+        "repayment threshold with RPI from "
+        "April 2027, instead of freezing "
+        "it at £29,385.",
+        "starts": "April 2027",
+        "type": "Student loans",
+        "details": "The threshold rises to £30,267 in "
+        "2027-28. Repayments are modelled, "
+        "replacing those reported in the "
+        "survey.",
+        "source": {
+            "label": "Repaying your student " "loan",
+            "href": "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
+        },
+        "modelling": "Sets the Plan 2 threshold to "
+        "rise with RPI from 2027-28. "
+        "Repayments are modelled, "
+        "replacing those reported in the "
+        "survey, and the revenue figure "
+        "is the change in modelled "
+        "repayments.",
+        "modelled_from": 2027,
+    },
+}
+
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
     """Create a {year: value} dict for parameter changes."""

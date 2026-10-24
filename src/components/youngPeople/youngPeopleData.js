@@ -3,7 +3,7 @@
  * measure's average change for a chosen age group beside its all-ages
  * figure, and the average change for every age group in every year shown.
  *
- * Both read only mean_change from public/data/age_impact.csv. A mean
+ * Both read only mean_change from the verified artifacts' age tables. A mean
  * change is additive across policies (the other charts on the page add up
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.
@@ -95,17 +95,23 @@ export function changeByYear(rows, policies, selected, years) {
     for (const group of AGE_GROUPS) point[group.key] = null;
     if (!(rows ?? []).some((row) => row.year === Number(year))) return point;
     point.published = true;
+    // A selected measure without a published row makes every group's
+    // figure unavailable that year, never a partial sum
+    const incomplete = selected.some((id) => !policies.some((policy) => policy.id === id));
     for (const group of AGE_GROUPS) {
       let total = 0;
       let thin = false;
+      let missing = incomplete;
       for (const policy of policies) {
         if (!selected.includes(policy.id)) continue;
         const row = findRow(rows, policy.id, year, group.key);
         if (row && row.sample_size < MIN_SAMPLE_SIZE) thin = true;
-        total += row ? row.mean_change : 0;
+        if (!row || !Number.isFinite(row.mean_change)) missing = true;
+        else total += row.mean_change;
       }
       if (thin) point.suppressed.push(group.key);
-      else point[group.key] = total;
+      else if (!missing) point[group.key] = total;
+      else point.incomplete = true;
     }
     return point;
   });

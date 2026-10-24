@@ -79,6 +79,12 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
   if (data.status === "unavailable") {
     return notice(`Results ${place} are not yet published.`);
   }
+  if (data.status === "stale") {
+    return notice(
+      "Newer results have been published since this page loaded.",
+      "Reload the page to see them.",
+    );
+  }
   if (data.status !== "ready") {
     return notice(
       `Results ${place} are not yet published.`,

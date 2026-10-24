@@ -3,7 +3,6 @@ import {
   chooseReform,
   choiceLabel,
   choiceMeasureNames,
-  packageReforms,
 } from "./selection";
 
 const POLICIES = [
@@ -17,6 +16,8 @@ const reforms = [
   "fuel_duty_freeze",
   "two_child_limit",
 ];
+// The catalogue's package: the combined run of the displayable measures
+const packageId = "autumn_budget_2026_combined";
 
 describe("chooseReform", () => {
   it("shows one selected measure's own reform", () => {
@@ -30,6 +31,7 @@ describe("chooseReform", () => {
       selectedIds: [...policyIds].reverse(),
       policyIds,
       reforms,
+      packageId,
     });
     expect(choice).toEqual({
       kind: "package",
@@ -55,16 +57,18 @@ describe("chooseReform", () => {
     ).toEqual({ kind: "pick" });
   });
 
-  it("finds no package when the data has none, or more than one", () => {
+  it("finds no package unless the catalogue names one the data carries", () => {
     expect(
-      chooseReform({ selectedIds: policyIds, policyIds, reforms: ["fuel_duty_freeze"] }),
+      chooseReform({ selectedIds: policyIds, policyIds, reforms: ["fuel_duty_freeze"], packageId }),
     ).toEqual({ kind: "no-package" });
+    // A "_combined" reform is never taken for the package by its name
+    for (const missing of [null, undefined]) {
+      expect(
+        chooseReform({ selectedIds: policyIds, policyIds, reforms, packageId: missing }),
+      ).toEqual({ kind: "no-package" });
+    }
     expect(
-      chooseReform({
-        selectedIds: policyIds,
-        policyIds,
-        reforms: ["a_combined", "b_combined"],
-      }),
+      chooseReform({ selectedIds: policyIds, policyIds, reforms, packageId: "combined--other" }),
     ).toEqual({ kind: "no-package" });
   });
 
@@ -85,6 +89,5 @@ describe("labels", () => {
       POLICIES.map((policy) => policy.name),
     );
     expect(choiceMeasureNames({ kind: "pick" }, POLICIES)).toEqual([]);
-    expect(packageReforms(reforms)).toEqual(["autumn_budget_2026_combined"]);
   });
 });

@@ -21,8 +21,8 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
-import { POLICIES } from "../utils/policies";
+import UnavailableNotice from "./publication/UnavailableNotice";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -31,16 +31,13 @@ import {
   AXIS_TITLE_STYLE,
   chartMargin,
   legendWrapperStyle,
-  legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 
-// Order for distributional chart: good for households first, then bad
-// Every legend uses one order, set in policyConfig: revenue raisers, then
-// costs. (A name with no data here is never drawn.)
+// The published catalogue supplies the shared measure order and colours.
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -68,6 +65,16 @@ const FLIP_SIGN_POLICIES = [];
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  const catalogue = useMeasureCatalogue();
+  const {
+    displayable: POLICIES,
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = catalogue;
+  const hasUnavailableSelection = selectedPolicies.some(
+    (id) => !POLICIES.some((policy) => policy.id === id),
+  );
 
   const formatPercent = (value) => `${value.toFixed(1)}%`;
 
@@ -78,36 +85,43 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
   // Build chart data for internal year
   // Memoised: a re-render with the same year and policies keeps the same
-  // array, so Recharts tweens once from the old year instead of restarting
+  // array, so Recharts tweens once from the old year instead of restarting.
+  // A selected measure without a published, displayable row is null, never
+  // zero, and makes the decile's net change unavailable.
   const data = useMemo(() => {
     const distributionalSelectedYear = rawData
       ? rawData.filter(
           (row) =>
             parseInt(row.year) === selectedYear &&
-            selectedPolicies.includes(row.reform_id),
+            selectedPolicies.includes(row.reform_id) &&
+            isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
         )
       : [];
 
     return decileOrder.map((decile) => {
       const dataPoint = { decile };
       let netChange = 0;
+      let incomplete = hasUnavailableSelection;
       POLICIES.forEach((policy) => {
         const isSelected = selectedPolicies.includes(policy.id);
         const dataRow = distributionalSelectedYear.find(
           (row) => row.reform_id === policy.id && row.decile === decile,
         );
-        let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
+        const parsedValue = dataRow ? Number.parseFloat(dataRow.value) : NaN;
+        let value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
+        if (isSelected && value === null) incomplete = true;
         // Flip sign for policies with incorrect data sign
-        if (FLIP_SIGN_POLICIES.includes(policy.id)) {
+        if (value !== null && FLIP_SIGN_POLICIES.includes(policy.id)) {
           value = -value;
         }
-        dataPoint[policy.name] = value;
-        netChange += value;
+        dataPoint[policy.seriesKey] = value;
+        if (value !== null) netChange += value;
       });
-      dataPoint.netChange = netChange;
+      dataPoint.netChange = incomplete ? null : netChange;
+      dataPoint.incomplete = incomplete;
       return dataPoint;
     });
-  }, [rawData, selectedPolicies, selectedYear]);
+  }, [rawData, selectedPolicies, selectedYear, catalogue, POLICIES, hasUnavailableSelection]);
 
   // The measures with a non-zero effect in any shown year, not just this
   // one: the legend (and so the plot's height) stays the same from year to
@@ -119,14 +133,13 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           (row) =>
             isDisplayYear(row.year) &&
             selectedPolicies.includes(row.reform_id) &&
+            isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
             Math.abs(parseFloat(row.value)) > 0.01,
         )
         .map((row) => row.reform_id),
     );
-    return ALL_POLICY_NAMES.filter((name) =>
-      ids.has(POLICIES.find((policy) => policy.name === name)?.id),
-    );
-  }, [rawData, selectedPolicies]);
+    return ALL_POLICY_NAMES.filter((key) => ids.has(bySeriesKey.get(key)?.id));
+  }, [rawData, selectedPolicies, catalogue, ALL_POLICY_NAMES, bySeriesKey]);
 
   // Calculate y-axis domain across ALL years, symmetrical around zero
   const calculateYAxisDomain = () => {
@@ -139,7 +152,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         ? rawData.filter(
             (row) =>
               parseInt(row.year) === year &&
-              selectedPolicies.includes(row.reform_id),
+              selectedPolicies.includes(row.reform_id) &&
+              isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
           )
         : [];
 
@@ -152,11 +166,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           const dataRow = yearData.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
           );
-          let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          // Flip sign for policies with incorrect data sign
-          if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-            value = -value;
-          }
+          const parsedValue = isSelected && dataRow ? Number.parseFloat(dataRow.value) : NaN;
+          const value = Number.isFinite(parsedValue) ? parsedValue : 0;
           if (value > 0) positiveSum += value;
           else negativeSum += value;
         });
@@ -180,6 +191,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   };
 
   const yAxisDomain = calculateYAxisDomain();
+  const hasIncompleteResults = data.some((point) => point.incomplete);
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -211,9 +223,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   const legendItems = [
     ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
-      label: name,
+      label: bySeriesKey.get(name)?.label ?? name,
       type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
@@ -232,15 +244,15 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     legendItems,
     logo: CHART_LOGO,
   };
-  const selectedPolicyNames = POLICIES.filter((policy) =>
+  const selectedMeasures = POLICIES.filter((policy) =>
     selectedPolicies.includes(policy.id),
-  ).map((policy) => policy.name);
+  );
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear }),
+    csv: () => decileCsv(data, selectedMeasures, { kind: "relative", year: selectedYear }),
     published,
   };
 
@@ -261,6 +273,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       </div>
 
       <div ref={chartRef}>
+        {published && hasIncompleteResults && (
+          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+        )}
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
             <ComposedChart
@@ -344,7 +359,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
-                  name={policyName}
+                  name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that

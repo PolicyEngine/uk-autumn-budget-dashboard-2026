@@ -14,7 +14,7 @@
 
 import canonicalize from "canonicalize";
 import contract from "./contract.json";
-import { attestationProblems } from "./manifest";
+import { attestationProblems, displayProblems, personalSeriesProblems } from "./manifest";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -189,6 +189,23 @@ export async function receiptProblems(receipt, key, entry) {
   }
   if (dashboard.key !== key) {
     problems.push("the receipt is for a different entry");
+  }
+  if (dashboard.name !== entry.name) {
+    problems.push("the receipt's name is not the manifest's");
+  }
+  if (dashboard.description !== undefined && typeof dashboard.description !== "string") {
+    problems.push("the receipt's description is not text");
+  }
+  if ((dashboard.description ?? "") !== (entry.description ?? "")) {
+    problems.push("the receipt's description is not the manifest's");
+  }
+  problems.push(...personalSeriesProblems(dashboard.personal).map((problem) => `the receipt's ${problem}`));
+  if (canonicalize(dashboard.personal ?? null) !== canonicalize(entry.personal ?? null)) {
+    problems.push("the receipt's personal mapping is not the manifest's");
+  }
+  problems.push(...displayProblems(dashboard.display).map((problem) => `the receipt's ${problem}`));
+  if (canonicalize(dashboard.display ?? null) !== canonicalize(entry.display ?? null)) {
+    problems.push("the receipt's display metadata is not the manifest's");
   }
   const digests = dashboard.digests ?? {};
   for (const field of [

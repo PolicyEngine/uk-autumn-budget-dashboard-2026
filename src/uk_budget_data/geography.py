@@ -23,6 +23,7 @@ Nothing here prints a value, a count or a support figure: only labels.
 
 import argparse
 import contextlib
+import hashlib
 import json
 import math
 import os
@@ -73,6 +74,7 @@ from uk_budget_data.private_outputs import (
 from uk_budget_data.publication import combine
 from uk_budget_data.publication import manifest as publication_manifest
 from uk_budget_data.publication.combine import combined_key
+from uk_budget_data.publication.release_index import write_area_provenance
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
@@ -2036,6 +2038,46 @@ class _Plan:
     seat_weights: Optional[Path]
     prior_regional: Optional[pd.DataFrame]
     microcosm_export: bool = False
+    # What the run was made from, for publish index (release_index.py)
+    provenance: Optional[dict] = None
+
+
+def manifest_key(reform_id: str) -> str:
+    """The manifest key a reform in the area tables stands for: a package
+    alias names the combined run of its exact members."""
+    if reform_id in PACKAGES:
+        return combined_key(sorted(PACKAGES[reform_id]))
+    return reform_id
+
+
+def area_provenance(
+    manifest: publication_manifest.Manifest,
+    manifest_bytes: bytes,
+    reform_ids: Sequence[str],
+) -> dict:
+    """The approved entry each reform's area results were made beside.
+
+    ``publish index`` refuses to bind the area tables once any of these
+    entries has changed (its artifact, receipt or outputs), so a correction
+    cannot leave old results by area bound to the new figures. It does not
+    prove the area run simulated the approved definition: the run simulates
+    the registry at its own commit (see the runbook, G4).
+    """
+    reforms = {}
+    for reform_id in reform_ids:
+        key = manifest_key(reform_id)
+        entry = manifest.entries()[key]
+        reforms[reform_id] = {
+            "key": key,
+            "artifact_sha256": entry.artifact_sha256,
+            "receipt_sha256": entry.receipt_sha256,
+            "outputs_sha256": entry.outputs_sha256,
+        }
+    return {
+        "manifest_revision": manifest.revision,
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "reforms": reforms,
+    }
 
 
 def approved_reforms(
@@ -2150,8 +2192,9 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
             f"No publication manifest at {parsed.manifest}: there is "
             "nothing the national page may publish yet."
         )
+    manifest_bytes = parsed.manifest.read_bytes()
     manifest = publication_manifest.parse_manifest(
-        parsed.manifest.read_bytes(), str(parsed.manifest)
+        manifest_bytes, str(parsed.manifest)
     )
     ids = approved_reforms(manifest, parsed.reforms)
     if parsed.seat_reforms is not None:
@@ -2255,6 +2298,7 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_weights=seat_weights,
         prior_regional=prior,
         microcosm_export=microcosm_export,
+        provenance=area_provenance(manifest, manifest_bytes, chosen),
     )
 
 
@@ -2497,6 +2541,10 @@ def _run_geography(
         written = write_public_tables(
             geo.release, parsed.out_dir, names, levels=geo.published_levels
         )
+        if plan.provenance is not None:
+            written["provenance"] = write_area_provenance(
+                parsed.out_dir, plan.provenance, written.values()
+            )
     except (
         GeographyError,
         KeyError,

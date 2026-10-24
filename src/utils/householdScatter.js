@@ -1,5 +1,5 @@
 /**
- * The household scatter, as published in public/data/household_scatter_binned.csv.
+ * The household scatter, from each verified artifact's household_scatter_binned.csv.
  *
  * Households are never shown one by one: each row is one cell of baseline
  * income band by income change band, with the weighted number of
@@ -125,6 +125,7 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   rows: Array<Object>|null}} options.data
  * @param {Array<string>} options.selectedIds
  * @param {Array<string>} options.policyIds - Every measure the page offers.
+ * @param {string|null} [options.packageId] - The package's combined run.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
@@ -132,13 +133,13 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageId }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  const choice = chooseReform({ selectedIds, policyIds, reforms });
+  const choice = chooseReform({ selectedIds, policyIds, reforms, packageId });
   if (choice.kind === "none") {
     return notice("Select a measure to see household results.");
   }

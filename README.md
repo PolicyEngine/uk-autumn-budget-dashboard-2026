@@ -176,7 +176,7 @@ units start on separate workers, and the rest follow as each worker's next
 unit (tests that share one household, through an `xdist_group`, count as one
 unit). Each slow unit added lengthens the run.
 
-## Available reforms
+## Published measures
 
 The dashboard analyses ten candidate measures for the Autumn Budget on 28 October 2026, modelled before the Budget from reporting up to 24 October; none is announced policy. Each is compared against current law in policyengine-uk (`src/uk_budget_data/reforms.py`; modifiers in `budget_measures.py`). `autumn_budget_2026_combined` simulates all ten together.
 
@@ -192,6 +192,51 @@ The dashboard analyses ten candidate measures for the Autumn Budget on 28 Octobe
 | `salary_sacrifice_cap_2028` | The £2,000 salary sacrifice cap from April 2028 |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 repayment threshold uprated by RPI from April 2027 |
+The page builds one measure catalogue from the publication manifest
+(`public/data/manifest.json`) and shows no figure without one. The file itself
+must name this Budget (`release: uk-autumn-budget-2026`, and `budget` with that
+id and the date 2026-10-28). With no manifest the Budget views say that no
+Budget results are published yet; an unreadable, invalid or other-Budget
+manifest makes them unavailable. Neither ever falls back to the flat CSVs, and
+Living standards and Methodology render either way. An open page checks the
+manifest on focus and every five minutes, and moves to a newer one's verified
+figures, or drops them when it is withdrawn.
+
+The frontend contains no measure list. Labels, descriptions, selection, legends,
+ordering, chart colours, policy cards and the Methodology table's modelling
+notes all come from the catalogue. Each measure's display metadata
+(`PUBLIC_DISPLAY` in `src/uk_budget_data/reforms.py`: colour, legend place,
+short description, card text, modelling note) is published with it, in its
+receipt and manifest entry, under the artifact digest. A measure published
+without a colour gets one from its id and the sign of its supported budgetary
+impact; the order is revenue, cost, then other measures, by published legend
+place and then id within each group. Chart series are keyed `measure:<id>`,
+never by a published label.
+
+Where each view's figures come from:
+
+| View | Route |
+|---|---|
+| Public finances, deciles, winners and losers, headline metrics, household scatter | Receipt-verified artifacts (`loadDashboard`, #20's `loadPublication`) |
+| Example households, young people | The same artifacts, each table re-read through its receipt (`loadVerifiedTable`) |
+| OBR comparison | Unavailable: `obr_comparison.csv` is built from the November 2025 costings (`data_inputs/obr_estimates.csv`), so nothing binds it. It needs a 2026 OBR source. |
+| Results by area | `regional.csv` and `constituency.csv` through the release index, which `publish index` writes only for tables the area run made from the entries now approved (`area_provenance.json`) |
+| Personal impact (lifetime and single year) | The household API. Every measure is listed as not modelled, with no total, unless a reviewed mapping says the calculation implements its published parameters and years. There are none today. |
+
+A row is shown only when its measure or combined run is displayable (approved or
+provisional), the year is supported, and its artifact verified in the browser
+against its receipt and the manifest. Package figures come from the combined run
+of exactly the displayable measures. `uk-budget-data publish index` binds the
+area files to the manifest's revision and bytes (`release-index.json`); the page
+checks each file's SHA-256 before using it, and asks a reader to reload when the
+manifest has changed since the page loaded (runbook, G4).
+
+Frontend tests cover unfamiliar measure ids, held and stale entries, tampered
+artifacts and flat files, mismatched index revisions, today's real
+`public/data` without a manifest, and fast-check properties for the row gate,
+catalogue membership, colours and series keys. Run `bun run test` (Vitest uses
+at most two workers) and `bun run build`. The legacy-name guard covers frontend
+source; Python reform definitions are unchanged.
 
 ## Technology stack
 

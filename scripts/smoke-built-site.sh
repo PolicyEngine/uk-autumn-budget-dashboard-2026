@@ -16,16 +16,13 @@ SITE="${1:-http://127.0.0.1:3000/uk/autumn-budget-2026}"
 SITE="${SITE%/}"
 read -r -a EXTRA <<<"${SMOKE_CURL_ARGS:-}"
 
-# Every file a tab fetches (App.jsx, OBRComparisonTable, the income-curve
-# charts, YoungPeopleSection, the Living standards view, the map).
+# Every file a tab fetches that every build carries: the OBR comparison's
+# OBR figures, the Living standards view and the map's boundaries. Budget
+# figures come only from manifest.json, its artifacts and release-index.json,
+# which exist only once results are published; src/tabsSmoke.test.jsx renders
+# each tab on the verified publication fixture.
 DATA_FILES=(
-  budgetary_impact.csv
-  distributional_impact.csv
-  winners_losers.csv
-  metrics.csv
   obr_comparison.csv
-  income_curve.csv
-  age_impact.csv
   living_standards_outlook.json
   uk_constituencies_2024.geojson
 )

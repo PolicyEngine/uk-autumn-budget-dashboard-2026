@@ -19,7 +19,8 @@ import {
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
-import { parseTable } from "../utils/publication/csv";
+import { loadVerifiedTable } from "../utils/loadDashboard";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
@@ -31,11 +32,7 @@ import Note from "./Note";
 import PillSelect from "./PillSelect";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import TrendCard from "./youngPeople/TrendCard";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
-} from "../utils/policyConfig";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -61,7 +58,6 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
 
-const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv`;
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
 // on white)
@@ -113,28 +109,28 @@ function niceDomain(maxAbs) {
   return { domain: [-top, top], ticks };
 }
 
-/** Load age_impact.csv once per mount, typed by the publication contract. */
-function useAgeImpactRows() {
-  const [state, setState] = useState({ status: "loading", rows: null });
+/**
+ * The age table from each verified artifact (#20's receipt route), typed by
+ * the publication contract. A measure whose artifact carries no age table
+ * has no rows, so its figures by age are unavailable.
+ */
+function useAgeImpactRows(catalogue) {
+  const [state, setState] = useState({ catalogue, status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
-    fetch(DATA_URL)
-      .then((response) => {
-        if (!response.ok) throw new Error(`age_impact.csv: ${response.status}`);
-        return response.text();
+    loadVerifiedTable(catalogue, "age_impact")
+      .then((rows) => {
+        // No verified age table at all reads as unavailable, not as empty charts
+        if (!cancelled) setState({ catalogue, status: rows.length ? "ready" : "unavailable", rows: rows.length ? rows : null });
       })
-      .then((text) => {
-        if (!cancelled) setState({ status: "ready", rows: parseTable("age_impact", text) });
-      })
-      .catch((error) => {
-        console.error("Error loading results by age:", error);
-        if (!cancelled) setState({ status: "error", rows: null });
+      .catch(() => {
+        if (!cancelled) setState({ catalogue, status: "error", rows: null });
       });
     return () => {
       cancelled = true;
     };
-  }, []);
-  return state;
+  }, [catalogue]);
+  return state.catalogue === catalogue ? state : { status: "loading", rows: null };
 }
 
 /** A legend of one row of swatches, in the grouped legend's style. */
@@ -191,7 +187,7 @@ function useBandDomain(rows, policies, selectedPolicies) {
         let up = 0;
         let down = 0;
         for (const policy of policies) {
-          const value = point[policy.name] ?? 0;
+          const value = point[policy.seriesKey ?? `measure:${policy.id}`] ?? 0;
           if (value > 0) up += value;
           else down += value;
         }
@@ -236,6 +232,11 @@ function SingleAgeTooltip(props) {
 }
 
 function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const {
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = useMeasureCatalogue();
   const chartRef = useRef(null);
   const [view, setView] = useState("band");
   const single = view === "single";
@@ -260,11 +261,12 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           ),
         ),
       ),
-    [rows, policies, selectedPolicies],
+    [rows, policies, selectedPolicies, ALL_POLICY_NAMES],
   );
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
   const missingAges = singleData.filter((point) => point.netChange === null);
+  const incomplete = data.some((point) => point.incomplete);
   const description = single ? SINGLE_AGE_DESCRIPTION : MEAN_DESCRIPTION;
 
   const title = `Average change by age, ${yearLabel}`;
@@ -285,9 +287,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
       : [
           ...activeNames.map((name) => ({
             color: POLICY_COLORS[name],
-            label: name,
+            label: bySeriesKey.get(name)?.label ?? name,
             type: "rect",
-            group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+            group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
           })),
           ...(activeNames.length > 1
             ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
@@ -296,7 +298,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   };
   const selectedNames = policies
     .filter((policy) => selectedPolicies.includes(policy.id))
-    .map((policy) => policy.name);
+    .map((policy) => ({ key: policy.seriesKey ?? `measure:${policy.id}`, label: policy.label ?? policy.name, decimals: 2 }));
   const units =
     "£ per person per year; each person counts their household's change in net income (not equivalised)";
   const csvText = () =>
@@ -318,7 +320,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           units,
           columns: [
             { key: "label", label: "Age" },
-            ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
+            ...selectedNames,
             { key: "netChange", label: "Net change", decimals: 2 },
           ],
           rows: published ? data.filter((point) => !point.suppressed) : [],
@@ -360,6 +362,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
+        {published && incomplete && !single && (
+          <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
+        )}
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : single ? (
@@ -440,7 +445,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 <Bar
                   key={name}
                   dataKey={name}
-                  name={name}
+                  name={bySeriesKey.get(name)?.label ?? name}
                   fill={POLICY_COLORS[name]}
                   stackId="stack"
                   {...chartMotion()}
@@ -514,11 +519,11 @@ function GroupTick({ x, y, payload, narrow }) {
   );
 }
 
-function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId }) {
   const chartRef = useRef(null);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const shares = sharesByGroup(rows, policies, selectedPolicies, selectedYear);
+  const shares = sharesByGroup(rows, policies, selectedPolicies, selectedYear, combinedId);
   const data = shares
     ? shares.groups
         .filter((group) => !group.suppressed)
@@ -687,13 +692,17 @@ const pick = (row) =>
 /**
  * "Young people (under 25)": how the selected policies change household
  * incomes by age group (ONS age bands) and single year of age, with young
- * people aged 16 to 24 highlighted. It loads
- * public/data/age_impact.csv itself and follows the page's policy and
- * year pills.
+ * people aged 16 to 24 highlighted. It loads the age table from the
+ * verified artifacts itself and follows the page's policy and year pills.
  */
 function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
-  const { status, rows } = useAgeImpactRows();
+  const catalogue = useMeasureCatalogue();
+  const { status, rows: publishedRows } = useAgeImpactRows(catalogue);
+  const { combinedId } = catalogue;
+  const rows = useMemo(() => publishedRows?.filter((row) =>
+    isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+  ) ?? null, [publishedRows, catalogue]);
 
   // A link to #young-people: the section renders after the page's data
   // loads, too late for the browser's own jump, so scroll once it is here.
@@ -706,7 +715,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
     }
   }, [status]);
 
-  const props = { rows, policies, selectedPolicies, selectedYear, narrow };
+  const props = { rows, policies, selectedPolicies, selectedYear, narrow, combinedId };
   return (
     <>
       <SectionHeading

@@ -25,6 +25,7 @@ import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
 import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const API = "https://household-api.test";
@@ -32,7 +33,7 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv"]);
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -53,9 +54,9 @@ const LOADED = {
   // The form's list: its first row (Age) and the optional details; the
   // results are checked below.
   personal: (panel) => within(panel).findAllByRole("heading", { name: "More details" }),
-  // Population impact's Young people sub-tab (?sub=young): the cards
-  // render once age_impact.csv is read.
-  young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
+  // Population impact's Young people sub-tab (?sub=young): the fixture
+  // publication's artifacts carry no age table, so it says so.
+  young: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The Incomes heading shows once the outlook is read.
   living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -67,6 +68,8 @@ const TEST_ONLY = /^An update to .* inside a test was not wrapped in act/;
 
 let requests;
 let consoleErrors;
+
+const publicationFetch = dashboardFixtureFetch();
 
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
@@ -87,6 +90,7 @@ function serve(input, init = {}) {
     return new Response("{}", { status: 404 });
   }
   const { pathname } = new URL(url, "http://localhost");
+  if (pathname === "/data/manifest.json" || pathname.startsWith("/data/artifacts/")) return publicationFetch(url, init);
   const path = normalize(join(PUBLIC, decodeURIComponent(pathname)));
   const found = path.startsWith(PUBLIC) && existsSync(path) && statSync(path).isFile();
   requests.push({ url: pathname, status: found ? 200 : 404 });
@@ -126,7 +130,7 @@ const CASES = [
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on the real data", () => {
+describe("each of the four tabs and the Young people sub-tab, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });

@@ -134,6 +134,8 @@ TABLE_KINDS = {
     "metrics.csv": NATIONAL_TABLE,
     "household_scatter_binned.csv": NATIONAL_TABLE,
     "income_curve.csv": SYNTHETIC_HOUSEHOLD,
+    "age_impact.csv": NATIONAL_TABLE,
+    "obr_comparison.csv": NATIONAL_TABLE,
 }
 # A receipt holds provenance and digests, and the manifest entries, their
 # statuses and digests, and any household check receipt, which concerns
@@ -611,6 +613,67 @@ def planned_rows(
         )
     ]
     problems.extend(_no_kind_problems(where, raw))
+    from uk_budget_data.publication.release_index import AREA_PROVENANCE_FILE
+
+    # What the area run was made from: ids, keys and digests, no figures
+    provenance_path = data_root / AREA_PROVENANCE_FILE
+    if provenance_path.exists():
+        provenance_where = provenance_path.relative_to(root).as_posix()
+        provenance_bytes = _read_file(
+            provenance_path, provenance_where, problems
+        )
+        if provenance_bytes is not None:
+            problems.extend(
+                _no_kind_problems(provenance_where, provenance_bytes)
+            )
+            rows.append(
+                Row(
+                    provenance_where,
+                    STATIC_ASSET,
+                    sha256_bytes(provenance_bytes),
+                    "What the area run was made from, for publish index",
+                )
+            )
+    if manifest.flat_files or (data_root / "release-index.json").exists():
+        from uk_budget_data.publication.release_index import (
+            INDEX_FILE,
+            release_index_problems,
+        )
+
+        problems.extend(release_index_problems(data_root, manifest))
+        index_path = data_root / INDEX_FILE
+        index_where = index_path.relative_to(root).as_posix()
+        index_bytes = _read_file(index_path, index_where, problems)
+        if index_bytes is not None:
+            problems.extend(_no_kind_problems(index_where, index_bytes))
+            rows.append(
+                Row(
+                    index_where,
+                    STATIC_ASSET,
+                    sha256_bytes(index_bytes),
+                    f"Flat release index for manifest revision {manifest.revision}",
+                )
+            )
+        # The reviewer signs each known national/synthetic flat table too.
+        # Disclosure-layer geography and other reference files keep their
+        # separate review process and existing disclosure classifications.
+        for filename, digest in sorted(manifest.flat_files.items()):
+            kind = TABLE_KINDS.get(filename)
+            if kind is None:
+                continue
+            flat_path = data_root / filename
+            flat_where = flat_path.relative_to(root).as_posix()
+            flat_bytes = _read_file(flat_path, flat_where, problems)
+            if flat_bytes is not None:
+                problems.extend(_no_kind_problems(flat_where, flat_bytes))
+                rows.append(
+                    Row(
+                        flat_where,
+                        kind,
+                        digest,
+                        f"Flat table bound to manifest revision {manifest.revision}",
+                    )
+                )
     for key, entry in listed.items():
         if entry.status == m.APPROVED:
             responsible = _name(entry.approval.by if entry.approval else "")

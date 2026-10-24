@@ -11,6 +11,7 @@ one step and raises the revision.
 
 import json
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,8 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
+    StrictInt,
     field_validator,
     model_validator,
 )
@@ -29,6 +32,8 @@ from uk_budget_data.publication.attestations import Attestation
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
 MANIFEST_FILE = "manifest.json"
+CURRENT_RELEASE = "uk-autumn-budget-2026"
+CURRENT_BUDGET = {"id": CURRENT_RELEASE, "date": "2026-10-28"}
 
 STAGED = "staged"
 PROVISIONAL = "provisional"
@@ -74,10 +79,87 @@ class ReconciliationSummary(_Strict):
     responsiveness_status: str
 
 
+class PersonalSeries(_Strict):
+    """A reviewed per-model response contract, distinct from national scoring.
+
+    Optional fields retain old receipts for inspection. A legacy key-only
+    mapping never authorizes figures in either personal frontend.
+    """
+
+    key: str = Field(min_length=1)
+    policies: Optional[list[str]] = Field(default=None, min_length=1)
+    model: Optional[Literal["lifecycle", "personal"]] = None
+    reviewed: Optional[StrictBool] = None
+    description: Optional[str] = Field(default=None, min_length=1)
+    years: Optional[list[StrictInt]] = Field(default=None, min_length=1)
+    unsupported_years: Optional[list[StrictInt]] = None
+
+    @field_validator("policies")
+    @classmethod
+    def _group_ids_are_unique_and_not_empty(cls, value):
+        if value is not None and (
+            any(not item for item in value) or len(value) != len(set(value))
+        ):
+            raise ValueError("personal group ids must be unique and nonempty")
+        return value
+
+    @field_validator("description")
+    @classmethod
+    def _description_is_not_blank(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("personal model description cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def _years_are_explicit_and_consistent(self):
+        if self.model is not None and not re.fullmatch(
+            r"impact_[A-Za-z0-9][A-Za-z0-9_]*", self.key
+        ):
+            raise ValueError("personal mapping key must name an impact series")
+        for values in (self.years, self.unsupported_years):
+            if values is not None and len(values) != len(set(values)):
+                raise ValueError("personal model years must be unique")
+        if set(self.years or []) & set(self.unsupported_years or []):
+            raise ValueError(
+                "personal supported and unsupported years overlap"
+            )
+        return self
+
+
+class DisplaySource(_Strict):
+    """A public page on the measure, for its policy card."""
+
+    label: str = Field(min_length=1)
+    href: str = Field(pattern=r"^https://")
+
+
+class MeasureDisplay(_Strict):
+    """How the page shows a measure (reforms.PUBLIC_DISPLAY): display
+    metadata only, covered by the artifact digest like the description.
+    Every field is optional, so a measure without it falls back to the
+    page's defaults (a colour from its id and direction, its description)."""
+
+    color: Optional[str] = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    order: Optional[StrictInt] = Field(default=None, ge=0)
+    short_description: Optional[str] = Field(default=None, min_length=1)
+    summary: Optional[str] = Field(default=None, min_length=1)
+    starts: Optional[str] = Field(default=None, min_length=1)
+    type: Optional[str] = Field(default=None, min_length=1)
+    details: Optional[str] = Field(default=None, min_length=1)
+    source: Optional[DisplaySource] = None
+    modelling: Optional[str] = Field(default=None, min_length=1)
+    modelled_from: Optional[StrictInt] = None
+
+
 class Entry(_Strict):
     """One measure, or one combined run, in the manifest."""
 
     name: str
+    # Public registry text, copied from the artifact and covered by its
+    # digest. Empty keeps manifests written before descriptions compatible.
+    description: str = ""
+    personal: Optional[PersonalSeries] = None
+    display: Optional[MeasureDisplay] = None
     status: Status
     artifact: str
     outputs_sha256: str
@@ -151,6 +233,16 @@ class Execution(_Strict):
 
 class Manifest(_Strict):
     schema_id: str = Field(default=SCHEMA, alias="schema")
+    release: str = CURRENT_RELEASE
+    budget: dict[str, str] = Field(
+        default_factory=lambda: dict(CURRENT_BUDGET)
+    )
+    # A flat table may only be read through the separately verified release
+    # index. These digests are part of this exact publication snapshot.
+    flat_files: dict[str, str] = Field(default_factory=dict)
+    # The ids the bound area tables use for manifest keys (a package alias
+    # for its combined run), as the area run recorded them
+    flat_aliases: dict[str, str] = Field(default_factory=dict)
     revision: int = 0
     updated_at: Optional[str] = None
     basis: Optional[dict] = None

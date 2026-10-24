@@ -1,70 +1,64 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import PolicyCards from "./PolicyCards";
-import { POLICIES } from "../utils/policies";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
-} from "../utils/policyConfig";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { ALPHA, BETA, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
-describe("the candidate measures' config", () => {
-  it("gives every measure a colour, a legend place and a card", () => {
-    expect(POLICIES).toHaveLength(10);
-    expect(new Set(ALL_POLICY_NAMES)).toEqual(new Set(POLICIES.map((p) => p.name)));
-    for (const policy of POLICIES) {
-      expect(POLICY_COLORS[policy.name]).toMatch(/^#[0-9A-F]{6}$/);
-      for (const field of ["summary", "starts", "type", "details"]) {
-        expect(policy[field], `${policy.id} ${field}`).toBeTruthy();
-      }
-    }
-    // Raisers first in the legend
-    const raisers = ALL_POLICY_NAMES.filter((name) => REVENUE_RAISING_NAMES.has(name));
-    expect(ALL_POLICY_NAMES.slice(0, raisers.length)).toEqual(raisers);
-  });
-
-  it("never repeats a revenue figure in a card", () => {
-    for (const policy of POLICIES) {
-      const text = [policy.summary, policy.details].join(" ");
-      expect(text, policy.id).not.toMatch(/£[\d.]+ ?(bn|billion)/);
-    }
-  });
-});
+// The card text comes from each measure's published display metadata
+// (reforms.PUBLIC_DISPLAY; tests/test_public_display.py checks the real
+// measures' cards). ALPHA costs revenue, BETA raises it.
+function renderCards(selectedPolicies, edit = () => {}) {
+  const fixture = measureCatalogueFixture({ held: false });
+  fixture.manifest.measures[ALPHA].display = {
+    color: "#0D9488",
+    summary: "Mock support for households.",
+    starts: "Winter 2026-27",
+    type: "Benefit",
+    details: "An assumption about mock households.",
+    source: { label: "Mock source", href: "https://example.org/mock" },
+  };
+  edit(fixture);
+  const catalogue = buildMeasureCatalogue(fixture);
+  return render(
+    <MeasureCatalogueProvider catalogue={catalogue}>
+      <PolicyCards selectedPolicies={selectedPolicies} />
+    </MeasureCatalogueProvider>,
+  );
+}
 
 describe("PolicyCards", () => {
   it("shows only the selected policies, grouped by revenue effect", () => {
-    render(
-      <PolicyCards
-        policies={POLICIES}
-        selectedPolicies={["threshold_freeze_2031_32", "warm_home_discount_top_up"]}
-      />,
-    );
+    renderCards([ALPHA, BETA]);
     const raises = screen.getByRole("heading", { name: "Raises revenue" }).parentElement;
     const costs = screen.getByRole("heading", { name: "Costs revenue" }).parentElement;
     expect(within(raises).getAllByRole("listitem")).toHaveLength(1);
-    expect(raises).toHaveTextContent("Threshold freeze to 2031-32");
+    expect(raises).toHaveTextContent("Mock beta contribution");
     expect(within(costs).getAllByRole("listitem")).toHaveLength(1);
-    expect(costs).toHaveTextContent("Warm Home Discount top-up");
-    expect(screen.queryByText("Fuel duty rises deferred")).toBeNull();
+    expect(costs).toHaveTextContent("Mock alpha support");
   });
 
   it("gives each card its start and type, with details closed until opened", () => {
-    render(<PolicyCards policies={POLICIES} selectedPolicies={["warm_home_discount_top_up"]} />);
+    renderCards([ALPHA]);
     const card = screen.getByRole("listitem");
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("TypeBenefit");
+    expect(card.querySelector(".policy-card-swatch")).toHaveStyle({ background: "#0D9488" });
     const details = card.querySelector("details");
     expect(details.open).toBe(false);
     fireEvent.click(within(card).getByText("Details"));
     expect(details.open).toBe(true);
-    expect(within(card).getByRole("link", { name: "Warm Home Discount" })).toHaveAttribute(
-      "target",
-      "_blank",
-    );
+    expect(within(card).getByRole("link", { name: "Mock source" })).toHaveAttribute("target", "_blank");
+  });
+
+  it("falls back to the public description for a measure published without card text", () => {
+    renderCards([BETA]);
+    const card = screen.getByRole("listitem");
+    expect(card).toHaveTextContent("Published contribution from mock households.");
+    expect(card.querySelector("dl")).toBeNull();
   });
 
   it("leaves out a group with nothing selected", () => {
-    render(<PolicyCards policies={POLICIES} selectedPolicies={["road_fuel_vat_cut"]} />);
+    renderCards([ALPHA]);
     expect(screen.queryByRole("heading", { name: "Raises revenue" })).toBeNull();
   });
 });

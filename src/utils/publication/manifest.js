@@ -42,6 +42,78 @@ function isYearList(value) {
   return Array.isArray(value) && value.every(Number.isInteger);
 }
 
+/** Optional reviewed compatibility contract. Legacy key-only metadata may be
+ * read, but personal selection requires a model, approval, explanation and years.
+ */
+export function personalSeriesProblems(value) {
+  if (value === undefined || value === null) return [];
+  if (!isPlainObject(value)) return ["personal mapping is not an object"];
+  const problems = [];
+  if (Object.keys(value).some((key) => !["key", "policies", "model", "reviewed", "description", "years", "unsupported_years"].includes(key))) {
+    problems.push("personal mapping has unknown fields");
+  }
+  if (typeof value.key !== "string" || value.key.length === 0) {
+    problems.push("personal mapping key is missing");
+  }
+  if (value.policies != null && (
+    !Array.isArray(value.policies) || value.policies.length === 0 ||
+    value.policies.some((id) => typeof id !== "string" || id.length === 0)
+  )) {
+    problems.push("personal mapping policies is not a non-empty list of ids");
+  }
+  if (value.policies != null && Array.isArray(value.policies) && new Set(value.policies).size !== value.policies.length) {
+    problems.push("personal mapping policies contains duplicate ids");
+  }
+  if (value.model != null && !["lifecycle", "personal"].includes(value.model)) {
+    problems.push("personal mapping model is unknown");
+  }
+  if (value.model != null && (typeof value.key !== "string" || !/^impact_[A-Za-z0-9][A-Za-z0-9_]*$/.test(value.key))) {
+    problems.push("personal mapping key is not an impact series");
+  }
+  if (value.reviewed != null && typeof value.reviewed !== "boolean") {
+    problems.push("personal mapping reviewed is not a boolean");
+  }
+  if (value.description != null && (typeof value.description !== "string" || value.description.trim().length === 0)) {
+    problems.push("personal mapping description is empty");
+  }
+  for (const field of ["years", "unsupported_years"]) {
+    if (value[field] != null && (!isYearList(value[field]) || new Set(value[field]).size !== value[field].length || (field === "years" && value[field].length === 0))) {
+      problems.push(`personal mapping ${field} is not a unique list of years`);
+    }
+  }
+  if (Array.isArray(value.years) && Array.isArray(value.unsupported_years) && value.years.some((year) => value.unsupported_years.includes(year))) {
+    problems.push("personal mapping supported and unsupported years overlap");
+  }
+  return problems;
+}
+
+const DISPLAY_TEXT = ["short_description", "summary", "starts", "type", "details", "modelling"];
+const DISPLAY_FIELDS = [...DISPLAY_TEXT, "color", "order", "source", "modelled_from"];
+
+/**
+ * How the page shows a measure (`display`, reforms.PUBLIC_DISPLAY), as
+ * MeasureDisplay in uk_budget_data.publication.manifest checks it: every
+ * field optional, none unknown.
+ */
+export function displayProblems(value) {
+  if (value === undefined || value === null) return [];
+  if (!isPlainObject(value)) return ["display is not an object"];
+  const problems = [];
+  if (Object.keys(value).some((key) => !DISPLAY_FIELDS.includes(key))) problems.push("display has unknown fields");
+  if (value.color != null && (typeof value.color !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(value.color))) problems.push("display color is not a hex colour");
+  if (value.order != null && (!Number.isInteger(value.order) || value.order < 0)) problems.push("display order is not a non-negative integer");
+  if (value.modelled_from != null && !Number.isInteger(value.modelled_from)) problems.push("display modelled_from is not a year");
+  for (const field of DISPLAY_TEXT) {
+    if (value[field] != null && (typeof value[field] !== "string" || value[field].length === 0)) problems.push(`display ${field} is not text`);
+  }
+  if (value.source != null && (
+    !isPlainObject(value.source) || Object.keys(value.source).some((key) => !["label", "href"].includes(key)) ||
+    typeof value.source.label !== "string" || value.source.label.length === 0 ||
+    typeof value.source.href !== "string" || !value.source.href.startsWith("https://")
+  )) problems.push("display source is not a label and https link");
+  return problems;
+}
+
 /** Python's whitespace and Unicode case-fold rules for attestor names. */
 function stripped(value) {
   const whitespace = new Set(contract.name_whitespace);
@@ -146,6 +218,11 @@ function entryProblems(key, entry, { combined }) {
   if (typeof entry.name !== "string" || entry.name === "") {
     problems.push(`${where}.name is missing`);
   }
+  if (entry.description !== undefined && typeof entry.description !== "string") {
+    problems.push(`${where}.description is not text`);
+  }
+  problems.push(...personalSeriesProblems(entry.personal).map((problem) => `${where}.${problem}`));
+  problems.push(...displayProblems(entry.display).map((problem) => `${where}.${problem}`));
   if (!STATUSES.includes(entry.status)) {
     problems.push(`${where}.status is ${JSON.stringify(entry.status)}`);
   }

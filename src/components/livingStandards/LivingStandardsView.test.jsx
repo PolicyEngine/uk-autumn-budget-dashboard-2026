@@ -1,3 +1,4 @@
+import { dashboardFixtureFetch } from "../../test/dashboardFixture";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,13 +11,14 @@ const OUTLOOK = readFileSync(
 );
 
 beforeEach(() => {
+  const publicationFetch = dashboardFixtureFetch();
   // The outlook JSON for the Living standards view; an empty CSV for the rest
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) =>
       String(url).endsWith("living_standards_outlook.json")
         ? new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } })
-        : new Response("reform_id,year,value\n", { status: 200 }),
+        : publicationFetch(url),
     ),
   );
   window.history.replaceState({}, "", "/");
@@ -31,6 +33,7 @@ const band = (container) => container.querySelector(".title-row");
 describe("the Living standards view", () => {
   it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     // The Population view has the year and policy pills
     expect(band(container).querySelector(".band-year")).not.toHaveAttribute("aria-hidden");
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
@@ -203,9 +206,10 @@ describe("the Living standards view", () => {
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 
-  it("hides the year and policy pills but keeps the band's layout", () => {
+  it("hides the year and policy pills but keeps the band's layout", async () => {
     window.history.replaceState({}, "", "/?tab=living");
     const { container } = render(<App />);
+    await screen.findByRole("tablist", { name: "Views" });
     for (const selector of [".band-year", ".band-policy"]) {
       const pill = band(container).querySelector(selector);
       // Still in the band, holding its place, but hidden and out of reach

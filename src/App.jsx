@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import PolicySelector from "./components/PolicySelector";
 import BudgetaryImpactChart from "./components/BudgetaryImpactChart";
 import DistributionalChart from "./components/DistributionalChart";
@@ -22,11 +22,14 @@ import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
-import { buildBudgetData } from "./utils/budgetData";
-import { POLICIES } from "./utils/policies";
 import Note from "./components/Note";
 import PolicyCards from "./components/PolicyCards";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
+import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
+import { loadManifest } from "./utils/publication/load";
+import UnavailableNotice from "./components/publication/UnavailableNotice";
+import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
@@ -79,56 +82,10 @@ export const CANDIDATE_BANNER =
   "Candidate measures, modelled before the Budget on 28 October; not announced policy.";
 const VIEWS_WITHOUT_CANDIDATE_BANNER = new Set(["living", "methodology"]);
 
-// Preset policy combinations
-const PRESETS = [
-  {
-    id: "autumn-budget",
-    name: "All candidate measures",
-    policies: POLICIES.map((p) => p.id),
-  },
-];
-
 // The ui-kit shell's sticky site nav, as globals.css selects it to make it
 // scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
-
-function parseCSV(csvText) {
-  const lines = csvText.trim().split("\n");
-
-  // Parse a single CSV line handling quoted fields
-  const parseLine = (line) => {
-    const values = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    values.push(current.trim());
-    return values;
-  };
-
-  const headers = parseLine(lines[0]);
-  const data = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseLine(lines[i]);
-    const row = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx];
-    });
-    data.push(row);
-  }
-  return data;
-}
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub) {
@@ -144,247 +101,55 @@ function dropSubTab(sub) {
   );
 }
 
-function App() {
-  const [selectedPolicies, setSelectedPolicies] = useState(
-    POLICIES.map((p) => p.id),
-  );
-  // Both start on DEFAULT_DISPLAY_YEAR (2027-28); there is no ?year param
-  const [selectedYear] = useState(DEFAULT_DISPLAY_YEAR);
-  // The year every chart shows, chosen with the header pill
+// With no Budget results to show: the page's shell and the views that need
+// none (Living standards, Methodology) still render
+const NOTHING_PUBLISHED = Object.freeze({
+  status: "no-manifest", catalogue: buildMeasureCatalogue(),
+  budgetary: [], distributional: [], winnersLosers: [], metrics: [],
+});
+
+// The views whose figures come from the publication
+const BUDGET_VIEWS = new Set(["dashboard", "personal"]);
+
+function Dashboard({ published, unavailable = null, updated = false }) {
+  const catalogue = useMeasureCatalogue();
+  const POLICIES = catalogue.measures;
+  const [selectedPolicies, setSelectedPolicies] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get("policies");
+    const available = catalogue.displayable.map((measure) => measure.id);
+    return requested === null ? available : requested.split(",").filter((id) => available.includes(id));
+  });
+  const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
+  // The year every chart shows, chosen with the header pill; there is no ?year param
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
-  // One example household for both household cards, so they always match
-  const [exampleHouseholdId, setExampleHouseholdId] = useState(
-    EXAMPLE_HOUSEHOLDS[0].id,
-  );
-  const [results, setResults] = useState(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
-
-  // Valid policy IDs from POLICIES
-  const validPolicyIds = POLICIES.map((p) => p.id);
-
-  // Initialize from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const policiesParam = params.get("policies");
+  const [activeTab, setActiveTab] = useState(() => {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
     if (opensYoungPeople(window.location)) dropSubTab("young");
-    setActiveTab(viewFromLocation(window.location));
+    return viewFromLocation(window.location);
+  });
+  const PRESETS = [{ id: "autumn-budget", name: "All candidate measures", policies: catalogue.displayable.map((measure) => measure.id) }];
 
-    if (policiesParam) {
-      // Filter to only include valid policy IDs
-      const policies = policiesParam
-        .split(",")
-        .filter((id) => validPolicyIds.includes(id));
-      setSelectedPolicies(policies);
-    }
-  }, []);
-
-  // Update URL when policies or tab change
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-
-    // Preserve personal impact data if present
-    const personalParam = params.get("personal");
-
-    if (activeTab === DEFAULT_VIEW) {
-      params.delete("tab");
-    } else {
-      params.set("tab", activeTab);
-    }
-    if (POLICY_PARAM_VIEWS.has(activeTab) && selectedPolicies.length > 0) {
-      params.set("policies", selectedPolicies.join(","));
-    } else {
-      params.delete("policies");
-    }
-
-    // Re-add personal param if it was there
-    if (personalParam) {
-      params.set("personal", personalParam);
-    }
-
-    const newUrl = `${params.toString() ? `?${params.toString()}` : window.location.pathname}${window.location.hash}`;
-    window.history.replaceState({}, "", newUrl);
+    if (activeTab === DEFAULT_VIEW) params.delete("tab");
+    else params.set("tab", activeTab);
+    if (POLICY_PARAM_VIEWS.has(activeTab) && selectedPolicies.length) params.set("policies", selectedPolicies.join(","));
+    else params.delete("policies");
+    window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
   }, [selectedPolicies, activeTab]);
 
-  // Run analysis when policies or year change
-  useEffect(() => {
-    if (selectedPolicies.length === 0) {
-      setResults(null);
-      return;
-    }
-
-    runAnalysis();
-  }, [selectedPolicies, selectedYear]);
-
-  const runAnalysis = async () => {
-    try {
-      // Fetch all CSVs in parallel
-      const [
-        budgetaryRes,
-        distributionalRes,
-        winnersLosersRes,
-        metricsRes,
-      ] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/distributional_impact.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/winners_losers.csv`),
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/metrics.csv`),
-      ]);
-
-      const budgetaryData = parseCSV(await budgetaryRes.text());
-      const distributionalData = parseCSV(await distributionalRes.text());
-      const winnersLosersData = parseCSV(await winnersLosersRes.text());
-      const metricsData = parseCSV(await metricsRes.text());
-
-      // Filter data for selected policies
-      const filteredBudgetary = budgetaryData.filter((row) =>
-        selectedPolicies.includes(row.reform_id),
-      );
-      const filteredDistributional = distributionalData.filter((row) =>
-        selectedPolicies.includes(row.reform_id),
-      );
-      const filteredWinnersLosers = winnersLosersData.filter((row) =>
-        selectedPolicies.includes(row.reform_id),
-      );
-      const filteredMetrics = metricsData.filter((row) =>
-        selectedPolicies.includes(row.reform_id),
-      );
-
-      // One point per shown year, from the years the file covers (the
-      // year list used to be hardcoded and stopped at 2030-31)
-      const budgetData = buildBudgetData(
-        budgetaryData,
-        POLICIES,
-        selectedPolicies,
-      );
-
-      // Calculate budgetary impact for 2026 (metrics always show 2026)
-      const budgetaryImpact2026 = filteredBudgetary
-        .filter((row) => parseInt(row.year) === 2026)
-        .reduce((sum, row) => sum + parseFloat(row.value), 0);
-
-      // Build distributional data (grouped by decile with policy breakdown)
-      // Always include all policy keys for smooth animations
-      const decileOrder = [
-        "1st",
-        "2nd",
-        "3rd",
-        "4th",
-        "5th",
-        "6th",
-        "7th",
-        "8th",
-        "9th",
-        "10th",
-      ];
-      const distributionalSelectedYear = distributionalData.filter(
-        (row) => parseInt(row.year) === selectedYear,
-      );
-      const distributionalChartData = decileOrder.map((decile) => {
-        const dataPoint = { decile };
-        let netChange = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = distributionalSelectedYear.find(
-            (row) => row.reform_id === policy.id && row.decile === decile,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netChange += value;
-        });
-        dataPoint.netChange = netChange;
-        return dataPoint;
-      });
-
-      // Build waterfall data (grouped by decile with policy breakdown)
-      // Always include all policy keys for smooth animations
-      const waterfallSelectedYear = winnersLosersData.filter(
-        (row) => parseInt(row.year) === selectedYear && row.decile !== "all",
-      );
-      const waterfallDeciles = [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-      ];
-      const waterfallData = waterfallDeciles.map((decile) => {
-        const dataPoint = { decile };
-        let netChange = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = waterfallSelectedYear.find(
-            (row) => row.reform_id === policy.id && row.decile === decile,
-          );
-          const value =
-            isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
-          dataPoint[policy.name] = value;
-          netChange += value;
-        });
-        dataPoint.netChange = netChange;
-        return dataPoint;
-      });
-
-      // Extract metrics for 2026 (metrics always show 2026)
-      const metrics2026 = filteredMetrics.find(
-        (row) => parseInt(row.year) === 2026,
-      );
-      const percentAffected = metrics2026
-        ? parseFloat(metrics2026.people_affected)
-        : null;
-      const giniChange = metrics2026
-        ? parseFloat(metrics2026.gini_change)
-        : null;
-      const povertyRateChange = metrics2026
-        ? parseFloat(metrics2026.poverty_change_pp)
-        : null;
-
-      // Calculate total revenue over budget window (2026-2029)
-      const budgetWindowRevenue = filteredBudgetary.reduce(
-        (sum, row) => sum + parseFloat(row.value),
-        0,
-      );
-
-      setResults({
-        metrics: {
-          budgetaryImpact2026,
-          budgetWindowRevenue,
-          percentAffected,
-          giniChange,
-          povertyRateChange,
-        },
-        budgetData,
-        distributionalData:
-          distributionalChartData.length > 0 ? distributionalChartData : null,
-        waterfallData: waterfallData.length > 0 ? waterfallData : null,
-        rawDistributional: filteredDistributional,
-        rawWinnersLosers: filteredWinnersLosers,
-      });
-    } catch (error) {
-      console.error("Error loading results:", error);
-      setResults(null);
-    }
-  };
+  const results = useMemo(() => ({
+    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
+    rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
+    rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
+  }), [published, catalogue, selectedPolicies]);
 
   const handlePolicyToggle = (policyId) => {
-    setSelectedPolicies((prev) => {
-      if (prev.includes(policyId)) {
-        return prev.filter((id) => id !== policyId);
-      } else {
-        return [...prev, policyId];
-      }
-    });
+    if (!catalogue.byId.get(policyId)?.displayable) return;
+    setSelectedPolicies((previous) => previous.includes(policyId) ? previous.filter((id) => id !== policyId) : [...previous, policyId]);
   };
-
-  const handlePresetClick = (presetPolicies) => {
-    setSelectedPolicies(presetPolicies);
-  };
+  const handlePresetClick = setSelectedPolicies;
 
   const titleSentinelRef = useRef(null);
   const [titleStuck, setTitleStuck] = useState(false);
@@ -463,13 +228,11 @@ function App() {
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
   const showingLine = selectedPolicies.length > 0 &&
-    selectedPolicies.length < POLICIES.length && (
+    selectedPolicies.length < catalogue.displayable.length && (
       <p className="showing-line">
         {selectedPolicies.length === 1
-          ? `Showing: ${
-              POLICIES.find((policy) => policy.id === selectedPolicies[0])?.name
-            }`
-          : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
+          ? `Showing: ${catalogue.byId.get(selectedPolicies[0])?.name}`
+          : `Showing ${selectedPolicies.length} of ${catalogue.displayable.length} policies`}
       </p>
     );
 
@@ -507,12 +270,11 @@ function App() {
           <h1>UK Autumn Budget 2026</h1>
 
           {/* The year applies to every chart on Population impact (both
-              sub-tabs) and to Personal impact, and
-              the revenue chart highlights it; it lives in the band so it can
-              be changed from anywhere. The policy pill
-              applies to those views and Personal impact. A pill that does
-              not apply keeps its place but is hidden, so the band does not
-              move. */}
+              sub-tabs) and to Personal impact, and the revenue chart
+              highlights it; it lives in the band so it can be changed from
+              anywhere. The policy pill applies to those views. A pill that
+              does not apply keeps its place but is hidden, so the band does
+              not move. */}
           <div
             className={`band-year ${yearShown ? "" : "is-hidden"}`}
             aria-hidden={yearShown ? undefined : "true"}
@@ -554,6 +316,21 @@ function App() {
           </div>
         )}
 
+        {updated && (
+          <p className="publication-updated" role="status">
+            Newer results were published while this page was open; it now shows them.
+          </p>
+        )}
+        {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
+          <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
+        )}
+        {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
+          <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
+            <p>{measure.description}</p>
+            <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
+          </UnavailableNotice>
+        ))}
+
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
           tabs={VIEWS}
@@ -569,14 +346,19 @@ function App() {
           aria-labelledby={tabId(activeTab)}
           className="tab-panel"
         >
-        {activeTab === "living" ? (
+        {unavailable && BUDGET_VIEWS.has(activeTab) ? (
+          <UnavailableNotice reason={unavailable.reason}>
+            {unavailable.detail && <p>{unavailable.detail}</p>}
+            <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+          </UnavailableNotice>
+        ) : activeTab === "living" ? (
           <LivingStandardsTab />
         ) : activeTab === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : activeTab === "personal" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
-            policies={POLICIES}
+            policies={catalogue.displayable}
             year={distributionalYear}
           />
         ) : (
@@ -590,7 +372,7 @@ function App() {
             <YoungPeopleSection
               selectedPolicies={selectedPolicies}
               selectedYear={distributionalYear}
-              policies={POLICIES}
+              policies={catalogue.displayable}
             />
           )
         ) : (
@@ -608,7 +390,15 @@ function App() {
                     />
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
-                        data={results.budgetData}
+                        data={DISPLAY_YEARS.map(
+                          (year) =>
+                            results.budgetData.find((point) => point.year === year) ?? {
+                              // In the config, not yet in the published files
+                              year,
+                              netImpact: null,
+                              unpublished: true,
+                            },
+                        )}
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the card */}
@@ -709,10 +499,7 @@ function App() {
                         title="About selected policies"
                         contentClassName="policy-details-content"
                       >
-                        <PolicyCards
-                          policies={POLICIES}
-                          selectedPolicies={selectedPolicies}
-                        />
+                        <PolicyCards selectedPolicies={selectedPolicies} />
                       </Disclosure>
                     </section>
                   </>
@@ -727,6 +514,79 @@ function App() {
         <ReplicationLine />
       </main>
     </div>
+  );
+}
+
+// How often an open page checks for a newer publication, besides when it
+// regains focus
+const RECHECK_MS = 5 * 60 * 1000;
+
+function App() {
+  const [published, setPublished] = useState(null);
+  const [error, setError] = useState(null);
+  const [updated, setUpdated] = useState(false);
+  const current = useRef(null);
+  useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    const controller = new AbortController();
+    const show = (result) => {
+      current.current = result;
+      setPublished(result);
+      setError(null);
+    };
+    loadDashboard(base, { signal: controller.signal })
+      .then((result) => { if (!controller.signal.aborted) show(result); })
+      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
+
+    // An open page follows the publication: a newer manifest replaces the
+    // figures with its own verified ones; a withdrawn or invalid one takes
+    // them away. A network failure keeps the snapshot the page verified.
+    let checking = false;
+    const recheck = async () => {
+      if (checking || controller.signal.aborted || current.current === null) return;
+      checking = true;
+      try {
+        const live = await loadManifest(base, { signal: controller.signal });
+        const shown = current.current.catalogue?.manifest?.snapshotSha256 ?? null;
+        if ((live?.snapshotSha256 ?? null) === shown) return;
+        const next = await loadDashboard(base, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        show(next);
+        setUpdated(true);
+      } catch (failure) {
+        if (controller.signal.aborted || failure?.name === "AbortError") return;
+        if (failure instanceof TypeError || /HTTP 5\d\d/.test(failure?.message ?? "")) return;
+        current.current = null;
+        setPublished(null);
+        setError(failure.message);
+      } finally {
+        checking = false;
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") recheck(); };
+    const timer = setInterval(recheck, RECHECK_MS);
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+  if (!published && !error) return <p role="status">Loading published measures…</p>;
+  const unavailable = error
+    ? { reason: "Published results are unavailable", detail: error }
+    : published.status === "no-manifest"
+      ? { reason: "No Budget results are published yet" }
+      : null;
+  const shown = unavailable ? NOTHING_PUBLISHED : published;
+  // One snapshot per mount: a newer one starts the views afresh
+  const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
+  return (
+    <MeasureCatalogueProvider catalogue={shown.catalogue}>
+      <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+    </MeasureCatalogueProvider>
   );
 }
 

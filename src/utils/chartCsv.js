@@ -62,9 +62,15 @@ export const fiscalYear = (year) => {
 
 /**
  * Revenue impact: one row per fiscal year, a column per selected measure,
- * and the net impact. `data` is the chart's data (year, measure names,
- * netImpact).
+ * and the net impact. `data` uses namespaced measure keys; catalogue
+ * entries supply the published column labels.
  */
+const policyColumn = (policy, decimals) => ({
+  key: typeof policy === "string" ? policy : policy.seriesKey,
+  label: typeof policy === "string" ? policy : policy.label,
+  decimals,
+});
+
 export function revenueCsv(data, policyNames) {
   return buildChartCsv({
     title: "Revenue impact of the selected policies",
@@ -72,7 +78,7 @@ export function revenueCsv(data, policyNames) {
       "£ billion per fiscal year; positive values are revenue for the Government, negative values are costs",
     columns: [
       { key: "fiscal_year", label: "Fiscal year" },
-      ...policyNames.map((name) => ({ key: name, label: name, decimals: 4 })),
+      ...policyNames.map((policy) => policyColumn(policy, 4)),
       { key: "netImpact", label: "Net impact", decimals: 4 },
     ],
     // A year not yet published is a note, never a row of zeros
@@ -100,11 +106,7 @@ export function decileCsv(data, policyNames, { kind, year }) {
       : "% change in household net income",
     columns: [
       { key: "decile", label: "Income decile" },
-      ...policyNames.map((name) => ({
-        key: name,
-        label: name,
-        decimals: absolute ? 2 : 4,
-      })),
+      ...policyNames.map((policy) => policyColumn(policy, absolute ? 2 : 4)),
       { key: "netChange", label: "Net change", decimals: absolute ? 2 : 4 },
     ],
     rows: data.map((point) => ({

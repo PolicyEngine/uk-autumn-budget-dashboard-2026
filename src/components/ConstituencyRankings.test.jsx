@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
 import { downloadFile } from "../utils/downloadFile";
 import { parseCsv } from "../utils/publication/csv";
 import { RANKING_CSV_COLUMNS } from "../utils/constituencyRanking";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import { AREA_ROUTING_URL, areaRouting, geographyFetch } from "../test/geographyFixture";
+import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+
+// Byte verification against the release index is tested in
+// src/utils/publication/flat.test.js; these tests cover the rankings view.
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),

@@ -16,6 +16,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import NoBreakYear from "./NoBreakYear";
 import HouseholdPicker from "./HouseholdPicker";
 import useIncomeCurve from "../hooks/useIncomeCurve";
@@ -69,7 +70,7 @@ function EmploymentIncomeChart({
   const householdId = controlledHousehold ?? ownHousehold;
   const setHouseholdId = onHouseholdChange ?? setOwnHousehold;
   const household = exampleHousehold(householdId);
-  const { loading, data } = useIncomeCurve({
+  const { loading, data: curve, levels } = useIncomeCurve({
     household: household.id,
     year: selectedYear,
     policies: selectedPolicies,
@@ -79,8 +80,10 @@ function EmploymentIncomeChart({
 
   const chartTitle = `${CHART_TITLE}, ${formatYearRange(selectedYear)}`;
 
-  // The income curve file covers this year only if it has rows for it
-  const published = data.length > 0;
+  // Net income levels need the approved package baseline at every point;
+  // without it the change chart still shows, but this one is unavailable
+  const published = levels;
+  const data = published ? curve : [];
   const exportName = `household-net-income-${household.id}-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -133,6 +136,7 @@ function EmploymentIncomeChart({
       {picker}
 
       <div ref={chartRef} className="chart-plot">
+        {!published && <UnavailableNotice reason="Absolute household income is unavailable. An approved combined package baseline and every selected measure are required." />}
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 420 : 430}>
             <LineChart

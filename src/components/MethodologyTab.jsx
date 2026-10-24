@@ -2,20 +2,15 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
+import { NOT_MODELLED, measureModelling } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { POLICY_COLORS } from "../utils/policyConfig";
 import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./methodology/Methodology.css";
-
-const RESEARCH = [
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
-];
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
@@ -144,6 +139,9 @@ function SectionLink({ id, children }) {
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
+  const catalogue = useMeasureCatalogue();
+  const MEASURE_MODELLING = measureModelling(catalogue);
+  const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
       {text}
@@ -247,7 +245,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Static",
-                  "Households do not change their behaviour in response to a measure, except where a measure's modelling says otherwise (the salary sacrifice cap). Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
+                  "Households do not change their behaviour in response to a measure, except where a measure's modelling in the table below says otherwise. Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                 ],
                 [
                   "Years",
@@ -273,7 +271,7 @@ function MethodologyTab({ onShowTab }) {
                     <th scope="row">
                       <span
                         className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.name] }}
+                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
                         aria-hidden="true"
                       />
                       {measure.name}
@@ -281,7 +279,7 @@ function MethodologyTab({ onShowTab }) {
                     <td>{measure.how}</td>
                     <td className="method-measure-year">
                       <span className="method-cell-label">From </span>
-                      {fiscalYearTick(measure.from)}
+                      {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
                     </td>
                   </tr>
                 ))}
@@ -334,7 +332,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The Plan 2 student loan measure counts the change in loan repayments. The employer National Insurance relief changes revenue only: with wages fixed, household incomes do not move.",
+                  "A measure whose published description says it is costed another way, such as from a Treasury cost estimate or from the change in loan repayments, follows that description.",
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
@@ -553,16 +551,8 @@ function MethodologyTab({ onShowTab }) {
               are in the line at the foot of the page.
             </p>
             <p>
-              Methods and sources: our research on the{" "}
-              {RESEARCH.map(([href, label], index) => (
-                <span key={href}>
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    {label}
-                  </a>
-                  {index < RESEARCH.length - 2 ? ", " : index === RESEARCH.length - 2 ? " and " : ""}
-                </span>
-              ))}
-              .
+              Methods and sources are published with each measure's description. See the{" "}
+              <a href="https://policyengine.org/uk/research" target="_blank" rel="noopener noreferrer">PolicyEngine research library</a>.
             </p>
           </div>
         </MethodSection>
