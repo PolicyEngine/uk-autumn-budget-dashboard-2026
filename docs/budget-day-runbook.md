@@ -614,6 +614,63 @@ uv run uk-budget-data publish check
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
+## Budget day: publish one measure
+
+**Proposed in [#105](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/105); the commands exist once its PR merges.** Each measure goes live on its own when its data pull request merges, so a measure ready at 13:30 doesn't wait for the slowest one, and a late fix reruns one measure. The combined run is refreshed in batches. This is the flat-CSV route the page reads today; it doesn't replace the gated artifacts and manifest above.
+
+**A measure moves through** coded → checked → run → signed → live:
+
+1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py` and merges to `main` on the usual gates.
+2. **Run (automatic).** The merge starts the "Publish measures (Budget day)" workflow (`.github/workflows/publish-measure.yml`):
+   - it finds the measures the merge added or changed, comparing the registry on `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach): `uv run uk-budget-data changed-measures`;
+   - it runs `uk-budget-data publish-measure <id>` for each one in parallel, on the larger runner;
+   - it opens **one draft data PR** with their rows and a summary (revenue by year, the 2029 decile change, and the change against the rows they replace). Its review rows are **pending**: kind `pending`, the Reconciler named, expiring in 7 days.
+3. **Signed (María, the Reconciler).** Review the data PR's summary and diff. Then, on its branch:
+
+   ```sh
+   uv run uk-budget-data sign-pending --reviewer juaristi22
+   git commit -am "Sign review rows" && git push
+   ```
+
+   It gives each row back its kind and refuses any file that changed after it was marked. Nothing is ever signed automatically.
+4. **Live (Vahid, the Integrator).** Merge the data PR once the required checks pass. Merging deploys, and the measure shows on the page. **"Live" means the measure has rows in `public/data/budgetary_impact.csv` on `main`.** That is what the page already treats as published without a manifest (#104's catalogue), so there is no separate status file.
+
+**By hand** (the same steps the workflow takes):
+
+```sh
+export HUGGING_FACE_TOKEN=...   # the read token; never print it
+uv run uk-budget-data publish-measure fuel_duty_freeze           # every policy year
+uv run uk-budget-data publish-measure fuel_duty_freeze --years 2029 --summary summary.md
+uv run uk-budget-data refresh-combined                           # the live measures together
+```
+
+Or dispatch the workflow with `measures` (space-separated ids). Each command:
+
+- rewrites only that measure's rows in `budgetary_impact`, `distributional_impact`, `winners_losers`, `metrics`, `age_impact`, `household_scatter_binned` and `income_curve`, for the years run. Every other line keeps its bytes, and a rerun gives the same bytes;
+- refuses a measure the data can't cost (`data_limits`), and puts any model limit in the summary as a warning;
+- writes no results by area. Those wait for #59 (`--geography` refuses until then).
+
+**The combined run.** Measures interact, so the package total isn't the sum of the measures. The "Refresh the combined run (Budget day)" workflow runs `refresh-combined` for the live measures on demand, and every 30 minutes on 28 October from 12:30 to 18:00 (London is on GMT that day, so these are UTC times too). It opens its own draft data PR, signed and merged in the same way. Until it merges:
+
+- the combined run's `reform_members` cell no longer matches the live measures (a new measure isn't a member, and `publish-measure` blanks the cell when it changes a member's rows);
+- so, with every measure selected, the page shows the total as the **sum of measures**, labelled so under the revenue chart;
+- once it merges, the page uses the combined run's total and drops the label.
+
+On the 24 October rerun, the sum of measures was within £0.13bn of the combined run in every year.
+
+**Two data PRs touching the same files.** Merge one, then rerun the other's workflow (dispatch with its measures): the upsert is idempotent, so the rerun writes onto the new `main` cleanly.
+
+**Runner.** The compute jobs need more memory than a standard runner has. Their label comes from the dispatch input `runner`, else the repository variable `PUBLISH_MEASURE_RUNNER`, else `ubuntu-latest-16-cores` (64 GB). That label must exist as an organisation larger runner, or the job queues until it times out. Budget about 20 GB per measure once results by area are included. The secret is `PE_UK_PRIVATE_HF_READ_TOKEN`, as the Certified data check uses. A later PR can move the compute to Modal, one container per measure.
+
+**Timings.**
+
+| Run | Wall time | Peak memory | Notes |
+|---|---|---|---|
+| `publish-measure fuel_duty_freeze --years 2029`, laptop, 24 October | 1 min 23 s | 5.4 GB | Microcosm, policyengine 6.10.2. All seven files came out byte-identical to the 24 October full run. |
+| One measure, every year, all tables but the map (24 October full run, per measure) | about 6–7 min | about 20 GB | From #69's rerun |
+| Results by area, per measure | about 9 min | more than 20 GB | After #59 |
+| `refresh-combined` | not yet measured | | Time it at the rehearsal and record it here |
+
 ## Rolling re-cuts, and the 07:00 go/no-go (Max, 22 October)
 
 Max, relayed by the UK hub and the coordinator on 22 October: "i think we should keep improving the model as much as we can as long as we can". So there is no single lock. The dashboard adopts each certified re-cut, under d1152 ("latest certified release"). UK time equals UTC from Sunday 25 October.
