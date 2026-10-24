@@ -95,10 +95,10 @@ const IN_SENTENCE = {
 // The breakdown's top rows, in Spring Statement's order: market income,
 // taxes, benefits, pension contributions. Each opens to its programmes.
 export const GROUPS = [
-  { id: "income", label: "Market income", color: "#4A7BA7" },
+  { id: "income", label: "Market income", color: CHART_COLOURS.marketIncome },
   { id: "tax", label: "Taxes", color: CHART_COLOURS.noChange },
   { id: "benefit", label: "Benefits", color: CHART_COLOURS.gain },
-  { id: "pension", label: "Pension contributions", color: "#B8875A" },
+  { id: "pension", label: "Pension contributions", color: CHART_COLOURS.pensionContributions },
 ];
 
 // Rows the API files under taxes that the breakdown shows as their own

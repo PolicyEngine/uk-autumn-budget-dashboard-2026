@@ -183,12 +183,12 @@ export function joinSeries(entries) {
  * Chart palette (teal ramp + neutral), as the published UK dashboards: the
  * shared chart colours (chartTheme.CHART_COLOURS), so a rise is the gain
  * teal and a fall the loss amber on every tab. `light` is the ramp's third
- * step, for a series beside dark and teal (Tailwind teal 300).
+ * step, for a series beside dark and teal.
  */
 export const PALETTE = {
   dark: CHART_COLOURS.highlight,
   teal: CHART_COLOURS.gain,
-  light: "#81E6D9",
+  light: CHART_COLOURS.gainLight,
   grey: CHART_COLOURS.noChange,
   amber: CHART_COLOURS.loss,
 };

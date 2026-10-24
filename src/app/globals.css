@@ -143,6 +143,19 @@ code {
   --c-diff-small: #10b981;
   --c-diff-medium: #fbbf24;
   --c-diff-large: #ef4444;
+  /* Categorical series: age bands (blues under 50, purples from 50, each
+     darker with age; 16 to 24 is --c-gain), the household breakdown's
+     market income and pension contributions */
+  --c-age-children: #8db8e3;
+  --c-age-young-adults: #5a8fcb;
+  --c-age-adults: #3165a8;
+  --c-age-older: #7c5cb8;
+  --c-age-pension: #2e1f5e;
+  --c-market-income: #4a7ba7;
+  --c-pension-contributions: #b8875a;
+  --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  --c-loss-light: #fbbf24; /* a small loss */
+  --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
