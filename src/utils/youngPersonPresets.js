@@ -25,7 +25,8 @@
  */
 
 // Inputs every example sets the same way: no other income, no salary
-// sacrifice, no children, and the form's default spending.
+// sacrifice, no children. Everything else (region, spending, council tax
+// band) stays at the form's sourced defaults (utils/householdDefaults.js).
 const COMMON = {
   retirement_age: 67,
   life_expectancy: 85,
@@ -33,16 +34,12 @@ const COMMON = {
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
-  rail_spending_per_year: 2000,
-  petrol_spending_per_year: 500,
   children_ages: "",
-  // Single-year answers: single, no Universal Credit claim, renting
-  // privately, council tax band D, no diesel or childcare
+  // Single-year answers: single, claiming any Universal Credit due,
+  // renting privately, no childcare
   has_partner: false,
-  claims_universal_credit: false,
+  claims_universal_credit: true,
   tenure: "RENT_PRIVATELY",
-  council_tax_band: "D",
-  diesel_spending_per_year: 0,
   monthly_childcare: 0,
 };
 

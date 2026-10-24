@@ -19,6 +19,7 @@
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
+import { regionalRent } from "./householdDefaults";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -137,7 +138,8 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       region: inputs.region,
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
-      monthly_rent: renting ? inputs.monthly_rent : 0,
+      // Left as prefilled (null), the region's average private rent
+      monthly_rent: renting ? monthlyRent(inputs) : 0,
       dividend_income: inputs.dividends_per_year,
       savings_interest_income: inputs.savings_interest_per_year,
       property_income: inputs.property_income_per_year,
@@ -163,6 +165,12 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
     include: [...include],
   };
 }
+
+/** The rent a month: as entered, else the region's average private rent. */
+export const monthlyRent = (inputs) =>
+  typeof inputs.monthly_rent === "number" && Number.isFinite(inputs.monthly_rent)
+    ? inputs.monthly_rent
+    : regionalRent(inputs.region);
 
 const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 
