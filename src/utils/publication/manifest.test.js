@@ -48,6 +48,14 @@ describe("parseManifest on the fixture", () => {
       ),
     ).not.toThrow();
   });
+
+  it("accepts a public description while retaining older manifests", () => {
+    expect(manifest.measures.alpha.description).toBeUndefined();
+    const updated = parseManifest(edited((m) => {
+      m.measures.alpha.description = "A newly announced measure.";
+    }));
+    expect(updated.measures.alpha.description).toBe("A newly announced measure.");
+  });
 });
 
 describe("parseManifest refusals", () => {
@@ -55,6 +63,7 @@ describe("parseManifest refusals", () => {
     "a different schema": (m) => (m.schema = "other/v1"),
     "revision zero": (m) => (m.revision = 0),
     "an unknown status": (m) => (m.measures.alpha.status = "published"),
+    "a non-text public description": (m) => (m.measures.alpha.description = 7),
     "a bad digest": (m) => (m.measures.alpha.outputs_sha256 = "abc"),
     "a digest with a trailing newline": (m) =>
       (m.measures.alpha.outputs_sha256 += "\n"),

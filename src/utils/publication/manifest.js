@@ -146,6 +146,9 @@ function entryProblems(key, entry, { combined }) {
   if (typeof entry.name !== "string" || entry.name === "") {
     problems.push(`${where}.name is missing`);
   }
+  if (entry.description !== undefined && typeof entry.description !== "string") {
+    problems.push(`${where}.description is not text`);
+  }
   if (!STATUSES.includes(entry.status)) {
     problems.push(`${where}.status is ${JSON.stringify(entry.status)}`);
   }
