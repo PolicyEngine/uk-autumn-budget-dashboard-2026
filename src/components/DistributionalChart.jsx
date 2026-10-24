@@ -261,7 +261,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
 
       <div ref={chartRef}>
         {published ? (
-          <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
+          <ResponsiveContainer width="100%" height={narrow ? 620 : 500}>
             <ComposedChart
               data={data}
               margin={chartMargin(narrow)}
@@ -367,7 +367,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
           </ResponsiveContainer>
         ) : (
           <UnpublishedPlot
-            height={narrow ? 620 : 480}
+            height={narrow ? 620 : 500}
             yearLabel={formatYearRange(selectedYear)}
           />
         )}

@@ -7,6 +7,7 @@ import {
   createSvgText,
   createSvgRect,
   createSvgLine,
+  createSvgCircle,
   createSvgGroup,
   createSvgTspan,
   addSvgNamespaces,
@@ -14,6 +15,7 @@ import {
 } from "./svgHelpers";
 import { measureTextWidth, wrapText, estimateTextHeight } from "./textMeasure";
 import { downloadSvg } from "./downloadFile";
+import { legendGrid, LEGEND_COLUMN_GAP } from "./legendLayout";
 
 /**
  * Convert an image URL to a base64 data URL.
@@ -229,6 +231,18 @@ function createLegend(items, maxWidth, yPosition, options = {}) {
           dash: item.dash,
         });
         itemGroup.appendChild(line);
+      } else if (item.type === "dot" || item.type === "ring") {
+        // A solid dot, or a hollow ring (the OBR in the dumbbell chart)
+        const ring = item.type === "ring";
+        itemGroup.appendChild(
+          createSvgCircle({
+            cx: currentX + legendIconSize / 2,
+            cy: currentY,
+            r: ring ? legendIconSize / 2 - 1 : legendIconSize / 2 - 2,
+            fill: ring ? "none" : item.color,
+            stroke: ring ? item.color : undefined,
+          }),
+        );
       } else {
         const rect = createSvgRect({
           x: currentX,
@@ -542,9 +556,11 @@ export async function buildChartSvg(containerRef, options = {}) {
 }
 
 /**
- * The on-screen grouped legend, drawn in SVG: "Raise revenue" and "Cost
- * revenue" columns side by side (one item a line), then the net line
- * centred under them; the block centred in `areaWidth`.
+ * The on-screen grouped legend, drawn in SVG: each group's heading ("Raise
+ * revenue", "Cost revenue") spans the block and its items flow into the
+ * same even columns (legendGrid, as on screen), a label too long for its
+ * column wrapping onto a second line; then the net line centred under
+ * them. The block is centred in `areaWidth`.
  *
  * @param {Array<{color: string, label: string, type: string, group?: string}>} items
  *   Items with `group` "raise" or "cost"; items without a group (the net
@@ -552,44 +568,37 @@ export async function buildChartSvg(containerRef, options = {}) {
  */
 export function createGroupedLegend(items, areaWidth) {
   const { legendFontSize, legendIconSize, legendIconTextGap, colors } = STYLES;
-  const rowHeight = legendFontSize + 8;
-  const headingHeight = 18;
-  const columnGap = 32;
+  const font = { fontSize: legendFontSize, fontWeight: "500" };
+  const lineHeight = legendFontSize + 4;
+  const itemGap = 6;
+  const headingHeight = 16;
+  const groupGap = 10;
   const groups = [
     ["Raise revenue", items.filter((item) => item.group === "raise")],
     ["Cost revenue", items.filter((item) => item.group === "cost")],
   ].filter(([, groupItems]) => groupItems.length > 0);
   const rest = items.filter((item) => !item.group);
 
-  const itemWidth = (item) =>
-    legendIconSize +
-    legendIconTextGap +
-    measureTextWidth(item.label, { fontSize: legendFontSize, fontWeight: "500" });
-  const columns = groups.map(([heading, groupItems]) => ({
-    heading,
-    items: groupItems,
-    width: Math.max(
-      measureTextWidth(heading, { fontSize: 11, fontWeight: "600" }),
-      ...groupItems.map(itemWidth),
-    ),
-  }));
-  const blockWidth =
-    columns.reduce((sum, column) => sum + column.width, 0) +
-    columnGap * Math.max(0, columns.length - 1);
-  // Side by side only if the columns fit the width; otherwise stacked
-  const stacked = blockWidth > areaWidth;
-  const columnsHeight = stacked
-    ? columns.reduce(
-        (sum, column) => sum + headingHeight + column.items.length * rowHeight + 8,
+  const iconWidth = legendIconSize + legendIconTextGap;
+  const itemWidth =
+    Math.ceil(
+      Math.max(
         0,
-      )
-    : headingHeight + Math.max(0, ...columns.map((column) => column.items.length)) * rowHeight;
+        ...groups.flatMap(([, groupItems]) =>
+          groupItems.map((item) => iconWidth + measureTextWidth(item.label, font)),
+        ),
+      ),
+    ) + 1;
+  const grid = legendGrid({
+    available: areaWidth,
+    itemWidth,
+    counts: groups.map(([, groupItems]) => groupItems.length),
+  });
+  const left = Math.max(0, (areaWidth - grid.width) / 2);
+  const labelWidth = Math.max(1, grid.columnWidth - iconWidth);
 
   const group = createSvgGroup({ className: "exported-legend" });
-  const stackedWidth = Math.max(0, ...columns.map((column) => column.width));
-  let x = stacked ? Math.max(0, (areaWidth - stackedWidth) / 2) : (areaWidth - blockWidth) / 2;
-  let top = 0;
-  const drawItem = (item, itemX, itemY) => {
+  const drawSwatch = (item, itemX, itemY) => {
     if (item.type === "line") {
       group.appendChild(
         createSvgLine({
@@ -612,37 +621,63 @@ export function createGroupedLegend(items, areaWidth) {
         }),
       );
     }
-    group.appendChild(
-      createSvgText(item.label, {
-        x: itemX + legendIconSize + legendIconTextGap,
-        y: itemY + legendFontSize / 3,
-        fontSize: legendFontSize,
-        fontWeight: "500",
-        fill: colors.legendText,
-      }),
-    );
   };
-  columns.forEach((column) => {
+  // One item: its swatch by the first line, the label wrapped to the column
+  const drawItem = (item, itemX, top, lines) => {
+    const firstY = top + lineHeight / 2;
+    drawSwatch(item, itemX, firstY);
+    const text = createSvgText("", {
+      x: itemX + iconWidth,
+      y: firstY + legendFontSize / 3,
+      ...font,
+      fill: colors.legendText,
+    });
+    lines.forEach((line, index) => {
+      text.appendChild(
+        createSvgTspan(line, {
+          x: itemX + iconWidth,
+          dy: index === 0 ? "0" : `${lineHeight}px`,
+        }),
+      );
+    });
+    group.appendChild(text);
+  };
+
+  let top = 0;
+  groups.forEach(([heading, groupItems], groupIndex) => {
+    if (groupIndex > 0) top += groupGap;
     group.appendChild(
-      createSvgText(column.heading, {
-        x,
+      createSvgText(heading, {
+        x: left,
         y: top + 11,
         fontSize: 11,
         fontWeight: "600",
         fill: "#6B7280",
       }),
     );
-    column.items.forEach((item, index) => {
-      drawItem(item, x, top + headingHeight + rowHeight * index + rowHeight / 2);
-    });
-    if (stacked) top += headingHeight + column.items.length * rowHeight + 8;
-    else x += column.width + columnGap;
+    top += headingHeight + itemGap;
+    for (let start = 0; start < groupItems.length; start += grid.columns) {
+      const row = groupItems.slice(start, start + grid.columns);
+      const wrapped = row.map((item) => wrapText(item.label, labelWidth, font));
+      row.forEach((item, column) => {
+        drawItem(
+          item,
+          left + column * (grid.columnWidth + LEGEND_COLUMN_GAP),
+          top,
+          wrapped[column],
+        );
+      });
+      const rowLines = Math.max(1, ...wrapped.map((lines) => lines.length));
+      top += rowLines * lineHeight;
+      if (start + grid.columns < groupItems.length) top += itemGap;
+    }
   });
-  let height = columnsHeight;
+  let height = top;
   rest.forEach((item) => {
-    const restWidth = itemWidth(item);
-    drawItem(item, (areaWidth - restWidth) / 2, height + 6 + rowHeight / 2);
-    height += rowHeight + 6;
+    const restWidth = iconWidth + measureTextWidth(item.label, font);
+    height += 10;
+    drawItem(item, (areaWidth - restWidth) / 2, height, [item.label]);
+    height += lineHeight;
   });
   return { element: group, height };
 }
