@@ -172,25 +172,26 @@ Dashboard, 5 October 2026, María Juaristi and Vahid Ahmadi. https://www.policye
 
 **X**
 
-> We modelled a targeted discount on energy bills, paid as a flat amount. In 2026-27:
-> • Cost: £2.09bn
-> • 11.95m households (41.8%) receive support
-> • £175 on average per receiving household
+> A £175 discount on winter energy bills for every household where someone gets a means-tested benefit, or no one has taxable income of £24,000 or more. We estimate that in 2026-27:
+> • It costs £2.09bn
+> • 11.95m households (41.8% in GB) qualify
 
 Reply: `Read more: https://www.policyengine.org/uk/targeted-energy-discount`
 
 **LinkedIn**
 
-> PolicyEngine models a targeted discount on energy bills, paid as a flat amount to eligible households.
+> PolicyEngine models a targeted discount on winter energy bills in Great Britain.
+>
+> • Who qualifies: a household where anyone receives a qualifying means-tested benefit, or where the highest individual taxable income is below £24,000.
+> • How much: £175 off the energy bill of each qualifying household.
 >
 > In 2026-27, if every eligible household receives it:
 > • it costs £2.09 billion
-> • 11.95 million households, 41.8% of the 28.6 million in Great Britain, receive support
-> • the average receiving household gets £175
+> • 11.95 million households qualify, 41.8% of the 28.6 million in Great Britain
 >
 > If half of the households eligible through the income test alone took it up, it would cost £1.71 billion and reach 9.8 million households.
 >
-> Explore the design choices, years and take-up: https://www.policyengine.org/uk/targeted-energy-discount
+> The dashboard also models a tiered version (£220 for incomes below £18,000, £85 from £18,000 to £24,000) and a version for benefit recipients only. Explore the designs and check your own household: https://www.policyengine.org/uk/targeted-energy-discount
 >
 > #EnergyBills
 
