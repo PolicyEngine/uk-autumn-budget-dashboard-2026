@@ -6,6 +6,7 @@
  */
 import { consistentRound } from "./householdImpactApi";
 import { getPolicyColor } from "./policyConfig";
+import { CHART_COLOURS } from "./chartTheme";
 
 const MINUS = "−";
 
@@ -95,8 +96,8 @@ const IN_SENTENCE = {
 // taxes, benefits, pension contributions. Each opens to its programmes.
 export const GROUPS = [
   { id: "income", label: "Market income", color: "#4A7BA7" },
-  { id: "tax", label: "Taxes", color: "#9CA3AF" },
-  { id: "benefit", label: "Benefits", color: "#319795" },
+  { id: "tax", label: "Taxes", color: CHART_COLOURS.noChange },
+  { id: "benefit", label: "Benefits", color: CHART_COLOURS.gain },
   { id: "pension", label: "Pension contributions", color: "#B8875A" },
 ];
 
@@ -203,7 +204,7 @@ export function policyRows(byPolicy, total, policies) {
     rows.push({
       id: "interaction",
       name: "Interaction between policies",
-      color: "#9CA3AF",
+      color: CHART_COLOURS.noChange,
       change: byPolicy.residual,
     });
   }

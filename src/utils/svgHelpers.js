@@ -1,3 +1,4 @@
+import { CHART_COLOURS } from "./chartTheme";
 /**
  * SVG helper utilities for creating and manipulating SVG elements.
  */
@@ -39,7 +40,7 @@ export function createSvgElement(tagName, attributes = {}) {
  */
 export function createSvgText(
   content,
-  { x, y, fontSize, fontWeight = "400", fill = "#374151" },
+  { x, y, fontSize, fontWeight = "400", fill = CHART_COLOURS.text },
 ) {
   const text = createSvgElement("text", {
     x,

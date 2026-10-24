@@ -62,6 +62,7 @@ import {
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { CHART_COLOURS } from "../utils/chartTheme";
 
 const CHART_TITLE = "Constituency-level impacts";
 
@@ -156,8 +157,8 @@ function placeInCorners(svg, area) {
     .attr("x", area.right - CHART_LOGO.width - CHART_LOGO.padding)
     .attr("y", area.bottom - CHART_LOGO.height - CHART_LOGO.padding);
 }
-const SELECTED_STROKE = { stroke: "#1D4044", strokeWidth: 0.6 };
-const HOVER_STROKE = { stroke: "#666666", strokeWidth: 0.3 };
+const SELECTED_STROKE = { stroke: CHART_COLOURS.highlight, strokeWidth: 0.6 };
+const HOVER_STROKE = { stroke: CHART_COLOURS.tick, strokeWidth: 0.3 };
 
 // A colour d3 can blend: a hex value, or rgb() left by an interrupted
 // transition. Never a pattern's url().
@@ -267,7 +268,7 @@ function MapTemplate({ features, children }) {
             className="map-template-svg"
           >
             {paths.map(({ code, d }) => (
-              <path key={code} d={d} fill="#D1D5DB" stroke="#FFFFFF" strokeWidth={0.4} />
+              <path key={code} d={d} fill={CHART_COLOURS.axis} stroke={CHART_COLOURS.surface} strokeWidth={0.4} />
             ))}
           </svg>
         )}

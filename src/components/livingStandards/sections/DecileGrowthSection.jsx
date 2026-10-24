@@ -46,7 +46,7 @@ export default function useDecileView(data) {
   const controls = (
     <PillSelect
       variant="light"
-      prefix="Housing costs"
+      prefix="Housing"
       name="Housing costs"
       value={basis}
       onChange={setBasis}

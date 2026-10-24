@@ -5,7 +5,15 @@
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
-import { EMPTY, VIEW_OPTIONS, lineSeries, mergeSeries, rangeAxis, visibleRows } from "../../../utils/livingStandards/baseline";
+import {
+  EMPTY,
+  VIEW_OPTIONS,
+  lineSeries,
+  mergeSeries,
+  rangeAxis,
+  shortLabel,
+  visibleRows,
+} from "../../../utils/livingStandards/baseline";
 import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
@@ -82,19 +90,18 @@ export default function useInequalityView(data) {
       <>
         <PillSelect
           variant="light"
-          prefix="Measure"
           name="Inequality measure"
           value={measure}
           onChange={setMeasure}
           options={Object.keys(ineq.measures).map((id) => ({
             value: id,
             label: ineq.measures[id],
-            badge: ineq.measures[id].replace(/ coefficient$/, ""),
+            badge: shortLabel(ineq.measures[id]),
           }))}
         />
         <PillSelect
           variant="light"
-          prefix="Housing costs"
+          prefix="Housing"
           name="Housing costs"
           value={basis}
           onChange={setBasis}

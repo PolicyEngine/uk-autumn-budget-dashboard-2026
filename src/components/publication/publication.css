@@ -22,8 +22,8 @@
   padding: 6px 10px;
   display: inline-block;
   border-radius: 4px;
-  background: #fff7e6;
-  color: #7a5a1f;
+  background: var(--c-notice-bg);
+  color: var(--c-notice-text);
   font-size: var(--fs-small);
   font-weight: 500;
 }
@@ -73,7 +73,7 @@
 .publication-fiscal th,
 .publication-fiscal td {
   padding: 6px 8px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--c-grid);
   text-align: right;
 }
 
@@ -91,7 +91,7 @@
 
 .publication-row-interaction th,
 .publication-row-interaction td {
-  color: #666;
+  color: var(--pe-gray-500);
 }
 
 .publication-cell-unavailable {
@@ -116,7 +116,7 @@
 
 .publication-note {
   margin: 8px 0 0;
-  color: #666;
+  color: var(--pe-gray-500);
   font-size: var(--fs-small);
   line-height: 1.5;
 }
@@ -124,7 +124,7 @@
 .publication-tooltip {
   padding: 8px 10px;
   background: white;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--c-grid);
   border-radius: 4px;
   font-size: var(--fs-small);
   color: var(--pe-gray-700);
@@ -136,6 +136,6 @@
 
 .publication-provisional-marker {
   font-weight: 400;
-  color: #7a5a1f;
+  color: var(--c-notice-text);
   font-size: 0.85em;
 }

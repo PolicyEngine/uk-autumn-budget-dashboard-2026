@@ -4,7 +4,7 @@ import { buildChartSvg } from "../utils/exportChartAsSvg";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
-import { useNarrowViewport, TICK_STYLE } from "../utils/chartTheme";
+import { useNarrowViewport, TICK_STYLE, CHART_COLOURS } from "../utils/chartTheme";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import NoBreakYear from "./NoBreakYear";
 import useElementWidth from "../hooks/useElementWidth";
@@ -23,20 +23,20 @@ import "./OBRDumbbellChart.css";
  * obr_behavioural } } }], ...].
  */
 
-export const PE_COLOUR = "#319795";
-export const OBR_COLOUR = "#9CA3AF";
-const PE_LABEL_COLOUR = "#0F766E";
-const OBR_LABEL_COLOUR = "#6B7280";
-const ZERO_LINE = "#374151";
-const GRID = "#E5E7EB";
-const NAME_COLOUR = "#374151";
-const BOTH_LABEL_COLOUR = "#374151";
+export const PE_COLOUR = CHART_COLOURS.gain;
+export const OBR_COLOUR = CHART_COLOURS.obr;
+const PE_LABEL_COLOUR = CHART_COLOURS.gainText;
+const OBR_LABEL_COLOUR = CHART_COLOURS.obrText;
+const ZERO_LINE = CHART_COLOURS.zeroLine;
+const GRID = CHART_COLOURS.grid;
+const NAME_COLOUR = CHART_COLOURS.zeroLine;
+const BOTH_LABEL_COLOUR = CHART_COLOURS.zeroLine;
 // The PolicyEngine dot sits inside the OBR ring when the two coincide
 export const PE_RADIUS = 5;
 export const OBR_RADIUS = 8;
 // A white outline so labels stay legible where they cross a gridline
 const HALO = {
-  stroke: "#ffffff",
+  stroke: CHART_COLOURS.surface,
   strokeWidth: 4,
   strokeLinejoin: "round",
   paintOrder: "stroke",
@@ -44,9 +44,9 @@ const HALO = {
 
 // The comparison table's difference bands and colours
 export const BANDS = [
-  { key: "small", below: 0.5, colour: "#10b981", label: "under £0.5bn" },
-  { key: "medium", below: 2, colour: "#fbbf24", label: "£0.5–2bn" },
-  { key: "large", below: Infinity, colour: "#ef4444", label: "over £2bn" },
+  { key: "small", below: 0.5, colour: CHART_COLOURS.diffSmall, label: "under £0.5bn" },
+  { key: "medium", below: 2, colour: CHART_COLOURS.diffMedium, label: "£0.5–2bn" },
+  { key: "large", below: Infinity, colour: CHART_COLOURS.diffLarge, label: "over £2bn" },
 ];
 
 const MINUS = "−";
@@ -242,7 +242,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   // A white backing so a gridline or the zero line never runs through a label
   const backing = (left, cy, w) => (
-    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill="#ffffff" />
+    <rect x={left - 2} y={cy - 8} width={w + 4} height={16} fill={CHART_COLOURS.surface} />
   );
 
   const fits = (text, side, cx) => {
@@ -414,7 +414,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
           cx={x(row.obr)}
           cy={cy}
           r={OBR_RADIUS}
-          fill="#ffffff"
+          fill={CHART_COLOURS.surface}
         />,
       );
     }

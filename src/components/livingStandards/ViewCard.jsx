@@ -1,11 +1,12 @@
 import LsCard from "./LsCard";
-import PillSelect from "../PillSelect";
+import ViewSwitch from "../ViewSwitch";
 
 /**
- * A card that shows one of several views of a topic, chosen with a "Show"
- * pill. Each view (from a use…View hook) gives the card's parts: period,
+ * A card that shows one of several views of a topic, chosen with a small
+ * segmented switch (ViewSwitch, without icons; each view's short `badge`
+ * as its label, the full label as its title). Each view (from a use…View hook) gives the card's parts: period,
  * summary, about, notes, source, download, its own pills and the chart.
- * The Show pill comes first in the one controls row, then the view's own
+ * The switch comes first in the one controls row, then the view's own
  * pills. A view with none keeps the first view's pills in place, hidden and
  * inert, so the card's layout does not jump when the view changes.
  *
@@ -28,14 +29,15 @@ export default function ViewCard({ title, name, views, value, onChange }) {
       download={view.download}
       controls={
         <>
-          <PillSelect
-            variant="light"
-            prefix="Show"
-            name={name}
-            value={current.value}
-            onChange={onChange}
-            options={available.map((v) => ({ value: v.value, label: v.label, badge: v.badge }))}
-          />
+          {available.length > 1 && (
+            <ViewSwitch
+              compact
+              label={name}
+              value={current.value}
+              onChange={onChange}
+              options={available.map((v) => ({ value: v.value, label: v.badge ?? v.label, title: v.label }))}
+            />
+          )}
           {view.controls ??
             (available[0].view.controls && (
               <span className="ls-controls-placeholder" aria-hidden="true" inert>

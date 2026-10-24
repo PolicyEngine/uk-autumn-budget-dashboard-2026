@@ -68,7 +68,7 @@
 }
 
 .single-year-change.is-loss .stat-value {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 /* What the figures assume: one muted line of short items under the
@@ -253,7 +253,7 @@
 }
 
 .programme-table .change.is-loss {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 .programme-table .change.is-zero {
@@ -287,7 +287,7 @@
   font-size: var(--fs-small);
   color: var(--pe-gray-800);
   background: var(--pe-surface);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pe-gray-200);
   border-radius: 6px;
 }
 
@@ -358,8 +358,8 @@
 }
 
 .single-year-banner.is-loss {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: var(--c-loss-soft);
+  border-color: var(--c-loss-border);
 }
 
 .single-year-banner p {
@@ -380,7 +380,7 @@
 }
 
 .single-year-banner.is-loss .single-year-amount {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 .single-year-pct {

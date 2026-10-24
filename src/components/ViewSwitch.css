@@ -29,10 +29,24 @@
 
 .obr-view-option[aria-pressed="true"] {
   background: var(--band-teal);
-  color: #fff;
+  color: var(--c-surface);
 }
 
 .obr-view-option:focus-visible {
   outline: 2px solid var(--band-teal);
   outline-offset: -2px;
+}
+
+/* In-card size: as tall as the in-card pills (30px), no icons */
+.obr-view-switch.is-compact {
+  flex: 0 0 auto;
+  border-color: var(--pe-gray-300);
+  border-radius: 999px;
+}
+
+.obr-view-switch.is-compact .obr-view-option {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--fs-micro);
+  white-space: nowrap;
 }

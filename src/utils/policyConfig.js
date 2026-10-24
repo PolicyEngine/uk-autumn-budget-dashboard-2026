@@ -8,24 +8,28 @@
 
 import { POLICIES } from "./policies";
 
-// Policy colours by display name (used in population impact charts).
-// Raise revenue: amber, darkest to lightest. Cost revenue: teal, with the
-// chart palette's blue-grey, steel blue and mint between, so that adjacent
-// bars stay distinct. The names are the measures' names in src/utils/policies.js.
+// Policy colours by display name (used in population impact charts), from
+// the Autumn Budget 2025 dashboard's theme: raise revenue in its amber
+// family, cost revenue in its teal family (Tailwind's amber and teal
+// scales). Raise revenue runs darkest to lightest, two steps apart, as last
+// year's did. Cost revenue has seven measures, more than last year's four,
+// so its shades alternate dark and light down the stack (each neighbour at
+// least three steps apart) to keep neighbouring bars distinct. The names are
+// the measures' names in src/utils/policies.js.
 export const POLICY_COLORS = {
   // Raise revenue (amber)
   "Threshold freeze to 2031-32": "#78350F", // Amber 900
   "Business Asset Disposal Relief restricted": "#B45309", // Amber 700
   "Salary sacrifice cap from 2028": "#F59E0B", // Amber 500
 
-  // Cost revenue (teal, with blue and mint so neighbours stay apart)
+  // Cost revenue (teal)
   "Fuel duty rises deferred": "#115E59", // Teal 800
-  "VAT cut on road fuel": "#5FB88A", // Mint
-  "Zero VAT on domestic electricity": "#0D9488", // Teal 600
-  "Warm Home Discount top-up": "#5A8FB8", // Blue-grey
-  "State Pension income tax protection": "#2DD4BF", // Teal 400
-  "Employer NI relief for under-25s": "#4A7BA7", // Steel blue
-  "Plan 2 student loan threshold unfrozen": "#99F6E4", // Teal 200
+  "VAT cut on road fuel": "#2DD4BF", // Teal 400
+  "Zero VAT on domestic electricity": "#0F766E", // Teal 700
+  "Warm Home Discount top-up": "#5EEAD4", // Teal 300
+  "State Pension income tax protection": "#0D9488", // Teal 600
+  "Employer NI relief for under-25s": "#99F6E4", // Teal 200
+  "Plan 2 student loan threshold unfrozen": "#14B8A6", // Teal 500
 };
 
 // Policy colours by measure id (personal impact), the same as by name

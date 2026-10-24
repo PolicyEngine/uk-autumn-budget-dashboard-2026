@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -10,19 +10,19 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 
-export const BEFORE_COLOUR = "#9CA3AF";
-export const AFTER_COLOUR = "#319795";
-const LOSS_COLOUR = "#D97706";
-const ZERO_LINE = "#374151";
-const YOU_COLOUR = "#374151";
-const DROP_FILL = "#F3F4F6";
+export const BEFORE_COLOUR = CHART_COLOURS.noChange;
+export const AFTER_COLOUR = CHART_COLOURS.gain;
+const LOSS_COLOUR = CHART_COLOURS.loss;
+const ZERO_LINE = CHART_COLOURS.text;
+const YOU_COLOUR = CHART_COLOURS.text;
+const DROP_FILL = CHART_COLOURS.mutedFill;
 const BEFORE_DASH = "6 4";
 
 export const LEGEND_ITEMS = [
   { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
   { label: "After the selected policies", color: AFTER_COLOUR, type: "line" },
 ];
-const DROP_ITEM = { label: "Net income falls as salary rises", color: "#E5E7EB" };
+const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
 
 /** Ticks for a change: symmetric about zero in a 1/2/5 step. */
 function changeTicks(maxAbs) {
@@ -229,7 +229,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             <path d={linePath(points, x, y1, "after")} fill="none" stroke={AFTER_COLOUR} strokeWidth={2.5} />
 
             {/* X axis */}
-            <line x1={left} x2={left + plotW} y1={top2 + bottomH} y2={top2 + bottomH} stroke="#D1D5DB" />
+            <line x1={left} x2={left + plotW} y1={top2 + bottomH} y2={top2 + bottomH} stroke={CHART_COLOURS.axis} />
             {xTicks.map((tick) => (
               <text key={`x-${tick}`} x={x(tick)} y={top2 + bottomH + 18} textAnchor="middle" {...TICK_STYLE}>
                 {formatPoundsShort(tick)}
@@ -250,7 +250,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             {youX !== null && (
               <g className="earnings-you">
                 <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray="4 3" />
-                {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke="#fff" strokeWidth={2} />}
+                {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />}
                 <text
                   x={youX + (youX > left + plotW - 40 ? -6 : 6)}
                   y={top1 + 12}
@@ -258,7 +258,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
                   fontSize={13}
                   fontWeight={600}
                   fill={YOU_COLOUR}
-                  stroke="#fff"
+                  stroke={CHART_COLOURS.surface}
                   strokeWidth={4}
                   paintOrder="stroke"
                 >
@@ -270,7 +270,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             {/* Hover guide */}
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
-                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top2 + bottomH} stroke="#9CA3AF" strokeWidth={1} />
+                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top2 + bottomH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
                 <circle cx={x(hovered.income)} cy={y1(hovered.before)} r={3.5} fill={BEFORE_COLOUR} />
                 <circle cx={x(hovered.income)} cy={y1(hovered.after)} r={3.5} fill={AFTER_COLOUR} />
               </g>

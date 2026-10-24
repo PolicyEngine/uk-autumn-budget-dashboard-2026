@@ -33,6 +33,7 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
   axisWidth,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -177,8 +178,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           style={{
             padding: "60px 20px",
             textAlign: "center",
-            color: "#666",
-            backgroundColor: "#f9f9f9",
+            color: CHART_COLOURS.tick,
+            backgroundColor: CHART_COLOURS.mutedFill,
             borderRadius: "8px",
           }}
         >
@@ -207,7 +208,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
-      ? [{ color: "#000000", label: "Net change", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
   ];
 
@@ -296,7 +297,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   return ticks.sort((a, b) => a - b);
                 })()}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 
               <Tooltip
 
@@ -346,7 +347,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 // Straight segments: deciles are categories, not a curve
                 type="linear"
                 dataKey="netChange"
-                stroke="#000000"
+                stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
                 name="netChange"

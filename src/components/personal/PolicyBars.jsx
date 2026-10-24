@@ -4,9 +4,10 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 
-const ZERO_LINE = "#374151";
-const NAME_COLOUR = "#374151";
+const ZERO_LINE = CHART_COLOURS.text;
+const NAME_COLOUR = CHART_COLOURS.text;
 
 // Text width without a canvas: close enough for 12–13px system sans
 const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;

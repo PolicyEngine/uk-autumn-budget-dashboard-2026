@@ -111,6 +111,41 @@ code {
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97) */
   --band-teal: #285e61;
+
+  /* Chart colours by meaning, the same on every tab. The JS mirror is
+     CHART_COLOURS in src/utils/chartTheme.js (SVG exports need literal
+     values); src/utils/chartTheme.test.js keeps the two equal. Policy
+     colours are per measure, in src/utils/policyConfig.js. */
+  --c-gain: #319795; /* better off, rise in income, after the Budget */
+  --c-gain-text: #0f766e; /* a gain written as text */
+  --c-loss: #d97706; /* worse off, fall in income */
+  --c-loss-text: #b45309; /* a loss written as text */
+  --c-loss-soft: #fdf0e1; /* a loss chip's background */
+  --c-loss-border: #fde68a; /* a loss banner's border */
+  --c-no-change: #9ca3af; /* unchanged */
+  --c-before: #9ca3af; /* before the Budget, pre-Budget, baseline, outturn */
+  --c-after: #319795; /* after the Budget, Budget, projection */
+  --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
+  --c-highlight: #285e61; /* the highlighted group, such as the age band */
+  --c-highlight-band: #eaf5f4; /* behind a highlighted group */
+  --c-obr: #9ca3af; /* the OBR's figure (a ring) */
+  --c-obr-text: #6b7280;
+  --c-net: #000000; /* the net line and its dots */
+  --c-zero-line: #374151;
+  --c-grid: #e5e7eb;
+  --c-axis: #d1d5db;
+  --c-tick: #6b7280;
+  --c-axis-title: #4b5563;
+  --c-text: #374151;
+  --c-surface: #ffffff;
+  --c-muted-fill: #f3f4f6; /* a shaded area with no data */
+  /* How far PolicyEngine is from the OBR */
+  --c-diff-small: #10b981;
+  --c-diff-medium: #fbbf24;
+  --c-diff-large: #ef4444;
+  /* Notices: data pending or provisional */
+  --c-notice-bg: #fff7e6;
+  --c-notice-text: #7a5a1f;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

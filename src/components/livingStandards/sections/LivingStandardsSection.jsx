@@ -26,6 +26,7 @@ import {
   projectionStartYear,
   trimProjection,
   visibleRows,
+  shortLabel,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
@@ -158,7 +159,6 @@ export default function useHouseholdIncomeView(data) {
       <>
         <PillSelect
           variant="light"
-          prefix="Measure"
           name="Income metric"
           value={metric}
           onChange={setMetric}
@@ -166,7 +166,7 @@ export default function useHouseholdIncomeView(data) {
             value: id,
             label: living.metrics[id],
             // The pill shows "Median (BHC)"; the list keeps the full name
-            badge: living.metrics[id].replace(/ equivalised income/i, ""),
+            badge: shortLabel(living.metrics[id]),
           }))}
         />
         <PillSelect
@@ -177,7 +177,7 @@ export default function useHouseholdIncomeView(data) {
           onChange={setAdjustment}
           options={[
             { value: "real", label: "Real" },
-            { value: "nominal", label: "Cash terms" },
+            { value: "nominal", label: "Cash terms", badge: shortLabel("Cash terms") },
           ]}
         />
         <PillSelect

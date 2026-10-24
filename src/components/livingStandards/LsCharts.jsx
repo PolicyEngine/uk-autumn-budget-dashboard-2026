@@ -24,6 +24,7 @@ import {
   TICK_STYLE,
   axisWidth,
   useNarrowViewport,
+  CHART_COLOURS,
 } from "../../utils/chartTheme";
 import { fyLabel, fyShortLabel } from "../../utils/livingStandards/outlook";
 
@@ -211,7 +212,7 @@ export function LsBarChart({
             width={yWidth}
             allowDecimals
           />
-          <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+          <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
           <Tooltip
             {...TOOLTIP_PROPS}
             cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}

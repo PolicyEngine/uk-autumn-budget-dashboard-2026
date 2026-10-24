@@ -23,6 +23,7 @@ import {
   axisWidth,
   fiscalYearTick,
   shortFiscalYearTick,
+  CHART_COLOURS,
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
@@ -88,8 +89,8 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
         if (!area) return null;
         return (
           <g key={year}>
-            <rect x={area.x} y={yAxis.y} width={area.width} height={yAxis.height} fill="#F3F4F6" />
-            <text x={area.centre} y={yAxis.y + 16} textAnchor="middle" fontSize={11} fill="#6B7280">
+            <rect x={area.x} y={yAxis.y} width={area.width} height={yAxis.height} fill={CHART_COLOURS.mutedFill} />
+            <text x={area.centre} y={yAxis.y + 16} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
               <tspan x={area.centre}>Not yet</tspan>
               <tspan x={area.centre} dy={13}>published</tspan>
             </text>
@@ -208,10 +209,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 style: AXIS_TITLE_STYLE,
               }}
             />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+            <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Tooltip
               {...TOOLTIP_PROPS}
-              cursor={{ stroke: "#D1D5DB" }}
+              cursor={{ stroke: CHART_COLOURS.axis }}
               content={
                 <ChartTooltip
                   format={pounds}
@@ -233,7 +234,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 strokeDasharray={series.dash}
                 dot={{
                   fill: series.color,
-                  stroke: "#ffffff",
+                  stroke: CHART_COLOURS.surface,
                   strokeWidth: 1.5,
                   r: series.key === YOUNG_BAND ? 4.5 : 3,
                 }}

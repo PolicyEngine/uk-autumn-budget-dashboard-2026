@@ -1,11 +1,35 @@
 // Helpers shared by the baseline sections (living standards, poverty).
 
 import { fyStart } from "./outlook";
+import { CHART_COLOURS } from "../chartTheme";
 
 export const EMPTY = [];
 
-export const OUTTURN_COLOUR = "#9CA3AF";
-export const PROJECTION_COLOUR = "#319795";
+export const OUTTURN_COLOUR = CHART_COLOURS.before;
+export const PROJECTION_COLOUR = CHART_COLOURS.after;
+
+/**
+ * A short form of a measure or group name for a closed in-card pill, so a
+ * card's pills fit one line; the list keeps the full name. "Absolute (BHC)"
+ * becomes "Abs. BHC", "All people" "All".
+ */
+export function shortLabel(label) {
+  const text = String(label);
+  const fixed = {
+    "All people": "All",
+    "All children": "All",
+    "Working-age adults": "Working age",
+    "Gini coefficient": "Gini",
+    "90:10 ratio": "90:10",
+    "Cash terms": "Cash",
+  };
+  if (fixed[text]) return fixed[text];
+  const basis = text.match(/^(Absolute|Relative) \((BHC|AHC)\)$/);
+  if (basis) return `${basis[1] === "Absolute" ? "Abs." : "Rel."} ${basis[2]}`;
+  const income = text.match(/^(Mean|Median) equivalised income \((BHC|AHC)\)$/);
+  if (income) return `${income[1]} ${income[2]}`;
+  return text;
+}
 
 export const VIEW_OPTIONS = [
   { value: "outturn", label: "Outturn" },
@@ -155,12 +179,16 @@ export function joinSeries(entries) {
   return Object.values(out).sort((a, b) => a.year - b.year);
 }
 
-/** Chart palette (teal ramp + neutral), as the published UK dashboards. */
+/**
+ * Chart palette (teal ramp + neutral), as the published UK dashboards: the
+ * shared chart colours (chartTheme.CHART_COLOURS), so a rise is the gain
+ * teal and a fall the loss amber on every tab. `light` is the ramp's third
+ * step, for a series beside dark and teal (Tailwind teal 300).
+ */
 export const PALETTE = {
-  dark: "#285E61",
-  teal: "#319795",
+  dark: CHART_COLOURS.highlight,
+  teal: CHART_COLOURS.gain,
   light: "#81E6D9",
-  grey: "#9CA3AF",
-  amber: "#D97706",
-  red: "#B91C1C",
+  grey: CHART_COLOURS.noChange,
+  amber: CHART_COLOURS.loss,
 };

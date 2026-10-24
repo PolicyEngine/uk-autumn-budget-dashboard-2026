@@ -19,6 +19,7 @@ import {
   TICK_STYLE,
   axisWidth,
   useNarrowViewport,
+  CHART_COLOURS,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
@@ -175,9 +176,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
             {salary !== null && (
               <ReferenceLine
                 x={salary}
-                stroke="#374151"
+                stroke={CHART_COLOURS.text}
                 strokeDasharray="4 3"
-                label={{ value: "You", position: "insideTopRight", fill: "#374151", fontSize: 13, fontWeight: 600 }}
+                label={{ value: "You", position: "insideTopRight", fill: CHART_COLOURS.text, fontSize: 13, fontWeight: 600 }}
               />
             )}
             <Line

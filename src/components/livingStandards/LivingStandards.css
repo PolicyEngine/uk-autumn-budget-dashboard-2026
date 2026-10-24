@@ -24,7 +24,7 @@
 .ls-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   margin: 4px 0 12px;
 }
 
@@ -32,17 +32,23 @@
   margin: 0;
 }
 
+/* Compact pills, so a card's controls fit one line in a half-width card
+   at 1440 (they wrap on a phone) */
 .ls-controls .pill-select-light .pill-select-toggle {
   gap: 4px;
   height: 30px;
-  padding: 0 8px 0 10px;
+  padding: 0 6px 0 9px;
   font-size: var(--fs-micro);
 }
 
 .ls-controls .pill-select-light .pill-select-badge {
   height: 22px;
-  padding: 0 7px;
+  padding: 0 6px;
   font-size: var(--fs-micro);
+}
+
+.ls-controls .obr-view-switch.is-compact .obr-view-option {
+  padding: 0 8px;
 }
 
 /* In-card pill lists open from the pill's left edge, inside the card */
@@ -233,7 +239,7 @@
 
 .stat-sub.change-negative,
 .ls-table td.change-negative {
-  color: #b91c1c;
+  color: var(--c-loss-text);
 }
 
 .ls-section-controls {
@@ -382,7 +388,7 @@
   top: 50%;
   height: 2px;
   margin-top: -1px;
-  background: #b8c4cc;
+  background: var(--c-axis);
 }
 
 .ls-dot-plot .dot-arrow {
@@ -396,12 +402,12 @@
 
 .ls-dot-plot .dot-arrow.right {
   right: 6px;
-  border-left: 6px solid #8a9aa5;
+  border-left: 6px solid var(--c-no-change);
 }
 
 .ls-dot-plot .dot-arrow.left {
   left: 6px;
-  border-right: 6px solid #8a9aa5;
+  border-right: 6px solid var(--c-no-change);
 }
 
 .ls-dot-plot .dot {
@@ -443,8 +449,8 @@
 }
 
 .ls-dot-plot .dot-chip.bad {
-  background: #fdf0e1;
-  color: #b45309;
+  background: var(--c-loss-soft);
+  color: var(--c-loss-text);
 }
 
 .ls-dot-plot .dot-chip {

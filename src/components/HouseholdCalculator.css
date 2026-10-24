@@ -36,8 +36,8 @@
 }
 
 .error {
-  background: #fef2f2;
-  color: #ef4444;
+  background: var(--c-loss-soft);
+  color: var(--c-loss-text);
 }
 
 /* Chart styles */
@@ -46,7 +46,7 @@
 }
 
 .chart .grid line {
-  stroke: #e0e0e0;
+  stroke: var(--c-grid);
   stroke-dasharray: 4, 4;
 }
 
@@ -78,7 +78,7 @@
 }
 
 .tooltip-label {
-  color: #64748b;
+  color: var(--pe-gray-500);
 }
 
 .tooltip-value {
@@ -91,7 +91,7 @@
 }
 
 .tooltip-value.negative {
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 /* Methodology section */
@@ -106,27 +106,27 @@
   margin: 0 0 12px 0;
   font-size: var(--fs-card-title);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--pe-gray-800);
 }
 
 .methodology h4 {
   margin: 20px 0 8px 0;
   font-size: var(--fs-body);
   font-weight: 600;
-  color: #334155;
+  color: var(--pe-gray-700);
 }
 
 .methodology p {
   margin: 0 0 16px 0;
   line-height: 1.6;
-  color: #475569;
+  color: var(--pe-gray-600);
   font-size: var(--fs-small);
 }
 
 .methodology ul {
   margin: 0;
   padding-left: 20px;
-  color: #475569;
+  color: var(--pe-gray-600);
   font-size: var(--fs-small);
   line-height: 1.6;
 }
@@ -136,7 +136,7 @@
 }
 
 .methodology li strong {
-  color: #1e293b;
+  color: var(--pe-gray-800);
 }
 
 /* Responsive adjustments */
@@ -449,7 +449,7 @@
   margin: 6px 0 0;
   font-size: var(--fs-caption);
   line-height: 1.45;
-  color: #b45309;
+  color: var(--c-loss-text);
 }
 
 /* ---------- The form: one list of questions, each opening in place ---------- */

@@ -112,7 +112,7 @@ describe("the Living standards view", () => {
     expect(window.location.search).toBe("?tab=living");
   });
 
-  it("switches each card's view with its Show pill, and never shows a signed zero", async () => {
+  it("switches each card's view with its switch, and never shows a signed zero", async () => {
     window.history.replaceState({}, "", "/?tab=living");
     render(<App />);
     const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
@@ -124,7 +124,12 @@ describe("the Living standards view", () => {
     // Poverty over time: Rate (with its Measure, Group and Period pills) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
     expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toBeInTheDocument();
-    choose(poverty, "Poverty view", "Depth");
+    // The view is a segmented switch (Rate | Depth), short labels in the pills
+    const views = within(poverty).getByRole("group", { name: "Poverty view" });
+    expect(within(views).getByRole("button", { name: "Rate" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
+    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
+    fireEvent.click(within(views).getByRole("button", { name: "Depth" }));
     poverty = (await heading(/^Poverty over time, 2026-27 to 2029-30$/)).closest(".ls-card");
     expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
@@ -145,10 +150,16 @@ describe("the Living standards view", () => {
 
     // Incomes over time and Growth across the distribution
     const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
-    choose(incomes, "Income view", "Inequality");
+    fireEvent.click(
+      within(within(incomes).getByRole("group", { name: "Income view" })).getByRole("button", { name: "Inequality" }),
+    );
     expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    choose(growth, "Distribution view", "Lower- vs higher-income halves");
+    const halves = within(within(growth).getByRole("group", { name: "Distribution view" })).getByRole("button", {
+      name: "Halves",
+    });
+    expect(halves).toHaveAttribute("title", "Lower- vs higher-income halves");
+    fireEvent.click(halves);
     expect(within(growth).getByText(/lower-income half of non-pensioners/)).toBeInTheDocument();
 
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"

@@ -9,6 +9,7 @@ import {
   EMPTY,
   VIEW_OPTIONS,
   chartEndYear,
+  shortLabel,
   lineSeries,
   mergeSeries,
   niceAxis,
@@ -125,11 +126,14 @@ export default function usePovertyRateView(data) {
       <>
         <PillSelect
           variant="light"
-          prefix="Measure"
           name="Poverty measure"
           value={measure}
           onChange={setMeasure}
-          options={measureIds.map((id) => ({ value: id, label: poverty.measures[id] }))}
+          options={measureIds.map((id) => ({
+            value: id,
+            label: poverty.measures[id],
+            badge: shortLabel(poverty.measures[id]),
+          }))}
         />
         <PillSelect
           variant="light"
@@ -137,7 +141,11 @@ export default function usePovertyRateView(data) {
           name="Population group"
           value={group}
           onChange={setGroup}
-          options={groupIds.map((id) => ({ value: id, label: poverty.groups[id] }))}
+          options={groupIds.map((id) => ({
+            value: id,
+            label: poverty.groups[id],
+            badge: shortLabel(poverty.groups[id]),
+          }))}
         />
         <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
       </>

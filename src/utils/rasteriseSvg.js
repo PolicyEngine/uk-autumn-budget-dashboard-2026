@@ -1,3 +1,4 @@
+import { CHART_COLOURS } from "./chartTheme";
 /**
  * PNG downloads, rasterised from the same SVG the SVG download writes.
  */
@@ -23,7 +24,7 @@ export function svgToPngBlob(svg, width, height, scale = 2) {
       canvas.width = Math.round(width * scale);
       canvas.height = Math.round(height * scale);
       const context = canvas.getContext("2d");
-      context.fillStyle = "#ffffff";
+      context.fillStyle = CHART_COLOURS.surface;
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
