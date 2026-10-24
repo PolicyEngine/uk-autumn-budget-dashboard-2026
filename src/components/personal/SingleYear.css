@@ -175,7 +175,8 @@
 .programme-chevron {
   display: inline-block;
   width: 12px;
-  color: var(--pe-gray-500);
+  font-size: 0.9em;
+  color: var(--pe-gray-600);
 }
 
 .programme-row:not(.depth-1) th > .programme-name {

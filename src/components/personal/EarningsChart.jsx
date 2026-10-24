@@ -96,7 +96,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
     axisWidth(yTicks, formatPoundsShort),
     axisWidth(cTicks, formatPoundsShort),
   );
-  const right = 12;
+  const right = 20;
   const topH = narrow ? 210 : 250;
   const gap = 28;
   const bottomH = narrow ? 120 : 140;
