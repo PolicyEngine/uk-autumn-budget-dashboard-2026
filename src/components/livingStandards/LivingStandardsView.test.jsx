@@ -42,9 +42,67 @@ describe("the Living standards view", () => {
     expect(tabs[3]).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: "Living standards" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    // Baseline outlook is the sub-tab it opens on
+    expect(screen.getByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("heading", { name: "Forecast changes" })).toBeNull();
     // Its engine and data, said once on the view
     expect(screen.getAllByText(/Baseline from policyengine 6\.8\.0/)).toHaveLength(1);
+    expect(window.location.search).toBe("?tab=living");
+  });
+
+  it("splits into Baseline outlook and Forecast changes sub-tabs, with the intro and data shared", async () => {
+    window.history.replaceState({}, "", "/?tab=living");
+    render(<App />);
+    const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
+    const [baseline, forecast] = within(subTabs).getAllByRole("tab");
+    expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
+
+    const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
+    expect(panel()).toHaveAccessibleName("Baseline outlook");
+    for (const name of ["Incomes", "Poverty", "Child poverty", "What the baseline leaves out"]) {
+      expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
+    }
+    expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
+
+    fireEvent.click(forecast);
+    expect(forecast).toHaveAttribute("aria-selected", "true");
+    expect(panel()).toHaveAccessibleName("Forecast changes");
+    expect(within(panel()).getByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(within(panel()).getByRole("heading", { level: 2, name: "Household income" })).toBeInTheDocument();
+    expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
+
+    // Shared by both: the provenance line above, the Data section below
+    expect(screen.getAllByText(/Baseline from policyengine 6\.8\.0/)).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { name: "Data" })).toHaveLength(1);
+    expect(within(panel()).queryByRole("heading", { name: "Data" })).toBeNull();
+
+    fireEvent.click(baseline);
+    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
+    expect(window.location.search).toBe("?tab=living");
+  });
+
+  it("opens the sub-tab a link names, and drops it on another view", async () => {
+    window.history.replaceState({}, "", "/?tab=living&sub=forecast");
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("tab")).toBe("methodology");
+    expect(params.has("sub")).toBe(false);
+
+    // Back on Living standards, it opens at the default sub-tab
+    fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
+    expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("opens Baseline outlook for an unknown ?sub=", async () => {
+    window.history.replaceState({}, "", "/?tab=living&sub=nonsense");
+    render(<App />);
+    expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
     expect(window.location.search).toBe("?tab=living");
   });
 

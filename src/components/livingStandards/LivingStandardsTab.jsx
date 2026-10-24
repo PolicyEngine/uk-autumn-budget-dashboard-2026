@@ -1,14 +1,18 @@
 // The Living standards view: the pre-Budget baseline outlook for UK
 // household incomes and poverty, and the OBR forecast it is built on.
 // Ported from PolicyEngine/uk-living-standards-outlook (branch
-// review-1-fixes, db0c8e4): its two tabs are this view's sections, in the
-// dashboard's layout. It reads public/data/living_standards_outlook.json and
-// runs on its own engine version, which its provenance line states.
+// review-1-fixes, db0c8e4): its two tabs are this view's two sub-tabs,
+// Baseline outlook and Forecast changes, in the dashboard's layout. The
+// intro and provenance line sit above the sub-tabs and the Data section
+// below them, since they hold for both. It reads
+// public/data/living_standards_outlook.json and runs on its own engine
+// version, which its provenance line states.
 
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import Note from "../Note";
+import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { describeDataset, fyDash, loadOutlook } from "../../utils/livingStandards/outlook";
 import LivingStandardsSection from "./sections/LivingStandardsSection";
 import DecileGrowthSection from "./sections/DecileGrowthSection";
@@ -97,8 +101,87 @@ function Provenance({ meta }) {
   );
 }
 
+const SUB_TABS = [
+  { value: "baseline", label: "Baseline outlook" },
+  { value: "forecast", label: "Forecast changes" },
+];
+const SUB_TAB_VALUES = SUB_TABS.map((t) => t.value);
+
+/** Incomes, poverty and child poverty under the baseline, and its gaps. */
+function BaselinePanel({ data }) {
+  return (
+    <>
+      {BASELINE_ROWS.map((row) => (
+        <Row key={row.id} row={row} data={data} />
+      ))}
+
+      <SectionHeading
+        title="What the baseline leaves out"
+        subtitle="Gaps and simplifications that change how the projections read."
+      />
+      <section id="living-caveats" className="report-section">
+        <CaveatsSection data={data} />
+      </section>
+    </>
+  );
+}
+
+/** The OBR forecast behind the baseline, and the OBR's household income. */
+function ForecastPanel({ data, forecastView, setForecastView }) {
+  const forecast = data.forecast;
+  return (
+    <>
+      {forecast && (
+        <>
+          <SectionHeading
+            title="Forecast changes"
+            subtitle={
+              forecast.post_published
+                ? `The OBR economic forecast behind the baseline. This compares the ${forecast.pre_label.replace(/\s*\(pre-Budget\)/, "")} forecast with the Autumn Budget 2026 forecast.`
+                : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
+            }
+          />
+          <section id="living-forecast" className="report-section">
+            <ForecastHeadlineSection data={data} />
+            <div className="ls-section-controls">
+              <PillSelect
+                variant="light"
+                prefix="Show as"
+                name="Chart or table"
+                value={forecastView}
+                onChange={setForecastView}
+                options={[
+                  { value: "chart", label: "Charts" },
+                  { value: "table", label: "Tables" },
+                ]}
+              />
+            </div>
+          </section>
+          <ForecastSeriesSection data={data} view={forecastView} />
+        </>
+      )}
+
+      {data.obr_rhdi && (
+        <>
+          <SectionHeading
+            title="Household income"
+            subtitle="The OBR's national-accounts measure of household income per person."
+          />
+          <section id="living-rhdi" className="report-section">
+            <div className="charts-grid">
+              <RhdiSection data={data} />
+            </div>
+          </section>
+        </>
+      )}
+    </>
+  );
+}
+
 export default function LivingStandardsTab() {
   const [state, setState] = useState({ loading: true, data: null, error: null });
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES);
+  // Charts or tables: kept here so it survives a sub-tab switch
   const [forecastView, setForecastView] = useState("chart");
 
   useEffect(() => {
@@ -112,7 +195,6 @@ export default function LivingStandardsTab() {
   }, []);
 
   const { loading, data, error } = state;
-  const forecast = data?.forecast;
 
   return (
     <>
@@ -138,61 +220,20 @@ export default function LivingStandardsTab() {
 
       {data && (
         <div className="results-container">
-          {BASELINE_ROWS.map((row) => (
-            <Row key={row.id} row={row} data={data} />
-          ))}
-
-          <SectionHeading
-            title="What the baseline leaves out"
-            subtitle="Gaps and simplifications that change how the projections read."
+          <SubTabs
+            tabs={SUB_TABS}
+            value={sub}
+            onChange={setSub}
+            ariaLabel="Living standards sections"
+            idPrefix="living"
           />
-          <section id="living-caveats" className="report-section">
-            <CaveatsSection data={data} />
-          </section>
-
-          {forecast && (
-            <>
-              <SectionHeading
-                title="Forecast changes"
-                subtitle={
-                  forecast.post_published
-                    ? `The OBR economic forecast behind the baseline. This compares the ${forecast.pre_label.replace(/\s*\(pre-Budget\)/, "")} forecast with the Autumn Budget 2026 forecast.`
-                    : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
-                }
-              />
-              <section id="living-forecast" className="report-section">
-                <ForecastHeadlineSection data={data} />
-                <div className="ls-section-controls">
-                  <PillSelect
-                    variant="light"
-                    prefix="Show as"
-                    name="Chart or table"
-                    value={forecastView}
-                    onChange={setForecastView}
-                    options={[
-                      { value: "chart", label: "Charts" },
-                      { value: "table", label: "Tables" },
-                    ]}
-                  />
-                </div>
-              </section>
-              <ForecastSeriesSection data={data} view={forecastView} />
-            </>
-          )}
-
-          {data.obr_rhdi && (
-            <>
-              <SectionHeading
-                title="Household income"
-                subtitle="The OBR's national-accounts measure of household income per person."
-              />
-              <section id="living-rhdi" className="report-section">
-                <div className="charts-grid">
-                  <RhdiSection data={data} />
-                </div>
-              </section>
-            </>
-          )}
+          <SubTabPanel idPrefix="living" value={sub}>
+            {sub === "forecast" ? (
+              <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
+            ) : (
+              <BaselinePanel data={data} />
+            )}
+          </SubTabPanel>
 
           <SectionHeading title="Data" subtitle="The prices, sources and notes behind this view." />
           <AboutDataSection data={data} />

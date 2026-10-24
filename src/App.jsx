@@ -14,6 +14,7 @@ import HouseholdScatter from "./components/HouseholdScatter";
 import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
 import ViewTabs from "./components/ViewTabs";
+import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab, { METHOD_SECTIONS } from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
@@ -177,6 +178,19 @@ function parseCSV(csvText) {
     data.push(row);
   }
   return data;
+}
+
+/** Take the open sub-tab (?sub=) out of the address. */
+function dropSubTab() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(SUB_TAB_PARAM)) return;
+  params.delete(SUB_TAB_PARAM);
+  const search = params.toString();
+  window.history.replaceState(
+    {},
+    "",
+    `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`,
+  );
 }
 
 function App() {
@@ -456,7 +470,10 @@ function App() {
   // A link to #young-people from elsewhere on the page opens its view
   useEffect(() => {
     const onHashChange = () => {
-      if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) setActiveTab("young");
+      if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
+        dropSubTab();
+        setActiveTab("young");
+      }
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -472,6 +489,9 @@ function App() {
   const appRef = useRef(null);
   const tabScrollPending = useRef(false);
   const handleTabChange = (tab) => {
+    // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
+    // it goes before another view opens and reads the address
+    if (tab !== activeTab) dropSubTab();
     setActiveTab(tab);
     // A hash that belongs to the Young people view goes when another view
     // is chosen, so the address never opens a different view from this one
