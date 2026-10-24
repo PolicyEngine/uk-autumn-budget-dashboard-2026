@@ -19,6 +19,8 @@ import {
   approximatePatternId,
 } from "../utils/geography/palette";
 import {
+  AREA_ROUTING_URL,
+  areaRouting,
   geographyFetch,
   geographyFixture,
 } from "../test/geographyFixture";
@@ -509,6 +511,176 @@ describe("ConstituencyMap", () => {
     expect(svgText).not.toMatch(/NaN|undefined/);
     expect(root.querySelector("image").getAttribute("href")).toMatch(/^data:/);
   });
+});
+
+describe("ConstituencyMap and the release's area routing", () => {
+  const NOT_AVAILABLE = "Results by constituency are not available on this release.";
+  const NOT_LOADED = "Results by constituency could not be loaded.";
+  const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
+  // The redesign's only how-to-read sentence; the search box's placeholder
+  // says what to do.
+  const HOW_TO_READ = /Each one is coloured by the size of its change/;
+  // A fetch that fails, as on a network error, only when it is awaited.
+  const NETWORK_FAILURE = {
+    then: (_, reject) => reject(new TypeError("network down")),
+  };
+
+  // The placeholder may draw the boundaries in grey, with a disabled search
+  // box and download menu, but no seat, figure or export from the file.
+  const expectNothingFromTheFile = (container) => {
+    expect(container.querySelector("path.constituency-path")).toBeNull();
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    for (const path of container.querySelectorAll(".map-template-svg path")) {
+      expect(path.getAttribute("fill")).toBe("#D1D5DB");
+    }
+    expect(
+      screen.getByRole("button", { name: /Download chart/ }),
+    ).toBeDisabled();
+    const search = screen.queryByLabelText("Search constituency");
+    if (search) expect(search).toBeDisabled();
+    expect(container.textContent).not.toMatch(FIGURES);
+  };
+
+  it.each([
+    ["routes them to a local-area release", "local_area"],
+    ["routes them to an area-coded national release", "area_coded_national"],
+  ])("draws the map when the release %s", async (_, kind) => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ [AREA_ROUTING_URL]: areaRouting("available", kind) }),
+    );
+    const { container } = await renderMap();
+    expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
+      CATEGORY_COLOURS.large_gain,
+    );
+    expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
+    expect(screen.getByText(HOW_TO_READ)).toBeInTheDocument();
+  });
+
+  it.each([
+    ["the current table", undefined, null],
+    ["last year's table", geographyFixture("legacy-constituency-2025.csv"), null],
+    ["no table", 404, null],
+    // What the module writes for a routing missing a template.
+    ["a local-area kind", undefined, "local_area"],
+    ["an area-coded national kind", undefined, "area_coded_national"],
+  ])(
+    "says results by constituency are not available on a release that routes none, with %s",
+    async (_, table, kind) => {
+      vi.stubGlobal(
+        "fetch",
+        geographyFetch({
+          [AREA_ROUTING_URL]: areaRouting("not_available", kind),
+          ...(table === undefined ? {} : { "/data/constituency.csv": table }),
+        }),
+      );
+      const { container } = render(
+        <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+      );
+      expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
+      // The notice is the label alone, and the card no longer says how to
+      // read a map it does not draw.
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^Results by constituency are not available on this release\.(See the results by region\.)?$/,
+      );
+      expect(
+        screen.getByText(
+          "The average change in household net income in each constituency.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(HOW_TO_READ)).not.toBeInTheDocument();
+      // Regions are published only from an enhanced FRS run, which does not
+      // read the routing, so the notice still points to them.
+      expect(
+        await screen.findByRole("link", { name: "See the results by region." }),
+      ).toHaveAttribute("href", "#results-by-region");
+      expectNothingFromTheFile(container);
+    },
+  );
+
+  it("says so for one measure as for the package", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ [AREA_ROUTING_URL]: areaRouting("not_available") }),
+    );
+    render(
+      <ConstituencyMap
+        selectedPolicies={["rail_fares_freeze"]}
+        selectedYear={2029}
+        policies={POLICIES}
+      />,
+    );
+    expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Results by constituency are not yet published for this measure.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("never shows a table's figures while the routing loads", async () => {
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        [AREA_ROUTING_URL]: gate.then(() => areaRouting("not_available")),
+      }),
+    );
+    const { container } = render(
+      <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+    );
+    expect(screen.getByText("Loading map…")).toBeInTheDocument();
+    // Let the table and the boundaries arrive first.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.getByText("Loading map…")).toBeInTheDocument();
+    expect(container.querySelector("path.constituency-path")).toBeNull();
+    await act(async () => {
+      release();
+      await gate;
+    });
+    expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
+    expect(container.querySelector("path.constituency-path")).toBeNull();
+  });
+
+  it.each([
+    ["is missing", 404],
+    ["answers with an HTTP error", 500],
+    [
+      "answers with an HTTP error whose body says available",
+      { status: 503, body: areaRouting("available") },
+    ],
+    ["cannot be fetched", NETWORK_FAILURE],
+    ["is not JSON", "<!doctype html><p>Service unavailable</p>"],
+    ["is not a routing status", '{"area_views": "partly"}'],
+    // The module writes available only with a kind the area run serves.
+    ["says available with no kind", areaRouting("available", null)],
+  ])(
+    "says results by constituency could not be loaded, and shows none, when the routing file %s",
+    async (_, answer) => {
+      // The table and the boundaries load: only the routing fails.
+      vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: answer }));
+      const { container } = render(
+        <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
+      );
+      expect(await screen.findByText(NOT_LOADED)).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /^Results by constituency could not be loaded\.(See the results by region\.)?$/,
+      );
+      expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
+      // As for any file that fails to load, the card still says how to read
+      // the map.
+      expect(screen.getByText(HOW_TO_READ)).toBeInTheDocument();
+      // Let the other files arrive: nothing from them shows.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+      expect(screen.getByText(NOT_LOADED)).toBeInTheDocument();
+      expectNothingFromTheFile(container);
+    },
+  );
 });
 
 describe("exportMapAsSvg", () => {

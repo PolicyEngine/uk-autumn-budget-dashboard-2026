@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import {
+  useAreaRouting,
   useConstituencyBoundaries,
   useGeographyData,
 } from "../hooks/useGeographyData";
@@ -46,7 +47,11 @@ import {
   choiceMeasureNames,
   chooseReform,
 } from "../utils/geography/selection";
-import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
+import {
+  REGION_VIEW_ID,
+  areaViewsNotAvailable,
+  viewState,
+} from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 
@@ -188,7 +193,10 @@ function TooltipLines({ lines }) {
  * measure or the whole package, one outcome and one year. Seats are
  * coloured by category, dotted when approximate, hatched when withheld,
  * light grey when too uncertain to classify, and drawn as no data when
- * there is no row. Nothing is summed across measures.
+ * there is no row. Nothing is summed across measures. It draws only on a
+ * release that says it routes results by area: on one that routes none it
+ * says so, and when it can't read the release's routing it says its results
+ * could not be loaded, drawing nothing either way.
  */
 /**
  * The map's layout before its results are published: every constituency
@@ -259,6 +267,7 @@ export default function ConstituencyMap({
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
   const boundaries = useConstituencyBoundaries();
+  const routing = useAreaRouting();
   const [outcome, setOutcome] = useState("relative_change");
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -279,12 +288,16 @@ export default function ConstituencyMap({
     policyIds: policies.map((policy) => policy.id),
     reforms,
   });
+  // On a release that routes no results by area, the card describes the
+  // measure only, not how to read a map it does not draw.
+  const notRouted = areaViewsNotAvailable(routing);
   let view = viewState({
     data: constituency,
     choice,
     year: selectedYear,
     outcome,
     place: "by constituency",
+    routing,
   });
   // Whether the region view has this measure, so a notice can point to it.
   const regionalHasChoice =
@@ -593,8 +606,13 @@ export default function ConstituencyMap({
             </h3>
             <p className="chart-description">
               The average change in household net income in each constituency.
-              Each one is coloured by the size of its change when its 90%
-              interval is narrow enough to tell.
+              {!notRouted && (
+                <>
+                  {" "}
+                  Each one is coloured by the size of its change when its 90%
+                  interval is narrow enough to tell.
+                </>
+              )}
             </p>
           </div>
           {view.kind === "rows" ? (

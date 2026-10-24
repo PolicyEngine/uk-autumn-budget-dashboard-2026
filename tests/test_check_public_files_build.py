@@ -2,6 +2,7 @@
 
 import csv
 import hashlib
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -15,6 +16,11 @@ from policyengine.disclosure.schema import (
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "scripts" / "check-public-files.mjs"
+CI_SCRIPT = REPO / "scripts" / "check_public_data.py"
+
+spec = importlib.util.spec_from_file_location("check_public_data", CI_SCRIPT)
+check_public_data = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(check_public_data)
 COLUMNS = REPO / "scripts" / "disclosure_public_columns.json"
 REVIEW_COLUMNS = [
     "path",
@@ -122,6 +128,85 @@ def test_the_build_check_refuses_what_ci_refuses(tree):
         "public/sample.json: record-level identifiers",
         "public/sample.json: not reviewed",
     ]
+
+
+@needs_node
+@pytest.mark.parametrize(
+    "text", sorted(check_public_data.AREA_ROUTING_CONTENTS)
+)
+def test_the_build_check_accepts_what_ci_accepts_as_area_routing(tree, text):
+    path = tree / check_public_data.AREA_ROUTING_FILE
+    path.parent.mkdir(parents=True)
+    path.write_bytes(text)
+    review(tree, [])
+    assert run(tree) == []
+
+
+@needs_node
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"area_views": "not_available", "regional_release_kind": null}\n',
+        '{\n  "area_views": "unknown",\n  "regional_release_kind": null\n}\n',
+        '{\n  "area_views": "available",\n  "regional_release_kind": null\n}\n',
+    ],
+)
+def test_the_build_check_refuses_any_other_area_routing_text(tree, text):
+    # A review entry doesn't make another text acceptable.
+    name = check_public_data.AREA_ROUTING_FILE
+    write(tree, name, text)
+    review(tree, [(name, "static_asset", "")])
+    assert run(tree) == [
+        f"{name}: not an area routing status",
+        f"{name}: needs no review entry",
+    ]
+
+
+@needs_node
+def test_the_build_check_refuses_a_review_entry_for_the_routing(tree):
+    # Nothing reads it, so it would only look like a review.
+    name = check_public_data.AREA_ROUTING_FILE
+    (tree / name).parent.mkdir(parents=True)
+    (tree / name).write_bytes(min(check_public_data.AREA_ROUTING_CONTENTS))
+    review(tree, [(name, "static_asset", "")])
+    assert run(tree) == [f"{name}: needs no review entry"]
+
+
+@needs_node
+@pytest.mark.parametrize(
+    "name",
+    [
+        "public/area-routing.json",
+        "public/data/blog_charts/area-routing.json",
+        "public/data/artifacts/area-routing.json",
+        "public/data/Area-routing.json",
+    ],
+)
+def test_only_the_routing_file_itself_goes_without_review(tree, name):
+    (tree / name).parent.mkdir(parents=True, exist_ok=True)
+    (tree / name).write_bytes(min(check_public_data.AREA_ROUTING_CONTENTS))
+    review(tree, [])
+    assert run(tree) == [f"{name}: not reviewed"]
+
+
+@needs_node
+def test_the_build_check_knows_the_same_area_routing_texts_as_ci():
+    source = (
+        "import { AREA_ROUTING_CONTENTS } from "
+        f"{json.dumps(SCRIPT.as_uri())};\n"
+        "console.log(JSON.stringify([...AREA_ROUTING_CONTENTS]));\n"
+    )
+    output = subprocess.run(
+        [node, "--input-type=module", "-e", source],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    texts = json.loads(output)
+    assert len(texts) == len(set(texts))
+    assert {text.encode() for text in texts} == (
+        check_public_data.AREA_ROUTING_CONTENTS
+    )
 
 
 @needs_node
