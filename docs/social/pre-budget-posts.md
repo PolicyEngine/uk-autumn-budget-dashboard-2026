@@ -8,13 +8,15 @@ Drafts for PolicyEngine UK's LinkedIn page and @PolicyEngineUK on X, for the day
 - **LinkedIn.** A first line that states the finding, two or three lines of context, the numbers as bullets, the caveat the page itself carries, then the link. Two or three hashtags at most.
 - **Numbers.** Every figure is quoted from the live page or post on 24 October 2026, in its default view, and its source is given under each post. Where the page labels a figure provisional or a scenario, the post does too.
 - **Wording.** Posts say "bottom/top income quintile" or "lower-/higher-income households", and "increases/decreases net income" (no "helps" or "hurts"). They state what the analysis finds and never what the Budget should do.
+- **No names.** Posts describe the policy, without naming the politician or organisation behind it.
+- **No head-to-head figures.** Posts give PolicyEngine's own estimates and do not set them against the costings of DWP, the OBR, the government or other organisations.
 
 ## Suggested order
 
 | When | Post |
 |---|---|
 | Mon 26 Oct | [P1 Budget-day plans](#p1-what-we-publish-on-budget-day), then [1 council tax surcharge](#1-high-value-council-tax-surcharge-by-constituency) |
-| Mon 26 Oct | [2 triple lock](#2-the-burnham-plan-and-the-triple-lock), [3 energy bills](#3-energy-bills-and-the-autumn-budget-2026) |
+| Mon 26 Oct | [2 triple lock](#2-replacing-the-triple-lock-from-2030), [3 energy bills](#3-energy-bills-and-the-autumn-budget-2026) |
 | Tue 27 Oct | [P2 webinar](#p2-budget-day-webinar), [4 targeted energy discount](#4-targeted-energy-bill-discount), [6 free childcare](#6-free-childcare-hours-and-a-75-subsidy) |
 | Tue 27 Oct | [5 Middle East war](#5-the-middle-east-war-and-uk-living-standards), [7 electricity VAT](#7-temporary-vat-cut-on-domestic-electricity), [8 bus fares](#8-2-bus-fare-cap) |
 | Any time | [9 AI shock](#9-who-bears-the-ai-shock), [10 JOSS paper](#10-policyengine-in-the-journal-of-open-source-software), [11 marriage calculator](#11-marriage-calculator) |
@@ -76,7 +78,7 @@ Source: the event entry in policyengine-app-v2 #1279 (draft). The time and link 
 
 > Ahead of Wednesday's Budget, PolicyEngine UK has modelled:
 > • the high value council tax surcharge by constituency
-> • the Burnham plan against the triple lock
+> • replacing the triple lock from 2030
 > • four ways to support energy bills in 2027-28
 > • free childcare hours and a 75% subsidy
 > All free to explore.
@@ -88,7 +90,7 @@ Reply: `Our UK research: https://www.policyengine.org/uk/research`
 > Ahead of the Autumn Budget on Wednesday, here is what PolicyEngine UK has published on the policies in the debate. Each tool is free and open source.
 >
 > • High value council tax surcharge: revenue by constituency and income quintile → https://www.policyengine.org/uk/research/high-value-council-tax-surcharge-constituency-estimates
-> • The Burnham plan against the triple lock, across 50,000 paths of prices and earnings → https://www.policyengine.org/uk/triple-lock
+> • Replacing the triple lock from 2030, across 50,000 paths of prices and earnings → https://www.policyengine.org/uk/triple-lock
 > • Energy bills: what a £400 payment, a price cap freeze, a targeted discount and an extended VAT cut would each cost in 2027-28 → https://www.policyengine.org/uk/energy-autumn-budget
 > • Free childcare hours and a 75% childcare subsidy → https://www.policyengine.org/uk/free-childcare-reform
 >
@@ -116,7 +118,7 @@ Reply: `Read more: https://www.policyengine.org/uk/research/high-value-council-t
 
 > The high value council tax surcharge on homes in England worth £2 million or more raises £410 million in 2028-29 from owner-occupied main residences, before behavioural responses, by PolicyEngine's estimate.
 >
-> The OBR estimates £605 million from all liable properties before behavioural responses, and £400 million after them. Our figure covers owner-occupied main residences only; the OBR's base also includes second homes and let or company-owned properties.
+> The estimate covers about 127,000 owner-occupied main residences; second homes and let or company-owned properties are outside it.
 >
 > • Ten constituencies, eight of them in London, raise 39% of the revenue.
 > • The top income quintile pays 65% of the revenue; each of the bottom three quintiles pays about 7%. Some owners of homes worth over £2 million are in lower income quintiles, and the surcharge depends only on the home's value.
@@ -128,13 +130,13 @@ Reply: `Read more: https://www.policyengine.org/uk/research/high-value-council-t
 
 Source: `app/src/data/posts/articles/high-value-council-tax-surcharge-constituency-estimates.md` in policyengine-app-v2. Tag María if she wants to be tagged.
 
-### 2. The Burnham plan and the triple lock
+### 2. Replacing the triple lock from 2030
 
 Dashboard, 16 October 2026, Vahid Ahmadi and Max Ghenis. https://www.policyengine.org/uk/triple-lock
 
 **X**
 
-> The Burnham plan against the triple lock, across 50,000 paths of prices and earnings:
+> Replacing the State Pension triple lock from 2030, across 50,000 paths of prices and earnings:
 > • Saving in 2039-40: £11.1bn gross, £7.9bn net of tax and benefits
 > • Full new State Pension £931 a year lower on average
 > • 27% of households with less income
@@ -144,15 +146,15 @@ Reply: `Explore the paths: https://www.policyengine.org/uk/triple-lock`
 
 **LinkedIn**
 
-> How much would the Burnham plan save compared with the triple lock? PolicyEngine simulates both across 50,000 possible paths of prices and earnings.
+> The government plans to replace the State Pension triple lock from 2030 with a rise of at least prices or 2.5% that keeps its value relative to earnings. PolicyEngine simulates both rules across 50,000 possible paths of prices and earnings.
 >
 > In 2039-40, on average across the paths:
-> • the plan saves £11.1 billion gross, or £7.9 billion net of tax and benefits (£3.2 billion gross in 2034-35)
+> • the new rule saves £11.1 billion gross, or £7.9 billion net of tax and benefits (£3.2 billion gross in 2034-35)
 > • the middle 80% of paths runs from £3.9 billion to £18.9 billion gross
 > • the full new State Pension is £931 a year lower (£329 to £1,583 on the middle 80% of paths)
-> • 27% of UK households have less income, mostly pensioner households
+> • 27% of UK households have less income than under the triple lock, mostly pensioner households
 >
-> DWP's costing is £15 billion in 2039-40; ours is £11.1 billion on average. The range is a spread within one model, not a forecast probability, and the figures are provisional until the Budget on 28 October.
+> The range is a spread within one model, not a forecast probability. The figures are provisional until the Budget on 28 October.
 >
 > https://www.policyengine.org/uk/triple-lock
 >
@@ -181,7 +183,7 @@ Reply: `Compare the options: https://www.policyengine.org/uk/energy-autumn-budge
 > PolicyEngine costs four options discussed ahead of the Budget for 2027-28, with the average gain per household and the share of households that gain:
 > • £400 to every household: £11.78 billion, £400, 100%
 > • Freeze the price cap at April–June 2026 tariffs: £11.39 billion, £387, 94.7%
-> • Targeted discount (Resolution Foundation design, simplified): £2.11 billion, £72, 40.9%
+> • Targeted discount (simplified): £2.11 billion, £72, 40.9%
 > • Extend the electricity VAT cut: £1.45 billion, £49, 97.4%
 >
 > Compare the options and their effects by income decile: https://www.policyengine.org/uk/energy-autumn-budget
@@ -192,11 +194,11 @@ Source: live page, the 2027-28 cost table. **Check before posting:** the page's 
 
 ### 4. Targeted energy bill discount
 
-Dashboard, 5 October 2026, María Juaristi and Vahid Ahmadi, on the Resolution Foundation's "Billing me softly" proposal. https://www.policyengine.org/uk/targeted-energy-discount
+Dashboard, 5 October 2026, María Juaristi and Vahid Ahmadi. https://www.policyengine.org/uk/targeted-energy-discount
 
 **X**
 
-> We modelled the Resolution Foundation's targeted energy bill discount. At RF's amounts in 2026-27:
+> We modelled a targeted discount on energy bills, paid as a flat amount. In 2026-27:
 > • Cost: £2.09bn
 > • 11.95m households (41.8%) receive support
 > • £175 on average per receiving household
@@ -205,7 +207,7 @@ Reply: `Read more: https://www.policyengine.org/uk/targeted-energy-discount`
 
 **LinkedIn**
 
-> The Resolution Foundation has proposed a targeted discount on energy bills. PolicyEngine models it as a flat payment at RF's amounts.
+> PolicyEngine models a targeted discount on energy bills, paid as a flat amount to eligible households.
 >
 > In 2026-27, if every eligible household receives it:
 > • it costs £2.09 billion
@@ -218,7 +220,7 @@ Reply: `Read more: https://www.policyengine.org/uk/targeted-energy-discount`
 >
 > #EnergyBills
 
-Source: live page, default view. The page's poverty figure (140,000) is left out: the page notes it rests on an effective sample of 19 households. Tag the Resolution Foundation if we want to.
+Source: live page, default view. The page's poverty figure (140,000) is left out: the page notes it rests on an effective sample of 19 households.
 
 ### 5. The Middle East war and UK living standards
 
@@ -281,13 +283,13 @@ Dashboard, 21 July 2026, Vahid Ahmadi. https://www.policyengine.org/uk/electrici
 
 **X**
 
-> We estimate the six-month VAT cut on domestic electricity costs £669m (£769m if usage is weighted to winter); the government's estimate of £850m includes small businesses. Gain per household: £43 a year, £21 over the six months.
+> We estimate the six-month VAT cut on domestic electricity costs £669m (£769m if usage is weighted to winter). Gain per household: £43 a year, £21 over the six months.
 
 Reply: `Read more: https://www.policyengine.org/uk/electricity-vat-cut`
 
 **LinkedIn**
 
-> The temporary VAT cut on domestic electricity costs £669 million over six months by PolicyEngine's estimate, or £769 million if usage is weighted towards winter. The government's figure of £850 million also includes small businesses.
+> The temporary VAT cut on domestic electricity costs £669 million over six months by PolicyEngine's estimate, or £769 million if usage is weighted towards winter.
 >
 > • The average household gains £43 on a full-year basis, £21 over the six months.
 > • The bottom income quintile gains 0.08% of net income over the window, against 0.02% for the top quintile: the gain is similar in cash and larger as a share of income for lower-income households.
@@ -307,13 +309,13 @@ Dashboard, 23 July 2026, Vahid Ahmadi. https://www.policyengine.org/uk/bus-fare-
 
 **X**
 
-> We estimate the £2 bus fare cap in England outside London costs £409m, against £400m of government funding. The £3-to-£2 cut alone costs £273m. Modelled households save £18.20 a year on average.
+> We estimate the £2 bus fare cap in England outside London costs £409m in total. The £3-to-£2 cut alone costs £273m. Modelled households save £18.20 a year on average.
 
 Reply: `Read more: https://www.policyengine.org/uk/bus-fare-cap`
 
 **LinkedIn**
 
-> The £2 bus fare cap in England outside London costs £409 million by PolicyEngine's estimate. The government says £400 million of extra funding backs the cap.
+> The £2 bus fare cap in England outside London costs £409 million by PolicyEngine's estimate.
 >
 > • The estimate covers both the cut from £3 to £2 (£273 million on its own) and keeping a cap after the £3 cap's funding ends on 31 March.
 > • The average household in England outside London saves £18.20 a year.
