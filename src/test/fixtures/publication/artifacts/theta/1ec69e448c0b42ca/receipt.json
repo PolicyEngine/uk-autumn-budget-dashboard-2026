@@ -1,0 +1,156 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      },
+      "forecast": {
+        "source": "test",
+        "status": "pre_budget",
+        "vintage": "v1"
+      }
+    },
+    "composition": null,
+    "config_baseline": null,
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "digests": {
+      "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
+      "outputs_sha256": "8701efe05da1a90a62d59707804ac459d69ddd464af20717157bb612a0b76e18",
+      "receipt_sha256": "58e25270ea076d9a297f1554549199d5393afefe6a6a74c84cf4fd5d24f15d45"
+    },
+    "files": {
+      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
+      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
+      "household_scatter_binned.csv": "0992fd1cb6289300b43c3c088861b8839185fe80845e3d3565f6264621a7143e",
+      "income_curve.csv": "98c65fa31ea1801cff78e2d1f42c593f48947d0b02d9b25373ca12b7f94d2aa4",
+      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
+      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
+    },
+    "generated_at": "2026-10-24T11:18:06.980177+00:00",
+    "generator_argv": [
+      "test"
+    ],
+    "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "key": "theta",
+    "measure_ids": [
+      "theta"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [
+      {
+        "key": "pc_minimum_guarantee_uprating",
+        "parameters": [
+          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+        ],
+        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": []
+    },
+    "name": "Theta",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": [
+      2033
+    ]
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "theta baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "471c95179d9d3fc56de27b6893390d83f779efbad5e120dbb0a595917649169f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "8701efe05da1a90a62d59707804ac459d69ddd464af20717157bb612a0b76e18",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "content",
+      "kind": "reform",
+      "name": "theta",
+      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "darwin",
+      "python_version": "3.13.15"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2032,
+      2033
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

@@ -49,6 +49,7 @@ from uk_budget_data.publication.tables import (
     band,
     bin_scatter,
     canonical_csv,
+    change_band,
     parse_csv,
 )
 from uk_budget_data.publication.validate import table_problems
@@ -212,13 +213,8 @@ def test_binned_scatter_holds_no_household_level_data(rows):
                 SCATTER_BINS["income_max"],
             )
             == cell["income_band"]
-            and band(
-                round(r["income_change"], 2),
-                SCATTER_BINS["change_band_width"],
-                SCATTER_BINS["change_min"],
-                SCATTER_BINS["change_max"],
-            )
-            == cell["change_band"]
+            and change_band(round(r["income_change"], 2))
+            == (cell["change_band"], cell["change_band_upper"])
         ]
         # Every published cell pools at least the minimum of households,
         # and its count is their weight, rounded.
@@ -237,7 +233,7 @@ def test_binned_scatter_ignores_row_order(rows, random):
 
 @given(
     st.floats(-1e7, 1e7),
-    st.sampled_from([(5_000.0, 0.0, 150_000.0), (100.0, -2_000.0, 2_000.0)]),
+    st.sampled_from([(5_000.0, 0.0, 150_000.0)]),
 )
 def test_bands_hold_their_values_and_outer_bands_are_open(value, spec):
     width, low, high = spec
@@ -263,7 +259,7 @@ def test_float_noise_around_zero_is_not_a_loss():
         }
     ] * SCATTER_MIN_HOUSEHOLDS
     (cell,) = bin_scatter(rows)
-    assert cell["change_band"] == 0.0
+    assert (cell["change_band"], cell["change_band_upper"]) == (-1.0, 1.0)
 
 
 def test_small_cells_are_left_out():
@@ -284,7 +280,8 @@ def test_small_cells_are_left_out():
             "reform_name": "A",
             "year": 2027,
             "income_band": 20_000.0,
-            "change_band": -100.0,
+            "change_band": -75.0,
+            "change_band_upper": -50.0,
             "households": 100.0 * SCATTER_MIN_HOUSEHOLDS,
         }
     ]
@@ -961,3 +958,43 @@ def test_a_measure_cannot_use_a_combined_key(world):
             data_root=world.data_root,
             inputs=world.inputs,
         )
+
+
+@given(st.floats(-1e7, 1e7, allow_nan=False))
+def test_change_bands_hold_their_values_and_mirror_about_zero(value):
+    lower, upper = change_band(value)
+    edges = SCATTER_BINS["change_edges"]
+    assert edges == [-edge for edge in reversed(edges)]
+    if abs(value) < 1:
+        assert (lower, upper) == (-1.0, 1.0)
+    elif lower == upper:
+        # Open-ended beyond the outermost edge
+        assert abs(value) >= edges[-1] and lower == math.copysign(
+            edges[-1], value
+        )
+    elif value > 0:
+        assert lower <= value < upper
+    else:
+        assert lower < value <= upper
+    assert change_band(-value) == (
+        (-upper, -lower) if abs(value) >= 1 else (lower, upper)
+    )
+
+
+def test_change_bands_are_the_validators():
+    from uk_budget_data.publication.validate import SCATTER_CHANGE_BANDS
+
+    # Every band a cell can name is one the validator accepts, and the
+    # validator accepts no other.
+    named = {
+        change_band(value)
+        for value in [0.0]
+        + [
+            sign * (edge + offset)
+            for edge in SCATTER_BINS["change_edges"]
+            if edge > 0
+            for offset in (0.0, 0.5)
+            for sign in (1, -1)
+        ]
+    }
+    assert named == SCATTER_CHANGE_BANDS

@@ -1,0 +1,3 @@
+reform_id,reform_name,year,income_band,change_band,change_band_upper,households
+combined--alpha+beta,Combined--Alpha+Beta,2032,20000.0,-75.0,-50.0,1000.0
+combined--alpha+beta,Combined--Alpha+Beta,2033,20000.0,-75.0,-50.0,1000.0
