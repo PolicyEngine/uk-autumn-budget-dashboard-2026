@@ -1,0 +1,192 @@
+name: Publish measures (Budget day)
+
+# Budget day, #105: a measure goes live when its pull request merges.
+#
+# On a push to main that touches the measure registry, this workflow finds
+# the measures the push added or changed (the registry on HEAD against
+# HEAD^, compared in Python by what each measure is: uk-budget-data
+# changed-measures), runs `uk-budget-data publish-measure` for each one in
+# parallel, and opens ONE draft data pull request with their rows and a
+# summary. Review rows on it are pending; the Reconciler signs them
+# (`uk-budget-data sign-pending`) before it merges. Merging deploys, and the
+# measure is live. Nothing here signs a row or merges anything.
+#
+# Runner: one measure peaks at about 6 GB for one year, and about 20 GB for
+# every year with results by area (#59), so the compute job runs on a larger
+# runner. Its label comes from the `runner` input, else the repository
+# variable PUBLISH_MEASURE_RUNNER, else ubuntu-latest-16-cores (64 GB). That
+# label must exist as an organisation larger runner, or the job queues
+# until it times out. A later PR can move the compute job to Modal.
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/uk_budget_data/reforms.py
+  workflow_dispatch:
+    inputs:
+      measures:
+        description: Measure ids, space separated (empty for those the last push to the branch changed)
+        required: false
+        default: ""
+      years:
+        description: Years, space separated (empty for every policy year)
+        required: false
+        default: ""
+      runner:
+        description: Runner label for the simulations (empty for vars.PUBLISH_MEASURE_RUNNER or ubuntu-latest-16-cores)
+        required: false
+        default: ""
+
+permissions: {}
+
+# One run per commit: a re-run of the same push waits, never doubles up.
+# Data PRs go on a branch per run, so runs never write to one branch.
+concurrency:
+  group: publish-measure-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Find the measures to publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      measures: ${{ steps.ids.outputs.measures }}
+      count: ${{ steps.ids.outputs.count }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Measure ids
+        id: ids
+        env:
+          INPUT_MEASURES: ${{ inputs.measures }}
+        run: |
+          if [ -n "${INPUT_MEASURES}" ]; then
+            measures=$(python3 -c 'import json, os; print(json.dumps(os.environ["INPUT_MEASURES"].split()))')
+          else
+            uv run uk-budget-data changed-measures --base HEAD^ --head HEAD > changed.json
+            cat changed.json
+            measures=$(python3 -c 'import json; print(json.dumps(json.load(open("changed.json"))["changed"]))')
+          fi
+          echo "measures=${measures}" >> "$GITHUB_OUTPUT"
+          echo "count=$(python3 -c 'import json, sys; print(len(json.loads(sys.argv[1])))' "${measures}")" >> "$GITHUB_OUTPUT"
+          echo "Measures: ${measures}"
+
+  compute:
+    name: Run ${{ matrix.measure }}
+    needs: detect
+    if: needs.detect.outputs.count != '0'
+    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'ubuntu-latest-16-cores' }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        measure: ${{ fromJSON(needs.detect.outputs.measures) }}
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
+      MEASURE: ${{ matrix.measure }}
+      YEARS: ${{ inputs.years }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Run the measure's tables
+        run: |
+          years=()
+          if [ -n "${YEARS}" ]; then read -r -a years <<< "${YEARS}"; years=(--years "${years[@]}"); fi
+          /usr/bin/time -v uv run uk-budget-data publish-measure "${MEASURE}" \
+            --rows-dir fragments "${years[@]}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fragment-${{ matrix.measure }}
+          path: fragments/
+          retention-days: 7
+          if-no-files-found: error
+
+  data-pr:
+    name: Open the data pull request
+    needs: [detect, compute]
+    # Opens a PR for the measures that ran, even if another one failed;
+    # the summary lists only the measures it carries.
+    if: ${{ !cancelled() && needs.detect.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fragment-*
+          path: fragments
+          merge-multiple: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Upsert the rows; mark review rows pending
+        run: uv run uk-budget-data apply-rows fragments --summary summary.md
+
+      # Last, so no step before it can reach the token. An App token lets
+      # the data PR start CI; one opened with the default token does not.
+      - name: Mint an App token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Open the draft data pull request
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          BRANCH: data/publish-measure-${{ github.run_id }}
+          TITLE: "Data: publish ${{ join(fromJSON(needs.detect.outputs.measures), ', ') }}"
+          SUMMARY: summary.md
+        run: bash scripts/budget_day/open_data_pr.sh

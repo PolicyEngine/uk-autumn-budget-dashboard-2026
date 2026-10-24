@@ -1,0 +1,158 @@
+name: Refresh the combined run (Budget day)
+
+# Budget day, #105: the live measures simulated together, in batches.
+#
+# Measures interact, so the package total is not the sum of the measures.
+# Rerunning it on every measure's merge would add minutes to each, so this
+# runs on demand and every 30 minutes on Budget day, from 12:30 to 18:00
+# London time. On 28 October London is on GMT (the clocks go back on 25
+# October), so the times are the same in UTC. A scheduled run on any other
+# date stops at its first step, so the schedule needs no disabling after the
+# day; remove it once the Budget is over.
+#
+# It runs `uk-budget-data refresh-combined` for the live measures (those in
+# public/data/budgetary_impact.csv on main) and opens a draft data pull
+# request, pending review, as publish-measure.yml does. When nothing
+# changed it opens nothing. Until that PR merges, the page labels totals as
+# the sum of measures. Runner: as publish-measure.yml.
+on:
+  schedule:
+    - cron: "30 12-17 28 10 *"
+    - cron: "0 13-18 28 10 *"
+  workflow_dispatch:
+    inputs:
+      measures:
+        description: Members, space separated (empty for the live measures)
+        required: false
+        default: ""
+      years:
+        description: Years, space separated (empty for every policy year)
+        required: false
+        default: ""
+      runner:
+        description: Runner label (empty for vars.PUBLISH_MEASURE_RUNNER or ubuntu-latest-16-cores)
+        required: false
+        default: ""
+
+permissions: {}
+
+# One refresh at a time; a newer queued one replaces an older queued one,
+# which is what a refresh wants.
+concurrency:
+  group: refresh-combined
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Only on Budget day, when scheduled
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      run: ${{ steps.day.outputs.run }}
+    steps:
+      - name: Check the date
+        id: day
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "${EVENT}" = schedule ] && [ "$(date -u +%F)" != 2026-10-28 ]; then
+            echo "Scheduled for Budget day only (2026-10-28); nothing to do."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  compute:
+    name: Run the live measures together
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'ubuntu-latest-16-cores' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
+      MEASURES: ${{ inputs.measures }}
+      YEARS: ${{ inputs.years }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Run the combined package
+        run: |
+          args=()
+          if [ -n "${MEASURES}" ]; then read -r -a m <<< "${MEASURES}"; args+=(--measures "${m[@]}"); fi
+          if [ -n "${YEARS}" ]; then read -r -a y <<< "${YEARS}"; args+=(--years "${y[@]}"); fi
+          /usr/bin/time -v uv run uk-budget-data refresh-combined --rows-dir fragments "${args[@]}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fragment-combined
+          path: fragments/
+          retention-days: 7
+          if-no-files-found: error
+
+  data-pr:
+    name: Open the data pull request
+    needs: compute
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: fragment-combined
+          path: fragments
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies (lockfile must be current)
+        run: uv sync --locked
+
+      - name: Upsert the combined rows; mark review rows pending
+        run: uv run uk-budget-data apply-rows fragments --summary summary.md
+
+      - name: Mint an App token
+        id: app
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Open the draft data pull request
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
+          BRANCH: data/refresh-combined-${{ github.run_id }}
+          TITLE: "Data: refresh the combined run"
+          SUMMARY: summary.md
+        run: bash scripts/budget_day/open_data_pr.sh
