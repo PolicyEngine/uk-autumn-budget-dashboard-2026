@@ -24,9 +24,11 @@ const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
  * @param {Array<{id, name, color, rounded}>} props.rows
  * @param {string[]} props.noEffect - Names of measures that do not move the household
  * @param {string[]} [props.underAPound] - Names of measures worth under £1
+ * @param {Array<{id, name, kind, text}>} [props.notes] - Notes on measures'
+ *   figures: an employer cost (£0 for every household) or "if received"
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel }) {
+export default function PolicyBars({ rows, noEffect, underAPound = [], notes = [], yearLabel }) {
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const width = measured > 0 ? measured : 640;
@@ -179,6 +181,11 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
       {noEffect.length > 0 && rows.length > 0 && (
         <p className="single-year-quiet">No effect on your household: {noEffect.join(", ")}.</p>
       )}
+      {notes.map((note) => (
+        <p key={note.id} className="single-year-quiet" data-note={note.kind}>
+          <strong>{note.name}</strong>: {note.text}
+        </p>
+      ))}
     </div>
   );
 }

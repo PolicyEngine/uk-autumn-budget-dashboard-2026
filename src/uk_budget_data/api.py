@@ -394,6 +394,17 @@ class HouseholdAnswersRequest(BaseModel):
     )
     petrol_spending: float = Field(default=0, ge=0, le=100_000)
     diesel_spending: float = Field(default=0, ge=0, le=100_000)
+    electricity_spending: float = Field(
+        default=household_impact.ELECTRICITY_SPENDING,
+        ge=0,
+        le=100_000,
+        description=(
+            "Domestic electricity, £ a year including VAT, for the zero VAT "
+            "on domestic electricity. Left out: the average UK household's, "
+            "£20.00 a week (ONS, Family spending in the UK, April 2024 to "
+            "March 2025, Table A1, 4.4.1)."
+        ),
+    )
     salary_sacrifice_pension_contributions: float = Field(
         default=0, ge=0, le=MAX_AMOUNT
     )

@@ -90,6 +90,10 @@ def _with(change):
             ["body", "household", "children_ages"],
         ),
         (
+            {"household": {"electricity_spending": -1}},
+            ["body", "household", "electricity_spending"],
+        ),
+        (
             {"household": {"state_pension": -1}},
             ["body", "household", "state_pension"],
         ),
@@ -243,3 +247,13 @@ def test_a_calculation_past_its_limit_is_a_504(monkeypatch):
     monkeypatch.setattr(household_impact, "calculate_household_impact", slow)
     response = client.post(ROUTE, json=REQUEST)
     assert response.status_code == 504
+
+
+def test_electricity_spending_defaults_to_the_ons_average():
+    """Left out, the average household's (ONS Family Spending); entered,
+    as entered."""
+    from uk_budget_data.api import HouseholdAnswersRequest
+
+    assert HouseholdAnswersRequest().answers().electricity_spending == 1_040
+    answers = HouseholdAnswersRequest(electricity_spending=600).answers()
+    assert answers.electricity_spending == 600
