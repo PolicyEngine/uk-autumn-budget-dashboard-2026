@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -12,84 +11,54 @@ import {
   Line,
   ReferenceLine,
 } from "recharts";
-import {
-  POLICY_COLORS_BY_KEY,
-  PERSONAL_IMPACT_POLICY_ORDER,
-} from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import "./PersonalImpactResults.css";
 
-// Use shared policy colours
-const POLICY_COLOURS = POLICY_COLORS_BY_KEY;
-const POLICY_ORDER = PERSONAL_IMPACT_POLICY_ORDER;
-
 function formatCurrency(value, decimals = 0) {
-  const sign = value >= 0 ? "+" : "";
+  const sign = value >= 0 ? "+" : "−";
   return `${sign}£${Math.abs(value).toLocaleString("en-GB", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })}`;
 }
 
-function PersonalImpactResults({ results }) {
-  // Prepare chart data
-  const yearlyData = useMemo(() => {
-    if (!results?.years) return [];
-
-    const years = Object.keys(results.years)
-      .map(Number)
-      .sort((a, b) => a - b);
-
-    return years.map((year) => {
-      const yearData = { year };
-      let total = 0;
-
-      POLICY_ORDER.forEach((policyId) => {
-        const policy = results.policies?.[policyId];
-        if (policy?.years?.[year]) {
-          const change = policy.years[year].net_income_change || 0;
-          yearData[policyId] = change;
-          total += change;
-        } else {
-          yearData[policyId] = 0;
-        }
-      });
-
-      yearData.total = total;
-      return yearData;
-    });
-  }, [results]);
-
-  // Cumulative data for line chart
-  const cumulativeData = useMemo(() => {
-    if (!yearlyData.length) return [];
-
-    let cumulative = 0;
-    return yearlyData.map((d) => {
-      cumulative += d.total;
-      return {
-        year: d.year,
-        yearly: d.total,
-        cumulative,
-      };
-    });
-  }, [yearlyData]);
-
-  // Policy summary (sorted by impact magnitude)
-  const policySummary = useMemo(() => {
-    if (!results?.policies) return [];
-
-    return POLICY_ORDER.map((policyId) => ({
-      id: policyId,
-      name: results.policies[policyId]?.name || policyId,
-      total: results.policies[policyId]?.total_impact || 0,
-    }))
-      .filter((p) => p.total !== 0)
-      .sort((a, b) => b.total - a.total);
-  }, [results]);
+function PersonalImpactResults({ results, selectedPolicies }) {
+  const { displayable, measures } = useMeasureCatalogue();
+  const selected = selectedPolicies ?? measures.map((measure) => measure.id);
+  const selectedMeasures = displayable.filter((measure) => selected.includes(measure.id));
+  const years = Object.keys(results?.years ?? {}).map(Number).sort((a, b) => a - b);
+  const modelled = selectedMeasures.filter((measure) => years.length > 0 && years.every((year) =>
+    Number.isFinite(results?.policies?.[measure.id]?.years?.[year]?.net_income_change),
+  ));
+  const POLICY_ORDER = modelled.map((measure) => measure.id);
+  const POLICY_COLOURS = Object.fromEntries(modelled.map((measure) => [measure.id, measure.color]));
+  const names = Object.fromEntries(modelled.map((measure) => [measure.id, measure.label]));
+  const unmodelled = selected.filter((id) => !POLICY_ORDER.includes(id))
+    .map((id) => measures.find((measure) => measure.id === id)?.label ?? id);
+  const complete = unmodelled.length === 0 && modelled.length > 0;
+  const yearlyData = years.map((year) => {
+    const row = { year, total: complete ? 0 : null };
+    for (const measure of modelled) {
+      row[measure.id] = results.policies[measure.id].years[year].net_income_change;
+      if (complete) row.total += row[measure.id];
+    }
+    return row;
+  });
+  let cumulative = 0;
+  const cumulativeData = complete ? yearlyData.map((row) => {
+    cumulative += row.total;
+    return { year: row.year, yearly: row.total, cumulative };
+  }) : [];
+  const policySummary = modelled.map((measure) => ({
+    id: measure.id,
+    name: measure.label,
+    total: yearlyData.reduce((sum, row) => sum + row[measure.id], 0),
+  })).sort((a, b) => b.total - a.total);
 
   if (!results) return null;
 
-  const totalImpact = results.totals?.cumulative || 0;
+  const totalImpact = complete ? yearlyData.reduce((sum, row) => sum + row.total, 0) : null;
   const impactClass =
     totalImpact > 0 ? "positive" : totalImpact < 0 ? "negative" : "neutral";
 
@@ -97,16 +66,22 @@ function PersonalImpactResults({ results }) {
     <div className="personal-impact-results">
       {/* Hero summary */}
       <div className={`impact-summary ${impactClass}`}>
-        <div className="summary-label">Your total impact over 5 years</div>
-        <div className="summary-value">{formatCurrency(totalImpact)}</div>
+        <div className="summary-label">Your total impact over {years.length} years</div>
+        <div className="summary-value">{complete ? formatCurrency(totalImpact) : "Unavailable"}</div>
         <div className="summary-context">
-          {totalImpact > 0
+          {!complete ? "Some selected measures are not modelled" : totalImpact > 0
             ? "You gain from these budget policies"
             : totalImpact < 0
               ? "You lose from these budget policies"
               : "These policies have no net effect on you"}
         </div>
       </div>
+
+      {unmodelled.length > 0 && (
+        <UnavailableNotice reason={`Not modelled: ${unmodelled.join(", ")}.`}>
+          <p>The total for the selected measures is unavailable.</p>
+        </UnavailableNotice>
+      )}
 
       {/* Year-by-year breakdown */}
       <div className="results-section">
@@ -132,19 +107,20 @@ function PersonalImpactResults({ results }) {
               <Tooltip
                 formatter={(value, name) => [
                   formatCurrency(value),
-                  results.policies?.[name]?.name || name,
+                  names[name] || name,
                 ]}
                 labelFormatter={(label) => `Year: ${label}`}
               />
               <Legend
                 wrapperStyle={{ paddingTop: "20px" }}
-                formatter={(value) => results.policies?.[value]?.name || value}
+                formatter={(value) => names[value] || value}
               />
               <ReferenceLine y={0} stroke="#666" />
               {POLICY_ORDER.map(
                 (policyId) =>
                   results.policies?.[policyId] && (
                     <Bar
+                      name={names[policyId]}
                       key={policyId}
                       dataKey={policyId}
                       stackId="a"
@@ -207,7 +183,7 @@ function PersonalImpactResults({ results }) {
             policySummary.map((policy) => (
               <div
                 key={policy.id}
-                className={`policy-row ${policy.total > 0 ? "positive" : "negative"}`}
+                className={`policy-row ${policy.total > 0 ? "positive" : policy.total < 0 ? "negative" : ""}`}
               >
                 <div
                   className="policy-color"
@@ -244,10 +220,10 @@ function PersonalImpactResults({ results }) {
             <tbody>
               {POLICY_ORDER.filter((id) => results.policies?.[id]).map(
                 (policyId) => {
-                  const policy = results.policies[policyId];
+                  const total = yearlyData.reduce((sum, row) => sum + row[policyId], 0);
                   return (
                     <tr key={policyId}>
-                      <td className="policy-cell">{policy.name}</td>
+                      <td className="policy-cell">{names[policyId]}</td>
                       {yearlyData.map((d) => (
                         <td
                           key={d.year}
@@ -265,10 +241,10 @@ function PersonalImpactResults({ results }) {
                         </td>
                       ))}
                       <td
-                        className={`total-cell ${policy.total_impact > 0 ? "positive" : policy.total_impact < 0 ? "negative" : ""}`}
+                        className={`total-cell ${total > 0 ? "positive" : total < 0 ? "negative" : ""}`}
                       >
-                        {policy.total_impact !== 0
-                          ? formatCurrency(policy.total_impact)
+                        {total !== 0
+                          ? formatCurrency(total)
                           : "—"}
                       </td>
                     </tr>
@@ -284,13 +260,13 @@ function PersonalImpactResults({ results }) {
                       d.total > 0 ? "positive" : d.total < 0 ? "negative" : ""
                     }
                   >
-                    {formatCurrency(d.total)}
+                    {complete ? formatCurrency(d.total) : "Unavailable"}
                   </td>
                 ))}
                 <td
                   className={`total-cell ${totalImpact > 0 ? "positive" : totalImpact < 0 ? "negative" : ""}`}
                 >
-                  {formatCurrency(totalImpact)}
+                  {complete ? formatCurrency(totalImpact) : "Unavailable"}
                 </td>
               </tr>
             </tbody>

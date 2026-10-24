@@ -14,6 +14,8 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./HouseholdChart.css";
+import UnavailableNotice from "./publication/UnavailableNotice";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -30,6 +32,14 @@ const LEGEND_ITEMS = [
 ];
 
 function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+  const catalogue = useMeasureCatalogue();
+  const { byId, combinedId, displayable } = catalogue;
+  const modelledPolicies = useMemo(() => {
+    const displayableIds = new Set(displayable.map((measure) => measure.id));
+    return selectedPolicies.filter(
+      (id) => displayableIds.has(id) || id === combinedId,
+    );
+  }, [selectedPolicies, displayable, combinedId]);
   // Use prop for year selection (shared slider in parent)
 
   // Zoom state
@@ -64,7 +74,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       const year = parseInt(row.year);
       const householdId = row.household_id;
 
-      if (!selectedPolicies.includes(reformId)) return;
+      if (!modelledPolicies.includes(reformId) || !isCatalogueRowDisplayable(catalogue, reformId, year)) return;
 
       if (!dataByReformYearHousehold[reformId]) {
         dataByReformYearHousehold[reformId] = {};
@@ -85,7 +95,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     const years = [2026, 2027, 2028, 2029, 2030];
     let householdIdsInAllYears = null;
 
-    selectedPolicies.forEach((reformId) => {
+    modelledPolicies.forEach((reformId) => {
       years.forEach((year) => {
         const yearData = dataByReformYearHousehold[reformId]?.[year] || {};
         const idsThisYear = new Set(Object.keys(yearData));
@@ -114,7 +124,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       const policyBreakdown = {}; // Store change per policy
 
       // Sum income changes from all selected policies for this household
-      selectedPolicies.forEach((reformId) => {
+      modelledPolicies.forEach((reformId) => {
         const householdData =
           dataByReformYearHousehold[reformId]?.[selectedYear]?.[householdId];
         if (householdData) {
@@ -146,7 +156,7 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     });
 
     return filteredData;
-  }, [rawData, selectedPolicies, selectedYear]);
+  }, [rawData, modelledPolicies, selectedYear, catalogue]);
 
   // Process data for Recharts
   const { chartData, stats, dataExtent } = useMemo(() => {
@@ -394,19 +404,8 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     setZoomDomain(null);
   };
 
-  // Policy name mapping for tooltip
-  const policyNames = {
-    two_child_limit: "2 child limit repeal",
-    fuel_duty_freeze: "Fuel duty freeze",
-    rail_fares_freeze: "Rail fares freeze",
-    threshold_freeze_extension: "Threshold freeze",
-    dividend_tax_increase_2pp: "Dividend tax +2pp",
-    savings_tax_increase_2pp: "Savings tax +2pp",
-    property_tax_increase_2pp: "Property tax +2pp",
-    freeze_student_loan_thresholds: "Student loan freeze",
-    salary_sacrifice_cap: "Salary sacrifice cap",
-    autumn_budget_2026_combined: "Autumn Budget (combined)",
-  };
+  const policyName = (id) =>
+    byId.get(id)?.label ?? (id === combinedId ? "All measures" : id);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }) => {
@@ -449,11 +448,11 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
                   key={policyId}
                   style={{
                     margin: "2px 0",
-                    color: change > 0 ? "#319795" : "#D97706",
+                    color: byId.get(policyId)?.color ?? "#9CA3AF",
                     fontSize: "11px",
                   }}
                 >
-                  {policyNames[policyId] || policyId}: {formatValue(change)}
+                  {policyName(policyId)}: {formatValue(change)}
                 </p>
               ))}
             </div>
@@ -477,6 +476,10 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
         return "#9CA3AF";
     }
   };
+
+  if (modelledPolicies.length !== selectedPolicies.length) {
+    return <UnavailableNotice reason="Household results are unavailable for some selected measures. A partial total is not shown." />;
+  }
 
   if (!data || data.length === 0) {
     return (

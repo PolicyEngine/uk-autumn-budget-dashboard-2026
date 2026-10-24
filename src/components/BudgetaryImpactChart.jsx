@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
   ReferenceArea,
   ReferenceLine,
-  LabelList,
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
@@ -20,7 +19,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
-import { POLICY_COLORS, ALL_POLICY_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -29,7 +28,6 @@ import {
   AXIS_TITLE_STYLE,
   chartMargin,
   legendWrapperStyle,
-  legendLabelStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
@@ -48,7 +46,7 @@ import {
 const formatNetLabel = (value) =>
   value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -59,11 +57,11 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
   return (
     <g className="net-impact-labels">
       {data.map((point) => {
-        const gains = ALL_POLICY_NAMES.reduce(
+        const gains = policyNames.reduce(
           (sum, name) => sum + Math.max(0, point[name] || 0),
           0,
         );
-        const costs = ALL_POLICY_NAMES.reduce(
+        const costs = policyNames.reduce(
           (sum, name) => sum + Math.min(0, point[name] || 0),
           0,
         );
@@ -136,13 +134,16 @@ const CHART_DESCRIPTION =
 function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  const {
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    revenueRaisingNames: REVENUE_RAISING_NAMES,
+  } = useMeasureCatalogue();
 
   if (!data || data.length === 0) return null;
 
   const formatCurrencyTick = (value) =>
     value < 0 ? `-£${Math.abs(value)}bn` : `£${value}bn`;
-  const formatCurrencyTooltip = (value) =>
-    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `£${value.toFixed(1)}bn`;
 
   // Check which policies have non-zero values for legend/tooltip
   const hasNonZeroValues = (policyName) => {
@@ -326,6 +327,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
+                  policyNames={ALL_POLICY_NAMES}
                   show
                 />
               }

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./GroupedLegend.css";
 
 // A group with more items than this may split into two sub-columns
@@ -20,17 +20,19 @@ export function legendGroups(items) {
     return [[null, items]];
   }
   return [
-    ["Raise revenue", items.filter((item) => item.raises)],
-    ["Cost revenue", items.filter((item) => !item.raises)],
+    ["Raise revenue", items.filter((item) => item.direction !== "neutral" && item.raises)],
+    ["Cost revenue", items.filter((item) => item.direction !== "neutral" && !item.raises)],
+    ["Other measures", items.filter((item) => item.direction === "neutral")],
   ].filter(([, groupItems]) => groupItems.length > 0);
 }
 
 /** The dashboard's policy names as legend items, coloured as in the charts. */
-export const policyItems = (names) =>
+export const policyItems = (names, catalogue) =>
   names.map((name) => ({
     label: name,
-    color: POLICY_COLORS[name],
-    raises: REVENUE_RAISING_NAMES.has(name),
+    color: catalogue.policyColors[name],
+    raises: catalogue.revenueRaisingNames.has(name),
+    direction: catalogue.byName.get(name)?.direction,
   }));
 
 /** A legend key: a square, or a short line (dashed when `dash` is set). */
@@ -75,7 +77,8 @@ function Swatch({ item, measure = false }) {
  * Pass `names` (dashboard policy names) or `items`.
  */
 function GroupedLegend({ names, items, netLabel }) {
-  const all = items ?? policyItems(names ?? []);
+  const catalogue = useMeasureCatalogue();
+  const all = items ?? policyItems(names ?? [], catalogue);
   const groups = legendGroups(all);
   const ref = useRef(null);
   const measureRef = useRef(null);

@@ -74,10 +74,28 @@ class ReconciliationSummary(_Strict):
     responsiveness_status: str
 
 
+class PersonalSeries(_Strict):
+    """An existing lifetime response column and its indivisible group."""
+
+    key: str = Field(min_length=1)
+    policies: Optional[list[str]] = Field(default=None, min_length=1)
+
+    @field_validator("policies")
+    @classmethod
+    def _group_ids_are_not_empty(cls, value):
+        if value is not None and any(not item for item in value):
+            raise ValueError("personal group ids cannot be empty")
+        return value
+
+
 class Entry(_Strict):
     """One measure, or one combined run, in the manifest."""
 
     name: str
+    # Public registry text, copied from the artifact and covered by its
+    # digest. Empty keeps manifests written before descriptions compatible.
+    description: str = ""
+    personal: Optional[PersonalSeries] = None
     status: Status
     artifact: str
     outputs_sha256: str

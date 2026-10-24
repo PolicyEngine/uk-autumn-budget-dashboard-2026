@@ -20,7 +20,8 @@ import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import UnavailableNotice from "./publication/UnavailableNotice";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -29,14 +30,11 @@ import {
   AXIS_TITLE_STYLE,
   chartMargin,
   legendWrapperStyle,
-  legendLabelStyle,
   axisWidth,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
-// Order for waterfall chart: good for households first, then bad
-// Every legend uses one order, set in policyConfig: revenue raisers, then
-// costs. (A name with no data here is never drawn.)
+// The published catalogue supplies the shared measure order and colours.
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -48,28 +46,15 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
-
-  // Build chart data for internal year
-  const POLICIES = [
-    { id: "two_child_limit", name: "2 child limit repeal" },
-    { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-    { id: "rail_fares_freeze", name: "Rail fares freeze" },
-    { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-    { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-    {
-      id: "savings_tax_increase_2pp",
-      name: "Savings income tax increase (+2pp)",
-    },
-    {
-      id: "property_tax_increase_2pp",
-      name: "Property income tax increase (+2pp)",
-    },
-    {
-      id: "freeze_student_loan_thresholds",
-      name: "Freeze student loan repayment thresholds",
-    },
-    { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
-  ];
+  const {
+    displayable: POLICIES,
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    revenueRaisingNames: REVENUE_RAISING_NAMES,
+  } = useMeasureCatalogue();
+  const hasUnavailableSelection = selectedPolicies.some(
+    (id) => !POLICIES.some((policy) => policy.id === id),
+  );
 
   const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
   const waterfallSelectedYear = rawData
@@ -81,26 +66,23 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       )
     : [];
 
-  // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
-  const FLIP_SIGN_POLICIES = [];
-
   const data = waterfallDeciles.map((decile) => {
     const dataPoint = { decile };
     let netChange = 0;
+    let incomplete = hasUnavailableSelection;
     POLICIES.forEach((policy) => {
       const isSelected = selectedPolicies.includes(policy.id);
       const dataRow = waterfallSelectedYear.find(
         (row) => row.reform_id === policy.id && row.decile === decile,
       );
-      let value = isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
-      // Flip sign for policies with incorrect data sign
-      if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-        value = -value;
-      }
+      const parsedValue = dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
+      const value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
+      if (isSelected && value === null) incomplete = true;
       dataPoint[policy.name] = value;
-      netChange += value;
+      if (value !== null) netChange += value;
     });
-    dataPoint.netChange = netChange;
+    dataPoint.netChange = incomplete ? null : netChange;
+    dataPoint.incomplete = incomplete;
     return dataPoint;
   });
 
@@ -129,12 +111,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
           const dataRow = yearData.find(
             (row) => row.reform_id === policy.id && row.decile === decile,
           );
-          let value =
-            isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
-          // Flip sign for policies with incorrect data sign
-          if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-            value = -value;
-          }
+          const parsedValue = isSelected && dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
+          const value = Number.isFinite(parsedValue) ? parsedValue : 0;
           if (value > 0) positiveSum += value;
           else negativeSum += value;
         });
@@ -158,6 +136,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   };
 
   const yAxisDomain = calculateYAxisDomain();
+  const hasIncompleteResults = data.some((point) => point.incomplete);
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -252,6 +231,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
       </div>
 
       <div ref={chartRef}>
+        {published && hasIncompleteResults && (
+          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+        )}
         {published ? (
           <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
             <ComposedChart

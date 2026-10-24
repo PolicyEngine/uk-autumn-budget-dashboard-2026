@@ -4,6 +4,7 @@ This module provides the main pipeline for generating all dashboard data
 from a list of reforms.
 """
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -31,7 +32,10 @@ from uk_budget_data.calculators import (
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.private_outputs import private_directory, save_private_csv
-from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+from uk_budget_data.reforms import (
+    PUBLIC_PERSONAL_SERIES,
+    get_autumn_budget_2026_reforms,
+)
 from uk_budget_data.scored_years import missing_scored_years
 
 console = Console()
@@ -401,7 +405,31 @@ class DataPipeline:
 
         for key, filename in file_mapping.items():
             if key in data and len(data[key]) > 0:
-                save_csv(data[key], output_dir / filename)
+                frame = data[key]
+                # The flat route carries the same public registry text as
+                # receipts. Keep it on the budgetary rows so labels,
+                # descriptions and direction can be read in one place.
+                if key == "budgetary_impact" and "reform_id" in frame:
+                    descriptions = {
+                        reform.id: reform.description
+                        for reform in self.reforms
+                    }
+                    frame = frame.assign(
+                        reform_description=frame["reform_id"]
+                        .map(descriptions)
+                        .fillna(""),
+                        reform_personal=frame["reform_id"].map(
+                            lambda measure: (
+                                json.dumps(
+                                    PUBLIC_PERSONAL_SERIES[measure],
+                                    sort_keys=True,
+                                )
+                                if measure in PUBLIC_PERSONAL_SERIES
+                                else ""
+                            )
+                        ),
+                    )
+                save_csv(frame, output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
 

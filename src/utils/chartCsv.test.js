@@ -130,6 +130,19 @@ describe("chart CSV downloads", () => {
     expect(row.split(",")[0]).toBe("22");
     expect(row.split(",").at(-1)).toBe("8.25");
   });
+
+  it("exports unfamiliar lifetime response columns and leaves an incomplete total empty", () => {
+    const text = lifecycleCsv(
+      [{ age: 22, year: 2026, impact_ab2026_mock_alpha: 10 }],
+      ["impact_ab2026_mock_alpha"],
+      { real: false, complete: false },
+    );
+    const [, , header, row] = lines(text);
+    expect(header).toContain("impact_ab2026_mock_alpha");
+    expect(header).not.toContain("impact_rail_fare_freeze");
+    expect(row.split(",").at(-2)).toBe("10");
+    expect(row.split(",").at(-1)).toBe("");
+  });
 });
 
 describe("years not yet published", () => {

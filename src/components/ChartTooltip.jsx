@@ -1,4 +1,4 @@
-import { POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./ChartTooltip.css";
 
 /** A signed value with a true minus, for tooltips. */
@@ -34,6 +34,10 @@ function ChartTooltip({
   single,
   showPlus = false,
 }) {
+  const {
+    policyColors: POLICY_COLORS,
+    revenueRaisingNames: REVENUE_RAISING_NAMES,
+  } = useMeasureCatalogue();
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
   const singleRows = single
