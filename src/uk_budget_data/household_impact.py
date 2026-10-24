@@ -147,12 +147,13 @@ class Programme:
     """A row of the programme table: a policyengine-uk variable summed over
     the household's members of its entity, with its parts as child rows.
     ``group`` is "tax" (an amount the household pays), "benefit" (one it
-    receives) or "income" (gross income, before tax)."""
+    receives) or "income" (gross income, before tax). A row with no
+    ``variable`` is the sum of its children."""
 
     id: str
     label: str
     group: str
-    variable: str
+    variable: Optional[str]
     entity: str
     children: tuple = ()
     note: Optional[str] = None
@@ -239,6 +240,19 @@ PROGRAMMES = (
         "household",
         note="From the petrol and diesel spending entered.",
     ),
+    Programme("tv_licence", "TV licence", "tax", "tv_licence", "household"),
+    Programme(
+        "pension_contributions",
+        "Pension contributions from pay",
+        "tax",
+        "pension_contributions",
+        "person",
+        note=(
+            "Not a tax, but taken off net income. Salary sacrificed above "
+            "the salary sacrifice cap is paid into the pension from pay "
+            "instead."
+        ),
+    ),
     Programme(
         "universal_credit",
         "Universal Credit",
@@ -301,6 +315,51 @@ PROGRAMMES = (
         "state_pension", "State Pension", "benefit", "state_pension", "person"
     ),
     Programme(
+        "winter_fuel_payment",
+        "Winter Fuel Payment",
+        "benefit",
+        "winter_fuel_allowance",
+        "household",
+    ),
+    Programme(
+        "scottish_child_payment",
+        "Scottish Child Payment",
+        "benefit",
+        "scottish_child_payment",
+        "person",
+    ),
+    Programme(
+        "free_childcare",
+        "Free childcare hours",
+        "benefit",
+        None,
+        "person",
+        children=(
+            _row(
+                "universal_childcare_entitlement",
+                "Universal hours (3- and 4-year-olds)",
+                "universal_childcare_entitlement",
+                "person",
+            ),
+            _row(
+                "extended_childcare_entitlement",
+                "Working parents' hours",
+                "extended_childcare_entitlement",
+                "benunit",
+            ),
+            _row(
+                "targeted_childcare_entitlement",
+                "Disadvantaged 2-year-olds' hours",
+                "targeted_childcare_entitlement",
+                "person",
+            ),
+        ),
+        note=(
+            "The value of the funded hours, which policyengine-uk counts in "
+            "net income."
+        ),
+    ),
+    Programme(
         "employment_income",
         "Employment income",
         "income",
@@ -340,9 +399,27 @@ PROGRAMMES = (
     ),
 )
 
+# Each group's total as policyengine-uk's net income counts it
+# (household_net_income = market income + benefits - taxes - pension
+# contributions), and the row that takes what the rows above leave out, so
+# the table always adds up to net income. They are £0 for the answers the
+# form takes; a non-zero one means a programme row is missing.
+GROUP_TOTALS = {
+    "tax": ("household_tax", "pension_contributions"),
+    "benefit": ("household_benefits",),
+    "income": ("household_market_income",),
+}
+OTHER_ROWS = (
+    Programme("other_taxes", "Other taxes", "tax", None, "household"),
+    Programme(
+        "other_benefits", "Other benefits", "benefit", None, "household"
+    ),
+    Programme("other_income", "Other income", "income", None, "household"),
+)
+
 
 def _all_rows():
-    for programme in PROGRAMMES:
+    for programme in (*PROGRAMMES, *OTHER_ROWS):
         yield programme
         yield from programme.children
 
@@ -369,7 +446,8 @@ DEPENDANTS_NOTE = (
     "Credit."
 )
 EXTRA_VARIABLES = sorted(
-    {row.variable for row in _all_rows()}
+    {row.variable for row in _all_rows() if row.variable}
+    | {name for names in GROUP_TOTALS.values() for name in names}
     | set(DEPENDANT_VARIABLES)
     | {"brma", "local_authority"}
 )
@@ -750,12 +828,7 @@ def run_scenario(
         "benunit": [result.benunit],
         "household": [result.household],
     }
-    out["rows"] = {
-        row.id: _summed(
-            [member[row.variable] for member in entities[row.entity]], False
-        )
-        for row in _all_rows()
-    }
+    out["rows"] = _programme_rows(entities)
     out["dependants"] = [
         {name: bool(person[name]) for name in DEPENDANT_VARIABLES}
         for person in result.person
@@ -763,6 +836,51 @@ def run_scenario(
     out["brma"] = result.household.brma
     out["local_authority"] = result.household.local_authority
     return out
+
+
+def _programme_rows(entities: dict) -> dict:
+    """Each programme row summed over the household; a row with no
+    variable as the sum of its children, and each group's "other" row as
+    the group's total less its rows."""
+
+    def total(variable):
+        for entity in ("household", "benunit", "person"):
+            try:
+                return _summed(
+                    [member[variable] for member in entities[entity]], False
+                )
+            except (KeyError, AttributeError, TypeError):
+                continue
+        raise KeyError(variable)
+
+    rows = {}
+    for programme in PROGRAMMES:
+        for child in programme.children:
+            rows[child.id] = _summed(
+                [member[child.variable] for member in entities[child.entity]],
+                False,
+            )
+        if programme.variable is None:
+            rows[programme.id] = sum(
+                rows[child.id] for child in programme.children
+            )
+        else:
+            rows[programme.id] = _summed(
+                [
+                    member[programme.variable]
+                    for member in entities[programme.entity]
+                ],
+                False,
+            )
+    for other in OTHER_ROWS:
+        listed = sum(
+            rows[programme.id]
+            for programme in PROGRAMMES
+            if programme.group == other.group
+        )
+        group_total = sum(total(name) for name in GROUP_TOTALS[other.group])
+        rows[other.id] = group_total - listed
+    return rows
 
 
 def sweep_axes(employment_income: float) -> tuple[list, list[float]]:
@@ -933,7 +1051,8 @@ def calculate_household_impact(
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
-            _programme_entry(row, before, after) for row in PROGRAMMES
+            _programme_entry(row, before, after)
+            for row in (*PROGRAMMES, *OTHER_ROWS)
         ],
         "not_in_breakdown": list(NOT_IN_BREAKDOWN),
         "dependants": _dependants(answers, before),

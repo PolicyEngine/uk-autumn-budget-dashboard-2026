@@ -346,12 +346,62 @@ def test_the_household_situation_builds_in_policyengine_uk():
         )
 
 
+# The households the reconciliation checks: between them every programme
+# row the form can move
+RECONCILED = {
+    **{name: PROBES[name] for name in ("uc_family", "salary_sacrifice_60k")},
+    "everything": EVERYTHING,
+    "pensioner": Answers(
+        age=72,
+        employment_income=0,
+        tenure="OWNED_OUTRIGHT",
+        savings_interest_income=2_000,
+    ),
+    "scotland_uc_toddler": Answers(
+        employment_income=12_000,
+        children=(Child(1), Child(3)),
+        region="SCOTLAND",
+        claims_universal_credit=True,
+        tenure="RENT_FROM_COUNCIL",
+        monthly_rent=500,
+        monthly_childcare=200,
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(RECONCILED))
+def test_the_programme_table_adds_up_to_net_income(name):
+    """Income plus benefits less taxes (and pension contributions) is net
+    income, before and after, so the table matches the tiles; and no
+    "other" row is needed for the answers the form takes (a non-zero one
+    names a missing programme row)."""
+    result = calculate(RECONCILED[name], household_impact.measure_ids())
+    sign = {"tax": -1, "benefit": 1, "income": 1}
+    for side in ("baseline", "reform"):
+        table = sum(
+            sign[row["group"]] * row[side] for row in result["programmes"]
+        )
+        assert table == pytest.approx(
+            result["net_income"][side], abs=0.05
+        ), side
+        others = {
+            row["id"]: row[side]
+            for row in result["programmes"]
+            if row["id"].startswith("other_")
+        }
+        assert all(abs(value) < 1 for value in others.values()), others
+
+
 # --- the calculation, mocked --------------------------------------------------
 
 
 def _stub(net):
     member = SimpleNamespace(
-        **{row.variable: 0.0 for row in household_impact._all_rows()}
+        **{
+            row.variable: 0.0
+            for row in household_impact._all_rows()
+            if row.variable
+        }
     )
     return SimpleNamespace(
         household=SimpleNamespace(
@@ -361,10 +411,19 @@ def _stub(net):
             **{
                 row.variable: 0.0
                 for row in household_impact._all_rows()
-                if row.entity == "household"
+                if row.entity == "household" and row.variable
+            },
+            **{
+                name: 0.0
+                for names in household_impact.GROUP_TOTALS.values()
+                for name in names
             },
         ),
-        benunit={row.variable: 0.0 for row in household_impact._all_rows()},
+        benunit={
+            row.variable: 0.0
+            for row in household_impact._all_rows()
+            if row.variable
+        },
         person=[
             {
                 **vars(member),
