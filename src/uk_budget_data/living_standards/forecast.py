@@ -135,7 +135,11 @@ def compute_post(forecast: dict, parsed: dict) -> dict:
             if y <= SOCIAL_RENT_FIXED_YEAR:
                 values[y] = pre[y]
                 continue
+            # The year before may precede the years shown (2026 for 2027):
+            # read_post_document reads it from the EFO too.
             cpi = cpi_post.get(y - 1)
+            if cpi is None and "cpi" in parsed:
+                cpi = parsed["cpi"].values.get(y - 1)
             if cpi is None:
                 raise ForecastTableError(
                     f"social_rent {y}: no OBR CPI for {y - 1} in the "

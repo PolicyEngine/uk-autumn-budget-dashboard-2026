@@ -1,6 +1,6 @@
 // Lower- vs higher-income half of non-pensioners: mean equivalised AHC income
 // in real terms (income_by_decile.non_pensioner_split). Ported from
-// PolicyEngine/uk-living-standards-outlook. Change runs from 2026-27. The
+// PolicyEngine/uk-living-standards-outlook. Change runs from 2027-28. The
 // Lower- vs higher-income halves view of the Growth across the distribution
 // card.
 
@@ -32,7 +32,7 @@ export default function useHalvesView(data) {
   const lower = split.series.below_middle;
   const upper = split.series.above_middle;
 
-  // Change runs from 2026-27 (as the summary does), from the real means;
+  // Change runs from 2027-28 (as the summary does), from the real means;
   // the level shows every year.
   const start = headlineStartYear(data);
   const rows = useMemo(() => {

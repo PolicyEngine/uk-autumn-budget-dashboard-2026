@@ -31,7 +31,10 @@ its survey weight x number of members).
                         household counts
 
 Years run sequentially in one baseline simulation, built by
-``pe.uk.managed_microsimulation()`` on the bundle's certified dataset.
+``pe.uk.managed_microsimulation()`` on the bundle's certified dataset. On a
+policyengine-uk before 2.134.4 the UC health element for 2030-31 and 2031-32
+is first set as that release sets it (:mod:`.uc_health_element`,
+PolicyEngine/policyengine-uk#2428).
 Ported from PolicyEngine/uk-living-standards-outlook
 pipeline/run_projections.py (6e28822).
 """
@@ -48,6 +51,11 @@ from uk_budget_data.living_standards.engine import (
     engine_versions,
     headline_end_year,
     projection_years,
+)
+from uk_budget_data.living_standards.uc_health_element import (
+    EXTENSION_YEARS,
+    apply_uc_health_element_extension,
+    needs_uc_health_element_extension,
 )
 
 warnings.filterwarnings("ignore", message="Accessing .values on a MicroSeries")
@@ -313,15 +321,32 @@ def run_projections(log=print) -> dict:
         f"{used_sha}; policyengine {versions['policyengine']}, "
         f"policyengine-uk {versions['policyengine_uk']}"
     )
+    years = projection_years(versions["policyengine_uk"])
+    uc_fix = {"applied": False}
+    if needs_uc_health_element_extension(versions["policyengine_uk"]):
+        # Before anything is calculated for those years.
+        if not getattr(sim, "built_from_dataset", False):
+            raise RuntimeError(
+                "The UC health element extension needs a simulation built "
+                "from data (its new-claimant draw)."
+            )
+        uc_fix = apply_uc_health_element_extension(
+            sim, tuple(y for y in EXTENSION_YEARS if y in years)
+        )
+        log(
+            f"UC health element for {uc_fix['years']} set as in "
+            f"policyengine-uk {uc_fix['fixed_in']} ({uc_fix['upstream_fix']})"
+        )
     snapshot = group_years(versions["policyengine_uk"])
     results = {
         "meta": {
             "dataset_sha256": used_sha,
             "dataset_revision": bundle.get("runtime_dataset_revision"),
             **versions,
+            "uc_health_element_extension": uc_fix,
         }
     }
-    for year in projection_years(versions["policyengine_uk"]):
+    for year in years:
         t0 = time.time()
         r = baseline_year(sim, year, snapshot)
         results[str(year)] = r

@@ -15,7 +15,7 @@ const REAL = JSON.parse(
 const POST_LABEL = "OBR October 2026 (Autumn Budget)";
 const POST_RELEASE = "OBR Economic and fiscal outlook, October 2026: detailed forecast tables, economy";
 
-/** The real file, published: CPI 2026 up 0.3 points, RPI 2026 unchanged, earnings 2026 down 0.04 points. */
+/** The real file, published: CPI 2027 up 0.3 points, RPI 2027 unchanged, earnings 2027 down 0.04 points. */
 function publishedOutlook() {
   const data = structuredClone(REAL);
   const f = data.forecast;
@@ -27,7 +27,7 @@ function publishedOutlook() {
     for (const series of section.series) {
       series.post = series.pre.map((p) => ({
         year: p.year,
-        value: p.year === "2026" && series.key in shift ? p.value + shift[series.key] : p.value + 0.001,
+        value: p.year === "2027" && series.key in shift ? p.value + shift[series.key] : p.value + 0.001,
       }));
       series.post_source = `${POST_RELEASE}, ${series.label}`;
     }
@@ -59,7 +59,7 @@ describe("Forecast changes before the Budget forecast", () => {
   it("draws the pre-Budget line only and says the Budget forecast is to come", async () => {
     await renderForecast(REAL);
     expect(screen.getByText(/will add the Autumn Budget 2026 forecast once the OBR publishes it/)).toBeInTheDocument();
-    const cpi = card(/^CPI inflation, 2026 to 2030$/);
+    const cpi = card(/^CPI inflation, 2027 to 2030$/);
     const legend = cpi.querySelector(".chart-legend");
     expect(legend).toHaveTextContent("OBR March 2026 (pre-Budget)");
     expect(legend).not.toHaveTextContent("Budget forecast");
@@ -86,7 +86,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
       expect(text).toMatch(/pre-Budget/);
       expect(text).toMatch(/October 2026/);
     }
-    const legendText = card(/^CPI inflation, 2026 to 2030$/).querySelector(".chart-legend").textContent;
+    const legendText = card(/^CPI inflation, 2027 to 2030$/).querySelector(".chart-legend").textContent;
     expect(legendText).toContain("OBR March 2026 (pre-Budget)");
     expect(legendText).toContain(POST_LABEL);
 
@@ -97,7 +97,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     expect(screen.queryByText(/[−-]0\.0pp/)).toBeNull();
 
     // The source names both releases, inside About this chart
-    const cpi = card(/^CPI inflation, 2026 to 2030$/);
+    const cpi = card(/^CPI inflation, 2027 to 2030$/);
     fireEvent.click(within(cpi).getByRole("button", { name: "About this chart" }));
     const source = cpi.querySelector(".disclosure-content .ls-source");
     expect(source).toHaveTextContent(POST_RELEASE);
@@ -108,10 +108,10 @@ describe("Forecast changes once the Budget forecast is published", () => {
     await renderForecast(publishedOutlook());
     fireEvent.click(screen.getByRole("button", { name: /Chart or table/ }));
     fireEvent.click(screen.getByRole("option", { name: "Tables" }));
-    const cpi = card(/^CPI inflation, 2026 to 2030$/);
+    const cpi = card(/^CPI inflation, 2027 to 2030$/);
     const headers = within(cpi).getAllByRole("columnheader").map((h) => h.textContent);
     expect(headers).toEqual(["Year", "OBR March 2026 (pre-Budget)", POST_LABEL, "Difference"]);
     const first = within(cpi).getAllByRole("row")[1];
-    expect(first).toHaveTextContent(`2026${pct(cpiPre())}${pct(cpiPre() + 0.003)}+0.3pp`);
+    expect(first).toHaveTextContent(`2027${pct(cpiPre())}${pct(cpiPre() + 0.003)}+0.3pp`);
   });
 });

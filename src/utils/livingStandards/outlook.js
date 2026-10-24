@@ -77,19 +77,19 @@ export function splitSource(text) {
   return { label: label || url, url };
 }
 
-/** End year for headline comparisons (meta.headline_end_year, e.g. "2029-30"). */
+/** End year for headline comparisons (meta.headline_end_year, e.g. "2031-32"). */
 export const headlineYear = (data) => data?.meta?.headline_end_year || null;
 
 /**
- * Start year for headline changes (meta.headline_start_year): 2026-27, the
- * fiscal year of Autumn Budget 2026 and the data's own base year.
+ * Start year for headline changes (meta.headline_start_year): 2027-28, the
+ * first year of the dashboard's period and the data's own base year.
  */
 export const headlineStartYear = (data) => data?.meta?.headline_start_year || null;
 
 /**
- * Headline-start row (2026-27; the first row if absent) and the headline-year
+ * Headline-start row (2027-28; the first row if absent) and the headline-year
  * row (or the last row) of a projection. Series that also carry earlier
- * model years still report change from 2026-27.
+ * model years still report change from 2027-28.
  */
 export function headlineSpan(rows, data) {
   if (!rows || rows.length < 2) return null;
@@ -121,7 +121,7 @@ export function signedChange(delta, unit, zero = "no change") {
   return `${r > 0 ? "+" : "−"}${formatOneDp(Math.abs(r))}${unit}`;
 }
 
-/** The years a card covers: "2026-27 to 2029-30" (or one year alone). */
+/** The years a card covers: "2027-28 to 2031-32" (or one year alone). */
 export function periodLabel(from, to) {
   if (from == null || to == null) return null;
   const a = typeof from === "number" ? fyLabel(from) : fyDash(from);

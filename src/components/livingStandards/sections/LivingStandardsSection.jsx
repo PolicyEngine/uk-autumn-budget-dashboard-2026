@@ -1,6 +1,6 @@
 // Household income: the "Median income" view of the Incomes over time card.
 // Ported from PolicyEngine/uk-living-standards-outlook (LivingStandardsSection).
-// The summary runs from 2026-27 (headlineSpan).
+// The summary runs from 2027-28 (headlineSpan).
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";

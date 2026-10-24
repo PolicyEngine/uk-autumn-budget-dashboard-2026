@@ -1,4 +1,4 @@
-// Growth incidence: real change in each income decile's median from 2026-27
+// Growth incidence: real change in each income decile's median from 2027-28
 // (headlineStartYear) to the headline end year, from the real medians in
 // income_by_decile.<basis>.by_year.
 // The By decile view of the Growth across the distribution card. Ported
