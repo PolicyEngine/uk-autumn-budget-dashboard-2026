@@ -283,6 +283,7 @@ def test_small_cells_are_left_out():
             "change_band": -75.0,
             "change_band_upper": -50.0,
             "households": 100.0 * SCATTER_MIN_HOUSEHOLDS,
+            "income_basis_year": 2027,
         }
     ]
     canonical_csv("household_scatter_binned", enough)

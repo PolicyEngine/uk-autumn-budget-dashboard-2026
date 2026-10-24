@@ -177,6 +177,14 @@ def table_problems(
             f"household_scatter_binned: {len(unknown)} change bands not in "
             "the contract's change_edges"
         )
+    # Every year's cells band households by the same year's income, so the
+    # page can follow the same groups of households from year to year.
+    bases = {(row["reform_id"], row["income_basis_year"]) for row in binned}
+    if len({reform for reform, _ in bases}) < len(bases):
+        problems.append(
+            "household_scatter_binned: a measure's cells band households "
+            "by more than one income basis year"
+        )
 
     sample = tables.get("household_scatter")
     if sample:

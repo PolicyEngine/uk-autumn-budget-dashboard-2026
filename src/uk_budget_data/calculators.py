@@ -6,6 +6,7 @@ from baseline and reformed microsimulation results.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -557,13 +558,17 @@ def full_new_state_pension(years: list[int]) -> dict[int, float]:
 class HouseholdScatterCalculator(BaseCalculator):
     """Calculates household-level scatter plot data.
 
-    Samples households to keep file size manageable while maintaining
-    representativeness. Uses deterministic sampling for reproducibility.
+    One row per household, never published: ``bin_scatter`` bins them.
+    With a ``basis_year``, every year's rows carry the household's baseline
+    net income in that year (``reference_income``), and households are kept
+    by it, so every year holds the same households and each is banded by
+    the same income (``publication.tables.SCATTER_INCOME_BASIS_YEAR``).
     """
 
     max_income: int = 150_000
     min_income: int = 0
     sample_size: int = 2000  # Sample per reform per year
+    basis_year: Optional[int] = None
 
     def calculate(
         self,
@@ -588,6 +593,13 @@ class HouseholdScatterCalculator(BaseCalculator):
         household_id = baseline.calculate(
             "household_id", period=year, map_to="household"
         )
+        reference = None
+        if self.basis_year is not None:
+            reference = baseline.calculate(
+                "household_net_income",
+                period=self.basis_year,
+                map_to="household",
+            ).values
 
         return self.calculate_from_arrays(
             reform_id=reform_id,
@@ -597,6 +609,7 @@ class HouseholdScatterCalculator(BaseCalculator):
             income_changes=(reform_income - baseline_income).values,
             weights=household_weight.values,
             household_ids=household_id.values,
+            reference_incomes=reference,
         )
 
     def calculate_from_arrays(
@@ -608,6 +621,7 @@ class HouseholdScatterCalculator(BaseCalculator):
         income_changes: np.ndarray,
         weights: np.ndarray,
         household_ids: np.ndarray = None,
+        reference_incomes: np.ndarray = None,
     ) -> list[dict]:
         """Calculate from numpy arrays (for testing).
 
@@ -622,10 +636,18 @@ class HouseholdScatterCalculator(BaseCalculator):
             income_changes: Change in income (reform - baseline)
             weights: Household weights
             household_ids: Stable FRS household IDs (optional, for testing)
+            reference_incomes: The same households' baseline net incomes
+                in ``self.basis_year``, which then select and band them in
+                every year (optional).
         """
-        mask = (baseline_incomes >= self.min_income) & (
-            baseline_incomes <= self.max_income
+        if reference_incomes is not None and self.basis_year is None:
+            raise ValueError("reference_incomes need a basis_year")
+        selecting = (
+            baseline_incomes
+            if reference_incomes is None
+            else reference_incomes
         )
+        mask = (selecting >= self.min_income) & (selecting <= self.max_income)
 
         results = []
         for i in range(len(baseline_incomes)):
@@ -641,6 +663,9 @@ class HouseholdScatterCalculator(BaseCalculator):
                 # Include stable household_id if provided
                 if household_ids is not None:
                     row["household_id"] = int(household_ids[i])
+                if reference_incomes is not None:
+                    row["reference_income"] = float(reference_incomes[i])
+                    row["income_basis_year"] = int(self.basis_year)
                 results.append(row)
 
         return results
