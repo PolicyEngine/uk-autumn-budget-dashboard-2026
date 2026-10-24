@@ -55,7 +55,7 @@ const LOADED = {
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
   // The wizard opens at its first step; the API call it makes on load is
   // checked below.
-  personal: (panel) => within(panel).findAllByText(/Step 1 of 7/),
+  personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
   // The head count comes from age_impact.csv.
   young: (panel) => within(panel).findAllByText(/young people aged 16 to 24 in the UK/),
   // The Incomes heading shows once the outlook is read.
@@ -150,13 +150,13 @@ describe("each of the five tabs, on the real data", () => {
       expect(missing).toEqual([]);
       if (value === "personal") {
         expect(requests.map((r) => r.url)).toContain(`${LIFECYCLE_API}/calculate`);
-        // Walk the form to its results: the Single-year effect asks the
-        // household API in two stages and shows the answer
-        for (let i = 0; i < 5; i += 1) {
-          fireEvent.click(within(panel).getByRole("button", { name: "Next" }));
-        }
+        // Straight to the results from step 1 (every answer has a default):
+        // the Single-year effect asks the household API in two stages and
+        // shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: "See results" }));
-        expect(await within(panel).findByText("Net income before", {}, { timeout: 5000 })).toBeInTheDocument();
+        expect(
+          await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
+        ).toBeInTheDocument();
         await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
         const stages = requests
           .filter((r) => r.url === HOUSEHOLD_API)

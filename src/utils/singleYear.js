@@ -86,11 +86,20 @@ const IN_SENTENCE = {
   property_income: "property income",
 };
 
+// The breakdown's top rows, in Spring Statement's order: market income,
+// taxes, benefits, pension contributions. Each opens to its programmes.
 export const GROUPS = [
-  { id: "tax", label: "Taxes" },
-  { id: "benefit", label: "Benefits" },
-  { id: "income", label: "Earnings and other income" },
+  { id: "income", label: "Market income", color: "#4A7BA7" },
+  { id: "tax", label: "Taxes", color: "#9CA3AF" },
+  { id: "benefit", label: "Benefits", color: "#319795" },
+  { id: "pension", label: "Pension contributions", color: "#B8875A" },
 ];
+
+// Rows the API files under taxes that the breakdown shows as their own
+// top row, as Spring Statement does
+const OWN_GROUP = { pension_contributions: "pension" };
+const NEGATIVE_GROUPS = new Set(["tax", "pension"]);
+const groupOf = (row) => OWN_GROUP[row.id] ?? row.group ?? "benefit";
 
 // The dashboard's sentence-case names first; the API's labels ("Income
 // Tax") for a row this list does not know
@@ -120,9 +129,9 @@ export function programmeGroups(programmes) {
   return GROUPS.map((group) => ({
     ...group,
     rows: (programmes ?? [])
-      .filter((row) => (row.group ?? "benefit") === group.id)
+      .filter((row) => groupOf(row) === group.id)
       .filter((row) => Math.round(row.before) !== 0 || Math.round(row.after) !== 0)
-      .map((row) => toRow(row, group.id === "tax" ? -1 : 1)),
+      .map((row) => toRow(row, NEGATIVE_GROUPS.has(group.id) ? -1 : 1)),
   })).filter((group) => group.rows.length > 0);
 }
 
@@ -313,6 +322,31 @@ export function roundProgrammeGroups(groups, totals, bars = []) {
       };
     }),
   }));
+}
+
+/**
+ * Each group's whole pounds: the sum of its rows' shown figures, so the
+ * top rows add up to net income.
+ *
+ * @param {ReturnType<typeof roundProgrammeGroups>} groups
+ */
+export function groupTotals(groups) {
+  return groups.map((group) => {
+    const sum = (side) => group.rows.reduce((acc, row) => acc + row.shown[side], 0);
+    return { ...group, shown: { before: sum("before"), after: sum("after"), change: sum("change") } };
+  });
+}
+
+/**
+ * The headline sentence's verb and amount, as Spring Statement words it:
+ * "would raise … by £103", "would lower … by £570", or "would not change".
+ *
+ * @param {number} change - The whole-pound change
+ */
+export function headlineVerb(change) {
+  if (change > 0) return "raise";
+  if (change < 0) return "lower";
+  return "not change";
 }
 
 /** The sweep's points: salary, net income before and after, and the change. */

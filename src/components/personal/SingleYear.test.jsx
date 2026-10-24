@@ -58,10 +58,12 @@ function renderTab(props = {}) {
   return { ...utils, onSubTabChange };
 }
 
+// Straight from step 1: every answer has a default
 function toResults() {
-  for (let i = 0; i < 5; i += 1) fireEvent.click(screen.getByRole("button", { name: "Next" }));
   fireEvent.click(screen.getByRole("button", { name: "See results" }));
 }
+
+const HEADLINE = /The selected policies would/;
 
 const subTabs = () => within(screen.getByRole("tablist", { name: "Personal impact results" }));
 
@@ -80,14 +82,14 @@ describe("Personal impact's result sub-tabs", () => {
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("multi");
     expect(onSubTabChange).toHaveBeenLastCalledWith("multi");
     expect(screen.getByRole("tabpanel", { name: "Multi-year effect" })).toHaveTextContent(
-      "The lifetime model does not use your region, home, loan plan, partner",
+      "The lifetime model does not use your region, home, partner",
     );
     expect(screen.getByRole("button", { name: /Prices/ })).toBeInTheDocument();
-    expect(screen.queryByText("Net income before")).not.toBeInTheDocument();
+    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
 
     fireEvent.click(subTabs().getByRole("tab", { name: "Single-year effect" }));
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
-    expect(await screen.findByText("Net income before")).toBeInTheDocument();
+    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
   });
 
   it("open on Multi-year effect from a link, without asking the household API", async () => {
@@ -112,14 +114,17 @@ describe("the Single-year effect, from the fixture", () => {
     const [first] = household;
     expect(first.year).toBe(2029);
     expect(first.household).toMatchObject({
-      age: 22,
-      employment_income: 30000,
-      region: "LONDON",
+      // The form's defaults (utils/householdDefaults.js)
+      age: 30,
+      employment_income: 34200,
+      region: "NORTH_WEST",
       tenure: "RENT_PRIVATELY",
-      monthly_rent: 900,
-      student_loan_plan: "PLAN_2",
+      monthly_rent: 975,
+      student_loan_plan: "NONE",
       has_partner: false,
-      claims_universal_credit: false,
+      claims_universal_credit: true,
+      petrol_spending: 620,
+      diesel_spending: 340,
       council_tax_band: "D",
       salary_year: 2026,
       children: [],
@@ -127,15 +132,18 @@ describe("the Single-year effect, from the fixture", () => {
     expect(first.household).not.toHaveProperty("children_ages");
   });
 
-  it("shows the three tiles, the salary used and what is not included", async () => {
+  it("says the change in one sentence, as Spring Statement does, with the salary used and what is not included", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     const panel = await screen.findByRole("tabpanel", { name: "Single-year effect" });
-    await within(panel).findByText("Net income before");
-    const values = [...panel.querySelectorAll(".single-year-tiles .stat-value")].map((node) => node.textContent);
-    expect(values).toEqual(["£65,371", "£69,136", "+£3,765 (+5.8%)"]);
-    expect(panel.querySelector(".single-year-change")).toHaveClass("is-gain");
+    const banner = (await within(panel).findByText(HEADLINE)).closest(".single-year-banner");
+    expect(banner).toHaveTextContent(
+      "The selected policies would raise your household's annual net income by £3,765 (+5.8%) in 2029-30",
+    );
+    expect(banner).toHaveClass("is-gain");
+    // The change is said once: not as a tile, not in the breakdown
+    expect(panel.querySelector(".single-year-tiles")).toBeNull();
     expect(panel).toHaveTextContent(
       "Your salary in 2029-30: £34,192, and your partner's £12,822, grown from 2026",
     );
@@ -163,39 +171,54 @@ describe("the Single-year effect, from the fixture", () => {
     const sum = bars
       .map((bar) => parse(bar.querySelector(".policy-bar-value").textContent))
       .reduce((a, b) => a + b, 0);
-    const tile = container.querySelector(".single-year-change .stat-value").firstChild.textContent;
-    expect(sum).toBe(parse(tile));
+    const headline = container.querySelector(".single-year-amount").textContent;
+    expect(sum).toBe(parse(headline));
     expect(sum).toBe(3765);
     expect(screen.getByText(/No effect on your household: Dividend tax increase/)).toBeInTheDocument();
     expect(container.querySelector('[data-policy="interaction"]')).toBeNull();
   });
 
-  it("lists taxes and benefits before and after, with no total row", async () => {
+  it("breaks net income down as Spring Statement does: market income, taxes, benefits", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     const table = await screen.findByRole("table");
-    const rowNames = within(table).getAllByRole("rowheader").map((cell) => cell.textContent.replace(/[▸▾]/g, ""));
-    expect(rowNames).toEqual([
-      "Income tax",
-      "National Insurance",
-      "Fuel duty",
-      "TV licence",
-      "Universal Credit",
-      "Child Benefit",
-      "Free childcare hours",
-      "Employment income",
-    ]);
-    expect(screen.getByText("The largest changes are to Universal Credit and income tax.")).toBeInTheDocument();
+    const rowNames = () =>
+      within(table)
+        .getAllByRole("rowheader")
+        .map((cell) => cell.textContent.replace(/[▸▾]/g, ""));
+    expect(rowNames()).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
+    for (const name of ["Before", "After", "Change"]) {
+      expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
+    }
+    // Net income: before and after only; its change is the sentence above
+    const net = within(table).getByRole("row", { name: /Net income/ });
+    expect(net).toHaveTextContent("£65,371£69,136");
+    expect(net).not.toHaveTextContent("£3,765");
+
+    // Each top row opens to its taxes or benefits, closed at first
+    expect(within(table).queryByText("Income tax")).not.toBeInTheDocument();
+    fireEvent.click(within(table).getByRole("button", { name: /Taxes/ }));
     const incomeTax = within(table).getByRole("row", { name: /Income tax/ });
     expect(incomeTax).toHaveTextContent("−£4,164−£4,360−£196");
     expect(within(incomeTax).getByText("−£196")).toHaveClass("is-loss");
-    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
-    expect(within(table).queryByText(/Net income/)).not.toBeInTheDocument();
-    // Parts open on demand
-    expect(within(table).queryByText("On earnings")).not.toBeInTheDocument();
+    // And a programme to its parts
     fireEvent.click(within(table).getByRole("button", { name: /Income tax/ }));
     expect(within(table).getByText("On earnings")).toBeInTheDocument();
+    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
+
+    // The top rows add up to net income, in every column
+    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    const top = [...table.querySelectorAll(".programme-row.depth-0")].map((row) =>
+      [...row.querySelectorAll("td")].map((cell) => parse(cell.textContent)),
+    );
+    const sums = [0, 1, 2].map((col) => top.reduce((acc, row) => acc + row[col], 0));
+    expect(sums).toEqual([65371, 69136, 3765]);
+
+    // How it is calculated: closed, under the table
+    const method = screen.getByText("How is this calculated?").closest("details");
+    expect(method).not.toHaveAttribute("open");
+    expect(within(method).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
   });
 
   it("marks you on the earnings chart, with the marginal rate in a closed expander", async () => {
@@ -208,10 +231,6 @@ describe("the Single-year effect, from the fixture", () => {
     expect(expander).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(expander);
     expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
-    const method = screen.getByRole("button", { name: "How this is calculated" });
-    expect(method).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(method);
-    expect(screen.getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
@@ -219,7 +238,7 @@ describe("the Single-year effect, from the fixture", () => {
     serve((body) => json(householdAnswerFor(body)));
     const { rerender } = renderTab();
     toResults();
-    await screen.findByText("Net income before");
+    await screen.findByText(HEADLINE);
     rerender(
       <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
     );
@@ -279,7 +298,7 @@ describe("the Single-year effect's errors", () => {
     expect(alert).toHaveTextContent("answered with an error (500)");
     fail = false;
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("Net income before")).toBeInTheDocument();
+    expect(await screen.findByText(HEADLINE)).toBeInTheDocument();
   });
 
   it("keeps the headline when only the breakdown fails", async () => {
@@ -290,7 +309,7 @@ describe("the Single-year effect's errors", () => {
     toResults();
     expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
     expect(screen.getByText("The earnings chart is not available.")).toBeInTheDocument();
-    expect(screen.getByText("Net income before")).toBeInTheDocument();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
 

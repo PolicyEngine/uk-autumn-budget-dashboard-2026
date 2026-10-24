@@ -15,11 +15,12 @@ import { RAISER_KEYS } from "./LifecycleAbout";
 import { METHOD_SECTIONS } from "./MethodologyTab";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import SectionHeading from "./SectionHeading";
-import Disclosure from "./Disclosure";
 import SubTabs, { SubTabPanel, subTabId } from "./SubTabs";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
-import { atStatePensionAge, isRenting, statePensionFor } from "../utils/householdImpactApi";
+import { atStatePensionAge, isRenting, monthlyRent, statePensionFor } from "../utils/householdImpactApi";
+import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
+import { ChoiceTiles, NumberField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import "./LifecycleCalculator.css";
 
@@ -71,18 +72,20 @@ const RPI_FORECASTS = {
 const RPI_LONG_TERM = 0.0239;
 
 // Default input values: the lifecycle model's inputs (the Multi-year
-// effect); only these go to its API
+// effect); only these go to its API. Sources: utils/householdDefaults.js
 const DEFAULT_INPUTS = {
-  current_age: 22,
-  current_salary: 30000,
+  current_age: 30,
+  current_salary: DEFAULT_SALARY,
+  // State Pension age from 2028, and an illustrative life expectancy
   retirement_age: 67,
   life_expectancy: 85,
+  // Used only with a loan plan; illustrative
   student_loan_debt: 45000,
-  salary_sacrifice_per_year: 2000,
-  rail_spending_per_year: 2000,
-  petrol_spending_per_year: 500,
-  dividends_per_year: 500,
-  savings_interest_per_year: 500,
+  salary_sacrifice_per_year: 0,
+  rail_spending_per_year: DEFAULT_SPENDING.rail,
+  petrol_spending_per_year: DEFAULT_SPENDING.petrol,
+  dividends_per_year: 0,
+  savings_interest_per_year: 0,
   property_income_per_year: 0,
   children_ages: "",
 };
@@ -90,16 +93,18 @@ const DEFAULT_INPUTS = {
 // The household's other answers, for the Single-year effect only: the
 // lifetime model does not use them
 export const HOUSEHOLD_DEFAULTS = {
-  region: "LONDON",
+  region: "NORTH_WEST",
   tenure: "RENT_PRIVATELY",
-  monthly_rent: 900,
-  student_loan_plan: "PLAN_2",
+  // null: the region's average private rent (ONS), until changed
+  monthly_rent: null,
+  student_loan_plan: "NONE",
   has_partner: false,
   partner_age: 30,
-  partner_salary: 25000,
-  claims_universal_credit: false,
+  partner_salary: DEFAULT_SALARY,
+  // Entitlement: the household claims what it is due
+  claims_universal_credit: true,
   council_tax_band: "D",
-  diesel_spending_per_year: 0,
+  diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   monthly_childcare: 0,
   // At State Pension age; null is the full new State Pension for the year
   state_pension_per_year: null,
@@ -108,9 +113,12 @@ export const HOUSEHOLD_DEFAULTS = {
 
 export const WIZARD_DEFAULTS = { ...DEFAULT_INPUTS, ...HOUSEHOLD_DEFAULTS };
 
-// The lifecycle API's request: its own inputs only
-const lifecycleInputs = (inputs) =>
-  Object.fromEntries(Object.keys(DEFAULT_INPUTS).map((key) => [key, inputs[key]]));
+// The lifecycle API's request: its own inputs only. It models a Plan 2
+// loan; with no loan plan the balance is nil
+const lifecycleInputs = (inputs) => ({
+  ...Object.fromEntries(Object.keys(DEFAULT_INPUTS).map((key) => [key, inputs[key]])),
+  student_loan_debt: inputs.student_loan_plan === "NONE" ? 0 : inputs.student_loan_debt,
+});
 
 // The results' two sub-tabs (?sub=single|multi); the first is the default
 export const PERSONAL_SUB_TABS = [
@@ -119,87 +127,200 @@ export const PERSONAL_SUB_TABS = [
 ];
 const SUB_TAB_PREFIX = "personal";
 
-// Slider configurations
-// The form's steps: the inputs each one asks for, then the results
-// `more`: optional inputs in a closed "More details" expander
-const WIZARD_STEPS = [
-  { title: "About you", fields: ["current_age", "region", "retirement_age", "life_expectancy"] },
-  { title: "Earnings", fields: ["current_salary", "salary_sacrifice_per_year"] },
+// The form: the essentials, then optional details (all prefilled), then
+// the results. Each step's questions come in groups with a heading.
+export const WIZARD_STEPS = [
   {
-    title: "Other income",
-    fields: ["state_pension_per_year", "dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
-  },
-  { title: "Student loan", fields: ["student_loan_plan", "student_loan_debt"] },
-  {
-    title: "Home and spending",
-    fields: ["tenure", "monthly_rent", "rail_spending_per_year", "petrol_spending_per_year"],
-    more: ["council_tax_band", "diesel_spending_per_year"],
-  },
-  {
-    title: "Family",
-    fields: [
-      "has_partner",
-      "partner_age",
-      "partner_salary",
-      "partner_state_pension_per_year",
-      "children_ages",
-      "claims_universal_credit",
+    title: "Your household",
+    intro: "The essentials. Every answer starts at a typical value; change what differs for you.",
+    groups: [
+      { title: "You", fields: ["current_age", "current_salary", "region"] },
+      { title: "Partner", fields: ["has_partner", "partner_age", "partner_salary"] },
+      { title: "Children", fields: ["children_count", "children_ages"] },
+      { title: "Home", fields: ["tenure", "monthly_rent"] },
+      { title: "Student loan", fields: ["student_loan_plan"] },
     ],
-    more: ["monthly_childcare"],
   },
-  { title: "Results", fields: [] },
+  {
+    title: "More details",
+    intro: "Optional. Each answer is already filled in; skip to the results if they fit.",
+    groups: [
+      {
+        title: "Other income",
+        fields: [
+          "state_pension_per_year",
+          "partner_state_pension_per_year",
+          "savings_interest_per_year",
+          "dividends_per_year",
+          "property_income_per_year",
+        ],
+      },
+      { title: "Work", fields: ["salary_sacrifice_per_year"] },
+      { title: "Spending", fields: ["petrol_spending_per_year", "diesel_spending_per_year", "rail_spending_per_year"] },
+      { title: "Home and family", fields: ["council_tax_band", "monthly_childcare", "claims_universal_credit"] },
+      {
+        title: "For the multi-year effect only",
+        fields: ["retirement_age", "life_expectancy", "student_loan_debt"],
+      },
+    ],
+  },
+  { title: "Results", groups: [] },
 ];
 
-// Choices from a list
-const SELECT_CONFIGS = {
+export const REGION_OPTIONS = [
+  ["NORTH_EAST", "North East"],
+  ["NORTH_WEST", "North West"],
+  ["YORKSHIRE", "Yorkshire and the Humber"],
+  ["EAST_MIDLANDS", "East Midlands"],
+  ["WEST_MIDLANDS", "West Midlands"],
+  ["EAST_OF_ENGLAND", "East of England"],
+  ["LONDON", "London"],
+  ["SOUTH_EAST", "South East"],
+  ["SOUTH_WEST", "South West"],
+  ["WALES", "Wales"],
+  ["SCOTLAND", "Scotland"],
+  ["NORTHERN_IRELAND", "Northern Ireland"],
+];
+
+const YES_NO = [
+  { value: false, label: "No" },
+  { value: true, label: "Yes" },
+];
+
+const MAX_CHILDREN = 6;
+// A child's age when added (as Spring Statement's calculator does)
+const NEW_CHILD_AGE = 5;
+
+// Choices shown as boxes
+const CHOICE_CONFIGS = {
   region: {
     label: "Region",
-    options: [
-      ["NORTH_EAST", "North East"],
-      ["NORTH_WEST", "North West"],
-      ["YORKSHIRE", "Yorkshire and the Humber"],
-      ["EAST_MIDLANDS", "East Midlands"],
-      ["WEST_MIDLANDS", "West Midlands"],
-      ["EAST_OF_ENGLAND", "East of England"],
-      ["LONDON", "London"],
-      ["SOUTH_EAST", "South East"],
-      ["SOUTH_WEST", "South West"],
-      ["WALES", "Wales"],
-      ["SCOTLAND", "Scotland"],
-      ["NORTHERN_IRELAND", "Northern Ireland"],
-    ],
+    layout: "grid",
+    options: REGION_OPTIONS.map(([value, label]) => ({ value, label })),
+    hint: "Scotland has its own income tax rates, and housing support follows local rents.",
+  },
+  has_partner: {
+    label: "Do you live with a partner?",
+    options: YES_NO,
+    hint: "Universal Credit and the High Income Child Benefit Charge are assessed per couple.",
+  },
+  children_count: {
+    label: "Number of children",
+    layout: "compact",
+    options: Array.from({ length: MAX_CHILDREN + 1 }, (_, n) => ({ value: n, label: String(n) })),
   },
   tenure: {
     label: "Housing",
     options: [
-      ["RENT_PRIVATELY", "Renting privately"],
-      ["RENT_FROM_COUNCIL", "Renting from the council"],
-      ["RENT_FROM_HA", "Renting from a housing association"],
-      ["OWNED_WITH_MORTGAGE", "Own with a mortgage"],
-      ["OWNED_OUTRIGHT", "Own outright"],
+      { value: "RENT_PRIVATELY", label: "Rent privately" },
+      { value: "RENT_FROM_COUNCIL", label: "Rent from the council" },
+      { value: "RENT_FROM_HA", label: "Rent from a housing association" },
+      { value: "OWNED_WITH_MORTGAGE", label: "Own with a mortgage" },
+      { value: "OWNED_OUTRIGHT", label: "Own outright" },
     ],
   },
   student_loan_plan: {
     label: "Student loan plan",
+    layout: "grid",
     options: [
-      ["NONE", "No student loan"],
-      ["PLAN_1", "Plan 1"],
-      ["PLAN_2", "Plan 2"],
-      ["PLAN_4", "Plan 4 (Scotland)"],
-      ["PLAN_5", "Plan 5"],
-      ["POSTGRADUATE", "Postgraduate loan"],
+      { value: "NONE", label: "No loan" },
+      { value: "PLAN_1", label: "Plan 1", hint: "Started before Sept 2012, or Northern Ireland" },
+      { value: "PLAN_2", label: "Plan 2", hint: "England or Wales, Sept 2012 to July 2023" },
+      { value: "PLAN_4", label: "Plan 4", hint: "Scotland" },
+      { value: "PLAN_5", label: "Plan 5", hint: "England, from Aug 2023" },
+      { value: "POSTGRADUATE", label: "Postgraduate", hint: "Master's or doctoral loan" },
     ],
   },
   council_tax_band: {
     label: "Council tax band",
-    options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => [band, `Band ${band}`]),
+    layout: "compact",
+    options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
+    hint: "Band D if you are not sure.",
+  },
+  claims_universal_credit: {
+    label: "Would your household claim Universal Credit if entitled?",
+    options: [
+      { value: true, label: "Yes" },
+      { value: false, label: "No" },
+    ],
+    hint: "Yes counts the Universal Credit your answers entitle you to.",
   },
 };
 
-// Yes or no
-const CHECK_CONFIGS = {
-  has_partner: { label: "I live with a partner" },
-  claims_universal_credit: { label: "My household claims Universal Credit" },
+// Amounts and ages, as number boxes with − and + steppers
+const NUMBER_CONFIGS = {
+  current_age: { label: "Age", min: 18, max: 80, step: 1 },
+  current_salary: { label: "Salary in 2026", min: 0, max: 500000, step: 1000, money: true, hint: SALARY_SOURCE },
+  partner_age: { label: "Partner's age", min: 18, max: 80, step: 1 },
+  partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true },
+  monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
+  savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  state_pension_per_year: { label: "Your State Pension", min: 0, max: 25000, step: 10, money: true, suffix: "a year" },
+  partner_state_pension_per_year: {
+    label: "Partner's State Pension",
+    min: 0,
+    max: 25000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+  },
+  salary_sacrifice_per_year: {
+    label: "Pension paid by salary sacrifice",
+    min: 0,
+    max: 60000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "From April 2029 the National Insurance relief is capped at £2,000 a year.",
+  },
+  petrol_spending_per_year: {
+    label: "Petrol",
+    min: 0,
+    max: 20000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+  },
+  diesel_spending_per_year: {
+    label: "Diesel",
+    min: 0,
+    max: 20000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+  },
+  rail_spending_per_year: {
+    label: "Rail fares",
+    min: 0,
+    max: 20000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+    hint: "Average household spending (ONS Family Spending, 2024-25). Only the multi-year effect uses it.",
+  },
+  monthly_childcare: {
+    label: "Paid childcare",
+    min: 0,
+    max: 5000,
+    step: 25,
+    money: true,
+    suffix: "a month",
+    hint: "For all children together.",
+  },
+  retirement_age: { label: "Retirement age", min: 55, max: 100, step: 1, hint: "67 is the State Pension age from 2028." },
+  life_expectancy: { label: "Life expectancy", min: 60, max: 100, step: 1, hint: "The lifetime projection runs to this age." },
+  student_loan_debt: {
+    label: "Student loan balance",
+    min: 0,
+    max: 200000,
+    step: 1000,
+    money: true,
+    hint: "At the start of work. The lifetime model applies Plan 2 terms to it.",
+  },
 };
 
 // Shown only when they apply
@@ -207,217 +328,48 @@ const FIELD_APPLIES = {
   monthly_rent: (inputs) => isRenting(inputs.tenure),
   partner_age: (inputs) => inputs.has_partner,
   partner_salary: (inputs) => inputs.has_partner,
+  children_ages: (inputs, childrenCount) => childrenCount > 0,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
+  student_loan_debt: (inputs) => inputs.student_loan_plan !== "NONE",
   state_pension_per_year: (inputs, childrenCount, year) => atStatePensionAge(inputs.current_age, year),
   partner_state_pension_per_year: (inputs, childrenCount, year) =>
     inputs.has_partner && atStatePensionAge(inputs.partner_age, year),
 };
 
-// Fields left as prefilled until changed (null): the full new State Pension
+// Fields left as prefilled until changed (null), and what fills them
 const PREFILLED = {
-  state_pension_per_year: (year) => statePensionFor(year).full,
-  partner_state_pension_per_year: (year) => statePensionFor(year).full,
+  state_pension_per_year: (year) => Math.round(statePensionFor(year).full),
+  partner_state_pension_per_year: (year) => Math.round(statePensionFor(year).full),
+  monthly_rent: (year, inputs) => regionalRent(inputs.region),
 };
 
-// The State Pension fields' note: what the prefill is
-const statePensionHint = (year) =>
-  `Prefilled with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
-    statePensionFor(year).full,
-  )}); change it if yours differs.`;
+const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? region;
 
-// Hints for fields whose config has no explanation of its own
-const FIELD_HINTS = {
-  current_age: "Your age now.",
-  retirement_age: "The age you stop working.",
-  life_expectancy: "The projection runs to this age.",
-  student_loan_debt: "Plan 2 balance when you start work. It changes with interest and repayments. Only the multi-year effect uses it.",
-  region: "Where you live. Scotland has its own income tax rates, and housing support follows local rents.",
-  student_loan_plan:
-    "Plan 1: started before September 2012, or in Northern Ireland. Plan 2: England or Wales from September 2012 (England to July 2023). Plan 4: Scotland. Plan 5: England from August 2023.",
-  tenure: "How you hold your home.",
-  monthly_rent: "Rent a month. Universal Credit can help with it.",
-  has_partner: "A spouse or partner you live with. Universal Credit and the High Income Child Benefit Charge are assessed per couple.",
-  partner_age: "Your partner's age now.",
-  partner_salary: "Your partner's salary in 2026.",
-  claims_universal_credit: "Tick if your household claims Universal Credit, or would if entitled.",
-  council_tax_band: "Band D if you are not sure.",
-  diesel_spending_per_year: "Annual diesel spending.",
-  monthly_childcare: "Paid childcare a month, for all children together.",
+// The prefilled fields' notes: what the prefill is
+const PREFILL_HINTS = {
+  state_pension_per_year: (year) =>
+    `Prefilled with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
+      statePensionFor(year).full,
+    )}); change it if yours differs.`,
+  partner_state_pension_per_year: (year) =>
+    `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
+  monthly_rent: (year, inputs) =>
+    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${
+      inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
+    } 2026); change it if yours differs.`,
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, step: 0, maxStep: 0, presetId: null };
+const savedWizard = { inputs: null, step: 0, presetId: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, step: 0, maxStep: 0, presetId: null });
+  Object.assign(savedWizard, { inputs: null, step: 0, presetId: null });
 }
 
 // The price base for "real terms": this dashboard's year
 const PRICE_BASE_YEAR = 2026;
 const PRICE_LABEL = `${PRICE_BASE_YEAR} £`;
-
-const SLIDER_CONFIGS = [
-  {
-    id: "current_age",
-    label: "Age",
-    min: 18,
-    max: 80,
-    step: 1,
-    format: (v) => v.toString(),
-  },
-  {
-    id: "current_salary",
-    label: "Salary",
-    min: 0,
-    max: 200000,
-    step: 1000,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Your salary in 2026. Grows with age-based earnings trajectory.",
-  },
-  {
-    id: "retirement_age",
-    label: "Retirement age",
-    min: 55,
-    max: 100,
-    step: 1,
-    format: (v) => v.toString(),
-  },
-  {
-    id: "life_expectancy",
-    label: "Life expectancy",
-    min: 60,
-    max: 100,
-    step: 1,
-    format: (v) => v.toString(),
-  },
-  {
-    id: "student_loan_debt",
-    label: "Student loan debt",
-    min: 0,
-    max: 100000,
-    step: 5000,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Initial debt at graduation. Evolves based on interest and repayments.",
-  },
-  {
-    id: "salary_sacrifice_per_year",
-    label: "Salary sacrifice",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Annual pension contribution via salary sacrifice. Grows with CPI. Cap of £2k from April 2029.",
-  },
-  {
-    id: "rail_spending_per_year",
-    label: "Rail spending",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Annual rail spending (fixed nominal). Policy impact uses RPI fare growth.",
-  },
-  {
-    id: "petrol_spending_per_year",
-    label: "Petrol spending",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Annual petrol spending (fixed nominal). Policy impact uses fuel duty changes.",
-  },
-  {
-    id: "dividends_per_year",
-    label: "Dividends",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip: "Annual dividend income. Grows with CPI to maintain real value.",
-  },
-  {
-    id: "savings_interest_per_year",
-    label: "Savings interest",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Annual savings interest income. Grows with CPI to maintain real value.",
-  },
-  {
-    id: "property_income_per_year",
-    label: "Property income",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-    tooltip:
-      "Annual rental/property income. Grows with CPI to maintain real value.",
-  },
-  {
-    id: "monthly_rent",
-    label: "Monthly rent",
-    min: 0,
-    max: 4000,
-    step: 25,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-  {
-    id: "partner_age",
-    label: "Partner's age",
-    min: 18,
-    max: 80,
-    step: 1,
-    format: (v) => v.toString(),
-  },
-  {
-    id: "partner_salary",
-    label: "Partner's salary",
-    min: 0,
-    max: 200000,
-    step: 1000,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-  {
-    id: "diesel_spending_per_year",
-    label: "Diesel spending",
-    min: 0,
-    max: 10000,
-    step: 100,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-  {
-    id: "state_pension_per_year",
-    label: "State Pension a year",
-    min: 0,
-    max: 25000,
-    step: 50,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-  {
-    id: "partner_state_pension_per_year",
-    label: "Partner's State Pension a year",
-    min: 0,
-    max: 25000,
-    step: 50,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-  {
-    id: "monthly_childcare",
-    label: "Monthly childcare",
-    min: 0,
-    max: 3000,
-    step: 25,
-    format: (v) => `£${d3.format(",.0f")(v)}`,
-  },
-];
 
 function LifecycleCalculator({
   selectedPolicies = [],
@@ -450,7 +402,6 @@ function LifecycleCalculator({
   const showResults = data.length > 0 && !noPolicies;
   // The form's step; kept between tab switches for the session
   const [step, setStep] = useState(() => savedWizard.step);
-  const [maxStep, setMaxStep] = useState(() => savedWizard.maxStep);
   const stepHeadingRef = useRef(null);
   const isResults = step === WIZARD_STEPS.length - 1;
   const [modalOpen, setModalOpen] = useState(false);
@@ -569,11 +520,9 @@ function LifecycleCalculator({
   // Handle input change
   const handleInputChange = (id, value) => {
     setPresetId(null);
-    const numeric = SLIDER_CONFIGS.some((config) => config.id === id);
-    setInputs((prev) => ({
-      ...prev,
-      [id]: numeric ? parseFloat(value) : value,
-    }));
+    // The controls give typed values: numbers from the number boxes,
+    // strings and booleans from the choice boxes
+    setInputs((prev) => ({ ...prev, [id]: value }));
   };
 
   // Format signed currency
@@ -1106,7 +1055,6 @@ function LifecycleCalculator({
   const goToStep = (next) => {
     const target = Math.max(0, Math.min(WIZARD_STEPS.length - 1, next));
     setStep(target);
-    setMaxStep((reached) => Math.max(reached, target));
   };
 
   // Focus the step's heading when the step changes (not on first load)
@@ -1123,9 +1071,8 @@ function LifecycleCalculator({
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.step = step;
-    savedWizard.maxStep = maxStep;
     savedWizard.presetId = presetId;
-  }, [inputs, step, maxStep, presetId]);
+  }, [inputs, step, presetId]);
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
@@ -1136,21 +1083,19 @@ function LifecycleCalculator({
 
   const money = (value) => `£${d3.format(",.0f")(value)}`;
   const optionLabel = (id) =>
-    SELECT_CONFIGS[id].options.find(([value]) => value === inputs[id])?.[1] ?? inputs[id];
+    CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id])?.label ?? inputs[id];
   const inputSummary = [
-    `Age ${inputs.current_age}, retiring at ${inputs.retirement_age}`,
-    optionLabel("region"),
+    `Age ${inputs.current_age}`,
+    regionName(inputs.region),
     `salary ${money(inputs.current_salary)}`,
-    inputs.student_loan_plan === "NONE"
-      ? "no student loan"
-      : `${optionLabel("student_loan_plan")} loan ${money(inputs.student_loan_debt)}`,
     isRenting(inputs.tenure)
-      ? `rent ${money(inputs.monthly_rent)} a month`
+      ? `rent ${money(monthlyRent(inputs))} a month`
       : optionLabel("tenure").toLowerCase(),
     inputs.has_partner ? `partner on ${money(inputs.partner_salary)}` : "no partner",
     childrenCount === 0
       ? "no children"
       : `${childrenCount} ${childrenCount === 1 ? "child" : "children"}`,
+    inputs.student_loan_plan === "NONE" ? "no student loan" : `${optionLabel("student_loan_plan")} loan`,
   ].join(" · ");
 
   // The Single-year effect: asked for only while it is shown
@@ -1169,105 +1114,78 @@ function LifecycleCalculator({
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
 
+  // The children's ages, kept as the text the lifecycle API and the
+  // household request read ("5, 3")
+  const childAges = parseChildrenAges(inputs.children_ages);
+  const setChildAges = (ages) => handleInputChange("children_ages", ages.join(", "));
+  const setChildrenCount = (count) => {
+    const ages = childAges.slice(0, count);
+    while (ages.length < count) ages.push(NEW_CHILD_AGE);
+    setChildAges(ages);
+  };
+
   // One question of the form
   const renderField = (id) => {
     if (!fieldApplies(id)) return null;
+    if (id === "children_count") {
+      return (
+        <ChoiceTiles
+          key={id}
+          id={id}
+          {...CHOICE_CONFIGS.children_count}
+          value={childrenCount}
+          onChange={setChildrenCount}
+        />
+      );
+    }
     if (id === "children_ages") {
       return (
-        <div className="control-group" key={id}>
-          <label htmlFor="field-children_ages">Children&apos;s ages</label>
-          <div className="slider-container">
-            <input
-              id="field-children_ages"
-              type="text"
-              value={inputs.children_ages}
-              placeholder="e.g. 5, 3, 1"
-              className="text-input"
-              aria-describedby="hint-children_ages"
-              onChange={(e) => handleInputChange("children_ages", e.target.value)}
+        <div className="field-row children-ages" key={id}>
+          {childAges.map((age, index) => (
+            <NumberField
+              key={index}
+              id={`child_age_${index}`}
+              label={`Child ${index + 1}'s age`}
+              value={age}
+              min={0}
+              max={19}
+              step={1}
+              onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
             />
-            <span className="slider-value children-count">
-              {childrenCount === 0
-                ? "0 children"
-                : childrenCount === 1
-                  ? "1 child"
-                  : `${childrenCount} children`}
-            </span>
-          </div>
-          <p className="field-hint" id="hint-children_ages">
-            Ages in 2026, separated by commas. Leave blank if none.
-          </p>
+          ))}
+          <p className="field-hint field-row-hint">Ages in 2026.</p>
         </div>
       );
     }
-    if (SELECT_CONFIGS[id]) {
-      const config = SELECT_CONFIGS[id];
+    if (CHOICE_CONFIGS[id]) {
       return (
-        <div className="control-group" key={id}>
-          <label htmlFor={`field-${id}`}>{config.label}</label>
-          <div className="slider-container">
-            <select
-              id={`field-${id}`}
-              className="select-input"
-              value={inputs[id]}
-              aria-describedby={`hint-${id}`}
-              onChange={(e) => handleInputChange(id, e.target.value)}
-            >
-              {config.options.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="field-hint" id={`hint-${id}`}>
-            {FIELD_HINTS[id]}
-          </p>
-        </div>
+        <ChoiceTiles
+          key={id}
+          id={id}
+          {...CHOICE_CONFIGS[id]}
+          value={inputs[id]}
+          onChange={(value) => handleInputChange(id, value)}
+        />
       );
     }
-    if (CHECK_CONFIGS[id]) {
-      return (
-        <div className="control-group is-check" key={id}>
-          <label htmlFor={`field-${id}`}>
-            <input
-              id={`field-${id}`}
-              type="checkbox"
-              checked={Boolean(inputs[id])}
-              aria-describedby={`hint-${id}`}
-              onChange={(e) => handleInputChange(id, e.target.checked)}
-            />
-            {CHECK_CONFIGS[id].label}
-          </label>
-          <p className="field-hint" id={`hint-${id}`}>
-            {FIELD_HINTS[id]}
-          </p>
-        </div>
-      );
-    }
-    const config = SLIDER_CONFIGS.find((item) => item.id === id);
-    const value = inputs[id] ?? PREFILLED[id]?.(year) ?? 0;
-    const hint = PREFILLED[id] ? statePensionHint(year) : (FIELD_HINTS[id] ?? config.tooltip);
+    const config = NUMBER_CONFIGS[id];
+    const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
+    const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
+    const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
     return (
-      <div className="control-group" key={id}>
-        <label htmlFor={`field-${id}`}>{config.label}</label>
-        <div className="slider-container">
-          <input
-            id={`field-${id}`}
-            type="range"
-            value={value}
-            min={config.min}
-            max={config.max}
-            step={config.step}
-            aria-describedby={`hint-${id}`}
-            aria-valuetext={config.format(value)}
-            onChange={(e) => handleInputChange(id, e.target.value)}
-          />
-          <span className="slider-value">{config.format(value)}</span>
-        </div>
-        <p className="field-hint" id={`hint-${id}`}>
-          {hint}
-        </p>
+      <div className="number-field-wrap" key={id}>
+        <NumberField
+          id={id}
+          {...config}
+          hint={hint}
+          value={value}
+          onChange={(next) => handleInputChange(id, next)}
+        />
+        {PREFILLED[id] && !prefilled && (
+          <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
+            {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
+          </button>
+        )}
       </div>
     );
   };
@@ -1778,9 +1696,9 @@ function LifecycleCalculator({
                   type="button"
                   className={`wizard-step-tab ${index === step ? "is-current" : ""} ${
                     index < step ? "is-done" : ""
-                  } ${index <= maxStep ? "is-reachable" : ""}`}
+                  } is-reachable`}
+                  // Every answer has a default, so every step is open
                   aria-current={index === step ? "step" : undefined}
-                  disabled={index > maxStep}
                   onClick={() => goToStep(index)}
                 >
                   <span className="wizard-step-number" aria-hidden="true">
@@ -1792,7 +1710,7 @@ function LifecycleCalculator({
               </li>
             ))}
           </ol>
-          {/* On a phone: "Step 2 of 7 · Earnings" and a progress bar */}
+          {/* On a phone: "Step 2 of 3 · More details" and a progress bar */}
           <p className="wizard-steps-compact" aria-hidden="true">
             Step {step + 1} of {WIZARD_STEPS.length} · {WIZARD_STEPS[step].title}
           </p>
@@ -1831,6 +1749,7 @@ function LifecycleCalculator({
               </div>
             )}
             {isResults && <p className="wizard-summary">{inputSummary}</p>}
+            {!isResults && <p className="wizard-intro">{WIZARD_STEPS[step].intro}</p>}
           </div>
 
           {step === 0 && (
@@ -1843,7 +1762,7 @@ function LifecycleCalculator({
                   <button
                     key={preset.id}
                     type="button"
-                    className={`light-pill-button ${presetId === preset.id ? "is-active" : ""}`}
+                    className={`example-tile ${presetId === preset.id ? "is-active" : ""}`}
                     aria-pressed={presetId === preset.id}
                     onClick={() => applyPreset(preset)}
                   >
@@ -1861,12 +1780,14 @@ function LifecycleCalculator({
 
           {!isResults && (
             <div className="wizard-fields">
-              {WIZARD_STEPS[step].fields.map(renderField)}
-              {(WIZARD_STEPS[step].more ?? []).some((id) => fieldApplies(id)) && (
-                <Disclosure inCard className="wizard-more" title="More details (optional)">
-                  {WIZARD_STEPS[step].more.map(renderField)}
-                </Disclosure>
-              )}
+              {WIZARD_STEPS[step].groups
+                .filter((group) => group.fields.some((id) => fieldApplies(id)))
+                .map((group) => (
+                  <section className="wizard-group" key={group.title} aria-label={group.title}>
+                    <h4 className="wizard-group-title">{group.title}</h4>
+                    <div className="wizard-group-fields">{group.fields.map(renderField)}</div>
+                  </section>
+                ))}
             </div>
           )}
 
@@ -1897,9 +1818,11 @@ function LifecycleCalculator({
           {isResults && subTab === "multi" && (
             <SubTabPanel idPrefix={SUB_TAB_PREFIX} value="multi" className="wizard-results">
                 <p className="personal-lede">
-                  Your change in take-home pay over your working life. The lifetime
-                  model does not use your region, home, loan plan, partner,
-                  Universal Credit claim or the optional details.
+                  Your change in take-home pay over your working life, from the same
+                  answers. The lifetime model does not use your region, home,
+                  partner, council tax band, childcare, diesel, Universal Credit
+                  claim or State Pension, and it applies Plan 2 terms to any
+                  student loan.
                 </p>
                 {noPolicies && (
                   <p className="lifecycle-empty" role="status">
@@ -2005,20 +1928,21 @@ function LifecycleCalculator({
         {!isResults && (
         <div className="wizard-actions">
             <>
-              <button
-                type="button"
-                className="light-pill-button"
-                onClick={() => goToStep(step - 1)}
-                disabled={step === 0}
-              >
-                Back
-              </button>
+              {step === 0 ? (
+                <button type="button" className="light-pill-button" onClick={() => goToStep(1)}>
+                  More details (optional)
+                </button>
+              ) : (
+                <button type="button" className="light-pill-button" onClick={() => goToStep(step - 1)}>
+                  Back
+                </button>
+              )}
               <button
                 type="button"
                 className="wizard-next"
-                onClick={() => goToStep(step + 1)}
+                onClick={() => goToStep(WIZARD_STEPS.length - 1)}
               >
-                {step === WIZARD_STEPS.length - 2 ? "See results" : "Next"}
+                See results
               </button>
             </>
         </div>
