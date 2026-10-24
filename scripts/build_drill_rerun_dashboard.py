@@ -22,6 +22,7 @@ import csv
 import importlib.util
 import io
 import json
+import re
 import statistics
 import subprocess
 from pathlib import Path
@@ -186,6 +187,85 @@ def cause(drill: str, mid: str, year: int):
     return ("Engine and data both changed; not split", [])
 
 
+# Largest genuine gaps against the like-for-like mock official costing
+# (large-gap benchmark audit). One representative cell each; the related
+# cells give the range shown in the tooltip.
+GAPS = [
+    {"label": "Capital Gains Tax", "cell": ("2", "mock2_cgt_rates", 2027),
+     "related": [("2", "mock2_cgt_rates"), ("3", "mock3_cgt_higher_rate_aea"), ("4", "mock4_cgt_higher_rate")],
+     "reason": "our data has about 3× the gains",
+     "detail": "Microcosm's higher-rate gains base is about £108bn against the costings' £36–38.5bn."},
+    {"label": "Pensioner Allowance", "cell": ("3", "mock3_pensioner_allowance", 2030),
+     "related": [("3", "mock3_pensioner_allowance")],
+     "reason": "more pensioners above the flat rate",
+     "detail": "87% of gainers have State Pension above the flat rate; 4.46m beneficiaries against 3.4m."},
+    {"label": "Local Housing Allowance", "cell": ("3", "mock3_lha_30th_percentile", 2030),
+     "related": [("3", "mock3_lha_30th_percentile")],
+     "reason": "fewer claimants gain",
+     "detail": "Modelled gainers and gains fall well short of 1.15m × £1,480; uniform Annex A scaling halves the rise."},
+    {"label": "Threshold freeze", "cell": ("3", "mock3_threshold_freeze_2032", 2031),
+     "related": [("3", "mock3_threshold_freeze_2032"), ("4", "mock4_threshold_freeze_2032")],
+     "reason": "2031 income path in the new data",
+     "detail": "Against the tax-year liability; the income tax leg is £4.5bn against £3.0bn."},
+    {"label": "Employer NI threshold", "cell": ("2", "mock2_employer_ni_threshold", 2030),
+     "related": [("2", "mock2_employer_ni_threshold"), ("4", "mock4_employer_ni_under23")],
+     "reason": "unexplained; employment counts",
+     "detail": "Against the net post-behavioural figure; full pay pass-through and no corporation tax in the model. Drill 4 under-23s: more 21–22 employments in the data."},
+]
+
+
+def gap_rows(rows):
+    by = {(r["drill"], r["id"], r["year"]): r for r in rows}
+    out = []
+    for g in GAPS:
+        r = by[g["cell"]]
+        rel = [x for x in rows if (x["drill"], x["id"]) in g["related"] and x["lfl"] and not zero_cell(x)]
+        out.append({
+            "label": g["label"], "drill": r["drill"], "id": r["id"], "fy": r["fy"], "icon": r["icon"],
+            "ours": r["new"], "drill_day": r["old"], "official": r["lfl"],
+            "gap": r["new"] - r["lfl"], "gap_drill_day": r["old"] - r["lfl"],
+            "ratio": abs(r["new"]) / abs(r["lfl"]),
+            "range": [[x["drill"], x["fy"], x["new"], x["lfl"]] for x in rel],
+            "reason": g["reason"], "detail": g["detail"],
+        })
+    return sorted(out, key=lambda x: -abs(x["gap"]))
+
+
+def zero_cell(x):
+    return abs(x["old"] or 0) < 0.005 and abs(x["new"] or 0) < 0.005
+
+
+def gh_anchor(heading: str) -> str:
+    """GitHub's heading anchor: lower case, drop punctuation, spaces to -."""
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+
+
+def note_sections(mod) -> dict:
+    """(drill, measure id) -> the measure's section in its mock costing note.
+
+    Each drill's scoring sheet numbers its measures as the costing note does
+    ("## 5. Employer ..."), so the sheet's measure number finds the heading.
+    """
+    out = {}
+    for cfg in mod.DRILLS.values():
+        d = cfg["drill"]
+        if cfg["sheet"] is None or d not in mod.COSTING_NOTES:
+            continue
+        sha, path = mod.COSTING_NOTES[d]
+        lines = git("show", f"{sha}:{path}").splitlines()
+        for num, rid in cfg["sheet"]["map"].items():
+            for i, line in enumerate(lines):
+                if line.startswith(f"## {num}. "):
+                    title = line[3:]
+                    out[(str(d), rid)] = {
+                        "url": f"{GH}/blob/{sha}/{path}#{gh_anchor(title)}",
+                        "title": title.split(":")[0] if len(title) > 80 else title,
+                        "file": path, "line": i + 1,
+                    }
+                    break
+    return out
+
+
 def num(v):
     return None if v in ("", None) else float(v)
 
@@ -248,6 +328,7 @@ def main() -> None:
     mod = load_drills()
     drills = mod.DRILLS
     sheets = {str(c["drill"]): sheet_rows(c) for c in drills.values()}
+    notes = note_sections(mod)
 
     with open(base / "comparison.csv", newline="") as f:
         comp = list(csv.DictReader(f))
@@ -284,6 +365,7 @@ def main() -> None:
             "pct": num(r["revenue_pct_diff"]), "size_pct": num(r["magnitude_pct_diff"]),
             "static": static, "post": post, "team": team,
             "sheet": None if not sh else {"url": sh["url"], "file": sh["file"], "line": sh["line"]},
+            "note_sec": notes.get((d, mid)) if sh else None,
             "lfl": lfl, "lfl_src": lfl_src, "limit": limit, "vs": vs, "invalid": invalid,
             "note": note, "links": links,
             "d": {k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
@@ -308,7 +390,7 @@ def main() -> None:
 
     out = base / "dashboard"
     out.mkdir(exist_ok=True)
-    (out / "data.json").write_text(json.dumps({"drills": groups, "rows": rows}, ensure_ascii=False))
+    (out / "data.json").write_text(json.dumps({"drills": groups, "rows": rows, "gaps": gap_rows(rows)}, ensure_ascii=False))
     print(f"wrote {out / 'data.json'}: {len(rows)} rows")
     for g in groups:
         print(g["drill"], round(g["median"], 3), round(g["max"], 3), g["n"], g["closer"], g["further"], g["limited"])

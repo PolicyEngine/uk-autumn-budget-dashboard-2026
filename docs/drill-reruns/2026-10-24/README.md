@@ -75,16 +75,18 @@ This is not confirmed by bisection. The lesson for Budget day: write dated fuel 
 
 The median and maximum are taken over "material" cells: those where the drill-day revenue is at least £0.01bn, excluding the invalid fuel rows. The size change is (|rerun| − |drill day|) / |drill day|.
 
-| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the like-for-like official costing (year cells) |
+| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the like-for-like mock official costing (year cells) |
 |---|---|---|---|---|
 | 1 | 17 (4) | 9.98% | 20.3% | n/a: no filled national sheet with costings on the branch |
 | 2 | 23 (4) | 2.95% | 17.4% | 7 closer / 7 further |
 | 3 | 41 (5) | 1.95% | 14.6% | 23 closer / 10 further |
 | 4 | 51 (0) | 0.00% | 0.36% | 6 closer / 0 further (all moves are under 0.4%) |
 
-"Closer/further" compares each year cell's drill-day and rerun figures with the like-for-like official costing (see "Benchmark basis" below). Model year Y is fiscal year Y–Y+1, as the drill code states. Cells with a model limitation and the invalid fuel duty cells are left out (`vs_official_static` = `model_limitation` or `invalid` in `comparison.csv`).
+"Closer/further" compares each year cell's drill-day and rerun figures with the like-for-like mock official costing (see "Benchmark basis" below). Model year Y is fiscal year Y–Y+1, as the drill code states. Cells with a model limitation and the invalid fuel duty cells are left out (`vs_official_static` = `model_limitation` or `invalid` in `comparison.csv`).
 
 ### Benchmark basis
+
+The "official" costings here are **mock official costings**: the invented Treasury-style costings written for each rehearsal (each packet says "Every figure is invented for a PolicyEngine rehearsal"). They exist on no real website; the dashboard links each figure to the drill's mock costing note on GitHub. There is no real costing to compare with yet.
 
 The rerun figure is a standalone tax-year liability, on a net `gov_balance` basis. The costings are on different bases:
 
@@ -93,7 +95,7 @@ The rerun figure is a standalone tax-year liability, on a net `gov_balance` basi
 
 Where the drill's own costing note prints the figure on our basis, `comparison.csv` uses it as `official_like_for_like_bn`, with `like_for_like_source` giving the note and line. These substitutions are listed in `LIKE_FOR_LIKE` in `scripts/rerun_drills.py`:
 
-| Drill | Measure | Year | Headline static | Like-for-like | Why |
+| Drill | Measure | Year | Headline mock static | Like-for-like (mock) | Why |
 |---|---|---|---|---|---|
 | 2 | Employer NI threshold | 2027–30 | −2.25 to −2.40 | −1.85 / −1.89 / −1.93 / −1.97 | Our output is net of pay pass-through; the post-behavioural figure is net (costings note line 105) |
 | 2 | State Pension uprating | 2030 | +1.66 | +1.15 | Net of Pension Credit and income tax, like ours (line 165) |
