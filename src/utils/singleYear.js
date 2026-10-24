@@ -44,6 +44,7 @@ export const PROGRAMME_LABELS = {
   student_loan_repayments: "Student loan repayment",
   council_tax: "Council tax",
   fuel_duty: "Fuel duty",
+  vat_change: "VAT",
   tv_licence: "TV licence",
   pension_contributions: "Pension contributions from pay",
   other_taxes: "Other taxes",
@@ -60,6 +61,7 @@ export const PROGRAMME_LABELS = {
   pension_credit: "Pension Credit",
   state_pension: "State Pension",
   winter_fuel_payment: "Winter Fuel Payment",
+  warm_home_discount_top_up: "Warm Home Discount top-up",
   scottish_child_payment: "Scottish Child Payment",
   free_childcare: "Free childcare hours",
   universal_childcare_entitlement: "Universal hours (3- and 4-year-olds)",
@@ -81,6 +83,8 @@ const IN_SENTENCE = {
   student_loan_repayments: "student loan repayments",
   council_tax: "council tax",
   fuel_duty: "fuel duty",
+  vat_change: "VAT",
+  warm_home_discount_top_up: "the Warm Home Discount top-up",
   tv_licence: "the TV licence",
   pension_contributions: "pension contributions",
   free_childcare: "free childcare hours",
@@ -221,7 +225,18 @@ export function policyRows(byPolicy, total, policies) {
     rows: rows
       .filter((row) => row.rounded !== 0)
       .sort((a, b) => Math.abs(b.rounded) - Math.abs(a.rounded)),
-    noEffect: byPolicy.measures.filter((row) => row.status === "not_affected").map(nameOf),
+    // An employer cost has its own note, not "no effect"
+    noEffect: byPolicy.measures
+      .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
+      .map(nameOf),
+    // Notes on a measure's figure: an employer cost always, "if received"
+    // where the household gets the amount
+    notes: byPolicy.measures
+      .filter(
+        (row) =>
+          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+      )
+      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
@@ -427,8 +442,8 @@ export const SINGLE_YEAR_METHOD = [
     "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
   ],
   [
-    "Not modelled for one household",
-    "Six of the candidate measures change a formula in code, not just parameters, which policyengine.py's household calculation cannot apply, so they are in the national figures only: the fuel duty deferral (the VAT on the lower pump price), the State Pension income tax protection, the Warm Home Discount top-up, zero VAT on domestic electricity, the road fuel VAT cut and the employer NI relief for under-25s. Two would be £0 for a household anyway: the form takes no electricity spending, and the employer NI relief changes what employers pay, with wages held fixed.",
+    "Every policy applied",
+    "Each side is a policyengine-uk simulation of your household with the policies' parameter changes and their changes to the model's formulas, as in the national figures: the fuel duty deferral includes the VAT on the lower pump price, and the VAT changes apply to the petrol, diesel and electricity spending you enter. The employer NI relief for under-25s changes what employers pay, with wages held fixed, so it is £0 for every household (an employer cost). The Warm Home Discount top-up is shown for a household that would get it, if received: not every eligible household receives it, which the national figures allow for.",
   ],
   [
     "Who counts as a child",

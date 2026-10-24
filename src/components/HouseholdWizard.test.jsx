@@ -46,6 +46,7 @@ describe("the personal impact form", () => {
       "student_loan_plan",
       "petrol_spending_per_year",
       "diesel_spending_per_year",
+      "electricity_spending_per_year",
       "council_tax_band",
       "claims_universal_credit",
     ]);

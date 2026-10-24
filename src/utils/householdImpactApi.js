@@ -19,7 +19,7 @@
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
-import { regionalRent } from "./householdDefaults";
+import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -60,6 +60,7 @@ export const FIELD_LABELS = {
   property_income: "Property income",
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
+  electricity_spending: "Electricity spending",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -188,6 +189,7 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       property_income: inputs.property_income_per_year,
       petrol_spending: inputs.petrol_spending_per_year,
       diesel_spending: inputs.diesel_spending_per_year,
+      electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
       // The API estimates Council Tax from the band and the region's average
@@ -357,6 +359,10 @@ function normaliseByPolicy(raw) {
       name: row.name ?? null,
       change: num(row.change),
       status: row.status === "not_affected" ? "not_affected" : "affected",
+      // A note where the number alone would mislead: "employer_cost" (£0 by
+      // construction) or "if_received" (the eligible amount)
+      note: row.note ?? null,
+      noteKind: row.note_kind ?? null,
     })),
     combined: num(raw.combined),
     sumOfSingles: num(raw.sum_of_singles),
