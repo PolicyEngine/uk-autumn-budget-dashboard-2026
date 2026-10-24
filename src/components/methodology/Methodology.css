@@ -123,6 +123,24 @@
   color: var(--pe-gray-600);
 }
 
+/* A list of notes: the Living standards data notes and gaps */
+.method-card .method-list {
+  margin: 16px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.method-card .method-lead + .method-list {
+  margin-top: 0;
+}
+
+.method-card .method-list li + li {
+  margin-top: 6px;
+}
+
 .method-card code {
   font-size: 0.85em;
   padding: 1px 5px;

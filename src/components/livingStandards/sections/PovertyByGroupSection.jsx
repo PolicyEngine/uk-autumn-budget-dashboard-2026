@@ -16,6 +16,7 @@ import { CSV_SOURCES, PeSource } from "../sources";
 const MEASURES = {
   relative_ahc: {
     label: "Relative poverty (AHC)",
+    badge: "Poverty (AHC)",
     title: "Poverty",
     noun: "relative poverty rate",
     pick: (c) => (c.relative_ahc == null ? null : c.relative_ahc * 100),
@@ -33,6 +34,7 @@ const MEASURES = {
   },
   median_equivalised_income_bhc: {
     label: "Median income (BHC, real)",
+    badge: "Median income",
     title: "Median income",
     noun: "median income",
     pick: (c) => c.median_equivalised_income_bhc?.real ?? null,
@@ -148,7 +150,7 @@ export default function PovertyByGroupSection({ data }) {
             name="Measure"
             value={measure}
             onChange={setMeasure}
-            options={Object.entries(MEASURES).map(([id, x]) => ({ value: id, label: x.label }))}
+            options={Object.entries(MEASURES).map(([id, x]) => ({ value: id, label: x.label, badge: x.badge }))}
           />
         </>
       }

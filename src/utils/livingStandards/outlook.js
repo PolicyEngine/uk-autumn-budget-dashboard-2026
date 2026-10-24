@@ -80,21 +80,43 @@ export function splitSource(text) {
 /** End year for headline comparisons (meta.headline_end_year, e.g. "2029-30"). */
 export const headlineYear = (data) => data?.meta?.headline_end_year || null;
 
-/** Start year for headline changes (meta.headline_start_year, e.g. "2025-26"). */
-export const headlineStartYear = (data) => data?.meta?.headline_start_year || null;
+/**
+ * The first year headline changes run from: 2026-27, the fiscal year of
+ * Autumn Budget 2026, so no sentence reads as if 2025-26 were the current
+ * year. meta.headline_start_year wins if the data move it later.
+ */
+export const CURRENT_FISCAL_YEAR = "2026-27";
+
+/** Start year for headline changes: the later of 2026-27 and meta.headline_start_year. */
+export const headlineStartYear = (data) => {
+  const meta = data?.meta?.headline_start_year;
+  return meta && fyStart(meta) > fyStart(CURRENT_FISCAL_YEAR) ? meta : CURRENT_FISCAL_YEAR;
+};
 
 /**
- * Headline-start row (2025-26; the first row if absent) and the headline-year
- * row (or the last row) of a projection. Series that also carry the model's
- * 2024-25 point still report change from 2025-26.
+ * Headline-start row (2026-27; the first row if absent) and the headline-year
+ * row (or the last row) of a projection. Series that also carry earlier
+ * model years still report change from 2026-27.
  */
 export function headlineSpan(rows, data) {
   if (!rows || rows.length < 2) return null;
   const start = headlineStartYear(data);
   const end = headlineYear(data);
-  const first = (start && rows.find((r) => r.year === start)) || rows[0];
+  const first = rows.find((r) => r.year === start) || rows[0];
   const last = (end && rows.find((r) => r.year === end)) || rows[rows.length - 1];
   return first === last ? null : [first, last];
+}
+
+/**
+ * A pipeline note whose change runs from the data's own base year
+ * (meta.headline_start_year, 2025-26) says so, since the headline sentences
+ * run from 2026-27: "falls 5% to 2029-30" -> "falls 5% from 2025-26 to 2029-30".
+ */
+export function withBaseYear(note, data) {
+  const base = data?.meta?.headline_start_year;
+  const end = headlineYear(data);
+  if (!note || !base || !end || base === headlineStartYear(data)) return note;
+  return String(note).replace(new RegExp(`(?<!from \\d{4}-\\d{2} )\\bto ${end}`), `from ${base} to ${end}`);
 }
 
 /** Round to one decimal place, so a change agrees with the values shown. */
@@ -105,10 +127,6 @@ export function changeVerb(delta, unit) {
   if (delta == null || Math.abs(delta) < 0.05) return null;
   return `${delta > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(delta))}${unit}`;
 }
-
-/** Section notes minus the 2030-31 UC step, which meta.headline_end_year_note states once. */
-export const sectionNotes = (notes) =>
-  (notes || []).filter((n) => !/baseline discontinuity|UC health element protection|^Series end in/i.test(n));
 
 /** 2030 -> "30-31", for phone axes. */
 export const fyShortLabel = (start) => `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;
