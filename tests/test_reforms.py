@@ -526,16 +526,12 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
 
 
 def test_the_page_names_each_measure_as_the_pipeline_does():
-    """src/utils/policies.js lists the same ids, in the same order, with
-    the same names, so the page's rows join the published files."""
-    import re
-    from pathlib import Path
+    """The page holds no measure list (#104): it names each measure from
+    its publication, and shows it with the display metadata published with
+    it. Every candidate has that metadata, and nothing else does."""
+    from uk_budget_data.reforms import PUBLIC_DISPLAY
 
-    source = (
-        Path(__file__).resolve().parents[1] / "src/utils/policies.js"
-    ).read_text()
-    pairs = re.findall(r'id: "([a-z0-9_]+)",\n\s+name: "([^"]+)"', source)
-    assert pairs == [(m, get_reform(m).name) for m in CANDIDATES]
+    assert set(PUBLIC_DISPLAY) == set(CANDIDATES)
 
 
 # --- Every year the policy differs is covered ---------------------------------
