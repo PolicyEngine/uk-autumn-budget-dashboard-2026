@@ -34,17 +34,17 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         personal_impact,
         "POLICY_IDS",
         [
-            "two_child_limit",
-            "threshold_freeze_extension",
-            "rail_fares_freeze",
+            "fuel_duty_rise_deferral",
+            "salary_sacrifice_cap_2028",
+            "badr_lifetime_limit_cut",
             # A measure whose modifier changes households: it must reach
             # the workers (pickled by reference) and act there.
-            "dividend_tax_increase_2pp",
+            "warm_home_discount_top_up",
         ],
     )
     household = HouseholdInput(
-        employment_income=30_000,
-        dividend_income=20_000,
+        employment_income=15_000,
+        dividend_income=0,
         children_ages=[22, 24, 17, 3],
     )
     calls = []
@@ -74,14 +74,17 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
     # The serial run used no workers; the parallel one did.
     assert calls == [2]
     assert any(
-        serial["policies"]["dividend_tax_increase_2pp"]["years"][year][
+        serial["policies"]["warm_home_discount_top_up"]["years"][year][
             "net_income_change"
         ]
         for year in [2025, 2026, 2028, 2030]
     )
     assert any(
         serial["policies"][policy_id]["years"][year]["net_income_change"]
-        for policy_id in ["two_child_limit", "threshold_freeze_extension"]
+        for policy_id in [
+            "fuel_duty_rise_deferral",
+            "salary_sacrifice_cap_2028",
+        ]
         for year in [2025, 2026, 2028, 2030]
     )
 

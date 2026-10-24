@@ -21,6 +21,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { POLICIES } from "../utils/policies";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -50,26 +51,6 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const narrow = useNarrowViewport();
 
   // Build chart data for internal year
-  const POLICIES = [
-    { id: "two_child_limit", name: "2 child limit repeal" },
-    { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-    { id: "rail_fares_freeze", name: "Rail fares freeze" },
-    { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-    { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-    {
-      id: "savings_tax_increase_2pp",
-      name: "Savings income tax increase (+2pp)",
-    },
-    {
-      id: "property_tax_increase_2pp",
-      name: "Property income tax increase (+2pp)",
-    },
-    {
-      id: "freeze_student_loan_thresholds",
-      name: "Freeze student loan repayment thresholds",
-    },
-    { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
-  ];
 
   const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
   const waterfallSelectedYear = rawData

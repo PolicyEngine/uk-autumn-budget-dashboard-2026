@@ -92,7 +92,7 @@ config = DataConfig(
 generate_all_data(config=config)
 
 # Generate for specific reforms only
-reforms = [get_reform("two_child_limit"), get_reform("fuel_duty_freeze")]
+reforms = [get_reform("fuel_duty_rise_deferral"), get_reform("threshold_freeze_2031_32")]
 generate_all_data(reforms=reforms)
 ```
 
@@ -100,7 +100,7 @@ generate_all_data(reforms=reforms)
 
 - List the available reforms: `uv run uk-budget-data generate --list-reforms`
 - Generate all data: `uv run uk-budget-data generate`
-- Generate for specific reforms: `uv run uk-budget-data generate --reforms two_child_limit fuel_duty_freeze`
+- Generate for specific reforms: `uv run uk-budget-data generate --reforms fuel_duty_rise_deferral threshold_freeze_2031_32`
 - Choose the years: `uv run uk-budget-data generate --years 2026 2027`
 - See every command: `uv run uk-budget-data --help`
 
@@ -128,15 +128,15 @@ UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026 uv run uk-budget-data ge
 
 ### Custom baseline scenarios
 
-Some reforms compare against a custom baseline rather than current law. For example, the fuel duty freeze compares the announced policy (freeze extension) against what would happen if the 5p cut ended.
+Most measures compare against current law. A reform can instead bring a custom baseline, for example to compare a policy against what would have happened without it.
 
 ```python
 from uk_budget_data.models import Reform
 
 # Reform with custom baseline
 fuel_duty = Reform(
-    id="fuel_duty_freeze",
-    name="Fuel duty freeze",
+    id="example_fuel_duty",
+    name="Example fuel duty change",
     # Baseline: higher rates (no freeze)
     baseline_parameter_changes={
         "gov.hmrc.fuel_duty.petrol_and_diesel": {"2026": 0.58},
@@ -174,19 +174,20 @@ unit). Each slow unit added lengthens the run.
 
 ## Available reforms
 
-The dashboard analyses these November 2025 Autumn Budget policies:
+The dashboard analyses ten candidate measures for the Autumn Budget on 28 October 2026, modelled before the Budget from reporting up to 24 October; none is announced policy. Each is compared against current law in policyengine-uk (`src/uk_budget_data/reforms.py`; modifiers in `budget_measures.py`). `autumn_budget_2026_combined` simulates all ten together.
 
 | Reform | Description |
 |--------|-------------|
-| `two_child_limit` | Repeal of the two-child limit on benefits |
-| `fuel_duty_freeze` | Extension of the fuel duty freeze |
-| `threshold_freeze_extension` | Extension of income tax threshold freeze |
-| `dividend_tax_increase_2pp` | +2pp on dividend tax rates |
-| `savings_tax_increase_2pp` | +2pp on savings income tax |
-| `property_tax_increase_2pp` | +2pp on property income tax |
-| `rail_fares_freeze` | One-year freeze on regulated rail fares |
-| `freeze_student_loan_thresholds` | Freeze Plan 2 repayment thresholds |
-| `salary_sacrifice_cap` | Cap NI-free salary sacrifice at £2,000 |
+| `fuel_duty_rise_deferral` | 52.95p held through winter 2026-27, the 5p restored in autumn 2027, with the VAT on the pump price |
+| `state_pension_income_tax_protection` | An allowance of the full new State Pension for people over State Pension age, from April 2027 |
+| `warm_home_discount_top_up` | Warm Home Discount from £150 to £250, winter 2026-27 |
+| `domestic_electricity_zero_vat` | 0% VAT on domestic electricity, October 2026 to March 2028 |
+| `employer_ni_relief_under_25s` | No employer NI up to the upper earnings limit for employees under 25, from April 2027 |
+| `threshold_freeze_2031_32` | Personal allowance and basic rate band frozen in 2031-32 |
+| `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit from £1m to £500,000, from April 2027 |
+| `salary_sacrifice_cap_2028` | The £2,000 salary sacrifice cap from April 2028 |
+| `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
+| `plan_2_threshold_unfreeze` | Plan 2 repayment threshold uprated by RPI from April 2027 |
 
 ## Technology stack
 

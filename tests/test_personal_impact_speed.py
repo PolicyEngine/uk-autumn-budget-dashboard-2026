@@ -132,12 +132,13 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
     six households is in the PR."""
     # 2026 is merged into 2025's situation; the child has left by 2029.
     years = [2025, 2026, 2029]
-    # The two-child limit and the threshold freeze move this household;
-    # the rail fares freeze is the measure with a modifier.
+    # The Warm Home Discount top-up (a modifier) moves this Universal Credit
+    # household in 2026; the Plan 2 measure has parameter changes and
+    # modifiers on both sides; the BADR measure is parameters only.
     policy_ids = [
-        "two_child_limit",
-        "threshold_freeze_extension",
-        "rail_fares_freeze",
+        "warm_home_discount_top_up",
+        "plan_2_threshold_unfreeze",
+        "badr_lifetime_limit_cut",
     ]
     monkeypatch.setattr(personal_impact, "YEARS", years)
     monkeypatch.setattr(personal_impact, "POLICY_IDS", policy_ids)

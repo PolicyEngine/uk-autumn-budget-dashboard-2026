@@ -46,7 +46,7 @@ class BudgetaryImpactCalculator(BaseCalculator):
     years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))
 
     # Reforms that use student_loan_repayments_modelled instead of gov_balance
-    STUDENT_LOAN_REFORMS = ["freeze_student_loan_thresholds"]
+    STUDENT_LOAN_REFORMS = ["plan_2_threshold_unfreeze"]
 
     def calculate(
         self,

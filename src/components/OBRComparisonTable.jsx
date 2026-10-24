@@ -5,6 +5,10 @@ import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 
+/** What the comparison says while the OBR has not costed the selected measures. */
+export const OBR_UNAVAILABLE =
+  "Not available until the OBR publishes its costings with the Budget on 28 October.";
+
 function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
@@ -85,6 +89,22 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   );
 
   if (filteredData.length === 0) return null;
+
+  // The OBR's costings are joined by measure id. Until it costs these
+  // measures (with the Budget on 28 October), none has an OBR figure, so
+  // nothing is paired: the comparison says when it will be available.
+  const hasObrFigures = filteredData.some(
+    (row) => Number.isFinite(row.obr_static) || Number.isFinite(row.obr_behavioural),
+  );
+  if (!hasObrFigures) {
+    return (
+      <div className="obr-comparison-section">
+        <p className="comparison-description obr-unavailable">
+          {OBR_UNAVAILABLE}
+        </p>
+      </div>
+    );
+  }
 
   // Check if we have both static and behavioural data
   const hasBothTypes = filteredData.some(

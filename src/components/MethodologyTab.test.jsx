@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { POLICY_COLORS } from "../utils/policyConfig";
 
@@ -77,9 +77,16 @@ describe("MethodologyTab", () => {
     const flow = screen.getByRole("list", { name: "How the numbers are made" });
     expect(within(flow).getAllByRole("listitem")).toHaveLength(5);
 
-    const table = screen.getByRole("table");
+    const [table, notModelled] = screen.getAllByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(MEASURE_MODELLING.length);
+    // The likely measures the model cannot cost, each with its reason
+    const notModelledRows = within(notModelled).getAllByRole("row").slice(1);
+    expect(notModelledRows).toHaveLength(NOT_MODELLED.length);
+    for (const measure of NOT_MODELLED) {
+      expect(within(notModelled).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
+      expect(notModelled).toHaveTextContent(measure.why);
+    }
     for (const measure of MEASURE_MODELLING) {
       // Every measure is one the charts colour, by the same name
       expect(POLICY_COLORS[measure.name]).toBeDefined();

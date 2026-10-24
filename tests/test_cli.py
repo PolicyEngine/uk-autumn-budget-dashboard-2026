@@ -31,10 +31,15 @@ class TestCLI:
         from uk_budget_data.cli import parse_args
 
         args = parse_args(
-            ["generate", "--reforms", "two_child_limit", "fuel_duty_freeze"]
+            [
+                "generate",
+                "--reforms",
+                "warm_home_discount_top_up",
+                "fuel_duty_rise_deferral",
+            ]
         )
-        assert "two_child_limit" in args.reforms
-        assert "fuel_duty_freeze" in args.reforms
+        assert "warm_home_discount_top_up" in args.reforms
+        assert "fuel_duty_rise_deferral" in args.reforms
 
     def test_parse_args_generate_years(self):
         """parse_args accepts years for generate."""
@@ -83,22 +88,24 @@ class TestReformSelection:
         """Can get reforms by their IDs."""
         from uk_budget_data.cli import get_reforms_from_ids
 
-        reforms = get_reforms_from_ids(["two_child_limit", "fuel_duty_freeze"])
+        reforms = get_reforms_from_ids(
+            ["warm_home_discount_top_up", "fuel_duty_rise_deferral"]
+        )
         assert len(reforms) == 2
-        assert reforms[0].id == "two_child_limit"
-        assert reforms[1].id == "fuel_duty_freeze"
+        assert reforms[0].id == "warm_home_discount_top_up"
+        assert reforms[1].id == "fuel_duty_rise_deferral"
 
     def test_get_reforms_from_ids_warns_unknown(self, capsys):
         """Warns about unknown reform IDs."""
         from uk_budget_data.cli import get_reforms_from_ids
 
         reforms = get_reforms_from_ids(
-            ["two_child_limit", "unknown_reform_xyz"]
+            ["warm_home_discount_top_up", "unknown_reform_xyz"]
         )
 
         # Should only return the valid one
         assert len(reforms) == 1
-        assert reforms[0].id == "two_child_limit"
+        assert reforms[0].id == "warm_home_discount_top_up"
 
 
 class TestLegacyGeographyFlag:
