@@ -167,8 +167,11 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--years",
         nargs="+",
         type=int,
-        default=[2026, 2027, 2028, 2029, 2030],
-        help="Years to calculate (default: 2026 2027 2028 2029 2030)",
+        default=list(POLICY_YEARS),
+        help=(
+            "Years to calculate (default: the policy years in "
+            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+        ),
     )
 
     add_publish_parser(subparsers)

@@ -147,7 +147,8 @@ def make_tables(
             {
                 **base,
                 "income_band": 20000.0,
-                "change_band": -100.0 if value < 0 else 0.0,
+                "change_band": -75.0 if value < 0 else 50.0,
+                "change_band_upper": -50.0 if value < 0 else 75.0,
                 "households": 1000.0,
             }
         )

@@ -757,6 +757,7 @@ def generate_household_scatter(
             "year",
             "income_band",
             "change_band",
+            "change_band_upper",
             "households",
         ],
     )

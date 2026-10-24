@@ -132,4 +132,37 @@ def test_only_household_scatter_writes_one_binned_file(tmp_path, monkeypatch):
     # One cell per reform and year: 20 survey households, 40 records
     assert len(frame) == 4
     assert set(frame["change_band"]) == {100.0}
+    assert set(frame["change_band_upper"]) == {150.0}
     assert set(frame["households"]) == {20_000.0}
+
+
+def test_a_change_band_off_the_contracts_edges_is_refused():
+    from uk_budget_data.publication.validate import table_problems
+
+    cell = {
+        "reform_id": "alpha",
+        "reform_name": "Alpha",
+        "year": 2027,
+        "income_band": 20_000.0,
+        "change_band": 100.0,
+        "change_band_upper": 150.0,
+        "households": 1000.0,
+    }
+
+    def scatter_problems(cells):
+        return [
+            p
+            for p in table_problems(
+                {"household_scatter_binned": cells},
+                key="alpha",
+                years=[2027],
+            )
+            if p.startswith("household_scatter_binned:")
+        ]
+
+    assert scatter_problems([cell]) == []
+    # The old £100 bands are no longer the contract's
+    assert scatter_problems([{**cell, "change_band_upper": 200.0}]) == [
+        "household_scatter_binned: 1 change bands not in the contract's "
+        "change_edges"
+    ]
