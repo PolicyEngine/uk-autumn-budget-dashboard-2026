@@ -27,6 +27,15 @@ import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 
+// The receipt fixture's supported year follows the engine's projection
+// end (currently beyond the dashboard's Budget-year window). Exercise the
+// live calculator in that verified fixture year without rewriting receipts.
+vi.mock("./utils/displayYears", async (original) => {
+  const actual = await original();
+  const { IN_DATA } = await import("./test/publicationFixture");
+  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+});
+
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const API = "https://household-api.test";
 const HOUSEHOLD_API = `${API}/api/household-impact`;
@@ -140,6 +149,7 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
     async (_name, value, address, label) => {
       window.history.replaceState({}, "", address);
       render(<App />);
+      await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
       const panel = await screen.findByRole("tabpanel", { name: label });
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.

@@ -126,7 +126,7 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       id: `not-${item.id}`,
       label: name,
       value: "not shown",
-      detail: item.id === "rail_fares_freeze" ? "national figures only" : "not modelled for one household",
+      detail: "not modelled for one household",
     });
   }
   return items;

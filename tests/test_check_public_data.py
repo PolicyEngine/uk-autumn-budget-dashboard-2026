@@ -391,3 +391,48 @@ BUDGET_WEEK = [date(2026, 10, day) for day in range(23, 31)]
 @pytest.mark.parametrize("day", BUDGET_WEEK, ids=lambda d: d.isoformat())
 def test_this_repository_passes_through_budget_week(day):
     assert run(REPO, today=day).problems == []
+
+
+def test_area_provenance_has_a_declared_review_kind(repo):
+    import json
+    from uk_budget_data.publication.release_index import PROVENANCE_KIND
+
+    name = "public/data/area_provenance.json"
+    law = {
+        "kind": "current_law",
+        "representation": None,
+        "reform_sha256": None,
+        "binding": "content",
+    }
+    document = {
+        "schema": "uk-budget-area-provenance/v1",
+        "manifest_revision": 1,
+        "manifest_sha256": "a" * 64,
+        "files": {"regional.csv": "b" * 64},
+        "reforms": {
+            "alpha": {
+                "key": "alpha",
+                "artifact": "artifacts/alpha/approved",
+                "artifact_sha256": "c" * 64,
+                "receipt_sha256": "d" * 64,
+                "outputs_sha256": "e" * 64,
+                "execution_identity_sha256": "f" * 64,
+                "baseline": law,
+                "reform": law,
+            }
+        },
+    }
+    write(repo, name, json.dumps(document))
+    track(repo)
+    assert any("not reviewed" in problem for problem in run(repo).problems)
+    write_review(repo, [entry(repo, name, PROVENANCE_KIND)])
+    track(repo)
+    assert run(repo).problems == []
+    # A review cannot authorise figures or extra values in provenance.
+    document["survey_value"] = 12
+    write(repo, name, json.dumps(document))
+    write_review(repo, [entry(repo, name, PROVENANCE_KIND)])
+    track(repo)
+    assert any(
+        "unexpected fields" in problem for problem in run(repo).problems
+    )

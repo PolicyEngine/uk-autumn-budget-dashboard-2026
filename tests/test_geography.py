@@ -1453,7 +1453,9 @@ def no_simulation(*args, **kwargs):
     raise AssertionError("a simulation was built")
 
 
-def publication_manifest(tmp_path, ids, packages=None, statuses=None):
+def publication_manifest(
+    tmp_path, ids, packages=None, statuses=None, years=(2027,)
+):
     """A real approved publication manifest over synthetic receipts.
 
     These approvals exercise the command's entry gate; the area run still
@@ -1464,8 +1466,45 @@ def publication_manifest(tmp_path, ids, packages=None, statuses=None):
     from uk_budget_data.publication.artifacts import read_receipt
     from uk_budget_data.publication.combine import combined_key
     from uk_budget_data.publication.publish import approve, stage
+    from uk_budget_data.publication import receipt as r
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import attestations as a
+    from uk_budget_data.publication.template_proof import (
+        measure_templates_proof,
+    )
+    from contextlib import ExitStack
+    from unittest.mock import patch
+    import shutil
 
     world = World()
+    stack = ExitStack()
+    stack.enter_context(
+        patch.object(a, "ATTESTATIONS_ROOT", world.root / "attestations")
+    )
+    stack.enter_context(
+        patch.object(a, "ATTESTATION_REPOSITORY", world.root / "attestations")
+    )
+
+    def attest(reference):
+        document = read_receipt(reference.path)
+        if not a.requires_attestation(document):
+            return
+        path = a.ATTESTATIONS_ROOT / f"{reference.key}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "measure_id": reference.key,
+                    "receipt_sha256": a.receipt_document_sha256(document),
+                    "reason": "Synthetic historical approval for independent area-limit tests",
+                    "checker": "First test reviewer",
+                    "second": "Second test reviewer",
+                    "released_at": "2026-10-22T10:30:00Z",
+                }
+            )
+        )
+        World.commit_attestation(path)
+
     try:
         manifest = m.Manifest()
         args = dict(data_root=world.data_root, inputs=world.inputs)
@@ -1473,7 +1512,26 @@ def publication_manifest(tmp_path, ids, packages=None, statuses=None):
         for key in ids:
             if key in (packages or {}):
                 continue
-            reference = world.ready(key, {2027: -1.0})
+            configured = g.get_reform(key)
+            if configured is None:
+                from uk_budget_data.models import Reform
+
+                configured = Reform(id=key, name=key)
+            baseline_identity, reform_identity = r.measure_identities(
+                configured, DataConfig(years=list(years)), r.code_revision()
+            )
+            reference = world.ready(
+                key,
+                {year: -1.0 for year in years},
+                baseline_identity=baseline_identity,
+                reform_identity=reform_identity,
+                modifier_templates=measure_templates_proof(
+                    configured,
+                    DataConfig(years=list(years)),
+                    r.code_revision(),
+                ),
+            )
+            attest(reference)
             stage(manifest, reference.path, **args)
             approve(manifest, key, "Reviewer", **args)
             receipt = read_receipt(reference.path)["execution_receipt"]
@@ -1486,7 +1544,7 @@ def publication_manifest(tmp_path, ids, packages=None, statuses=None):
             key = combined_key(list(members))
             reference = world.write(
                 key,
-                {2027: -float(len(members))},
+                {year: -float(len(members)) for year in years},
                 members=[records[member] for member in members],
                 measure_ids=list(members),
                 member_outputs={
@@ -1495,14 +1553,22 @@ def publication_manifest(tmp_path, ids, packages=None, statuses=None):
                 },
             )
             world.reconcile(reference)
+            attest(reference)
             stage(manifest, reference.path, **args)
             approve(manifest, key, "Reviewer", **args)
         for key, status in (statuses or {}).items():
             manifest.entries()[key].status = status
+        m.save_manifest(manifest, world.data_root)
+        shutil.copytree(
+            world.data_root / "artifacts",
+            tmp_path / "artifacts",
+            dirs_exist_ok=True,
+        )
         path = tmp_path / "publication.json"
         path.write_text(manifest.model_dump_json(by_alias=True))
         return path
     finally:
+        stack.close()
         world.close()
 
 
@@ -1700,7 +1766,7 @@ def run_cli(
     monkeypatch.setattr(g, "get_reform", reforms.get)
     monkeypatch.setattr(g, "PACKAGES", {"pkg": ("alpha", "beta")})
     manifest = publication_manifest(
-        tmp_path, reforms, packages={"pkg": ("alpha", "beta")}
+        tmp_path, reforms, packages={"pkg": ("alpha", "beta")}, years=(2026,)
     )
     enhanced_frs_bundle(monkeypatch)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
@@ -1720,14 +1786,37 @@ def run_cli(
     return code, out, tmp_path / "audit" / "geography"
 
 
+def assert_public_area_output(directory):
+    """Disclosure tables and reviewed provenance have separate public rules."""
+    from uk_budget_data.publication.release_index import (
+        AREA_PROVENANCE_FILE,
+        area_provenance_document_problems,
+    )
+
+    csvs = sorted(directory.glob("*.csv"))
+    assert csvs
+    for path in csvs:
+        assert validate_public(path) == []
+    document = json.loads((directory / AREA_PROVENANCE_FILE).read_bytes())
+    assert area_provenance_document_problems(document) == []
+    assert set(document["files"]) == {path.name for path in csvs}
+    import hashlib
+
+    assert document["files"] == {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in csvs
+    }
+
+
 def test_the_command_writes_both_tables_from_the_efrs(monkeypatch, tmp_path):
     code, out, audit = run_cli(monkeypatch, tmp_path)
     assert code == 0
     assert sorted(p.name for p in out.iterdir()) == [
+        "area_provenance.json",
         "constituency.csv",
         "regional.csv",
     ]
-    assert validate_public(out) == []
+    assert_public_area_output(out)
     assert set(pd.read_csv(out / "constituency.csv")["reform"]) == {"pkg"}
     (run,) = audit.iterdir()
     assert sorted(p.name for p in (run / "efrs").iterdir()) == [
@@ -1762,8 +1851,11 @@ def test_a_demoted_run_stops_the_command_unless_allowed(
 def test_the_command_writes_seats_only_from_microcosm(monkeypatch, tmp_path):
     code, out, _ = run_cli(monkeypatch, tmp_path, kind="microcosm")
     assert code == 0
-    assert [p.name for p in out.iterdir()] == ["constituency.csv"]
-    assert validate_public(out) == []
+    assert sorted(p.name for p in out.iterdir()) == [
+        "area_provenance.json",
+        "constituency.csv",
+    ]
+    assert_public_area_output(out)
 
 
 def test_a_local_file_without_the_export_marker_is_refused(
@@ -1921,7 +2013,7 @@ def test_a_computable_measure_still_writes_its_tables(monkeypatch, tmp_path):
         changes_of={"alpha": {INCOME_TAX_RATE: {"2026": 0.21}}},
     )
     assert code == 0
-    assert validate_public(out) == []
+    assert_public_area_output(out)
 
 
 # On the Pension Credit model limit, which holds this from 2027 until the
@@ -2007,7 +2099,6 @@ def test_real_simulations_are_judged_as_the_generator_judges_them(
 
 PURCHASES = "additional_residential_property_purchased"
 # The same name in ROT13, which no check of a formula's written names reads.
-HIDDEN_PURCHASES = "nqqvgvbany_erfvqragvny_cebcregl_chepunfrq"
 REFUSED = "Not computable on current data"
 
 
@@ -2054,10 +2145,19 @@ def geography_command(
 ):
     from uk_budget_data import cli
 
+    # The synthetic receipts attest these exact in-memory test definitions.
+    revision = g.publication_receipt.code_revision(REPO)
+    monkeypatch.setattr(
+        g.publication_receipt,
+        "code_revision",
+        lambda: g.publication_receipt.CodeRevision(revision.git_sha, True),
+    )
     lookup = {reform.id: reform for reform in reforms}
     monkeypatch.setattr(g, "get_reform", lookup.get)
     monkeypatch.setattr(g, "PACKAGES", packages or {})
-    manifest = publication_manifest(tmp_path, lookup, packages, statuses)
+    manifest = publication_manifest(
+        tmp_path, lookup, packages, statuses, years=tuple(map(int, years))
+    )
     if bundle_efrs:
         enhanced_frs_bundle(monkeypatch)
     monkeypatch.setenv(AUDIT_DIR_ENV, str(tmp_path / "audit"))
@@ -2109,7 +2209,7 @@ def test_an_approved_run_proceeds_on_real_simulations(
     )
     assert code == 0, printed
     assert (tmp_path / "out" / "regional.csv").is_file()
-    assert validate_public(tmp_path / "out") == []
+    assert_public_area_output(tmp_path / "out")
     assert "UNCERTIFIED" not in printed
 
 
@@ -2136,7 +2236,7 @@ def test_a_microcosm_run_has_banners_and_an_uncertified_private_audit(
     summary = json.loads(audit.read_text())
     assert summary["certified"] is False
     assert summary["certification_reason"] == g.MICROCOSM_UNCERTIFIED
-    assert validate_public(tmp_path / "out") == []
+    assert_public_area_output(tmp_path / "out")
 
 
 def test_explicit_efrs_data_keeps_its_route_on_a_microcosm_bundle(
@@ -2396,36 +2496,10 @@ def refused(printed):
     ]
 
 
-def sdlt_priced_on_purchases(sim):
-    """A limit that shows only in a formula: SDLT priced on second-home
-    purchases."""
-    from uk_budget_data.measure_templates import _replace_formula
-
-    def formula(household, period, parameters):
-        return household(PURCHASES, period) * 0.05
-
-    _replace_formula(sim, "sdlt_on_residential_property_transactions", formula)
-    return sim
-
-
-def council_tax_on_purchases_from_2028(sim):
-    """Council tax charged on second-home purchases, read only from 2028, so
-    a watch over the first year alone would miss it. Council tax's own
-    formula reads nothing limited, and the input's name is decoded as the
-    formula runs, so nothing in 2027 gives it away: only watching 2028
-    does."""
-    from uk_budget_data.measure_templates import _replace_formula
-
-    def formula(household, period, parameters):
-        import codecs
-
-        if period.start.year >= 2028:
-            name = codecs.decode(HIDDEN_PURCHASES, "rot13")
-            return household(name, period) * 0.05
-        return household.empty_array()
-
-    _replace_formula(sim, "council_tax", formula)
-    return sim
+from tests.fixed_shape_measures import (
+    sdlt_priced_on_purchases,
+    council_tax_on_purchases_from_2028,
+)
 
 
 def test_a_limit_only_in_a_formula_is_refused_on_real_simulations(

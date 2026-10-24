@@ -18,6 +18,9 @@ from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.release_index import (
+    identity_core,
+    area_provenance_document_problems,
+    PROVENANCE_KIND,
     AREA_FILES,
     AREA_PROVENANCE_FILE,
     FLAT_VIEW_FILES,
@@ -270,23 +273,6 @@ def test_no_legacy_lifetime_mapping_is_published():
     assert PUBLIC_PERSONAL_SERIES == {}
 
 
-def test_generated_lifetime_fixture_matches_the_public_registry():
-    path = (
-        Path(__file__).resolve().parents[1]
-        / "src/test/fixtures/lifecycle/published-measures.json"
-    )
-    fixture = json.loads(path.read_text())
-    assert fixture == [
-        {
-            "id": key,
-            "name": get_reform(key).name,
-            "description": get_reform(key).description,
-            "personal": mapping,
-        }
-        for key, mapping in sorted(PUBLIC_PERSONAL_SERIES.items())
-    ]
-
-
 def test_personal_metadata_changes_identity_without_changing_figures(world):
     first = world.write(
         "ab2026_mock_alpha", {2027: -1.0}, personal={"key": "impact_first"}
@@ -386,6 +372,18 @@ def _area_run(world, manifest, reforms):
         "reforms": {
             reform: {
                 "key": key,
+                "artifact": manifest.entries()[key].artifact,
+                "execution_identity_sha256": manifest.entries()[
+                    key
+                ].execution_identity_sha256,
+                **{
+                    side: identity_core(
+                        read_receipt(
+                            world.data_root / manifest.entries()[key].artifact
+                        )["execution_receipt"][side]
+                    )
+                    for side in ("baseline", "reform")
+                },
                 "artifact_sha256": manifest.entries()[key].artifact_sha256,
                 "receipt_sha256": manifest.entries()[key].receipt_sha256,
                 "outputs_sha256": manifest.entries()[key].outputs_sha256,
@@ -532,6 +530,13 @@ def test_review_rows_sign_the_bound_index_and_the_area_provenance(world):
     )
     assert "public/data/release-index.json" in report.added
     assert f"public/data/{AREA_PROVENANCE_FILE}" in report.added
+    with review_csv.open() as handle:
+        provenance_row = next(
+            row
+            for row in csv.DictReader(handle)
+            if row["path"] == f"public/data/{AREA_PROVENANCE_FILE}"
+        )
+    assert provenance_row["kind"] == PROVENANCE_KIND
     # Disclosure tables keep their own review process
     assert {path for path, _ in report.unreviewed} <= {
         "public/data/regional.csv"
@@ -704,3 +709,79 @@ def test_publish_check_recomputes_aliases_from_the_area_runs_record(world):
     assert (
         "release index: aliases differ from the area run's record" in problems
     )
+
+
+@pytest.mark.parametrize(
+    "field", ["artifact_sha256", "receipt_sha256", "execution_identity_sha256"]
+)
+def test_same_output_digests_do_not_authorise_changed_area_identities(
+    world, field
+):
+    """Review2 finding1: outputs alone never identify an approved run."""
+    manifest, args = _flat_snapshot(world)
+    entry = manifest.measures[KEY]
+    entry.__dict__[field] = "f" * 64
+    files = {"regional.csv": (world.data_root / "regional.csv").read_bytes()}
+    problems, _ = area_problems(manifest, files, world.data_root)
+    assert any(
+        "earlier" in problem or "receipt identity differs" in problem
+        for problem in problems
+    )
+
+
+@pytest.mark.parametrize("field", ["artifact", "baseline", "reform"])
+def test_index_checks_the_area_record_against_the_approved_receipt(
+    world, field
+):
+    from uk_budget_data.publication.publish import PublishError
+
+    manifest, args = _flat_snapshot(world)
+    path = world.data_root / AREA_PROVENANCE_FILE
+    provenance = json.loads(path.read_bytes())
+    record = provenance["reforms"][KEY]
+    if field == "artifact":
+        record[field] = "artifacts/another-approved-run"
+    else:
+        record[field] = {
+            "kind": "reform",
+            "representation": "policyengine-uk.scenario/v1",
+            "reform_sha256": "f" * 64,
+            "binding": "content",
+        }
+    path.write_text(json.dumps(provenance))
+    with pytest.raises(PublishError, match="area"):
+        write_release_index(manifest, **args)
+
+
+def test_area_provenance_is_part_of_the_verified_flat_snapshot(world):
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    path = world.data_root / AREA_PROVENANCE_FILE
+    index = json.loads((world.data_root / INDEX_FILE).read_bytes())
+    assert (
+        manifest.flat_provenance_sha256
+        == index["flat_provenance_sha256"]
+        == sha256_bytes(path.read_bytes())
+    )
+    # Even a semantically unchanged sidecar must be the reviewed bytes.
+    path.write_bytes(path.read_bytes() + b" ")
+    assert any("provenance" in problem for problem in check(manifest, **args))
+    assert any(
+        "provenance" in problem for problem in _build_index_problems(world)
+    )
+
+
+def test_reapproval_with_identical_outputs_still_invalidates_area_provenance(
+    world,
+):
+    from uk_budget_data.publication.publish import PublishError
+
+    manifest, args = _flat_snapshot(world)
+    original_outputs = manifest.measures[KEY].outputs_sha256
+    corrected = world.ready(KEY, {2027: -1.0}, rate=0.31)
+    assert corrected.outputs_sha256 == original_outputs
+    stage(manifest, corrected.path, **args)
+    approve(manifest, KEY, "Reviewer", **args)
+    m.save_manifest(manifest, world.data_root)
+    with pytest.raises(PublishError, match="made for an earlier"):
+        write_release_index(manifest, **args)

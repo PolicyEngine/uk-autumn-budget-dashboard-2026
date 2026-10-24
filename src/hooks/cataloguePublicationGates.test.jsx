@@ -27,7 +27,7 @@ async function verifiedCatalogue(fixture, { packageAs = COMBINED } = {}) {
     "regional.csv": geography("region", packageAs), "constituency.csv": geography("constituency", packageAs),
   }, aliases);
   vi.stubGlobal("fetch", vi.fn(async (url) => {
-    const name = String(url).slice(String(url).lastIndexOf("/") + 1);
+    const name = String(url).slice(String(url).indexOf("/data/") + 6);
     return Object.hasOwn(served, name) ? new Response(served[name]) : new Response(null, { status: 404 });
   }));
   return buildMeasureCatalogue({ ...fixture, tablesByKey: scatterTables() });
@@ -123,7 +123,7 @@ describe("catalogue gates on additional population files", () => {
     next.revision += 1;
     const served = await bindFlatFiles(next, { "regional.csv": geography("region") });
     vi.stubGlobal("fetch", vi.fn(async (url) => {
-      const name = String(url).slice(String(url).lastIndexOf("/") + 1);
+      const name = String(url).slice(String(url).indexOf("/data/") + 6);
       return Object.hasOwn(served, name) ? new Response(served[name]) : new Response(null, { status: 404 });
     }));
     const { result } = renderHook(() => useGeographyData("regional"), { wrapper: wrapperFor(catalogue) });

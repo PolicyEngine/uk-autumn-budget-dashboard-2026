@@ -19,11 +19,19 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import canonicalize from "canonicalize";
+import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt } from "../src/utils/publication/area.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
 const CURRENT_RELEASE = "uk-autumn-budget-2026";
 const CURRENT_BUDGET = { id: CURRENT_RELEASE, date: "2026-10-28" };
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const dropNulls = (value) => Array.isArray(value) ? value.map(dropNulls) :
+  value !== null && typeof value === "object" ? Object.fromEntries(Object.entries(value).filter(([, member]) => member !== null).map(([key, member]) => [key, dropNulls(member)])) : value;
+const artifactDigest = (receipt) => digest(canonicalize(dropNulls({
+  schema: receipt.schema, execution_receipt: receipt.execution_receipt,
+  dashboard: Object.fromEntries(Object.entries(receipt.dashboard ?? {}).filter(([field]) => !["generated_at", "generator_argv"].includes(field))),
+})));
 const isMap = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 const sameMap = (left, right) => isMap(left) && isMap(right) &&
   Object.keys(left).sort().join() === Object.keys(right).sort().join() &&
@@ -80,6 +88,31 @@ export function checkReleaseIndex(root) {
     const files = index.files;
     if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
+    const provenancePath = join(directory, AREA_PROVENANCE_FILE);
+    if (!/^[0-9a-f]{64}$/.test(index.flat_provenance_sha256 ?? "") ||
+        index.flat_provenance_sha256 !== manifest.flat_provenance_sha256 ||
+        lstatSync(provenancePath).isSymbolicLink()) {
+      problems.push("release index: area provenance is not bound to the manifest");
+    } else {
+      const provenanceBytes = readFileSync(provenancePath);
+      if (digest(provenanceBytes) !== index.flat_provenance_sha256) {
+        problems.push("release index: area provenance bytes differ");
+      } else {
+        try {
+          const provenance = JSON.parse(provenanceBytes);
+          assertAreaProvenance(provenance, manifest, files, index.aliases);
+          for (const record of Object.values(provenance.reforms)) {
+            const receiptPath = join(directory, record.artifact, "receipt.json");
+            if (lstatSync(receiptPath).isSymbolicLink()) throw new Error("area receipt is a symbolic link");
+            const receipt = JSON.parse(readFileSync(receiptPath));
+            if (artifactDigest(receipt) !== record.artifact_sha256) throw new Error("area receipt differs from approved artifact");
+            assertAreaReceipt(record, receipt);
+          }
+        } catch (error) {
+          problems.push(`release index: ${error.message}`);
+        }
+      }
+    }
     const unread = Object.keys(files).filter((name) => !FLAT_VIEW_FILES.includes(name)).sort();
     if (unread.length) problems.push(`release index: binds files no view reads: ${unread.join(", ")}`);
     const unbound = FLAT_VIEW_FILES.filter((name) => existsSync(join(directory, name)) && !Object.hasOwn(files, name));
@@ -213,6 +246,16 @@ export function checkPublicFiles(root, today = new Date()) {
         ? []
         : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
     const layerShaped = required.every((column) => columns.includes(column));
+    if (entry.kind === "publication_provenance" && name !== `public/data/${AREA_PROVENANCE_FILE}`) {
+      problems.push(`${name}: publication provenance is only allowed for the area run's record`);
+    }
+    if (entry.kind === "publication_provenance") {
+      try { assertAreaProvenanceDocument(JSON.parse(text)); }
+      catch { problems.push(`${name}: invalid publication provenance`); }
+    }
+    if (name === `public/data/${AREA_PROVENANCE_FILE}` && entry.kind !== "publication_provenance") {
+      problems.push(`${name}: must be reviewed as publication provenance`);
+    }
     if (entry.kind === "disclosure_table") {
       if (!layerShaped || !columns.every((column) => allowed.has(column))) {
         problems.push(`${name}: reviewed as a disclosure table, but it is not one`);

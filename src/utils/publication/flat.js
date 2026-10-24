@@ -1,6 +1,7 @@
-import { jcsSha256, sha256Hex } from "./digest";
+import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
 import { loadManifest } from "./load";
 import { assertCurrentRelease } from "./release";
+import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaReceipt } from "./area";
 
 export const RELEASE_INDEX_FILE = "release-index.json";
 export const RELEASE_INDEX_SCHEMA = "uk-budget-release-index/v1";
@@ -46,7 +47,10 @@ export async function verifyReleaseIndex(index, manifest) {
   if (await jcsSha256(aliases) !== await jcsSha256(manifest.flat_aliases ?? {})) {
     throw new Error("The release index aliases are not the manifest's");
   }
-  return { files, aliases: Object.freeze(Object.assign(Object.create(null), aliases)) };
+  if (!DIGEST.test(index.flat_provenance_sha256 ?? "") || index.flat_provenance_sha256 !== manifest.flat_provenance_sha256) {
+    throw new Error("Area provenance is not bound to the manifest snapshot");
+  }
+  return { files, aliases: Object.freeze(Object.assign(Object.create(null), aliases)), provenanceDigest: index.flat_provenance_sha256 };
 }
 
 /**
@@ -73,7 +77,20 @@ export async function loadVerifiedFlat(fileName, catalogue, { basePath = process
     if (live && live.snapshotSha256 !== manifest.snapshotSha256) throw new SnapshotChangedError();
     throw error;
   }
-  const { files, aliases } = verified;
+  const { files, aliases, provenanceDigest } = verified;
+  const provenanceResponse = await fetchImpl(`${basePath}/data/${AREA_PROVENANCE_FILE}`, { signal, cache: "no-cache" });
+  if (!provenanceResponse.ok) throw new Error("Area provenance is unavailable");
+  const provenanceBytes = await provenanceResponse.arrayBuffer();
+  if (await sha256Hex(provenanceBytes) !== provenanceDigest) throw new Error("Area provenance differs from the publication snapshot");
+  const provenance = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(provenanceBytes));
+  assertAreaProvenance(provenance, manifest, files, aliases);
+  await Promise.all(Object.values(provenance.reforms).map(async (record) => {
+    const receiptResponse = await fetchImpl(`${basePath}/data/${record.artifact}/receipt.json`, { signal });
+    if (!receiptResponse.ok) throw new Error("Approved area receipt is unavailable");
+    const receipt = await receiptResponse.json();
+    if (await artifactSha256(receipt) !== record.artifact_sha256) throw new Error("Area provenance receipt differs from the approved artifact");
+    assertAreaReceipt(record, receipt);
+  }));
   if (!Object.hasOwn(files, fileName)) throw new Error(`${fileName} is unavailable in this snapshot`);
   const response = await fetchImpl(`${basePath}/data/${fileName}`, { signal, cache: "no-cache" });
   if (!response.ok) throw new Error(`${fileName} is unavailable`);

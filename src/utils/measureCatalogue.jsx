@@ -45,8 +45,12 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     const name = entry?.name || receipt?.name || ownRows.find((row) => row.reform_name)?.reform_name || id;
     const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "A public description has not yet been published.";
     const availability = measureAvailability(manifest, id);
-    if (failures[id]) { availability.available = false; availability.reason = `Results unavailable: ${failures[id]}`; }
-    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, color: measureColor(id, direction), displayable: isDisplayable(entry), availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal };
+    const verified = tablesByKey != null && Object.hasOwn(tablesByKey, id) && !failures[id];
+    if (!verified && isDisplayable(entry)) {
+      availability.available = false;
+      availability.reason = `Results unavailable: ${failures[id] || "no verified artifact"}`;
+    }
+    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, color: measureColor(id, direction), displayable: isDisplayable(entry) && verified, availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal };
   });
   const labelCounts = new Map();
   for (const measure of measures) labelCounts.set(measure.name, (labelCounts.get(measure.name) ?? 0) + 1);

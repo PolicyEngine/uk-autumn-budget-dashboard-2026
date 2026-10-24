@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -44,7 +44,8 @@ async function renderForecast(data) {
   window.history.replaceState({}, "", "/?tab=living&sub=forecast");
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
   render(<LivingStandardsTab />);
-  await screen.findByRole("heading", { name: "Forecast changes" });
+  if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
+  else await screen.findByRole("heading", { name: "Forecast changes" });
 }
 
 const card = (name) => screen.getByRole("heading", { level: 3, name }).closest(".ls-card");
@@ -70,48 +71,20 @@ describe("Forecast changes before the Budget forecast", () => {
 });
 
 describe("Forecast changes once the Budget forecast is published", () => {
-  it("draws both forecasts, shows both values and the change, and drops the 'will add' line", async () => {
+  it("holds the Budget-day extract until it has a verified publication route", async () => {
     await renderForecast(publishedOutlook());
-    expect(screen.queryByText(/once the OBR publishes/)).toBeNull();
-    expect(
-      screen.getByText(/compares the OBR March 2026 forecast with the OBR October 2026 forecast/),
-    ).toBeInTheDocument();
-
-    // Every chart: pre-Budget grey and dashed, the Budget forecast teal and solid
-    const cards = document.querySelectorAll(".ls-card");
-    expect(cards.length).toBe(10);
-    for (const c of cards) {
-      const text = c.querySelector(".chart-legend").textContent;
-      expect(c.querySelectorAll(".grouped-legend-groups .grouped-legend-swatch-line")).toHaveLength(2);
-      expect(text).toMatch(/pre-Budget/);
-      expect(text).toMatch(/October 2026/);
-    }
-    const legendText = card(/^CPI inflation, 2027 to 2030$/).querySelector(".chart-legend").textContent;
-    expect(legendText).toContain("OBR March 2026 (pre-Budget)");
-    expect(legendText).toContain(POST_LABEL);
-
-    // Tiles: "2.3% → 2.6%" and "+0.3pp"; a change that rounds to zero reads "no change"
-    expect(screen.getByText(`${pct(cpiPre())} → ${pct(cpiPre() + 0.003)}`)).toBeInTheDocument();
-    expect(screen.getByText("+0.3pp")).toBeInTheDocument();
-    expect(screen.getAllByText("no change").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText(/[−-]0\.0pp/)).toBeNull();
-
-    // The source names both releases, inside About this chart
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
-    fireEvent.click(within(cpi).getByRole("button", { name: "About this chart" }));
-    const source = cpi.querySelector(".disclosure-content .ls-source");
-    expect(source).toHaveTextContent(POST_RELEASE);
-    expect(source).toHaveTextContent(/pre-Budget: OBR/);
+    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
+    expect(document.querySelector(".ls-card")).toBeNull();
+    expect(screen.queryByText(`${pct(cpiPre())} → ${pct(cpiPre() + 0.003)}`)).toBeNull();
+    expect(screen.queryByText("+0.3pp")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Chart or table/ })).toBeNull();
   });
 
-  it("shows pre, post and difference columns as tables", async () => {
+  it("keeps navigation back to the independent baseline available", async () => {
     await renderForecast(publishedOutlook());
-    fireEvent.click(screen.getByRole("button", { name: /Chart or table/ }));
-    fireEvent.click(screen.getByRole("option", { name: "Tables" }));
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
-    const headers = within(cpi).getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual(["Year", "OBR March 2026 (pre-Budget)", POST_LABEL, "Difference"]);
-    const first = within(cpi).getAllByRole("row")[1];
-    expect(first).toHaveTextContent(`2027${pct(cpiPre())}${pct(cpiPre() + 0.003)}+0.3pp`);
+    fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
+    expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
+    expect(screen.queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
   });
 });

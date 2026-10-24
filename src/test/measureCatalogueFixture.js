@@ -81,11 +81,16 @@ export async function bindFlatFiles(manifest, files, aliases = {}) {
   manifest.flat_files = Object.fromEntries(
     await Promise.all(Object.entries(files).map(async ([name, text]) => [name, await sha256Hex(text)])),
   );
+  const { areaProvenanceFixture } = await import("./areaProvenanceFixture");
+  const { document, receipts } = await areaProvenanceFixture(manifest, manifest.flat_files, aliases);
+  const provenance = JSON.stringify(document);
+  manifest.flat_provenance_sha256 = await sha256Hex(provenance);
   const snapshot = await sha256Hex(JSON.stringify(manifest));
   Object.defineProperty(manifest, "snapshotSha256", { value: snapshot, configurable: true });
   const index = {
     schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget,
     manifest_revision: manifest.revision, manifest_sha256: snapshot, files: manifest.flat_files, aliases,
+    flat_provenance_sha256: manifest.flat_provenance_sha256,
   };
-  return { [RELEASE_INDEX_FILE]: JSON.stringify(index), ...files };
+  return { ...receipts, [RELEASE_INDEX_FILE]: JSON.stringify(index), "area_provenance.json": provenance, ...files };
 }

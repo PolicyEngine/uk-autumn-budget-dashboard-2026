@@ -73,8 +73,12 @@ from uk_budget_data.private_outputs import (
 )
 from uk_budget_data.publication import combine
 from uk_budget_data.publication import manifest as publication_manifest
+from uk_budget_data.publication import receipt as publication_receipt
 from uk_budget_data.publication.combine import combined_key
-from uk_budget_data.publication.release_index import write_area_provenance
+from uk_budget_data.publication.release_index import (
+    IDENTITY_FIELDS,
+    write_area_provenance,
+)
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
     AUTUMN_BUDGET_2026_COMBINED_ID,
@@ -2040,6 +2044,8 @@ class _Plan:
     microcosm_export: bool = False
     # What the run was made from, for publish index (release_index.py)
     provenance: Optional[dict] = None
+    manifest: Optional[publication_manifest.Manifest] = None
+    manifest_bytes: bytes = b""
 
 
 def manifest_key(reform_id: str) -> str:
@@ -2050,28 +2056,110 @@ def manifest_key(reform_id: str) -> str:
     return reform_id
 
 
+def _area_identities(reform_id: str, years, revision):
+    """Bind exactly the scenarios the area run will build, as generation does."""
+    reform = get_reform(reform_id)
+    config = DataConfig(years=list(years))
+    if reform_id not in PACKAGES:
+        return publication_receipt.measure_identities(reform, config, revision)
+    members = combine.member_order(
+        [get_reform(member) for member in PACKAGES[reform_id]]
+    )
+    combined = combine.combine_measures(members, config)
+    uses_config = any(not member.has_custom_baseline() for member in members)
+    baseline = combined.baseline_scenario_for(config, uses_config)
+    identities = publication_receipt.combined_identities(
+        members,
+        config,
+        revision,
+        reform_applied_before_data_load=(
+            combined.to_scenario().applied_before_data_load
+        ),
+        baseline_applied_before_data_load=(
+            baseline.applied_before_data_load
+            if baseline is not None
+            else False
+        ),
+    )
+    return identities[:2]
+
+
 def area_provenance(
     manifest: publication_manifest.Manifest,
     manifest_bytes: bytes,
     reform_ids: Sequence[str],
+    *,
+    data_root: Path,
+    years: Sequence[int],
 ) -> dict:
-    """The approved entry each reform's area results were made beside.
+    """Refuse a current definition that differs from the approved receipt.
 
-    ``publish index`` refuses to bind the area tables once any of these
-    entries has changed (its artifact, receipt or outputs), so a correction
-    cannot leave old results by area bound to the new figures. It does not
-    prove the area run simulated the approved definition: the run simulates
-    the registry at its own commit (see the runbook, G4).
+    This runs during planning, before any microsimulation. Each scenario's
+    semantic identity (including structural code bindings and composition)
+    must equal the approved artifact's receipt. Names are presentation labels.
     """
+    revision = publication_receipt.code_revision()
     reforms = {}
     for reform_id in reform_ids:
         key = manifest_key(reform_id)
         entry = manifest.entries()[key]
+        receipt_path = data_root / entry.artifact / "receipt.json"
+        if receipt_path.is_symlink() or not receipt_path.is_file():
+            raise ValueError(f"{reform_id}: no regular approved receipt")
+        document = json.loads(receipt_path.read_bytes())
+        if not isinstance(document, dict):
+            raise ValueError(f"{reform_id}: approved receipt is not an object")
+        problems = publication_receipt.document_problems(document)
+        if (
+            publication_receipt.artifact_sha256(document)
+            != entry.artifact_sha256
+        ):
+            problems.append("approved artifact identity differs")
+        dashboard = document.get("dashboard") or {}
+        if dashboard.get("key") != key:
+            problems.append("approved receipt key differs")
+        for field in (
+            "receipt_sha256",
+            "outputs_sha256",
+            "execution_identity_sha256",
+        ):
+            if (dashboard.get("digests") or {}).get(field) != getattr(
+                entry, field
+            ):
+                problems.append(f"approved {field} differs")
+        if set(years) - (set(entry.years) - set(entry.unsupported_years)):
+            problems.append("requested years are not approved and supported")
+        if problems:
+            raise ValueError(f"{reform_id}: " + "; ".join(problems))
+        actual = _area_identities(reform_id, years, revision)
+        approved = document["execution_receipt"]
+        identities = {}
+        for side, identity in zip(("baseline", "reform"), actual):
+            core = {
+                field: identity.model_dump().get(field)
+                for field in IDENTITY_FIELDS
+            }
+            expected = {
+                field: approved[side].get(field) for field in IDENTITY_FIELDS
+            }
+            if core != expected:
+                raise ValueError(
+                    f"{reform_id}: current {side} identity differs from the "
+                    "approved receipt; regenerate and approve before the area run"
+                )
+            if core["binding"] == "code_revision" and not revision.tree_clean:
+                raise ValueError(
+                    f"{reform_id}: current {side} code is not committed"
+                )
+            identities[side] = core
         reforms[reform_id] = {
             "key": key,
+            "artifact": entry.artifact,
             "artifact_sha256": entry.artifact_sha256,
             "receipt_sha256": entry.receipt_sha256,
             "outputs_sha256": entry.outputs_sha256,
+            "execution_identity_sha256": entry.execution_identity_sha256,
+            **identities,
         }
     return {
         "manifest_revision": manifest.revision,
@@ -2298,7 +2386,8 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_weights=seat_weights,
         prior_regional=prior,
         microcosm_export=microcosm_export,
-        provenance=area_provenance(manifest, manifest_bytes, chosen),
+        manifest=manifest,
+        manifest_bytes=manifest_bytes,
     )
 
 
@@ -2416,7 +2505,18 @@ def _run_geography(
         return 1
     try:
         plan = _plan(parsed)
-    except (ValueError, OSError) as error:
+        plan.provenance = area_provenance(
+            plan.manifest,
+            plan.manifest_bytes,
+            [reform.id for reform in plan.reforms],
+            data_root=parsed.manifest.parent,
+            years=plan.years,
+        )
+    except (
+        ValueError,
+        OSError,
+        publication_receipt.ReceiptUnavailable,
+    ) as error:
         console.print(f"[red]Error: {error}[/red]")
         return 1
     dataset = str(parsed.dataset) if parsed.dataset else None

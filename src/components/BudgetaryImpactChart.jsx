@@ -19,6 +19,7 @@ import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -166,12 +167,14 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   const {
+    displayable,
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
     bySeriesKey,
   } = useMeasureCatalogue();
 
   if (!data || data.length === 0) return null;
+  if (!displayable.length) return <UnavailableNotice reason="Revenue figures are unavailable until approved results verify." />;
 
   const formatCurrencyTick = (value) =>
     value < 0 ? `-£${Math.abs(value)}bn` : `£${value}bn`;

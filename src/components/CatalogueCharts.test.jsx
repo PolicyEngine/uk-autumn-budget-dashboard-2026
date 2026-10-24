@@ -188,7 +188,7 @@ describe("published measure catalogue in population views", () => {
     expect(screen.getAllByText("Cost revenue")).toHaveLength(3);
   });
 
-  it("holds the age package and its headline when the combined run is withdrawn", async () => {
+  it("holds the age package shares when the combined run is withdrawn", async () => {
     const fixture = measureCatalogueFixture({ held: false });
     fixture.manifest.combined[COMBINED].status = "withdrawn";
     const catalogue = catalogueFor(fixture);
@@ -197,7 +197,7 @@ describe("published measure catalogue in population views", () => {
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
     expect(await screen.findByText(/These shares come from one simulation/)).toBeInTheDocument();
-    expect(screen.getByText("directly affected: shown for a single policy or for all policies")).toBeInTheDocument();
+    expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     expect(screen.getAllByTestId("chart-rows")).toHaveLength(3);
   });
 
@@ -265,6 +265,17 @@ describe("measure chart keys", () => {
         policies.forEach((policy, index) => expect(point[policy.seriesKey]).toBe(entries[index].value));
       },
     ), { numRuns: 100 });
+  });
+
+  it("never renders a held measure in age means, even if stale rows remain", () => {
+    fc.assert(fc.property(fc.integer({ min: -100000, max: 100000 }), (value) => {
+      const policy = { id: "held", seriesKey: "measure:held", name: "Held", displayable: false };
+      const rows = [{ reform_id: policy.id, year: YEAR, age_band: "16-24", mean_change: value, sample_size: 5000 }];
+      const point = meanChangeByBand(rows, [policy], [policy.id], YEAR).find((candidate) => candidate.band === "16-24");
+      expect(point[policy.seriesKey]).toBeNull();
+      expect(point.netChange).toBeNull();
+      expect(point.incomplete).toBe(true);
+    }));
   });
 
   it("groups neutral measures as Other measures in catalogue order", () => {

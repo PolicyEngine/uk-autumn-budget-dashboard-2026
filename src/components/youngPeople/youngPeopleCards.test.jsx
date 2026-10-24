@@ -154,6 +154,14 @@ describe("young people cards", () => {
     expect(screen.getByText(/for people aged 65 and over and for people of all ages/)).toBeInTheDocument();
   });
 
+  it("describes missing age-group rows as unavailable", () => {
+    render(<MeasuresCard {...props} selectedYear={2028} />);
+    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
+    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    expect(screen.getByText("Results are unavailable for the selected policies in 2028-29.")).toBeInTheDocument();
+    expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
+  });
+
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
     expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();

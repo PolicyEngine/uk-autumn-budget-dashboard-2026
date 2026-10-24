@@ -42,7 +42,7 @@ vi.mock("recharts", () => {
   return {
     ComposedChart: Chart, BarChart: Chart,
     ResponsiveContainer: ({ children }) => <div data-testid="recharts-responsive-container">{children}</div>,
-    Bar: Empty, CartesianGrid: Empty, Customized: Empty, LabelList: Empty,
+    Bar: Empty, Cell: Empty, Scatter: Empty, CartesianGrid: Empty, Customized: Empty, LabelList: Empty,
     Legend: Empty, Line: Empty, ReferenceArea: Empty, ReferenceLine: Empty,
     Tooltip: Empty, XAxis: Empty, YAxis: Empty,
   };

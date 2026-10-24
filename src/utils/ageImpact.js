@@ -66,10 +66,10 @@ export function meanChangeByBand(rows, policies, selected, year) {
     const point = { band: band.key, label: band.label, short: band.short };
     let net = 0;
     let suppressed = false;
-    let incomplete = selected.some((id) => !policies.some((policy) => policy.id === id));
+    let incomplete = selected.some((id) => !policies.some((policy) => policy.id === id && policy.displayable !== false));
     for (const policy of policies) {
       const isSelected = selected.includes(policy.id);
-      const row = isSelected
+      const row = isSelected && policy.displayable !== false
         ? yearRows.find((r) => r.reform_id === policy.id && r.age_band === band.key)
         : null;
       if (row && row.sample_size < MIN_SAMPLE_SIZE) suppressed = true;
@@ -120,7 +120,7 @@ export function wholeSelectionRun(policies, selected, combinedId = null) {
 export function meanChangeBySingleAge(rows, policies, selected, year) {
   const byKey = new Map();
   for (const row of forYear(rows ?? [], year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
-  const chosen = policies.filter((policy) => selected.includes(policy.id));
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const points = [];
   for (let age = 0; age <= SINGLE_AGE_TOP; age += 1) {
     const key = singleAgeKey(age);

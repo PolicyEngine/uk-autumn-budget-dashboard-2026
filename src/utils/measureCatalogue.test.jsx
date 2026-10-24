@@ -30,6 +30,23 @@ describe("published measure catalogue", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
+  it("does not offer an approved measure until its artifact has verified", () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    delete fixture.tablesByKey[ALPHA];
+    const catalogue = buildMeasureCatalogue(fixture);
+    expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA]);
+    expect(catalogue.byId.get(ALPHA).availability).toMatchObject({ available: false, reason: "Results unavailable: no verified artifact" });
+    expect(catalogue.combinedId).toBeNull();
+    expect(isCatalogueRowDisplayable(catalogue, ALPHA, 2029)).toBe(false);
+  });
+
+  it("does not offer an artifact that failed verification even if a table key remains", () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const catalogue = buildMeasureCatalogue({ ...fixture, failures: { [ALPHA]: "receipt digest differs" } });
+    expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA]);
+    expect(catalogue.byId.get(ALPHA).availability.reason).toContain("receipt digest differs");
+  });
+
   it("takes the package from the combined run of exactly the displayable measures", () => {
     // A held measure is listed as unavailable, never part of the package: the
     // combined run that leaves it out is the one the page shows
@@ -107,7 +124,7 @@ describe("published measure catalogue", () => {
       expect(point.netImpact).toBe(records.filter((record) => selected.includes(record.id)).reduce((sum, row) => sum + row.value, 0));
       for (const measure of catalogue.displayable) expect(point[measure.seriesKey]).toBe(records.find((row) => row.id === measure.id).value);
       expect(new Set(catalogue.measures.map((measure) => measure.seriesKey)).size).toBe(catalogue.measures.length);
-      expect(buildMeasureCatalogue({ manifest: catalogue.manifest, budgetary: [...rows].reverse() }).measures).toEqual(catalogue.measures);
+      expect(buildMeasureCatalogue({ manifest: catalogue.manifest, budgetary: [...rows].reverse(), tablesByKey: catalogue.tablesByKey }).measures).toEqual(catalogue.measures);
     }), { numRuns: 100 });
   });
 });

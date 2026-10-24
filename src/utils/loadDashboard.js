@@ -65,7 +65,7 @@ export function budgetChartData(budgetary, measures, selected, years) {
   return years.map((year) => {
     const point = { year };
     let total = 0;
-    let complete = true;
+    let complete = selected.every((id) => measures.some((measure) => measure.id === id));
     for (const measure of measures) {
       const supported = measure.displayable && measure.years.includes(year) && !measure.unsupported_years.includes(year);
       const row = supported ? budgetary.find((item) => item.reform_id === measure.id && Number(item.year) === year) : undefined;

@@ -54,3 +54,11 @@ it("renders an independent view while the manifest request is still pending", as
   expect(screen.getByRole("tablist", { name: "Views" })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "At a glance" })).toBeInTheDocument();
 });
+
+it("keeps a requested selection in the address while publication is loading", () => {
+  vi.stubGlobal("fetch", async () => new Promise(() => {}));
+  window.history.replaceState({}, "", "/?policies=alpha");
+  render(<App />);
+  expect(screen.getByRole("tablist", { name: "Views" })).toBeInTheDocument();
+  expect(new URLSearchParams(window.location.search).get("policies")).toBe("alpha");
+});

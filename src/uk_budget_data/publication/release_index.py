@@ -49,6 +49,117 @@ AREA_PROVENANCE_SCHEMA = "uk-budget-area-provenance/v1"
 ID_COLUMNS = ("reform_id", "reform")
 
 
+# Identity fields covered by the released receipt digest; names are labels.
+IDENTITY_FIELDS = ("kind", "representation", "reform_sha256", "binding")
+PROVENANCE_KIND = "publication_provenance"
+AREA_RECORD_FIELDS = {
+    "key",
+    "artifact",
+    "artifact_sha256",
+    "receipt_sha256",
+    "outputs_sha256",
+    "execution_identity_sha256",
+    "baseline",
+    "reform",
+}
+
+
+def identity_core(identity: dict) -> dict:
+    return {field: identity.get(field) for field in IDENTITY_FIELDS}
+
+
+def area_provenance_document_problems(document) -> list[str]:
+    """A provenance file holds only publication identities and file digests.
+
+    This closed shape is also its reviewed public-data kind: adding any
+    survey value or a new field requires changing this rule and its review.
+    """
+    if not isinstance(document, dict) or set(document) != {
+        "schema",
+        "manifest_revision",
+        "manifest_sha256",
+        "reforms",
+        "files",
+    }:
+        return ["area provenance: unexpected fields"]
+    if document.get("schema") != AREA_PROVENANCE_SCHEMA:
+        return ["area provenance: unknown schema"]
+    if (
+        type(document["manifest_revision"]) is not int
+        or document["manifest_revision"] < 1
+    ):
+        return ["area provenance: invalid manifest revision"]
+
+    def digest(value):
+        return isinstance(value, str) and DIGEST.fullmatch(value) is not None
+
+    if not digest(document["manifest_sha256"]):
+        return ["area provenance: invalid manifest digest"]
+    files = document["files"]
+    if (
+        not isinstance(files, dict)
+        or not files
+        or any(
+            name not in AREA_FILES or not digest(value)
+            for name, value in files.items()
+        )
+    ):
+        return ["area provenance: invalid table digests"]
+    reforms = document["reforms"]
+    if not isinstance(reforms, dict) or not reforms:
+        return ["area provenance: no reform identities"]
+    for reform_id, record in reforms.items():
+        if (
+            not isinstance(reform_id, str)
+            or not reform_id
+            or not isinstance(record, dict)
+            or set(record) != AREA_RECORD_FIELDS
+        ):
+            return ["area provenance: unexpected reform identity fields"]
+        if (
+            not isinstance(record["key"], str)
+            or not record["key"]
+            or not isinstance(record["artifact"], str)
+        ):
+            return ["area provenance: invalid approved artifact"]
+        path = Path(record["artifact"])
+        if path.is_absolute() or ".." in path.parts or not path.parts:
+            return ["area provenance: unsafe approved artifact path"]
+        if any(
+            not digest(record[field])
+            for field in (
+                "artifact_sha256",
+                "receipt_sha256",
+                "outputs_sha256",
+                "execution_identity_sha256",
+            )
+        ):
+            return ["area provenance: invalid approved identity digest"]
+        for side in ("baseline", "reform"):
+            identity = record[side]
+            if not isinstance(identity, dict) or set(identity) != set(
+                IDENTITY_FIELDS
+            ):
+                return ["area provenance: invalid scenario identity"]
+            if identity["kind"] == "current_law":
+                if identity != {
+                    "kind": "current_law",
+                    "representation": None,
+                    "reform_sha256": None,
+                    "binding": "content",
+                }:
+                    return ["area provenance: invalid current-law identity"]
+            elif (
+                identity["kind"] != "reform"
+                or not digest(identity["reform_sha256"])
+                or not isinstance(identity["representation"], str)
+                or not identity["representation"]
+                or identity["binding"] not in ("content", "code_revision")
+            ):
+                return ["area provenance: invalid reform identity"]
+    return []
+
+
 def identity_problems(manifest) -> list[str]:
     """Publication is for this Budget and this release, explicitly."""
     raw = (
@@ -99,6 +210,9 @@ def write_area_provenance(out_dir, provenance: dict, written) -> Path:
             for path in written
         },
     }
+    problems = area_provenance_document_problems(document)
+    if problems:
+        raise ValueError("; ".join(problems))
     path = out_dir / AREA_PROVENANCE_FILE
     handle, temporary = tempfile.mkstemp(
         prefix=".area-provenance-", suffix=".json", dir=out_dir
@@ -146,7 +260,9 @@ def area_problems(
         or document.get("schema") != AREA_PROVENANCE_SCHEMA
     ):
         return [f"area results: {AREA_PROVENANCE_FILE} has another schema"], {}
-    problems = []
+    problems = area_provenance_document_problems(document)
+    if problems:
+        return problems, {}
     digests = {
         name: sha256_bytes(content) for name, content in present.items()
     }
@@ -165,7 +281,13 @@ def area_problems(
             problems.append(f"{name}: not a readable CSV with a reform column")
     entries = manifest.entries()
     aliases = {}
-    identity = ("artifact_sha256", "receipt_sha256", "outputs_sha256")
+    identity = (
+        "artifact",
+        "artifact_sha256",
+        "receipt_sha256",
+        "outputs_sha256",
+        "execution_identity_sha256",
+    )
     for reform_id in sorted(used):
         record = reforms.get(reform_id)
         if (
@@ -191,6 +313,31 @@ def area_problems(
                 f"area results for {reform_id} were made for an earlier "
                 f"{key}; rerun the area run"
             )
+        if entry is not None:
+            try:
+                receipt_path = data_root / entry.artifact / "receipt.json"
+                if receipt_path.is_symlink():
+                    raise ValueError
+                receipt = json.loads(receipt_path.read_bytes())
+                from uk_budget_data.publication.receipt import (
+                    artifact_sha256,
+                    document_problems,
+                )
+
+                if (
+                    document_problems(receipt)
+                    or artifact_sha256(receipt) != entry.artifact_sha256
+                    or any(
+                        record[side]
+                        != identity_core(receipt["execution_receipt"][side])
+                        for side in ("baseline", "reform")
+                    )
+                ):
+                    raise ValueError
+            except (OSError, ValueError, KeyError, TypeError):
+                problems.append(
+                    f"area results: {reform_id} approved receipt identity differs"
+                )
         if key != reform_id:
             aliases[reform_id] = key
     return problems, aliases
@@ -250,6 +397,19 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         problems.append("release index: manifest revision differs")
     if index.get("manifest_sha256") != sha256_bytes(manifest_bytes):
         problems.append("release index: manifest bytes differ")
+    provenance_digest = raw.get("flat_provenance_sha256")
+    provenance_path = data_root / AREA_PROVENANCE_FILE
+    if (
+        not isinstance(provenance_digest, str)
+        or not DIGEST.fullmatch(provenance_digest)
+        or index.get("flat_provenance_sha256") != provenance_digest
+        or provenance_path.is_symlink()
+        or not provenance_path.is_file()
+        or sha256_bytes(provenance_path.read_bytes()) != provenance_digest
+    ):
+        problems.append(
+            "release index: area provenance differs from the manifest binding"
+        )
     aliases = index.get("aliases")
     if aliases != (raw.get("flat_aliases") or {}):
         problems.append("release index: aliases differ from the manifest's")
@@ -392,6 +552,9 @@ def write_release_index(
         name: sha256_bytes(content) for name, content in files.items()
     }
     working.flat_aliases = dict(sorted(aliases.items()))
+    working.flat_provenance_sha256 = sha256_bytes(
+        (data_root / AREA_PROVENANCE_FILE).read_bytes()
+    )
     working.revision += 1
     working.updated_at = m.now()
     manifest_bytes = (
@@ -411,6 +574,7 @@ def write_release_index(
         "files": working.flat_files,
         # The ids the bound tables use for manifest keys (a package alias)
         "aliases": working.flat_aliases,
+        "flat_provenance_sha256": working.flat_provenance_sha256,
     }
     index_bytes = (json.dumps(index, indent=2, sort_keys=True) + "\n").encode()
     staged = []

@@ -80,6 +80,7 @@ KINDS = (
     "synthetic_household",
     REFERENCE_GEOGRAPHY,
     "static_asset",
+    "publication_provenance",
     PENDING,
 )
 MAX_PENDING_DAYS = 14
@@ -300,6 +301,13 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                     + ("it is" if layer else "it is not")
                     + " a disclosure table"
                 )
+            elif (
+                name == "public/data/area_provenance.json"
+                and entry.kind != "publication_provenance"
+            ):
+                report.problems.append(
+                    f"{name}: requires publication_provenance review"
+                )
             elif sha256_of(data) != entry.sha256:
                 report.problems.append(f"{name}: changed since its review")
             elif entry.kind == PENDING:
@@ -315,6 +323,23 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                         f"({entry.reviewer}): {entry.basis}"
                     )
                     area_codes_allowed = True
+            elif entry.kind == "publication_provenance":
+                from uk_budget_data.publication.release_index import (
+                    area_provenance_document_problems,
+                )
+
+                try:
+                    document = json.loads(data)
+                except (ValueError, UnicodeError):
+                    document = None
+                if name != "public/data/area_provenance.json":
+                    report.problems.append(
+                        f"{name}: not the area provenance path"
+                    )
+                report.problems.extend(
+                    f"{name}: {problem}"
+                    for problem in area_provenance_document_problems(document)
+                )
             elif entry.kind == REFERENCE_GEOGRAPHY:
                 area_codes_allowed = True
 

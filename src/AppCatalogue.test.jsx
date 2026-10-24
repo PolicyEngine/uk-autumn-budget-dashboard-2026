@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
+import fc from "fast-check";
 import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { readFileSync } from "node:fs";
@@ -74,10 +75,9 @@ describe("the page's verified publication catalogue", () => {
     const artifact = manifest.measures.alpha.artifact;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(manifest), "budgetary_impact.csv": fixtureText(`${artifact}/budgetary_impact.csv`) } }));
     render(<App />);
-    const figures = await screen.findByTestId("distributional-figures");
-    expect(JSON.parse(figures.dataset.rows)).toEqual([]);
-    expect(JSON.parse(screen.getByTestId("budget-figures").dataset.rows).every((row) => row.netImpact === null)).toBe(true);
-    expect(screen.getByText(/Alpha: Results unavailable/)).toBeInTheDocument();
+    expect(await screen.findByText(/Alpha: Results unavailable/)).toBeInTheDocument();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 
   it.each(["?tab=living", "?tab=methodology"])("keeps the shell and %s without a manifest", async (search) => {
@@ -87,10 +87,10 @@ describe("the page's verified publication catalogue", () => {
     render(<App />);
     const view = search.includes("living") ? "living-view" : "methodology-view";
     expect(await screen.findByTestId(view)).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(4);
     expect(screen.queryByText("No Budget results are published yet")).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
-    expect(screen.getByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 });
@@ -127,12 +127,37 @@ describe("an open page follows the publication", () => {
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
   });
 
-  it("keeps the verified snapshot through a network failure", async () => {
-    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+  it("suppresses figures on every revalidation failure and recovers on the next focus", async () => {
+    await fc.assert(fc.asyncProperty(fc.constantFrom("unreachable", "500", "503", "invalid", "404"), async (failure) => {
+      const approved = () => dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } });
+      vi.stubGlobal("fetch", approved());
+      render(<App />);
+      await screen.findByTestId("distributional-figures");
+      expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+      vi.stubGlobal("fetch", failure === "unreachable"
+        ? async () => { throw new TypeError("Failed to fetch"); }
+        : dashboardFixtureFetch({ overrides: { "manifest.json": failure === "invalid" ? "{}" : Number(failure) } }));
+      await act(async () => { window.dispatchEvent(new Event("focus")); });
+      expect(await screen.findByText(failure === "404" ? "No Budget results are published yet" : "Published results are unavailable")).toBeInTheDocument();
+      expect(screen.queryByTestId("distributional-figures")).toBeNull();
+      expect(screen.queryByTestId("budget-figures")).toBeNull();
+
+      // No reload is needed after an initial or subsequent failed request.
+      vi.stubGlobal("fetch", approved());
+      await act(async () => { window.dispatchEvent(new Event("focus")); });
+      await screen.findByTestId("distributional-figures");
+      expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+      cleanup();
+    }), { numRuns: 15 });
+  });
+
+  it("recovers after the initial publication request fails", async () => {
+    vi.stubGlobal("fetch", async () => { throw new TypeError("offline"); });
     render(<App />);
-    await screen.findByTestId("distributional-figures");
-    vi.stubGlobal("fetch", async () => { throw new TypeError("Failed to fetch"); });
+    await screen.findByText("Published results are unavailable");
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await screen.findByTestId("distributional-figures");
     expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
   });
 });

@@ -1,3 +1,4 @@
+import { areaProvenanceFixture } from "../../test/areaProvenanceFixture";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { fixtureFetch, fixtureJson, fixtureText, BASE_PATH, IN_DATA } from "../../test/publicationFixture";
@@ -15,9 +16,12 @@ async function flatSnapshot({ aliases = {} } = {}) {
   const manifest = fixtureJson("manifest.json");
   manifest.flat_files = { [file]: await sha256Hex(csv) };
   manifest.flat_aliases = aliases;
+  const { document, receipts } = await areaProvenanceFixture(manifest, manifest.flat_files, aliases);
+  const provenance = JSON.stringify(document);
+  manifest.flat_provenance_sha256 = await sha256Hex(provenance);
   const text = JSON.stringify(manifest);
-  const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files, aliases };
-  const overrides = { "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
+  const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files, aliases, flat_provenance_sha256: manifest.flat_provenance_sha256 };
+  const overrides = { ...receipts, "area_provenance.json": provenance, "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
   const loaded = await loadManifest(BASE_PATH, { fetchImpl: fixtureFetch({ overrides }) });
   return { manifest: loaded, index, overrides };
 }
@@ -143,5 +147,29 @@ describe("a page left open across a deploy", () => {
     const failure = await loadVerifiedFlat(file, { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) }).catch((error) => error);
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(SnapshotChangedError);
+  });
+});
+
+describe("area provenance binding through the production browser loader", () => {
+  it.each(["missing", "bytes", "artifact_sha256", "receipt_sha256", "execution_identity_sha256", "aliases"])("withholds area figures for changed provenance %s", async (change) => {
+    const original = await flatSnapshot({ aliases: { package_alias: "combined--alpha+beta" } });
+    const overrides = { ...original.overrides };
+    if (change === "missing") overrides["area_provenance.json"] = 404;
+    else if (change === "bytes") overrides["area_provenance.json"] += " ";
+    else {
+      // Rebinding a manifest/index pair cannot make another artifact identity
+      // match the area simulation's approved record, even with the same CSV.
+      const manifest = JSON.parse(overrides["manifest.json"]);
+      const index = JSON.parse(overrides["release-index.json"]);
+      if (change === "aliases") {
+        manifest.flat_aliases.package_alias = "alpha";
+        index.aliases.package_alias = "alpha";
+      } else manifest.combined["combined--alpha+beta"][change] = "e".repeat(64);
+      overrides["manifest.json"] = JSON.stringify(manifest);
+      index.manifest_sha256 = await sha256Hex(overrides["manifest.json"]);
+      overrides["release-index.json"] = JSON.stringify(index);
+    }
+    const fetchImpl = fixtureFetch({ overrides });
+    await expect(loadVerifiedFlatCsv(file, null, { basePath: BASE_PATH, fetchImpl })).rejects.toThrow(/provenance|approved calculation|aliases|manifest/i);
   });
 });

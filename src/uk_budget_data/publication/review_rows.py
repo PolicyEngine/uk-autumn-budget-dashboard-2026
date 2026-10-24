@@ -613,7 +613,11 @@ def planned_rows(
         )
     ]
     problems.extend(_no_kind_problems(where, raw))
-    from uk_budget_data.publication.release_index import AREA_PROVENANCE_FILE
+    from uk_budget_data.publication.release_index import (
+        AREA_PROVENANCE_FILE,
+        PROVENANCE_KIND,
+        area_provenance_document_problems,
+    )
 
     # What the area run was made from: ids, keys and digests, no figures
     provenance_path = data_root / AREA_PROVENANCE_FILE
@@ -626,10 +630,17 @@ def planned_rows(
             problems.extend(
                 _no_kind_problems(provenance_where, provenance_bytes)
             )
+            try:
+                provenance_document = json.loads(provenance_bytes)
+            except (ValueError, UnicodeError):
+                provenance_document = None
+            problems.extend(
+                area_provenance_document_problems(provenance_document)
+            )
             rows.append(
                 Row(
                     provenance_where,
-                    STATIC_ASSET,
+                    PROVENANCE_KIND,
                     sha256_bytes(provenance_bytes),
                     "What the area run was made from, for publish index",
                 )

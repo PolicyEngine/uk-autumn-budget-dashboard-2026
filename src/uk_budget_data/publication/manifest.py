@@ -217,6 +217,8 @@ class Manifest(_Strict):
     # The ids the bound area tables use for manifest keys (a package alias
     # for its combined run), as the area run recorded them
     flat_aliases: dict[str, str] = Field(default_factory=dict)
+    # The area sidecar is part of the same snapshot as the flat CSVs.
+    flat_provenance_sha256: Optional[str] = None
     revision: int = 0
     updated_at: Optional[str] = None
     basis: Optional[dict] = None

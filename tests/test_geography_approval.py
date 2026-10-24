@@ -117,6 +117,7 @@ def publication():
         world.reconcile(combined)
         stage(manifest, combined.path, **args)
         approve(manifest, combined_key(list(MEMBERS)), "Reviewer", **args)
+        m.save_manifest(manifest, world.data_root)
         yield world, manifest
     finally:
         world.close()
@@ -577,3 +578,88 @@ def test_selection_never_simulates_an_unapproved_id(
         else:
             plan = g._plan(parse_args(arguments))
             assert [reform.id for reform in plan.reforms] == chosen
+
+
+def test_area_provenance_records_the_approved_artifact_and_scenarios(
+    publication,
+):
+    from unittest.mock import patch
+    from tests.publication_support import RATE_PATH
+    from uk_budget_data.publication.release_index import identity_core
+
+    world, manifest = publication
+    definition = Reform(
+        id="alpha",
+        name="Alpha",
+        parameter_changes={RATE_PATH: {"2027": 0.22}},
+    )
+    with (
+        patch.object(g, "get_reform", lambda key: definition),
+        patch.object(g.publication_receipt, "code_revision", world.revision),
+    ):
+        provenance = g.area_provenance(
+            manifest,
+            manifest.model_dump_json(by_alias=True).encode(),
+            ["alpha"],
+            data_root=world.data_root,
+            years=[2027],
+        )
+    entry = manifest.measures["alpha"]
+    record = provenance["reforms"]["alpha"]
+    receipt = read_receipt(world.data_root / entry.artifact)
+    assert record["artifact"] == entry.artifact
+    for field in (
+        "artifact_sha256",
+        "receipt_sha256",
+        "outputs_sha256",
+        "execution_identity_sha256",
+    ):
+        assert record[field] == getattr(entry, field)
+    for side in ("baseline", "reform"):
+        assert record[side] == identity_core(
+            receipt["execution_receipt"][side]
+        )
+
+
+@given(
+    side=st.sampled_from(["baseline", "reform"]),
+    rate=st.integers(min_value=1, max_value=99).filter(
+        lambda value: value != 22
+    ),
+)
+@settings(max_examples=20, deadline=None)
+def test_changed_area_definition_is_refused_before_simulation(
+    publication, side, rate
+):
+    """Changing current parameters cannot borrow an earlier approval."""
+    from unittest.mock import Mock, patch
+    from tests.publication_support import RATE_PATH
+
+    world, manifest = publication
+    definition = Reform(
+        id="alpha",
+        name="Alpha",
+        parameter_changes={
+            RATE_PATH: {"2027": rate / 100 if side == "reform" else 0.22}
+        },
+        baseline_parameter_changes=(
+            {RATE_PATH: {"2027": rate / 100}} if side == "baseline" else None
+        ),
+    )
+    simulate = Mock(side_effect=AssertionError("simulation must not start"))
+    with (
+        patch.object(g, "get_reform", lambda key: definition),
+        patch.object(g.publication_receipt, "code_revision", world.revision),
+        patch.object(g, "simulate_reform", simulate),
+    ):
+        with pytest.raises(
+            ValueError, match=f"current {side} identity differs"
+        ):
+            g.area_provenance(
+                manifest,
+                manifest.model_dump_json(by_alias=True).encode(),
+                ["alpha"],
+                data_root=world.data_root,
+                years=[2027],
+            )
+    simulate.assert_not_called()
