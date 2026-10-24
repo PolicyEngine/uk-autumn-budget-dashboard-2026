@@ -80,6 +80,17 @@ describe("the page's verified publication catalogue", () => {
     expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 
+  it.each(["epsilon", "never_published"])("does not replace the requested unavailable selection %s with zeros", async (id) => {
+    window.history.replaceState({}, "", `/?policies=${id}`);
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    render(<App />);
+    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("policies")).toBe(id);
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    expect(document.body).not.toHaveTextContent("£0");
+  });
+
   it.each(["?tab=living", "?tab=methodology"])("keeps the shell and %s without a manifest", async (search) => {
     // Round-2 review: the views that need no Budget figures stay
     window.history.replaceState({}, "", `/${search}`);

@@ -663,3 +663,39 @@ def test_changed_area_definition_is_refused_before_simulation(
                 years=[2027],
             )
     simulate.assert_not_called()
+
+
+def test_area_command_refuses_a_changed_definition_before_building(
+    publication,
+):
+    import os
+    from unittest.mock import Mock, patch
+    from tests.publication_support import RATE_PATH
+
+    world, manifest = publication
+    definition = Reform(
+        id="alpha",
+        name="Alpha",
+        parameter_changes={RATE_PATH: {"2027": 0.35}},
+    )
+    plan = SimpleNamespace(
+        manifest=manifest,
+        manifest_bytes=manifest.model_dump_json(by_alias=True).encode(),
+        reforms=[definition],
+        years=[2027],
+        provenance=None,
+    )
+    parsed = SimpleNamespace(
+        manifest=world.data_root / "manifest.json",
+        dataset_kind="efrs",
+    )
+    simulate = Mock(side_effect=AssertionError("simulation must not start"))
+    with (
+        patch.dict(os.environ, {AUDIT_DIR_ENV: str(world.root / "private")}),
+        patch.object(g, "_plan", lambda parsed: plan),
+        patch.object(g, "get_reform", lambda key: definition),
+        patch.object(g.publication_receipt, "code_revision", world.revision),
+        patch.object(g, "simulate_reform", simulate),
+    ):
+        assert g._run_geography(parsed, certification_reason=None) == 1
+    simulate.assert_not_called()
