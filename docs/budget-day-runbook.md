@@ -592,7 +592,7 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
 uv run uk-budget-data generate --combined <all coded ids> --years 2026 2027 2028 2029 2030
 uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<digest>/
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
-uv run uk-budget-data publish check
+# Generate the area tables, then use the final index/check block below.
 ```
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
@@ -609,10 +609,10 @@ uv run uk-budget-data publish check
   uv run uk-budget-data publish check
   ```
 
-  `publish index` runs every gate, and refuses area tables made beside an earlier version of any entry (its artifact, receipt or outputs), tables not the ones the area run wrote, and figures for a staged, stale, withdrawn or not-computable entry. It writes `release-index.json` and the manifest's `flat_files` and `flat_aliases`: the manifest's new revision, the SHA-256 of each file, and the manifest key the area run's package alias stands for. The page shows the area views only while the index matches the manifest it loaded and each file's bytes match. With no index, only the area views are unavailable. The `publish check` in the block above fails while an older index exists; this one is the check that counts.
+  `publish index` runs every gate, and refuses area tables made beside an earlier version of any entry (its artifact, receipt or outputs), tables not the ones the area run wrote, and figures for a staged, stale, withdrawn or not-computable entry. It writes `release-index.json` and the manifest's `flat_files` and `flat_aliases`: the manifest's new revision, the SHA-256 of each file, and the manifest key the area run's package alias stands for. The page shows the area views only while the index matches the manifest it loaded and each file's bytes match. With no index, only the area views are unavailable. Run the final `publish check` only after the index has been rebuilt for the last manifest change.
   - **Before simulating**, the area run compares the actual baseline and reform scenario identities with the approved receipts. Any parameter, structural code or baseline mismatch stops before simulation. Its closed-schema `area_provenance.json` records the approved artifact, receipt, execution identity and table digests. `publish index` binds its bytes as `flat_provenance_sha256`; publication, public-file and browser checks verify that record and its aliases against the approved receipts. Review this sidecar as `publication_provenance`, and each CSV as a disclosure table.
 - **An open page follows the publication.** On focus, on becoming visible and every five minutes the page checks `manifest.json`. A newer one replaces the figures with its own verified ones, with a notice; a missing, invalid or unreachable one takes them away. A later successful check restores verified results without a page reload. So a withdrawal reaches readers with the page open within five minutes, or when they return to the tab.
-- **The OBR comparison is unavailable this year.** `obr_comparison.csv` is built from `data_inputs/obr_estimates.csv`, which holds the November 2025 costings under ids the 2026 registry reuses, so nothing binds it and the page shows the comparison as unavailable. Showing it needs a 2026 OBR source.
+- **The OBR comparison is unavailable this year.** `obr_comparison.csv` is built from `data_inputs/obr_estimates.csv`, which holds the November 2025 costings rather than this Budget, so nothing binds it and the page shows the comparison as unavailable. Showing it needs a 2026 OBR source.
 - **Before simulating**, the combined run is checked: every parameter each member sets alone must hold in the combination. Conflicting measures are refused, naming both.
 - **Approval** needs every member approved.
 - **Review rows.** As at G2, before the pull request is opened: `uv run uk-budget-data publish review-rows --reviewer <name>`, with `--staged-by <Integrator>` while any provisional or not-computable entry is listed. The review list goes in the same commit as the artifacts. Each row is the Reconciler's attestation that they reviewed those bytes.
