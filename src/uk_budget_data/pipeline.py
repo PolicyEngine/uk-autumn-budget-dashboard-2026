@@ -115,8 +115,11 @@ class ReformProcessor:
         self.income_curve_calc = IncomeCurveCalculator(
             num_points=self.config.income_curve_points,
         )
+        from uk_budget_data.publication.tables import scatter_basis_year
+
         self.household_scatter_calc = HouseholdScatterCalculator(
             max_income=self.config.household_scatter_max_income,
+            basis_year=scatter_basis_year(self.config.years),
         )
         self.constituency_calc = ConstituencyCalculator()
         self.demographic_calc = DemographicConstituencyCalculator()
@@ -662,18 +665,34 @@ def household_scatter_rows(
     weights,
     survey_households,
     max_income: float,
+    reference_incomes=None,
+    basis_year: Optional[int] = None,
 ) -> list[dict]:
     """One year's household rows for the binned scatter, never published.
 
-    Households with a baseline net income from £0 to ``max_income`` are
-    kept, as the household scatter calculator keeps them; each row names
-    its survey household so that ``bin_scatter`` counts those.
+    ``reference_incomes`` are the same households' baseline net incomes in
+    ``basis_year``: each row carries its household's, and ``bin_scatter``
+    bands it by that, so a household sits in the same income band in every
+    year. Households whose basis-year income is from £0 to ``max_income``
+    are kept, in every year alike, so every year holds the same households.
+    Without ``reference_incomes`` a year is banded and kept by its own
+    baseline income. Each row names its survey household so that
+    ``bin_scatter`` counts those.
     """
+    if reference_incomes is None:
+        reference_incomes, basis_year = baseline_incomes, year
+    elif basis_year is None:
+        raise ValueError("reference_incomes need their basis_year")
     rows = []
-    for base, new, weight, survey in zip(
-        baseline_incomes, reform_incomes, weights, survey_households
+    for base, new, weight, survey, reference in zip(
+        baseline_incomes,
+        reform_incomes,
+        weights,
+        survey_households,
+        reference_incomes,
+        strict=True,
     ):
-        if 0 <= base <= max_income:
+        if 0 <= reference <= max_income:
             rows.append(
                 {
                     "reform_id": reform.id,
@@ -683,6 +702,8 @@ def household_scatter_rows(
                     "income_change": float(new - base),
                     "household_weight": float(weight),
                     "survey_household": survey,
+                    "reference_income": float(reference),
+                    "income_basis_year": int(basis_year),
                 }
             )
     return rows
@@ -702,11 +723,15 @@ def generate_household_scatter(
     household_scatter`` calls it.
     """
     from uk_budget_data.geography import household_values
-    from uk_budget_data.publication.tables import bin_scatter
+    from uk_budget_data.publication.tables import (
+        bin_scatter,
+        scatter_basis_year,
+    )
 
     reforms = reforms or get_autumn_budget_2026_reforms()
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
+    basis_year = scatter_basis_year(config.years)
     binned = []
     for reform in reforms:
         baseline = data_limits.watched_build(
@@ -720,6 +745,11 @@ def generate_household_scatter(
         survey = scatter_survey_households(baseline, dataset_path)
         rows = []
         with data_limits.observing(baseline, reformed) as observed:
+            # Every year's households are banded by their basis-year
+            # baseline income, so each stays in its income band.
+            reference = household_values(
+                baseline, "household_net_income", basis_year
+            )
             for year in config.years:
                 rows.extend(
                     household_scatter_rows(
@@ -734,6 +764,8 @@ def generate_household_scatter(
                         household_values(baseline, "household_weight", year),
                         survey,
                         config.household_scatter_max_income,
+                        reference_incomes=reference,
+                        basis_year=basis_year,
                     )
                 )
         binned.extend(bin_scatter(rows))
@@ -759,6 +791,7 @@ def generate_household_scatter(
             "change_band",
             "change_band_upper",
             "households",
+            "income_basis_year",
         ],
     )
     path = config.output_dir / HOUSEHOLD_SCATTER_FILE
