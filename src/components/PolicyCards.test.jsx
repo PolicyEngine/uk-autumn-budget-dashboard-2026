@@ -10,7 +10,7 @@ import {
 
 describe("the candidate measures' config", () => {
   it("gives every measure a colour, a legend place and a card", () => {
-    expect(POLICIES).toHaveLength(10);
+    expect(POLICIES).toHaveLength(9);
     expect(new Set(ALL_POLICY_NAMES)).toEqual(new Set(POLICIES.map((p) => p.name)));
     for (const policy of POLICIES) {
       expect(POLICY_COLORS[policy.name]).toMatch(/^#[0-9A-F]{6}$/);

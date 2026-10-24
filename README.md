@@ -178,7 +178,7 @@ unit). Each slow unit added lengthens the run.
 
 ## Available reforms
 
-The dashboard analyses ten candidate measures for the Autumn Budget on 28 October 2026, modelled before the Budget from reporting up to 24 October; none is announced policy. Each is compared against current law in policyengine-uk (`src/uk_budget_data/reforms.py`; modifiers in `budget_measures.py`). `autumn_budget_2026_combined` simulates all ten together.
+The dashboard analyses nine candidate measures for the Autumn Budget on 28 October 2026, modelled before the Budget from reporting up to 24 October; none is announced policy. Each is compared against current law in policyengine-uk (`src/uk_budget_data/reforms.py`; modifiers in `budget_measures.py`). `autumn_budget_2026_combined` simulates all nine together. A tenth candidate, the £2,000 salary sacrifice cap brought forward to April 2028, was dropped on 24 October: on policyengine-uk 2.132.6 its revenue included spurious income tax, because adjusted net income does not deduct the excess redirected into the pension.
 
 | Reform | Description |
 |--------|-------------|
@@ -189,7 +189,6 @@ The dashboard analyses ten candidate measures for the Autumn Budget on 28 Octobe
 | `employer_ni_relief_under_25s` | No employer NI up to the upper earnings limit for employees under 25, from April 2027 |
 | `threshold_freeze_2031_32` | Personal allowance and basic rate band frozen in 2031-32 |
 | `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit from £1m to £500,000, from April 2027 |
-| `salary_sacrifice_cap_2028` | The £2,000 salary sacrifice cap from April 2028 |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 repayment threshold uprated by RPI from April 2027 |
 

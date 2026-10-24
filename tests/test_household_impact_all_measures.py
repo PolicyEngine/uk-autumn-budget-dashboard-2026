@@ -2,7 +2,7 @@
 
 The household route runs each side as a ``policyengine_uk.Simulation`` with
 the side's ``Scenario`` (parameter changes and simulation modifiers), so all
-ten measures apply to a household, the six with formula modifiers included.
+nine measures apply to a household, the six with formula modifiers included.
 
 - Hand checks: each modifier measure's change is recomputed from the
   parameters and the spending entered.
