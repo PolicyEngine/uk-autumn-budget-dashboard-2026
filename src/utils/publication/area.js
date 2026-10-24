@@ -76,3 +76,22 @@ export function assertAreaProvenance(document, manifest, files, aliases) {
   }
   if (!sameMap(expectedAliases, aliases)) throw new Error("Area aliases differ from verified provenance");
 }
+
+
+/** Every area CSV row must belong to an approved calculation recorded by the area run. */
+export function assertAreaRows(rows, provenance) {
+  const [header, ...records] = rows;
+  const columns = header?.map((name, index) => index === 0 ? name.replace(/^\uFEFF/, "") : name);
+  const identityColumns = columns?.filter((name) => ["reform_id", "reform"].includes(name)) ?? [];
+  if (identityColumns.length !== 1 || !isMap(provenance?.reforms)) {
+    throw new Error("Area CSV has no unambiguous reform column or verified provenance");
+  }
+  const index = columns.indexOf(identityColumns[0]);
+  for (const row of records) {
+    // CSV readers ignore empty lines; an empty field in a populated row is invalid.
+    if (row.length === 1 && row[0] === "") continue;
+    if (row.length !== columns.length || !row[index] || !Object.hasOwn(provenance.reforms, row[index])) {
+      throw new Error("Area CSV reform has no verified provenance");
+    }
+  }
+}

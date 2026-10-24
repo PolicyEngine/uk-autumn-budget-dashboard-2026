@@ -20,7 +20,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import canonicalize from "canonicalize";
-import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt } from "../src/utils/publication/area.js";
+import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt, assertAreaRows } from "../src/utils/publication/area.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
 const CURRENT_RELEASE = "uk-autumn-budget-2026";
@@ -88,6 +88,7 @@ export function checkReleaseIndex(root) {
     const files = index.files;
     if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");
+    let verifiedProvenance = null;
     const provenancePath = join(directory, AREA_PROVENANCE_FILE);
     if (!/^[0-9a-f]{64}$/.test(index.flat_provenance_sha256 ?? "") ||
         index.flat_provenance_sha256 !== manifest.flat_provenance_sha256 ||
@@ -101,6 +102,7 @@ export function checkReleaseIndex(root) {
         try {
           const provenance = JSON.parse(provenanceBytes);
           assertAreaProvenance(provenance, manifest, files, index.aliases);
+          verifiedProvenance = provenance;
           for (const record of Object.values(provenance.reforms)) {
             const receiptPath = join(directory, record.artifact, "receipt.json");
             if (lstatSync(receiptPath).isSymbolicLink()) throw new Error("area receipt is a symbolic link");
@@ -125,8 +127,14 @@ export function checkReleaseIndex(root) {
       const path = join(directory, name);
       if (!existsSync(path) || !lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) {
         problems.push(`release index: ${name}: not a regular file`);
-      } else if (digest(readFileSync(path)) !== expected) {
-        problems.push(`release index: ${name}: bytes differ`);
+      } else {
+        const content = readFileSync(path);
+        if (digest(content) !== expected) {
+          problems.push(`release index: ${name}: bytes differ`);
+        } else if (verifiedProvenance) {
+          try { assertAreaRows(parseCsv(content.toString("utf8")), verifiedProvenance); }
+          catch (error) { problems.push(`release index: ${name}: ${error.message}`); }
+        }
       }
     }
   } catch {

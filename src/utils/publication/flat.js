@@ -1,7 +1,8 @@
 import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
 import { loadManifest } from "./load";
 import { assertCurrentRelease } from "./release";
-import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaReceipt } from "./area";
+import { parseCsv } from "./csv";
+import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaReceipt, assertAreaRows } from "./area";
 
 export const RELEASE_INDEX_FILE = "release-index.json";
 export const RELEASE_INDEX_SCHEMA = "uk-budget-release-index/v1";
@@ -96,7 +97,9 @@ export async function loadVerifiedFlat(fileName, catalogue, { basePath = process
   if (!response.ok) throw new Error(`${fileName} is unavailable`);
   const bytes = await response.arrayBuffer();
   if (await sha256Hex(bytes) !== files[fileName]) throw new Error(`${fileName} does not match the publication snapshot`);
-  return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), aliases };
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  assertAreaRows(parseCsv(text), provenance);
+  return { text, aliases };
 }
 
 /** The text of one flat view file, verified as loadVerifiedFlat does. */

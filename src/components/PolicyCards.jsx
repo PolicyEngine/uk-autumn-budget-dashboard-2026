@@ -1,8 +1,7 @@
-import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
-
 const GROUPS = [
-  ["Raises revenue", true],
-  ["Costs revenue", false],
+  ["Raises revenue", "revenue"],
+  ["Costs revenue", "cost"],
+  ["Other measures", "neutral"],
 ];
 
 /**
@@ -13,15 +12,10 @@ const GROUPS = [
  * figures stay in the charts.
  */
 function PolicyCards({ policies, selectedPolicies }) {
-  return GROUPS.map(([heading, raises]) => {
-    const items = ALL_POLICY_NAMES.map((name) =>
-      policies.find((policy) => policy.name === name),
-    ).filter(
-      (policy) =>
-        policy &&
-        selectedPolicies.includes(policy.id) &&
-        REVENUE_RAISING_NAMES.has(policy.name) === raises,
-    );
+  return GROUPS.map(([heading, direction]) => {
+    const items = policies.filter((policy) =>
+      policy.displayable === true && selectedPolicies.includes(policy.id) && policy.direction === direction,
+    ).sort((a, b) => a.order - b.order);
     if (!items.length) return null;
     return (
       <div key={heading} className="policy-group">
@@ -32,22 +26,22 @@ function PolicyCards({ policies, selectedPolicies }) {
               <p className="policy-card-name">
                 <span
                   className="policy-card-swatch"
-                  style={{ background: POLICY_COLORS[policy.name] }}
+                  style={{ background: policy.color }}
                   aria-hidden="true"
                 />
-                {policy.name}
+                {policy.label ?? policy.name}
               </p>
-              <p className="policy-card-summary">{policy.summary}</p>
-              <dl className="policy-card-facts">
-                <div className="policy-chip">
+              <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
+              {(policy.starts || policy.type) && <dl className="policy-card-facts">
+                {policy.starts && <div className="policy-chip">
                   <dt>Starts</dt>
                   <dd>{policy.starts}</dd>
-                </div>
-                <div className="policy-chip">
+                </div>}
+                {policy.type && <div className="policy-chip">
                   <dt>Type</dt>
                   <dd>{policy.type}</dd>
-                </div>
-              </dl>
+                </div>}
+              </dl>}
               {(policy.details || policy.source) && (
                 <div className="policy-card-foot">
                   {policy.details && (

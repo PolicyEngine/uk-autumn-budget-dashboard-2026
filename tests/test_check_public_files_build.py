@@ -215,3 +215,82 @@ def test_this_repository_passes_the_build_check():
         [node, str(SCRIPT), str(REPO)], capture_output=True, text=True
     )
     assert result.returncode == 0, result.stdout.splitlines()[:-1]
+
+
+@needs_node
+@pytest.mark.parametrize("area_id", ["alpha", "beta"])
+def test_build_requires_every_area_csv_id_in_verified_provenance(tree, area_id):
+    """An approved national key cannot stand in for a missing area proof."""
+    fixture = REPO / "src/test/fixtures/publication"
+    manifest = json.loads((fixture / "manifest.json").read_text())
+    entry = manifest["measures"]["alpha"]
+    receipt_text = (fixture / entry["artifact"] / "receipt.json").read_text()
+    receipt = json.loads(receipt_text)
+    fields = (
+        "artifact",
+        "artifact_sha256",
+        "receipt_sha256",
+        "outputs_sha256",
+        "execution_identity_sha256",
+    )
+    record = {field: entry[field] for field in fields}
+    record["key"] = "alpha"
+    for side in ("baseline", "reform"):
+        record[side] = {
+            field: receipt["execution_receipt"][side].get(field)
+            for field in ("kind", "representation", "reform_sha256", "binding")
+        }
+    table = f"level,area_code,reform,year,value\nregion,E12000001,{area_id},2032,12\n"
+    table_digest = hashlib.sha256(table.encode()).hexdigest()
+    files = {"regional.csv": table_digest}
+    provenance = {
+        "schema": "uk-budget-area-provenance/v1",
+        "manifest_revision": manifest["revision"],
+        "manifest_sha256": "a" * 64,
+        "files": files,
+        "reforms": {"alpha": record},
+    }
+    provenance_text = json.dumps(provenance)
+    provenance_digest = hashlib.sha256(provenance_text.encode()).hexdigest()
+    manifest.update(
+        flat_files=files,
+        flat_aliases={},
+        flat_provenance_sha256=provenance_digest,
+    )
+    manifest_text = json.dumps(manifest)
+    index = {
+        "schema": "uk-budget-release-index/v1",
+        "release": manifest["release"],
+        "budget": manifest["budget"],
+        "manifest_revision": manifest["revision"],
+        "manifest_sha256": hashlib.sha256(manifest_text.encode()).hexdigest(),
+        "files": files,
+        "aliases": {},
+        "flat_provenance_sha256": provenance_digest,
+    }
+    for name, text in {
+        "manifest.json": manifest_text,
+        "release-index.json": json.dumps(index),
+        "area_provenance.json": provenance_text,
+        "regional.csv": table,
+        f"{entry['artifact']}/receipt.json": receipt_text,
+    }.items():
+        write(tree, f"public/data/{name}", text)
+    source = (
+        f"import {{ checkReleaseIndex }} from {json.dumps(SCRIPT.as_uri())};\n"
+        f"console.log(JSON.stringify(checkReleaseIndex({json.dumps(str(tree))})));\n"
+    )
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", source],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    problems = json.loads(result.stdout)
+    assert problems == (
+        []
+        if area_id == "alpha"
+        else [
+            "release index: regional.csv: Area CSV reform has no verified provenance"
+        ]
+    )

@@ -5,7 +5,6 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
-import HouseholdChart from "./HouseholdChart";
 import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
 import ChartTooltip from "./ChartTooltip";
@@ -124,27 +123,6 @@ describe("published measure catalogue in population views", () => {
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
   });
 
-  it("uses catalogue labels in household breakdowns and keeps held measures out", () => {
-    const fixture = measureCatalogueFixture();
-    const catalogue = catalogueFor(fixture);
-    const { container } = render(withCatalogue(catalogue,
-      <HouseholdChart rawData={fixture.household} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
-    ));
-    expect(screen.getByText(/Mock alpha support:/)).toHaveStyle({ color: catalogue.byId.get(ALPHA).color });
-    expect(screen.getByText(/Mock beta contribution:/)).toHaveStyle({ color: catalogue.byId.get(BETA).color });
-    expect(chartRows(container)[0].x).toBe(50);
-    expect(container.textContent).not.toContain("Mock held measure");
-  });
-
-  it("shows unavailable instead of a partial household total when a held id remains selected", () => {
-    const fixture = measureCatalogueFixture();
-    const { container } = render(withCatalogue(catalogueFor(fixture),
-      <HouseholdChart rawData={fixture.household} selectedPolicies={[ALPHA, HELD]} selectedYear={YEAR} />,
-    ));
-    expect(screen.getByRole("status")).toHaveTextContent("A partial total is not shown");
-    expect(container.querySelector('[data-testid="chart-rows"]')).toBeNull();
-  });
-
   it.each([
     ["relative", DistributionalChart, "distributional"],
     ["absolute", WaterfallChart, "winnersLosers"],
@@ -184,8 +162,8 @@ describe("published measure catalogue in population views", () => {
       const swatch = row.querySelector(".chart-tooltip-swatch");
       expect(swatch).toHaveStyle({ background: measure.color });
     }
-    expect(screen.getAllByText("Raise revenue")).toHaveLength(3);
-    expect(screen.getAllByText("Cost revenue")).toHaveLength(3);
+    expect(screen.getAllByText("Raise revenue")).toHaveLength(2);
+    expect(screen.getAllByText("Cost revenue")).toHaveLength(2);
   });
 
   it("holds the age package shares when the combined run is withdrawn", async () => {

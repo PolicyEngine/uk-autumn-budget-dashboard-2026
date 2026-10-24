@@ -7,21 +7,21 @@ import { sha256Hex } from "./digest";
 import { loadVerifiedFlat, loadVerifiedFlatCsv, RELEASE_INDEX_SCHEMA } from "./flat";
 import { budgetChartData, loadDashboard } from "../loadDashboard";
 
-// TEST DATA ONLY: a synthetic area table's bytes (the loader checks bytes,
-// not columns)
+// TEST DATA ONLY: synthetic area bytes, including a reform identity column.
 const file = "regional.csv";
 const csv = "level,area_code,reform,year,value\nregion,E12000001,alpha,2032,12\n";
 
-async function flatSnapshot({ aliases = {} } = {}) {
+async function flatSnapshot({ aliases = {}, csvText = csv, provenanceIds = null } = {}) {
   const manifest = fixtureJson("manifest.json");
-  manifest.flat_files = { [file]: await sha256Hex(csv) };
+  manifest.flat_files = { [file]: await sha256Hex(csvText) };
   manifest.flat_aliases = aliases;
   const { document, receipts } = await areaProvenanceFixture(manifest, manifest.flat_files, aliases);
+  if (provenanceIds) document.reforms = Object.fromEntries(Object.entries(document.reforms).filter(([id]) => provenanceIds.includes(id)));
   const provenance = JSON.stringify(document);
   manifest.flat_provenance_sha256 = await sha256Hex(provenance);
   const text = JSON.stringify(manifest);
   const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files, aliases, flat_provenance_sha256: manifest.flat_provenance_sha256 };
-  const overrides = { ...receipts, "area_provenance.json": provenance, "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
+  const overrides = { ...receipts, "area_provenance.json": provenance, "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csvText };
   const loaded = await loadManifest(BASE_PATH, { fetchImpl: fixtureFetch({ overrides }) });
   return { manifest: loaded, index, overrides };
 }
@@ -151,6 +151,16 @@ describe("a page left open across a deploy", () => {
 });
 
 describe("area provenance binding through the production browser loader", () => {
+  it("rejects an approved CSV measure that the verified area run never recorded", async () => {
+    const csvText = csv + csv.split("\n")[1].replace(",alpha,", ",beta,") + "\n";
+    const { manifest, overrides } = await flatSnapshot({ csvText, provenanceIds: ["alpha"] });
+    // The manifest, index, file bytes, area sidecar and approved alpha
+    // receipt all agree. Beta is approved nationally, but has no area proof.
+    await expect(loadVerifiedFlatCsv(file, { manifest }, {
+      basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }),
+    })).rejects.toThrow(/reform has no verified provenance/);
+  });
+
   it.each(["missing", "bytes", "artifact_sha256", "receipt_sha256", "execution_identity_sha256", "aliases"])("withholds area figures for changed provenance %s", async (change) => {
     const original = await flatSnapshot({ aliases: { package_alias: "combined--alpha+beta" } });
     const overrides = { ...original.overrides };
