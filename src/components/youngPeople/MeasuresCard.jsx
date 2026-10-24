@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -28,17 +28,28 @@ import {
   legendWrapperStyle,
   fiscalYearTick,
 } from "../../utils/chartTheme";
-import { isPublished } from "../../utils/ageImpact";
+import PillSelect from "../PillSelect";
+import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds, wrapWords } from "./youngPeopleData";
 
-/** The two groups each measure is shown for. */
-export const GROUPS = [
-  { key: "young", label: "Aged 16 to 24", color: "#319795" },
+/** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
+export const groupLabel = (band) => {
+  const label = AGE_BANDS.find((candidate) => candidate.key === band)?.label ?? band;
+  return `Aged ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+};
+
+/** The two bars per measure: the chosen age group, and all ages. */
+export const groupsFor = (band) => [
+  { key: "group", label: groupLabel(band), color: "#319795" },
   { key: "all", label: "All ages", color: "#9CA3AF" },
 ];
 
-export const MEASURES_DESCRIPTION =
-  "Each selected policy's own average change in household net income per person, in pounds a year, for young people aged 16 to 24 and for people of all ages. Largest effect on young people first.";
+export const measuresDescription = (band) => {
+  const label = groupLabel(band).replace(/^Aged /, "");
+  return `Each selected policy's own average change in household net income per person, in pounds a year, for people aged ${label} and for people of all ages. Largest effect on the chosen age group first.`;
+};
+
+const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));
 
 const UNIT = "Average change per person (£ a year)";
 
@@ -66,12 +77,15 @@ function MeasureTick({ x, y, payload, maxChars }) {
 }
 
 /**
- * "Which measures matter most": each selected policy's mean change for
- * young people aged 16 to 24 beside its all-ages figure, in the selected
- * year. Every bar is one policy's own run, so nothing is added up.
+ * "Which measures matter most": each selected policy's mean change for a
+ * chosen age group (16 to 24 at first) beside its all-ages figure, in the
+ * selected year. Every bar is one policy's own run, so nothing is added up.
  */
 function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
+  const [band, setBand] = useState(YOUNG_BAND);
+  const GROUPS = groupsFor(band);
+  const description = measuresDescription(band);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
   const { shown, noEffect, suppressed } = measureComparison(
@@ -79,14 +93,15 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     policies,
     selectedPolicies,
     selectedYear,
+    band,
   );
-  const values = shown.flatMap((point) => [point.young, point.all]);
+  const values = shown.flatMap((point) => [point.group, point.all]);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const title = `Effect of each policy, ${yearLabel}`;
   const exportOptions = {
     title,
-    description: MEASURES_DESCRIPTION,
+    description,
     logo: CHART_LOGO,
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
@@ -101,7 +116,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         "£ per person per year; each policy's own effect; each person counts their household's change in net income (not equivalised)",
       columns: [
         { key: "name", label: "Policy" },
-        { key: "young", label: "Aged 16 to 24", decimals: 2 },
+        { key: "group", label: GROUPS[0].label, decimals: 2 },
         { key: "all", label: "All ages", decimals: 2 },
       ],
       rows: published ? shown : [],
@@ -109,7 +124,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     });
   const download = {
     chartRef,
-    name: `young-people-change-by-policy-${selectedYear}`,
+    name: `young-people-change-by-policy-${band.replace("+", "-plus")}-${selectedYear}`,
     exportOptions,
     csv: csvText,
     published: published && shown.length > 0,
@@ -123,11 +138,22 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           <h3>
             <NoBreakYear text={title} />
           </h3>
-          <p className="chart-description">{MEASURES_DESCRIPTION}</p>
+          <p className="chart-description">{description}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={chartRef}>
+      <div className="chart-controls young-people-controls">
+        <PillSelect
+          variant="light"
+          prefix="Compare"
+          name="Age group compared with all ages"
+          value={band}
+          onChange={setBand}
+          options={BAND_OPTIONS}
+          stableWidth
+        />
+      </div>
+      <div ref={chartRef} className="young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : shown.length ? (

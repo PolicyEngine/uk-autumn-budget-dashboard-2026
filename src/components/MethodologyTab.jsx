@@ -5,7 +5,7 @@ import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
-import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
+import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
@@ -416,10 +416,29 @@ function MethodologyTab({ onShowTab }) {
           <div className="card method-card">
             <FactList
               items={[
-                ["Age bands", AGE_BANDS.map((band) => band.label).join(", ") + "."],
+                [
+                  "Age bands",
+                  <>
+                    {AGE_BANDS.map((band) => band.label).join(", ")}, and all ages. The adult
+                    bands are the Office for National Statistics' standard Labour Force
+                    Survey age groups (
+                    <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
+                      {AGE_BAND_SOURCE.label}
+                    </a>
+                    , which splits 16 to 24 into 16 to 17 and 18 to 24). 16 to 24 is the
+                    ONS labour-market definition of young people. Children are under 16, as
+                    in ONS population statistics and DWP&apos;s Households Below Average
+                    Income; unlike HBAI, the bands count 16- to 19-year-olds in full-time non-advanced
+                    education with 16 to 24, not as children.
+                  </>,
+                ],
+                [
+                  "Single year of age",
+                  `Ages 0 to ${SINGLE_AGE_TOP - 1} one year at a time, then ${SINGLE_AGE_TOP} and over together, as in the ONS mid-year population estimates.`,
+                ],
                 [
                   "Who counts",
-                  `People in households with an income decile. An age band with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                  `People in households with an income decile. An age band or single year of age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
                 ],
                 [
                   "Better or worse off",
