@@ -138,7 +138,7 @@ Dashboard, 16 October 2026, Vahid Ahmadi and Max Ghenis. https://www.policyengin
 
 > Replacing the State Pension triple lock from 2030, across 50,000 paths of prices and earnings:
 > • Saving in 2039-40: £11.1bn gross, £7.9bn net of tax and benefits
-> • Full new State Pension £931 a year lower on average
+> • Full new State Pension £931/yr lower on average
 > • 27% of households with less income
 > Provisional until the Budget.
 
