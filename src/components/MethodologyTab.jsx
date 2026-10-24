@@ -77,6 +77,11 @@ const FLOW = [
 ];
 
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
+const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
+const SCATTER_CHANGE_EDGES = SCATTER_BINS.change_edges
+  .filter((edge) => edge > 0)
+  .map(pounds)
+  .join(", ");
 const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /** A section of the view: its title outside the cards, then its cards. */
@@ -356,11 +361,11 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Household scatter bands",
-                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in ${pounds(SCATTER_BINS.change_band_width)} bands from -${pounds(-SCATTER_BINS.change_min)} to ${pounds(SCATTER_BINS.change_max)}.`,
+                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart's change axis is symmetric-logarithmic, so the small bands near zero and the large ones both show.`,
                 ],
                 [
-                  "Gain, loss, little change",
-                  `A group is a gain when its whole change band is above £0, a loss when it is at or below £0, and little change in the £0 to ${pounds(SCATTER_BINS.change_band_width)} band.`,
+                  "Gain, loss, no change",
+                  "A group is no change when its households' net income changes by less than £1 either way, a gain from £1 up and a loss from −£1 down. Gain bands include their lower edge and loss bands their upper one, so the bands mirror about zero.",
                 ],
                 [
                   "Disclosure",

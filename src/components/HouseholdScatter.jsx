@@ -12,11 +12,16 @@ import {
   YAxis,
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
-import { SCATTER_BINS } from "../utils/publication/scatter";
+import {
+  CHANGE_MAX,
+  CHANGE_MIN,
+  SCATTER_BINS,
+  toChangeAxis,
+} from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
+  CHANGE_AXIS_DOMAIN,
   changeBandLabel,
-  EDGE_STRIP,
   HOUSEHOLDS_PER_DOT,
   incomeBandLabel,
   scatterCsv,
@@ -73,7 +78,7 @@ function StripRect({ x, y, width, height, fill, fillOpacity, title }) {
 const KEY = [
   { label: "Gain", color: "#319795" },
   { label: "Loss", color: "#D97706" },
-  { label: "Little change", color: "#9CA3AF" },
+  { label: "No change", color: "#9CA3AF" },
 ];
 
 function CellTooltip({ active, payload }) {
@@ -90,7 +95,9 @@ function CellTooltip({ active, payload }) {
       <div className="chart-tooltip-row">
         <span className="chart-tooltip-swatch" style={{ background: colourFor(point) }} />
         <span className="chart-tooltip-name">Change a year</span>
-        <span className="chart-tooltip-value">{changeBandLabel(point.changeBand)}</span>
+        <span className="chart-tooltip-value">
+          {changeBandLabel(point.changeBand, point.changeBandUpper)}
+        </span>
       </div>
     </div>
   );
@@ -98,10 +105,13 @@ function CellTooltip({ active, payload }) {
 
 /**
  * Households by baseline net income and the change in it, from the binned
- * cells in household_scatter_binned.csv (£5,000 income band by £100 change
- * band). Each cell is drawn as about one dot per 20,000 weighted households,
- * placed at random (deterministically) inside the cell, so the cloud reads
- * as density; the open-ended outer change bands sit in shaded strips beyond
+ * cells in household_scatter_binned.csv (£5,000 income bands by change
+ * bands narrow near zero, from contract.scatter_bins.change_edges). The
+ * change axis is symlog, so the small bands near zero and the large ones
+ * both read. Each cell is drawn as about one dot per 20,000 weighted
+ * households, placed at random (deterministically) inside the cell on that
+ * axis, so the cloud reads as density; the no-change band is a line of dots
+ * at £0, and the open-ended outer change bands sit in shaded strips beyond
  * the plotted range. No survey household is shown on its own (#30): a dot's
  * tooltip gives its cell.
  *
@@ -128,20 +138,30 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
   ) {
     incomeTicks.push(value);
   }
-  const bins = SCATTER_BINS;
-  // The plotted range stops one band inside each end; the outer bands,
-  // which hold every larger change, sit in a marked strip beyond it.
-  const innerMax = bins.change_max - bins.change_band_width;
-  const innerMin = bins.change_min + bins.change_band_width;
-  const changeDomain = [innerMin - EDGE_STRIP, innerMax + EDGE_STRIP];
+  // The change axis is symlog: positions are toChangeAxis(£). The outer
+  // bands, which hold every change beyond ±£5,000, sit in a marked strip
+  // beyond the plotted range.
+  const innerMax = toChangeAxis(CHANGE_MAX);
+  const innerMin = toChangeAxis(CHANGE_MIN);
+  const changeDomain = CHANGE_AXIS_DOMAIN;
   // The strips' own ticks, at their middles, name them as open-ended
-  const upperTick = innerMax + EDGE_STRIP / 2;
-  const lowerTick = innerMin - EDGE_STRIP / 2;
-  const innerTicks = [-1500, -1000, -500, 0, 500, 1000, 1500];
+  const upperTick = (innerMax + changeDomain[1]) / 2;
+  const lowerTick = (innerMin + changeDomain[0]) / 2;
+  const tickPounds = narrow
+    ? [0, 50, 100, 500, 1000]
+    : [0, 10, 50, 100, 250, 500, 1000, 2500];
+  const innerPounds = [
+    ...tickPounds.slice(1).map((value) => -value).reverse(),
+    ...tickPounds,
+  ];
+  const innerTicks = innerPounds.map((value) => toChangeAxis(value));
+  const poundsAt = new Map(
+    [...innerPounds, CHANGE_MIN, CHANGE_MAX].map((value) => [toChangeAxis(value), value]),
+  );
   const changeTick = (value) => {
-    if (value >= upperTick) return `≥ ${pounds(innerMax)}`;
-    if (value <= lowerTick) return `≤ ${pounds(innerMin)}`;
-    return pounds(value);
+    if (value === upperTick) return `≥ ${pounds(CHANGE_MAX)}`;
+    if (value === lowerTick) return `≤ ${pounds(CHANGE_MIN)}`;
+    return pounds(poundsAt.get(value) ?? 0);
   };
   const dots =
     view.kind === "points"
@@ -152,10 +172,11 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
     lower: dots.some((dot) => dot.edge === "lower"),
   };
   // A strip's tick only when the strip is drawn
+  // and, without a strip, the edge itself (±£5,000) on wide screens
   const changeTicks = [
-    ...(hasEdge.lower ? [lowerTick] : []),
+    ...(hasEdge.lower ? [lowerTick] : narrow ? [] : [innerMin]),
     ...innerTicks,
-    ...(hasEdge.upper ? [upperTick] : []),
+    ...(hasEdge.upper ? [upperTick] : narrow ? [] : [innerMax]),
   ];
   const dotRadius = narrow ? 1.6 : 2;
 
@@ -226,7 +247,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
                 stroke="none"
                 ifOverflow="hidden"
                 shape={(props) => (
-                  <StripRect {...props} title={`Gains of ${pounds(innerMax)} or more`} />
+                  <StripRect {...props} title={`Gains of ${pounds(CHANGE_MAX)} or more`} />
                 )}
               />
             )}
@@ -239,7 +260,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
                 stroke="none"
                 ifOverflow="hidden"
                 shape={(props) => (
-                  <StripRect {...props} title={`Losses of ${pounds(innerMax)} or more`} />
+                  <StripRect {...props} title={`Losses of ${pounds(CHANGE_MAX)} or more`} />
                 )}
               />
             )}
@@ -262,7 +283,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
             />
             <YAxis
               type="number"
-              dataKey="change"
+              dataKey="y"
               domain={changeDomain}
               ticks={changeTicks}
               allowDataOverflow
@@ -271,6 +292,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
               axisLine={false}
               tickLine={false}
               width={axisWidth([lowerTick, ...innerTicks, upperTick], changeTick)}
+              interval={0}
             />
             <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
             {view.kind === "points" && (
