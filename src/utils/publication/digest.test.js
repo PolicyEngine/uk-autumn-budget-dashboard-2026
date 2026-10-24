@@ -147,6 +147,16 @@ describe("binding a receipt to its manifest entry", () => {
     );
   });
 
+  it("binds the published display metadata to the receipt", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.display = { color: "#115E59", order: 3 };
+    const entry = { ...entries.alpha, display: { color: "#000000", order: 3 }, artifact_sha256: await artifactSha256(receipt) };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's display metadata is not the manifest's",
+    );
+    expect(await receiptProblems(receipt, "alpha", { ...entry, display: receipt.dashboard.display })).toEqual([]);
+  });
+
   it("accepts matching public descriptions covered by the artifact digest", async () => {
     const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
     receipt.dashboard.description = "A newly announced measure.";
