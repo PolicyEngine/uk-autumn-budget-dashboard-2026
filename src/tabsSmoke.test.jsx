@@ -56,8 +56,8 @@ const LOADED = {
   // The wizard opens at its first step; the API call it makes on load is
   // checked below.
   personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
-  // The head count comes from age_impact.csv.
-  young: (panel) => within(panel).findAllByText(/young people aged 16 to 24 in the UK/),
+  // The cards render once age_impact.csv is read.
+  young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
   // The Incomes heading shows once the outlook is read.
   living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
   methodology: (panel) => within(panel).findAllByRole("heading"),

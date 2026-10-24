@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
 import { changeByYear, measureComparison, niceRange, wrapWords } from "./youngPeopleData";
@@ -56,8 +56,24 @@ describe("young people data", () => {
       "2 child limit repeal",
       "Salary sacrifice cap",
     ]);
-    expect(shown[0]).toMatchObject({ young: -330, all: -300 });
+    expect(shown[0]).toMatchObject({ group: -330, all: -300 });
     expect(noEffect).toEqual([]);
+  });
+
+  it("compares any age group with all ages", () => {
+    const rows = [
+      ...ROWS,
+      row("two_child_limit", 2029, "0-15", 700),
+      row("threshold_freeze_extension", 2029, "0-15", -50),
+      row("salary_sacrifice_cap", 2029, "0-15", -10),
+    ];
+    const { shown } = measureComparison(rows, POLICIES, ALL, 2029, "0-15");
+    expect(shown.map((point) => point.name)).toEqual([
+      "2 child limit repeal",
+      "Threshold freeze extension",
+      "Salary sacrifice cap",
+    ]);
+    expect(shown[0]).toMatchObject({ group: 700, all: 260 });
   });
 
   it("lists policies with no effect and hides thin rows", () => {
@@ -70,9 +86,19 @@ describe("young people data", () => {
 
   it("adds up mean changes by year and never reads a missing year as zero", () => {
     const points = changeByYear(ROWS, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029, 2031]);
-    expect(points[0]).toMatchObject({ year: 2028, published: true, young: 30, all: 80 });
-    expect(points[1]).toMatchObject({ young: -110, all: -40 });
-    expect(points[2]).toMatchObject({ year: 2031, published: false, young: null, all: null });
+    expect(points[0]).toMatchObject({ year: 2028, published: true, "16-24": 30, all: 80 });
+    expect(points[1]).toMatchObject({ "16-24": -110, all: -40 });
+    // A group with no rows adds up to zero; a thin one is null
+    expect(points[1]["0-15"]).toBe(0);
+    expect(points[2]).toMatchObject({ year: 2031, published: false, "16-24": null, all: null });
+    const thin = changeByYear(
+      [...ROWS, row("two_child_limit", 2029, "65+", 5, MIN_SAMPLE_SIZE - 1)],
+      POLICIES,
+      ALL,
+      [2029],
+    );
+    expect(thin[0]["65+"]).toBeNull();
+    expect(thin[0].suppressed).toEqual(["65+"]);
   });
 
   it("picks nice ticks that include zero", () => {
@@ -95,6 +121,13 @@ describe("young people cards", () => {
     expect(screen.getByRole("button", { name: /Download chart: Effect of each policy/ })).toBeInTheDocument();
     expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
     expect(screen.getByText(/No effect in 2028-29: Salary sacrifice cap/)).toBeInTheDocument();
+  });
+
+  it("lets the reader choose the age group compared", () => {
+    render(<MeasuresCard {...props} selectedYear={2028} />);
+    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
+    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    expect(screen.getByText(/for people aged 65 and over and for people of all ages/)).toBeInTheDocument();
   });
 
   it("shows a year with no rows as not yet published", () => {

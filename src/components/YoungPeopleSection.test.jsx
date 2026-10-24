@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
+  meanChangeBySingleAge,
+  sharesByGroup,
+  singleAgeKey,
   wholeSelectionRun,
-  youngAndAll,
   MIN_SAMPLE_SIZE,
 } from "../utils/ageImpact";
 import { COMBINED_REFORM_ID } from "../utils/policyConfig";
@@ -80,22 +82,64 @@ describe("results by age", () => {
     expect(wholeSelectionRun(POLICIES, ALL)).toBe(COMBINED_REFORM_ID);
     const three = [...POLICIES, { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" }];
     expect(wholeSelectionRun(three, ALL)).toBeNull();
-    expect(youngAndAll([], three, ALL, 2029)).toBeNull();
+    expect(sharesByGroup([], three, ALL, 2029)).toBeNull();
+  });
+
+  it("gives every age group's shares from the whole run, thin groups left out", () => {
+    const rows = [
+      { reform_id: COMBINED_REFORM_ID, year: 2029, age_band: "16-24", sample_size: 5000, pct_better_off: 4 },
+      { reform_id: COMBINED_REFORM_ID, year: 2029, age_band: "65+", sample_size: MIN_SAMPLE_SIZE - 1 },
+      { reform_id: COMBINED_REFORM_ID, year: 2029, age_band: "all", sample_size: 50000, pct_better_off: 5 },
+    ];
+    const { run, groups } = sharesByGroup(rows, POLICIES, ALL, 2029);
+    expect(run).toBe(COMBINED_REFORM_ID);
+    expect(groups.map((group) => group.key)).toEqual(["0-15", "16-24", "25-34", "35-49", "50-64", "65+", "all"]);
+    expect(groups.find((group) => group.key === "16-24").row.pct_better_off).toBe(4);
+    expect(groups.find((group) => group.key === "65+").suppressed).toBe(true);
+    expect(groups.find((group) => group.key === "0-15").suppressed).toBe(true);
+  });
+
+  it("adds up single years of age, leaving a gap where any policy has no row", () => {
+    expect(singleAgeKey(17)).toBe("17");
+    expect(singleAgeKey(90)).toBe("90+");
+    const rows = [
+      { reform_id: "two_child_limit", year: 2029, age_band: "17", mean_change: 100, sample_size: 300 },
+      { reform_id: "threshold_freeze_extension", year: 2029, age_band: "17", mean_change: -40, sample_size: 300 },
+      { reform_id: "two_child_limit", year: 2029, age_band: "18", mean_change: 90, sample_size: 300 },
+      { reform_id: "two_child_limit", year: 2029, age_band: "90+", mean_change: 5, sample_size: 200 },
+      { reform_id: "threshold_freeze_extension", year: 2029, age_band: "90+", mean_change: 1, sample_size: 200 },
+    ];
+    const points = meanChangeBySingleAge(rows, POLICIES, ALL, 2029);
+    expect(points).toHaveLength(91);
+    expect(points[17]).toMatchObject({ age: 17, label: "17", netChange: 60 });
+    // 18 has no row for the threshold freeze
+    expect(points[18].netChange).toBeNull();
+    expect(points[90]).toMatchObject({ label: "90+", netChange: 6 });
+    // One policy alone
+    expect(meanChangeBySingleAge(rows, POLICIES, ["two_child_limit"], 2029)[18].netChange).toBe(90);
   });
 });
 
 describe("YoungPeopleSection", () => {
-  it("has a linkable heading and the 16 to 24 headline figures", async () => {
+  it("has a linkable heading, no headline tiles and every card", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
     const heading = screen.getByRole("heading", { level: 2, name: "Young people (under 25)" });
     expect(heading.parentElement).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
-    // All policies selected: the combined run's 1.5m of 7.5m
-    expect(await screen.findByText("7.5m")).toBeInTheDocument();
-    expect(screen.getByText("1.5m")).toBeInTheDocument();
-    expect(screen.getByText(/20\.0% of them/)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: /Average change by age, 2029-30/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 3, name: /Average change by age, 2029-30/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
     expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(4);
+  });
+
+  it("switches average change by age to single years of age", async () => {
+    render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
+    const pill = await screen.findByRole("button", { name: /Average change by age shown/ });
+    fireEvent.click(pill);
+    fireEvent.click(screen.getByRole("option", { name: /By single year of age/ }));
+    expect(screen.getByText(/by single year of age, in pounds a year/)).toBeInTheDocument();
   });
 
   it("says when the selection has no whole run, never showing zero", async () => {
@@ -108,7 +152,6 @@ describe("YoungPeopleSection", () => {
       />,
     );
     expect(await screen.findByText(/shown for a single policy or for all policies\./)).toBeInTheDocument();
-    expect(screen.getByText(/directly affected: shown for a single policy/)).toBeInTheDocument();
     // Every chart but the shares is drawn
     expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(3);
   });

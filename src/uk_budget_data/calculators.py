@@ -836,10 +836,15 @@ class DemographicConstituencyCalculator(BaseCalculator):
 
 
 # Age bands for results by age: (label, lowest age, highest age), inclusive.
-# Children are under 16, as in HBAI; HBAI also counts 16- to 19-year-olds
-# in full-time non-advanced education as children, which these bands do
-# not: everyone aged 16 to 24 is in "16-24". The adult bands are coarser
-# than HBAI's ten-year bands so that each is large in the survey.
+# The adult bands are the ONS Labour Force Survey's standard age groups
+# (ONS, "A05 SA: Employment, unemployment and economic inactivity by age
+# group", which splits 16-17 and 18-24, 25-34, 35-49, 50-64 and 65 and
+# over); 16-24 is the ONS labour-market definition of young people (as in
+# its "Young people not in education, employment or training (NEET)"
+# release). Children are under 16, as in ONS population statistics and
+# DWP's Households Below Average Income (HBAI); HBAI also counts 16- to
+# 19-year-olds in full-time non-advanced education as children, which these
+# bands do not: everyone aged 16 to 24 is in "16-24".
 AGE_BANDS: tuple[tuple[str, int, int], ...] = (
     ("0-15", 0, 15),
     ("16-24", 16, 24),
@@ -849,6 +854,12 @@ AGE_BANDS: tuple[tuple[str, int, int], ...] = (
     ("65+", 65, 200),
 )
 AGE_BAND_ALL = "all"
+# Single years of age are rows too, labelled by the age ("0", "1", ...), up
+# to this age; people this age or older share its row, labelled "90+" (the
+# ONS mid-year estimates' top age).
+SINGLE_AGE_TOP = 90
+# A single year of age with fewer survey records than this has no row.
+SINGLE_AGE_MIN_RECORDS = 100
 # A change smaller than this share of household net income counts as no
 # change: the test MetricsCalculator uses for people affected.
 AGE_CHANGE_THRESHOLD = 0.0001
@@ -872,6 +883,14 @@ def age_band_of(age: np.ndarray) -> np.ndarray:
     return labels
 
 
+def single_age_of(age: np.ndarray) -> np.ndarray:
+    """Each age's single-year label: "0" to "89", then "90+"."""
+    whole = np.floor(np.asarray(age, dtype=float)).astype(int)
+    labels = whole.astype(str).astype(object)
+    labels[whole >= SINGLE_AGE_TOP] = f"{SINGLE_AGE_TOP}+"
+    return labels
+
+
 @dataclass
 class AgeImpactCalculator(BaseCalculator):
     """Change in household net income by the age of each person.
@@ -892,6 +911,11 @@ class AgeImpactCalculator(BaseCalculator):
     DIRECT_EFFECT_MIN_GBP or more a year. Benefits are paid to benefit
     units, not people, so a change only in benefits (or in prices) is not
     counted as direct.
+
+    After the AGE_BANDS rows and the ``all`` row come rows by single year
+    of age (``age_band`` "0" to "89", then "90+"), with the same columns.
+    A single year with fewer than SINGLE_AGE_MIN_RECORDS survey records has
+    no row, so thin cells are never published.
     """
 
     def calculate(
@@ -964,6 +988,14 @@ class AgeImpactCalculator(BaseCalculator):
 
         groups = [(label, bands == label) for label, _, _ in AGE_BANDS]
         groups.append((AGE_BAND_ALL, np.ones(len(frame), dtype=bool)))
+        singles = single_age_of(frame["age"].to_numpy())
+        for whole in sorted({int(label.rstrip("+")) for label in singles}):
+            label = (
+                f"{SINGLE_AGE_TOP}+" if whole >= SINGLE_AGE_TOP else str(whole)
+            )
+            members = singles == label
+            if members.sum() >= SINGLE_AGE_MIN_RECORDS:
+                groups.append((label, members))
         rows = []
         for label, members in groups:
             w = weight[members]
