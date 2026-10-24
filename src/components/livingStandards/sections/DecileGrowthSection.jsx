@@ -1,7 +1,6 @@
 // Growth incidence: real change in each income decile's median from 2026-27
 // (headlineStartYear) to the headline end year, from the real medians in
-// income_by_decile.<basis>.by_year. The data's own cumulative_growth runs
-// from 2025-26, so its notes say so (withBaseYear).
+// income_by_decile.<basis>.by_year.
 // Ported from PolicyEngine/uk-living-standards-outlook.
 
 import { useState } from "react";
@@ -15,7 +14,6 @@ import {
   formatOneDp,
   headlineStartYear,
   headlineYear,
-  withBaseYear,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
@@ -47,8 +45,8 @@ export default function DecileGrowthSection({ data }) {
     <LsCard
       title="Income growth by decile"
       about={`${dec.statistic}. Deciles are re-ranked each year, so this compares positions in the distribution, not the same people.`}
-      boxes={[data.meta.headline_end_year_note, basis === "ahc" && withBaseYear(data.meta.cpi_ahc_note, data)]}
-      notes={(dec.notes || []).filter((n) => /lowest tenth/i.test(n)).map((n) => withBaseYear(n, data))}
+      boxes={[data.meta.headline_end_year_note, basis === "ahc" && data.meta.cpi_ahc_note]}
+      notes={(dec.notes || []).filter((n) => /lowest tenth/i.test(n))}
       summary={
         <>
           From {fyDash(first.year)} to {fyDash(end.year)}, real median income ({basisShort}) in the lowest-income
