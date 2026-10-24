@@ -1,14 +1,16 @@
 import GeographyMethodology from "./GeographyMethodology";
 import LifecycleAbout from "./LifecycleAbout";
+import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
-import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
+import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
@@ -136,7 +138,8 @@ function SectionLink({ id, children }) {
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
  * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the Living standards view keeps its own provenance line.
+ * impact. Living standards states the engine, data, notes and gaps of
+ * that view's own baseline.
  *
  * @param {Object} props
  * @param {(tab: string) => void} props.onShowTab - Switch to another view
@@ -437,10 +440,29 @@ function MethodologyTab({ onShowTab }) {
           <div className="card method-card">
             <FactList
               items={[
-                ["Age bands", AGE_BANDS.map((band) => band.label).join(", ") + "."],
+                [
+                  "Age bands",
+                  <>
+                    {AGE_BANDS.map((band) => band.label).join(", ")}, and all ages. The adult
+                    bands are the Office for National Statistics' standard Labour Force
+                    Survey age groups (
+                    <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
+                      {AGE_BAND_SOURCE.label}
+                    </a>
+                    , which splits 16 to 24 into 16 to 17 and 18 to 24). 16 to 24 is the
+                    ONS labour-market definition of young people. Children are under 16, as
+                    in ONS population statistics and DWP&apos;s Households Below Average
+                    Income; unlike HBAI, the bands count 16- to 19-year-olds in full-time non-advanced
+                    education with 16 to 24, not as children.
+                  </>,
+                ],
+                [
+                  "Single year of age",
+                  `Ages 0 to ${SINGLE_AGE_TOP - 1} one year at a time, then ${SINGLE_AGE_TOP} and over together, as in the ONS mid-year population estimates.`,
+                ],
                 [
                   "Who counts",
-                  `People in households with an income decile. An age band with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                  `People in households with an income decile. An age band or single year of age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
                 ],
                 [
                   "Better or worse off",
@@ -470,33 +492,34 @@ function MethodologyTab({ onShowTab }) {
             <h3 className="method-card-title">Lifetime model</h3>
             <LifecycleAbout />
           </div>
-          {/* Placeholder: the single-year calculation's method goes here
-              when it lands on Personal impact. */}
-          <div
-            id={METHOD_SECTIONS.singleYear}
-            className="card method-card method-anchor method-placeholder"
-          >
-            <h3 className="method-card-title">
-              Single-year calculation <span className="method-badge">To follow</span>
-            </h3>
-            <p>
-              It uses the same engine and measures as the national figures.
-              Its method will be described here.
+          <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
+            <h3 className="method-card-title">Single-year calculation</h3>
+            <FactList items={SINGLE_YEAR_METHOD} />
+            <p className="method-more">
+              <ViewLink tab="personal" onShowTab={onShowTab}>
+                See the Personal impact tab
+              </ViewLink>
+              .
             </p>
           </div>
         </MethodSection>
 
-        <MethodSection id={METHOD_SECTIONS.living} title="Living standards">
+        <MethodSection
+          id={METHOD_SECTIONS.living}
+          title="Living standards"
+          subtitle="The separate baseline behind the Living standards tab."
+        >
           <div className="card method-card">
             <p>
               The{" "}
               <ViewLink tab="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
-              view uses a separate baseline, with its engine and data noted on
-              that tab.
+              view runs on a separate baseline from the Budget views, set out
+              below.
             </p>
           </div>
+          <LivingStandardsMethod />
         </MethodSection>
 
         <MethodSection

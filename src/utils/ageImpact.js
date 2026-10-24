@@ -1,7 +1,8 @@
 /**
- * Results by age band (public/data/age_impact.csv) for the "Young people"
- * section: the rows the charts and headline figures read, for the selected
- * policies and year.
+ * Results by age (public/data/age_impact.csv) for the "Young people"
+ * section: the rows the charts read, for the selected policies and year.
+ * The file has a row per age band, one for all ages ("all"), and one per
+ * single year of age ("0" to "89", then "90+").
  *
  * Each row's mean change gives every person their household's change in
  * net income (not equivalised) and averages over people. Mean changes are
@@ -13,7 +14,11 @@
  */
 import { COMBINED_REFORM_ID } from "./policyConfig";
 
-/** The age bands, in order, with a label for the page and a short one. */
+/**
+ * The age bands, in order, with a label for the page and a short one: the
+ * ONS Labour Force Survey's age groups (16 to 24 is the ONS's young people),
+ * with children under 16, as in ONS and DWP HBAI statistics.
+ */
 export const AGE_BANDS = [
   { key: "0-15", label: "Under 16", short: "<16" },
   { key: "16-24", label: "16 to 24", short: "16–24" },
@@ -24,6 +29,20 @@ export const AGE_BANDS = [
 ];
 export const YOUNG_BAND = "16-24";
 export const ALL_BAND = "all";
+/** Every band and all ages: the groups the comparison charts offer. */
+export const AGE_GROUPS = [
+  ...AGE_BANDS,
+  { key: ALL_BAND, label: "All ages", short: "All" },
+];
+/** The top single year of age: its row is everyone that age or older. */
+export const SINGLE_AGE_TOP = 90;
+/** The single-year row label of an age ("17", or "90+" at the top). */
+export const singleAgeKey = (age) => (age >= SINGLE_AGE_TOP ? `${SINGLE_AGE_TOP}+` : String(age));
+/** The ONS source of the age bands, for the Methodology. */
+export const AGE_BAND_SOURCE = {
+  label: "ONS, A05 SA: Employment, unemployment and economic inactivity by age group",
+  url: "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employmentunemploymentandeconomicinactivitybyagegroupseasonallyadjusteda05sa",
+};
 
 /** A band with fewer survey records than this is not shown. */
 export const MIN_SAMPLE_SIZE = 100;
@@ -81,31 +100,54 @@ export function wholeSelectionRun(policies, selected) {
 }
 
 /**
- * Rows for people aged 16 to 24 and for all people from the whole
- * selection's run, or null when the selection has no such run or its
- * rows are missing or too thin.
+ * One point per single year of age, 0 to SINGLE_AGE_TOP: the selected
+ * policies' mean changes added up (`netChange`), or null where any selected
+ * policy has no row for the age (the generator leaves out an age with too
+ * few survey records) or a thin one.
+ *
+ * @param {Array<Object>} rows - Typed age_impact rows
+ * @param {Array<{id: string}>} policies - Every policy
+ * @param {Array<string>} selected - Selected policy ids
+ * @param {number} year
  */
-export function youngAndAll(rows, policies, selected, year) {
+export function meanChangeBySingleAge(rows, policies, selected, year) {
+  const byKey = new Map();
+  for (const row of forYear(rows ?? [], year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
+  const chosen = policies.filter((policy) => selected.includes(policy.id));
+  const points = [];
+  for (let age = 0; age <= SINGLE_AGE_TOP; age += 1) {
+    const key = singleAgeKey(age);
+    let net = 0;
+    let complete = chosen.length > 0;
+    for (const policy of chosen) {
+      const row = byKey.get(`${policy.id}|${key}`);
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
+        complete = false;
+        break;
+      }
+      net += row.mean_change;
+    }
+    points.push({ age, label: key, netChange: complete ? net : null });
+  }
+  return points;
+}
+
+/**
+ * The whole selection's run's row for every age group (AGE_GROUPS, in
+ * order): `{ run, groups: [{ key, label, row, suppressed }] }`, or null
+ * when the selection has no such run or the year has no rows for it. A
+ * group whose row is missing or too thin has `row: null` and
+ * `suppressed: true`.
+ */
+export function sharesByGroup(rows, policies, selected, year) {
   const run = wholeSelectionRun(policies, selected);
   if (!run) return null;
   const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
-  const young = yearRows.find((row) => row.age_band === YOUNG_BAND);
-  const all = yearRows.find((row) => row.age_band === ALL_BAND);
-  if (!young || !all) return null;
-  if (young.sample_size < MIN_SAMPLE_SIZE) return null;
-  return { run, young, all };
-}
-
-/** People aged 16 to 24 in the year (the same in every run), or null. */
-export function youngPopulation(rows, year) {
-  const row = forYear(rows ?? [], year).find((r) => r.age_band === YOUNG_BAND);
-  return row ? row.people : null;
-}
-
-/** 7,471,170 -> "7.5m"; 820,000 -> "820k". */
-export function formatPeople(value) {
-  if (value === null || value === undefined) return "–";
-  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}m`;
-  if (value >= 1e3) return `${Math.round(value / 1e3).toLocaleString("en-GB")}k`;
-  return Math.round(value).toLocaleString("en-GB");
+  if (!yearRows.length) return null;
+  const groups = AGE_GROUPS.map((group) => {
+    const row = yearRows.find((candidate) => candidate.age_band === group.key) ?? null;
+    const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
+    return { key: group.key, label: group.label, short: group.short, row: usable, suppressed: !usable };
+  });
+  return { run, groups };
 }

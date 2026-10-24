@@ -61,6 +61,7 @@ import {
 } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 
 const CHART_TITLE = "Constituency-level impacts";
 
@@ -302,7 +303,7 @@ function MapScalePlaceholder() {
 
 export default function ConstituencyMap({
   selectedPolicies = [],
-  selectedYear = 2029,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
   policies = [],
   // Whether the page shows the results by region, so a notice can link
   // to them.

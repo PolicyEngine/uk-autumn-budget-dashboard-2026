@@ -21,7 +21,8 @@ import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
-import { DISPLAY_YEARS } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+import { buildBudgetData } from "./utils/budgetData";
 import { POLICIES } from "./utils/policies";
 import Note from "./components/Note";
 import PolicyCards from "./components/PolicyCards";
@@ -29,7 +30,9 @@ import PolicyCards from "./components/PolicyCards";
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them.
+// outlook, and Methodology is text: neither pill applies to them. On
+// Personal impact the year pill applies to its Single-year effect sub-tab
+// only (yearShown, below), not to the lifetime results.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "personal", label: "Personal impact", year: false, policies: true },
@@ -48,6 +51,15 @@ const POLICY_PARAM_VIEWS = new Set(["dashboard", "young"]);
 
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
+
+/**
+ * Whether the band's year pill applies: on the views that use a year, and
+ * on Personal impact while its Single-year effect sub-tab is open.
+ */
+export function yearPillShown(view, personalSubTab) {
+  if (view === "personal") return personalSubTab === "single";
+  return Boolean(VIEW_BY_KEY[view]?.year);
+}
 
 /** The view a page address opens: #young-people, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
@@ -129,16 +141,18 @@ function App() {
   const [selectedPolicies, setSelectedPolicies] = useState(
     POLICIES.map((p) => p.id),
   );
-  // Default to 2029 so more policies have visible impact
-  const [selectedYear, setSelectedYear] = useState(2030);
-  // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
-  const [distributionalYear, setDistributionalYear] = useState(2029);
+  // Both start on DEFAULT_DISPLAY_YEAR (2027-28); there is no ?year param
+  const [selectedYear] = useState(DEFAULT_DISPLAY_YEAR);
+  // The year every chart shows, chosen with the header pill
+  const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   // One example household for both household cards, so they always match
   const [exampleHouseholdId, setExampleHouseholdId] = useState(
     EXAMPLE_HOUSEHOLDS[0].id,
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Personal impact's open sub-tab, as PersonalImpactTab reports it
+  const [personalSubTab, setPersonalSubTab] = useState("single");
 
   // Valid policy IDs from POLICIES
   const validPolicyIds = POLICIES.map((p) => p.id);
@@ -229,24 +243,13 @@ function App() {
         selectedPolicies.includes(row.reform_id),
       );
 
-      // Build budgetary impact data for the chart: 2026 and every year
-      // shown. Always include all policy keys for smooth animations
-      const years = [2026, ...DISPLAY_YEARS];
-      const budgetData = years.map((year) => {
-        const dataPoint = { year };
-        let netImpact = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = budgetaryData.find(
-            (row) => row.reform_id === policy.id && parseInt(row.year) === year,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netImpact += value;
-        });
-        dataPoint.netImpact = netImpact;
-        return dataPoint;
-      });
+      // One point per shown year, from the years the file covers (the
+      // year list used to be hardcoded and stopped at 2030-31)
+      const budgetData = buildBudgetData(
+        budgetaryData,
+        POLICIES,
+        selectedPolicies,
+      );
 
       // Calculate budgetary impact for 2026 (metrics always show 2026)
       const budgetaryImpact2026 = filteredBudgetary
@@ -453,6 +456,7 @@ function App() {
   };
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
+  const yearShown = yearPillShown(activeTab, personalSubTab);
 
   // With no policies chosen, the policy-driven views offer the full Budget
   const emptyState = (
@@ -478,7 +482,7 @@ function App() {
 
   return (
     // A view without the year pill has a one-row band on a phone
-    <div className="app" ref={appRef} data-band={view.year ? undefined : "compact"}>
+    <div className="app" ref={appRef} data-band={yearShown ? undefined : "compact"}>
       <main className="main-content">
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -488,15 +492,16 @@ function App() {
           <h1>UK Autumn Budget 2026</h1>
 
           {/* The year applies to every chart on the Population and Young
-              people views, and the revenue chart highlights it; it lives in
-              the band so it can be changed from anywhere. The policy pill
+              people views and to Personal impact's Single-year effect, and
+              the revenue chart highlights it; it lives in the band so it can
+              be changed from anywhere. The policy pill
               applies to those views and Personal impact. A pill that does
               not apply keeps its place but is hidden, so the band does not
               move. */}
           <div
-            className={`band-year ${view.year ? "" : "is-hidden"}`}
-            aria-hidden={view.year ? undefined : "true"}
-            inert={!view.year}
+            className={`band-year ${yearShown ? "" : "is-hidden"}`}
+            aria-hidden={yearShown ? undefined : "true"}
+            inert={!yearShown}
           >
             <YearSlider
               selectedYear={distributionalYear}
@@ -571,6 +576,8 @@ function App() {
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
             onShowMethod={showMethod}
+            year={distributionalYear}
+            onSubTabChange={setPersonalSubTab}
           />
         ) : activeTab === "young" ? (
           selectedPolicies.length === 0 ? (
@@ -598,15 +605,7 @@ function App() {
                     />
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
-                        data={DISPLAY_YEARS.map(
-                          (year) =>
-                            results.budgetData.find((point) => point.year === year) ?? {
-                              // In the config, not yet in the published files
-                              year,
-                              netImpact: null,
-                              unpublished: true,
-                            },
-                        )}
+                        data={results.budgetData}
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the card */}

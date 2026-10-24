@@ -20,6 +20,11 @@ describe("display years", () => {
     expect(DISPLAY_YEARS).toEqual([2027, 2028, 2029, 2030, 2031]);
   });
 
+  it("default to 2027-28, the first year shown", () => {
+    expect(DEFAULT_DISPLAY_YEAR).toBe(2027);
+    expect(DISPLAY_YEARS).toContain(DEFAULT_DISPLAY_YEAR);
+  });
+
   it("tell a year the files cover from one they do not yet", () => {
     const rows = [{ year: "2030", value: "1" }];
     expect(isPublishedYear(rows, 2030)).toBe(true);

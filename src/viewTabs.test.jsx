@@ -67,7 +67,8 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     const expected = {
       dashboard: [true, true],
-      personal: [false, true],
+      // The year drives Personal impact's default sub-tab, Single-year effect
+      personal: [true, true],
       young: [true, true],
       living: [false, false],
       methodology: [false, false],
@@ -79,6 +80,22 @@ describe("the view tabs", () => {
       // Both stay in the band, so a hidden one keeps its place
       expect([shown(year), shown(policy)]).toEqual(expected[view.value]);
     });
+  });
+
+  it("hide the year pill on Personal impact's Multi-year effect, in place", () => {
+    window.history.replaceState({}, "", "/?tab=personal&sub=multi");
+    const { container, unmount } = render(<App />);
+    const year = () => band(container).querySelector(".band-year");
+    expect(shown(year())).toBe(false);
+    // Hidden, not removed: it keeps its place in the band
+    expect(year()).toHaveAttribute("aria-hidden", "true");
+    expect(container.querySelector(".app")).toHaveAttribute("data-band", "compact");
+    unmount();
+
+    window.history.replaceState({}, "", "/?tab=personal");
+    const second = render(<App />);
+    expect(shown(second.container.querySelector(".band-year"))).toBe(true);
+    expect(second.container.querySelector(".app")).not.toHaveAttribute("data-band");
   });
 
   it("keep ?tab= in step, with the policies only on the views they drive", () => {

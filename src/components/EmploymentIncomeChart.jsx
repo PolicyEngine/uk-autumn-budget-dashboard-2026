@@ -36,6 +36,8 @@ import {
   legendLabelStyle,
   axisWidth,
 } from "../utils/chartTheme";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion } from "../utils/chartMotion";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -56,7 +58,7 @@ const LEGEND_ITEMS = [
  */
 function EmploymentIncomeChart({
   selectedPolicies,
-  selectedYear = 2029,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
   defaultHousehold = DEFAULT_HOUSEHOLD,
   household: controlledHousehold,
   onHouseholdChange,
@@ -200,8 +202,7 @@ function EmploymentIncomeChart({
                 strokeWidth={2.5}
                 dot={false}
                 name="Before the Budget"
-                animationDuration={500}
-                animationBegin={0}
+                {...chartMotion()}
               />
               <Line
                 type="monotone"
@@ -211,8 +212,7 @@ function EmploymentIncomeChart({
                 strokeDasharray="8 4"
                 dot={false}
                 name="After the Budget"
-                animationDuration={500}
-                animationBegin={0}
+                {...chartMotion()}
               />
               <Customized component={<ChartUnitLabel text="Household net income" />} />
             <Customized component={PolicyEngineLogo} />

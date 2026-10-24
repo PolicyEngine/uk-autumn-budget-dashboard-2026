@@ -80,13 +80,16 @@ export function splitSource(text) {
 /** End year for headline comparisons (meta.headline_end_year, e.g. "2029-30"). */
 export const headlineYear = (data) => data?.meta?.headline_end_year || null;
 
-/** Start year for headline changes (meta.headline_start_year, e.g. "2025-26"). */
+/**
+ * Start year for headline changes (meta.headline_start_year): 2026-27, the
+ * fiscal year of Autumn Budget 2026 and the data's own base year.
+ */
 export const headlineStartYear = (data) => data?.meta?.headline_start_year || null;
 
 /**
- * Headline-start row (2025-26; the first row if absent) and the headline-year
- * row (or the last row) of a projection. Series that also carry the model's
- * 2024-25 point still report change from 2025-26.
+ * Headline-start row (2026-27; the first row if absent) and the headline-year
+ * row (or the last row) of a projection. Series that also carry earlier
+ * model years still report change from 2026-27.
  */
 export function headlineSpan(rows, data) {
   if (!rows || rows.length < 2) return null;
@@ -105,10 +108,6 @@ export function changeVerb(delta, unit) {
   if (delta == null || Math.abs(delta) < 0.05) return null;
   return `${delta > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(delta))}${unit}`;
 }
-
-/** Section notes minus the 2030-31 UC step, which meta.headline_end_year_note states once. */
-export const sectionNotes = (notes) =>
-  (notes || []).filter((n) => !/baseline discontinuity|UC health element protection|^Series end in/i.test(n));
 
 /** 2030 -> "30-31", for phone axes. */
 export const fyShortLabel = (start) => `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;

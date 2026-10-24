@@ -2006,6 +2006,10 @@
         [
           "households",
           "float"
+        ],
+        [
+          "income_basis_year",
+          "int"
         ]
       ],
       "file": "household_scatter_binned.csv",

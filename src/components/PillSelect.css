@@ -104,8 +104,34 @@
   white-space: nowrap;
 }
 
+.pill-select-light .pill-select-toggle {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
 .pill-select-light .pill-select-toggle:hover {
   border-color: var(--pe-teal-500);
+  background: var(--pe-gray-50);
+}
+
+.pill-select-light .pill-select-toggle:active,
+.pill-select-light .pill-select-toggle[aria-expanded="true"] {
+  background: var(--pe-gray-100);
+  border-color: var(--pe-teal-500);
+}
+
+.pill-select-light .pill-select-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.25);
+  border-color: var(--pe-teal-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pill-select-light .pill-select-toggle {
+    transition: none;
+  }
 }
 
 .pill-select-prefix {

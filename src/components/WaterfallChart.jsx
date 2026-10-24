@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   ComposedChart,
   Bar,
@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Customized,
+  Scatter,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
@@ -33,7 +34,8 @@ import {
   legendLabelStyle,
   axisWidth,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
+import { chartMotion, netDot } from "../utils/chartMotion";
 
 // Order for waterfall chart: good for households first, then bad
 // Every legend uses one order, set in policyConfig: revenue raisers, then
@@ -46,44 +48,67 @@ const CHART_DESCRIPTION =
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
+// Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
+const FLIP_SIGN_POLICIES = [];
+
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
   // Build chart data for internal year
+  // Memoised: a re-render with the same year and policies keeps the same
+  // array, so Recharts tweens once from the old year instead of restarting
+  const data = useMemo(() => {
+    const waterfallSelectedYear = rawData
+      ? rawData.filter(
+          (row) =>
+            parseInt(row.year) === selectedYear &&
+            row.decile !== "all" &&
+            selectedPolicies.includes(row.reform_id),
+        )
+      : [];
 
-  const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-  const waterfallSelectedYear = rawData
-    ? rawData.filter(
-        (row) =>
-          parseInt(row.year) === selectedYear &&
-          row.decile !== "all" &&
-          selectedPolicies.includes(row.reform_id),
-      )
-    : [];
-
-  // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
-  const FLIP_SIGN_POLICIES = [];
-
-  const data = waterfallDeciles.map((decile) => {
-    const dataPoint = { decile };
-    let netChange = 0;
-    POLICIES.forEach((policy) => {
-      const isSelected = selectedPolicies.includes(policy.id);
-      const dataRow = waterfallSelectedYear.find(
-        (row) => row.reform_id === policy.id && row.decile === decile,
-      );
-      let value = isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
-      // Flip sign for policies with incorrect data sign
-      if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-        value = -value;
-      }
-      dataPoint[policy.name] = value;
-      netChange += value;
+    return waterfallDeciles.map((decile) => {
+      const dataPoint = { decile };
+      let netChange = 0;
+      POLICIES.forEach((policy) => {
+        const isSelected = selectedPolicies.includes(policy.id);
+        const dataRow = waterfallSelectedYear.find(
+          (row) => row.reform_id === policy.id && row.decile === decile,
+        );
+        let value = isSelected && dataRow ? parseFloat(dataRow.avg_change) : 0;
+        // Flip sign for policies with incorrect data sign
+        if (FLIP_SIGN_POLICIES.includes(policy.id)) {
+          value = -value;
+        }
+        dataPoint[policy.name] = value;
+        netChange += value;
+      });
+      dataPoint.netChange = netChange;
+      return dataPoint;
     });
-    dataPoint.netChange = netChange;
-    return dataPoint;
-  });
+  }, [rawData, selectedPolicies, selectedYear]);
+
+  // The measures with a non-zero effect in any shown year, not just this
+  // one: the legend (and so the plot's height) stays the same from year to
+  // year, so a year change or Play tweens the bars instead of rescaling
+  const activePolicies = useMemo(() => {
+    const ids = new Set(
+      (rawData ?? [])
+        .filter(
+          (row) =>
+            row.decile !== "all" && isDisplayYear(row.year) &&
+            selectedPolicies.includes(row.reform_id) &&
+            Math.abs(parseFloat(row.avg_change)) > 0.01,
+        )
+        .map((row) => row.reform_id),
+    );
+    return ALL_POLICY_NAMES.filter((name) =>
+      ids.has(POLICIES.find((policy) => policy.name === name)?.id),
+    );
+  }, [rawData, selectedPolicies]);
 
   // Calculate y-axis domain across ALL years, symmetrical around zero
   const calculateYAxisDomain = () => {
@@ -172,12 +197,6 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
     return value < 0 ? `-£${absVal}` : `£${absVal}`;
   };
 
-  // Check which policies have non-zero values
-  const hasNonZeroValues = (policyName) => {
-    return data.some((d) => Math.abs(d[policyName] || 0) > 0.01);
-  };
-
-  const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
@@ -318,9 +337,9 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
                   fill={POLICY_COLORS[policyName]}
                   name={policyName}
                   stackId="stack"
-                  animationDuration={500}
-                  animationBegin={0}
-                  hide={!hasNonZeroValues(policyName)}
+                  {...chartMotion()}
+                  // Always mounted (a zero series has no height), so a series that
+                  // starts in a later year grows in place instead of remounting
                 />
               ))}
               <Line
@@ -329,9 +348,20 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
                 dataKey="netChange"
                 stroke="#000000"
                 strokeWidth={2}
-                dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
+                dot={false}
                 name="netChange"
-                animationDuration={500}
+                {...chartMotion()}
+                hide={activePolicies.length <= 1}
+              />
+              {/* The net dots as a Scatter: Recharts hides a Line's own dots while
+                  it animates, so they would vanish and pop back on every year
+                  change; a Scatter's points tween with the line instead */}
+              <Scatter
+                dataKey="netChange"
+                shape={netDot}
+                legendType="none"
+                tooltipType="none"
+                {...chartMotion()}
                 hide={activePolicies.length <= 1}
               />
               <Customized component={<ChartUnitLabel text="Average change per household (£)" />} />

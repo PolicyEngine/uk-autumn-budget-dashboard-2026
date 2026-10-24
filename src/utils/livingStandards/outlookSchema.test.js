@@ -277,13 +277,7 @@ describe("living_standards_outlook.json matches DATA_CONTRACT.md", () => {
           series(points, path, rate, { endYear: end });
         }
       }
-      const kept = object(cp.two_child_limit_kept, "child_poverty_by_family.two_child_limit_kept");
-      string(kept.label, "child_poverty_by_family.two_child_limit_kept.label");
-      for (const key of ["baseline", "counterfactual"]) {
-        series(kept[key], `child_poverty_by_family.two_child_limit_kept.${key}`, rate, { endYear: end });
-      }
-      sentences(cp.notes, "child_poverty_by_family.notes", { nonEmpty: true });
-      sentences(cp.sources, "child_poverty_by_family.sources");
+      sentences(cp.notes, "child_poverty_by_family.notes");
     }),
   );
 

@@ -99,14 +99,16 @@ describe("MethodologyTab", () => {
     }
   });
 
-  it("holds a marked slot for the single-year calculation", () => {
+  it("describes the single-year calculation in its slot", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     expect(within(slot).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Single-year calculation",
     );
-    expect(slot).toHaveTextContent("To follow");
-    expect(slot).toHaveTextContent("same engine and measures as the national figures");
+    expect(slot).not.toHaveTextContent("To follow");
+    expect(slot).toHaveTextContent("same measures as the national figures");
+    expect(slot).toHaveTextContent("OBR's average earnings forecast");
+    expect(slot).toHaveTextContent("rail fares freeze");
   });
 
   it("switches views from its links, in place", () => {

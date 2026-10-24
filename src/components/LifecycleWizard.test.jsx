@@ -1,54 +1,193 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import LifecycleCalculator from "./LifecycleCalculator";
+import { beforeEach, describe, expect, it } from "vitest";
+import LifecycleCalculator, { WIZARD_DEFAULTS, resetSavedWizard } from "./LifecycleCalculator";
+import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
+
+beforeEach(() => {
+  resetSavedWizard();
+});
+
+const steps = () => screen.getByRole("navigation", { name: "Steps" });
+const group = (name) => screen.getByRole("radiogroup", { name });
+const choose = (groupName, option) =>
+  fireEvent.click(within(group(groupName)).getByRole("radio", { name: option }));
+const box = (name) => screen.getByRole("spinbutton", { name });
+const moreDetails = () => fireEvent.click(screen.getByRole("button", { name: "More details (optional)" }));
 
 describe("the personal impact form", () => {
-  it("shows one step at a time and walks to the results", () => {
+  it("has two steps and the results, and reaches the results from the first", () => {
     render(<LifecycleCalculator />);
-    const steps = screen.getByRole("navigation", { name: "Steps" });
-    expect(within(steps).getByRole("button", { current: "step" })).toHaveTextContent(
-      "About you",
-    );
-    expect(screen.getByLabelText("Age")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Salary")).not.toBeInTheDocument();
+    expect(
+      within(steps())
+        .getAllByRole("button")
+        .map((b) => b.textContent.replace(/^[0-9✓]+Step \d+: /, "")),
+    ).toEqual(["Your household", "More details", "Results"]);
+    expect(within(steps()).getByRole("button", { current: "step" })).toHaveTextContent("Your household");
+    // Every step is open: every answer has a default
+    within(steps())
+      .getAllByRole("button")
+      .forEach((button) => expect(button).not.toBeDisabled());
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByRole("heading", { level: 3, name: "Earnings" })).toHaveFocus();
-    expect(screen.getByLabelText("Salary")).toBeInTheDocument();
+    // The essentials on step 1; the optional details on step 2
+    expect(box("Age")).toBeInTheDocument();
+    expect(box("Salary in 2026")).toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "Dividends" })).not.toBeInTheDocument();
 
-    // Jump back by the step tabs; later steps are not reachable yet
-    expect(within(steps).getByRole("button", { name: /Family/ })).toBeDisabled();
-    fireEvent.click(within(steps).getByRole("button", { name: /About you/ }));
-    expect(screen.getByLabelText("Age")).toBeInTheDocument();
-
-    for (let i = 0; i < 5; i += 1) {
-      fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    }
+    // Straight to the results, skipping the optional step
     fireEvent.click(screen.getByRole("button", { name: "See results" }));
-    expect(screen.getByRole("heading", { level: 3, name: "Results" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Results" })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    expect(screen.getByLabelText("Age")).toBeInTheDocument();
+    expect(box("Age")).toBeInTheDocument();
+
+    moreDetails();
+    expect(screen.getByRole("heading", { level: 3, name: "More details" })).toHaveFocus();
+    expect(box("Dividends")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(box("Age")).toBeInTheDocument();
+  });
+
+  it("starts every answer at its default, with the sources said", () => {
+    render(<LifecycleCalculator />);
+    expect(box("Age")).toHaveValue(30);
+    expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
+    expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
+    expect(within(group("Region")).getByRole("radio", { name: "North West" })).toBeChecked();
+    expect(within(group("Do you live with a partner?")).getByRole("radio", { name: "No" })).toBeChecked();
+    expect(within(group("Number of children")).getByRole("radio", { name: "0" })).toBeChecked();
+    expect(within(group("Housing")).getByRole("radio", { name: "Rent privately" })).toBeChecked();
+    expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
+    expect(screen.getByText(/average private rent in North West \(ONS, September 2026\)/)).toBeInTheDocument();
+    expect(within(group("Student loan plan")).getByRole("radio", { name: "No loan" })).toBeChecked();
+
+    moreDetails();
+    expect(box("Petrol")).toHaveValue(DEFAULT_SPENDING.petrol);
+    expect(box("Diesel")).toHaveValue(DEFAULT_SPENDING.diesel);
+    expect(box("Rail fares")).toHaveValue(DEFAULT_SPENDING.rail);
+    expect(box("Savings interest")).toHaveValue(0);
+    expect(box("Pension paid by salary sacrifice")).toHaveValue(0);
+    expect(within(group("Council tax band")).getByRole("radio", { name: "D" })).toBeChecked();
+    expect(
+      within(group("Would your household claim Universal Credit if entitled?")).getByRole("radio", { name: "Yes" }),
+    ).toBeChecked();
+    // No loan plan: no balance to ask
+    expect(screen.queryByRole("spinbutton", { name: "Student loan balance" })).not.toBeInTheDocument();
+    expect(WIZARD_DEFAULTS.student_loan_plan).toBe("NONE");
+  });
+
+  it("uses choice boxes with radio semantics, and steppers for amounts", () => {
+    render(<LifecycleCalculator />);
+    const regions = within(group("Region")).getAllByRole("radio");
+    expect(regions).toHaveLength(12);
+    choose("Region", "London");
+    expect(within(group("Region")).getByRole("radio", { name: "London" })).toBeChecked();
+    // The rent follows the region until it is changed
+    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rent: £25 more" }));
+    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON + 25 - (REGIONAL_RENT.LONDON % 25));
+    choose("Region", "Wales");
+    expect(box("Rent")).not.toHaveValue(REGIONAL_RENT.WALES);
+    fireEvent.click(screen.getByRole("button", { name: "Use the regional average" }));
+    expect(box("Rent")).toHaveValue(REGIONAL_RENT.WALES);
+
+    fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
+    expect(box("Age")).toHaveValue(31);
+    fireEvent.change(box("Salary in 2026"), { target: { value: "52000" } });
+    expect(box("Salary in 2026")).toHaveValue(52000);
+  });
+
+  it("asks rent only of renters, and the partner's answers only with a partner", () => {
+    render(<LifecycleCalculator />);
+    choose("Housing", "Own outright");
+    expect(screen.queryByRole("spinbutton", { name: "Rent" })).not.toBeInTheDocument();
+
+    expect(screen.queryByRole("spinbutton", { name: "Partner's salary in 2026" })).not.toBeInTheDocument();
+    choose("Do you live with a partner?", "Yes");
+    expect(box("Partner's age")).toHaveValue(30);
+    expect(box("Partner's salary in 2026")).toHaveValue(DEFAULT_SALARY);
+  });
+
+  it("asks one age per child, and childcare only with children", () => {
+    render(<LifecycleCalculator />);
+    choose("Number of children", "2");
+    expect(box("Child 1's age")).toHaveValue(5);
+    fireEvent.change(box("Child 2's age"), { target: { value: "9" } });
+    expect(box("Child 2's age")).toHaveValue(9);
+    choose("Number of children", "3");
+    expect(box("Child 2's age")).toHaveValue(9);
+    expect(box("Child 3's age")).toHaveValue(5);
+    moreDetails();
+    expect(box("Paid childcare")).toHaveValue(0);
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    choose("Number of children", "0");
+    expect(screen.queryByRole("spinbutton", { name: "Child 1's age" })).not.toBeInTheDocument();
+    moreDetails();
+    expect(screen.queryByRole("spinbutton", { name: "Paid childcare" })).not.toBeInTheDocument();
+  });
+
+  it("asks the balance only with a loan plan", () => {
+    render(<LifecycleCalculator />);
+    const plans = within(group("Student loan plan"))
+      .getAllByRole("radio")
+      .map((radio) => radio.closest("label").querySelector(".choice-tile-label").textContent);
+    expect(plans).toEqual(["No loan", "Plan 1", "Plan 2", "Plan 4", "Plan 5", "Postgraduate"]);
+    choose("Student loan plan", /^Plan 2/);
+    moreDetails();
+    expect(box("Student loan balance")).toHaveValue(45000);
+  });
+
+  it("asks for the State Pension only at State Pension age, prefilled with the full rate", () => {
+    render(<LifecycleCalculator year={2029} />);
+    moreDetails();
+    expect(screen.queryByRole("spinbutton", { name: "Your State Pension" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.change(box("Age"), { target: { value: "72" } });
+    moreDetails();
+    expect(box("Your State Pension")).toHaveValue(13697);
+    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,697\)/)).toBeInTheDocument();
+    fireEvent.change(box("Your State Pension"), { target: { value: "9000" } });
+    expect(box("Your State Pension")).toHaveValue(9000);
   });
 
   it("fills the form from a young-person example, still editable", () => {
     render(<LifecycleCalculator />);
     fireEvent.click(screen.getByRole("button", { name: "A 22-year-old renting" }));
-    expect(screen.getByRole("button", { name: "A 22-year-old renting" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByText(/Rent is not an input/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Age")).toHaveValue("22");
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    expect(screen.getByLabelText("Salary")).toHaveValue("25000");
+    expect(screen.getByRole("button", { name: "A 22-year-old renting" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Only the single-year effect uses rent/)).toBeInTheDocument();
+    expect(box("Age")).toHaveValue(22);
+    expect(box("Salary in 2026")).toHaveValue(25000);
 
-    fireEvent.change(screen.getByLabelText("Salary"), { target: { value: "26000" } });
-    expect(screen.getByLabelText("Salary")).toHaveValue("26000");
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
+    expect(box("Salary in 2026")).toHaveValue(26000);
     // Edited: no longer the example as given
-    expect(screen.queryByText(/Rent is not an input/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Only the single-year effect uses rent/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "A 23-year-old graduate" }));
     expect(screen.getByText(/Plan 5, for courses starting from August 2023, is not modelled/)).toBeInTheDocument();
+  });
+
+  it("fills the household answers from each example", () => {
+    const cases = [
+      ["A 22-year-old renting", { plan: "No loan", rent: 900 }],
+      ["A 19-year-old apprentice", { plan: "No loan", rent: 600 }],
+      ["A 23-year-old graduate", { plan: /^Plan 2/, rent: 900 }],
+    ];
+    for (const [label, expected] of cases) {
+      resetSavedWizard();
+      const { unmount } = render(<LifecycleCalculator />);
+      // Start from answers the example must overwrite
+      choose("Do you live with a partner?", "Yes");
+      choose("Number of children", "2");
+      choose("Housing", "Own outright");
+      fireEvent.click(screen.getByRole("button", { name: label }));
+
+      expect(within(group("Region")).getByRole("radio", { name: "North West" })).toBeChecked();
+      expect(within(group("Student loan plan")).getByRole("radio", { name: expected.plan })).toBeChecked();
+      expect(within(group("Housing")).getByRole("radio", { name: "Rent privately" })).toBeChecked();
+      expect(box("Rent")).toHaveValue(expected.rent);
+      expect(within(group("Do you live with a partner?")).getByRole("radio", { name: "No" })).toBeChecked();
+      expect(within(group("Number of children")).getByRole("radio", { name: "0" })).toBeChecked();
+      unmount();
+    }
   });
 });

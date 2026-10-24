@@ -16,6 +16,7 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { exportChartAsSvg } from "../utils/exportChartAsSvg";
 import "./HouseholdChart.css";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 
 // Chart metadata for export
 const CHART_DESCRIPTION =
@@ -31,7 +32,7 @@ const LEGEND_ITEMS = [
   { color: "#9CA3AF", label: "No change", type: "rect" },
 ];
 
-function HouseholdChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+function HouseholdChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   // Use prop for year selection (shared slider in parent)
 
   // Zoom state

@@ -10,7 +10,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from uk_budget_data.calculators import AGE_BANDS, AgeImpactCalculator
+from uk_budget_data.calculators import (
+    AGE_BANDS,
+    SINGLE_AGE_MIN_RECORDS,
+    AgeImpactCalculator,
+    single_age_of,
+)
 
 # One row per person. own_change is the largest change in their own taxes
 # or earnings.
@@ -97,6 +102,49 @@ def test_bands_cover_every_age_once():
         covered.extend(range(low, min(high, 120) + 1))
     assert covered == list(range(0, 121))
     assert ("16-24", 16, 24) in AGE_BANDS
+
+
+def _single_age_frame():
+    """Records at ages 17, 18, 92 and 95, enough at 17 and in 90+ only."""
+
+    def people(age, count, change):
+        return [
+            (age, 10, 4, 20_000, 20_000 + change, 10_000, 10_000, 0.0)
+        ] * count
+
+    records = (
+        # 17: 100 records, each £50 better off
+        people(17, SINGLE_AGE_MIN_RECORDS, 50)
+        # 18: one record short of a row
+        + people(18, SINGLE_AGE_MIN_RECORDS - 1, 50)
+        # 92 and 95 share the 90+ row: 60 records lose £20, 40 gain £30
+        + people(92, 60, -20)
+        + people(95, 40, 30)
+    )
+    return pd.DataFrame(records, columns=PEOPLE.columns)
+
+
+def test_single_years_of_age_by_hand():
+    rows = AgeImpactCalculator().calculate_from_dataframe(
+        "m", "Measure", 2027, _single_age_frame()
+    )
+    labels = [row["age_band"] for row in rows]
+    # Bands, then all, then single years; 18 has too few records
+    assert labels == ["16-24", "65+", "all", "17", "90+"]
+    by_label = {row["age_band"]: row for row in rows}
+    assert by_label["17"]["sample_size"] == SINGLE_AGE_MIN_RECORDS
+    assert by_label["17"]["people"] == 1_000
+    assert by_label["17"]["mean_change"] == pytest.approx(50)
+    assert by_label["17"]["pct_better_off"] == pytest.approx(100)
+    # (60 x -20 + 40 x 30) / 100 = 0
+    assert by_label["90+"]["mean_change"] == pytest.approx(0)
+    assert by_label["90+"]["pct_worse_off"] == pytest.approx(60)
+    assert by_label["90+"]["pct_better_off"] == pytest.approx(40)
+
+
+def test_single_age_labels():
+    labels = single_age_of(np.array([0, 16.5, 89, 90, 104]))
+    assert list(labels) == ["0", "16", "89", "90+", "90+"]
 
 
 class _Values:

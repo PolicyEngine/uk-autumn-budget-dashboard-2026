@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   checkLifecycleApiEnv,
+  checkPersonalApiEnv,
+  householdApiUrlProblem,
   lifecycleApiUrlProblem,
 } from "../../scripts/lifecycle-api-env.mjs";
 
@@ -67,5 +69,64 @@ describe("checkLifecycleApiEnv", () => {
     expect(log.warn).toHaveBeenCalledTimes(1);
     checkLifecycleApiEnv({ NEXT_PUBLIC_LIFECYCLE_API_URL: GOOD }, log);
     expect(log.warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+const HOUSEHOLD =
+  "https://uk-budget-api-2026-qevs5bboca-ew.a.run.app/api/household-impact";
+
+describe("householdApiUrlProblem", () => {
+  it("accepts the service URL followed by /api/household-impact", () => {
+    for (const env of [
+      { NEXT_PUBLIC_HOUSEHOLD_API_URL: HOUSEHOLD, VERCEL_ENV: "production" },
+      { NEXT_PUBLIC_HOUSEHOLD_API_URL: "http://localhost:5001/api/household-impact" },
+    ]) {
+      expect(householdApiUrlProblem(env)).toBeNull();
+    }
+  });
+
+  it("refuses any other form in every build", () => {
+    for (const url of [
+      "https://uk-budget-api-2026-qevs5bboca-ew.a.run.app",
+      GOOD, // the lifecycle URL
+      `${HOUSEHOLD}/`,
+      `${HOUSEHOLD}?x=1`,
+    ]) {
+      for (const extra of [{}, { VERCEL_ENV: "preview" }, { NEXT_PUBLIC_MOCK: "1" }]) {
+        const problem = householdApiUrlProblem({ NEXT_PUBLIC_HOUSEHOLD_API_URL: url, ...extra });
+        expect(problem?.level, url).toBe("error");
+        expect(problem.message).toContain("/api/household-impact");
+      }
+    }
+  });
+
+  it("fails a production build without it, and only warns elsewhere", () => {
+    expect(householdApiUrlProblem({ VERCEL_ENV: "production" })?.level).toBe("error");
+    for (const env of [{}, { VERCEL_ENV: "preview" }, { VERCEL_ENV: "production", NEXT_PUBLIC_MOCK: "1" }]) {
+      expect(householdApiUrlProblem(env)?.level).toBe("warning");
+    }
+  });
+});
+
+describe("checkPersonalApiEnv", () => {
+  it("checks both URLs: a production build needs each", () => {
+    const log = { warn: vi.fn() };
+    expect(() =>
+      checkPersonalApiEnv({ VERCEL_ENV: "production", NEXT_PUBLIC_LIFECYCLE_API_URL: GOOD }, log),
+    ).toThrow(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/);
+    expect(() =>
+      checkPersonalApiEnv({ VERCEL_ENV: "production", NEXT_PUBLIC_HOUSEHOLD_API_URL: HOUSEHOLD }, log),
+    ).toThrow(/NEXT_PUBLIC_LIFECYCLE_API_URL is not set/);
+    checkPersonalApiEnv(
+      {
+        VERCEL_ENV: "production",
+        NEXT_PUBLIC_LIFECYCLE_API_URL: GOOD,
+        NEXT_PUBLIC_HOUSEHOLD_API_URL: HOUSEHOLD,
+      },
+      log,
+    );
+    expect(log.warn).not.toHaveBeenCalled();
+    checkPersonalApiEnv({ VERCEL_ENV: "preview" }, log);
+    expect(log.warn).toHaveBeenCalledTimes(2);
   });
 });

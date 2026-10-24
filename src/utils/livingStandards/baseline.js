@@ -29,7 +29,7 @@ export const NO_OFFICIAL_SERIES = "No official series on this definition";
  * anywhere in the file (2024-25 with the current data). The model's own point
  * for that year is drawn next to the official one, so the level gap shows
  * within one year instead of as a one-year change; earlier model years are
- * not drawn. Headline changes still start at meta.headline_start_year.
+ * not drawn. Headline changes start at 2026-27 (headlineStartYear).
  */
 export function projectionStartYear(data) {
   let last = -Infinity;

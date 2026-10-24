@@ -6,7 +6,9 @@
  * serves it, and the lifecycle API answered with the real route's output
  * for the calculator's default household
  * (src/test/fixtures/lifecycle/default-household.json, written by
- * uk_budget_data.api). A tab fails if rendering throws, if anything logs a
+ * uk_budget_data.api), and the household API answered with the
+ * single-year fixture (src/test/fixtures/householdImpact.json, shaped as
+ * the Single-year effect's contract). A tab fails if rendering throws, if anything logs a
  * console error, if a data file it fetches is missing, or if it shows an
  * error message instead of its content.
  *
@@ -20,12 +22,15 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
+import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
 import lifecycleAnswer from "./test/fixtures/lifecycle/default-household.json";
+import { householdAnswerFor } from "./test/householdFixture";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const LIFECYCLE_API = "https://lifecycle-api.test/api/lifecycle";
+const HOUSEHOLD_API = "https://lifecycle-api.test/api/household-impact";
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
@@ -34,6 +39,8 @@ const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
   /NEXT_PUBLIC_LIFECYCLE_API_URL is not set/,
+  /NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/,
+  /Results are not available here/,
   /API error/,
   /Application error/,
   /Something went wrong/i,
@@ -48,11 +55,11 @@ const LOADED = {
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
   // The wizard opens at its first step; the API call it makes on load is
   // checked below.
-  personal: (panel) => within(panel).findAllByText(/Step 1 of 7/),
-  // The head count comes from age_impact.csv.
-  young: (panel) => within(panel).findAllByText(/young people aged 16 to 24 in the UK/),
-  // The provenance line comes from the outlook's meta.
-  living: (panel) => within(panel).findAllByText(/Baseline from policyengine \d/),
+  personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
+  // The cards render once age_impact.csv is read.
+  young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
+  // The Incomes heading shows once the outlook is read.
+  living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -66,6 +73,16 @@ let consoleErrors;
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
+  if (url.startsWith(HOUSEHOLD_API)) {
+    const ok = url === HOUSEHOLD_API && method === "POST";
+    requests.push({ url, status: ok ? 200 : 404, body: init.body });
+    return ok
+      ? new Response(JSON.stringify(householdAnswerFor(init.body)), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      : new Response("{}", { status: 404 });
+  }
   if (url.startsWith(LIFECYCLE_API)) {
     const ok = url === `${LIFECYCLE_API}/calculate` && method === "POST";
     requests.push({ url, status: ok ? 200 : 404 });
@@ -87,6 +104,8 @@ beforeEach(() => {
   requests = [];
   consoleErrors = [];
   vi.stubEnv("NEXT_PUBLIC_LIFECYCLE_API_URL", LIFECYCLE_API);
+  vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
+  clearHouseholdImpactCache();
   vi.stubGlobal("fetch", vi.fn(async (input, init) => serve(input, init)));
   vi.spyOn(console, "error").mockImplementation((...args) => {
     const message = args.map((a) => (a instanceof Error ? a.message : String(a))).join(" ");
@@ -131,6 +150,22 @@ describe("each of the five tabs, on the real data", () => {
       expect(missing).toEqual([]);
       if (value === "personal") {
         expect(requests.map((r) => r.url)).toContain(`${LIFECYCLE_API}/calculate`);
+        // Straight to the results from step 1 (every answer has a default):
+        // the Single-year effect asks the household API in two stages and
+        // shows the answer
+        fireEvent.click(within(panel).getByRole("button", { name: "See results" }));
+        expect(
+          await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
+        ).toBeInTheDocument();
+        await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
+        const stages = requests
+          .filter((r) => r.url === HOUSEHOLD_API)
+          .map((r) => JSON.parse(r.body).include);
+        expect(stages).toEqual([[], ["by_policy", "sweep"]]);
+        for (const pattern of FAILURE_TEXT) {
+          expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
+        }
+        expect(consoleErrors).toEqual([]);
       }
     },
     15000,

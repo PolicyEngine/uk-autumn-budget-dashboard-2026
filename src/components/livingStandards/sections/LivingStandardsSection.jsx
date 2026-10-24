@@ -1,5 +1,5 @@
 // Household income card. Ported from PolicyEngine/uk-living-standards-outlook
-// (LivingStandardsSection); text and figures unchanged.
+// (LivingStandardsSection). The summary runs from 2026-27 (headlineSpan).
 
 import { useMemo, useState } from "react";
 import LsCard from "../LsCard";
@@ -155,7 +155,12 @@ export default function LivingStandardsSection({ data }) {
             name="Income metric"
             value={metric}
             onChange={setMetric}
-            options={metricIds.map((id) => ({ value: id, label: living.metrics[id] }))}
+            options={metricIds.map((id) => ({
+              value: id,
+              label: living.metrics[id],
+              // The pill shows "Median (BHC)"; the list keeps the full name
+              badge: living.metrics[id].replace(/ equivalised income/i, ""),
+            }))}
           />
           <PillSelect
             variant="light"
@@ -191,6 +196,7 @@ export default function LivingStandardsSection({ data }) {
           </Note>
         )
       }
+      boxes={[meta.headline_end_year_note, /_ahc$/.test(metric) && meta.cpi_ahc_note]}
       notes={[units && `Incomes are in ${units}.`]}
     >
       {chartData.length === 0 ? (
