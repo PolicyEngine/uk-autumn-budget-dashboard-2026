@@ -10,13 +10,19 @@ public rows reach public/data. Its exact values and counts go to a private
 directory outside any git repository.
 
 Three levels go into one release. National is a reference: the national
-tables publish it already, so its change cells are known. On the national
-dataset (the enhanced FRS) the region level is published and seats come from
-the eFRS seat weight matrix. On a local dataset (Microcosm) each household
-carries its seat, and the region level is a reference, since the regional
-table comes from the national dataset. Seats are published for the chosen
-reforms only; every other reform is a reference there with every cell
-withheld, so a package's measures are checked without being shown.
+tables publish it already, so its change cells are known. On a national
+dataset the region level is published: the enhanced FRS, whose seats come
+from its seat weight matrix, or Microcosm's national file, which has none.
+On Microcosm's local file each household carries its seat, and the region
+level is a reference, since the regional table comes from the national
+dataset. Seats are published for the chosen reforms only; every other reform
+is a reference there with every cell withheld, so a package's measures are
+checked without being shown.
+
+Microcosm's national and local files are a pair, built from the same survey
+households. Regions come from the national file and seats from the local
+one, which takes the regional table as a prior. ``pair_consistency`` then
+compares the two files' national and regional estimates, privately.
 
 Nothing here prints a value, a count or a support figure: only labels.
 """
@@ -69,6 +75,7 @@ from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
     PrivateOutputError,
     private_directory,
+    save_private_csv,
 )
 from uk_budget_data.publication import combine
 from uk_budget_data.publication import manifest as publication_manifest
@@ -105,11 +112,18 @@ PACKAGES = {
 
 EFRS = "efrs"
 MICROCOSM = "microcosm"
-DATASET_KINDS = (EFRS, MICROCOSM)
+MICROCOSM_NATIONAL = "microcosm-national"
+DATASET_KINDS = (EFRS, MICROCOSM, MICROCOSM_NATIONAL)
+MICROCOSM_KINDS = (MICROCOSM, MICROCOSM_NATIONAL)
 MICROCOSM_UNCERTIFIED = (
     "UNCERTIFIED: Microcosm's local-area results are not certified "
     "(policyengine.py#685)"
 )
+# Columns only Microcosm's local file carries: each household's areas.
+MICROCOSM_LOCAL_COLUMNS = ("region_code_oa", "constituency_code_oa")
+# The page shows the one reform ending in this as the full package
+# (src/utils/geography/selection.js).
+PACKAGE_SUFFIX = "_combined"
 # Flags on the copies policyengine-uk-data stacks onto the FRS households to
 # build the enhanced FRS, in the order it stacks them.
 COPY_FLAGS = (
@@ -152,6 +166,16 @@ SEAT_WEIGHTS_FILE = "parliamentary_constituency_weights.h5"
 # but not time, since the layer's per-seat support checks dominate.
 SEAT_MATRIX_DTYPE = np.float64
 MAX_ROUNDS = 50
+# The layer's private audit, and the pair check written beside it.
+AUDIT_FILE = "disclosure_audit.csv"
+PAIR_REPORT_FILE = "pair_consistency.csv"
+# How far the local file's national and regional estimates may sit from the
+# national file's before the pair check flags them (María, 19 October): a
+# share of the national file's value, never less than a floor in the
+# outcome's unit. Report only: a flag never stops a run.
+PAIR_TOLERANCE = {"national": 0.05, "region": 0.10}
+PAIR_FLOOR = {"average_change": 5.0, "relative_change": 0.0005}
+RUN_ID = re.compile(r"[A-Za-z0-9._-]{1,80}")
 
 # (level, area_code, reform, year, family) and (reform, year).
 Cell = tuple[str, str, str, int, str]
@@ -554,6 +578,32 @@ def _efrs_source_ids(
     return ids.astype(np.int64)
 
 
+def check_microcosm_file(household: pd.DataFrame, kind: str) -> None:
+    """Refuse a Microcosm file given as the other file of the pair.
+
+    Both files carry the same export marker, so their columns tell them
+    apart: only the local file places each household in its areas.
+
+    Raises:
+        ValueError: If the columns do not match ``kind``.
+    """
+    local = [c for c in MICROCOSM_LOCAL_COLUMNS if c in household.columns]
+    if kind == MICROCOSM_NATIONAL:
+        if local:
+            raise ValueError(
+                f"This is a Microcosm local file (it carries {local}); use "
+                "--dataset-kind microcosm for it"
+            )
+        if "region" not in household.columns:
+            raise ValueError("A Microcosm national file needs region")
+    elif kind == MICROCOSM and len(local) < len(MICROCOSM_LOCAL_COLUMNS):
+        missing = [c for c in MICROCOSM_LOCAL_COLUMNS if c not in local]
+        raise ValueError(
+            f"This Microcosm file lacks {missing}, so it is not a local file; "
+            "use --dataset-kind microcosm-national for the national one"
+        )
+
+
 def survey_household_ids(
     household: pd.DataFrame,
     person: Optional[pd.DataFrame],
@@ -575,17 +625,18 @@ def survey_household_ids(
       every copy must match its original on region, tenure, accommodation
       and the ages and genders of its members. Otherwise the dataset is
       refused.
-    - ``microcosm``: ``source_household_id`` of a Microcosm export
-      (``microcosm_export``, from :func:`is_microcosm_export`), refused if
-      it is unique per row while copies are flagged, does not match
-      ``source_household_key`` one to one, or spans regions. A local file is
-      a sample, so a copy's original need not be in it; files that are not
-      Microcosm exports go through ``efrs`` instead.
+    - ``microcosm`` and ``microcosm-national``: ``source_household_id`` of a
+      Microcosm export (``microcosm_export``, from
+      :func:`is_microcosm_export`), refused if it is unique per row while
+      copies are flagged, does not match ``source_household_key`` one to
+      one, or spans regions. A local file is a sample, so a copy's original
+      need not be in it; files that are not Microcosm exports go through
+      ``efrs`` instead.
 
     Raises:
         ValueError: For another kind, or when the ids cannot be trusted.
     """
-    if kind == MICROCOSM:
+    if kind in MICROCOSM_KINDS:
         return _microcosm_source_ids(household, microcosm_export)
     if kind == EFRS:
         return _efrs_source_ids(household, person)
@@ -818,11 +869,15 @@ class GeographyCollector:
         """The dataset-level arrays of the dataset a simulation runs on.
 
         ``kind`` is ``efrs`` (the national dataset; seats from the weight
-        matrix at ``seat_weights``, if given) or ``microcosm`` (a local
-        dataset; seats from ``constituency_code_oa``).
+        matrix at ``seat_weights``, if given), ``microcosm-national``
+        (Microcosm's national file; regions from ``region``, no seats) or
+        ``microcosm`` (Microcosm's local file; seats from
+        ``constituency_code_oa``).
         """
         tables = dataset_tables(simulation)
         household = tables.household
+        if kind in MICROCOSM_KINDS:
+            check_microcosm_file(household, kind)
         source_ids = survey_household_ids(
             household,
             tables.person,
@@ -839,6 +894,12 @@ class GeographyCollector:
                     if seat_weights is not None
                     else None
                 ),
+            )
+        if kind == MICROCOSM_NATIONAL:
+            return cls(
+                source_ids=source_ids,
+                region_codes=frs_region_codes(household["region"], regions),
+                national=True,
             )
         return cls(
             source_ids=source_ids,
@@ -1909,6 +1970,127 @@ def write_private_audit(
     return directory
 
 
+# -- the pair check ----------------------------------------------------------
+
+
+_PAIR_KEY = ["level", "area_code", "reform", "year", "outcome"]
+
+
+def _audit_cells(path: Union[str, Path]) -> pd.DataFrame:
+    """A private audit's national and regional change cells, exact."""
+    frame = pd.read_csv(
+        path,
+        usecols=[*_PAIR_KEY, "exact_value"],
+        dtype={key: str for key in _PAIR_KEY if key != "year"},
+        keep_default_na=False,
+    )
+    keep = (
+        frame["level"].isin(PAIR_TOLERANCE)
+        & frame["outcome"].isin(PUBLISHED_OUTCOMES)
+        & ~frame["reform"].str.endswith(INTERACTION_SUFFIX)
+    )
+    frame = frame[keep].copy()
+    frame["year"] = frame["year"].astype(int)
+    frame["exact_value"] = frame["exact_value"].astype(float)
+    return frame
+
+
+def pair_consistency(
+    national_audit: Union[str, Path], local_audit: Union[str, Path]
+) -> pd.DataFrame:
+    """Compare a Microcosm pair's national and regional estimates. Private.
+
+    The two files carry their own weights, so their estimates differ; a
+    large gap points to a bug or to miscalibration. Each row is a national
+    or regional change cell from the two runs' private audits: both exact
+    values, the gap, the gap allowed (``PAIR_TOLERANCE`` of the national
+    file's value, at least ``PAIR_FLOOR``) and a status. A cell only one run
+    holds is marked so. The table holds exact values: it stays in the
+    private directory.
+    """
+    national = _audit_cells(national_audit)
+    local = _audit_cells(local_audit)
+    merged = national.merge(
+        local,
+        on=_PAIR_KEY,
+        how="outer",
+        suffixes=("_national", "_local"),
+        indicator=True,
+    )
+    national_value = merged["exact_value_national"]
+    local_value = merged["exact_value_local"]
+    gap = (local_value - national_value).abs()
+    allowed = np.maximum(
+        merged["level"].map(PAIR_TOLERANCE) * national_value.abs(),
+        merged["outcome"].map(PAIR_FLOOR),
+    )
+    side = merged["_merge"].astype(str)
+    status = np.select(
+        [side == "left_only", side == "right_only", gap > allowed],
+        ["national_only", "local_only", "beyond_tolerance"],
+        default="within_tolerance",
+    )
+    report = merged[_PAIR_KEY].copy()
+    report["national_value"] = national_value
+    report["local_value"] = local_value
+    report["gap"] = gap
+    report["allowed"] = allowed
+    report["status"] = status
+    return report.sort_values(_PAIR_KEY, kind="mergesort").reset_index(
+        drop=True
+    )
+
+
+def pair_summary(report: pd.DataFrame) -> str:
+    """The pair check as counts of cells, never values."""
+    counts = report["status"].value_counts()
+    one_side = int(counts.get("national_only", 0)) + int(
+        counts.get("local_only", 0)
+    )
+    return (
+        f"Pair check (report only): {len(report)} national and regional "
+        f"cells, {int(counts.get('beyond_tolerance', 0))} beyond tolerance, "
+        f"{one_side} in one run only. Private report: {PAIR_REPORT_FILE}"
+    )
+
+
+def add_pair_check_parser(subparsers) -> None:
+    """The ``pair-check`` command: compare two geography runs' audits."""
+    parser = subparsers.add_parser(
+        "pair-check",
+        help="Compare a Microcosm pair's national and regional estimates, "
+        "privately",
+    )
+    parser.add_argument(
+        "--national-audit",
+        type=Path,
+        required=True,
+        help="The national file's run: its private audit directory",
+    )
+    parser.add_argument(
+        "--local-audit",
+        type=Path,
+        required=True,
+        help="The local file's run: its private audit directory, where the "
+        "report goes",
+    )
+
+
+def run_pair_check(parsed: argparse.Namespace) -> int:
+    """Run the ``pair-check`` command. Prints counts only."""
+    try:
+        directory = private_directory(parsed.local_audit)
+        report = pair_consistency(
+            parsed.national_audit / AUDIT_FILE, directory / AUDIT_FILE
+        )
+        save_private_csv(report, directory / PAIR_REPORT_FILE)
+    except (OSError, PrivateOutputError, ValueError) as error:
+        console.print(f"[red]Error: {error}[/red]")
+        return 1
+    console.print(pair_summary(report))
+    return 0
+
+
 # -- command line ------------------------------------------------------------
 
 
@@ -1929,7 +2111,9 @@ def add_geography_parser(subparsers) -> None:
         "--dataset-kind",
         choices=DATASET_KINDS,
         default=EFRS,
-        help="efrs (the national dataset) or microcosm (a local one)",
+        help="efrs (the national eFRS), microcosm-national (Microcosm's "
+        "national file, for regions) or microcosm (Microcosm's local file, "
+        "for seats)",
     )
     parser.add_argument(
         "--levels",
@@ -1949,13 +2133,35 @@ def add_geography_parser(subparsers) -> None:
         "--seat-reforms",
         nargs="+",
         default=None,
-        help="Reforms published by constituency (default: chosen packages)",
+        help="Reforms published by constituency (default: the chosen "
+        "packages; with --package, the package and every measure)",
     )
     parser.add_argument(
         "--manifest",
         type=Path,
         default=publication_manifest.manifest_path(),
         help="Publication manifest (default: public/data/manifest.json)",
+    )
+    parser.add_argument(
+        "--package",
+        default=None,
+        help="Also simulate the chosen reforms together as one package with "
+        f"this id (ending in {PACKAGE_SUFFIX}), checked against its measures; "
+        "the manifest must approve the combination",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Names the private audit directory, geography/<run-id>/<kind> "
+        "(default: the start time), so a pair's two runs can be compared",
+    )
+    parser.add_argument(
+        "--compare-with",
+        type=Path,
+        default=None,
+        help="A Microcosm national run's private audit directory: compare "
+        "this local run's national and regional estimates with it, "
+        "privately (report only)",
     )
     parser.add_argument(
         "--reforms",
@@ -2036,6 +2242,7 @@ class _Plan:
     seat_weights: Optional[Path]
     prior_regional: Optional[pd.DataFrame]
     microcosm_export: bool = False
+    compare_with: Optional[Path] = None
 
 
 def approved_reforms(
@@ -2111,6 +2318,33 @@ def approved_reforms(
     return ids
 
 
+def approved_package(
+    manifest: publication_manifest.Manifest,
+    package: str,
+    measures: Sequence[str],
+) -> None:
+    """Refuse a --package the manifest does not approve.
+
+    Its measures were approved one by one already; the package is approved
+    only by the combined entry for exactly those measures, as a registered
+    package is (:func:`approved_reforms`).
+    """
+    members = sorted(measures)
+    key = combined_key(members)
+    entry = manifest.combined.get(key)
+    status = entry.status if entry is not None else "absent from the manifest"
+    if status != publication_manifest.APPROVED:
+        raise ValueError(
+            f"Unapproved reforms: {package} ({key}): "
+            f"{status.replace('_', ' ')}"
+        )
+    if sorted(entry.measures or []) != members:
+        raise ValueError(
+            f"Unapproved reforms: {package} ({key}): combined members do "
+            "not match"
+        )
+
+
 def _bundle_dataset(name: Optional[str] = None) -> tuple[str, str]:
     """Resolve a UK bundle name, including overlays, without loading data."""
     release = get_release_manifest("uk")
@@ -2133,16 +2367,26 @@ def _local_dataset(dataset: Optional[Path]) -> Optional[Path]:
 def _plan(parsed: argparse.Namespace) -> _Plan:
     """Check a geography run's options. Raises ValueError with labels."""
     kind = parsed.dataset_kind
-    if kind == MICROCOSM and parsed.dataset is None:
-        raise ValueError("--dataset-kind microcosm needs --dataset")
-    if kind == MICROCOSM and parsed.seat_weights is not None:
+    if kind in MICROCOSM_KINDS and parsed.dataset is None:
+        raise ValueError(f"--dataset-kind {kind} needs --dataset")
+    if kind in MICROCOSM_KINDS and parsed.seat_weights is not None:
         raise ValueError("--seat-weights is for the eFRS only")
+    if kind == MICROCOSM_NATIONAL and CONSTITUENCY in parsed.levels:
+        raise ValueError(
+            "--dataset-kind microcosm-national has no seats; they come from "
+            "the local file (--dataset-kind microcosm). Pass --levels region"
+        )
+    if parsed.compare_with is not None:
+        if kind != MICROCOSM:
+            raise ValueError("--compare-with is for a Microcosm local run")
+        if not (parsed.compare_with / AUDIT_FILE).is_file():
+            raise ValueError(f"No {AUDIT_FILE} in {parsed.compare_with}")
     # Read from the file, never inferred from the kind: the ids check it too.
     local = _local_dataset(parsed.dataset)
     microcosm_export = local is not None and is_microcosm_export(local)
-    if kind == MICROCOSM and not microcosm_export:
+    if kind in MICROCOSM_KINDS and not microcosm_export:
         raise ValueError(
-            "--dataset-kind microcosm needs a Microcosm export; a file "
+            f"--dataset-kind {kind} needs a Microcosm export; a file "
             "built by policyengine-uk-data goes through --dataset-kind efrs"
         )
     if not parsed.manifest.is_file():
@@ -2153,9 +2397,16 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
     manifest = publication_manifest.parse_manifest(
         parsed.manifest.read_bytes(), str(parsed.manifest)
     )
-    ids = approved_reforms(manifest, parsed.reforms)
+    # --package is approved below, as the combination of its measures, so
+    # naming it among --reforms too is not asking for a measure.
+    requested = parsed.reforms
+    if requested is not None and parsed.package is not None:
+        requested = [r for r in requested if r != parsed.package]
+    ids = approved_reforms(manifest, requested)
     if parsed.seat_reforms is not None:
-        approved_reforms(manifest, parsed.seat_reforms)
+        approved_reforms(
+            manifest, [r for r in parsed.seat_reforms if r != parsed.package]
+        )
     if kind == EFRS:
         if microcosm_export:
             raise ValueError(
@@ -2200,18 +2451,30 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         absent = [c for c in components if c not in chosen]
         if absent:
             raise ValueError(f"{package} needs its measures: {absent}")
+    package = parsed.package
+    if package is not None:
+        if packages:
+            raise ValueError(
+                f"--package cannot join a registered package: {sorted(packages)}"
+            )
+        # Named among --reforms too, it is the package, not a measure.
+        reforms = [r for r in reforms if r.id != package]
+        chosen = [r.id for r in reforms]
+        approved_package(manifest, package, chosen)
+    published = [*chosen, package] if package is not None else chosen
     levels = list(dict.fromkeys(parsed.levels))
     seat_reforms = []
     if CONSTITUENCY in levels:
-        seat_reforms = parsed.seat_reforms or [
-            p for p in PACKAGES if p in chosen
-        ]
+        default = (
+            published if package else [p for p in PACKAGES if p in chosen]
+        )
+        seat_reforms = parsed.seat_reforms or default
         if not seat_reforms and parsed.seat_reforms is None:
             raise ValueError(
                 "No approved package is chosen: constituency results need "
                 "--seat-reforms naming chosen reforms"
             )
-        if not seat_reforms or set(seat_reforms) - set(chosen):
+        if not seat_reforms or set(seat_reforms) - set(published):
             raise ValueError("--seat-reforms must name chosen reforms")
     inputs = parsed.data_inputs_dir
     regions = load_regions(inputs / REGIONS_FILE)
@@ -2243,9 +2506,14 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         prior = pd.read_csv(
             parsed.prior_regional, dtype=str, keep_default_na=False
         )
+    years = sorted(set(parsed.years))
+    if package is not None:
+        # Last: it builds household simulations to check the combination.
+        reforms.append(build_package(package, reforms, years))
+        packages[package] = tuple(chosen)
     return _Plan(
         reforms=reforms,
-        years=sorted(set(parsed.years)),
+        years=years,
         packages=packages,
         seat_reforms=list(seat_reforms),
         levels=levels,
@@ -2255,21 +2523,27 @@ def _plan(parsed: argparse.Namespace) -> _Plan:
         seat_weights=seat_weights,
         prior_regional=prior,
         microcosm_export=microcosm_export,
+        compare_with=parsed.compare_with,
     )
 
 
-def _reform_scenarios(reform: Reform, years, *, check_composition=False):
+def _reform_scenarios(
+    reform: Reform, years, *, check_composition=False, members=None
+):
     """The generator's scenarios, composing a package's approved members.
 
-    The registered package supplies its alias only. Its members supply both
-    scenarios and their modifiers, including whether the configured baseline
-    applies when the composed baseline is empty.
+    The registered package, or a --package (``members``), supplies its alias
+    only. Its members supply both scenarios and their modifiers, including
+    whether the configured baseline applies when the composed baseline is
+    empty.
     """
     config = DataConfig(years=list(years))
     uses_config = not reform.has_custom_baseline()
-    if reform.id in PACKAGES:
+    if members is None and reform.id in PACKAGES:
+        members = PACKAGES[reform.id]
+    if members is not None:
         members = combine.member_order(
-            [get_reform(member) for member in PACKAGES[reform.id]]
+            [get_reform(member) for member in members]
         )
         combined = combine.combine_measures(members, config)
         if check_composition:
@@ -2284,12 +2558,15 @@ def _reform_scenarios(reform: Reform, years, *, check_composition=False):
     )
 
 
-def simulate_reform(reform: Reform, dataset: Optional[str], years) -> tuple:
+def simulate_reform(
+    reform: Reform, dataset: Optional[str], years, *, members=None
+) -> tuple:
     """A reform's baseline and reformed microsimulations, built under the
     data-limit build watch (``data_limits.watched_build``), as the
-    publication generator builds them."""
+    publication generator builds them. ``members`` are a --package's
+    measures."""
     baseline_scenario, reform_scenario = _reform_scenarios(
-        reform, years, check_composition=True
+        reform, years, check_composition=True, members=members
     )
     baseline = data_limits.watched_build(
         build_microsimulation, dataset, baseline_scenario
@@ -2321,6 +2598,37 @@ def reform_model_limits(reform: Reform, baseline, reformed, years) -> list:
     if all(hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)):
         return model_limits.limits_touched(baseline, reformed)
     return model_limits.limits_for_scenarios(*_reform_scenarios(reform, years))
+
+
+def build_package(name: str, measures: Sequence[Reform], years) -> Reform:
+    """The measures as one reform named ``name``, simulated whole.
+
+    A reform registered under ``name`` is the package, so the tables by area
+    show the same package as the national tables; otherwise it is built the
+    way ``generate --combined`` builds a combined run. Either way it is
+    checked to change exactly what its measures change before anything is
+    simulated.
+
+    Raises:
+        ValueError: If the name is not a package id or the package is not
+            exactly its measures.
+    """
+    if not name.endswith(PACKAGE_SUFFIX):
+        raise ValueError(
+            f"--package {name} must end in {PACKAGE_SUFFIX}, the suffix the "
+            "page reads as the full package"
+        )
+    ordered = combine.member_order(list(measures))
+    if len(ordered) < 2:
+        raise ValueError("--package needs at least two measures")
+    config = DataConfig(years=list(years))
+    package = get_reform(name)
+    if package is None:
+        package = combine.combine_measures(ordered, config).model_copy(
+            update={"id": name}
+        )
+    combine.check_consistency(package, ordered, config, list(config.years))
+    return package
 
 
 def run_geography(parsed: argparse.Namespace) -> int:
@@ -2363,7 +2671,15 @@ def _run_geography(
     parsed: argparse.Namespace, *, certification_reason: Optional[str]
 ) -> int:
     """Build and write a run, inside any dataset certification banners."""
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_id = parsed.run_id or datetime.now(timezone.utc).strftime(
+        "%Y%m%dT%H%M%SZ"
+    )
+    if not RUN_ID.fullmatch(run_id):
+        console.print(
+            "[red]Error: --run-id takes letters, digits, '.', '_' and '-' "
+            "only[/red]"
+        )
+        return 1
     release_name = parsed.dataset_kind
     try:
         private_directory(subdirectory=f"geography/{run_id}/{release_name}")
@@ -2388,7 +2704,16 @@ def _run_geography(
         held = {}
         for reform in plan.reforms:
             console.print(f"Simulating {reform.id}")
-            baseline, reformed = simulate_reform(reform, dataset, plan.years)
+            # A --package is composed from its measures, as a registered
+            # package is.
+            extra = (
+                {"members": plan.packages[reform.id]}
+                if reform.id in plan.packages and reform.id not in PACKAGES
+                else {}
+            )
+            baseline, reformed = simulate_reform(
+                reform, dataset, plan.years, **extra
+            )
             if collector is None:
                 collector = GeographyCollector.from_simulation(
                     baseline,
@@ -2480,6 +2805,12 @@ def _run_geography(
             release_name=release_name,
             certification_reason=certification_reason,
         )
+        if plan.compare_with is not None:
+            report = pair_consistency(
+                plan.compare_with / AUDIT_FILE, audit / AUDIT_FILE
+            )
+            save_private_csv(report, audit / PAIR_REPORT_FILE)
+            console.print(pair_summary(report))
         for reform, year in log.demotions:
             console.print(
                 f"[yellow]Demoted: constituency {reform} {year} is not "
