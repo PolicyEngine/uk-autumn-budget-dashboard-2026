@@ -1,5 +1,5 @@
 drill,cells,material_cells,invalid_cells_excluded,median_abs_pct_diff,max_abs_pct_diff,largest_movers,closer_to_official,further_from_official
 1,25,17,4,9.98,20.26,mock_child_benefit_increase 2030: -1.268 -> -1.029bn; mock_child_benefit_increase 2029: -1.250 -> -1.014bn; mock_child_benefit_increase 2028: -1.229 -> -1.002bn,0,0
 2,40,23,4,2.953,17.42,mock2_employer_ni_threshold 2030: -1.314 -> -1.085bn; mock2_employer_ni_threshold 2028: -1.328 -> -1.169bn; mock2_electricity_vat_zero 2027: -0.937 -> -1.035bn,7,7
-3,66,41,5,1.955,14.63,mock3_lha_30th_percentile 2031: -0.992 -> -1.138bn; mock3_threshold_freeze_2032 2031: +4.455 -> +4.332bn; mock3_pensioner_allowance 2031: -2.993 -> -3.094bn,13,10
-4,78,51,0,2.549e-06,0.3575,mock4_combined 2030: -3.453 -> -3.452bn; mock4_state_pension_topup_allowance 2031: -0.630 -> -0.628bn; mock4_state_pension_topup_allowance 2030: -0.581 -> -0.579bn,0,0
+3,66,41,5,1.955,14.63,mock3_lha_30th_percentile 2031: -0.992 -> -1.138bn; mock3_threshold_freeze_2032 2031: +4.455 -> +4.332bn; mock3_pensioner_allowance 2031: -2.993 -> -3.094bn,23,10
+4,78,51,0,2.549e-06,0.3575,mock4_combined 2030: -3.453 -> -3.452bn; mock4_state_pension_topup_allowance 2031: -0.630 -> -0.628bn; mock4_state_pension_topup_allowance 2030: -0.581 -> -0.579bn,6,0

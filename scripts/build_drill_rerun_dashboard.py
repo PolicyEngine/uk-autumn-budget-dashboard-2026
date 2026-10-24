@@ -80,6 +80,28 @@ DESCRIPTIONS = {
     "mock4_whd_topup": "Winter 2026-27 only: a further £125 for Warm Home Discount households on means-tested benefits and £75 for Pension Credit households, England and Wales.",
 }
 
+# Icon per measure, by policy area (rendered as inline SVG on the page).
+ICONS = {
+    "mock_fuel_duty_freeze": "fuel", "mock2_fuel_duty_hold": "fuel", "mock3_fuel_duty_phasing": "fuel",
+    "mock4_fuel_duty": "fuel", "mock4_fuel_vat_cut": "fuel",
+    "mock_energy_vat_zero_rate": "zap", "mock2_electricity_vat_zero": "zap", "mock2_energy_price_payment": "zap",
+    "mock3_whd_top_up": "zap", "mock4_whd_topup": "zap",
+    "mock_child_benefit_increase": "baby", "mock4_cb_early_years_addition": "baby",
+    "mock4_uc_child_element": "users", "mock4_carers_allowance_limit": "heart",
+    "mock_nics_threshold_rise": "briefcase", "mock2_employer_ni_threshold": "briefcase",
+    "mock3_employer_ni_under_22": "briefcase", "mock4_employer_ni_under23": "briefcase",
+    "mock3_class4_main_rate": "briefcase", "mock3_salary_sacrifice_cap": "briefcase",
+    "mock_hvcts_extension": "home", "mock2_hvcts_band": "home", "mock3_hvcts_top_bands": "home",
+    "mock3_lha_30th_percentile": "home", "mock4_lha_reset": "home",
+    "mock2_cgt_rates": "trending", "mock3_cgt_higher_rate_aea": "trending", "mock4_cgt_higher_rate": "trending",
+    "mock4_savings_starting_band": "trending",
+    "mock2_state_pension_uprating": "pension", "mock2_state_pension_personal_allowance": "pension",
+    "mock3_pensioner_allowance": "pension", "mock4_state_pension_topup_allowance": "pension",
+    "mock3_additional_rate_threshold": "percent", "mock3_threshold_freeze_2032": "percent",
+    "mock4_threshold_freeze_2032": "percent",
+    "mock4_combined": "layers",
+}
+
 # Sentence-case display names where the drill's own name has a MOCK tag or an
 # odd case.
 NAMES = {
@@ -178,7 +200,7 @@ def load_drills():
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.DRILLS
+    return mod
 
 
 def sheet_rows(cfg) -> dict:
@@ -223,7 +245,8 @@ def main() -> None:
     p.add_argument("--dir", default="docs/drill-reruns/2026-10-24")
     args = p.parse_args()
     base = Path(args.dir)
-    drills = load_drills()
+    mod = load_drills()
+    drills = mod.DRILLS
     sheets = {str(c["drill"]): sheet_rows(c) for c in drills.values()}
 
     with open(base / "comparison.csv", newline="") as f:
@@ -238,28 +261,30 @@ def main() -> None:
         static = sh["static"] if sh else None
         post = sh["post"] if sh else None
         team = sh["team"] if sh else None
-        # Same basis: the drill team compared our figure with the costing as
-        # it stood. Where their reconciled figure differs from the drill-day
-        # figure, they converted it first (cash timing, fiscal-year
-        # proration, in-year share), so the raw figure is not like-for-like.
-        aligned = None
-        if sh and static is not None:
-            aligned = team is not None and abs(old - team) <= max(0.005, 0.02 * abs(old))
-        vs = None
-        if sh and static is not None and not invalid and aligned and abs(static) > 1e-9:
-            go, gn = abs(old - static), abs(new - static)
-            vs = "same" if abs(gn - go) < 0.0005 else ("closer" if gn < go else "further")
+        # Like-for-like benchmark: the costing-note figure that matches our
+        # basis where the audit found one, else the headline static.
+        key = (int(d), mid, y)
+        sub = mod.LIKE_FOR_LIKE.get(key)
+        lfl = num(r["official_like_for_like_bn"])
+        lfl_src = None
+        if sub:
+            sha, path = mod.COSTING_NOTES[int(d)]
+            lfl_src = {"url": f"{GH}/blob/{sha}/{path}?plain=1#L{sub[1]}",
+                       "file": path, "line": sub[1], "why": sub[3]}
+        limit = mod.MODEL_LIMITATION.get(mid) if sh else None
+        v = r["vs_official_static"] or None
+        vs = {"unchanged": "same"}.get(v, v) if v in ("closer", "further", "unchanged") else None
         note, links = (None, []) if invalid else cause(d, mid, y)
         name = NAMES.get(mid, r["measure_name"].removeprefix("MOCK: ").replace(" (MOCK)", ""))
         rows.append({
             "drill": d, "id": mid, "name": name[0].upper() + name[1:],
-            "desc": DESCRIPTIONS.get(mid, ""), "year": y,
+            "desc": DESCRIPTIONS.get(mid, ""), "icon": ICONS.get(mid, "percent"), "year": y,
             "fy": f"{y}-{(y + 1) % 100:02d}",
             "old": old, "new": new, "diff": num(r["revenue_bn_diff"]),
             "pct": num(r["revenue_pct_diff"]), "size_pct": num(r["magnitude_pct_diff"]),
             "static": static, "post": post, "team": team,
             "sheet": None if not sh else {"url": sh["url"], "file": sh["file"], "line": sh["line"]},
-            "aligned": aligned, "vs": vs, "invalid": invalid,
+            "lfl": lfl, "lfl_src": lfl_src, "limit": limit, "vs": vs, "invalid": invalid,
             "note": note, "links": links,
             "d": {k: [num(r[f"{k}_drill_day"]), num(r[f"{k}_rerun"])]
                   for k in ("d1_avg_change", "d5_avg_change", "d10_avg_change", "people_affected_pct")},
@@ -278,7 +303,7 @@ def main() -> None:
             "median": statistics.median(sizes), "max": max(sizes), "n": len(mat),
             "closer": sum(r["vs"] == "closer" for r in g) if has_sheet else None,
             "further": sum(r["vs"] == "further" for r in g) if has_sheet else None,
-            "basis_diff": sum(r["aligned"] is False and not r["invalid"] for r in g),
+            "limited": sorted({r["name"] for r in g if r["limit"]}),
         })
 
     out = base / "dashboard"
@@ -286,7 +311,7 @@ def main() -> None:
     (out / "data.json").write_text(json.dumps({"drills": groups, "rows": rows}, ensure_ascii=False))
     print(f"wrote {out / 'data.json'}: {len(rows)} rows")
     for g in groups:
-        print(g["drill"], round(g["median"], 3), round(g["max"], 3), g["n"], g["closer"], g["further"], g["basis_diff"])
+        print(g["drill"], round(g["median"], 3), round(g["max"], 3), g["n"], g["closer"], g["further"], g["limited"])
 
 
 if __name__ == "__main__":

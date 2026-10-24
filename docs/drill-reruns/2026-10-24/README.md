@@ -75,14 +75,46 @@ This is not confirmed by bisection. The lesson for Budget day: write dated fuel 
 
 The median and maximum are taken over "material" cells: those where the drill-day revenue is at least £0.01bn, excluding the invalid fuel rows. The size change is (|rerun| − |drill day|) / |drill day|.
 
-| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the official static costing |
+| Drill | Material cells (invalid excluded) | Median abs. size change | Max abs. size change | Rerun closer to / further from the like-for-like official costing (year cells) |
 |---|---|---|---|---|
 | 1 | 17 (4) | 9.98% | 20.3% | n/a: no filled national sheet with costings on the branch |
 | 2 | 23 (4) | 2.95% | 17.4% | 7 closer / 7 further |
-| 3 | 41 (5) | 1.95% | 14.6% | 13 closer / 10 further |
-| 4 | 51 (0) | 0.00% | 0.36% | None moved (all moves are under 0.4%) |
+| 3 | 41 (5) | 1.95% | 14.6% | 23 closer / 10 further |
+| 4 | 51 (0) | 0.00% | 0.36% | 6 closer / 0 further (all moves are under 0.4%) |
 
-"Closer/further" compares the flat CSV figure with `costing_static` in the drill's filled sheet, with model year Y read as fiscal year Y–Y+1. The flat CSV is calendar-year net budgetary impact, while the costings are fiscal-year gross tax heads. Read the column as the direction of movement, not as a reconciliation. It counts like-for-like rows only: where the sheet's team figure differs from the drill-day figure, the drill team converted it before comparing (cash timing for CGT and Class 4, in-year shares, fiscal-year proration), so those rows are marked `different_basis` in `comparison.csv` and left out (drill 2: 2 rows, drill 3: 13, drill 4: 15).
+"Closer/further" compares each year cell's drill-day and rerun figures with the like-for-like official costing (see "Benchmark basis" below). Model year Y is fiscal year Y–Y+1, as the drill code states. Cells with a model limitation and the invalid fuel duty cells are left out (`vs_official_static` = `model_limitation` or `invalid` in `comparison.csv`).
+
+### Benchmark basis
+
+The rerun figure is a standalone tax-year liability, on a net `gov_balance` basis. The costings are on different bases:
+
+- **Drill 2:** National Accounts (accruals), so timing matches. Some figures are gross.
+- **Drills 3 and 4:** cash for income tax, CGT and NICs. Each costing note also prints the tax-year liability.
+
+Where the drill's own costing note prints the figure on our basis, `comparison.csv` uses it as `official_like_for_like_bn`, with `like_for_like_source` giving the note and line. These substitutions are listed in `LIKE_FOR_LIKE` in `scripts/rerun_drills.py`:
+
+| Drill | Measure | Year | Headline static | Like-for-like | Why |
+|---|---|---|---|---|---|
+| 2 | Employer NI threshold | 2027–30 | −2.25 to −2.40 | −1.85 / −1.89 / −1.93 / −1.97 | Our output is net of pay pass-through; the post-behavioural figure is net (costings note line 105) |
+| 2 | State Pension uprating | 2030 | +1.66 | +1.15 | Net of Pension Credit and income tax, like ours (line 165) |
+| 3 | CGT higher rate and AEA | 2027 | +0.115 | +1.650 | Tax-year liability; only 7% is cash in-year (line 51) |
+| 3 | Additional rate threshold | 2027 | +1.46 | +1.826 | Liability; the static is cash, 80% in-year (line 86) |
+| 3 | Class 4 main rate | 2027 | +0.155 | +0.61 | Liability: 1 point on the £61bn profit base; a quarter is cash in-year (line 119) |
+| 3 | Threshold freeze | 2031 | +2.945 | +3.258 | Liability, the sum of the legs (line 18) |
+| 3 | Pensioner Allowance | 2031 | −1.855 | −1.640 | Standalone; the static is stacked after the freeze (line 29) |
+| 4 | CGT higher rate | 2027 | +0.07 | +0.770 | Liability; only 9% is cash in-year (line 73) |
+| 4 | State Pension Top-up Allowance | 2027 | −0.07 | −0.113 | Liability; 60% is cash in-year (line 29) |
+| 4 | State Pension Top-up Allowance | 2031 | −0.31 | −0.187 | Standalone liability; the static is stacked (line 29) |
+| 4 | Threshold freeze | 2031 | +3.705 | +4.038 | Liability, the sum of the legs (line 18) |
+
+In later years of CGT, Class 4 and the Top-up Allowance, the cash and liability figures differ by under about 5% (payment lag). Those cells keep the cash figure.
+
+These cells have a **model limitation**, so they are not compared:
+
+- **Drill 4 Carer's Allowance earnings limit:** take-up is set from current receipt, so people newly entitled by the higher limit cannot appear.
+- **Drill 4 savings starting band:** policyengine-uk defect #1799, about 2.5 times too high.
+- **Drill 3 salary sacrifice cap:** the engine doesn't take the sacrificed pay out of adjusted net income, which adds income tax through the allowance taper and the child benefit charge.
+- **Drill 2 electricity VAT:** the cost is split across calendar years. The fiscal 2027-28 total is −1.38 against −1.76.
 
 ### Largest movers and their causes
 

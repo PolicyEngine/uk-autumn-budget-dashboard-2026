@@ -7,432 +7,429 @@
 <link rel="icon" href="data:,">
 <title>Drill reruns comparison</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--teal:#285e61;--teal2:#319795;--tealbg:#e6fffa;--bg:#f4f6f8;--card:#fff;--text:#1a202c;--muted:#64748b;--line:#e2e8f0;
---green:#15803d;--greenbg:#dcfce7;--amber:#b45309;--amberbg:#fef3c7;--grey:#475569;--greybg:#eef2f6;--warn:#9a3412;--warnbg:#ffedd5}
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
-a{color:var(--teal2);text-decoration:none}a:hover{text-decoration:underline}
-header{background:var(--teal);color:#fff;padding:14px 0}
-.wrap{max-width:1240px;margin:0 auto;padding-left:16px;padding-right:16px}
-h1{margin:0;font-size:22px;font-weight:600;line-height:1.3}
-.lede{margin:0 0 16px;font-size:15.5px;line-height:1.55;color:#4b5563}
-.ikey{font-size:13px;color:#4b5563;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
-.ikey>span{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-.sw{display:inline-block;width:12px;height:12px;border-radius:3px}
-.legend{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px}
-.legend i.mo,.legend i.mn{display:inline-block;width:10px;height:10px;border-radius:50%}
-.legend i.mo{border:2px solid #94a3b8;background:#fff;box-sizing:border-box}.legend i.mn{background:var(--teal2)}
-.legend i.ds2,.legend i.dp2,.legend i.dt2{display:inline-block;width:8px;height:8px;transform:rotate(45deg);box-sizing:border-box;margin:0 3px}
-.legend i.ds2{background:#1a202c}.legend i.dp2{border:1.5px solid #1a202c;background:#fff}.legend i.dt2{border:1.5px dashed #64748b}
-details.info{display:inline}
-details.info summary{display:inline;cursor:pointer;list-style:none;color:var(--teal2);font-weight:600}
-details.info summary::-webkit-details-marker{display:none}
-details.info[open] .itext{display:block;margin:4px 0;padding:6px 9px;background:#fff;border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:12px;font-weight:400;text-align:left;white-space:normal}
-.gnote{padding:10px 18px;font-size:13px;color:var(--text);background:#fffaf5;border-bottom:1px solid var(--line)}
-.sub{opacity:.88;font-size:13px}
-.mock{display:inline-block;background:#fff;color:var(--teal);font-weight:700;font-size:11px;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
-main.wrap{padding-top:20px;padding-bottom:8px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
-.controls{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:14px}
-.controls label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
-input[type=search]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:230px}
-.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;padding:6px 11px;border-radius:8px;cursor:pointer;color:var(--text)}
-.btn:hover{border-color:var(--teal2)}
-.seg{display:inline-flex}.seg .btn{border-radius:0;margin-right:-1px}.seg .btn:first-child{border-radius:8px 0 0 8px}.seg .btn:last-child{border-radius:0 8px 8px 0}
-.seg .btn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
-.drill{margin-bottom:24px;padding:0;overflow:hidden}
-.dhead{display:grid;grid-template-columns:auto 1fr auto;gap:6px 18px;align-items:start;padding:16px 18px;cursor:pointer;user-select:none}
-.dhead:hover{background:#f0faf9}
-.dhead:focus-visible,.mhead:focus-visible,.ghead:focus-visible,[data-tip]:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
-.dside{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
-.tbtn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--teal2);color:var(--teal);border-radius:8px;padding:6px 12px;font-weight:600;font-size:13px;background:#fff;white-space:nowrap}
-.dhead:hover .tbtn{background:var(--tealbg)}
-.bigchev{display:inline-block;font-size:16px;line-height:1;transition:transform .2s}
-.open>.dhead .bigchev{transform:rotate(180deg)}
-.peek{font-size:12.5px;color:#94a3b8;margin-top:6px}
-.dprose{grid-column:1/-1}
-#tt{position:fixed;z-index:50;max-width:320px;background:#1f2937;color:#f9fafb;font-size:12.5px;line-height:1.45;padding:9px 11px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:none}
-#tt b{display:block;font-weight:600;margin-bottom:3px;color:#fff}
-#tt div{color:#e5e7eb}
-[data-tip]{cursor:help}
-a[data-tip],.mhead [data-tip]{cursor:pointer}
-.mk{cursor:pointer}.mk:hover{stroke-width:2.6}
-.brow:hover{background:#f8fafc}
-.chip:hover{border-color:var(--teal2)}
-.stat{padding:2px 4px;border-radius:6px}.stat:hover{background:#f1f5f9}
-.dv:hover b{color:var(--teal)}
-.dnum{width:42px;height:42px;border-radius:10px;background:var(--tealbg);color:var(--teal);font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center}
-.dtitle{font-weight:600;font-size:16px}
-.dlinks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.chip{display:inline-flex;align-items:center;font-size:12px;padding:2px 9px;border-radius:999px;background:#f1f5f9;color:#4b5563;border:1px solid var(--line);white-space:nowrap}
-a.chip{color:var(--teal);border-color:#b2e0dd;background:var(--tealbg)}
-.dwhat{font-size:13px;color:var(--muted);margin-top:8px}
-.dstats{display:flex;gap:18px;text-align:right}
-.stat .v{font-size:20px;font-weight:700;color:var(--teal);line-height:1.1}
-.stat .l{font-size:11.5px;color:var(--muted)}
-.chev{display:inline-block;transition:transform .15s;color:var(--teal2);font-size:12px}
-.open>.dhead .chev,.open>.mhead .chev,.open>.ghead .chev{transform:rotate(90deg)}
-@media(max-width:760px){.dhead{grid-template-columns:auto 1fr}.dside{grid-column:1/-1;align-items:stretch}.dstats{text-align:left;flex-wrap:wrap}.tbtn{justify-content:center}}
-.dbody{display:none;border-top:1px solid var(--line)}
-.open>.dbody,.open>.mbody,.open>.gbody{display:block}
-.cols,.mhead,.yrow{display:grid;grid-template-columns:84px minmax(220px,360px) 180px minmax(0,1fr);gap:8px 24px;align-items:start}
-.mhead>.mname,.yrow>.mname{grid-column:1/-1}
-.cols>div:first-child{display:none}
-.db{position:relative;height:36px;margin:0 24px}
-.db .tr{position:absolute;left:-24px;right:-24px;top:17px;height:1px;background:#e2e8f0}
-.db .z{position:absolute;top:9px;height:18px;border-left:1px dashed #94a3b8}
-.db .ar{position:absolute;top:16px;height:2px;background:var(--teal2)}
-.db .ar.r::after,.db .ar.l::after{content:"";position:absolute;top:-4px;border:5px solid transparent}
-.db .ar.r::after{right:2px;border-left:6px solid var(--teal2);border-right:0}
-.db .ar.l::after{left:2px;border-right:6px solid var(--teal2);border-left:0}
-.db .m{position:absolute;top:13px;width:10px;height:10px;margin-left:-5px;border-radius:50%;z-index:2;cursor:pointer}
-.db .m.o{background:#fff;border:2px solid #94a3b8}.db .m.n{background:var(--teal2)}
-.db .d{position:absolute;top:13px;width:9px;height:9px;margin-left:-4.5px;transform:rotate(45deg);z-index:1;cursor:pointer;box-sizing:border-box}
-.db .d.s{background:#1a202c}.db .d.p{background:#fff;border:1.5px solid #1a202c;width:8px;height:8px;margin-left:-4px;top:13.5px}.db .d.t{border:1.5px dashed #64748b;width:11px;height:11px;margin-left:-5.5px;top:12px}
-.db .v{position:absolute;font-size:12px;line-height:1;white-space:nowrap;transform:translateX(-50%);font-variant-numeric:tabular-nums;cursor:pointer}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.db .v.st{transform:none}.db .v.en{transform:translateX(-100%)}
-.db .v.top{top:-1px}.db .v.bot{top:26px}
-.db .v.o{color:#94a3b8}.db .v.n{color:var(--teal);font-weight:600}.db .v.s{color:#1a202c}
-.bars{padding:4px 18px 16px 78px}
-.brow{display:grid;grid-template-columns:minmax(0,280px) 64px minmax(0,1fr) 72px;gap:10px;align-items:center;font-size:13px;padding:3px 4px;border-radius:5px}
-.ychip{display:inline-block;font-size:11px;color:#64748b;background:#f1f5f9;border-radius:999px;padding:1px 7px;font-variant-numeric:tabular-nums;justify-self:start}
-.unch{font-size:12.5px;color:#94a3b8;margin-top:6px;padding:0 4px}
-.brow .bl{color:var(--text);line-height:1.25}
-.track{position:relative;height:18px;background:#f1f5f9;border-radius:3px}
-.track .z{position:absolute;top:-2px;bottom:-2px;width:1px;background:#94a3b8}
-.track i{position:absolute;top:3px;height:12px;border-radius:2px}
-.track i.closer{background:#22c55e}.track i.further{background:#f59e0b}.track i.none{background:#94a3b8}
-.brow .bv{text-align:right;font-variant-numeric:tabular-nums;color:#374151;font-weight:500}
-.brow .bv.nc{color:#94a3b8;font-weight:400}
-.take{font-size:14.5px;color:#374151;font-weight:500}
-.bnote{font-size:11.5px;color:var(--muted);margin-top:4px}
-.bkey{font-size:11.5px;color:var(--muted);margin-bottom:4px}
-.ychart{padding:10px 18px 4px 30px}
-.ychart>svg{display:block}
-.ychart text{font-family:Inter,system-ui,sans-serif;font-size:11px;fill:#64748b}
-.lg{font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:2px}
-.cols{padding:8px 18px;font-size:11.5px;color:var(--muted);font-weight:600;background:#fafbfc;border-bottom:1px solid var(--line)}
-.cols .n,.n{text-align:right;font-variant-numeric:tabular-nums}
-.measure{border-bottom:1px solid var(--line)}
-.mhead{padding:14px 18px;cursor:pointer}
-.mhead:hover{background:#fafcfc}
-.nm{font-weight:600;font-size:15.5px;color:#374151}
-.ds{color:#4b5563;font-size:14px;line-height:1.5;margin-top:2px}
-.mnote{font-size:13px;color:var(--muted);margin-top:4px}
-.why{font-weight:600;color:#4b5563}
-.more{display:inline-block;font-size:12.5px;color:var(--teal);margin-top:8px;font-weight:600;border:1px solid #b2e0dd;background:#fff;border-radius:7px;padding:3px 10px}
-.mhead:hover .more,.ghead:hover .more{background:var(--tealbg);border-color:var(--teal2)}
-.yr{font-size:13px;white-space:nowrap}.yr small{display:block;color:var(--muted);font-size:11px}
-.num{font-variant-numeric:tabular-nums;text-align:right;font-size:14px}
-.lbl{display:none;font-size:11px;color:var(--muted);font-weight:500}
-.chg{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
-.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;font-size:12.5px}
-.pill.closer{background:var(--greenbg);color:var(--green)}
-.pill.further{background:var(--amberbg);color:var(--amber)}
-.pill.none{background:var(--greybg);color:var(--grey)}
-.bar{height:4px;border-radius:2px;background:var(--line);width:100%;max-width:140px;position:relative}
-.bar i{position:absolute;top:0;height:4px;border-radius:2px;background:var(--teal2)}
-.bar i.closer{background:#22c55e}.bar i.further{background:#f59e0b}.bar i.none{background:#94a3b8}
-.off{text-align:right;font-variant-numeric:tabular-nums}
-.off small{display:block;color:var(--muted);font-size:11px}
-.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--greybg);color:var(--grey);white-space:nowrap}
-.tag.warn{background:var(--warnbg);color:var(--warn)}
-.mbody{display:none;background:#fafbfc;border-top:1px dashed var(--line);padding:4px 0 8px}
-.yrow{padding:9px 18px 9px 30px;border-bottom:1px solid #eef1f4}
-.yrow:last-child{border-bottom:0}
-.yrow .ylab{font-weight:600;font-size:13px}
-.yrow .mnote{margin-top:0}
-.dec{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-2px}
-.dec b{color:var(--text);font-weight:500}
-.group{border-top:1px solid var(--line)}
-.ghead{padding:11px 18px;cursor:pointer;font-weight:600;font-size:13px;color:var(--warn);background:#fffaf5}
-.gbody{display:none}
-.flat .yrow{padding-left:18px}
-.flat .who{font-size:12px;color:var(--muted)}
-.empty{padding:16px 18px;color:var(--muted)}
-@media(max-width:760px){
- .cols{display:none}
- .mhead,.yrow{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
- .mhead>.mname,.yrow>.mname{grid-column:1/-1}
-  .lbl{display:block}
- .num,.off{text-align:left}
- .yrow{padding-left:18px}
- .chg{grid-column:auto}
- .dumb{grid-column:1/-1}
- .bars{padding:2px 16px 14px}
- .brow{grid-template-columns:minmax(0,1fr) 64px;row-gap:3px}
- .brow .bl{grid-column:1}.brow .ychip{grid-column:2;justify-self:end}.brow .track{grid-column:1}.brow .bv{grid-column:2}
- .ychart{padding-left:16px;padding-right:16px}
- .bar{max-width:none}
- .yr small{display:block}
+:root{
+  --teal:#285e61;--teal2:#319795;--tealbg:#e6f6f5;
+  --page:#f7f9fa;--card:#fff;--line:#e5e7eb;
+  --text:#4b5563;--strong:#374151;--muted:#6b7280;--faint:#9ca3af;
+  --slate:#334155;
+  --gbg:#e6f4ea;--gtx:#2f855a;--gbar:#9fd3b0;
+  --abg:#fdf3e1;--atx:#b7791f;--abar:#f1c27d;
+  --nbg:#f1f3f5;--ntx:#6b7280;--nbar:#cbd5e1;
 }
-.tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 18px;padding-bottom:2px;scrollbar-width:thin;border-bottom:1px solid var(--line)}
-.tab{font:inherit;font-size:14px;font-weight:500;color:#4b5563;background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;cursor:pointer;white-space:nowrap}
-.tab:hover{color:var(--teal);background:#f0faf9;border-radius:6px 6px 0 0}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--page);color:var(--text);font-size:15px;line-height:1.65;font-variant-numeric:tabular-nums}
+a{color:var(--teal2);text-decoration:none}a:hover{text-decoration:underline}
+header{background:var(--teal);color:#fff;padding:16px 0}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+@media(max-width:760px){.wrap{padding:0 16px}}
+h1{margin:0;font-size:21px;font-weight:600;line-height:1.3}
+.mock{display:inline-block;background:#fff;color:var(--teal);font-weight:600;font-size:11px;padding:1px 7px;border-radius:4px;margin-left:8px;vertical-align:middle;letter-spacing:.02em}
+main.wrap{padding-top:24px;padding-bottom:48px}
+.lede{margin:0 0 20px;font-size:15.5px;color:var(--text);max-width:75ch}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin:0 0 32px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{font:inherit;font-size:15px;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--teal)}
 .tab.on{color:var(--teal);border-bottom-color:var(--teal2);font-weight:600}
-.tab:focus-visible{outline:2px solid var(--teal2);outline-offset:-2px}
-.ogrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
-@media(max-width:900px){.ogrid{grid-template-columns:1fr}}
-.ocard{display:flex;flex-direction:column;gap:12px}
-.otop{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
-.ost{text-align:left;justify-content:flex-start}
-.obtn{align-self:flex-start;border:1.5px solid var(--teal2);color:var(--teal);font-weight:600;margin-top:auto}
-.obtn:hover{background:var(--tealbg)}
-.ochart{margin-bottom:24px}
-.orow{display:grid;grid-template-columns:70px minmax(0,1fr) 64px;gap:10px;align-items:center;padding:4px;font-size:13px;border-radius:5px}
-.orow:hover{background:#f8fafc}
-.otrack{position:relative;height:18px;background:#f1f5f9;border-radius:3px}
-.otrack i{position:absolute;left:0;top:3px;height:12px;background:var(--teal2);border-radius:2px}
-.otrack b{position:absolute;top:0;width:2px;height:18px;background:#1a202c;margin-left:-1px}
-.ov{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
-.dhead{cursor:default}.dhead:hover{background:none}
-.sources{margin-bottom:28px;font-size:13.5px;color:#4b5563}
-.sources h2{font-size:15px;margin:0 0 8px;color:#374151;font-weight:600}
-.sources ul{margin:0 0 8px;padding-left:18px}.sources li{margin:5px 0;line-height:1.5}
-.slinks{font-size:12.5px;color:var(--muted)}
-.dotted{border-bottom:1px dotted #94a3b8}
-.srcline{margin:4px 0 32px;font-size:12.5px}
-.obtn.linkish{border:0;background:none;padding:0;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;margin:0}
-.obtn.linkish:hover{color:var(--teal);text-decoration:underline;background:none}
-footer{font-size:12.5px;color:var(--muted);padding:8px 0 36px;display:flex;flex-direction:column;gap:6px}
+.tab:focus-visible,[data-tip]:focus-visible,button:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px}
+.sec{margin-bottom:40px}
+.sh{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 12px;letter-spacing:.01em}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}
+.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media(max-width:1000px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.grid3,.grid4,.grid2{grid-template-columns:minmax(0,1fr)}}
+.grid3>*,.grid4>*{min-width:0}
+.big{font-size:30px;font-weight:600;color:var(--teal);line-height:1.2}
+.small{font-size:14px;color:var(--muted)}
+.dhd{margin-bottom:24px}
+.dhd h2{margin:0 0 8px;font-size:21px;font-weight:600;color:var(--strong)}
+.dhd p{margin:10px 0 0;max-width:75ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;font-size:13px;padding:2px 10px;border-radius:999px;background:var(--nbg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+a.chip{color:var(--teal);background:var(--tealbg);border-color:#cde9e7}
+a.chip:hover{text-decoration:none;border-color:var(--teal2)}
+/* bars */
+.btitle{font-size:15px;color:var(--strong);margin:0 0 14px}
+.brow{display:grid;grid-template-columns:minmax(0,320px) 70px minmax(0,1fr) 72px;gap:12px;align-items:center;padding:4px 6px;border-radius:6px;font-size:14px;cursor:pointer}
+.brow:hover{background:#f3f6f7}
+.brow .bl{color:var(--strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.yc{font-size:12.5px;color:var(--muted)}
+.track{position:relative;height:16px;background:#f3f4f6;border-radius:4px}
+.track .z{position:absolute;top:-3px;bottom:-3px;width:1px;background:#d1d5db}
+.track i{position:absolute;top:3px;height:10px;border-radius:3px}
+i.closer{background:var(--gbar)}i.further{background:var(--abar)}i.none{background:var(--nbar)}
+.bv{text-align:right;color:var(--strong)}
+.unch{font-size:14px;color:var(--muted);margin:8px 6px 0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:13px;color:var(--muted);margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px}
+@media(max-width:760px){.brow{grid-template-columns:minmax(0,1fr) 64px;row-gap:4px}.brow .yc{text-align:right}.brow .track{grid-column:1}.brow .bv{grid-column:2}}
+/* measure boxes */
+.mtools{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 16px}
+.mtools input[type=search]{font:inherit;font-size:14px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:220px;color:var(--strong)}
+.mtools label{font-size:14px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.mlist{padding:8px 24px 16px}
+.mg{padding:22px 0 18px;border-top:1px solid var(--line);scroll-margin-top:16px}
+.mlist .lh+.mg{border-top:0}
+.mg.flash{background:#f0faf9}
+.mg .mdesc{margin-bottom:10px}
+.yr2{display:grid;grid-template-columns:96px 110px 110px 190px minmax(140px,1fr) 110px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f2f4;font-size:14.5px}
+.ylist .yr2:last-child{border-bottom:0}
+.yr2.lh{font-size:13px;color:var(--faint);border-bottom:1px solid var(--line);padding:12px 0 8px}
+.c-o{color:var(--faint);text-align:right}
+@media(max-width:860px){.c-o::before{content:"drill day ";font-size:12.5px}.c-n::before{content:"rerun ";font-size:12.5px;color:var(--faint)}}.c-n{color:var(--teal2);text-align:right}.c-f{text-align:right}
+.yr2.lh>div:nth-child(2),.yr2.lh>div:nth-child(3),.yr2.lh>div:nth-child(6){text-align:right}
+.c-y{color:var(--strong)}.yi{color:var(--teal2);font-size:13px}
+.offl{color:var(--slate)}.faint{color:var(--faint)}
+.lbl{display:none}
+.viz{position:relative;height:24px;max-width:200px;margin:0 6px}
+.viz .vt{position:absolute;left:-6px;right:-6px;top:11.5px;height:1px;background:#e5e7eb}
+.viz .vz{position:absolute;top:5px;height:14px;border-left:1px dashed #d1d5db}
+.viz .va{position:absolute;top:11px;height:2px;background:#9fd6d3}
+.viz .vo,.viz .vn{position:absolute;top:7px;width:10px;height:10px;margin-left:-5px;border-radius:50%}
+.viz .vo{background:#fff;border:2px solid var(--faint);box-sizing:border-box}.viz .vn{background:var(--teal2)}
+.viz .vd{position:absolute;top:8px;width:8px;height:8px;margin-left:-4px;transform:rotate(45deg);background:var(--slate)}
+.ko,.kn,.kd{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle}
+.ko{border:2px solid var(--faint);box-sizing:border-box}.kn{background:var(--teal2)}.kd{background:var(--slate);border-radius:0;transform:rotate(45deg);width:7px;height:7px}
+.pts{margin:12px 0 6px;padding:0;list-style:none;font-size:14px}.pts li{margin:4px 0;display:flex;gap:8px;align-items:flex-start}.pts .i2{flex:0 0 14px;margin-top:4px;color:var(--teal2)}.pts b{font-weight:600;color:var(--strong)}
+.cl{margin:14px 0 4px;font-size:14px;color:var(--muted)}
+.cave{background:#fbfcfc}
+@media(max-width:860px){
+ .mh,.mb,.mf{padding-left:16px;padding-right:16px}
+ .yr2{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 10px;padding:10px 0}
+ .yr2.lh{display:none}
+ .c-y{font-weight:600}
+ .c-d{grid-column:1/3}.c-f{grid-column:3}
+ .c-v{grid-column:1/-1}.viz{max-width:none}
+ .c-f.nof{display:none}
+ .c-d:has(+.c-v+.c-f.nof){grid-column:1/-1}
+ .lbl{display:inline;color:var(--faint);font-size:12.5px}
+ .mlist{padding:4px 16px 12px}
+}
+.mcs{display:flex;flex-direction:column;gap:20px}
+.mc{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;scroll-margin-top:16px}
+.mh{display:flex;gap:14px;align-items:flex-start;background:#f0fafa;border-left:3px solid var(--teal2);border-bottom:1px solid var(--line);padding:16px 22px}
+.mc.bad .mh{background:#f4f5f7;border-left-color:#cbd5e1}.mc.bad .ico{color:var(--faint);background:#e9ecef}
+.ico{flex:0 0 32px;width:32px;height:32px;border-radius:8px;background:#d9f0ee;color:var(--teal2);display:flex;align-items:center;justify-content:center}
+.mt{min-width:0;flex:1}
+.mb{padding:4px 22px 12px}
+.mf{background:#fafbfb;border-top:1px solid var(--line);padding:12px 22px 14px}
+.mf .pts{margin:0 0 6px}
+.noeff{font-size:13px;color:var(--faint);padding-top:6px}
+.mc.flash{box-shadow:0 0 0 3px #b2dfdb}
+.sb .slab{font-size:14px;color:var(--strong);margin-top:2px}
+.sb .sl{font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbox{border-top:3px solid var(--nbar);padding:22px 24px;scroll-margin-top:16px;font-size:14px;display:flex;flex-direction:column;gap:10px}
+.mbox.closer{border-top-color:#7cc49a}.mbox.further{border-top-color:#e9b45c}
+.mbox.flash{box-shadow:0 0 0 3px #b2dfdb}
+.mname{font-size:16px;font-weight:600;color:var(--strong);line-height:1.4}
+.mdesc{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;font-size:16px}
+.pair .o{color:var(--faint)}.pair .n{color:var(--teal2);font-weight:600}.pair .u{font-size:14px;color:var(--muted)}
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:14px;white-space:nowrap}
+.pill.closer{background:var(--gbg);color:var(--gtx)}.pill.further{background:var(--abg);color:var(--atx)}.pill.none{background:var(--nbg);color:var(--ntx)}
+.off{color:var(--muted)}
+.off a{color:var(--slate)}
+.tag{display:inline-block;font-size:13px;padding:0 8px;border-radius:999px;background:var(--nbg);color:var(--muted);border:1px solid var(--line);cursor:help}
+.why{color:var(--text)}
+.why b{font-weight:600;color:var(--strong)}
+.ytw{overflow-x:auto;margin:2px -4px 0;padding:0 4px}
+table.yt{border-collapse:collapse;width:100%;font-size:14px}
+.yt th,.yt td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid #f0f1f3}
+.yt th{font-weight:400;color:var(--muted)}
+.yt th:first-child,.yt td:first-child{text-align:left;color:var(--muted);padding-left:0}
+.yt tr:last-child td{border-bottom:0}
+.yt td.n{color:var(--teal2)}.yt td.o{color:var(--faint)}
+.yt .pill{font-size:13px;padding:0 7px}
+.lnk{font:inherit;font-size:14px;color:var(--teal2);background:none;border:0;padding:0;cursor:pointer;align-self:flex-start}
+.lnk:hover{text-decoration:underline}
+.cave{background:#fbfcfc}
+.cave h3{font-size:15px;font-weight:600;color:var(--strong);margin:0 0 6px}
+.cave ul{margin:0 0 16px;padding-left:18px}.cave li{margin:4px 0}
+.cave ul:last-child{margin-bottom:0}
+/* overview */
+.obox{display:flex;flex-direction:column;gap:6px}
+.otitle{font-size:15px;color:var(--strong);font-weight:600}
+.i2{vertical-align:-2px}
+.mini{margin:8px 0 4px}
+.mtitle{font-size:13px;color:var(--muted);margin-bottom:6px}
+.mrow{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) 52px;gap:10px;align-items:center;font-size:13.5px;padding:2px 4px;border-radius:5px;cursor:help}
+.mrow:hover{background:#f3f6f7}
+.mn{color:var(--strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtr{position:relative;height:14px;background:#f3f4f6;border-radius:3px}
+.mtr .z{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#d1d5db}
+.mtr i{position:absolute;top:3px;height:8px;border-radius:2px}
+.mv{text-align:right;color:var(--strong)}
+.open.more{font-size:13px;margin:4px 4px 0}
+.mleg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--faint);margin-top:8px}
+.mleg span{display:inline-flex;gap:5px;align-items:center}.mleg .sw{width:10px;height:10px}
+.orow2{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.bpill{align-self:flex-start;display:inline-flex;gap:6px;align-items:center;background:#f0fafa;color:var(--teal);border:1px solid #d5eeec;border-radius:999px;padding:3px 12px;font-size:14px;margin-top:6px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tg{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);background:#f4f5f7;border-radius:6px;padding:2px 9px}
+.tgm{font-size:13px;color:var(--faint)}
+.ovs{margin-top:4px}
+.split{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#f3f4f6;max-width:280px}
+.split .sg{background:var(--gbar)}.split .sa{background:var(--abar)}
+.splab{display:flex;justify-content:space-between;max-width:280px;font-size:13px;color:var(--muted);margin-top:3px}
+.onote{font-size:13.5px;color:var(--faint);display:flex;gap:6px;align-items:center}
+.verdict{font-size:20px;font-weight:600;color:var(--teal);line-height:1.3}
+.op{margin:0;font-size:14px;color:var(--text)}
+.tiny{font-size:13px;color:var(--faint)}
+.ometa{font-size:13px;color:var(--faint);margin-top:auto;padding-top:6px}
+.spark{display:block;margin:6px 0 4px}
+.open{font:inherit;font-size:14px;color:var(--teal2);background:none;border:0;padding:0;cursor:pointer;align-self:flex-start;margin-top:4px}
+.open:hover{text-decoration:underline}
+.orow{display:grid;grid-template-columns:72px minmax(0,1fr) 64px;gap:12px;align-items:center;padding:4px 0;font-size:14px}
+.otrack{position:relative;height:16px;background:#f3f4f6;border-radius:4px}
+.otrack i{position:absolute;left:0;top:3px;height:10px;background:#8fcfcb;border-radius:3px}
+.otrack b{position:absolute;top:-2px;width:2px;height:20px;background:var(--slate);margin-left:-1px}
+.gaps ol{margin:0;padding-left:20px}.gaps li{margin:6px 0}
+details.src summary{cursor:pointer;color:var(--strong);font-weight:600;font-size:15px;list-style:none}
+details.src summary::-webkit-details-marker{display:none}
+details.src summary::before{content:"▸ ";color:var(--teal2)}
+details.src[open] summary::before{content:"▾ "}
+details.src .dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px 20px;margin:18px 0 18px}
+.dl dt{color:var(--faint);font-size:14px}.dl dd{margin:0;font-size:14.5px;max-width:75ch}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:760px){details.src .dl{grid-template-columns:1fr;gap:2px}.dl dd{margin-bottom:12px}}
+.dotted{border-bottom:1px dotted var(--faint);cursor:help}
+.foot{font-size:14px;color:var(--muted)}
+.foot button{font:inherit;color:var(--teal2);background:none;border:0;padding:0;cursor:pointer}
+.empty{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#tt{position:fixed;z-index:50;max-width:320px;background:#1f2937;color:#f3f4f6;font-size:13px;line-height:1.5;padding:9px 12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:none}
+#tt b{display:block;font-weight:600;margin-bottom:2px;color:#fff}
+[data-tip]{cursor:help}a[data-tip],.brow[data-tip]{cursor:pointer}
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1>Drill reruns: drill day vs policyengine 6.10.2 <span class="mock">MOCK</span></h1>
-</div></header>
+<header><div class="wrap"><h1>Drill reruns: drill day vs policyengine 6.10.2 <span class="mock">MOCK</span></h1></div></header>
 <main class="wrap">
-  <p class="lede">Each drill scored mock Budget measures on the day. Here we rerun the same code on today's engine and data, and compare the result with the drill-day figure and the official costing.</p>
+  <p class="lede">Each drill scored mock Budget measures on the day. We reran the same code on today's engine and data.</p>
   <nav class="tabs" id="tabs" role="tablist" aria-label="Drills"></nav>
   <div id="root"></div>
   <div id="tt" role="tooltip" hidden></div>
-
 </main>
 <script>
-const README='https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md';
-const BASIS='Different basis: the drill team converted our figure before comparing it with the costing (cash timing, in-year share or fiscal-year proration). The raw figures are not like-for-like, so the row is not coloured or counted. Their converted figure is shown.';
-const DEC1='Decile 1: pe-uk 2.132.4 resets negative household income to zero and counts those households in decile 1, so decile 1 moves even where revenue does not. Figures from before and after it are not comparable.';
-const FUEL='Not a valid rerun: this drill set fuel duty month by month, and pe-uk 2.132.6 ignores month-dated rates, so the rerun scores only the VAT part of the measure.';
+const GH='https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026';
+const README=GH+'/blob/drill-rerun-latest-engine/docs/drill-reruns/2026-10-24/README.md';
+const DEC1='Decile 1: policyengine-uk 2.132.4 now counts households with negative income in decile 1, so decile 1 moves even where revenue does not.';
+const FUEL='This drill set fuel duty month by month. Today\'s engine ignores month-by-month rates, so only the VAT part is scored.';
+const SHORT={mock_nics_threshold_rise:'NI threshold rise',mock_child_benefit_increase:'Child Benefit increase',mock2_employer_ni_threshold:'Employer NI threshold',mock3_lha_30th_percentile:'LHA to 30th percentile',mock4_state_pension_topup_allowance:'State Pension Top-up Allowance'};
+const TABS=[['overview','Overview'],['drill1','Drill 1 · 28 Sep'],['drill2','Drill 2 · 5 Oct'],['drill3','Drill 3 · 12 Oct'],['drill4','Drill 4 · 19 Oct']];
 const TAB0=new URLSearchParams(location.search).get('tab');
-const isOpen=k=>!st.closed.has(k);
-const st={tab:/^drill[1-4]$/.test(TAB0||'')?TAB0:'overview',view:'m',hideZero:true,q:'',closed:new Set()};
+const st={tab:/^drill[1-4]$/.test(TAB0||'')?TAB0:'overview',hideZero:true,q:'',dec:new Set(),fig:new Set()};
 let D,BY;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const n2=v=>v==null?'—':(v<0?'−':'')+Math.abs(v).toFixed(2);
-const bn=n2;
 const sbn=v=>v==null?'—':(v>0.0049?'+':v<-0.0049?'−':'')+Math.abs(v).toFixed(2);
-const pc=v=>v==null?'':(v>0.05?'+':v<-0.05?'−':'')+Math.abs(v).toFixed(1)+'%';
-const gbp=x=>{if(x==null)return '—';const n=Math.round(x);return (n<0?'−':'')+'£'+Math.abs(n).toLocaleString('en-GB')};
-const pct1=x=>x==null?'—':x.toFixed(1)+'%';
-const ext=(t,u,tp)=>`<a href="${u}" target="_blank" rel="noopener"${tp?T(tp):''}>${esc(t)}</a>`;
-const T=(text,focus)=>` data-tip="${esc(text)}"${focus?' tabindex="0"':''}`;
-const zero=r=>Math.abs(r.old||0)<5e-3&&Math.abs(r.new||0)<5e-3;
-const cls=r=>r.vs==='closer'||r.vs==='further'?r.vs:'none';
-const still=rs=>rs.every(r=>Math.abs(r.diff||0)<5e-4);
-function headline(rs){if(still(rs))return rs.find(r=>!zero(r))||rs[0];let b=null;for(const r of rs){if(zero(r))continue;if(!b||Math.abs(r.diff)>Math.abs(b.diff)+1e-9)b=r}return b||rs[0]}
 const fp=p=>p==null?'':Math.abs(p)<0.005?'no change':(p>0?'+':'−')+Math.abs(p).toFixed(Math.abs(p)<1?2:1)+'%';
+const gbp=x=>{if(x==null)return '—';const n=Math.round(x);return (n<0?'−':'')+'£'+Math.abs(n).toLocaleString('en-GB')};
+const T=(t,f)=>` data-tip="${esc(t)}"${f?' tabindex="0"':''}`;
+const ext=(t,u,tp)=>`<a href="${u}" target="_blank" rel="noopener"${tp?T(tp):''}>${esc(t)}</a>`;
+const zero=r=>Math.abs(r.old||0)<5e-3&&Math.abs(r.new||0)<5e-3;
+const still=rs=>rs.every(r=>Math.abs(r.diff||0)<5e-4);
+const cls=r=>r.vs==='closer'||r.vs==='further'?r.vs:'none';
+function headline(rs){if(still(rs))return rs.find(r=>!zero(r))||rs[0];let b=null;for(const r of rs){if(zero(r))continue;if(!b||Math.abs(r.diff)>Math.abs(b.diff)+1e-9)b=r}return b||rs[0]}
+const short=h=>SHORT[h.id]||h.name;
 function status(r){
-  if(r.invalid)return 'No colour: not a valid rerun (fuel duty).';
-  if(r.vs==='closer')return 'Green: the rerun is closer to the official static costing.';
-  if(r.vs==='further')return 'Amber: the rerun is further from the official static costing.';
-  if(r.vs==='same')return 'Grey: the distance to the official costing is unchanged.';
-  if(r.aligned===false)return 'Grey: the costing is on a different basis.';
-  if(r.static!=null)return 'Grey: the official costing is £0 this year.';
-  return 'Grey: no official costing for this drill or year.'}
-const chgTxt=r=>r.pct==null?(Math.abs(r.diff||0)>=5e-3?`${sbn(r.diff)}bn (from £0)`:`${sbn(r.diff)}bn`):`${sbn(r.diff)}bn (${pc(r.pct)})`;
-function rowTip(r,first){
-  const L=[first||`${r.name} · ${r.fy}`,`Drill-day estimate: ${n2(r.old)}bn`,`Rerun today: ${n2(r.new)}bn`,`Change: ${chgTxt(r)}`];
-  if(r.static!=null)L.push(`Official static costing: ${n2(r.static)}bn`);
-  if(r.post!=null)L.push(`Post-behavioural costing: ${n2(r.post)}bn`);
-  if(r.aligned===false&&!r.invalid)L.push(`Drill team's converted figure: ${n2(r.team)}bn`);
+  if(r.invalid)return 'Not a valid rerun (fuel duty).';
+  if(r.limit)return 'Model limitation: not compared with the costing.';
+  if(r.vs==='closer')return 'Closer to the official costing than on drill day.';
+  if(r.vs==='further')return 'Further from the official costing than on drill day.';
+  if(r.vs==='same')return 'Same distance from the official costing.';
+  if(r.lfl!=null)return 'Official costing is £0 this year.';
+  return 'No official costing.'}
+function rowTip(r){const L=[`${r.name} · ${r.fy}`,`Drill day ${n2(r.old)}bn → rerun ${n2(r.new)}bn`,`Change ${sbn(r.diff)}bn`+(r.pct!=null?` (${fp(r.pct)})`:'')];
+  if(r.lfl!=null)L.push(`Official (like-for-like) ${n2(r.lfl)}bn`+(r.lfl_src?`, headline static ${n2(r.static)}bn`:''));
   L.push(status(r));return L.join('\n')}
-const LEGEND=`<div class="ikey legend"><span>£bn: negative = cost, positive = raises money</span><span><i class="sw" style="background:#22c55e"></i>closer to the official costing</span><span><i class="sw" style="background:#f59e0b"></i>further from it</span><span><i class="sw" style="background:#94a3b8"></i>no like-for-like costing</span><span><i class="mo"></i>drill day → <i class="mn"></i>rerun</span><span><i class="ds2"></i>official static · <i class="dp2"></i>post-behavioural · <i class="dt2"></i>drill team's converted figure</span></div>`;
-const KEY=`drill day <svg width="9" height="9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="3.5" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/></svg> → rerun <svg width="9" height="9" aria-hidden="true"><circle cx="4.5" cy="4.5" r="4" fill="#319795"/></svg> · official <svg width="10" height="10" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z" fill="#1a202c"/></svg>`;
-function dumb(r){
-  const showTeam=r.aligned===false&&!r.invalid&&r.team!=null;
-  const vals=[r.old,r.new];if(r.static!=null)vals.push(r.static);if(r.post!=null)vals.push(r.post);if(showTeam)vals.push(r.team);
-  let lo=Math.min(...vals),hi=Math.max(...vals);const mag=Math.max(Math.abs(lo),Math.abs(hi));const minSpan=Math.max(0.04,mag*0.12);
-  if(hi-lo<minSpan){const m=(hi+lo)/2;lo=m-minSpan/2;hi=m+minSpan/2}
-  const pad=(hi-lo)*0.06;lo-=pad;hi+=pad;
-  const x=v=>((v-lo)/(hi-lo)*100).toFixed(2);
-  const mt=(lab,v)=>T(rowTip(r,`${r.name} · ${r.fy} · ${lab.toLowerCase()}`));
-  let g='<span class="tr"></span>';
-  if(lo<0&&hi>0)g+=`<span class="z" style="left:${x(0)}%"></span>`;
-  const xo=+x(r.old),xn=+x(r.new);
-  if(Math.abs(xn-xo)>4)g+=`<span class="ar ${xn>xo?'r':'l'}" style="left:${Math.min(xo,xn)}%;width:${Math.abs(xn-xo)}%"></span>`;
-  if(r.post!=null)g+=`<span class="d p" style="left:${x(r.post)}%"${mt('Post-behavioural costing',r.post)}></span>`;
-  if(showTeam)g+=`<span class="d t" style="left:${x(r.team)}%"${mt("Drill team's converted figure",r.team)}></span>`;
-  if(r.static!=null)g+=`<span class="d s" style="left:${x(r.static)}%"${mt('Official static costing',r.static)}></span>`;
-  g+=`<span class="m o" style="left:${xo}%"${mt('Drill-day estimate',r.old)}></span><span class="m n" style="left:${xn}%"${mt('Rerun today',r.new)}></span>`;
-  const lab=(X,pos,v,c,nm)=>`<span class="v ${c} ${pos} ${X<8?'st':X>92?'en':''}" style="left:${X}%"${mt(nm,v)}><span class="sr">${nm}: </span>${n2(v)}<span class="sr">; </span></span>`;
-  const same=n2(r.old)===n2(r.new);
-  g+=(same?'':lab(xo,'bot',r.old,'o','Drill-day estimate'))+lab(xn,'top',r.new,'n',same?'Drill day and rerun':'Rerun today');
-  if(r.static!=null&&n2(r.static)!==n2(r.new)&&n2(r.static)!==n2(r.old)){const xs=+x(r.static);if(Math.abs(xs-xn)>=18)g+=lab(xs,'top',r.static,'s','Official static costing');else if(same||Math.abs(xs-xo)>=18)g+=lab(xs,'bot',r.static,'s','Official static costing')}
-  return `<div class="dumb"><span class="lbl">${KEY}</span><div class="db" role="img" aria-label="${esc(rowTip(r))}">${g}</div></div>`}
-function change(r){
-  const p=r.pct==null?(Math.abs(r.diff||0)>=5e-3?'from £0':''):pc(r.pct);
-  const how=`How the change is computed\nrerun ${n2(r.new)} − drill day ${n2(r.old)} = ${sbn(r.diff)}bn`+(r.pct!=null?`\n${pc(r.pct)} of the drill-day figure`:(p?'\nNo % change: the drill-day figure was £0':''))+`\n${status(r)}`;
-  return `<div class="chg"><span class="lbl">Change</span><span class="pill ${cls(r)}"${T(how,true)}>${sbn(r.diff)}${p?' · '+p:''}</span></div>`}
-function official(r){
-  if(r.static==null)return `<div class="off"><span class="lbl">Official costing</span><span class="muted"${T('No official costing: drill 1 has no filled scoring sheet.',true)}>—</span></div>`;
-  const tp=`Official costing, ${r.fy}\nStatic: ${n2(r.static)}bn`+(r.post!=null?`\nPost-behavioural: ${n2(r.post)}bn`:'')+`\nSource: ${r.sheet.file}, line ${r.sheet.line}\nClick to open the sheet row`;
-  let h=`<div class="off"><span class="lbl">Official costing (static)</span><a href="${r.sheet.url}" target="_blank" rel="noopener"${T(tp)}>${bn(r.static)}</a>`;
-  if(r.post!=null)h+=`<small${T('Post-behavioural costing: the official figure after behavioural effects, from the same sheet row. Shown for reference; colours use the static costing.',true)}>post-behavioural ${bn(r.post)}</small>`;
-  if(r.aligned===false&&!r.invalid)h+=`<small><span class="tag"${T(BASIS,true)}>different basis ⓘ</span> team figure ${bn(r.team)}</small>`;
-  return h+'</div>'}
-function note(r){
-  if(r.invalid)return `<span class="tag warn"${T(FUEL,true)}>⚠ not a valid rerun</span>`;
-  let h='<span class="why">Why it moved:</span> '+esc(r.note);if(r.links.length)h+=' ('+r.links.map(l=>ext(l[0],l[1],l[2]||l[0])).join(', ')+')';
-  return h}
-function dec(r){const d=r.d;
-  const it=(lab,a,f,extra)=>`<span class="dv"${T(`${lab}, ${r.fy}\nDrill day: ${f(a[0])}\nRerun: ${f(a[1])}`+(extra?'\n'+extra:''),true)}>${lab.split(':')[0]} <b>${f(a[0])} → ${f(a[1])}</b></span>`;
-  return `<div class="dec">Average change per household a year: ${it('Decile 1',d.d1_avg_change,gbp,DEC1)} <span class="tag"${T(DEC1,true)}>ⓘ</span> · ${it('Decile 5',d.d5_avg_change,gbp)} · ${it('Decile 10',d.d10_avg_change,gbp)} · ${it('People affected',d.people_affected_pct,pct1,'Share of people whose net income changes.')}</div>`}
-function yrow(r,who,hn){
-  return `<div class="yrow">
-   <div class="mname">${who?`<div class="who">Drill ${r.drill} · <b>${esc(r.name)}</b></div>`:''}${hn!==undefined&&r.note===hn&&!r.invalid?'':`<div class="mnote">${note(r)}</div>`}</div>
-   <div class="yr ylab"><span class="lbl">Year</span>${r.fy}</div>
-   ${dumb(r)}${change(r)}${official(r)}${dec(r)}</div>`}
-const COLS=`<div class="cols"><div>Measure</div><div>Year</div><div>Drill day → rerun vs official (£bn)</div><div>Change, rerun vs drill day</div><div class="n">Official costing, static (£bn)</div></div>`;
-function ychart(rs){
-  const sm=innerWidth<600,cw=(document.getElementById('root').clientWidth||900)-(sm?40:80),W=Math.max(260,Math.min(720,cw)),H=120,L=sm?40:48,Rr=sm?22:34,Tp=8,B=22;
-  const vals=[];rs.forEach(r=>{vals.push(r.old,r.new);if(r.static!=null)vals.push(r.static)});
-  let lo=Math.min(0,...vals),hi=Math.max(0,...vals);const p=(hi-lo)*0.08||0.1;lo-=p;hi+=p;
-  const x=i=>L+(rs.length===1?0.5:i/(rs.length-1))*(W-L-Rr),y=v=>Tp+(hi-v)/(hi-lo)*(H-Tp-B);
-  let g='';const raw=(hi-lo)/3,mg=Math.pow(10,Math.floor(Math.log10(raw))),stp=[1,2,5,10].map(k=>k*mg).find(k=>k>=raw);const ticks=[];for(let v=Math.ceil(lo/stp)*stp;v<=hi+1e-9;v+=stp)ticks.push(Math.round(v/stp)*stp);
-  ticks.forEach(v=>{g+=`<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${Math.abs(v)<1e-9?'#94a3b8':'#eef2f6'}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${Math.abs(v)<1e-9?'0':n2(v)}</text>`});
-  rs.forEach((r,i)=>g+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${sm&&rs.length>4?r.fy.slice(2):r.fy}</text>`);
-  const line=(k,c,dash)=>`<polyline points="${rs.map((r,i)=>x(i)+','+y(r[k])).join(' ')}" fill="none" stroke="${c}" stroke-width="2"${dash?' stroke-dasharray="4 3"':''}/>`;
-  g+=line('old','#94a3b8',true)+line('new','#319795');
-  rs.forEach((r,i)=>{const X=x(i);
-    if(r.static!=null){const Y=y(r.static);g+=`<path class="mk" d="M${X} ${Y-5}L${X+5} ${Y}L${X} ${Y+5}L${X-5} ${Y}Z" fill="${r.aligned===false?'none':'#1a202c'}" stroke="#1a202c" stroke-width="1.3"${r.aligned===false?' stroke-dasharray="2 1.5"':''}${T(rowTip(r,`${r.name} · ${r.fy} · official static costing`))}/>`}
-    g+=`<circle class="mk" cx="${X}" cy="${y(r.old)}" r="4.5" fill="#fff" stroke="#94a3b8" stroke-width="1.8"${T(rowTip(r,`${r.name} · ${r.fy} · drill-day estimate`))}/><circle class="mk" cx="${X}" cy="${y(r.new)}" r="4.5" fill="#319795"${T(rowTip(r,`${r.name} · ${r.fy} · rerun today`))}/>`});
-  return `<div class="ychart"><div class="lg"><span>${KEY}</span><span>£bn by fiscal year; open diamond = costing on a different basis</span></div><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg></div>`}
-function measure(id,rs){
-  const vis=rs.filter(r=>!(st.hideZero&&zero(r)));const h=headline(rs);const k='m:'+id;const open=isOpen(k);
-  const others=vis.length-(vis.includes(h)?1:0);
-  const btn=open?'Hide years ▴':(others>0?`+${others} more year${others>1?'s':''} and deciles ▾`:'Deciles and people affected ▾');
-  return `<div class="measure ${open?'open':''}" data-k="${k}">
-   <div class="mhead" data-t="${k}" role="button" tabindex="0" aria-expanded="${open}">
-    <div class="mname"><div class="nm">${esc(h.name)}</div><div class="ds">${esc(h.desc)}</div>
-     <div class="mnote">${note(h)}</div><span class="more">${btn}</span></div>
-    <div class="yr"><span class="lbl">Year</span>${h.fy}${still(rs)?'':`<small${T('The year where the figure moved most in £bn. Expand the measure for every year.',true)}>largest move</small>`}</div>
-    ${dumb(h)}${change(h)}${official(h)}</div>
-   <div class="mbody">${open&&vis.length>1?ychart(vis):''}${vis.map(r=>yrow(r,false,h.note)).join('')||'<div class="empty">All years are £0.</div>'}</div></div>`}
-function match(rs){const q=st.q.toLowerCase();return !q||rs.some(r=>(r.name+' '+r.desc+' '+r.id+' '+(r.note||'')).toLowerCase().includes(q))}
-function stat(v,l,tp){return `<div class="stat"${T(tp,true)}><div class="v">${v}</div><div class="l">${l}</div></div>`}
-function bars(g,ok,bad){
-  const items=ok.map(([id,rs])=>[headline(rs),rs]).filter(([h])=>!zero(h));
-  if(!items.length)return '';
+function measuresOf(d){const ids=[...new Set(D.rows.filter(r=>r.drill===d).map(r=>r.id))];return ids.map(id=>BY[id])}
+function valid(d){return measuresOf(d).filter(rs=>!rs[0].invalid&&!rs.every(zero))}
+function biggest(d){const hs=valid(d).map(headline).filter(h=>h.pct!=null);return hs.reduce((a,b)=>Math.abs(b.pct)>Math.abs(a.pct)?b:a)}
+function takeaway(g){
+  if(g.max<1)return 'Same data, engine-only change: nothing moved meaningfully.';
+  const hs=valid(g.drill).map(headline);const k=hs.filter(h=>h.pct!=null&&Math.abs(h.pct)<5).length;
+  const what=g.drill==='1'?'Engine and data both changed (new survey base).':'Engine and data both changed.';
+  return what+' '+(k*2>=hs.length?'Most measures moved by under 5%.':'Most measures moved by 5% or more.')}
+function chips(g){const isu=g.issue_label==='retro'?'The review written after the drill.':"The drill's instructions and candidate reforms.";
+  return `<div class="chips"><a class="chip" href="${g.pr_url}" target="_blank" rel="noopener"${T(`Pull request #${g.pr}: the drill-day code and results.`)}>PR #${g.pr}</a><a class="chip" href="${g.issue_url}" target="_blank" rel="noopener"${T(`Issue #${g.issue}. ${isu}`)}>${esc(g.issue_label)} #${g.issue}</a><span class="chip"${T(`Drill day: policyengine ${g.engine}. Rerun: policyengine 6.10.2 (policyengine-uk 2.132.6).`,true)}>engine ${esc(g.engine.split(' ')[0])} → 6.10.2</span><span class="chip"${T(`Drill day: ${{'1':'enhanced FRS (policyengine 6.0.0 default)','2':'Microcosm aa31bdf6','3':'Microcosm aa31bdf6','4':'Microcosm 810ba980'}[g.drill]}. Rerun: certified Microcosm national file 810ba980.`,true)}>${esc(g.data)}</span></div>`}
+/* ---------- overview ---------- */
+function mini(d){
+  const items=valid(d).map(rs=>[headline(rs),rs]);
+  const moved=items.filter(([h,rs])=>!still(rs)&&h.pct!=null&&Math.abs(h.pct)>=0.05).map(x=>x[0]).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  const unch=items.length-moved.length;const top=moved.slice(0,5),more=moved.length-top.length;
+  const span=Math.max(5,...moved.map(h=>Math.abs(h.pct)))*1.05;
+  const rows=top.map(h=>{const w=Math.abs(h.pct)/span*50;return `<div class="mrow"${T(rowTip(h),true)}><div class="mn">${esc(short(h))}</div><div class="mtr"><span class="z"></span><i class="${cls(h)}" style="left:${h.pct<0?50-w:50}%;width:${Math.max(w,0.8)}%"></i></div><div class="mv">${pw(h.pct)}</div></div>`}).join('');
+  return `<div class="mini"><div class="mtitle">How much each measure changed (rerun vs drill day)</div>${rows}
+   ${more>0?`<button class="open more" data-tab="drill${d}">+${more} more →</button>`:''}${unch>0?`<div class="tiny">${unch} measure${unch>1?'s':''} unchanged</div>`:''}
+   <div class="mleg"><span><i class="sw" style="background:var(--gbar)"></i>closer to official</span><span><i class="sw" style="background:var(--abar)"></i>further</span><span><i class="sw" style="background:var(--nbar)"></i>no costing</span></div></div>`}
+function overview(){
+  const DATES={'1':'28 September','2':'5 October','3':'12 October','4':'19 October'};
+  const boxes=D.drills.map(g=>{const b=biggest(g.drill);const whole=p=>(p>0?'+':'−')+(Math.abs(p)>=1?Math.round(Math.abs(p)):Math.abs(p).toFixed(1))+'%';
+    const verdict=g.median>=5?'Results moved a lot':g.median>=1?'Results moved a little':'Results barely moved';
+    const typ=g.median>=1?Math.round(g.median)+'%':g.median<0.005?'almost nothing':g.median.toFixed(2)+'%';
+    const l1=`The typical measure changed by ${typ}; the biggest change was ${short(b)} (${whole(b.pct)}).`;
+    const l2=g.drill==='4'?'Why: only the model was updated, so little change was expected.':g.drill==='1'?'Why: the model was updated and the data moved from older survey data (FRS) to Microcosm.':'Why: both the model and the data have been updated since.';
+    const l3=g.closer==null?'No official costings for this drill.':`Closer to the official costing in ${g.closer} of ${g.closer+g.further} measure-years; ${g.further} moved further away.`;
+    const fuel=measuresOf(g.drill).some(rs=>rs[0].invalid);
+    const meta=`PR #${g.pr} · ${g.issue_label} #${g.issue} · engine ${g.engine.split(' ')[0]} → 6.10.2 · data: ${g.data}`;
+    const tot=g.closer==null?0:g.closer+g.further;
+    const vsb=g.closer==null?`<div class="onote">${icon2('info')} No official costings</div>`
+      :`<div class="split"${T(`Measure-years (one measure in one year) where the rerun moved closer to or further from the like-for-like official costing. ${g.closer} closer, ${g.further} further, of ${tot}.`,true)}><span class="sg" style="flex:${g.closer}"></span><span class="sa" style="flex:${g.further||0.0001}"></span></div><div class="splab"><span>${g.closer} closer</span><span>${g.further} further</span></div>`;
+    const tags=`<div class="tags"><span class="tg">${icon2('cog')} Model updated</span>${g.drill==='4'?'<span class="tgm">so little change expected</span>':`<span class="tg">${icon2('db')} New data: ${g.drill==='1'?'FRS → Microcosm':'earlier → current Microcosm'}</span>`}</div>`;
+    return `<section class="card obox"><div class="otitle">Drill ${g.drill} · ${DATES[g.drill]}</div>
+      <div><div class="big"${T(`Median change in the size of each measure (${g.median.toFixed(2)}%), over ${g.n} year cells with a drill-day figure of at least £0.01bn. Largest: ${g.max.toFixed(1)}%.`,true)}>${typ==='almost nothing'?'0%':typ}</div><div class="small">typical change · ${esc(verdict.toLowerCase())}</div></div>
+      ${mini(g.drill)}
+      ${tags}
+      <div class="ovs">${vsb}</div>
+      ${fuel?'<div class="tiny">Fuel duty not compared (see drill)</div>':''}
+      <div class="ometa">${esc(meta)}</div>
+      <button class="open" data-tab="drill${g.drill}">Open drill ${g.drill} →</button></section>`}).join('');
+  const mx=Math.max(...D.drills.map(g=>g.max));
+  const chart=D.drills.map(g=>`<div class="orow"${T(`Drill ${g.drill}: median ${g.median.toFixed(2)}%, largest ${g.max.toFixed(1)}%.`,true)}><div>Drill ${g.drill}</div><div class="otrack"><i style="width:${Math.max(g.median/mx*100,0.5)}%"></i><b style="left:${g.max/mx*100}%"></b></div><div class="bv">${g.median<0.005?'0.00':g.median.toFixed(2)}%</div></div>`).join('');
+  const AUD='From the large-gap benchmark audit (24 October 2026), after matching costings to our basis.';
+  return `<div class="sec grid4">${boxes}</div>
+   <div class="sec card"><div class="btitle">How much each drill moved</div>${chart}<div class="legend"><span><i class="sw" style="background:#8fcfcb"></i>median move</span><span><i class="sw" style="background:#334155;width:3px"></i>largest move</span></div></div>
+   <div class="sec card gaps"><div class="btitle"${T(AUD,true)}>Biggest gaps vs official</div><ol>
+    <li>Capital Gains Tax: ours is about 2.4–2.8 times the costing.</li>
+    <li>Drill 3 Pensioner Allowance: £1.2–1.4bn a year more costly.</li>
+    <li>Drill 3 LHA: about £1.2bn a year below the costing.</li>
+    <li>2031-32 threshold freeze: +33% (drill 3), +19% (drill 4).</li>
+    <li>Employer NI: gaps of £0.5–0.9bn a year.</li></ol></div>
+   <details class="card src"><summary>Sources and method</summary><dl class="dl">
+    <dt>Rerun</dt><dd>Each drill's own code, on <span class="dotted"${T('policyengine-uk 2.132.6, policyengine-core 3.33.3\nData: microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71\nSHA-256 810ba980…0951ece',true)}>policyengine 6.10.2</span> and the certified Microcosm data (24 Oct 2026).</dd>
+    <dt>Sources</dt><dd>Drill-day figures from each drill's results; official costings from its scoring sheet. <span class="tiny">Each costing links to its row.</span></dd>
+    <dt>Years</dt><dd>Model year 2027 = fiscal year 2027-28. Costings are matched to our basis; rows with a model limitation are left out of closer/further.</dd>
+   </dl><div class="pills"><a class="chip" href="${GH}/pull/114" target="_blank" rel="noopener">PR #114</a><a class="chip" href="${README}" target="_blank" rel="noopener">README</a><a class="chip" href="https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2" target="_blank" rel="noopener">policyengine 6.10.2</a><a class="chip" href="https://pypi.org/project/policyengine-uk/2.132.6/" target="_blank" rel="noopener">policyengine-uk 2.132.6</a></div></details>`}
+/* ---------- drill tab ---------- */
+function bars(g,list){
+  const items=list.map(rs=>[headline(rs),rs]).filter(([h])=>!zero(h));
   const moved=items.filter(([h,rs])=>!still(rs)&&(h.pct==null||Math.abs(h.pct)>=0.05)),same=items.filter(x=>!moved.includes(x));
   const span=Math.max(5,...moved.map(([h])=>Math.abs(h.pct??0)))*1.05;
-  moved.sort((a,b)=>Math.abs(b[0].pct??0)-Math.abs(a[0].pct??0));
   const rows=moved.map(([h])=>{const p=h.pct;let bar='';if(p!=null){const w=Math.abs(p)/span*50;bar=`<i class="${cls(h)}" style="left:${p<0?50-w:50}%;width:${Math.max(w,0.6)}%"></i>`}
-    const tp=rowTip(h)+(h.note?`\nWhy it moved: ${h.note}`:'')+`\n${h.desc}`;
-    return `<div class="brow"${T(tp,true)}><div class="bl">${esc(h.name)}</div><span class="ychip">${h.fy}</span><div class="track"><span class="z" style="left:50%"></span>${bar}</div><div class="bv">${p==null?'from £0':fp(p)}</div></div>`}).join('');
-  const sameTxt=same.length?`<div class="unch"${T(`Unchanged (under 0.05% in every shown year)\n`+same.map(([h])=>`${h.name} (${h.fy}): ${n2(h.old)} → ${n2(h.new)}bn`).join('\n'),true)}>${same.length} measure${same.length>1?'s':''} unchanged (under 0.05%): ${esc(same.slice(0,3).map(([h])=>h.name).join(', '))}${same.length>3?', …':''}</div>`:'';
-  return `<div class="bars"><div class="bkey">How much each measure moved, rerun vs drill day (axis ±${span.toFixed(0)}%)</div>${rows}${sameTxt}${bad.length?`<div class="bnote">Fuel duty is left out: it is not a valid rerun.</div>`:''}${LEGEND}</div>`}
-function measuresOf(g){const ids=[...new Set(D.rows.filter(r=>r.drill===g.drill).map(r=>r.id))];return ids.map(id=>[id,BY[id]])}
-function takeaway(g){
-  const all=measuresOf(g),ok=all.filter(([,rs])=>!rs[0].invalid&&!rs.every(zero)),bad=all.filter(([,rs])=>rs[0].invalid);
-  const hs=ok.map(([,rs])=>headline(rs));const n=hs.length;
-  if(g.max<1)return `${g.data==='Same data'?'Same data and only the engine changed: ':''}none of the ${n} measures moved by more than ${g.max.toFixed(1)}%.`;
-  const k=hs.filter(h=>h.pct!=null&&Math.abs(h.pct)<5).length;
-  const base=bad.length?`${n} valid measures (fuel duty excluded)`:`${n} measures`;
-  const part=k===n?'all moved by less than 5%':k===0?'all moved by 5% or more':`${k} moved by less than 5% and ${n-k} by 5% or more`;
-  const big=hs.filter(h=>h.pct!=null).reduce((a,b)=>Math.abs(b.pct)>Math.abs(a.pct)?b:a);
-  return `${base}: ${part}. The biggest move is ${big.name} (${fp(big.pct)} in ${big.fy}).`}
-function vsStat(g){return g.closer==null?stat('n/a','no official costings','Drill 1 has no filled scoring sheet with official costings, so nothing can move closer or further.')
-    :stat(g.closer+g.further===0?'none':`${g.closer} / ${g.further}`,g.closer+g.further===0?'moved against official':'closer / further vs official',`Rows on the costing's basis where the rerun moved closer (${g.closer}) or further (${g.further}) from the official static costing. ${g.basis_diff} rows on a different basis and the invalid fuel duty rows are left out; the rest did not move against the costing.`)}
-function stats(g){const base=`over the ${g.n} rows where the drill-day figure is at least £0.01bn, leaving out invalid fuel duty rows`;
-  return `${stat(g.median<0.005?'0.00%':g.median.toFixed(2)+'%','median change in size',`Median absolute change in the size of each measure, rerun vs drill day, ${base}.`)}${stat(g.max.toFixed(1)+'%','largest change',`Largest absolute change in size, ${base}.`)}${vsStat(g)}`}
-function chips(g){const isu=g.issue_label==='retro'?'The retrospective written after the drill.':"The drill's instructions and candidate reforms.";
-  return `<a class="chip" href="${g.pr_url}" target="_blank" rel="noopener"${T(`Drill ${g.drill} pull request #${g.pr}: the drill-day code and published results.`)}>PR #${g.pr}</a><a class="chip" href="${g.issue_url}" target="_blank" rel="noopener"${T(`Issue #${g.issue}. ${isu}`)}>${esc(g.issue_label)} #${g.issue}</a><span class="chip"${T(`Engine: policyengine ${g.engine} on drill day; policyengine 6.10.2 (pe-uk 2.132.6) for the rerun.`,true)}>engine ${esc(g.engine.split(' ')[0])} → 6.10.2</span><span class="chip"${T(`Data: ${g.data}. Drill day: ${{'1':'enhanced FRS (policyengine 6.0.0 default)','2':'Microcosm aa31bdf6','3':'Microcosm aa31bdf6','4':'Microcosm 810ba980'}[g.drill]}. Rerun: certified Microcosm national file 810ba980.`,true)}>${esc(g.data)}</span>`}
-function drill(g){
-  const groups=measuresOf(g).filter(([,rs])=>match(rs)&&!(st.hideZero&&rs.every(zero)));
-  const ok=groups.filter(([,rs])=>!rs[0].invalid).sort((a,b)=>Math.abs(headline(b[1]).pct||0)-Math.abs(headline(a[1]).pct||0));
-  const bad=groups.filter(([,rs])=>rs[0].invalid);
-  const gk='g'+g.drill,go=isOpen(gk);
-  const body=st.view==='t'?flat(g):`${COLS}${ok.map(([id,rs])=>measure(id,rs)).join('')||'<div class="empty">No measures match.</div>'}
-    ${bad.length?`<div class="group ${go?'open':''}"><div class="ghead" data-t="${gk}" role="button" tabindex="0" aria-expanded="${go}"><span class="more">${go?'Hide ▴':'Show ▾'}</span> Not valid reruns (${bad.length}): fuel duty</div><div class="gbody"><div class="gnote">This drill set fuel duty month by month. Today's engine ignores month-by-month rates, so the rerun scores only the VAT part and cannot be compared. Drill 4 set its dates differently and is unaffected (${ext('details',README,'README: the fuel duty finding, with a one-household check of each measure')}).</div>${bad.map(([id,rs])=>measure(id,rs)).join('')}</div></div>`:''}`;
-  return `<section class="card drill open">
-   <div class="dhead">
-    <div class="dnum">${g.drill}</div>
-    <div class="dmain"><div class="dtitle">Drill ${g.drill} · ${g.date}</div><div class="dlinks">${chips(g)}</div></div>
-    <div class="dside"><div class="dstats">${stats(g)}</div></div>
-    <div class="dprose"><div class="take">${esc(takeaway(g))}</div></div>
-   </div>${bars(g,ok,bad)}</section>
-   ${CONTROLS}
-   <section class="card drill open"><div class="dbody">${body}</div></section>
-   <div class="srcline"><button class="obtn linkish" data-tab="overview">Sources and method → Overview</button></div>`}
-function flat(g){
-  const rs=D.rows.filter(r=>r.drill===g.drill&&!(st.hideZero&&zero(r))&&match([r]))
-   .sort((a,b)=>(a.invalid-b.invalid)||(Math.abs(b.pct??0)-Math.abs(a.pct??0)));
-  return `<div class="flat">${COLS}${rs.map(r=>yrow(r,true)).join('')}</div>`}
-const CONTROLS=`<div class="controls" id="controls">
-    <span class="seg" id="view" role="group" aria-label="View"><button class="btn" data-v="m">By measure</button><button class="btn" data-v="t">Every year</button></span>
-    <label><input type="checkbox" id="hideZero"> Hide years where both are £0</label>
-    <input type="search" id="q" placeholder="Search measures" aria-label="Search measures">
-  </div>`;
-function overview(){
-  const mx=Math.max(...D.drills.map(g=>g.max));
-  const chart=D.drills.map(g=>`<div class="orow"${T(`Drill ${g.drill}: median change ${g.median.toFixed(2)}%, largest ${g.max.toFixed(1)}%, ${g.n} rows (drill-day figure at least £0.01bn, fuel duty excluded).`,true)}><div class="ol">Drill ${g.drill}</div><div class="otrack"><i style="width:${Math.max(g.median/mx*100,0.4)}%"></i><b style="left:${g.max/mx*100}%"></b></div><div class="ov">${g.median<0.005?'0.00':g.median.toFixed(2)}%</div></div>`).join('');
-  return `<div class="ogrid">${D.drills.map(g=>`<section class="card ocard">
-     <div class="otop"><div class="dnum">${g.drill}</div><div><div class="dtitle">Drill ${g.drill} · ${g.date}</div><div class="dlinks">${chips(g)}</div></div></div>
-     <div class="dstats ost">${stats(g)}</div>
-     <div class="take">${esc(takeaway(g))}</div>
-     <button class="btn obtn" data-tab="drill${g.drill}">Open drill ${g.drill} →</button></section>`).join('')}</div>
-   <section class="card ochart"><div class="bkey">Median change in the size of each drill's measures (bar), with the largest change (tick)</div>${chart}</section>
-   <section class="card sources" id="sources"><h2>Sources and method</h2><ul>
-    <li><b>What was rerun:</b> each drill's own measure code, on policyengine 6.10.2 (policyengine-uk 2.132.6, policyengine-core 3.33.3) with the <span class="dotted"${T('microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71\nSHA-256 810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece',true)}>certified Microcosm national data</span>, on 24 October 2026.</li>
-    <li><b>Where the figures come from:</b> drill-day figures are the results each drill committed on the day; official costings come from each drill's filled scoring sheet, and every costing links to its row.</li>
-    <li><b>Years and basis:</b> model year Y is shown as fiscal year Y–Y+1, as the drill teams did. Where a drill team converted our figure before comparing it with the costing, the row is marked "different basis" and not counted as closer or further.</li>
-   </ul><div class="slinks">${ext('policyengine 6.10.2','https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2')} · ${ext('policyengine-uk 2.132.6','https://pypi.org/project/policyengine-uk/2.132.6/')} · ${ext('PR #114','https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/114')} · ${ext('README',README)}</div></section>`}
-const TABS=[['overview','Overview'],['drill1','Drill 1 · 28 Sep'],['drill2','Drill 2 · 5 Oct'],['drill3','Drill 3 · 12 Oct'],['drill4','Drill 4 · 19 Oct']];
-function tabs(){document.getElementById('tabs').innerHTML=TABS.map(([k,l])=>`<button role="tab" class="tab ${st.tab===k?'on':''}" data-tab="${k}" aria-selected="${st.tab===k}" tabindex="${st.tab===k?0:-1}">${l}</button>`).join('');const bar=document.getElementById('tabs'),on=bar.querySelector('.tab.on');if(on&&bar.scrollWidth>bar.clientWidth)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2)}
+    return `<div class="brow" data-go="${h.id}"${T(rowTip(h)+'\nClick to see the measure.',true)}><div class="bl">${esc(h.name)}</div><span class="yc">${h.fy}</span><div class="track"><span class="z" style="left:50%"></span>${bar}</div><div class="bv">${p==null?'from £0':fp(p)}</div></div>`}).join('');
+  const sameTxt=same.length?`<div class="unch"${T('Unchanged (under 0.05%)\n'+same.map(([h])=>h.name).join('\n'),true)}>${same.length} unchanged: ${esc(same.slice(0,3).map(([h])=>short(h)).join(', '))}${same.length>3?', …':''}</div>`:'';
+  return `<div class="card"><div class="btitle">How much each measure moved</div>${rows}${sameTxt}
+   <div class="legend"><span><i class="sw" style="background:var(--gbar)"></i>closer to official</span><span><i class="sw" style="background:var(--abar)"></i>further from official</span><span><i class="sw" style="background:var(--nbar)"></i>no like-for-like costing</span><span><span style="color:var(--faint)">grey</span> drill day · <span style="color:var(--teal2)">teal</span> rerun · £bn</span></div></div>`}
+const bnf=v=>v==null?'—':(v<0?'−':'')+'£'+Math.abs(v).toFixed(2)+'bn';
+const sbnf=v=>(v>0.0049?'+':v<-0.0049?'−':'')+'£'+Math.abs(v).toFixed(2)+'bn';
+const pw=p=>p==null?'':(Math.abs(p)<0.005?'0%':(p>0?'+':'−')+(Math.abs(p)>=1?Math.round(Math.abs(p)):Math.abs(p).toFixed(Math.abs(p)<0.1?2:1))+'%');
+function offCell(r){if(r.lfl==null)return '<span class="faint">—</span>';
+  const t=r.lfl_src?`Official, like-for-like: ${r.lfl_src.why}.\nSource: ${r.lfl_src.file}, line ${r.lfl_src.line}.\nHeadline static ${bnf(r.static)} (${r.sheet.file}, line ${r.sheet.line}).\nClick to open the costing note.`:`Official static costing.\nSource: ${r.sheet.file}, line ${r.sheet.line}.`+(r.post!=null?`\nPost-behavioural ${bnf(r.post)}.`:'')+'\nClick to open the sheet row.';
+  return `<a class="offl" href="${r.lfl_src?r.lfl_src.url:r.sheet.url}" target="_blank" rel="noopener"${T(t)}>${bnf(r.lfl)}${r.lfl_src?'*':''}</a>`}
+function viz(r,lo,hi){const x=v=>((v-lo)/(hi-lo)*100).toFixed(1);let g='<span class="vt"></span>';
+  if(lo<0&&hi>0)g+=`<span class="vz" style="left:${x(0)}%"></span>`;
+  const xo=+x(r.old),xn=+x(r.new);if(Math.abs(xn-xo)>2)g+=`<span class="va" style="left:${Math.min(xo,xn)}%;width:${Math.abs(xn-xo)}%"></span>`;
+  if(r.lfl!=null)g+=`<span class="vd" style="left:${x(r.lfl)}%"></span>`;
+  g+=`<span class="vo" style="left:${xo}%"></span><span class="vn" style="left:${xn}%"></span>`;
+  return `<div class="viz"${T(rowTip(r),true)}>${g}</div>`}
+function yrow(r,lo,hi,hn){const c=cls(r);const extra=r.note&&r.note!==hn&&!r.invalid?` <span class="yi"${T(r.fy+': '+r.note,true)}>ⓘ</span>`:'';
+  return `<div class="yr2"><div class="c-y">${r.fy}${extra}</div><div class="c-o"><span class="sr">Drill day </span>${bnf(r.old)}</div><div class="c-n"><span class="sr">Rerun </span>${bnf(r.new)}</div>
+   <div class="c-d"><span class="pill ${c}"${T(`rerun ${bnf(r.new)} − drill day ${bnf(r.old)} = ${sbnf(r.diff)}`+(r.pct!=null?` (${fp(r.pct)})`:'')+'\n'+status(r),true)}>${sbnf(r.diff)}${r.pct!=null&&Math.abs(r.diff)>=5e-4?` (${pw(r.pct)})`:''}</span></div>
+   <div class="c-v">${viz(r,lo,hi)}</div><div class="c-f${r.lfl==null?' nof':''}"><span class="lbl">Official </span>${offCell(r)}</div></div>`}
+function points(rs,h){const P=[];
+  if(h.note){let s=esc(h.note);if(h.links.length)s+=' ('+h.links.map(l=>ext(l[0],l[1],l[2]||l[0])).join(', ')+')';P.push(`${icon2('why')}<span><b>Why it moved:</b> ${s}</span>`)}
+  if(h.invalid)P.push(`${icon2('scale')}<span><b>Vs official:</b> not comparable; the rerun drops the duty change.</span>`);
+  else if(h.limit)P.push(`${icon2('scale')}<span><b>Vs official:</b> not comparable. Model limitation: ${esc(h.limit)}.</span>`);
+  else{const c=rs.filter(r=>r.vs==='closer').length,f=rs.filter(r=>r.vs==='further').length,n=rs.filter(r=>r.vs).length;
+    if(!rs.some(r=>r.lfl!=null))P.push(`${icon2('scale')}<span><b>Vs official:</b> no official costing.</span>`);
+    else if(!n)P.push(`${icon2('scale')}<span><b>Vs official:</b> official costing is £0 in these years.</span>`);
+    else{const u=n-c-f,yr=k=>k===1?'1 year':k+' years';const parts=[];if(c)parts.push(`closer in ${yr(c)}`);if(f)parts.push(`further in ${yr(f)}`);if(u)parts.push(`unchanged in ${yr(u)}`);
+      P.push(`${icon2('scale')}<span><b>Vs official:</b> ${c===n?(n>1?`closer in all ${n} years`:'closer'):f===n?(n>1?`further in all ${n} years`:'further'):u===n?'no change in the gap':parts.join(', ')}.</span>`)}
+    if(rs.some(r=>r.lfl_src))P.push(`${icon2('warn')}<span><b>Basis:</b> figures marked * use the costing note's figure on our basis (hover for why).</span>`)}
+  return `<ul class="pts">${P.map(x=>`<li>${x}</li>`).join('')}</ul>`}
+function dtable(rs){const f=(a,g)=>`${g(a[0])} → ${g(a[1])}`;const p=x=>x==null?'—':x.toFixed(1)+'%';
+  return `<div class="ytw"><table class="yt"><thead><tr><th>Per household a year</th>${rs.map(r=>`<th>${r.fy}</th>`).join('')}</tr></thead><tbody>
+   <tr><td><span${T(DEC1,true)}>Decile 1 ⓘ</span></td>${rs.map(r=>`<td>${f(r.d.d1_avg_change,gbp)}</td>`).join('')}</tr>
+   <tr><td>Decile 5</td>${rs.map(r=>`<td>${f(r.d.d5_avg_change,gbp)}</td>`).join('')}</tr>
+   <tr><td>Decile 10</td>${rs.map(r=>`<td>${f(r.d.d10_avg_change,gbp)}</td>`).join('')}</tr>
+   <tr><td>People affected</td>${rs.map(r=>`<td>${f(r.d.people_affected_pct,p)}</td>`).join('')}</tr></tbody></table></div>`}
+const IC={home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+ percent:'<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+ briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+ trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ baby:'<circle cx="12" cy="12" r="9"/><path d="M9 14c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5"/><circle cx="9" cy="10" r=".8"/><circle cx="15" cy="10" r=".8"/>',
+ pension:'<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+ zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+ fuel:'<line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0V9.83a2 2 0 0 0-.59-1.42L18 5"/>',
+ layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+ heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>'};
+const IC2={info:'<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',cog:'<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/>',db:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',trend:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',why:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',scale:'<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',warn:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'};
+const icon2=k=>`<svg class="i2" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC2[k]}</svg>`;
+const icon=k=>`<span class="ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]||IC.percent}</svg></span>`;
+const LHEAD=`<div class="yr2 lh"><div>Year</div><div>Drill day</div><div>Rerun</div><div>Difference</div><div><span class="ko"></span> drill day → <span class="kn"></span> rerun · <span class="kd"></span> official</div><div>Official</div></div>`;
+function mainNote(rs){const c={};rs.filter(r=>!zero(r)).forEach(r=>{if(r.note)c[r.note]=(c[r.note]||0)+1});const k=Object.keys(c).sort((a,b)=>c[b]-c[a]);return k.length?rs.find(r=>r.note===k[0]):null}
+function mgroup(rs){
+  const list=rs.filter(r=>!zero(r));const h=headline(rs);const mn=mainNote(rs)||h;const shown=list.length?list:[h];
+  const vals=[];shown.forEach(r=>{vals.push(r.old,r.new);if(r.lfl!=null)vals.push(r.lfl)});let lo=Math.min(...vals),hi=Math.max(...vals);
+  const span=Math.max(hi-lo,Math.max(Math.abs(lo),Math.abs(hi))*0.1,0.02);const mid=(hi+lo)/2;lo=Math.min(lo,mid-span/2);hi=Math.max(hi,mid+span/2);const pd=(hi-lo)*0.06;lo-=pd;hi+=pd;
+  const first=list.length?list[0].year:0;const hidden=rs.filter(r=>zero(r)&&r.year>first).map(r=>r.fy);
+  const open=st.dec.has(h.id);
+  return `<section class="mc${h.invalid?' bad':''}" id="m-${h.id}">
+   <div class="mh">${icon(h.icon)}<div class="mt"><div class="mname">${esc(h.name)}</div><div class="mdesc"${T(h.desc,true)}>${esc(h.desc)}</div></div></div>
+   <div class="mb">${LHEAD}<div class="ylist">${shown.map(r=>yrow(r,lo,hi,mn.note)).join('')}</div>
+    ${hidden.length&&list.length?`<div class="noeff">No effect in ${hidden.length>2?hidden[0]+' to '+hidden[hidden.length-1]:hidden.join(' and ')}.</div>`:''}</div>
+   <div class="mf">${points(rs,Object.assign({},h,{note:mn.note,links:mn.links}))}<button class="lnk" data-dec="${h.id}" aria-expanded="${open}">Distribution ${open?'▾':'▸'}</button>${open?dtable(shown):''}</div></section>`}
+function match(rs){const q=st.q.toLowerCase();return !q||rs.some(r=>(r.name+' '+r.desc+' '+r.id+' '+(r.note||'')).toLowerCase().includes(q))}
+function drillTab(g){
+  const all=measuresOf(g.drill);
+  const ok=all.filter(rs=>!rs[0].invalid&&!rs.every(zero)).sort((a,b)=>Math.abs(headline(b).pct||0)-Math.abs(headline(a).pct||0));
+  const bad=all.filter(rs=>rs[0].invalid);
+  const b=biggest(g.drill);
+  const cells=D.rows.filter(r=>r.drill===g.drill&&!zero(r)&&r.lfl!=null&&Math.abs(r.lfl)>1e-9);
+  const same=cells.filter(r=>r.vs==='same').length,nc=cells.filter(r=>r.invalid||r.limit).length;
+  const dir=r=>{const a=Math.abs(r.diff).toFixed(2);const cost=Math.abs(r.new)>=Math.abs(r.old)?'more':'less';return r.new<0||(r.new===0&&r.old<0)?`rerun costs £${a}bn ${cost}`:`rerun raises £${a}bn ${cost}`};
+  const pct=v=>v>=1?Math.round(v)+'%':v<0.005?'0%':v.toFixed(2)+'%';
+  const box1=`<div class="card sb"><div class="big">${pct(g.median)}</div><div class="slab">Typical change <span class="yi"${T(`Median absolute change in the size of each measure, rerun vs drill day, over ${g.n} year cells with a drill-day figure of at least £0.01bn (fuel duty excluded). Exact: ${g.median.toFixed(2)}%.`,true)}>ⓘ</span></div><div class="sl">Half the measures moved by less than this.</div></div>`;
+  const box2=`<div class="card sb"><div class="big">${pw(b.pct)}</div><div class="slab">Biggest change <span class="yi"${T(`The largest % change in a measure's headline year (the year with the largest £bn move). Largest over all cells: ${g.max.toFixed(1)}%.`,true)}>ⓘ</span></div><div class="sl">${esc(short(b))}, ${b.fy} (${dir(b)})</div></div>`;
+  const box3=g.closer==null?`<div class="card sb"><div class="big">—</div><div class="slab">Closer to the official costing</div><div class="sl">No official costings for this drill.</div></div>`
+   :`<div class="card sb"><div class="big">${g.closer} of ${g.closer+g.further}</div><div class="slab">Closer to the official costing <span class="yi"${T(`Year cells (one measure in one year) where the rerun is closer to the like-for-like official costing than the drill-day figure was. Denominator: cells that moved closer or further. Unchanged cells, model limitations and fuel duty are not counted.`,true)}>ⓘ</span></div><div class="sl">${g.further} moved further away${same?`; ${same} unchanged`:''}${nc?`; ${nc} not comparable`:''}.</div></div>`;
+  const cave=bad.length?`<div class="sec"><div class="sh">Not valid reruns (${bad.length})</div><p class="cl">${esc(FUEL)} ${ext('Details',README,'README: the fuel duty finding')}</p><div class="mcs">${bad.map(mgroup).join('')}</div></div>`:'';
+  return `<div class="dhd"><h2>Drill ${g.drill} · ${g.date}</h2>${chips(g)}<p>${esc(takeaway(g))}</p></div>
+   <div class="sec"><div class="sh">Summary</div>
+    <div class="grid3">
+     ${box1}${box2}${box3}
+    </div>${bars(g,ok)}</div>
+   <div class="sec mcs">${ok.map(mgroup).join('')}</div>
+   ${cave}
+   <div class="foot"><button data-tab="overview">Sources and method → Overview</button></div>`}
+/* ---------- tabs, render ---------- */
+function tabs(){const bar=document.getElementById('tabs');bar.innerHTML=TABS.map(([k,l])=>`<button role="tab" class="tab ${st.tab===k?'on':''}" data-tab="${k}" aria-selected="${st.tab===k}" tabindex="${st.tab===k?0:-1}">${l}</button>`).join('');
+  const on=bar.querySelector('.tab.on');if(on&&bar.scrollWidth>bar.clientWidth)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2)}
+function render(keep){const y=scrollY;hideTip();tabs();const root=document.getElementById('root');
+  root.innerHTML=st.tab==='overview'?overview():drillTab(D.drills.find(g=>'drill'+g.drill===st.tab));
+  const q=document.getElementById('q');if(q){q.oninput=e=>{st.q=e.target.value;render('q')};document.getElementById('hideZero').onchange=e=>{st.hideZero=e.target.checked;render()}}
+  scrollTo(0,y);if(keep==='q'&&q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}}
 function setTab(k,focus){st.tab=k;const u=new URL(location);if(k==='overview')u.searchParams.delete('tab');else u.searchParams.set('tab',k);history.replaceState(null,'',u);render();scrollTo(0,0);if(focus)document.querySelector(`.tab[data-tab="${k}"]`)?.focus()}
-function render(focusKey){
-  const y=scrollY;hideTip();tabs();
-  const root=document.getElementById('root');
-  if(st.tab==='overview')root.innerHTML=overview();
-  else{root.innerHTML=drill(D.drills.find(g=>'drill'+g.drill===st.tab));
-    document.querySelectorAll('#view .btn').forEach(b=>b.classList.toggle('on',b.dataset.v===st.view));
-    document.getElementById('hideZero').checked=st.hideZero;const q=document.getElementById('q');q.value=st.q;
-    wire()}
-  scrollTo(0,y);
-  if(focusKey){const el=document.querySelector(`[data-t="${CSS.escape(focusKey)}"]`)||document.getElementById(focusKey);if(el)el.focus({preventScroll:true})}}
-function wire(){
-    document.getElementById('view').onclick=e=>{const v=e.target.dataset.v;if(!v)return;st.view=v;render()};
-    document.getElementById('q').oninput=e=>{st.q=e.target.value;render('q')}}
-function toggle(k){st.closed.has(k)?st.closed.delete(k):st.closed.add(k);render(k)}
-// ---- shared tooltip
+document.getElementById('tabs').onclick=e=>{const t=e.target.closest('[data-tab]');if(t)setTab(t.dataset.tab)};
+document.getElementById('tabs').onkeydown=e=>{const i=TABS.findIndex(t=>t[0]===st.tab);let j=null;if(e.key==='ArrowRight')j=(i+1)%TABS.length;else if(e.key==='ArrowLeft')j=(i-1+TABS.length)%TABS.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=TABS.length-1;if(j==null)return;e.preventDefault();setTab(TABS[j][0],true)};
+document.getElementById('root').addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab]');if(t){setTab(t.dataset.tab);return}
+  const d=e.target.closest('[data-dec]');if(d){const k=d.dataset.dec;st.dec.has(k)?st.dec.delete(k):st.dec.add(k);render();return}
+  const f=e.target.closest('[data-fig]');if(f){const k=f.dataset.fig;st.fig.has(k)?st.fig.delete(k):st.fig.add(k);render();return}
+  const g=e.target.closest('[data-go]');if(g&&!(ptr!=='mouse'&&tipEl!==g)){const el=document.getElementById('m-'+g.dataset.go);if(el){el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1200)}}});
+document.getElementById('root').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const g=e.target.closest('[data-go]');if(g)g.click()});
+/* ---------- shared tooltip ---------- */
 const tt=document.getElementById('tt');let tipEl=null,ptr='mouse',downTip=null;
-function showTip(el){const t=el.getAttribute('data-tip');if(!t)return;tipEl=el;
-  const [h,...rest]=t.split('\n');tt.innerHTML=`<b>${esc(h)}</b>${rest.map(l=>`<div>${esc(l)}</div>`).join('')}`;
-  tt.hidden=false;const r=el.getBoundingClientRect(),w=tt.offsetWidth,hh=tt.offsetHeight;
-  let x=r.left+r.width/2-w/2;x=Math.max(8,Math.min(x,innerWidth-w-8));
-  let y=r.top-hh-8;if(y<8)y=r.bottom+8;if(y+hh>innerHeight-8)y=Math.max(8,innerHeight-hh-8);
-  tt.style.left=x+'px';tt.style.top=y+'px'}
+function showTip(el){const t=el.getAttribute('data-tip');if(!t)return;tipEl=el;const [h,...rest]=t.split('\n');
+  tt.innerHTML=`<b>${esc(h)}</b>${rest.map(l=>`<div>${esc(l)}</div>`).join('')}`;tt.hidden=false;
+  const r=el.getBoundingClientRect(),w=tt.offsetWidth,hh=tt.offsetHeight;let x=r.left+r.width/2-w/2;x=Math.max(8,Math.min(x,innerWidth-w-8));
+  let y=r.top-hh-8;if(y<8)y=r.bottom+8;if(y+hh>innerHeight-8)y=Math.max(8,innerHeight-hh-8);tt.style.left=x+'px';tt.style.top=y+'px'}
 function hideTip(){tt.hidden=true;tipEl=null}
 document.addEventListener('pointerdown',e=>{ptr=e.pointerType;downTip=tipEl});
+document.addEventListener('keydown',()=>{ptr='keyboard'});
 document.addEventListener('mouseover',e=>{if(ptr!=='mouse')return;const el=e.target.closest('[data-tip]');if(el)showTip(el);else if(tipEl)hideTip()});
 document.addEventListener('focusin',e=>{const el=e.target.closest('[data-tip]');if(el)showTip(el);else hideTip()});
 document.addEventListener('focusout',()=>{if(ptr==='mouse'||ptr==='keyboard')hideTip()});
-document.addEventListener('keydown',()=>{ptr='keyboard'});
 addEventListener('scroll',()=>{if(tipEl)hideTip()},{passive:true});
-document.addEventListener('click',e=>{
-  const el=e.target.closest('[data-tip]');
-  if(ptr!=='mouse'&&el&&!el.closest('a')){e.preventDefault();e.stopPropagation();if(downTip===el)hideTip();else showTip(el);return}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-tip]');
+  if(ptr!=='mouse'&&el&&!el.closest('a')&&!el.matches('[data-go]')){e.preventDefault();e.stopPropagation();if(downTip===el)hideTip();else showTip(el);return}
   if(!el&&tipEl&&ptr!=='mouse')hideTip()},true);
-// ---- toggles
-const root=document.getElementById('root');
-document.getElementById('tabs').onclick=e=>{const t=e.target.closest('[data-tab]');if(t)setTab(t.dataset.tab)};
-document.getElementById('tabs').onkeydown=e=>{const i=TABS.findIndex(t=>t[0]===st.tab);let j=null;if(e.key==='ArrowRight')j=(i+1)%TABS.length;else if(e.key==='ArrowLeft')j=(i-1+TABS.length)%TABS.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=TABS.length-1;if(j==null)return;e.preventDefault();setTab(TABS[j][0],true)};
-root.onclick=e=>{const ob=e.target.closest('.obtn');if(ob){setTab(ob.dataset.tab);return}if(e.target.closest('a'))return;const t=e.target.closest('[data-t]');if(!t)return;toggle(t.dataset.t)};
-root.onkeydown=e=>{if(e.key!=='Enter'&&e.key!==' ')return;const t=e.target.closest('[data-t]');if(!t||e.target!==t)return;e.preventDefault();toggle(t.dataset.t)};
-let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>D&&render(),200)});
 fetch('data.json').then(r=>r.json()).then(j=>{D=j;BY={};j.rows.forEach(r=>(BY[r.id]=BY[r.id]||[]).push(r));render()});
 </script>
 </body>

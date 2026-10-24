@@ -230,6 +230,43 @@ DRILLS = {
 # docs/drill-reruns/2026-10-24/probe_monthly_fuel_duty.py), so only the
 # pump-VAT modifier is scored. Drill 4 uses open-ended dated steps, which
 # still apply.
+# Like-for-like official benchmarks (large-gap benchmark audit, 24 October
+# 2026). The filled sheets' static figure is cash for drills 3 and 4, and
+# stacked or gross in a few cells, while the rerun is a standalone tax-year
+# liability (model year Y = fiscal year Y-(Y+1)) on a net gov_balance basis.
+# Where the drill's own costing note prints the matching figure, it is used
+# instead. Each entry: (drill, reform_id, year) -> value in £bn, the costing
+# note (branch, path), a string that must appear on the cited line, and why.
+COSTING_NOTES = {
+    2: ("3910feec69f373f04606d2990958bfc476b84177", "data_inputs/mock_drill2/packet/MOCK-policy-costings.md"),
+    3: ("b1642956f6d8d935023cf2cd0abf1ec075942e0b", "data_inputs/mock_drill3/packet/MOCK-policy-costings.md"),
+    4: ("8291938fe17687cbcda861630e3b7547ad3ab4d1", "data_inputs/mock_drill4/packet/MOCK-drill4-policy-costings.md"),
+}
+LIKE_FOR_LIKE = {
+    (2, "mock2_employer_ni_threshold", 2027): (-1.850, 105, "−1,850m", "net (post-behavioural) figure: our output is net of pay pass-through; the static is gross employer NICs"),
+    (2, "mock2_employer_ni_threshold", 2028): (-1.890, 105, "−1,890m", "net (post-behavioural) figure: our output is net of pay pass-through; the static is gross employer NICs"),
+    (2, "mock2_employer_ni_threshold", 2029): (-1.930, 105, "−1,930m", "net (post-behavioural) figure: our output is net of pay pass-through; the static is gross employer NICs"),
+    (2, "mock2_employer_ni_threshold", 2030): (-1.970, 105, "−1,970m", "net (post-behavioural) figure: our output is net of pay pass-through; the static is gross employer NICs"),
+    (2, "mock2_state_pension_uprating", 2030): (1.150, 165, "+1,150m", "net (post-behavioural) figure: net of Pension Credit and income tax, like our output; the static is gross pension spending"),
+    (3, "mock3_cgt_higher_rate_aea", 2027): (1.650, 51, "2027-28 £1,650m", "tax-year liability; the headline static is cash, of which only 7% arrives in 2027-28"),
+    (3, "mock3_additional_rate_threshold", 2027): (1.826, 86, "£1,826m in 2027-28", "tax-year liability; the headline static is cash (80% in-year)"),
+    (3, "mock3_class4_main_rate", 2027): (0.610, 119, "about £61bn in 2027-28", "tax-year liability, 1 point on the £61bn profit base; the headline static is cash (a quarter in-year)"),
+    (3, "mock3_threshold_freeze_2032", 2031): (3.258, 18, "Personal Allowance leg £1,916m", "tax-year liability, the sum of the legs (1,916 + 1,104 + 580 − 356 + 48 − 34); the headline static is cash"),
+    (3, "mock3_pensioner_allowance", 2031): (-1.640, 29, "£1,640m in 2031-32", "standalone figure; the headline static (−1,855) is stacked after the threshold freeze"),
+    (4, "mock4_cgt_higher_rate", 2027): (0.770, 73, "2027-28 £770m", "tax-year liability; the headline static is cash, of which only 9% arrives in 2027-28"),
+    (4, "mock4_state_pension_topup_allowance", 2027): (-0.113, 29, "2027-28 £113m", "tax-year liability; the headline static is cash (60% in-year)"),
+    (4, "mock4_state_pension_topup_allowance", 2031): (-0.187, 29, "liabilities of £187m", "standalone tax-year liability; the headline static (−310) is stacked after the threshold freeze"),
+    (4, "mock4_threshold_freeze_2032", 2031): (4.038, 18, "Personal Allowance leg £2,053m", "tax-year liability, the sum of the legs (2,053 + 1,242 + 636 − 411 + 512 + 5.6); the headline static is cash"),
+}
+# Cells where our model of the measure is wrong, so no comparison with the
+# costing is meaningful. Excluded from closer/further.
+MODEL_LIMITATION = {
+    "mock4_carers_allowance_limit": "Take-up is set from current receipt, so people newly entitled by the higher limit cannot appear",
+    "mock4_savings_starting_band": "Known policyengine-uk defect (#1799): the starting-rate band is not reduced by non-savings income, so the yield is about 2.5 times too high",
+    "mock3_salary_sacrifice_cap": "The engine doesn't take the sacrificed pay out of adjusted net income, which adds income tax through the allowance taper and the child benefit charge",
+    "mock2_electricity_vat_zero": "Split across calendar years (9/12 and 3/12); the fiscal 2027-28 total is −1.38 against −1.76",
+}
+
 RERUN_INVALID = {
     "mock_fuel_duty_freeze": "duty change dropped by engine (month-dated ranges); VAT modifier only",
     "mock2_fuel_duty_hold": "duty change dropped by engine (month-dated ranges); VAT modifier only",
@@ -588,8 +625,21 @@ def cmd_compare(args) -> None:
                 row["official_static_bn"] = s.get("official_static_bn")
                 row["official_post_behavioural_bn"] = s.get("official_post_bn")
                 row["sheet_team_figure_bn"] = s.get("sheet_team_bn")
-                off = s.get("official_static_bn")
-                if (
+                lfl = LIKE_FOR_LIKE.get((cfg["drill"], rid, year))
+                row["official_like_for_like_bn"] = (
+                    lfl[0] if lfl else s.get("official_static_bn")
+                )
+                row["like_for_like_source"] = (
+                    f"{COSTING_NOTES[cfg['drill']][1]}:{lfl[1]} ({lfl[3]})"
+                    if lfl
+                    else ("headline static" if s else None)
+                )
+                off = row["official_like_for_like_bn"]
+                if rid in RERUN_INVALID:
+                    row["vs_official_static"] = "invalid" if off is not None else None
+                elif rid in MODEL_LIMITATION and off is not None:
+                    row["vs_official_static"] = "model_limitation"
+                elif (
                     off is not None
                     and old_rev is not None
                     and new_rev is not None
@@ -597,19 +647,8 @@ def cmd_compare(args) -> None:
                 ):
                     gap_old = abs(old_rev - off)
                     gap_new = abs(new_rev - off)
-                    team = s.get("sheet_team_bn")
-                    # Like-for-like only: where the drill team's reconciled
-                    # figure differs from the drill-day figure, they
-                    # converted it (cash timing, in-year share, fiscal-year
-                    # proration) before comparing, so the raw figure is on
-                    # a different basis from the costing.
-                    same_basis = team is not None and abs(old_rev - team) <= max(
-                        0.005, 0.02 * abs(old_rev)
-                    )
                     row["vs_official_static"] = (
-                        "different_basis"
-                        if not same_basis
-                        else "unchanged"
+                        "unchanged"
                         if abs(gap_new - gap_old) < 0.0005
                         else "closer" if gap_new < gap_old else "further"
                     )
