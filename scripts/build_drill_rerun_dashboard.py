@@ -83,7 +83,7 @@ DESCRIPTIONS = {
 # Sentence-case display names where the drill's own name has a MOCK tag or an
 # odd case.
 NAMES = {
-    "mock4_combined": "Drill 4 package (all measures)",
+    "mock4_combined": "All drill 4 measures together",
     "mock4_threshold_freeze_2032": "Thresholds frozen to April 2032",
     "mock4_savings_starting_band": "Savings starting-rate band £2,000",
     "mock4_fuel_duty": "Fuel duty rises cancelled and restaged",
@@ -96,19 +96,19 @@ NAMES = {
 DRILL_META = {
     "1": {"date": "28 September 2026", "pr": 4, "issue": 6, "issue_label": "retro",
           "engine": "6.0.0 (pe-uk 2.90.2)",
-          "data": "Enhanced FRS → Microcosm 810ba980",
+          "data": "Enhanced FRS → Microcosm",
           "what": "Engine and data both changed; their effects are not split."},
     "2": {"date": "5 October 2026", "pr": 7, "issue": 8, "issue_label": "drill issue",
           "engine": "6.2.1 (pe-uk 2.120.0)",
-          "data": "Microcosm aa31bdf6 → 810ba980",
+          "data": "Earlier Microcosm → current",
           "what": "Engine and data both changed; their effects are not split."},
     "3": {"date": "12 October 2026", "pr": 9, "issue": 10, "issue_label": "drill issue",
           "engine": "6.2.7 (pe-uk 2.125.1)",
-          "data": "Microcosm aa31bdf6 → 810ba980",
+          "data": "Earlier Microcosm → current",
           "what": "Engine and data both changed; their effects are not split."},
     "4": {"date": "19 October 2026", "pr": 52, "issue": 53, "issue_label": "drill issue",
           "engine": "6.7.6 (pe-uk 2.130.1)",
-          "data": "Same Microcosm 810ba980",
+          "data": "Same data",
           "what": "Same Microcosm data; engine-only change 6.7.6 → 6.10.2, so close to zero change is expected. It did rerun: the State Pension Top-up Allowance and the package move by about 0.3%, and decile 1 moves with pe-uk 2.132.4."},
 }
 
@@ -129,33 +129,38 @@ L21324 = peuk("2.132.4", "2026-10-15")
 
 
 def cause(drill: str, mid: str, year: int):
-    """Attributed cause of the move (README largest-movers table) + links."""
+    """Plain-English cause of the move (README largest-movers table).
+
+    Each link is [label, url, tooltip]; the technical detail sits in the
+    tooltip so the main view stays readable.
+    """
     if mid == "mock_nics_threshold_rise" and year == 2027:
-        return ("Matches the Class 4 NI band fix the drill 1 retro flagged; not bisected",
-                [["policyengine-uk#1878", L1878]])
+        return ("Likely the fix of a National Insurance bug that the drill 1 review flagged",
+                [["details", L1878, "policyengine-uk#1878: Class 4 NI dropped the additional-rate band at non-round thresholds. Consistent with the move; not confirmed by bisection."]])
     if mid == "mock_child_benefit_increase":
-        return ("Mostly the data change (enhanced FRS → Microcosm)", [])
+        return ("Mostly the new data", [])
     if mid == "mock_energy_vat_zero_rate":
-        return ("Energy spending in the new data (enhanced FRS → Microcosm)", [])
+        return ("Energy spending in the new data", [])
     if mid == "mock_hvcts_extension":
-        return ("Surcharge now charged on owner-occupiers only; data change too",
-                [["pe-uk 2.123.1", L21231]])
+        return ("The surcharge now falls on owners only, not tenants; the new data adds to it",
+                [["details", L21231, "policyengine-uk 2.123.1 changelog: the High Value Council Tax Surcharge is charged only on owner-occupiers."]])
     if mid == "mock2_state_pension_personal_allowance" and year == 2026:
-        return ("New −£0.02bn in 2026-27 where drill day had £0; possibly how pe-uk dates bare-year keys; not confirmed",
-                [["pe-uk 2.131.1", L21311]])
+        return ("A small new cost in 2026-27 where the drill day had £0; possibly how the engine now dates parameters; not confirmed",
+                [["details", L21311, "policyengine-uk 2.131.1 changelog: bare-year and 1 January reform keys now name the calendar year."]])
     if drill == "3" and year == 2031:
         if mid == "mock3_threshold_freeze_2032":
-            return ("2031-32 is now a real data year, and its PA/basic rate limit indexation changed",
-                    [["pe-uk 2.128.0", L21280], ["pe-uk 2.126.2", L21262]])
-        return ("2031-32 is now a real data year; on drill day it reused 2030 data",
-                [["pe-uk 2.128.0", L21280]])
+            return ("2031-32 now has its own data, and the 2031-32 allowance uprating rule changed",
+                    [["details", L21280, "policyengine-uk 2.128.0 changelog: data projected to 2032, so 2031-32 is a data year."],
+                     ["rule", L21262, "policyengine-uk 2.126.2 changelog: from 2031-32 the personal allowance and basic rate limit follow September CPI with statutory rounding."]])
+        return ("2031-32 now has its own data; on the drill day it reused 2030's",
+                [["details", L21280, "policyengine-uk 2.128.0 changelog: data projected to 2032, so 2031-32 is a data year. First published in 2.130.1."]])
     if mid in ("mock4_cgt_higher_rate", "mock4_savings_starting_band"):
-        return ("Revenue unchanged; decile 1 moves with the negative-income change",
-                [["pe-uk 2.132.4", L21324]])
+        return ("Revenue unchanged; the decile 1 figure moves because negative incomes are now counted there",
+                [["details", L21324, "policyengine-uk 2.132.4 changelog: negative household income is reset to zero and counted in decile 1."]])
     if mid == "mock4_state_pension_topup_allowance":
-        return ("About 0.3% move; cause not identified", [])
+        return ("Small move (about 0.3%); cause not found", [])
     if drill == "4":
-        return ("Engine only; same data", [])
+        return ("Only the engine changed; same data", [])
     return ("Engine and data both changed; not split", [])
 
 
