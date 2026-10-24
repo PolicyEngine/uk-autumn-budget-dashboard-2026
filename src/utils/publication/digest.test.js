@@ -168,6 +168,30 @@ describe("binding a receipt to its manifest entry", () => {
     );
   });
 
+  it("binds the personal response mapping to the receipt", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.personal = { key: "impact_alpha", policies: ["alpha", "beta"] };
+    const entry = {
+      ...entries.alpha,
+      personal: receipt.dashboard.personal,
+      artifact_sha256: await artifactSha256(receipt),
+    };
+    expect(await receiptProblems(receipt, "alpha", entry)).toEqual([]);
+    entry.personal = { key: "impact_other" };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's personal mapping is not the manifest's",
+    );
+  });
+
+  it("rejects malformed personal response mappings", async () => {
+    const receipt = fixtureJson(`${entries.alpha.artifact}/receipt.json`);
+    receipt.dashboard.personal = { key: 7 };
+    const entry = { ...entries.alpha, artifact_sha256: await artifactSha256(receipt) };
+    expect(await receiptProblems(receipt, "alpha", entry)).toContain(
+      "the receipt's personal mapping key is missing",
+    );
+  });
+
   // Differential: the manifest's artifact digests were computed by Python.
   it.each(Object.entries(entries))(
     "%s: the browser computes the manifest's artifact digest",

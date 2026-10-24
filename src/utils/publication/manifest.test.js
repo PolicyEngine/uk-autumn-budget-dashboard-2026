@@ -64,6 +64,9 @@ describe("parseManifest refusals", () => {
     "revision zero": (m) => (m.revision = 0),
     "an unknown status": (m) => (m.measures.alpha.status = "published"),
     "a non-text public description": (m) => (m.measures.alpha.description = 7),
+    "an invalid personal response mapping": (m) => (m.measures.alpha.personal = { key: 7 }),
+    "an empty personal response group": (m) => (m.measures.alpha.personal = { key: "impact_alpha", policies: [] }),
+    "unknown personal mapping fields": (m) => (m.measures.alpha.personal = { key: "impact_alpha", extra: true }),
     "a bad digest": (m) => (m.measures.alpha.outputs_sha256 = "abc"),
     "a digest with a trailing newline": (m) =>
       (m.measures.alpha.outputs_sha256 += "\n"),
