@@ -1,6 +1,18 @@
 # W5 handover: the publication pipeline for 28 October
 
-W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026. The W5 session moved to a Claude Code cloud session that day, at Max's request, so the work survives lid-closes. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
+W5 is the workstream for the dashboard's deploy and rollback, receipts, reconciliation, the certified bundle, the briefing gate and the runbook. This file records where it stands as of 22 October 2026, about 17:35Z. Read `docs/budget-day-runbook.md` first; this file only adds what's in flight.
+
+## Two W5 sessions
+- **A Claude Code cloud session has run W5 since about 12:50Z,** at Max's request. Its takeover note is on #88. It pushes from one branch, so its PRs come one at a time, starting with #90.
+- **The local session carries on alongside it.** Its own move to a cloud session was refused.
+- **The split,** confirmed by the coordinator on #90 (17:26Z), with one writer per PR:
+  - **Cloud:** #90, option (d), the model limits (including the VAT limit below), the hub's model-gap figures and Friday's step-5 timing report.
+  - **Local:** #91, #92, #93, the Subfleet builds and **every bundle adoption**: dispatching the adopt workflow, regenerating and staging measures on certified data, merging, deploying the household API, the memory read, and keeping the revert PR green. The local session has the credentials, Subfleet and compute that adoption needs.
+- **Merge order where they overlap:** #90 → #91 → (d) → #92 and #93.
+  - (d) rebases on #91, because both touch `publish.py`, `review_rows.py`, `generate.py` and `receipt.py`.
+  - Whichever lands second merges `main` in (a merge, never a rebase) and re-runs CI. Neither session pushes to the other's branch.
+- **The next bundle's adoption** (the rehearsal or fallback cut, or any re-cut) waits until #90 is on `main`. Any pair with #2336 but without #2557 needs its CPI and State Pension limits.
+- **The two sessions talk** through comments on #90 and #88, and Fleet ops relays.
 
 ## Where things stand
 - **`main` runs policyengine 6.10.0** (policyengine-uk 2.132.6, Microcosm data 0.1.0), from #72.
@@ -17,41 +29,39 @@ W5 is the workstream for the dashboard's deploy and rollback, receipts, reconcil
   - #79, the upgrade order and rollback steps;
   - #81, rolling re-cuts, the 07:00Z go/no-go, the fast revert and the back-computed schedule;
   - #82, README and Makefile on bun and `uv run`;
-  - #84, the model gaps the UK hub found.
+  - #84, the model gaps the UK hub found;
+  - #85, the model limit for policyengine-uk #2533: 2027-28 benefit levels need the September 2026 CPI outturn;
+  - #86, `publish review-rows`: public-file review rows for the gated publication (coordinator's option (c));
+  - #87, the runbook on uprating inputs: a change to one projects the data on 6.10.0 (pe-uk #2405);
+  - #88, this file;
+  - #89, the templates follow the engine: `UC_REBALANCED_YEARS` from its export, the HVCTS band on its index, the #2430 scored-year check, and the wealth-tax refusal.
 
 ## Open pull requests
 Each is a draft with an independent review in progress or done. The audit comment on each merged PR shows the pattern to follow.
 
-| PR | What | State at hand-over |
+| PR | What | State |
 |---|---|---|
-| #85 | Model limit for policyengine-uk #2533: 2027-28 benefit levels need the September 2026 CPI outturn | Review running |
-| #86 | `publish review-rows`: public-file review rows for the gated publication (coordinator's option (c)) | Review running. Its builder stopped before reporting, so the review is the verification |
-| #87 | Runbook: a change to an uprating input projects the data on 6.10.0 (pe-uk #2405) | AGREE at `9e1fe45`; waiting on CI |
+| #90 | Model limits: the Pension Credit minimum guarantee follows earnings; the add-on after #2336 (cloud) | AGREE at `05a2ed0`; CI queued |
+| #91 | Data-limit hardening (families 1 and 2), the automatic hold for hand-written modifiers while a data limit is active, and release attestations | Reviewed. The round-1 changes are building on the local Subfleet daemon (`20261022-104658-w5-hardening-r1`, waiting for a lane) |
+| #92 | Generation refuses the engine's two wealth-tax scales, in `parameter_changes` or in what the built simulations run; runbook corrections after #89; this refresh | Round 2 under review |
+| #93 | Vercel builds with `bun run build`, as CI does; `.env.example` drops `VITE_API_URL` | Waiting on CI and the Vercel preview |
 
-## Builds handed to the UK hub
-These two Subfleet builds were still running on the local Subfleet daemon at hand-over. Codex-lane builds return their commits as a git bundle in the build's worktree, because their sandbox can't write the shared repository. Each needs a local session to import the bundle, fix the commit trailer (it names the model actually used), push and open a PR.
-- **`w5-templates-hub`** (`20261022-000716-w5-templates-hub`; attempts 1 and 2 exited with an error, and attempt 3 was running) covers four template fixes:
-  - `UC_REBALANCED_YEARS` follows the engine's export;
-  - the HVCTS template follows the engine's index, or refuses;
-  - generation refuses a measure that leaves a scored year unset on an uprated amount (pe-uk #2430);
-  - templates refuse the wealth-tax parameters, which tax gross wealth.
-- **`w5-hardening-v2`** (`20261021-192920-w5-hardening-v2`): data-limit hardening (families 1 and 2), the automatic hold for hand-written modifiers while a data limit is active, and release attestations. Its first attempt failed; the second was running.
-
-Their briefs and outputs are in W5's local drafts folder, under `builds/`.
+## Subfleet builds
+The local session's hand-off of its two builds to the UK hub never reached the hub, so the local session kept them: the templates build landed as #89, and the hardening build as #91. Separately, the hub salvaged the hardening build to `hub/w5-hardening-v2-salvage`. #91 contains all of it: merged into #91 file by file, it adds nothing. So #91 supersedes the branch. Codex-lane builds return their commits as a git bundle in the build's worktree, because their sandbox can't write the shared repository. A local session imports the bundle, fixes the commit trailer (it names the model actually used), pushes and opens or updates the PR. Briefs and outputs are in W5's local drafts folder, under `builds/`.
 
 ## Decisions and questions with the coordinator
-- **Not-computable artifacts (#86).** A not-computable entry's artifact must stay in `public/data` for `publish check`. But it isn't displayed, so `publish review-rows` writes it no row, and the Frontend build then fails on it. Options:
-  - a row for it;
-  - an exemption in María's check;
-  - keep not-computable entries out of the manifest until the day.
-- **The page caveat for area results** on Microcosm: Vahid's and María's call. #83 (merged) labels the command output and the private audit only.
-- **Regeneration time (A in the schedule):** measure it at Friday's rehearsal and report it. The coordinator sets the final build's start from A, B and C.
-- **The hub's report figures** for the model-gap list: fill them in when the report exists.
+The coordinator answered this file's open questions on #88 (12:03Z):
+- **Not-computable artifacts: option (d).** A not-computable entry's directory holds exactly `receipt.json`, and its review row reads "not computable, staged by <stager>". The cloud session builds it after #90. Until it lands, the rehearsal keeps not-computable measures out of the manifest (option (b)).
+- **The area-results caveat.** Show approved ids only, labelled as estimates from Microcosm's local-area file, which the national certificate doesn't cover (policyengine.py#685). Vahid and María choose the wording and placement.
+- **Regeneration time (A in the schedule).** Time step 5 (regenerate, stage, reconcile) at Friday's rehearsal and post it on #88. The coordinator then sets the final-cut times (#81's formula). The cloud session has no HuggingFace token, so whoever runs the regeneration times it, unless Max approves access.
+- **The hub's figures.** The hub posts its re-measured aggregates on GitHub, and the cloud session adds them to the model-gap list.
+
+Other items:
+- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The cloud session owns it.
 - **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
 ## Known follow-ups (not blocking)
 - Record who staged an entry in the manifest, so `--staged-by` isn't needed. Wait for the hardening PR, which may change the manifest schema.
-- The runbook has one private path, from an earlier PR, in the section on pension tax relief, the annual allowance, its taper and the MPAA.
 - #59 (María's Microcosm area runs) will need to rebase onto #83. #83's body lists the integration points: always compose packages (replacing #59's `build_package`), `--package` through approval, and the `microcosm-national` kind with the label.
 
 ## How W5 works
