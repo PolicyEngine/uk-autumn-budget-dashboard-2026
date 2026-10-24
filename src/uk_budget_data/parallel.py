@@ -57,6 +57,13 @@ RAMP_S = 180.0
 RESERVE_GB = 6.0
 # How often a waiting unit re-reads the free memory.
 ADMISSION_POLL_S = 5.0
+# With no unit running, how long a run waits for a unit's memory before it
+# starts the unit alone anyway, as a serial run would: the free figure may
+# never reach the estimate on a busy machine (another process holding
+# memory), and waiting for it without end would make --jobs N slower than
+# --jobs 1. Waited once per run: after that, a unit with none running starts
+# at once.
+ALONE_WAIT_S = 60.0
 
 # The modules each worker needs, imported once in the forkserver so that a
 # worker starts with the engine and its parameters already loaded.
@@ -230,7 +237,8 @@ class ProcessRunner:
     (``max_tasks_per_child=1``), so its simulations' memory is returned when
     it ends. A unit starts only when ``unit_gb`` (plus the reserve) is free;
     otherwise it waits for a running one to finish, or, with none running,
-    for memory to free up. Results come back in unit order.
+    for memory to free up, for at most ``alone_wait_s`` in the whole run,
+    after which such a unit starts alone at once, as a serial run would. Results come back in unit order.
     """
 
     def __init__(
@@ -242,6 +250,7 @@ class ProcessRunner:
         available: Callable[[], int] = available_memory_bytes,
         poll_s: float = ADMISSION_POLL_S,
         ramp_s: float = RAMP_S,
+        alone_wait_s: float = ALONE_WAIT_S,
         on_wait: Callable[[str], None] = lambda message: None,
         context=None,
     ):
@@ -253,6 +262,7 @@ class ProcessRunner:
         self.available = available
         self.poll_s = poll_s
         self.ramp_s = ramp_s
+        self.alone_wait_s = alone_wait_s
         self.on_wait = on_wait
         self.context = context
 
@@ -272,6 +282,7 @@ class ProcessRunner:
         running: dict[Future, int] = {}
         started: dict[Future, float] = {}
         context = self.context or _context()
+        alone_wait_left = self.alone_wait_s
         with ProcessPoolExecutor(
             max_workers=self.jobs,
             mp_context=context,
@@ -290,7 +301,18 @@ class ProcessRunner:
                             break
                         if not running:
                             waited = 0.0
-                            while not self._room():
+                            while alone_wait_left > 0 and not self._room():
+                                if waited >= alone_wait_left:
+                                    self.on_wait(
+                                        f"starting the next unit alone after "
+                                        f"{waited:.0f} s: "
+                                        f"{self.available() / GB:.0f} GB "
+                                        "free, as a serial run would; later "
+                                        "units with none running start at "
+                                        "once"
+                                    )
+                                    alone_wait_left = 0.0
+                                    break
                                 if waited == 0.0:
                                     self.on_wait(
                                         f"waiting for {self.unit_gb:.0f} GB "

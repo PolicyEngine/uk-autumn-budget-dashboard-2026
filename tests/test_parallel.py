@@ -190,6 +190,27 @@ def test_a_second_unit_waits_for_the_first_when_memory_is_short():
     assert start_b >= end_a
 
 
+def test_a_unit_starts_alone_when_memory_never_frees():
+    """On a busy machine the free figure may never reach the estimate. With
+    none running, a unit then starts alone after alone_wait_s, as a serial
+    run would, instead of waiting without end; the run waits so once."""
+    waits = []
+    runner = ProcessRunner(
+        2,
+        10.0,
+        available=lambda: 0,
+        poll_s=0.01,
+        alone_wait_s=0.05,
+        on_wait=waits.append,
+        context=_context(),
+    )
+    results = runner.map(parallel_helpers.timed_echo, [0.0, 0.0])
+    (start_a, end_a), (start_b, _) = results
+    assert start_b >= end_a
+    assert sum("starting the next unit alone" in w for w in waits) == 1
+    assert sum("waiting for" in w for w in waits) == 1
+
+
 # --- carrying measures to workers ------------------------------------------
 
 
