@@ -61,6 +61,7 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data.budget_measures import connect_student_loan_repayments
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
@@ -70,7 +71,6 @@ from uk_budget_data.publication.combine import (
 )
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
-    _connect_student_loan_variables,
     get_autumn_budget_2026_reforms,
     get_reform,
 )
@@ -148,19 +148,15 @@ EDUCATION_START_AGE = 16
 # Modifiers that only replace values a dataset supplies. A household
 # calculation has no dataset, so they change nothing there, and the
 # measure's parameter changes are the whole measure.
-HOUSEHOLD_INERT_MODIFIERS = frozenset({_connect_student_loan_variables})
+HOUSEHOLD_INERT_MODIFIERS = frozenset({connect_student_loan_repayments})
 
 NOT_MODELLED_REASON = (
     "This measure changes the simulation in code, which policyengine.py's "
     "household calculation can't apply."
 )
-NOT_MODELLED_REASONS = {
-    "rail_fares_freeze": (
-        "This measure spreads a national cost over households by how much "
-        "they use rail, which one household's answers can't show. It is in "
-        "the national figures only."
-    ),
-}
+# Reasons for particular measures, where the general one doesn't say enough.
+# None of the candidate measures needs one.
+NOT_MODELLED_REASONS: dict[str, str] = {}
 
 INTERACTION_METHOD = (
     "Each measure's change is that measure switched to its Budget setting, "
@@ -495,12 +491,9 @@ def _all_rows():
         yield from programme.children
 
 
-NOT_IN_BREAKDOWN = (
-    {
-        "id": "rail_fares_freeze",
-        "note": NOT_MODELLED_REASONS["rail_fares_freeze"],
-    },
-)
+# Measures in the national figures that the household breakdown can't
+# show: none of the candidate measures.
+NOT_IN_BREAKDOWN: tuple = ()
 
 # Dependant status, per child, as policyengine-uk decides it
 DEPENDANT_VARIABLES = (

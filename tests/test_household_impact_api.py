@@ -14,8 +14,8 @@ from uk_budget_data import api, household_impact
 client = TestClient(api.app)
 ROUTE = "/api/household-impact"
 REQUEST = {
-    "year": 2029,
-    "policies": ["threshold_freeze_extension"],
+    "year": 2031,
+    "policies": ["threshold_freeze_2031_32"],
     "household": {"age": 40, "employment_income": 60_000},
     "include": [],
 }
@@ -149,9 +149,9 @@ def test_answers_are_kept_by_request(monkeypatch):
     # The same request, its keys in another order
     again = client.post(ROUTE, json=dict(reversed(REQUEST.items()))).json()
     assert first == again
-    assert calls == [2029]
+    assert calls == [2031]
     client.post(ROUTE, json=_with({"year": 2030}))
-    assert calls == [2029, 2030]
+    assert calls == [2031, 2030]
 
 
 def test_a_household_answered_in_stages():
@@ -164,9 +164,9 @@ def test_a_household_answered_in_stages():
     assert net["change"] == pytest.approx(
         net["reform"] - net["baseline"], abs=0.01
     )
-    # The freeze keeps thresholds lower than pre-Budget law: less net income
+    # The freeze keeps thresholds lower than current law: less net income
     assert net["change"] < 0
-    assert body["included"] == ["threshold_freeze_extension"]
+    assert body["included"] == ["threshold_freeze_2031_32"]
     assert body["by_policy"] is None and body["sweep"] is None
     assert {row["id"] for row in body["programmes"]} >= {
         "income_tax",

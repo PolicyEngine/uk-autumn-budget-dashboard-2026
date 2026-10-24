@@ -177,9 +177,9 @@ HOUSEHOLD_IMPACT_ROUTE = "/api/household-impact"
 # The headline alone (no per-measure runs, no sweep): two runs, a few
 # seconds on a warm instance.
 SMOKE_HOUSEHOLD_IMPACT = {
-    "year": 2029,
-    "policies": ["threshold_freeze_extension"],
-    "household": {"employment_income": 30_000, "salary_year": 2029},
+    "year": 2028,
+    "policies": ["salary_sacrifice_cap_2028"],
+    "household": {"employment_income": 30_000, "salary_year": 2028},
     "include": [],
 }
 

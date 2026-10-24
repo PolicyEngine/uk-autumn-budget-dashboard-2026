@@ -26,7 +26,7 @@ The checker:
   "route": "/api/personal-impact",
   "request": {"employment_income": 30000},
   "expect": [
-    {"path": "policies.threshold_freeze_extension.years.2028.net_income_change", "value": -123.45}
+    {"path": "policies.salary_sacrifice_cap_2028.years.2028.net_income_change", "value": -123.45}
   ],
   "source": "hand calculation, <name>, <date>"
 }

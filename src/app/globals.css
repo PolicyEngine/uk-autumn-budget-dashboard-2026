@@ -1324,13 +1324,14 @@ body {
   }
 }
 
-/* About selected policies: one grouped list, no boxes */
+/* About selected policies: compact cards, grouped by revenue effect
+   (PolicyCards.jsx) */
 .policy-details-content {
   padding: 4px 0 20px;
 }
 
 .policy-group + .policy-group {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .policy-group-heading {
@@ -1341,43 +1342,132 @@ body {
   color: var(--pe-gray-500);
 }
 
-/* One list: each policy's name, then its description */
-.policy-grid {
+.policy-cards {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-}
-
-.main-content .policy-detail {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
   padding: 0;
-  border: none;
+  list-style: none;
 }
 
-.policy-detail-name {
+.policy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+}
+
+.policy-card-name {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 4px;
+  margin: 0;
   font-size: var(--fs-body);
   font-weight: 600;
+  line-height: 1.35;
   color: var(--pe-gray-900);
 }
 
-.policy-detail-swatch {
+.policy-card-swatch {
   width: 10px;
   height: 10px;
   flex: 0 0 auto;
+  border-radius: 2px;
 }
 
-.policy-detail-text {
+.policy-card-summary {
   margin: 0;
   font-size: var(--fs-small);
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--pe-gray-700);
 }
 
+.policy-card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.policy-chip {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+}
+
+.policy-chip dt {
+  color: var(--pe-gray-500);
+}
+
+.policy-chip dd {
+  margin: 0;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+}
+
+.policy-card-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  font-size: var(--fs-caption);
+}
+
+.policy-card-details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--pe-teal-700);
+}
+
+.policy-card-details p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-source {
+  width: fit-content;
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-source:hover {
+  text-decoration-color: currentColor;
+}
+
 @media (max-width: 768px) {
-  .policy-grid {
+  .policy-cards {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The candidate measures banner under the intro: the Note's line, in a
+   calm tinted box */
+.candidate-banner {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-100);
+  border-radius: var(--pe-radius-md);
+}
+
+.candidate-banner .note {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.candidate-banner .note svg {
+  color: var(--pe-teal-700);
 }

@@ -1,4 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from "react";
+import { POLICY_NAME_BY_ID } from "../utils/policies";
+import { COMBINED_REFORM_ID } from "../utils/policyConfig";
 import {
   ScatterChart,
   Scatter,
@@ -397,16 +399,8 @@ function HouseholdChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
   // Policy name mapping for tooltip
   const policyNames = {
-    two_child_limit: "2 child limit repeal",
-    fuel_duty_freeze: "Fuel duty freeze",
-    rail_fares_freeze: "Rail fares freeze",
-    threshold_freeze_extension: "Threshold freeze",
-    dividend_tax_increase_2pp: "Dividend tax +2pp",
-    savings_tax_increase_2pp: "Savings tax +2pp",
-    property_tax_increase_2pp: "Property tax +2pp",
-    freeze_student_loan_thresholds: "Student loan freeze",
-    salary_sacrifice_cap: "Salary sacrifice cap",
-    autumn_budget_2026_combined: "Autumn Budget (combined)",
+    ...POLICY_NAME_BY_ID,
+    [COMBINED_REFORM_ID]: "All candidate measures (combined)",
   };
 
   // Custom tooltip

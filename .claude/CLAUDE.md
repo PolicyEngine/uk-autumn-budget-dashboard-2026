@@ -39,7 +39,7 @@ Microsimulations are built through `pe.uk.managed_microsimulation()`, which
 resolves the bundle's dataset from the private HuggingFace repo. That needs
 `HUGGING_FACE_TOKEN` in the environment (and as a repo secret in CI).
 
-The reforms in `src/uk_budget_data/reforms.py` assume current law = Autumn Budget policy, with baseline parameter changes setting pre-budget values to show policy impact.
+The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 measures compared against current law (policyengine-uk before the Budget): each changes parameters, or applies a module-level modifier from `budget_measures.py`, to show its impact.
 
 ## Visual Style Guide
 

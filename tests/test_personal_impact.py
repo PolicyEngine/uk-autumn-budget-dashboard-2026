@@ -225,13 +225,11 @@ class TestPersonalImpactCalculator:
         """Test basic impact calculation for single person."""
         results = single_earner_results
 
-        # Threshold freeze should have negative impact at £50k income
-        threshold_policy = results["policies"].get(
-            "threshold_freeze_extension"
-        )
-        if threshold_policy:
-            # From 2028 onwards (when CPI indexing would have kicked in)
-            assert threshold_policy["years"][2028]["net_income_change"] < 0
+        # The salary sacrifice cap from 2028 lowers every worker's pay a
+        # little in 2028 (the broad-base haircut), so a single earner loses
+        cap_policy = results["policies"].get("salary_sacrifice_cap_2028")
+        if cap_policy:
+            assert cap_policy["years"][2028]["net_income_change"] < 0
 
     @pytest.mark.slow
     def test_zero_income_no_impact(self, calculator):
@@ -239,10 +237,11 @@ class TestPersonalImpactCalculator:
         household = HouseholdInput(employment_income=0)
         results = calculator.calculate(household)
 
-        # Most policies should have ~zero impact on zero income
+        # A single adult with no income claims Universal Credit, so the
+        # Warm Home Discount top-up pays £100 in 2026; nothing else reaches
+        # a household with no income, fuel, loans or gains.
         total = results["totals"]["cumulative"]
-        # Allow for small floating point errors
-        assert abs(total) < 100  # Less than £100 total impact
+        assert abs(total - 100) < 1
 
     @pytest.mark.slow
     def test_income_echoed_back(self, calculator):

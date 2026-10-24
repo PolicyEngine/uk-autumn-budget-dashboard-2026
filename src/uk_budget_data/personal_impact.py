@@ -50,14 +50,16 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 
 # Policies to analyse (excluding combined which would double-count)
 POLICY_IDS = [
-    "two_child_limit",
-    "fuel_duty_freeze",
-    "rail_fares_freeze",
-    "threshold_freeze_extension",
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
-    "salary_sacrifice_cap",
+    "fuel_duty_rise_deferral",
+    "state_pension_income_tax_protection",
+    "warm_home_discount_top_up",
+    "domestic_electricity_zero_vat",
+    "employer_ni_relief_under_25s",
+    "threshold_freeze_2031_32",
+    "badr_lifetime_limit_cut",
+    "salary_sacrifice_cap_2028",
+    "road_fuel_vat_cut",
+    "plan_2_threshold_unfreeze",
 ]
 
 
