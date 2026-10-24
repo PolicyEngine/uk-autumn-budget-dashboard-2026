@@ -251,6 +251,21 @@ def _run(parsed) -> int:
         raise pm.PublishMeasureError("no live measure to combine")
     console.print(f"Combining {len(members)} measures: {', '.join(members)}")
     reform = pm.combined_reform(members, config)
+    # As at G4: every member's own changes must hold in the combination
+    # (household simulations only; about a minute for nine measures)
+    from uk_budget_data.publication.combine import check_consistency
+
+    try:
+        check_consistency(
+            reform, [get_reform(m) for m in members], config, config.years
+        )
+    except ValueError as error:
+        raise pm.PublishMeasureError(str(error)) from error
+    if sorted(config.years) != sorted(POLICY_YEARS):
+        console.print(
+            "[yellow]Only some years: the page treats the combined run as "
+            "current only when every year names the same members.[/yellow]"
+        )
     return _emit(
         parsed, pm.compute_fragment(reform, config, members=members), started
     )

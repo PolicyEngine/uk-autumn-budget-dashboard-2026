@@ -915,11 +915,18 @@ def combined_reform(measure_ids: list[str], config):
 
     members = []
     for measure_id in measure_ids:
+        if is_combined(measure_id):
+            raise PublishMeasureError(
+                f"{measure_id} is a combined run, not a measure to combine"
+            )
         reform = get_reform(measure_id)
         if reform is None:
             raise PublishMeasureError(f"unknown measure id: {measure_id}")
         members.append(reform)
-    combined = combine_measures(members, config)
+    try:
+        combined = combine_measures(members, config)
+    except ValueError as error:  # CombineConflict: two members disagree
+        raise PublishMeasureError(str(error)) from error
     return combined.model_copy(
         update={
             "id": AUTUMN_BUDGET_2026_COMBINED_ID,

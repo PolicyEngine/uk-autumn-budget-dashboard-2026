@@ -460,3 +460,12 @@ def test_an_unchanged_member_leaves_the_combined_run_current(repo):
     budget.write_text(text)
     apply(repo, fragment({2026: "0.1"}))
     assert budget.read_text() == text
+
+
+def test_the_combined_run_is_never_its_own_member():
+    from uk_budget_data.models import DataConfig
+
+    with pytest.raises(pm.PublishMeasureError, match="combined run"):
+        pm.combined_reform(
+            ["two_child_limit", AUTUMN_BUDGET_2026_COMBINED_ID], DataConfig()
+        )

@@ -50,6 +50,12 @@ describe("combined total (#105)", () => {
     expect(totalSource(rows, ["alpha", "beta"])).toBe("sum");
   });
 
+  it("is stale when only some years were refreshed", () => {
+    const rows = [row(C, 2028, -1.2, ""), ...current];
+    expect(isCombinedCurrent(rows)).toBe(false);
+    expect(totalSource(rows, ["alpha", "beta"])).toBe("sum-stale");
+  });
+
   it("keeps a partial selection's sum unlabelled, as before", () => {
     const rows = [...current, row("gamma", 2029, 2)];
     expect(totalSource(rows, ["alpha", "gamma"])).toBe("sum");

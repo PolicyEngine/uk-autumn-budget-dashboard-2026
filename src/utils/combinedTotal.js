@@ -45,8 +45,13 @@ export function combinedMembers(budgetaryRows, combinedId = COMBINED_REFORM_ID) 
 export function isCombinedCurrent(budgetaryRows, combinedId = COMBINED_REFORM_ID) {
   const members = combinedMembers(budgetaryRows, combinedId);
   const live = liveMeasureIds(budgetaryRows);
+  // Every year's row must name the same members: a refresh of some years
+  // leaves the others stale
+  const rows = (budgetaryRows ?? []).filter((row) => row.reform_id === combinedId);
+  const named = members === null ? "" : members.join("+");
   return (
     members !== null &&
+    rows.every((row) => row.reform_members === named) &&
     members.length === live.length &&
     live.every((id) => members.includes(id))
   );
