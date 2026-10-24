@@ -15,6 +15,12 @@ import { RAISER_KEYS } from "./LifecycleAbout";
 import { METHOD_SECTIONS } from "./MethodologyTab";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import SectionHeading from "./SectionHeading";
+import Disclosure from "./Disclosure";
+import SubTabs, { SubTabPanel, subTabId } from "./SubTabs";
+import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
+import useHouseholdImpact from "../hooks/useHouseholdImpact";
+import { isRenting } from "../utils/householdImpactApi";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import "./LifecycleCalculator.css";
 
 // API URL - supplied by the environment; no fallback.
@@ -64,7 +70,8 @@ const RPI_FORECASTS = {
 };
 const RPI_LONG_TERM = 0.0239;
 
-// Default input values
+// Default input values: the lifecycle model's inputs (the Multi-year
+// effect); only these go to its API
 const DEFAULT_INPUTS = {
   current_age: 22,
   current_salary: 30000,
@@ -80,31 +87,146 @@ const DEFAULT_INPUTS = {
   children_ages: "",
 };
 
+// The household's other answers, for the Single-year effect only: the
+// lifetime model does not use them
+export const HOUSEHOLD_DEFAULTS = {
+  region: "LONDON",
+  tenure: "RENT_PRIVATELY",
+  monthly_rent: 900,
+  student_loan_plan: "PLAN_2",
+  has_partner: false,
+  partner_age: 30,
+  partner_salary: 25000,
+  claims_universal_credit: false,
+  council_tax_band: "D",
+  diesel_spending_per_year: 0,
+  monthly_childcare: 0,
+};
+
+export const WIZARD_DEFAULTS = { ...DEFAULT_INPUTS, ...HOUSEHOLD_DEFAULTS };
+
+// The lifecycle API's request: its own inputs only
+const lifecycleInputs = (inputs) =>
+  Object.fromEntries(Object.keys(DEFAULT_INPUTS).map((key) => [key, inputs[key]]));
+
+// The results' two sub-tabs (?sub=single|multi); the first is the default
+export const PERSONAL_SUB_TABS = [
+  { value: "single", label: "Single-year effect" },
+  { value: "multi", label: "Multi-year effect" },
+];
+const SUB_TAB_PREFIX = "personal";
+
 // Slider configurations
 // The form's steps: the inputs each one asks for, then the results
+// `more`: optional inputs in a closed "More details" expander
 const WIZARD_STEPS = [
-  { title: "About you", fields: ["current_age", "retirement_age", "life_expectancy"] },
+  { title: "About you", fields: ["current_age", "region", "retirement_age", "life_expectancy"] },
   { title: "Earnings", fields: ["current_salary", "salary_sacrifice_per_year"] },
   {
     title: "Other income",
     fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
   },
-  { title: "Student loan", fields: ["student_loan_debt"] },
-  { title: "Spending", fields: ["rail_spending_per_year", "petrol_spending_per_year"] },
-  { title: "Family", fields: ["children_ages"] },
+  { title: "Student loan", fields: ["student_loan_plan", "student_loan_debt"] },
+  {
+    title: "Home and spending",
+    fields: ["tenure", "monthly_rent", "rail_spending_per_year", "petrol_spending_per_year"],
+    more: ["council_tax_band", "diesel_spending_per_year"],
+  },
+  {
+    title: "Family",
+    fields: ["has_partner", "partner_age", "partner_salary", "children_ages", "claims_universal_credit"],
+    more: ["monthly_childcare"],
+  },
   { title: "Results", fields: [] },
 ];
+
+// Choices from a list
+const SELECT_CONFIGS = {
+  region: {
+    label: "Region",
+    options: [
+      ["NORTH_EAST", "North East"],
+      ["NORTH_WEST", "North West"],
+      ["YORKSHIRE", "Yorkshire and the Humber"],
+      ["EAST_MIDLANDS", "East Midlands"],
+      ["WEST_MIDLANDS", "West Midlands"],
+      ["EAST_OF_ENGLAND", "East of England"],
+      ["LONDON", "London"],
+      ["SOUTH_EAST", "South East"],
+      ["SOUTH_WEST", "South West"],
+      ["WALES", "Wales"],
+      ["SCOTLAND", "Scotland"],
+      ["NORTHERN_IRELAND", "Northern Ireland"],
+    ],
+  },
+  tenure: {
+    label: "Housing",
+    options: [
+      ["RENT_PRIVATELY", "Renting privately"],
+      ["RENT_FROM_COUNCIL", "Renting from the council"],
+      ["RENT_FROM_HA", "Renting from a housing association"],
+      ["OWNED_WITH_MORTGAGE", "Own with a mortgage"],
+      ["OWNED_OUTRIGHT", "Own outright"],
+    ],
+  },
+  student_loan_plan: {
+    label: "Student loan plan",
+    options: [
+      ["NONE", "No student loan"],
+      ["PLAN_1", "Plan 1"],
+      ["PLAN_2", "Plan 2"],
+      ["PLAN_4", "Plan 4 (Scotland)"],
+      ["PLAN_5", "Plan 5"],
+      ["POSTGRADUATE", "Postgraduate loan"],
+    ],
+  },
+  council_tax_band: {
+    label: "Council tax band",
+    options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => [band, `Band ${band}`]),
+  },
+};
+
+// Yes or no
+const CHECK_CONFIGS = {
+  has_partner: { label: "I live with a partner" },
+  claims_universal_credit: { label: "My household claims Universal Credit" },
+};
+
+// Shown only when they apply
+const FIELD_APPLIES = {
+  monthly_rent: (inputs) => isRenting(inputs.tenure),
+  partner_age: (inputs) => inputs.has_partner,
+  partner_salary: (inputs) => inputs.has_partner,
+  monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
+};
 
 // Hints for fields whose config has no explanation of its own
 const FIELD_HINTS = {
   current_age: "Your age now.",
   retirement_age: "The age you stop working.",
   life_expectancy: "The projection runs to this age.",
-  student_loan_debt: "Plan 2 balance when you start work. It changes with interest and repayments.",
+  student_loan_debt: "Plan 2 balance when you start work. It changes with interest and repayments. Only the multi-year effect uses it.",
+  region: "Where you live. Scotland has its own income tax rates, and housing support follows local rents.",
+  student_loan_plan:
+    "Plan 1: started before September 2012, or in Northern Ireland. Plan 2: England or Wales from September 2012 (England to July 2023). Plan 4: Scotland. Plan 5: England from August 2023.",
+  tenure: "How you hold your home.",
+  monthly_rent: "Rent a month. Universal Credit can help with it.",
+  has_partner: "A spouse or partner you live with. Universal Credit and the High Income Child Benefit Charge are assessed per couple.",
+  partner_age: "Your partner's age now.",
+  partner_salary: "Your partner's salary in 2026.",
+  claims_universal_credit: "Tick if your household claims Universal Credit, or would if entitled.",
+  council_tax_band: "Band D if you are not sure.",
+  diesel_spending_per_year: "Annual diesel spending.",
+  monthly_childcare: "Paid childcare a month, for all children together.",
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
 const savedWizard = { inputs: null, step: 0, maxStep: 0, presetId: null };
+
+/** Forget the form's saved state (a new session; for tests). */
+export function resetSavedWizard() {
+  Object.assign(savedWizard, { inputs: null, step: 0, maxStep: 0, presetId: null });
+}
 
 // The price base for "real terms": this dashboard's year
 const PRICE_BASE_YEAR = 2026;
@@ -214,10 +336,61 @@ const SLIDER_CONFIGS = [
     tooltip:
       "Annual rental/property income. Grows with CPI to maintain real value.",
   },
+  {
+    id: "monthly_rent",
+    label: "Monthly rent",
+    min: 0,
+    max: 4000,
+    step: 25,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
+  {
+    id: "partner_age",
+    label: "Partner's age",
+    min: 18,
+    max: 80,
+    step: 1,
+    format: (v) => v.toString(),
+  },
+  {
+    id: "partner_salary",
+    label: "Partner's salary",
+    min: 0,
+    max: 200000,
+    step: 1000,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
+  {
+    id: "diesel_spending_per_year",
+    label: "Diesel spending",
+    min: 0,
+    max: 10000,
+    step: 100,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
+  {
+    id: "monthly_childcare",
+    label: "Monthly childcare",
+    min: 0,
+    max: 3000,
+    step: 25,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
 ];
 
-function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMethod }) {
-  const [inputs, setInputs] = useState(() => savedWizard.inputs ?? DEFAULT_INPUTS);
+function LifecycleCalculator({
+  selectedPolicies = [],
+  policies = [],
+  onShowMethod,
+  year = DEFAULT_DISPLAY_YEAR,
+  subTab: subTabProp,
+  onSubTabChange,
+}) {
+  const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
+  // The results' sub-tab: from PersonalImpactTab (?sub=), else its own
+  const [ownSubTab, setOwnSubTab] = useState(PERSONAL_SUB_TABS[0].value);
+  const subTab = subTabProp ?? ownSubTab;
+  const setSubTab = onSubTabChange ?? setOwnSubTab;
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -311,7 +484,7 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
 
     try {
       const apiInputs = {
-        ...inputs,
+        ...lifecycleInputs(inputs),
         children_ages: parseChildrenAges(inputs.children_ages),
       };
 
@@ -342,21 +515,23 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced fetch on input change
+  // Debounced fetch when the lifecycle model's own inputs change
+  const lifecycleKey = JSON.stringify(lifecycleInputs(inputs));
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchData();
     }, 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputs]);
+  }, [lifecycleKey]);
 
   // Handle input change
   const handleInputChange = (id, value) => {
     setPresetId(null);
+    const numeric = SLIDER_CONFIGS.some((config) => config.id === id);
     setInputs((prev) => ({
       ...prev,
-      [id]: id === "children_ages" ? value : parseFloat(value),
+      [id]: numeric ? parseFloat(value) : value,
     }));
   };
 
@@ -913,20 +1088,146 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
-    setInputs({ ...DEFAULT_INPUTS, ...preset.inputs });
+    setInputs({ ...WIZARD_DEFAULTS, ...preset.inputs });
     setPresetId(preset.id);
   };
   const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
 
   const money = (value) => `£${d3.format(",.0f")(value)}`;
+  const optionLabel = (id) =>
+    SELECT_CONFIGS[id].options.find(([value]) => value === inputs[id])?.[1] ?? inputs[id];
   const inputSummary = [
     `Age ${inputs.current_age}, retiring at ${inputs.retirement_age}`,
+    optionLabel("region"),
     `salary ${money(inputs.current_salary)}`,
-    `student loan ${money(inputs.student_loan_debt)}`,
+    inputs.student_loan_plan === "NONE"
+      ? "no student loan"
+      : `${optionLabel("student_loan_plan")} loan ${money(inputs.student_loan_debt)}`,
+    isRenting(inputs.tenure)
+      ? `rent ${money(inputs.monthly_rent)} a month`
+      : optionLabel("tenure").toLowerCase(),
+    inputs.has_partner ? `partner on ${money(inputs.partner_salary)}` : "no partner",
     childrenCount === 0
       ? "no children"
       : `${childrenCount} ${childrenCount === 1 ? "child" : "children"}`,
   ].join(" · ");
+
+  // The Single-year effect: asked for only while it is shown
+  const householdPolicies = useMemo(
+    () => (selectionKey ? selectionKey.split(",") : []),
+    [selectionKey],
+  );
+  const householdResult = useHouseholdImpact({
+    inputs,
+    year,
+    policies: householdPolicies,
+    enabled: isResults && subTab === "single",
+  });
+  const noneSelected = householdPolicies.length === 0;
+
+  // Whether a field applies to the answers so far (rent only when renting)
+  const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount);
+
+  // One question of the form
+  const renderField = (id) => {
+    if (!fieldApplies(id)) return null;
+    if (id === "children_ages") {
+      return (
+        <div className="control-group" key={id}>
+          <label htmlFor="field-children_ages">Children&apos;s ages</label>
+          <div className="slider-container">
+            <input
+              id="field-children_ages"
+              type="text"
+              value={inputs.children_ages}
+              placeholder="e.g. 5, 3, 1"
+              className="text-input"
+              aria-describedby="hint-children_ages"
+              onChange={(e) => handleInputChange("children_ages", e.target.value)}
+            />
+            <span className="slider-value children-count">
+              {childrenCount === 0
+                ? "0 children"
+                : childrenCount === 1
+                  ? "1 child"
+                  : `${childrenCount} children`}
+            </span>
+          </div>
+          <p className="field-hint" id="hint-children_ages">
+            Ages in 2026, separated by commas. Leave blank if none.
+          </p>
+        </div>
+      );
+    }
+    if (SELECT_CONFIGS[id]) {
+      const config = SELECT_CONFIGS[id];
+      return (
+        <div className="control-group" key={id}>
+          <label htmlFor={`field-${id}`}>{config.label}</label>
+          <div className="slider-container">
+            <select
+              id={`field-${id}`}
+              className="select-input"
+              value={inputs[id]}
+              aria-describedby={`hint-${id}`}
+              onChange={(e) => handleInputChange(id, e.target.value)}
+            >
+              {config.options.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="field-hint" id={`hint-${id}`}>
+            {FIELD_HINTS[id]}
+          </p>
+        </div>
+      );
+    }
+    if (CHECK_CONFIGS[id]) {
+      return (
+        <div className="control-group is-check" key={id}>
+          <label htmlFor={`field-${id}`}>
+            <input
+              id={`field-${id}`}
+              type="checkbox"
+              checked={Boolean(inputs[id])}
+              aria-describedby={`hint-${id}`}
+              onChange={(e) => handleInputChange(id, e.target.checked)}
+            />
+            {CHECK_CONFIGS[id].label}
+          </label>
+          <p className="field-hint" id={`hint-${id}`}>
+            {FIELD_HINTS[id]}
+          </p>
+        </div>
+      );
+    }
+    const config = SLIDER_CONFIGS.find((item) => item.id === id);
+    return (
+      <div className="control-group" key={id}>
+        <label htmlFor={`field-${id}`}>{config.label}</label>
+        <div className="slider-container">
+          <input
+            id={`field-${id}`}
+            type="range"
+            value={inputs[id]}
+            min={config.min}
+            max={config.max}
+            step={config.step}
+            aria-describedby={`hint-${id}`}
+            aria-valuetext={config.format(inputs[id])}
+            onChange={(e) => handleInputChange(id, e.target.value)}
+          />
+          <span className="slider-value">{config.format(inputs[id])}</span>
+        </div>
+        <p className="field-hint" id={`hint-${id}`}>
+          {FIELD_HINTS[id] ?? config.tooltip}
+        </p>
+      </div>
+    );
+  };
 
   // Common table styling for modal
   const tableStyle = `width: 100%; border-collapse: collapse; font-size: 0.85rem;`;
@@ -1414,8 +1715,8 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
       {/* A step-by-step form in one card: a few questions per step, then
           the results. Inputs keep their values between steps and tabs. */}
       <SectionHeading
-        title="Your lifetime impact"
-        subtitle="Answer a few questions about yourself to see how the selected policies change your take-home pay over your working life."
+        title="Your household"
+        subtitle="Answer a few questions to see how the selected policies change your household's net income."
       />
       <div className="wizard">
 
@@ -1471,6 +1772,7 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
                 >
                   Edit details
                 </button>
+                {subTab === "multi" && (
                 <PillSelect
                   variant="light"
                   name="Prices"
@@ -1482,6 +1784,7 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
                     { value: "real", label: PRICE_LABEL },
                   ]}
                 />
+                )}
               </div>
             )}
             {isResults && <p className="wizard-summary">{inputSummary}</p>}
@@ -1515,68 +1818,45 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
 
           {!isResults && (
             <div className="wizard-fields">
-              {WIZARD_STEPS[step].fields.map((id) => {
-                if (id === "children_ages") {
-                  return (
-                    <div className="control-group" key={id}>
-                      <label htmlFor="field-children_ages">
-                        Children's ages
-                      </label>
-                      <div className="slider-container">
-                        <input
-                          id="field-children_ages"
-                          type="text"
-                          value={inputs.children_ages}
-                          placeholder="e.g. 5, 3, 1"
-                          className="text-input"
-                          aria-describedby="hint-children_ages"
-                          onChange={(e) =>
-                            handleInputChange("children_ages", e.target.value)
-                          }
-                        />
-                        <span className="slider-value children-count">
-                          {childrenCount === 0
-                            ? "0 children"
-                            : childrenCount === 1
-                              ? "1 child"
-                              : `${childrenCount} children`}
-                        </span>
-                      </div>
-                      <p className="field-hint" id="hint-children_ages">
-                        Ages in 2026, separated by commas. Leave blank if none.
-                      </p>
-                    </div>
-                  );
-                }
-                const config = SLIDER_CONFIGS.find((item) => item.id === id);
-                return (
-                  <div className="control-group" key={id}>
-                    <label htmlFor={`field-${id}`}>{config.label}</label>
-                    <div className="slider-container">
-                      <input
-                        id={`field-${id}`}
-                        type="range"
-                        value={inputs[id]}
-                        min={config.min}
-                        max={config.max}
-                        step={config.step}
-                        aria-describedby={`hint-${id}`}
-                        aria-valuetext={config.format(inputs[id])}
-                        onChange={(e) => handleInputChange(id, e.target.value)}
-                      />
-                      <span className="slider-value">{config.format(inputs[id])}</span>
-                    </div>
-                    <p className="field-hint" id={`hint-${id}`}>
-                      {FIELD_HINTS[id] ?? config.tooltip}
-                    </p>
-                  </div>
-                );
-              })}
+              {WIZARD_STEPS[step].fields.map(renderField)}
+              {(WIZARD_STEPS[step].more ?? []).some((id) => fieldApplies(id)) && (
+                <Disclosure inCard className="wizard-more" title="More details (optional)">
+                  {WIZARD_STEPS[step].more.map(renderField)}
+                </Disclosure>
+              )}
             </div>
           )}
 
           {isResults && (
-            <div className="wizard-results">
+            <div className="wizard-results-tabs">
+              <SubTabs
+                tabs={PERSONAL_SUB_TABS}
+                value={subTab}
+                onChange={setSubTab}
+                ariaLabel="Personal impact results"
+                idPrefix={SUB_TAB_PREFIX}
+              />
+            </div>
+          )}
+
+          {isResults && subTab === "single" && (
+            <SubTabPanel idPrefix={SUB_TAB_PREFIX} value="single" className="wizard-results">
+              <SingleYearHeadline
+                result={householdResult}
+                year={year}
+                policies={policies}
+                noPolicies={noneSelected}
+              />
+            </SubTabPanel>
+          )}
+
+          {isResults && subTab === "multi" && (
+            <SubTabPanel idPrefix={SUB_TAB_PREFIX} value="multi" className="wizard-results">
+                <p className="personal-lede">
+                  Your change in take-home pay over your working life. The lifetime
+                  model does not use your region, home, loan plan, partner,
+                  Universal Credit claim or the optional details.
+                </p>
                 {noPolicies && (
                   <p className="lifecycle-empty" role="status">
                     Select at least one policy in the bar above to see your
@@ -1674,7 +1954,7 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
                     </p>
                   )}
                 </div>
-            </div>
+            </SubTabPanel>
           )}
         </section>
 
@@ -1700,6 +1980,18 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
         </div>
         )}
       </div>
+
+      {/* The Single-year effect's sections, below the form card */}
+      {isResults && subTab === "single" && !noneSelected && (
+        <div role="region" aria-labelledby={subTabId(SUB_TAB_PREFIX, "single")}>
+          <SingleYearDetails
+            result={householdResult}
+            year={year}
+            policies={policies}
+            onShowMethod={onShowMethod}
+          />
+        </div>
+      )}
 
       {/* Tooltip */}
       <div ref={tooltipRef} className="lifecycle-tooltip"></div>

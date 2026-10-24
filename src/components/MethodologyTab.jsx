@@ -443,18 +443,37 @@ function MethodologyTab({ onShowTab }) {
             <h3 className="method-card-title">Lifetime model</h3>
             <LifecycleAbout />
           </div>
-          {/* Placeholder: the single-year calculation's method goes here
-              when it lands on Personal impact. */}
-          <div
-            id={METHOD_SECTIONS.singleYear}
-            className="card method-card method-anchor method-placeholder"
-          >
-            <h3 className="method-card-title">
-              Single-year calculation <span className="method-badge">To follow</span>
-            </h3>
-            <p>
-              It uses the same engine and measures as the national figures.
-              Its method will be described here.
+          <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
+            <h3 className="method-card-title">Single-year calculation</h3>
+            <FactList
+              items={[
+                [
+                  "Engine and measures",
+                  "The same engine (policyengine.py and policyengine-uk) and the same measures as the national figures, applied to one household's answers.",
+                ],
+                [
+                  "One year",
+                  "The year chosen in the bar above. Net income is before housing costs, under pre-Budget law and with the selected policies.",
+                ],
+                [
+                  "Salary",
+                  "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+                ],
+                [
+                  "Change by policy",
+                  "The policies are added one at a time in the publication's order, so the rows add up to the total change.",
+                ],
+                [
+                  "Not modelled for one household",
+                  "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show. It is in the national figures only.",
+                ],
+              ]}
+            />
+            <p className="method-more">
+              <ViewLink tab="personal" onShowTab={onShowTab}>
+                See the Personal impact tab
+              </ViewLink>
+              .
             </p>
           </div>
         </MethodSection>

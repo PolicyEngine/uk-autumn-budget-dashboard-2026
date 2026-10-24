@@ -1,0 +1,308 @@
+/* Personal impact: the Single-year effect, and the sub-tabs' place in the
+   wizard's results */
+
+/* The sub-tabs sit under the results header, in the form card */
+.wizard-results-tabs .sub-tabs {
+  margin: 0 0 16px;
+}
+
+.personal-lede,
+.single-year-lede {
+  margin: 0 0 16px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.single-year-updating {
+  color: var(--pe-gray-500);
+}
+
+.single-year-quiet {
+  margin: 12px 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-500);
+}
+
+/* Tiles: the change's colour is its direction for the household */
+.single-year-tiles {
+  margin-bottom: 16px;
+}
+
+.single-year-tiles.is-stale {
+  opacity: 0.6;
+}
+
+.single-year-change.is-gain .stat-value {
+  color: var(--pe-teal-700);
+}
+
+.single-year-change.is-loss .stat-value {
+  color: #b45309;
+}
+
+.single-year-notes p {
+  margin: 0 0 4px;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.single-year-error ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.single-year-error .light-pill-button {
+  margin-top: 8px;
+}
+
+/* Cards below the form */
+.single-year-details {
+  margin-top: 48px;
+}
+
+.single-year-card {
+  padding: var(--card-padding);
+  min-width: 0;
+}
+
+.single-year-pending {
+  min-height: 160px;
+}
+
+.policy-bars-plot,
+.earnings-plot {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.policy-bars-plot svg text,
+.earnings-plot svg text {
+  font-family: inherit;
+}
+
+.earnings-plot-inner {
+  position: relative;
+}
+
+.earnings-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.single-year-legend {
+  margin-top: 8px;
+}
+
+/* Taxes and benefits table */
+.programme-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.programme-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.programme-table th,
+.programme-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--pe-gray-100);
+}
+
+.programme-table thead th {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  border-bottom: 1px solid var(--pe-gray-200);
+}
+
+.programme-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.programme-table tbody th {
+  font-weight: 400;
+  color: var(--pe-gray-800);
+}
+
+.programme-group th {
+  padding-top: 16px;
+  font-size: var(--fs-caption);
+  font-weight: 600 !important;
+  color: var(--pe-gray-600) !important;
+  background: var(--pe-gray-50);
+}
+
+.programme-row.depth-1 th {
+  padding-left: 34px;
+  color: var(--pe-gray-600);
+}
+
+.programme-row.depth-1 td {
+  color: var(--pe-gray-600);
+}
+
+.programme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.programme-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.programme-chevron {
+  display: inline-block;
+  width: 12px;
+  color: var(--pe-gray-500);
+}
+
+.programme-row:not(.depth-1) th > .programme-name {
+  /* Lines up with the toggled rows' names */
+  padding-left: 18px;
+}
+
+.programme-table .change {
+  font-weight: 600;
+}
+
+.programme-table .change.is-gain {
+  color: var(--pe-teal-700);
+}
+
+.programme-table .change.is-loss {
+  color: #b45309;
+}
+
+.programme-table .change.is-zero {
+  font-weight: 400;
+  color: var(--pe-gray-400);
+}
+
+.programme-detail td {
+  padding-top: 0;
+  padding-left: 28px;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
+}
+
+/* The marginal rate inside the earnings card's expander */
+.single-year-mtr {
+  padding-top: 8px;
+}
+
+.single-year-mtr .chart-header h3 {
+  font-size: var(--fs-body) !important;
+}
+
+.single-year-about {
+  margin-top: 32px;
+}
+
+.single-year-method {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.single-year-method li + li {
+  margin-top: 4px;
+}
+
+/* Wizard: choices and the optional details */
+.select-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 360px;
+  height: 38px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-800);
+  background: var(--pe-surface);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--pe-teal-500);
+  box-shadow: 0 0 0 3px rgba(49, 151, 149, 0.1);
+}
+
+.wizard-fields .control-group.is-check label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-800);
+  cursor: pointer;
+}
+
+.control-group.is-check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--band-teal);
+}
+
+.wizard-more {
+  margin-top: 4px;
+}
+
+.wizard-more .disclosure-content {
+  padding-top: 16px;
+}
+
+@media (max-width: 768px) {
+  /* The change first and full width, before and after side by side */
+  .single-year-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .single-year-tiles .single-year-change {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+
+  .single-year-details {
+    margin-top: 32px;
+  }
+
+  .wizard-results-tabs .sub-tabs {
+    display: flex;
+    width: 100%;
+  }
+
+  .wizard-results-tabs .sub-tab {
+    flex: 1 1 0;
+  }
+
+  .select-input {
+    max-width: none;
+  }
+}
