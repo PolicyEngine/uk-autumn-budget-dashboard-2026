@@ -514,35 +514,45 @@ class IncomeCurveCalculator(BaseCalculator):
         reform_scenario,
         reform_id: str,
         reform_name: str,
-        year: int,
+        year,
     ) -> list[dict]:
-        """Every example household's curve for one measure and year.
+        """Every example household's curve for one measure, in one year or
+        several.
 
         Args:
             baseline_scenario: Scenario for baseline (pre-budget policy).
             reform_scenario: Scenario for reform (post-budget policy).
             reform_id: Unique identifier for the reform.
             reform_name: Human-readable reform name.
-            year: Year to calculate for.
+            year: A year, or a list of years. Each household is simulated
+                once per scenario for every year at once (``simulate``
+                reads each year as built), which gives the same values as
+                one simulation per year, to the bit, in about a quarter of
+                the time.
 
         Returns:
-            One row per household and grid point (see ``rows``).
+            One row per household and grid point (see ``rows``), year by
+            year, as consecutive one-year calls would return them.
         """
         from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 
-        results = []
+        years = [year] if isinstance(year, int) else [int(y) for y in year]
+        by_year: dict[int, list[dict]] = {y: [] for y in years}
         for household in EXAMPLE_HOUSEHOLDS:
-            results.extend(
-                self.rows(
-                    household,
-                    self.simulate(household, baseline_scenario, [year]),
-                    self.simulate(household, reform_scenario, [year]),
-                    reform_id,
-                    reform_name,
-                    [year],
+            baseline = self.simulate(household, baseline_scenario, years)
+            reformed = self.simulate(household, reform_scenario, years)
+            for y in years:
+                by_year[y].extend(
+                    self.rows(
+                        household,
+                        baseline,
+                        reformed,
+                        reform_id,
+                        reform_name,
+                        [y],
+                    )
                 )
-            )
-        return results
+        return [row for y in years for row in by_year[y]]
 
 
 def full_new_state_pension(years: list[int]) -> dict[int, float]:

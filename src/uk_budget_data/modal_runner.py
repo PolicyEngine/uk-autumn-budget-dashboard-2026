@@ -66,7 +66,9 @@ class ModalRunner:
         results = []
         for index, outcome in enumerate(self.remote(units)):
             if index >= len(units):
-                raise ModalUnavailable("Modal returned more results than units")
+                raise ModalUnavailable(
+                    "Modal returned more results than units"
+                )
             if outcome.reform_id != _unit_id(units[index]):
                 raise ModalUnavailable(
                     f"Modal returned {outcome.reform_id} in place of "
