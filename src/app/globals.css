@@ -371,7 +371,6 @@ body {
 }
 
 .method-card a,
-.map-method-link a,
 .lifecycle-method-link a {
   color: var(--pe-teal-700);
   text-decoration: underline;
@@ -380,13 +379,11 @@ body {
 }
 
 .method-card a:hover,
-.map-method-link a:hover,
 .lifecycle-method-link a:hover {
   text-decoration-color: currentColor;
 }
 
-/* One-line pointers from a card to its note on the Methodology view */
-.map-method-link,
+/* One-line pointer from a card to its note on the Methodology view */
 .lifecycle-method-link {
   margin: 0;
   padding-top: 16px;
@@ -1059,13 +1056,6 @@ body {
   display: block;
   width: 80px;
   height: auto;
-}
-
-/* A card's foot link (the map's method note): under the card's one rule,
-   like an in-card disclosure */
-.main-content .chart-footer {
-  margin-top: 16px;
-  border-top: 1px solid var(--card-border);
 }
 
 /* PolicyEngine logo under a table or chart drawn outside Recharts */

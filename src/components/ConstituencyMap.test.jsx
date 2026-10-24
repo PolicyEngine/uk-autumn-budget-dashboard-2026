@@ -215,12 +215,17 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("describes approximate seats as dotted, as the legend draws them", async () => {
+  it("has no footnote under the map; the search box says what to do", async () => {
+    // The dotted / hatched rules live on the Methodology tab (Figures by area)
     await renderMap();
     expect(
-      screen.getByText(/Dotted constituencies rest on few survey households/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Dotted constituencies rest on few survey households/),
+    ).toBeNull();
+    expect(screen.queryByText(/Select a constituency, or search for one/)).toBeNull();
     expect(screen.queryByText(/Lighter constituencies/)).toBeNull();
+    expect(
+      screen.getByPlaceholderText("Search or select a constituency"),
+    ).toBeInTheDocument();
   });
 
   it("makes the legend as wide as its longest line", async () => {

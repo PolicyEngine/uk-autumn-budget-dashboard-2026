@@ -52,6 +52,24 @@ const perDot = new Intl.NumberFormat("en-GB").format(HOUSEHOLDS_PER_DOT);
 const households = (value) =>
   `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value)} households`;
 
+/** A shaded edge strip, named on hover ("Gains of £1,900 or more"). */
+function StripRect({ x, y, width, height, fill, fillOpacity, title }) {
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  return (
+    <rect
+      className="household-scatter-strip"
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={fill}
+      fillOpacity={fillOpacity}
+    >
+      <title>{title}</title>
+    </rect>
+  );
+}
+
 const KEY = [
   { label: "Gain", color: "#319795" },
   { label: "Loss", color: "#D97706" },
@@ -207,6 +225,9 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
                 fillOpacity={1}
                 stroke="none"
                 ifOverflow="hidden"
+                shape={(props) => (
+                  <StripRect {...props} title={`Gains of ${pounds(innerMax)} or more`} />
+                )}
               />
             )}
             {hasEdge.lower && (
@@ -217,6 +238,9 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
                 fillOpacity={1}
                 stroke="none"
                 ifOverflow="hidden"
+                shape={(props) => (
+                  <StripRect {...props} title={`Losses of ${pounds(innerMax)} or more`} />
+                )}
               />
             )}
             <XAxis
@@ -276,14 +300,6 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
             {view.detail && <p className="household-scatter-template-detail">{view.detail}</p>}
           </div>
         )}
-      </div>
-
-      <div className="chart-legend">
-        <p className="household-scatter-floor">
-          Groups with fewer than {SCATTER_BINS.min_households} surveyed households are
-          not shown. The shaded strips at the top and bottom hold every gain or
-          loss of {pounds(innerMax)} or more, whatever its size.
-        </p>
       </div>
 
       <div className="chart-logo">

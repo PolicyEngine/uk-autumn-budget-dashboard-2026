@@ -30,14 +30,6 @@
   font-weight: 400;
 }
 
-/* The floor under the key, as small print */
-.household-scatter-floor {
-  margin: 6px 0 0;
-  font-size: 12px;
-  text-align: center;
-  color: var(--pe-gray-600, #4B5563);
-}
-
 /* Colour and size key, centred like the chart legends */
 .scatter-key {
   display: flex;

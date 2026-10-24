@@ -255,8 +255,6 @@ export default function ConstituencyMap({
   // Whether the page shows the results by region, so a notice can link
   // to them.
   showRegionLink = true,
-  // Shown at the bottom of the card (the method note)
-  footer = null,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -615,7 +613,7 @@ export default function ConstituencyMap({
       </div>
 
       {/* Rows shared with the card beside it: controls, plot, legend,
-          logo, then the method note. */}
+          then the logo. */}
       <div className="chart-controls">
         {view.kind === "rows" ? (
           <div className="map-top-bar">
@@ -629,7 +627,7 @@ export default function ConstituencyMap({
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Type to search..."
+                  placeholder="Search or select a constituency"
                   className="constituency-search"
                   autoComplete="off"
                 />
@@ -665,7 +663,7 @@ export default function ConstituencyMap({
                 <input
                   id="constituency-search"
                   type="text"
-                  placeholder="Type to search..."
+                  placeholder="Search or select a constituency"
                   className="constituency-search"
                   disabled
                 />
@@ -785,11 +783,6 @@ export default function ConstituencyMap({
 
       <div className="chart-legend">
         {view.kind !== "rows" && <MapScalePlaceholder />}
-        <p className="chart-note">
-          Dotted constituencies rest on few survey households; hatched ones are
-          not published, to protect survey respondents' confidentiality. Select
-          a constituency, or search for one, to see its figure and interval.
-        </p>
       </div>
 
       <div className="chart-logo">
@@ -799,7 +792,6 @@ export default function ConstituencyMap({
         )}
       </div>
 
-      {footer && <div className="chart-footer">{footer}</div>}
     </div>
   );
 }
