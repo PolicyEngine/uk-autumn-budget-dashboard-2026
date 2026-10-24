@@ -103,12 +103,10 @@ const POLICIES = [
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them. On
-// Personal impact the year pill applies to its Single-year effect sub-tab
-// only (yearShown, below), not to the lifetime results.
+// outlook, and Methodology is text: neither pill applies to them.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "personal", label: "Personal impact", year: false, policies: true },
+  { value: "personal", label: "Personal impact", year: true, policies: true },
   { value: "young", label: "Young people", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
@@ -125,12 +123,8 @@ const POLICY_PARAM_VIEWS = new Set(["dashboard", "young"]);
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
 
-/**
- * Whether the band's year pill applies: on the views that use a year, and
- * on Personal impact while its Single-year effect sub-tab is open.
- */
-export function yearPillShown(view, personalSubTab) {
-  if (view === "personal") return personalSubTab === "single";
+/** Whether the band's year pill applies: on the views that use a year. */
+export function yearPillShown(view) {
   return Boolean(VIEW_BY_KEY[view]?.year);
 }
 
@@ -219,8 +213,6 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
-  // Personal impact's open sub-tab, as PersonalImpactTab reports it
-  const [personalSubTab, setPersonalSubTab] = useState("single");
 
   // Valid policy IDs from POLICIES
   const validPolicyIds = POLICIES.map((p) => p.id);
@@ -524,7 +516,7 @@ function App() {
   };
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
-  const yearShown = yearPillShown(activeTab, personalSubTab);
+  const yearShown = yearPillShown(activeTab);
 
   // With no policies chosen, the policy-driven views offer the full Budget
   const emptyState = (
@@ -560,7 +552,7 @@ function App() {
           <h1>UK Autumn Budget 2026</h1>
 
           {/* The year applies to every chart on the Population and Young
-              people views and to Personal impact's Single-year effect, and
+              people views and to Personal impact, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Personal impact. A pill that does
@@ -636,7 +628,6 @@ function App() {
             policies={POLICIES}
             onShowMethod={showMethod}
             year={distributionalYear}
-            onSubTabChange={setPersonalSubTab}
           />
         ) : activeTab === "young" ? (
           selectedPolicies.length === 0 ? (

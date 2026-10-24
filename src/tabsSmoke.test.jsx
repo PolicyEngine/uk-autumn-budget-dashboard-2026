@@ -3,12 +3,9 @@
  *
  * Each tab is opened by its address (?tab=), as a shared link opens it, and
  * rendered with every data file served from public/ as the deployed page
- * serves it, and the lifecycle API answered with the real route's output
- * for the calculator's default household
- * (src/test/fixtures/lifecycle/default-household.json, written by
- * uk_budget_data.api), and the household API answered with the
- * single-year fixture (src/test/fixtures/householdImpact.json, shaped as
- * the Single-year effect's contract). A tab fails if rendering throws, if anything logs a
+ * serves it, and the household API answered with its fixture
+ * (src/test/fixtures/householdImpact.json, shaped as the route's
+ * contract). A tab fails if rendering throws, if anything logs a
  * console error, if a data file it fetches is missing, or if it shows an
  * error message instead of its content.
  *
@@ -25,12 +22,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
 import { clearHouseholdImpactCache } from "./hooks/useHouseholdImpact";
-import lifecycleAnswer from "./test/fixtures/lifecycle/default-household.json";
+import { resetSavedWizard } from "./components/HouseholdCalculator";
 import { householdAnswerFor } from "./test/householdFixture";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
-const LIFECYCLE_API = "https://lifecycle-api.test/api/lifecycle";
-const HOUSEHOLD_API = "https://lifecycle-api.test/api/household-impact";
+const API = "https://household-api.test";
+const HOUSEHOLD_API = `${API}/api/household-impact`;
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
@@ -38,7 +35,6 @@ const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
-  /NEXT_PUBLIC_LIFECYCLE_API_URL is not set/,
   /NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/,
   /Results are not available here/,
   /API error/,
@@ -53,8 +49,7 @@ const FAILURE_TEXT = [
 const LOADED = {
   // App.jsx renders the Public finances section only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The wizard opens at its first step; the API call it makes on load is
-  // checked below.
+  // The wizard opens at its first step; the results are checked below.
   personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
   // The cards render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
@@ -83,15 +78,10 @@ function serve(input, init = {}) {
         })
       : new Response("{}", { status: 404 });
   }
-  if (url.startsWith(LIFECYCLE_API)) {
-    const ok = url === `${LIFECYCLE_API}/calculate` && method === "POST";
-    requests.push({ url, status: ok ? 200 : 404 });
-    return ok
-      ? new Response(JSON.stringify(lifecycleAnswer), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
-      : new Response("{}", { status: 404 });
+  if (url.startsWith(API)) {
+    // Any other route on the API
+    requests.push({ url, status: 404 });
+    return new Response("{}", { status: 404 });
   }
   const { pathname } = new URL(url, "http://localhost");
   const path = normalize(join(PUBLIC, decodeURIComponent(pathname)));
@@ -103,9 +93,10 @@ function serve(input, init = {}) {
 beforeEach(() => {
   requests = [];
   consoleErrors = [];
-  vi.stubEnv("NEXT_PUBLIC_LIFECYCLE_API_URL", LIFECYCLE_API);
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
   clearHouseholdImpactCache();
+  // Each tab opens as a new visit would: the form at its first step
+  resetSavedWizard();
   vi.stubGlobal("fetch", vi.fn(async (input, init) => serve(input, init)));
   vi.spyOn(console, "error").mockImplementation((...args) => {
     const message = args.map((a) => (a instanceof Error ? a.message : String(a))).join(" ");
@@ -149,10 +140,10 @@ describe("each of the five tabs, on the real data", () => {
       );
       expect(missing).toEqual([]);
       if (value === "personal") {
-        expect(requests.map((r) => r.url)).toContain(`${LIFECYCLE_API}/calculate`);
+        // Nothing is asked before the results
+        expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
         // Straight to the results from step 1 (every answer has a default):
-        // the Single-year effect asks the household API in two stages and
-        // shows the answer
+        // the tab asks the household API in two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: "See results" }));
         expect(
           await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
@@ -162,6 +153,9 @@ describe("each of the five tabs, on the real data", () => {
           .filter((r) => r.url === HOUSEHOLD_API)
           .map((r) => JSON.parse(r.body).include);
         expect(stages).toEqual([[], ["by_policy", "sweep"]]);
+        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
+          true,
+        );
         for (const pattern of FAILURE_TEXT) {
           expect(document.body.textContent, String(pattern)).not.toMatch(pattern);
         }
@@ -172,14 +166,15 @@ describe("each of the five tabs, on the real data", () => {
   );
 
   it("fails the Personal impact tab when the API URL is not set", async () => {
-    // What production showed on 23 October: the tab's call never leaves
-    // the page, and the console error is what the check above catches.
-    vi.stubEnv("NEXT_PUBLIC_LIFECYCLE_API_URL", "");
+    // The tab's call never leaves the page, and it says so where the
+    // results would be: the check above would catch it.
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "See results" }));
     await waitFor(() =>
-      expect(consoleErrors.join("\n")).toMatch(/NEXT_PUBLIC_LIFECYCLE_API_URL is not set/),
+      expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
     );
-    expect(requests.some((r) => r.url.startsWith(LIFECYCLE_API))).toBe(false);
+    expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
   });
 });

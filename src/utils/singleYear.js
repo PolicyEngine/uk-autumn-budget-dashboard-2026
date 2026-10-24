@@ -1,5 +1,5 @@
 /**
- * What the Single-year effect shows, worked out from the API's answer
+ * What Personal impact shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.

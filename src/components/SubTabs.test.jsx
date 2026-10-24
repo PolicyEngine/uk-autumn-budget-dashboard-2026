@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import SubTabs, { SubTabPanel, subPanelId, subTabId, useSubTabParam } from "./SubTabs";
 
 const TABS = [
-  { value: "single", label: "Single-year effect" },
-  { value: "multi", label: "Multi-year effect" },
+  { value: "first", label: "First" },
+  { value: "second", label: "Second" },
   { value: "third", label: "Third" },
 ];
 
@@ -24,7 +24,7 @@ const tab = (name) => screen.getByRole("tab", { name });
 const sub = () => new URLSearchParams(window.location.search).get("sub");
 
 beforeEach(() => {
-  window.history.replaceState({}, "", "/?tab=personal");
+  window.history.replaceState({}, "", "/?tab=living");
 });
 
 afterEach(() => {
@@ -35,59 +35,59 @@ describe("SubTabs", () => {
   it("is a labelled tablist whose chosen tab controls the one panel", () => {
     render(<Harness />);
     expect(screen.getByRole("tablist", { name: "Effects" })).toBeInTheDocument();
-    expect(tab("Single-year effect")).toHaveAttribute("aria-selected", "true");
-    expect(tab("Single-year effect")).toHaveAttribute("tabindex", "0");
-    expect(tab("Single-year effect")).toHaveAttribute("id", subTabId("pi", "single"));
-    expect(tab("Single-year effect")).toHaveAttribute("aria-controls", subPanelId("pi", "single"));
-    expect(tab("Multi-year effect")).toHaveAttribute("aria-selected", "false");
-    expect(tab("Multi-year effect")).toHaveAttribute("tabindex", "-1");
-    expect(tab("Multi-year effect")).not.toHaveAttribute("aria-controls");
-    const panel = screen.getByRole("tabpanel", { name: "Single-year effect" });
-    expect(panel).toHaveAttribute("id", subPanelId("pi", "single"));
-    expect(panel).toHaveTextContent("Panel single");
+    expect(tab("First")).toHaveAttribute("aria-selected", "true");
+    expect(tab("First")).toHaveAttribute("tabindex", "0");
+    expect(tab("First")).toHaveAttribute("id", subTabId("pi", "first"));
+    expect(tab("First")).toHaveAttribute("aria-controls", subPanelId("pi", "first"));
+    expect(tab("Second")).toHaveAttribute("aria-selected", "false");
+    expect(tab("Second")).toHaveAttribute("tabindex", "-1");
+    expect(tab("Second")).not.toHaveAttribute("aria-controls");
+    const panel = screen.getByRole("tabpanel", { name: "First" });
+    expect(panel).toHaveAttribute("id", subPanelId("pi", "first"));
+    expect(panel).toHaveTextContent("Panel first");
   });
 
   it("moves with Left, Right (wrapping), Home and End, and focuses the tab", () => {
     render(<Harness />);
     const list = screen.getByRole("tablist");
     fireEvent.keyDown(list, { key: "ArrowRight" });
-    expect(tab("Multi-year effect")).toHaveAttribute("aria-selected", "true");
-    expect(tab("Multi-year effect")).toHaveFocus();
+    expect(tab("Second")).toHaveAttribute("aria-selected", "true");
+    expect(tab("Second")).toHaveFocus();
     fireEvent.keyDown(list, { key: "End" });
     expect(tab("Third")).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "ArrowRight" });
-    expect(tab("Single-year effect")).toHaveAttribute("aria-selected", "true");
+    expect(tab("First")).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "ArrowLeft" });
     expect(tab("Third")).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "Home" });
-    expect(tab("Single-year effect")).toHaveAttribute("aria-selected", "true");
-    expect(tab("Single-year effect")).toHaveFocus();
+    expect(tab("First")).toHaveAttribute("aria-selected", "true");
+    expect(tab("First")).toHaveFocus();
     // Other keys do nothing
     fireEvent.keyDown(list, { key: "ArrowDown" });
-    expect(tab("Single-year effect")).toHaveAttribute("aria-selected", "true");
+    expect(tab("First")).toHaveAttribute("aria-selected", "true");
   });
 
   it("keeps ?sub= in step, writing nothing for the default and keeping other params", () => {
     render(<Harness />);
-    expect(window.location.search).toBe("?tab=personal");
-    fireEvent.click(tab("Multi-year effect"));
-    expect(sub()).toBe("multi");
-    expect(new URLSearchParams(window.location.search).get("tab")).toBe("personal");
-    expect(screen.getByRole("tabpanel")).toHaveTextContent("Panel multi");
-    fireEvent.click(tab("Single-year effect"));
-    expect(window.location.search).toBe("?tab=personal");
+    expect(window.location.search).toBe("?tab=living");
+    fireEvent.click(tab("Second"));
+    expect(sub()).toBe("second");
+    expect(new URLSearchParams(window.location.search).get("tab")).toBe("living");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("Panel second");
+    fireEvent.click(tab("First"));
+    expect(window.location.search).toBe("?tab=living");
   });
 
   it("opens the sub-tab the address names, and the default for an unknown one", () => {
-    window.history.replaceState({}, "", "/?tab=personal&sub=third#x");
+    window.history.replaceState({}, "", "/?tab=living&sub=third#x");
     const { unmount } = render(<Harness />);
     expect(tab("Third")).toHaveAttribute("aria-selected", "true");
     expect(window.location.hash).toBe("#x");
     unmount();
 
-    window.history.replaceState({}, "", "/?tab=personal&sub=bogus");
+    window.history.replaceState({}, "", "/?tab=living&sub=bogus");
     render(<Harness />);
-    expect(tab("Single-year effect")).toHaveAttribute("aria-selected", "true");
+    expect(tab("First")).toHaveAttribute("aria-selected", "true");
     expect(sub()).toBeNull();
   });
 
@@ -97,7 +97,7 @@ describe("SubTabs", () => {
     render(<Harness />);
     const list = screen.getByRole("tablist");
     // Not scrolled past: the page stays put
-    fireEvent.click(tab("Multi-year effect"));
+    fireEvent.click(tab("Second"));
     expect(scrollTo).not.toHaveBeenCalled();
 
     // Scrolled 800px down, with the bar 500px down the page under a 112px band

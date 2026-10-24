@@ -12,29 +12,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 
-def lifecycle_answer(
-    first_year: int = 2026,
-    first_age: int = 19,
-    last_age: int = 85,
-    retirement_age: int = 67,
-    pay: float = 23_600,
-) -> dict:
-    """A /api/lifecycle/calculate answer of the real route's shape: one row
-    a year, flat pay to retirement and none after."""
-    return {
-        "data": [
-            {
-                "age": age,
-                "year": first_year + (age - first_age),
-                "employment_income": pay if age <= retirement_age else 0,
-                "baseline_net_income": 20_000,
-                "impact_threshold_freeze": -50,
-            }
-            for age in range(first_age, last_age + 1)
-        ]
-    }
-
-
 def household_impact_answer(baseline=25_000.0, reform=24_895.2) -> dict:
     """A /api/household-impact headline of the real route's shape."""
     return {
@@ -55,14 +32,12 @@ def serving(
     version: dict,
     impact: dict,
     health_status: int = 200,
-    lifecycle: Optional[dict] = None,
     household_impact: Optional[dict] = None,
 ):
-    """Serve /api/health, /api/version, /api/personal-impact,
-    /api/lifecycle/calculate and /api/household-impact; yield the base URL.
+    """Serve /api/health, /api/version, /api/personal-impact and
+    /api/household-impact; yield the base URL.
     Each POST body is recorded on ``server.posted``."""
     posted = []
-    lifecycle = lifecycle_answer() if lifecycle is None else lifecycle
     if household_impact is None:
         household_impact = household_impact_answer()
 
@@ -91,8 +66,6 @@ def serving(
             posted.append(json.loads(self.rfile.read(length) or b"null"))
             if self.path == "/api/personal-impact":
                 self._send(200, impact)
-            elif self.path == "/api/lifecycle/calculate":
-                self._send(200, lifecycle)
             elif self.path == "/api/household-impact":
                 self._send(200, household_impact)
             else:

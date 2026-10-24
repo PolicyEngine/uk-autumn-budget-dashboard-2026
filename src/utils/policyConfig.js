@@ -26,28 +26,21 @@ export const POLICY_COLORS = {
   "Freeze student loan repayment thresholds": "#FBBF24", // Amber 400 (lightest)
 };
 
-// Policy colors by API key (used in lifecycle calculator and personal impact)
+// Policy colors by API key
 // Colors match POLICY_COLORS for consistency
 export const POLICY_COLORS_BY_KEY = {
   // COSTS to treasury (good for households - teal/green spectrum, darkest to lightest)
   two_child_limit: "#0D9488", // Teal 600 (darkest)
-  impact_two_child_limit: "#0D9488",
   fuel_duty_freeze: "#14B8A6", // Teal 500
-  impact_fuel_duty_freeze: "#14B8A6",
   rail_fares_freeze: "#2DD4BF", // Teal 400
-  impact_rail_fare_freeze: "#2DD4BF",
 
   // REVENUE raisers (bad for households - amber/orange spectrum, darkest to lightest)
   threshold_freeze_extension: "#78350F", // Amber 900 (darkest)
-  impact_threshold_freeze: "#78350F",
   dividend_tax_increase_2pp: "#92400E", // Amber 800
   savings_tax_increase_2pp: "#B45309", // Amber 700
   property_tax_increase_2pp: "#D97706", // Amber 600
-  impact_unearned_income_tax: "#B45309", // Combines dividend/savings/property
   salary_sacrifice_cap: "#F59E0B", // Amber 500
-  impact_salary_sacrifice_cap: "#F59E0B",
   freeze_student_loan_thresholds: "#FBBF24", // Amber 400 (lightest)
-  impact_sl_threshold_freeze: "#FBBF24",
 };
 
 // Order: revenue raisers first (positive for gov), then costs (negative for gov)
@@ -83,50 +76,6 @@ export const REVENUE_RAISING_NAMES = new Set([
 // it when every policy is selected.
 export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 
-// Lifecycle calculator reform configuration
-// Note: In lifecycle view, we show impact FROM HOUSEHOLD PERSPECTIVE
-// (positive = good for household, negative = bad)
-export const LIFECYCLE_REFORMS = [
-  // The dashboard's policy names, in its legend order: raisers, then costs.
-  // The lifecycle model taxes dividends, savings and property income as one
-  // item, so they share one entry.
-  {
-    key: "impact_threshold_freeze",
-    label: "Threshold freeze extension",
-    color: POLICY_COLORS_BY_KEY.impact_threshold_freeze,
-  },
-  {
-    key: "impact_unearned_income_tax",
-    label: "Dividend, savings and property income tax increase",
-    color: POLICY_COLORS_BY_KEY.impact_unearned_income_tax,
-  },
-  {
-    key: "impact_salary_sacrifice_cap",
-    label: "Salary sacrifice cap",
-    color: POLICY_COLORS_BY_KEY.impact_salary_sacrifice_cap,
-  },
-  {
-    key: "impact_sl_threshold_freeze",
-    label: "Freeze student loan repayment thresholds",
-    color: POLICY_COLORS_BY_KEY.impact_sl_threshold_freeze,
-  },
-  {
-    key: "impact_two_child_limit",
-    label: "2 child limit repeal",
-    color: POLICY_COLORS_BY_KEY.impact_two_child_limit,
-  },
-  {
-    key: "impact_fuel_duty_freeze",
-    label: "Fuel duty freeze extension",
-    color: POLICY_COLORS_BY_KEY.impact_fuel_duty_freeze,
-  },
-  {
-    key: "impact_rail_fare_freeze",
-    label: "Rail fares freeze",
-    color: POLICY_COLORS_BY_KEY.impact_rail_fare_freeze,
-  },
-];
-
 // Personal impact policy order and colors
 export const PERSONAL_IMPACT_POLICY_ORDER = [
   "two_child_limit",
@@ -143,23 +92,3 @@ export const PERSONAL_IMPACT_POLICY_ORDER = [
 export function getPolicyColor(key) {
   return POLICY_COLORS_BY_KEY[key] || POLICY_COLORS[key] || "#9CA3AF";
 }
-
-// Which lifecycle (Personal impact) series each population policy maps to.
-// The lifecycle model costs the dividend, savings and property income tax
-// increases as one series, so it needs all three.
-export const LIFECYCLE_KEY_BY_POLICY = {
-  two_child_limit: "impact_two_child_limit",
-  fuel_duty_freeze: "impact_fuel_duty_freeze",
-  rail_fares_freeze: "impact_rail_fare_freeze",
-  threshold_freeze_extension: "impact_threshold_freeze",
-  freeze_student_loan_thresholds: "impact_sl_threshold_freeze",
-  salary_sacrifice_cap: "impact_salary_sacrifice_cap",
-};
-export const LIFECYCLE_COMBINED = {
-  key: "impact_unearned_income_tax",
-  policies: [
-    "dividend_tax_increase_2pp",
-    "savings_tax_increase_2pp",
-    "property_tax_increase_2pp",
-  ],
-};

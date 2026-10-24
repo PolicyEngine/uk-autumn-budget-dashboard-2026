@@ -371,7 +371,7 @@ body {
 }
 
 .method-card a,
-.lifecycle-method-link a {
+.household-method-link a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
@@ -379,21 +379,21 @@ body {
 }
 
 .method-card a:hover,
-.lifecycle-method-link a:hover {
+.household-method-link a:hover {
   text-decoration-color: currentColor;
 }
 
 /* One-line pointer from a card to its note on the Methodology view */
-.lifecycle-method-link {
+.household-method-link {
   margin: 0;
   padding-top: 16px;
   font-size: var(--fs-small);
   color: var(--pe-gray-600);
 }
 
-/* Under the lifetime chart, with the card's one rule above it, as under
-   the map */
-.lifecycle-method-link {
+/* Under the household's results, with one rule above it, as under the
+   map */
+.household-method-link {
   margin-top: 16px;
   border-top: 1px solid var(--card-border);
 }
@@ -895,13 +895,9 @@ body {
 
 /* Stacking: the sticky title band (z-index 1100) stays above every chart.
    Chart tooltips sit just below it (a component stylesheet sets them to
-   9999 globally); the lifetime calculator's modal sits above it. */
+   9999 globally). */
 .main-content .recharts-tooltip-wrapper {
   z-index: 1000 !important;
-}
-
-.main-content .modal-overlay {
-  z-index: 1200;
 }
 
 /* A fiscal year in a title never breaks at its hyphen */

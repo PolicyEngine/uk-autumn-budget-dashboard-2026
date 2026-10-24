@@ -1,5 +1,4 @@
 import GeographyMethodology from "./GeographyMethodology";
-import LifecycleAbout from "./LifecycleAbout";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
@@ -22,8 +21,8 @@ const RESEARCH = [
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
- * views link with these (the map to `geography`, the lifetime chart to
- * `lifetime`), so a key's id must not change.
+ * views link with these (the map to `geography`, Personal impact to
+ * `singleYear`), so a key's id must not change.
  */
 export const METHOD_SECTIONS = {
   overview: "method-overview",
@@ -33,14 +32,13 @@ export const METHOD_SECTIONS = {
   geography: "method-area",
   young: "method-young",
   personal: "method-personal",
-  lifetime: "method-lifetime",
   singleYear: "method-single-year",
   living: "method-living",
   limitations: "method-limitations",
   versions: "method-versions",
 };
 
-/** The sections in the contents, in page order (the lifetime and single-year blocks sit inside Personal impact). */
+/** The sections in the contents, in page order (the household calculation's block sits inside Personal impact). */
 export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.overview, title: "At a glance" },
   { id: METHOD_SECTIONS.data, title: "Data" },
@@ -464,14 +462,10 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.personal}
           title="Personal impact"
-          subtitle="The models behind Personal impact."
+          subtitle="The calculation behind Personal impact."
         >
-          <div id={METHOD_SECTIONS.lifetime} className="card method-card method-anchor">
-            <h3 className="method-card-title">Lifetime model</h3>
-            <LifecycleAbout />
-          </div>
           <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
-            <h3 className="method-card-title">Single-year calculation</h3>
+            <h3 className="method-card-title">Household calculation</h3>
             <FactList items={SINGLE_YEAR_METHOD} />
             <p className="method-more">
               <ViewLink tab="personal" onShowTab={onShowTab}>
@@ -522,13 +516,6 @@ function MethodologyTab({ onShowTab }) {
                     Surveys miss or under-record some incomes. The{" "}
                     {policyNotes("policy notes")} say where this affects a
                     measure.
-                  </>,
-                ],
-                [
-                  "Lifetime model",
-                  <>
-                    Personal impact uses a simpler model with its own values
-                    (see <SectionLink id={METHOD_SECTIONS.lifetime}>lifetime model</SectionLink>).
                   </>,
                 ],
               ]}

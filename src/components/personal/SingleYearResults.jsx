@@ -29,8 +29,8 @@ export function SingleYearError({ error, onRetry, title = "Results are not avail
   const fields = error?.fields ?? [];
   const canRetry = ["timeout", "network", "server"].includes(error?.kind);
   return (
-    <div className="lifecycle-error single-year-error" role="alert">
-      <p className="lifecycle-error-title">{title}</p>
+    <div className="household-error single-year-error" role="alert">
+      <p className="household-error-title">{title}</p>
       <p>{error?.message ?? "Something stopped the calculation."}</p>
       {fields.length > 0 && (
         <>
@@ -86,7 +86,7 @@ export function showDependantsNote(data) {
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
 /**
- * The Single-year effect inside the wizard's card: the lede, the headline
+ * The household's results inside the wizard's card: the lede, the headline
  * sentence (the only place the change appears), the salary used and what
  * is not included.
  */
@@ -98,7 +98,7 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
 
   if (noPolicies) {
     return (
-      <p className="lifecycle-empty" role="status">
+      <p className="household-empty" role="status">
         Select at least one policy in the bar above to see your household&apos;s
         net income.
       </p>
@@ -167,7 +167,7 @@ function Pending({ text }) {
 }
 
 /**
- * The Single-year effect below the wizard's card, in Spring Statement
+ * The household's results below the wizard's card, in Spring Statement
  * 2026's order: the breakdown of net income (with how it is calculated),
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
@@ -244,7 +244,7 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
       </section>
 
       {onShowMethod && (
-        <p className="lifecycle-method-link single-year-about">
+        <p className="household-method-link single-year-about">
           <a
             href={`?tab=methodology#${METHOD_SECTIONS.singleYear}`}
             onClick={(event) => {

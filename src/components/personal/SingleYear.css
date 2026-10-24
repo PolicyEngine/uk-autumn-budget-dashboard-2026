@@ -1,10 +1,4 @@
-/* Personal impact: the Single-year effect, and the sub-tabs' place in the
-   wizard's results */
-
-/* The sub-tabs sit under the results header, in the form card */
-.wizard-results-tabs .sub-tabs {
-  margin: 0 0 16px;
-}
+/* Personal impact: the household's results */
 
 .personal-lede,
 .single-year-lede {
@@ -305,15 +299,6 @@
 
   .single-year-details {
     margin-top: 32px;
-  }
-
-  .wizard-results-tabs .sub-tabs {
-    display: flex;
-    width: 100%;
-  }
-
-  .wizard-results-tabs .sub-tab {
-    flex: 1 1 0;
   }
 
   .select-input {

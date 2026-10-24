@@ -49,7 +49,7 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     const expected = {
       dashboard: [true, true],
-      // The year drives Personal impact's default sub-tab, Single-year effect
+      // The year drives Personal impact's household calculation
       personal: [true, true],
       young: [true, true],
       living: [false, false],
@@ -64,20 +64,11 @@ describe("the view tabs", () => {
     });
   });
 
-  it("hide the year pill on Personal impact's Multi-year effect, in place", () => {
+  it("show the year pill on Personal impact, whatever an old ?sub= link says", () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
-    const { container, unmount } = render(<App />);
-    const year = () => band(container).querySelector(".band-year");
-    expect(shown(year())).toBe(false);
-    // Hidden, not removed: it keeps its place in the band
-    expect(year()).toHaveAttribute("aria-hidden", "true");
-    expect(container.querySelector(".app")).toHaveAttribute("data-band", "compact");
-    unmount();
-
-    window.history.replaceState({}, "", "/?tab=personal");
-    const second = render(<App />);
-    expect(shown(second.container.querySelector(".band-year"))).toBe(true);
-    expect(second.container.querySelector(".app")).not.toHaveAttribute("data-band");
+    const { container } = render(<App />);
+    expect(shown(band(container).querySelector(".band-year"))).toBe(true);
+    expect(container.querySelector(".app")).not.toHaveAttribute("data-band");
   });
 
   it("keep ?tab= in step, with the policies only on the views they drive", () => {
@@ -156,9 +147,9 @@ describe("the view tabs", () => {
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
-    expect(within(panel).getByRole("heading", { level: 3, name: "Lifetime model" })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { level: 3, name: "Household calculation" })).toBeInTheDocument();
+    expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    expect(panel).toHaveTextContent("Earnings follow an age profile that starts at 22");
     expect(panel).toHaveTextContent("Methods and sources: our research on the");
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();

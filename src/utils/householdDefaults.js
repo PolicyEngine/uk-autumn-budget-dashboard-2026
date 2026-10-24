@@ -16,7 +16,7 @@
  *
  * Spending: ONS, Family Spending in the UK, FYE 2025, Workbook 1, Table A1,
  * average weekly household spending × 52, rounded to £10: petrol £11.90
- * (£620 a year), diesel £6.50 (£340), rail and tube fares £4.00 (£210).
+ * (£620 a year), diesel £6.50 (£340).
  * https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
  */
 
@@ -49,5 +49,4 @@ export const regionalRent = (region) => REGIONAL_RENT[region] ?? 1406;
 export const DEFAULT_SPENDING = {
   petrol: 620,
   diesel: 340,
-  rail: 210,
 };
