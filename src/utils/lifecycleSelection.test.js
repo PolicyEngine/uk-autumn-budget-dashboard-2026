@@ -103,3 +103,39 @@ describe("reviewed lifetime impact contracts", () => {
     }));
   });
 });
+
+// The round-1 review's reproductions, kept verbatim as regressions
+describe("review round 1 reproductions", () => {
+  it("finding 4: a measure id that names an API column is not an impact", () => {
+    // A published measure with id gross_income read £30,000 of earnings as
+    // £30,000 of policy impact, with no not-modelled notice
+    const grossIncome = measure("gross_income", { personal: null });
+    const data = [{ year: 2026, gross_income: 30_000, impact_gross_income: 30_000 }];
+    const selection = lifecycleSelection(["gross_income"], [grossIncome], data);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([grossIncome.label]);
+    expect(lifecycleTotals(data, selection.reforms, selection.unmodelled.length === 0).netTotal).toBeNull();
+  });
+
+  it("finding 4: two measures on one series without a declared group are both not modelled", () => {
+    const one = measure("one", { personal: { ...alpha.personal, key: "impact_shared" } });
+    const two = measure("two", { personal: { ...alpha.personal, key: "impact_shared" } });
+    const selection = lifecycleSelection(["one", "two"], [one, two], [{ year: 2026, impact_shared: 5 }, { year: 2029, impact_shared: 5 }]);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([one.label, two.label]);
+  });
+
+  it("finding 5: an unsupported year never enters a lifetime total", () => {
+    // years [2029], unsupported_years [2026], £100 in 2026 and £20 in 2029
+    // returned a complete £120
+    const limited = measure("limited", {
+      years: [2029], unsupported_years: [2026],
+      personal: { ...alpha.personal, key: "impact_limited", years: [2026, 2029] },
+    });
+    const data = [{ year: 2026, impact_limited: 100 }, { year: 2029, impact_limited: 20 }];
+    const selection = lifecycleSelection(["limited"], [limited], data);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([limited.label]);
+    expect(lifecycleTotals(data, [limited]).netTotal).toBeNull();
+  });
+});

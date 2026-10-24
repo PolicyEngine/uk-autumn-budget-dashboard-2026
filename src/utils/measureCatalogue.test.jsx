@@ -99,6 +99,37 @@ describe("published measure catalogue", () => {
   });
 });
 
+describe("the row gate (the page's core invariant)", () => {
+  const STATUSES = ["approved", "provisional", "staged", "stale", "withdrawn", "not_computable"];
+  it("shows a row only for a verified key, a displayable status and a supported year", () => {
+    fc.assert(fc.property(
+      fc.boolean(), fc.boolean(), fc.constantFrom(...STATUSES), fc.constantFrom(...STATUSES),
+      fc.constantFrom(2028, 2029, 2030), fc.boolean(), fc.constantFrom(ALPHA, COMBINED, "unlisted"),
+      (hasManifest, verified, alphaStatus, packageStatus, year, alphaLimited, id) => {
+        const fixture = measureCatalogueFixture({ held: false });
+        fixture.manifest.measures[ALPHA].status = alphaStatus;
+        fixture.manifest.combined[COMBINED].status = packageStatus;
+        for (const entry of [...Object.values(fixture.manifest.measures), ...Object.values(fixture.manifest.combined)]) entry.years = [2029, 2030];
+        if (alphaLimited) fixture.manifest.measures[ALPHA].unsupported_years = [2030];
+        if (!verified) delete fixture.tablesByKey[id];
+        const catalogue = buildMeasureCatalogue({ ...fixture, manifest: hasManifest ? fixture.manifest : null });
+        const shown = isCatalogueRowDisplayable(catalogue, id, year);
+        const displayable = (status) => ["approved", "provisional"].includes(status);
+        const supported = (limited) => [2029, 2030].includes(year) && !(limited && year === 2030);
+        const alphaShown = displayable(alphaStatus) && supported(alphaLimited);
+        const expected = hasManifest && verified && (
+          id === ALPHA ? alphaShown
+            // The package needs every member displayable (it is the run of
+            // exactly the displayable measures) and supported in the year
+            : id === COMBINED ? displayable(packageStatus) && displayable(alphaStatus) && supported(alphaLimited) && supported(false)
+              : false
+        );
+        expect(shown).toBe(expected);
+      },
+    ), { numRuns: 300 });
+  });
+});
+
 it("frontend source contains no embedded Budget measure names or ids", () => {
   // Python model definitions are intentionally outside this frontend guard:
   // removing them would change reform logic, which this change must preserve.

@@ -1,5 +1,5 @@
 /**
- * The household scatter, as published in public/data/household_scatter_binned.csv.
+ * The household scatter, from each verified artifact's household_scatter_binned.csv.
  *
  * Households are never shown one by one: each row is one cell of baseline
  * income band by income change band, with the weighted number of

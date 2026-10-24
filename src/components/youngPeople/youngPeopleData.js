@@ -3,7 +3,7 @@
  * change for young people aged 16 to 24 beside its all-ages figure, and
  * the average change in every year shown.
  *
- * Both read only mean_change from public/data/age_impact.csv. A mean
+ * Both read only mean_change from the verified artifacts' age tables. A mean
  * change is additive across policies (the other charts on the page add up
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.

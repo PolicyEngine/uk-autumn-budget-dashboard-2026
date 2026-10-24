@@ -174,34 +174,42 @@ unit). Each slow unit added lengthens the run.
 
 ## Published measures
 
-The page builds one measure catalogue from the publication manifest, or from
-`reform_id` and `reform_name` in the reviewed flat CSVs when the manifest is
-absent (HTTP 404). The frontend contains no measure list. Labels, descriptions,
-selection, legends and chart colours all use the catalogue. Colours depend only
-on the measure id and the sign of its supported budgetary impact; the order is
-revenue, cost, then other measures, with ids sorted within each group.
+The page builds one measure catalogue from the publication manifest
+(`public/data/manifest.json`) and shows no figure without one. The file itself
+must name this Budget (`release: uk-autumn-budget-2026`, and `budget` with that
+id and the date 2026-10-28). With no manifest the page says that no Budget
+results are published yet; an unreadable, invalid or other-Budget manifest shows
+that published results are unavailable. Neither ever falls back to the flat CSVs.
 
-This change keeps the rehearsed flat CSV figure route. When present, the manifest
-gates every view by status and supported year; combined results also require
-current member fingerprints. An invalid or unreachable manifest fails closed.
-This route does not verify flat-file bytes against artifact receipts: the public
-file review and build checks remain required. Complete receipt-verified artifact
-loading is a separate integration.
+The frontend contains no measure list. Labels, descriptions, selection, legends,
+ordering and chart colours all come from the catalogue. Colours depend only on
+the measure id and the sign of its supported budgetary impact; the order is
+revenue, cost, then other measures, with ids sorted within each group. Chart
+series are keyed `measure:<id>`, never by a published label.
 
-Generation publishes public descriptions in the budgetary CSV and in receipts
-and staged manifest entries. It also publishes personal API response mappings,
-including inseparable shared series, so the old household API keeps working
-without frontend aliases. Regenerate and review outputs to add this metadata to
-existing flat files; older files show an explicit missing-description fallback
-and list unmatched personal series as not modelled. Missing selected figures
-never become zero or a partial total. Held measures are listed with an
-unavailable notice and excluded from the figures.
+Where each view's figures come from:
 
-Frontend tests include unfamiliar measures, publication gates, legacy household
-compatibility and fast-check properties for catalogue membership and colours.
-Run `bun run test` (Vitest is capped at four workers) and `bun run build`. The
-legacy-name guard covers frontend source; Python reform definitions remain
-unchanged apart from publication metadata.
+| View | Route |
+|---|---|
+| Public finances, deciles, winners and losers, headline metrics, household scatter | Receipt-verified artifacts (`loadDashboard`, #20's `loadPublication`) |
+| Example households, young people | The same artifacts, each table re-read through its receipt (`loadVerifiedTable`) |
+| OBR comparison | PolicyEngine figures from the artifacts; OBR figures from `obr_comparison.csv` through the release index |
+| Results by area | `regional.csv` and `constituency.csv` through the release index |
+| Personal impact (lifetime and single year) | The household API. Every measure is listed as not modelled, with no total, unless a reviewed mapping says the calculation implements its published parameters and years. There are none today. |
+
+A row is shown only when its measure or combined run is displayable (approved or
+provisional), the year is supported, and its artifact verified in the browser
+against its receipt and the manifest. Package figures come from the combined run
+of exactly the displayable measures. `uk-budget-data publish index` binds the
+flat view files to the manifest's revision and bytes (`release-index.json`); the
+page checks each file's SHA-256 before using it (runbook, G4).
+
+Frontend tests cover unfamiliar measure ids, held and stale entries, tampered
+artifacts and flat files, mismatched index revisions, today's real
+`public/data` without a manifest, and fast-check properties for the row gate,
+catalogue membership, colours and series keys. Run `bun run test` (Vitest uses
+at most two workers) and `bun run build`. The legacy-name guard covers frontend
+source; Python reform definitions are unchanged.
 
 ## Technology stack
 

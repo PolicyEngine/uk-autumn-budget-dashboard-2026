@@ -1,5 +1,5 @@
 /**
- * Results by age band (public/data/age_impact.csv) for the "Young people"
+ * Results by age band (each verified artifact's age_impact.csv) for the "Young people"
  * section: the rows the charts and headline figures read, for the selected
  * policies and year.
  *
