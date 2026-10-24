@@ -677,37 +677,6 @@ def dataset_tables(simulation) -> DatasetTables:
     return DatasetTables(year=year, household=household, person=person)
 
 
-@dataclass(frozen=True)
-class DatasetRecords:
-    """What the collector needs of a dataset: each record's survey
-    household, and the household columns that place it in an area."""
-
-    source_ids: np.ndarray
-    household: pd.DataFrame
-
-
-def dataset_records(
-    simulation, *, kind: str, microcosm_export: bool = False
-) -> DatasetRecords:
-    """The collector's dataset-level inputs, read from a simulation."""
-    tables = dataset_tables(simulation)
-    household = tables.household
-    columns = (
-        ["region"]
-        if kind == EFRS
-        else ["region_code_oa", "constituency_code_oa"]
-    )
-    return DatasetRecords(
-        source_ids=survey_household_ids(
-            household,
-            tables.person,
-            kind,
-            microcosm_export=microcosm_export,
-        ),
-        household=household[columns].copy(),
-    )
-
-
 # -- per-record arrays -------------------------------------------------------
 
 
@@ -745,16 +714,7 @@ class SeatMatrix:
     ) -> "SeatMatrix":
         """Weights keyed by year, rows in the constituency lookup's order."""
         path = Path(path)
-
-        def load(year: int) -> np.ndarray:
-            with h5py.File(path, "r") as handle:
-                key = str(year)
-                if key not in handle:
-                    raise KeyError(
-                        f"{path} has no seat weights for {year}; it has "
-                        f"{sorted(handle.keys())}"
-                    )
-                return np.asarray(handle[key][...], dtype=SEAT_MATRIX_DTYPE)
+        load = _SeatWeightsFile(path)
 
         with h5py.File(path, "r") as handle:
             years = tuple(sorted(int(key) for key in handle.keys()))
@@ -764,6 +724,24 @@ class SeatMatrix:
             load=load,
             years=years,
         )
+
+
+@dataclass(frozen=True)
+class _SeatWeightsFile:
+    """Reads one year's seat weights from the file (picklable, so a
+    collector built in a worker process can be sent back)."""
+
+    path: Path
+
+    def __call__(self, year: int) -> np.ndarray:
+        with h5py.File(self.path, "r") as handle:
+            key = str(year)
+            if key not in handle:
+                raise KeyError(
+                    f"{self.path} has no seat weights for {year}; it has "
+                    f"{sorted(handle.keys())}"
+                )
+            return np.asarray(handle[key][...], dtype=SEAT_MATRIX_DTYPE)
 
 
 class GeographyCollector:
@@ -858,32 +836,17 @@ class GeographyCollector:
         matrix at ``seat_weights``, if given) or ``microcosm`` (a local
         dataset; seats from ``constituency_code_oa``).
         """
-        return cls.from_records(
-            dataset_records(
-                simulation, kind=kind, microcosm_export=microcosm_export
-            ),
-            kind=kind,
-            regions=regions,
-            seat_regions=seat_regions,
-            seat_weights=seat_weights,
+        tables = dataset_tables(simulation)
+        household = tables.household
+        source_ids = survey_household_ids(
+            household,
+            tables.person,
+            kind,
+            microcosm_export=microcosm_export,
         )
-
-    @classmethod
-    def from_records(
-        cls,
-        records: "DatasetRecords",
-        *,
-        kind: str,
-        regions: pd.DataFrame,
-        seat_regions: Mapping[str, str],
-        seat_weights: Optional[Union[str, Path]] = None,
-    ) -> "GeographyCollector":
-        """As ``from_simulation``, from what ``dataset_records`` read of the
-        simulation (in a worker process, for ``--jobs``)."""
-        household = records.household
         if kind == EFRS:
             return cls(
-                source_ids=records.source_ids,
+                source_ids=source_ids,
                 region_codes=frs_region_codes(household["region"], regions),
                 national=True,
                 seat_matrix=(
@@ -893,7 +856,7 @@ class GeographyCollector:
                 ),
             )
         return cls(
-            source_ids=records.source_ids,
+            source_ids=source_ids,
             region_codes=microcosm_region_codes(
                 household["region_code_oa"], regions
             ),
@@ -2442,7 +2405,10 @@ class GeographyUnit:
     years: tuple
     kind: str
     microcosm_export: bool
-    records: bool
+    # For the first measure: the collector's arguments, so that it builds
+    # the collector from its baseline (the dataset's survey households,
+    # regions and seats); None for the others.
+    collector: Optional[dict] = None
 
 
 @dataclass
@@ -2453,7 +2419,7 @@ class GeographyOutcome:
     runs: list = field(default_factory=list)
     limited: list = field(default_factory=list)
     held: list = field(default_factory=list)
-    records: Optional[DatasetRecords] = None
+    collector: Optional["GeographyCollector"] = None
 
 
 def simulate_area_unit(unit: GeographyUnit) -> GeographyOutcome:
@@ -2466,9 +2432,12 @@ def simulate_area_unit(unit: GeographyUnit) -> GeographyOutcome:
     outcome = GeographyOutcome(reform_id=reform.id)
     console.print(f"Simulating {reform.id}")
     baseline, reformed = simulate_reform(reform, unit.dataset, years)
-    if unit.records:
-        outcome.records = dataset_records(
-            baseline, kind=unit.kind, microcosm_export=unit.microcosm_export
+    if unit.collector is not None:
+        outcome.collector = GeographyCollector.from_simulation(
+            baseline,
+            kind=unit.kind,
+            microcosm_export=unit.microcosm_export,
+            **unit.collector,
         )
     # A measure the certified data cannot cost has no figure by area
     # either: what the code that differs reads is watched while the area
@@ -2548,9 +2517,16 @@ def _run_geography(
                 years=tuple(plan.years),
                 kind=parsed.dataset_kind,
                 microcosm_export=plan.microcosm_export,
-                # The first measure's baseline also gives the dataset's
-                # records (survey households, regions, seats).
-                records=index == 0,
+                # The first measure's baseline also gives the collector.
+                collector=(
+                    dict(
+                        regions=plan.regions,
+                        seat_regions=plan.seat_regions,
+                        seat_weights=plan.seat_weights,
+                    )
+                    if index == 0
+                    else None
+                ),
             )
             for index, reform in enumerate(plan.reforms)
         ]
@@ -2561,13 +2537,7 @@ def _run_geography(
             on_result=lambda i, o: console.print(f"Simulated {o.reform_id}"),
         ):
             if collector is None:
-                collector = GeographyCollector.from_records(
-                    outcome.records,
-                    kind=parsed.dataset_kind,
-                    regions=plan.regions,
-                    seat_regions=plan.seat_regions,
-                    seat_weights=plan.seat_weights,
-                )
+                collector = outcome.collector
             for year, baseline, reformed, weight in outcome.runs:
                 collector.add(
                     outcome.reform_id,
