@@ -8,11 +8,10 @@ import { fixtureJson } from "./test/publicationFixture";
 const outlook = readFileSync("public/data/living_standards_outlook.json", "utf8");
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it("keeps the shell and independent views available for every unavailable manifest state", async () => {
+it.each(["missing", "invalid", "unreachable", "2025"])("keeps the shell and independent views available for a %s manifest", async (failure) => {
   await fc.assert(fc.asyncProperty(
     fc.constantFrom("living", "methodology"),
-    fc.constantFrom("missing", "invalid", "unreachable", "2025"),
-    async (view, failure) => {
+    async (view) => {
       const requests = [];
       vi.stubGlobal("fetch", async (url) => {
         requests.push(String(url));
@@ -39,7 +38,7 @@ it("keeps the shell and independent views available for every unavailable manife
       cleanup();
       vi.unstubAllGlobals();
     },
-  ), { numRuns: 16 });
+  ), { numRuns: 4 });
 });
 
 
