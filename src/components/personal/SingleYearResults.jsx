@@ -260,7 +260,13 @@ export function SingleYearDetails({ result, year, policies }) {
       />
       <section className="report-section">
         {bars ? (
-          <PolicyBars rows={bars.rows} noEffect={bars.noEffect} underAPound={bars.underAPound} yearLabel={yearLabel} />
+          <PolicyBars
+            rows={bars.rows}
+            noEffect={bars.noEffect}
+            underAPound={bars.underAPound}
+            notes={bars.notes}
+            yearLabel={yearLabel}
+          />
         ) : detailFailed ? (
           <div className="card single-year-card">
             <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />

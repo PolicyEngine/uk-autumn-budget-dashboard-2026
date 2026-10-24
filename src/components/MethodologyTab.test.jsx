@@ -107,8 +107,10 @@ describe("MethodologyTab", () => {
     expect(slot).not.toHaveTextContent("To follow");
     expect(slot).toHaveTextContent("same measures as the national figures");
     expect(slot).toHaveTextContent("OBR's average earnings forecast");
-    expect(slot).toHaveTextContent("in the national figures only");
+    expect(slot).not.toHaveTextContent("in the national figures only");
+    expect(slot).toHaveTextContent("Every policy applied");
     expect(slot).toHaveTextContent("employer NI relief for under-25s");
+    expect(slot).toHaveTextContent("if received");
   });
 
   it("switches views from its links, in place", () => {

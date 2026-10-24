@@ -1,13 +1,11 @@
 """One household's net income in one year before and after the Budget,
-through policyengine.py.
+on the policyengine-uk version policyengine.py pins.
 
-``household_impact`` asks policyengine.py (``pe.uk.calculate_household``)
-for the household's net income under the selected measures' pre-Budget
-sides and under their Budget sides, under each measure switched on alone,
-and across an earnings sweep. policyengine.py takes parameter changes
-only, keyed by dates, so each measure's changes are read as the national
-run reads them (policyengine-uk's ``read_parameter_changes``) and written
-as inclusive date intervals.
+``household_impact`` builds the household as policyengine.py's household
+calculation does and runs each side (the selected measures' pre-Budget
+sides, their Budget sides, each measure switched on alone, and an earnings
+sweep) as a ``policyengine_uk.Simulation`` with the side's ``Scenario``:
+its parameter changes and its measures' simulation modifiers.
 
 The parity tests compare each result with the national route's household
 simulations (``personal_impact.household_simulations``), which build
@@ -18,7 +16,6 @@ The hand checks recompute the main changes from the parameters.
 import dataclasses
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import policyengine as pe
 import pytest
@@ -99,24 +96,15 @@ EVERYTHING = Answers(
     salary_sacrifice_pension_contributions=6_000,
 )
 
-# The probe each measure the household calculation models moves, and a
-# year it does. The other six candidates apply simulation modifiers, which
-# the household calculation can't, and are reported as not modelled. The
-# Business Asset Disposal Relief measure has no probe: the form takes no
-# capital gains.
+# The probe each parameter-change measure moves, and a year it does. The
+# measures with formula modifiers have their own hand checks and parity
+# tests (tests/test_household_impact_all_measures.py). The Business Asset
+# Disposal Relief measure has no probe: the form takes no capital gains.
 MOVED_BY = {
     "threshold_freeze_2031_32": ("employee_60k", 2031),
     "salary_sacrifice_cap_2028": ("salary_sacrifice_60k", 2028),
     "plan_2_threshold_unfreeze": ("graduate_35k", YEAR),
 }
-NOT_MODELLED_IDS = [
-    "domestic_electricity_zero_vat",
-    "employer_ni_relief_under_25s",
-    "fuel_duty_rise_deferral",
-    "road_fuel_vat_cut",
-    "state_pension_income_tax_protection",
-    "warm_home_discount_top_up",
-]
 
 
 def probe(name, year):
@@ -214,78 +202,64 @@ def test_no_changes_is_no_reform():
 # --- which measures, and which sides ---------------------------------------
 
 
-def test_a_measure_with_a_modifier_is_not_modelled_and_says_why():
-    sides = household_impact.measure_sides(
-        ["warm_home_discount_top_up", "threshold_freeze_2031_32"]
-    )
-    assert sides.included == ["threshold_freeze_2031_32"]
-    [payment] = sides.not_modelled
-    assert payment["id"] == "warm_home_discount_top_up"
-    assert payment["reason"] == (
-        household_impact.NOT_MODELLED_REASONS["warm_home_discount_top_up"]
-    )
-    assert "can't apply" in payment["reason"]
-
-
-def test_each_measure_not_modelled_has_its_own_reason():
+def test_every_measure_is_included_and_none_is_not_modelled():
     sides = household_impact.measure_sides(household_impact.measure_ids())
-    assert sorted(household_impact.NOT_MODELLED_REASONS) == NOT_MODELLED_IDS
-    for measure in sides.not_modelled:
-        assert measure["reason"] == (
-            household_impact.NOT_MODELLED_REASONS[measure["id"]]
-        )
-
-
-def test_six_candidates_are_not_modelled_for_a_household():
-    sides = household_impact.measure_sides(household_impact.measure_ids())
-    assert [m["id"] for m in sides.not_modelled] == NOT_MODELLED_IDS
-    assert sorted(sides.included) == sorted(
-        [*MOVED_BY, "badr_lifetime_limit_cut"]
-    )
-
-
-def test_the_plan_2_measure_is_modelled():
-    """Its modifier only replaces dataset values, which a household has
-    none of (parity below proves the result is the same)."""
-    measure = get_reform("plan_2_threshold_unfreeze")
-    assert measure.simulation_modifier is not None
-    assert household_impact.household_modelled(measure)
-    sides = household_impact.measure_sides(["plan_2_threshold_unfreeze"])
-    assert sides.included == ["plan_2_threshold_unfreeze"]
+    assert sorted(sides.included) == sorted(household_impact.measure_ids())
     assert sides.not_modelled == []
 
 
-def test_any_other_modifier_is_not_modelled():
-    measure = Reform(
-        id="x", name="x", description="x", simulation_modifier=lambda s: s
+def test_a_modifier_that_isnt_module_level_is_refused():
+    with pytest.raises(ValueError, match="module-level"):
+        household_impact.modifier_name(lambda sim: sim)
+    name = household_impact.modifier_name(
+        get_reform("road_fuel_vat_cut").simulation_modifier
     )
-    assert not household_impact.household_modelled(measure)
+    assert name == "uk_budget_data.budget_measures:road_fuel_vat_cut"
+    assert household_impact.resolve_modifier(name) is (
+        get_reform("road_fuel_vat_cut").simulation_modifier
+    )
 
 
 def test_before_is_current_law_and_after_holds_the_budget_changes():
     freeze = get_reform("threshold_freeze_2031_32")
     sides = household_impact.measure_sides(["threshold_freeze_2031_32"])
     # The candidates are measured against current law
-    assert sides.before == {}
-    assert sides.after == household_impact.py_reform_dict(
-        freeze.parameter_changes
-    )
+    assert sides.before == {"parameter_changes": {}, "modifiers": []}
+    assert household_impact.side_scenario(sides.before) is None
+    assert sides.after == {
+        "parameter_changes": freeze.parameter_changes,
+        "modifiers": [],
+    }
     # One measure: its single is the combined run
     assert sides.singles == {"threshold_freeze_2031_32": sides.after}
 
 
 def test_a_single_holds_every_other_measure_at_current_law():
     sides = household_impact.measure_sides(
-        ["threshold_freeze_2031_32", "badr_lifetime_limit_cut"]
+        [
+            "threshold_freeze_2031_32",
+            "road_fuel_vat_cut",
+            "plan_2_threshold_unfreeze",
+        ]
     )
     freeze = get_reform("threshold_freeze_2031_32")
-    badr = get_reform("badr_lifetime_limit_cut")
-    assert sides.singles["threshold_freeze_2031_32"] == (
-        household_impact.py_reform_dict(freeze.parameter_changes)
+    plan_2 = get_reform("plan_2_threshold_unfreeze")
+    student_loans = household_impact.modifier_name(
+        plan_2.baseline_simulation_modifier
     )
-    assert sides.singles["badr_lifetime_limit_cut"] == (
-        household_impact.py_reform_dict(badr.parameter_changes)
-    )
+    # The Plan 2 measure's pre-Budget side has its own modifier
+    assert sides.before["modifiers"] == [student_loans]
+    assert sides.singles["threshold_freeze_2031_32"] == {
+        "parameter_changes": freeze.parameter_changes,
+        "modifiers": [student_loans],
+    }
+    assert sides.singles["road_fuel_vat_cut"] == {
+        "parameter_changes": {},
+        "modifiers": [
+            student_loans,
+            "uk_budget_data.budget_measures:road_fuel_vat_cut",
+        ],
+    }
 
 
 def test_a_single_refuses_a_budget_side_another_measure_reverts():
@@ -442,71 +416,36 @@ def test_the_programme_table_adds_up_to_net_income(name):
 # --- the calculation, mocked --------------------------------------------------
 
 
-def _row_variables():
-    for row in household_impact._all_rows():
-        if row.variable:
-            yield row.variable
-        for pair in row.difference or ():
-            yield from pair
-
-
-def _stub(net):
-    member = SimpleNamespace(**{name: 0.0 for name in _row_variables()})
-    return SimpleNamespace(
-        household=SimpleNamespace(
-            household_net_income=net,
-            brma="X",
-            local_authority="Y",
-            **{
-                row.variable: 0.0
-                for row in household_impact._all_rows()
-                if row.entity == "household" and row.variable
-            },
-            **{
-                name: 0.0
-                for names in household_impact.GROUP_TOTALS.values()
-                for name in names
-            },
-        ),
-        benunit={name: 0.0 for name in _row_variables()},
-        person=[
-            {
-                **vars(member),
-                **{v: True for v in household_impact.DEPENDANT_VARIABLES},
-            }
-        ],
-    )
-
-
-class _Result(SimpleNamespace):
-    def __getitem__(self, key):
-        return getattr(self, key)
-
-
-def test_the_runs_it_asks_policyengine_py_for(monkeypatch):
+def test_the_runs_it_asks_for(monkeypatch):
     """Headline: two runs. By policy: one more per measure. Sweep: two
     runs with axes over the head's employment income."""
     calls = []
 
-    def calculate_household(**kwargs):
-        calls.append(kwargs)
+    def run_scenario(
+        people, benunit, household, year, side, axes=None, only=False
+    ):
+        calls.append({"year": year, "side": side, "axes": axes})
         net = 40_000.0 + 100 * len(calls)
-        if kwargs["axes"] is not None:
-            count = kwargs["axes"][0]["count"]
-            return SimpleNamespace(
-                household=SimpleNamespace(household_net_income=[net] * count)
-            )
-        stub = _stub(net)
-        stub.household = _Result(**vars(stub.household))
-        return stub
+        if axes is not None:
+            return {"household_net_income": [net] * axes[0]["count"]}
+        if only:
+            return {"household_net_income": net}
+        return {
+            "household_net_income": net,
+            "rows": {row.id: 0.0 for row in household_impact._all_rows()},
+            "dependants": [
+                {v: True for v in household_impact.DEPENDANT_VARIABLES}
+            ],
+            "brma": "X",
+            "local_authority": "Y",
+        }
 
-    monkeypatch.setattr(pe.uk, "calculate_household", calculate_household)
-    measures = ["threshold_freeze_2031_32", "badr_lifetime_limit_cut"]
+    monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
+    measures = ["threshold_freeze_2031_32", "road_fuel_vat_cut"]
     sides = household_impact.measure_sides(measures)
 
     calculate(Answers(), measures)
-    # Current law has no changes, so the baseline run takes no reform
-    assert [call["reform"] for call in calls] == [None, sides.after]
+    assert [call["side"] for call in calls] == [sides.before, sides.after]
     assert all(call["year"] == YEAR for call in calls)
 
     calls.clear()
@@ -514,13 +453,11 @@ def test_the_runs_it_asks_policyengine_py_for(monkeypatch):
     # The headline's two runs are reused (household_impact._RUNS): only the
     # singles and the sweep are asked for
     assert len(calls) == 4
-    assert [call["reform"] for call in calls[0:2]] == [
+    assert [call["side"] for call in calls[0:2]] == [
         sides.singles[id_] for id_ in sides.included
     ]
     assert calls[2]["axes"][0]["name"] == "employment_income"
-    # The sweep's baseline is the before side: current law, so no reform
-    assert sides.before == {}
-    assert calls[2]["reform"] is None
+    assert calls[2]["side"] == sides.before
     assert result["net_income"] == {
         "baseline": 40_100.0,
         "reform": 40_200.0,
@@ -534,15 +471,37 @@ def test_the_runs_it_asks_policyengine_py_for(monkeypatch):
     assert result["engine"] == runtime_identity()["packages"]
 
 
+def test_parameter_change_measures_match_policyengine_py_household_calc():
+    """For a measure of parameter changes alone, the route's simulation
+    gives what policyengine.py's household calculation gives, given the
+    changes as dated intervals (``py_reform_dict``)."""
+    measure = "threshold_freeze_2031_32"
+    answers = probe("employee_60k", 2031)
+    result = calculate(answers, [measure], 2031)
+    people, benunit, household = household_impact.household_entities(
+        answers, 2031
+    )
+    py = pe.uk.calculate_household(
+        people=people,
+        benunit=benunit,
+        household=household,
+        year=2031,
+        reform=household_impact.py_reform_dict(
+            get_reform(measure).parameter_changes
+        ),
+    )
+    assert result["net_income"]["reform"] == pytest.approx(
+        py.household.household_net_income, abs=0.01
+    )
+
+
 # --- the calculation, parity with the national route ------------------------
 
 
 @pytest.mark.parametrize("measure", sorted(MOVED_BY))
 def test_each_measure_matches_the_national_route(measure):
-    """Differential: .py's household calculation, given the measure's
-    changes as dated intervals, gives the national route's net incomes to
-    the penny (the national route applies the measure's modifiers), and
-    the measure really moves this household."""
+    """Differential: the route gives the national route's net incomes to
+    the penny, and the measure really moves this household."""
     name, year = MOVED_BY[measure]
     answers = probe(name, year)
     result = calculate(answers, [measure], year)
@@ -554,8 +513,8 @@ def test_each_measure_matches_the_national_route(measure):
 
 @pytest.mark.parametrize("year", [2028, 2031])
 def test_every_modelled_measure_together_matches_the_national_route(year):
-    """Differential: the measures merged into one pair of reform dicts give
-    the national route's combined run, interactions included."""
+    """Differential: the measures merged into one pair of sides give the
+    national route's combined run, interactions included."""
     measures = sorted([*MOVED_BY, "badr_lifetime_limit_cut"])
     answers = dataclasses.replace(EVERYTHING, salary_year=year)
     result = calculate(answers, measures, year)
@@ -661,7 +620,7 @@ def test_the_2031_measures_work():
     freeze = changes_by_measure(result)["threshold_freeze_2031_32"]
     assert freeze["change"] == pytest.approx(-(0.20 + 0.08) * 260, abs=0.05)
     assert result["year"] == 2031 and result["fiscal_year"] == "2031-32"
-    assert [m["id"] for m in result["not_modelled"]] == NOT_MODELLED_IDS
+    assert result["not_modelled"] == []
 
 
 # --- dependants ---------------------------------------------------------------
