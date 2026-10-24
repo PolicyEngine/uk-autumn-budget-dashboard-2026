@@ -20,7 +20,7 @@ export const POLICIES = [
     summary:
       "Keeps fuel duty at 52.95p a litre through winter 2026-27, restoring the 5p in two steps in autumn 2027.",
     starts: "January 2027",
-    type: "Duty",
+    type: "Fuel duty",
     details:
       "Assumes no RPI rise in April 2027, 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. Includes the VAT on the lower pump price; fuel spending is held fixed.",
     source: {

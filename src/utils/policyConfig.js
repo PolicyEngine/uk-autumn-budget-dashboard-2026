@@ -7,22 +7,23 @@
  */
 
 // Policy colours by display name (used in population impact charts).
-// Raise revenue: amber, darkest to lightest. Cost revenue: teal, darkest to
-// lightest. The names are the measures' names in src/utils/policies.js.
+// Raise revenue: amber, darkest to lightest. Cost revenue: teal, with the
+// chart palette's blue-grey, steel blue and mint between, so that adjacent
+// bars stay distinct. The names are the measures' names in src/utils/policies.js.
 export const POLICY_COLORS = {
   // Raise revenue (amber)
   "Threshold freeze to 2031-32": "#78350F", // Amber 900
   "Business Asset Disposal Relief restricted": "#B45309", // Amber 700
   "Salary sacrifice cap from 2028": "#F59E0B", // Amber 500
 
-  // Cost revenue (teal)
-  "Fuel duty rises deferred": "#134E4A", // Teal 900
-  "VAT cut on road fuel": "#115E59", // Teal 800
-  "Zero VAT on domestic electricity": "#0F766E", // Teal 700
-  "Warm Home Discount top-up": "#0D9488", // Teal 600
-  "State Pension income tax protection": "#14B8A6", // Teal 500
-  "Employer NI relief for under-25s": "#2DD4BF", // Teal 400
-  "Plan 2 student loan threshold unfrozen": "#5EEAD4", // Teal 300
+  // Cost revenue (teal, with blue and mint so neighbours stay apart)
+  "Fuel duty rises deferred": "#115E59", // Teal 800
+  "VAT cut on road fuel": "#5FB88A", // Mint
+  "Zero VAT on domestic electricity": "#0D9488", // Teal 600
+  "Warm Home Discount top-up": "#5A8FB8", // Blue-grey
+  "State Pension income tax protection": "#2DD4BF", // Teal 400
+  "Employer NI relief for under-25s": "#4A7BA7", // Steel blue
+  "Plan 2 student loan threshold unfrozen": "#99F6E4", // Teal 200
 };
 
 // Policy colours by API key (lifecycle calculator and personal impact).
