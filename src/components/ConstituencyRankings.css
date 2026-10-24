@@ -1,0 +1,174 @@
+/* Constituency rankings: a full-width card under the map and the scatter.
+   The card itself comes from .charts-grid > div. */
+
+.constituency-rankings-section {
+  margin-top: 20px;
+}
+
+/* The header is the shared card header (.chart-header in globals.css). */
+.constituency-rankings .chart-description {
+  max-width: 720px;
+}
+
+.rankings-mock-badge {
+  display: inline-block;
+  margin-right: var(--pe-space-sm);
+  padding: 2px 8px;
+  border-radius: var(--pe-radius-sm);
+  background: #b91c1c;
+  color: var(--pe-surface);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.rankings-controls {
+  display: flex;
+  margin-top: var(--pe-space-md);
+}
+
+.rankings-tables {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pe-space-lg);
+  margin-top: var(--pe-space-md);
+}
+
+.ranking-table-wrapper {
+  min-width: 0;
+}
+
+.ranking-table-wrapper h4 {
+  margin: 0 0 var(--pe-space-xs) 0;
+  color: var(--pe-gray-700);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+}
+
+.ranking-table caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--pe-text-muted);
+  font-size: var(--fs-small);
+  padding-bottom: 6px;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 7px 8px;
+  text-align: left;
+  white-space: nowrap;
+  border: none;
+}
+
+/* The only rules: under the header, and faint between rows */
+.ranking-table thead {
+  border-bottom: 1px solid var(--card-border);
+}
+
+.ranking-table tbody tr + tr {
+  border-top: 1px solid var(--pe-border-light);
+}
+
+.ranking-table thead th {
+  color: var(--pe-gray-600);
+  font-weight: 600;
+}
+
+.ranking-table tbody th {
+  font-weight: 500;
+  white-space: normal;
+}
+
+.ranking-table td:first-child {
+  color: var(--pe-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-table .number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-table .ranked {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.ranking-table .region-inline {
+  display: none;
+}
+
+.ranking-approximate {
+  color: var(--pe-text-muted);
+  cursor: help;
+}
+
+.ranking-no-figure {
+  color: var(--pe-text-muted);
+  font-weight: 400;
+}
+
+/* Before results are published: the header, and grey bars for rows */
+.ranking-placeholder-row td {
+  padding: 9px 8px;
+}
+
+.ranking-placeholder-bar {
+  display: block;
+  height: 10px;
+  border-radius: var(--pe-radius-sm);
+  background: var(--pe-gray-100);
+}
+
+.constituency-rankings .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ranking-tie-note,
+.rankings-note {
+  margin: var(--pe-space-sm) 0 0 0;
+  color: var(--pe-text-secondary);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .rankings-tables {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .ranking-table th,
+  .ranking-table td {
+    padding: 6px 4px;
+  }
+
+  .ranking-table .col-region {
+    display: none;
+  }
+
+  .ranking-table .region-inline {
+    display: block;
+    color: var(--pe-text-muted);
+    font-size: var(--fs-micro);
+    font-weight: 400;
+  }
+}

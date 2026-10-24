@@ -2,11 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import OutcomeToggle from "./OutcomeToggle";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import {
-  useAreaRouting,
-  useConstituencyBoundaries,
-  useGeographyData,
-} from "../hooks/useGeographyData";
+import { useConstituencyView } from "../hooks/useConstituencyView";
 import { CHART_LOGO } from "../utils/chartLogo";
 import {
   buildMapSvg,
@@ -33,7 +29,7 @@ import {
   CATEGORY_COLOURS,
   DIRECTION_TEXT_COLOURS,
 } from "../utils/geography/palette";
-import { hasReform, rowsFor } from "../utils/geography/rows";
+import { rowsFor } from "../utils/geography/rows";
 import {
   describeSeat,
   seatCode,
@@ -45,12 +41,10 @@ import {
 import {
   choiceLabel,
   choiceMeasureNames,
-  chooseReform,
 } from "../utils/geography/selection";
 import {
   REGION_VIEW_ID,
   areaViewsNotAvailable,
-  viewState,
 } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
@@ -264,10 +258,6 @@ export default function ConstituencyMap({
   // to them.
   showRegionLink = true,
 }) {
-  const constituency = useGeographyData("constituency");
-  const regional = useGeographyData("regional");
-  const boundaries = useConstituencyBoundaries();
-  const routing = useAreaRouting();
   const [outcome, setOutcome] = useState("relative_change");
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -278,46 +268,20 @@ export default function ConstituencyMap({
   const selectedRef = useRef(null);
   const statesRef = useRef(null);
 
-  const features = boundaries.features;
-  const reforms = [
-    ...(constituency.table?.reforms ?? []),
-    ...(regional.table?.reforms ?? []),
-  ];
-  const choice = chooseReform({
-    selectedIds: selectedPolicies,
-    policyIds: policies.map((policy) => policy.id),
-    reforms,
-  });
+  // The rankings under the map read the same state (useConstituencyView).
+  const {
+    view,
+    choice,
+    table: constituencyTable,
+    regionalTable,
+    features,
+    boundariesReady,
+    routing,
+    regionalHasChoice,
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
-  let view = viewState({
-    data: constituency,
-    choice,
-    year: selectedYear,
-    outcome,
-    place: "by constituency",
-    routing,
-  });
-  // Whether the region view has this measure, so a notice can point to it.
-  const regionalHasChoice =
-    Boolean(choice.reform) && hasReform(regional.table, choice.reform);
-  if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
-    view = {
-      ...view,
-      reason: "Results for this measure are published by region only.",
-    };
-  }
-  if (view.kind === "rows" && boundaries.status !== "ready") {
-    view =
-      boundaries.status === "loading"
-        ? { kind: "loading" }
-        : {
-            kind: "notice",
-            reason: "The constituency boundaries could not be loaded.",
-            detail: null,
-          };
-  }
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
   const yearLabel = fiscalYearLabel(selectedYear);
@@ -325,13 +289,13 @@ export default function ConstituencyMap({
   const states = useMemo(
     () =>
       reform && features
-        ? seatStates(features, constituency.table, {
+        ? seatStates(features, constituencyTable, {
             reform,
             year: selectedYear,
             outcome,
           })
         : null,
-    [features, constituency.table, reform, selectedYear, outcome],
+    [features, constituencyTable, reform, selectedYear, outcome],
   );
 
   const featuresByCode = useMemo(
@@ -536,7 +500,7 @@ export default function ConstituencyMap({
       ? describeSeat({
           feature: selectedFeature,
           state: states.get(selectedCode),
-          regional: regional.table,
+          regional: regionalTable,
           reform,
           year: selectedYear,
           outcome,
@@ -571,7 +535,7 @@ export default function ConstituencyMap({
   // The CSV holds the published strings for every constituency, as the
   // region export does: withheld figures stay blank.
   const handleExportCsv = () => {
-    const text = constituencyCsvText(constituency.table, {
+    const text = constituencyCsvText(constituencyTable, {
       reform,
       year: selectedYear,
       yearLabel,
@@ -697,7 +661,7 @@ export default function ConstituencyMap({
         )}
 
         {view.kind === "notice" && (
-          <MapTemplate features={boundaries.status === "ready" ? features : null}>
+          <MapTemplate features={boundariesReady ? features : null}>
             <UnavailableNotice reason={view.reason}>
               {regionalHasChoice && showRegionLink && (
                 <p>
