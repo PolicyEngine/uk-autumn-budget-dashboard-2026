@@ -82,7 +82,7 @@ describe("the flat tables the page reads", () => {
     for (const band of [...AGE_BANDS.map((b) => b.key), "all"]) {
       expect(bands.has(band), band).toBe(true);
     }
-    // The Young people tab looks the whole selection up by this id.
+    // The Young people sub-tab looks the whole selection up by this id.
     expect(rows.some((r) => r.reform_id === COMBINED_REFORM_ID)).toBe(true);
     for (const r of rows) {
       const total = r.pct_better_off + r.pct_worse_off + r.pct_unchanged;

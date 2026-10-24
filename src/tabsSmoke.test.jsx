@@ -1,7 +1,8 @@
 /**
- * Smoke test of the five tabs on the real data.
+ * Smoke test of the four tabs, and Population impact's Young people
+ * sub-tab, on the real data.
  *
- * Each tab is opened by its address (?tab=), as a shared link opens it, and
+ * Each tab is opened by its address (?tab=, ?sub=), as a shared link opens it, and
  * rendered with every data file served from public/ as the deployed page
  * serves it, and the lifecycle API answered with the real route's output
  * for the calculator's default household
@@ -56,7 +57,8 @@ const LOADED = {
   // The wizard opens at its first step; the API call it makes on load is
   // checked below.
   personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
-  // The cards render once age_impact.csv is read.
+  // Population impact's Young people sub-tab (?sub=young): the cards
+  // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
   // The Incomes heading shows once the outlook is read.
   living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
@@ -125,17 +127,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("each of the five tabs, on the real data", () => {
+// Each tab by its address, and Population impact's Young people sub-tab:
+// [name, LOADED key, address, the panel's label]
+const CASES = [
+  ...VIEWS.map((v) => [v.label, v.value, v.value === "dashboard" ? "/" : `/?tab=${v.value}`, v.label]),
+  ["Population impact: Young people", "young", "/?sub=young", "Young people"],
+];
+
+describe("each of the four tabs and the Young people sub-tab, on the real data", () => {
   it("covers every tab", () => {
-    expect(VIEWS.map((v) => v.value).sort()).toEqual(Object.keys(LOADED).sort());
+    expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
 
-  it.each(VIEWS.map((v) => [v.label, v.value]))(
+  it.each(CASES)(
     "%s renders its content with no error",
-    async (label, value) => {
-      window.history.replaceState({}, "", value === "dashboard" ? "/" : `/?tab=${value}`);
+    async (_name, value, address, label) => {
+      window.history.replaceState({}, "", address);
       render(<App />);
-      const panel = screen.getByRole("tabpanel", { name: label });
+      const panel = await screen.findByRole("tabpanel", { name: label });
       expect(await LOADED[value](panel, { timeout: 5000 })).not.toHaveLength(0);
       // Let every request the tab started settle.
       await new Promise((resolve) => setTimeout(resolve, 50));
