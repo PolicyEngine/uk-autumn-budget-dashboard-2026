@@ -48,7 +48,7 @@ export const POLICIES = [
     starts: "Winter 2026-27",
     type: "Benefit",
     details:
-      "Paid to households in Great Britain on Universal Credit or Pension Credit. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate. Its only year, 2026-27, comes before the charts' first year.",
+      "Paid to households in Great Britain on Universal Credit or Pension Credit. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. The model has no high-cost-to-heat test or legacy benefits, so eligibility is approximate.",
     source: {
       label: "Warm Home Discount",
       href: "https://www.gov.uk/the-warm-home-discount-scheme",

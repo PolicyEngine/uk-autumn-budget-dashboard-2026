@@ -185,7 +185,9 @@ def _create_warm_home_discount_top_up() -> Reform:
             "Candidate measure. The Warm Home Discount rises from £150 to "
             "£250 for winter 2026-27 only: £100 more to each household in "
             "Great Britain receiving Universal Credit or Pension Credit. "
-            "Eligibility is approximate, with no high-cost-to-heat test."
+            "Receipt follows DESNZ's rates: 85% of Pension Credit households "
+            "and 70% of other eligible households. Eligibility is "
+            "approximate, with no high-cost-to-heat test."
         ),
         simulation_modifier=budget_measures.warm_home_discount_top_up,
     )

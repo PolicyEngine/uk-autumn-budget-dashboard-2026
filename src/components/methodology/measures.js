@@ -42,7 +42,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Warm Home Discount top-up",
-    how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. There is no high-cost-to-heat test, and legacy benefits are not counted.",
+    how: "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit. Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616). There is no high-cost-to-heat test, and legacy benefits are not counted.",
     from: 2026,
   },
   {

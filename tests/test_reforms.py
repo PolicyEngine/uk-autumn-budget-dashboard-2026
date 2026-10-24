@@ -318,6 +318,145 @@ def test_northern_ireland_is_outside_the_warm_home_discount():
     assert reformed == pytest.approx(baseline, abs=PENNY)
 
 
+def test_the_warm_home_discount_top_up_is_for_winter_2026_27_only():
+    year = 2027
+    sit = situation(
+        {"pensioner": {"age": {year: 75}, "state_pension": {year: 8_000}}},
+        {"country": {year: "ENGLAND"}},
+    )
+    pension_credit, _ = change(
+        "warm_home_discount_top_up", sit, "pension_credit", year
+    )
+    assert pension_credit > 0
+    baseline, reformed = change(
+        "warm_home_discount_top_up", sit, "household_net_income", year
+    )
+    assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
+def _universal_credit_data(n):
+    """n single adults on Universal Credit with no earnings, in England and
+    Wales, as policyengine-uk #2616's receipt test builds them."""
+    import numpy as np
+    import pandas as pd
+    from policyengine_uk.data import UKMultiYearDataset, UKSingleYearDataset
+
+    ids = np.arange(n)
+    rng = np.random.default_rng(0)
+    tables = dict(
+        person=pd.DataFrame(
+            {
+                "person_id": ids * 10 + 1,
+                "person_benunit_id": ids,
+                "person_household_id": ids,
+                "age": np.full(n, 35),
+                "employment_income": np.zeros(n),
+            }
+        ),
+        benunit=pd.DataFrame(
+            {
+                "benunit_id": ids,
+                "would_claim_uc": np.ones(n, dtype=bool),
+                "universal_credit_pre_benefit_cap": np.full(n, 5_000.0),
+                "uc_benefit_cap_reduction": np.zeros(n),
+            }
+        ),
+        household=pd.DataFrame(
+            {
+                "household_id": ids,
+                "household_weight": 3_500 * rng.lognormal(0, 0.5, n),
+                "region": np.array(["LONDON", "NORTH_EAST", "WALES"])[ids % 3],
+            }
+        ),
+    )
+    return lambda: UKMultiYearDataset(
+        datasets=[
+            UKSingleYearDataset(
+                **{name: table.copy() for name, table in tables.items()},
+                fiscal_year=2026,
+            )
+        ]
+    )
+
+
+def test_warm_home_discount_receipt_follows_desnz_rates_on_data():
+    """In data, 70% of eligible households other than Pension Credit ones
+    receive the £100 (DESNZ's rate, pe-uk #2616's draw by household id): the
+    total is the rate times the eligible households times £100."""
+    import numpy as np
+    from policyengine_uk import Microsimulation
+    from policyengine_uk.utils.scenario import Scenario
+    from policyengine_uk.utils.stochastic import splitmix64_uniform
+
+    year, n = 2026, 4_000
+    data = _universal_credit_data(n)
+    baseline = Microsimulation(dataset=data())
+    reformed = Microsimulation(
+        dataset=data(),
+        scenario=Scenario(
+            simulation_modifier=budget_measures.warm_home_discount_top_up
+        ),
+    )
+    variable = "cost_of_living_support_payment"
+    paid = np.asarray(reformed.calculate(variable, year)) - np.asarray(
+        baseline.calculate(variable, year)
+    )
+    assert set(np.unique(paid)) == {0, 100}
+    draws = splitmix64_uniform(np.arange(n), salt=2).astype(np.float32)
+    assert np.array_equal(paid > 0, draws < 0.7)
+    weights = np.asarray(baseline.calculate("household_weight", year))
+    expected = 0.7 * weights.sum() * 100
+    assert (paid * weights).sum() == pytest.approx(expected, rel=0.03)
+
+
+def test_pension_credit_households_draw_against_85_percent():
+    """A household drawing 0.8 receives the top-up if it is on Pension
+    Credit (0.8 < 85%) and not otherwise (0.8 >= 70%)."""
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    from uk_budget_data import measure_templates
+
+    household_ids = np.arange(200)
+    draws = measure_templates.splitmix64_uniform(household_ids, salt=2).astype(
+        np.float32
+    )
+    on_pension_credit = np.arange(200) % 2 == 0
+
+    def household(name, period):
+        assert name == "household_id"
+        return household_ids
+
+    household.simulation = SimpleNamespace(built_from_dataset=True)
+    household.count = 200
+    household.members = SimpleNamespace(
+        benunit=lambda name, period: np.where(on_pension_credit, 100.0, 0)
+    )
+    household.any = lambda values: values
+    receives = measure_templates._receives(household, 2026, 0.85, 0.7)
+    assert np.array_equal(
+        receives, draws < np.where(on_pension_credit, 0.85, 0.7)
+    )
+    # A situation (not data) draws 0, so its household receives it
+    household.simulation = SimpleNamespace(built_from_dataset=False)
+    assert measure_templates._receives(household, 2026, 0.85, 0.7).all()
+
+
+def test_receipt_rates_come_in_pairs():
+    sim = Simulation(situation=situation({"p": {"age": {2026: 40}}}))
+    with pytest.raises(ValueError, match="both receipt rates"):
+        budget_measures.apply_benefit_receipt_payment(
+            sim,
+            amount=100,
+            eligible_benefits=["universal_credit"],
+            geography="GB",
+            channel="cost_of_living_support_payment",
+            year=2026,
+            pension_credit_receipt_rate=0.85,
+        )
+
+
 # --- 4. Electricity VAT -----------------------------------------------------
 
 
