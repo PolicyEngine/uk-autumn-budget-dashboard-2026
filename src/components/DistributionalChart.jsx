@@ -33,7 +33,7 @@ import {
   legendLabelStyle,
   axisWidth,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 
 // Order for distributional chart: good for households first, then bad
@@ -128,6 +128,25 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     });
   }, [rawData, selectedPolicies, selectedYear]);
 
+  // The measures with a non-zero effect in any shown year, not just this
+  // one: the legend (and so the plot's height) stays the same from year to
+  // year, so a year change or Play tweens the bars instead of rescaling
+  const activePolicies = useMemo(() => {
+    const ids = new Set(
+      (rawData ?? [])
+        .filter(
+          (row) =>
+            isDisplayYear(row.year) &&
+            selectedPolicies.includes(row.reform_id) &&
+            Math.abs(parseFloat(row.value)) > 0.01,
+        )
+        .map((row) => row.reform_id),
+    );
+    return ALL_POLICY_NAMES.filter((name) =>
+      ids.has(POLICIES.find((policy) => policy.name === name)?.id),
+    );
+  }, [rawData, selectedPolicies]);
+
   // Calculate y-axis domain across ALL years, symmetrical around zero
   const calculateYAxisDomain = () => {
     const allYears = DISPLAY_YEARS;
@@ -206,12 +225,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     );
   }
 
-  // Check which policies have non-zero values
-  const hasNonZeroValues = (policyName) => {
-    return data.some((d) => Math.abs(d[policyName] || 0) > 0.0001);
-  };
-
-  const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DISPLAY_YEARS } from "../utils/displayYears";
 import {
   Bar,
   BarChart,
@@ -178,8 +179,18 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     return niceDomain(maxAbs);
   }, [rows, policies, selectedPolicies]);
 
-  const activeNames = ALL_POLICY_NAMES.filter((name) =>
-    data.some((point) => Math.abs(point[name] ?? 0) > 0.01),
+  // Measures with an effect in any shown year, so the legend (and the
+  // plot's height) holds still when the year changes or Play runs
+  const activeNames = useMemo(
+    () =>
+      ALL_POLICY_NAMES.filter((name) =>
+        DISPLAY_YEARS.some((year) =>
+          meanChangeByBand(rows, policies, selectedPolicies, year).some(
+            (point) => Math.abs(point[name] ?? 0) > 0.01,
+          ),
+        ),
+      ),
+    [rows, policies, selectedPolicies],
   );
   const youngLabel = AGE_BANDS.find((band) => band.key === YOUNG_BAND).label;
   const suppressed = data.filter((point) => point.suppressed);
