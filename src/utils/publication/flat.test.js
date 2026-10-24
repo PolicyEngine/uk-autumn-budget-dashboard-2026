@@ -14,6 +14,7 @@ const csv = "level,area_code,reform,year,value\nregion,E12000001,alpha,2032,12\n
 async function flatSnapshot({ aliases = {} } = {}) {
   const manifest = fixtureJson("manifest.json");
   manifest.flat_files = { [file]: await sha256Hex(csv) };
+  manifest.flat_aliases = aliases;
   const text = JSON.stringify(manifest);
   const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files, aliases };
   const overrides = { "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
@@ -110,6 +111,8 @@ describe("aliases in the release index", () => {
     ["a key the manifest does not list", { package_alias: "combined--alpha+gamma" }],
     ["an alias that is itself a manifest key", { alpha: "combined--alpha+beta" }],
     ["no alias map", null],
+    // Round-2 review: relabelling the package as a measure kept every digest
+    ["aliases the manifest does not carry", { package_alias: "alpha" }],
   ])("refuses %s", async (_, aliases) => {
     const { manifest, index, overrides } = await flatSnapshot();
     index.aliases = aliases ?? undefined;

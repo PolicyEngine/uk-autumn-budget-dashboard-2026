@@ -214,6 +214,9 @@ class Manifest(_Strict):
     # A flat table may only be read through the separately verified release
     # index. These digests are part of this exact publication snapshot.
     flat_files: dict[str, str] = Field(default_factory=dict)
+    # The ids the bound area tables use for manifest keys (a package alias
+    # for its combined run), as the area run recorded them
+    flat_aliases: dict[str, str] = Field(default_factory=dict)
     revision: int = 0
     updated_at: Optional[str] = None
     basis: Optional[dict] = None

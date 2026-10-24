@@ -74,6 +74,9 @@ export function checkReleaseIndex(root) {
     if (!isMap(index.aliases) || Object.entries(index.aliases).some(([alias, key]) => keys.has(alias) || !keys.has(key))) {
       problems.push("release index: aliases must name manifest keys, and only them");
     }
+    if (!sameMap(index.aliases ?? {}, manifest.flat_aliases ?? {})) {
+      problems.push("release index: aliases differ from the manifest's");
+    }
     const files = index.files;
     if (!isMap(files) || !Object.keys(files).length) return [...problems, "release index: no flat CSV digests"];
     if (!sameMap(files, manifest.flat_files)) problems.push("release index: file map differs from manifest");

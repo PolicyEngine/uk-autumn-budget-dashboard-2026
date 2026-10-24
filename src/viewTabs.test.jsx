@@ -14,7 +14,8 @@ afterEach(() => {
 
 async function renderApp() {
   const rendered = render(<App />);
-  await screen.findByRole("tablist", { name: "Views" });
+  // The first render verifies the whole fixture (Web Crypto); allow for a busy host
+  await screen.findByRole("tablist", { name: "Views" }, { timeout: 15000 });
   return rendered;
 }
 

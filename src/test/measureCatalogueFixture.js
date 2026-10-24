@@ -77,6 +77,7 @@ export async function bindFlatFiles(manifest, files, aliases = {}) {
   const { sha256Hex } = await import("../utils/publication/digest");
   const { RELEASE_INDEX_FILE, RELEASE_INDEX_SCHEMA } = await import("../utils/publication/flat");
   manifest.revision ??= 1;
+  manifest.flat_aliases = aliases;
   manifest.flat_files = Object.fromEntries(
     await Promise.all(Object.entries(files).map(async ([name, text]) => [name, await sha256Hex(text)])),
   );

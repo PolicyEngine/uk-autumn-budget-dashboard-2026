@@ -22,8 +22,9 @@ import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import { DISPLAY_YEARS } from "./utils/displayYears";
-import { MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
+import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, budgetChartData } from "./utils/loadDashboard";
+import { loadManifest } from "./utils/publication/load";
 import UnavailableNotice from "./components/publication/UnavailableNotice";
 import { PROVISIONAL_LABEL } from "./utils/publication/manifest";
 
@@ -75,7 +76,17 @@ function dropSubTab() {
   );
 }
 
-function Dashboard({ published }) {
+// With no Budget results to show: the page's shell and the views that need
+// none (Living standards, Methodology) still render
+const NOTHING_PUBLISHED = Object.freeze({
+  status: "no-manifest", catalogue: buildMeasureCatalogue(),
+  budgetary: [], distributional: [], winnersLosers: [], metrics: [],
+});
+
+// The views whose figures come from the publication
+const BUDGET_VIEWS = new Set(["dashboard", "personal", "young"]);
+
+function Dashboard({ published, unavailable = null, updated = false }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
   const { policyColors: POLICY_COLORS } = catalogue;
@@ -261,6 +272,11 @@ function Dashboard({ published }) {
           policies in the bar above.
         </p>
 
+        {updated && (
+          <p className="publication-updated" role="status">
+            Newer results were published while this page was open; it now shows them.
+          </p>
+        )}
         {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
           <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
         )}
@@ -298,7 +314,12 @@ function Dashboard({ published }) {
                 : `Showing ${selectedPolicies.length} of ${POLICIES.length} policies`}
             </p>
           )}
-        {activeTab === "living" ? (
+        {unavailable && BUDGET_VIEWS.has(activeTab) ? (
+          <UnavailableNotice reason={unavailable.reason}>
+            {unavailable.detail && <p>{unavailable.detail}</p>}
+            <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+          </UnavailableNotice>
+        ) : activeTab === "living" ? (
           <LivingStandardsTab />
         ) : activeTab === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
@@ -491,20 +512,77 @@ function Dashboard({ published }) {
   );
 }
 
+// How often an open page checks for a newer publication, besides when it
+// regains focus
+const RECHECK_MS = 5 * 60 * 1000;
+
 function App() {
   const [published, setPublished] = useState(null);
   const [error, setError] = useState(null);
+  const [updated, setUpdated] = useState(false);
+  const current = useRef(null);
   useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const controller = new AbortController();
-    loadDashboard(process.env.NEXT_PUBLIC_BASE_PATH || "", { signal: controller.signal })
-      .then((result) => { if (!controller.signal.aborted) setPublished(result); })
+    const show = (result) => {
+      current.current = result;
+      setPublished(result);
+      setError(null);
+    };
+    loadDashboard(base, { signal: controller.signal })
+      .then((result) => { if (!controller.signal.aborted) show(result); })
       .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
-    return () => controller.abort();
+
+    // An open page follows the publication: a newer manifest replaces the
+    // figures with its own verified ones; a withdrawn or invalid one takes
+    // them away. A network failure keeps the snapshot the page verified.
+    let checking = false;
+    const recheck = async () => {
+      if (checking || controller.signal.aborted || current.current === null) return;
+      checking = true;
+      try {
+        const live = await loadManifest(base, { signal: controller.signal });
+        const shown = current.current.catalogue?.manifest?.snapshotSha256 ?? null;
+        if ((live?.snapshotSha256 ?? null) === shown) return;
+        const next = await loadDashboard(base, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        show(next);
+        setUpdated(true);
+      } catch (failure) {
+        if (controller.signal.aborted || failure?.name === "AbortError") return;
+        if (failure instanceof TypeError || /HTTP 5\d\d/.test(failure?.message ?? "")) return;
+        current.current = null;
+        setPublished(null);
+        setError(failure.message);
+      } finally {
+        checking = false;
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") recheck(); };
+    const timer = setInterval(recheck, RECHECK_MS);
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
-  if (error) return <UnavailableNotice reason="Published results are unavailable"><p>{error}</p></UnavailableNotice>;
-  if (published?.status === "no-manifest") return <UnavailableNotice reason="No Budget results are published yet" />;
-  if (!published) return <p role="status">Loading published measures…</p>;
-  return <MeasureCatalogueProvider catalogue={published.catalogue}><Dashboard published={published} /></MeasureCatalogueProvider>;
+  if (!published && !error) return <p role="status">Loading published measures…</p>;
+  const unavailable = error
+    ? { reason: "Published results are unavailable", detail: error }
+    : published.status === "no-manifest"
+      ? { reason: "No Budget results are published yet" }
+      : null;
+  const shown = unavailable ? NOTHING_PUBLISHED : published;
+  // One snapshot per mount: a newer one starts the views afresh
+  const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
+  return (
+    <MeasureCatalogueProvider catalogue={shown.catalogue}>
+      <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+    </MeasureCatalogueProvider>
+  );
 }
 
 export default App;
