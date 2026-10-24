@@ -41,7 +41,7 @@ describe("the OBR comparison table", () => {
       }),
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Show table" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Table" }));
 
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
@@ -53,6 +53,31 @@ describe("the OBR comparison table", () => {
     const column2030 = 1 + 2 * DISPLAY_YEARS.indexOf(2030);
     expect(cells[column2030]).toHaveTextContent("−£3.4bn");
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
+  });
+});
+
+describe("the OBR comparison's chart and table switch", () => {
+  it("shows the chart by default and swaps it for the table", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
+      }),
+    );
+    const { container } = render(
+      <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
+    );
+    const chart = await screen.findByRole("button", { name: "Chart" });
+    const table = screen.getByRole("button", { name: "Table" });
+    expect(chart).toHaveAttribute("aria-pressed", "true");
+    expect(container.querySelector(".obr-dumbbell")).not.toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+
+    fireEvent.click(table);
+    expect(table).toHaveAttribute("aria-pressed", "true");
+    expect(container.querySelector(".obr-dumbbell")).toBeNull();
+    expect(screen.getByRole("table")).toBeInTheDocument();
   });
 });
 
@@ -113,7 +138,7 @@ describe("the OBR comparison at 2031-32", () => {
       "£0",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Show table" }));
+    fireEvent.click(screen.getByRole("button", { name: "Table" }));
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
     const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);

@@ -50,14 +50,19 @@ const LEGEND_ITEMS = [
 /**
  * The change in an example household's net income from the selected
  * policies, across its income grid. The card's own chooser picks the
- * household; by default it shows the second, so the pair starts on two.
+ * household; App passes one shared choice so both cards show the same one.
  */
 function EmploymentIncomeDiffChart({
   selectedPolicies,
   selectedYear = 2029,
   defaultHousehold = EXAMPLE_HOUSEHOLDS[1].id,
+  household: controlledHousehold,
+  onHouseholdChange,
 }) {
-  const [householdId, setHouseholdId] = useState(defaultHousehold);
+  const [ownHousehold, setOwnHousehold] = useState(defaultHousehold);
+  // A parent can control the choice so the two household cards stay in step
+  const householdId = controlledHousehold ?? ownHousehold;
+  const setHouseholdId = onHouseholdChange ?? setOwnHousehold;
   const household = exampleHousehold(householdId);
   const { loading, data: curve } = useIncomeCurve({
     household: household.id,

@@ -187,6 +187,10 @@ function App() {
   const [selectedYear, setSelectedYear] = useState(2030);
   // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
   const [distributionalYear, setDistributionalYear] = useState(2029);
+  // One example household for both household cards, so they always match
+  const [exampleHouseholdId, setExampleHouseholdId] = useState(
+    EXAMPLE_HOUSEHOLDS[0].id,
+  );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -564,7 +568,9 @@ function App() {
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
           The fiscal and distributional effects of the UK Autumn Budget 2026
-          measures. Choose policies and a year in the bar above.
+          measures.{" "}
+          <br />
+          Choose policies and a year in the bar above.
         </p>
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
@@ -722,7 +728,7 @@ function App() {
                         household chooser, starting on different ones. */}
                     <SectionHeading
                       title="Example households"
-                      subtitle="Net income of five example households across their incomes. Choose a household in each chart."
+                      subtitle="Net income of five example households across their incomes. Choose a household in either chart."
                     />
                     <section
                       id="household"
@@ -731,12 +737,14 @@ function App() {
                       <EmploymentIncomeChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
-                        defaultHousehold={EXAMPLE_HOUSEHOLDS[0].id}
+                        household={exampleHouseholdId}
+                        onHouseholdChange={setExampleHouseholdId}
                       />
                       <EmploymentIncomeDiffChart
                         selectedPolicies={selectedPolicies}
                         selectedYear={distributionalYear}
-                        defaultHousehold={EXAMPLE_HOUSEHOLDS[1].id}
+                        household={exampleHouseholdId}
+                        onHouseholdChange={setExampleHouseholdId}
                       />
                     </section>
 

@@ -7,7 +7,9 @@ import OBRDumbbellChart from "./OBRDumbbellChart";
 function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   const [comparisonData, setComparisonData] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
-  const [showTable, setShowTable] = useState(false);
+  // The comparison shows as a chart or as a table, never both
+  const [view, setView] = useState("chart");
+  const showTable = view === "table";
 
   useEffect(() => {
     // Fetch both OBR comparison data and PolicyEngine budgetary impact data
@@ -137,7 +139,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
   return (
     <div className="obr-comparison-section">
-      {/* Intro on the left, the OBR basis pill on the right, top-aligned */}
+      {/* Intro across the full width; the controls sit below it */}
       <div className="obr-intro-row">
         <p className="comparison-description">
           PolicyEngine's static estimates, which leave out behavioural
@@ -152,6 +154,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
           , in £ billion a year. Positive values raise revenue or reduce
           spending; negative values do the opposite.
         </p>
+      </div>
+
+      <div className="obr-controls">
         {hasBothTypes && (
           <PillSelect
             variant="light"
@@ -165,25 +170,57 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
             ]}
           />
         )}
+        <div className="obr-view-switch" role="group" aria-label="Show as">
+          <button
+            type="button"
+            className="obr-view-option"
+            aria-pressed={!showTable}
+            aria-label="Chart"
+            title="Chart"
+            onClick={() => setView("chart")}
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path
+                d="M2 14h12M4 11V7M8 11V3M12 11V6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>Chart</span>
+          </button>
+          <button
+            type="button"
+            className="obr-view-option"
+            aria-pressed={showTable}
+            aria-label="Table"
+            title="Table"
+            onClick={() => setView("table")}
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path
+                d="M2.5 3h11v10h-11zM2.5 6.5h11M2.5 9.75h11M6.5 3v10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Table</span>
+          </button>
+        </div>
       </div>
 
-      <OBRDumbbellChart
-        policies={policies}
-        year={selectedYear}
-        showBehavioural={showBehavioural}
-      />
+      {!showTable && (
+        <OBRDumbbellChart
+          policies={policies}
+          year={selectedYear}
+          showBehavioural={showBehavioural}
+        />
+      )}
 
-      <button
-        type="button"
-        className="obr-table-toggle light-pill-button"
-        aria-expanded={showTable}
-        aria-controls="obr-comparison-table"
-        onClick={() => setShowTable(!showTable)}
-      >
-        {showTable ? "Hide table" : "Show table"}
-      </button>
-
-      {/* The table and its key sit behind the toggle, collapsed by default */}
+      {/* The table and its key replace the chart when "Table" is chosen */}
       <div
         id="obr-comparison-table"
         className="comparison-table-wrapper"
