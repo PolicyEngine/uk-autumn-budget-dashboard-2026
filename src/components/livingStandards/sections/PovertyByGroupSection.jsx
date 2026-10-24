@@ -170,14 +170,7 @@ export default function PovertyByGroupSection({ data }) {
               </span>
             )}
           </span>
-          <span className="dot-legend">
-            <span>
-              <i className="from" /> {fyDash(from)}
-            </span>
-            <span>
-              <i className="to" /> {fyDash(to)}
-            </span>
-          </span>
+          <span className="dot-values" />
         </div>
         {rows.map((r) => {
           const both = r.a != null && r.z != null;
@@ -224,6 +217,17 @@ export default function PovertyByGroupSection({ data }) {
           <span className="dot-values" />
         </div>
       </div>
+      </div>
+      {/* In the legend row, level with the legend of the card beside it */}
+      <div className="chart-legend">
+        <span className="dot-legend">
+          <span>
+            <i className="from" /> {fyDash(from)}
+          </span>
+          <span>
+            <i className="to" /> {fyDash(to)}
+          </span>
+        </span>
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
