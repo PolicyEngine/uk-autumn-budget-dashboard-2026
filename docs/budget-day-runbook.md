@@ -56,12 +56,12 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   | Where | What it says | Shown today? | Who fixes it |
   |---|---|---|---|
   | `public/combined_reforms/*.html` (five pages) | Four titled "Combined Autumn Budget 2025", and an untitled `revenue.html`, all with last year's figures | **No.** Removed by #26 (15 October), which also tests that no static page names another year's Budget | Done. The briefing export (#22) writes this year's from an approved manifest |
-  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | Last year's results: all four last changed on 8 December 2025 and are byte-identical to `ec29ebd`. (`household_scatter.csv` was withdrawn from every public path by #30, 15 October.) | **Yes**: `main`'s main route (`App.jsx`) fetches them and charts them under the 2026 heading once a policy is selected. For example, `?policies=two_child_limit` shows −£2.95bn for 2026 and −£3.72bn for 2030 (#26 review, 15 October). Served at `uk-autumn-budget-2026.vercel.app`, which deploys `main` | #3 regenerates them. Until it merges, the production URL shows last year's numbers; whether to hide them meanwhile is your call |
+  | `public/data/budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv` | **24 October (branch `ab2026-candidates`):** regenerated on the ten candidate 2026 measures (`reforms.py`), replacing last year's nine; the salary sacrifice cap candidate was dropped later that day (nine measures), and the combined package regenerated without it. `obr_comparison.csv` still holds last year's OBR rows, under last year's ids, so it pairs with nothing: the comparison says it is not available until the OBR publishes on 28 October | Yes, with the candidate banner under the intro | Budget day replaces the candidates with the announced measures |
   | `OBRComparisonTable.jsx` | "November 2025 Economic and Fiscal Outlook", with a link to it | **Yes**, on the Population impact tab, when its OBR comparison panel is opened | #3, which changes the file and stops showing the table |
-  | `LifecycleCalculator.jsx` | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | **Yes**, on the Personal impact tab (it calculates only if `NEXT_PUBLIC_LIFECYCLE_API_URL` is set) | #3 replaces the tab. The file is unused afterwards and can be deleted |
+  | The Personal impact tab's hand-typed calculator | "Household inputs (2025)", "Ages of children in 2025", "2025 £" | No | Deleted in #69: the tab now calls `/api/household-impact` (policyengine.py) |
   | `PersonalImpactForm.jsx` | "Your annual employment income (2025)", "Children (ages in 2025)" | Not on `main`. **Yes once #3 merges** | #3. Its `build_situation` grows income and ages from a 2025 base, so this is a choice of base year, not only a label |
   | `policyConfig.js` in #3, and the flat `public/data/*.csv` | A policy named "Autumn Budget 2025 (combined)" (id `autumn_budget_2025_combined`), with last year's rows | In #3, only through an old shared URL | #3 keeps it for old links: **your call** whether a 2026 page should still answer them |
-  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imports them, on `main`, in #3 or in the drills | Left alone. Delete them, or fix them before wiring them back |
+  | `Results.jsx`, `HouseholdImpactChart.jsx` | "2025 to 2030"; a hardcoded "in 2025" figure | No: nothing imported them, on `main`, in #3 or in the drills | Deleted in #69 (the UI redesign) |
   | `scripts/generate_combined_charts.py` | Chart titles "Combined Autumn Budget 2025" | Not a page | #22 |
 
   The page title and heading already say "UK Autumn Budget 2026".
@@ -105,7 +105,8 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | £40,000 earner, children 19, 22, 24 and 13 | 504 after 300 s | 187.6 s, then 195.8 s | 176.7 s, then 171.7 s | 182.6 s, then 167.2 s |
 
     The last household has two children who turn 25 within 2025-30, so it is built three times over, and it is the slowest answer found. It failed on `00004-fur` (which had #42); it answered on `00016-tes`, `00018-xuv` and `00020-pal`, after #46. The timings since 16 October are sequential `curl` requests to the live URL (`runs/household-api-<revision>.log` in W5's folder); each answer's `Server-Timing` header gives the calculation's own time, which was within 0.3 s of the total.
-  - **One calculation at a time per instance.** Since #45 the calculation runs off the event loop, so `/api/version` answers meanwhile. But calculations still run one at a time per instance, in arrival order (`CALCULATIONS` in `api.py`): several at once share the CPU and all finish later. The deploy doesn't set Cloud Run's `--concurrency`, so its default of 80 applies. A second visitor to the same instance waits for the first, and a visitor whose wait plus calculation passes 300 s gets a 504. How many visitors an instance takes, and the cost of more instances, is Max's call, through the coordinator.
+  - **Concurrent household calculations share the workers.** `/api/household-impact` admits up to `HOUSEHOLD_CONCURRENT_REQUESTS` requests per instance at once (default 4; 1 when `HOUSEHOLD_WORKERS` is 1), and their runs share the instance's `HOUSEHOLD_WORKERS` processes run by run (`FairSlots` in `personal_impact.py`; `/api/personal-impact` takes the same slots), so a second visitor's headline starts as soon as any run finishes instead of after the first visitor's whole calculation, and memory stays bounded by the workers. Measured on 24 October on a laptop with 2 workers, three different full requests at once: before, 23, 47 and 73 s (each queued behind the last); after, 54, 58 and 59 s. Three visitors asking in the page's two stages: headlines in 4–11 s either way, the last breakdown at 68 s before and 53 s after. The page now waits 90 s for a headline and 200 s for a breakdown; the server gives up at 280 s with a 504.
+    **Cloud Run setting needed:** `--concurrency` should match what an instance can serve in time. With `--cpu 2` and `HOUSEHOLD_WORKERS=2`, set `--concurrency 4` (equal to `HOUSEHOLD_CONCURRENT_REQUESTS`), so a fifth visitor goes to another instance rather than queueing; the deploy does not set it today, so Cloud Run's default of 80 applies. Not changed in `cloudbuild.yaml` here: it is a cost decision (more instances), Max's call through the coordinator.
 - [ ] **Rehearsal.** Intake, dashboard and briefing on the deployed routes, including one model upgrade and regeneration. Record the receipt here. Repeat after any material change.
   - **Time the regeneration** (regenerate, stage, reconcile: the fifth row of the table under "How long one adoption takes" below), as that section says, and post the time to the coordinator on GitHub. The coordinator sets the final cut's times from it.
 
@@ -117,7 +118,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
 
-**Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: the salary sacrifice cap declares National Insurance alone, though in the model it also raises some people's income tax.
+**Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: a measure declares the taxes whose rules its code changes, not every tax the model moves.
 
 **Every scored year must be written for an uprated amount** (policyengine-uk #2430). On either side of a measure, give an explicit value for every scored year from the first changed year onwards. State Pension, benefit rates and the LEL otherwise return to the old projected path after a bounded change; the personal allowance and threshold freeze are unaffected. Generation keeps the other measures and refuses a gap with `REFUSED <id>: <path> has no value for <years>; after a bounded change an uprated amount returns to the old path (policyengine-uk #2430). Write every scored year.` The flat pipeline warns instead.
 
@@ -236,7 +237,7 @@ These are monthly amounts. A change to `gov.dwp.universal_credit.elements.disabl
   - #2336 (fixing issue #1941) uprates them by September CPI, and leaves them alone when the full rates change. It has been on policyengine-uk's `main` since 21 October, 20:32Z (coordinator), and policyengine-uk 2.146.5 (on PyPI 22 October) has it.
 - **How much, on uk-data 1.58.1** (W3's aggregate-impact report on #2336, CI run 39506093016):
   - under a "raise the State Pension by 10%" reform, State Pension rises £1.1bn to £1.5bn a year less with the fix over 2025-26 to 2031-32, and £1.26bn to £1.48bn over the dashboard's years;
-  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over the dashboard's years, 2026-27 to 2030-31;
+  - the net cost is £0.76bn to £1.11bn a year lower over 2025-26 to 2031-32, and £0.85bn to £1.06bn over 2026-27 to 2030-31;
   - in the baseline, #2336's own runs put State Pension £353m lower in 2025-26 and £782m lower in 2030-31.
 
   So without the fix, a 10% rise's net cost is overstated by about £0.85bn to £1.06bn a year, and more for a bigger rise. These figures are not re-measured on Microcosm.
@@ -412,7 +413,7 @@ EOF
 | Beer duty to £30 (a calendar-preserved duty) | £0.00 (#3) | −£37.10 |
 | Personal allowance to £20,000 (read on 1 January) | +£1,486.00 | +£1,486.00 |
 
-On 1 January only, the registered `fuel_duty_freeze` showed exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…, simulation_modifier=…)` with the measure's bare-year keys, as the national run does, closes every gap found. #32 did that for `main`'s calculator, checked by `tests/test_household_route_parity.py`, which no longer expects any gap. **Your call**, for #3.
+On 1 January only, the 2025 placeholder `fuel_duty_freeze` showed exactly 1/12 of its national effect for every household and year. Building the household reform through `Scenario(parameter_changes=…, simulation_modifier=…)` with the measure's bare-year keys, as the national run does, closes every gap found. #32 did that for `main`'s calculator, checked by `tests/test_household_route_parity.py`, which no longer expects any gap. **Your call**, for #3.
 
 **#3 keys the pre-Budget fuel duty baseline by lone dates** (`"2026-03-22"`, `"2027-04-01"`, and so on, through `Reform._build_scenario`). On the bundle on `main` on 14 October (policyengine-uk 2.126.12), a lone date moves fuel duty only in the fiscal year that contains it (6 April to 5 April), and only by about one day's share of the change. `"2027-04-01"` falls in 2026-27, so 2027-28 stays at current law, and 2026-27 moves by a sliver: the #23 review measured 2026's rate moving from £0.539527 to £0.539526 a litre.
 
@@ -492,7 +493,7 @@ uv run uk-budget-data publish check
 
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
-- **Supported years.** Years the dataset does not cover (2031 onwards on the current bundle) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
+- **Supported years.** Years the dataset does not cover (from 2033 on 6.10.0, whose projection reaches 2032; every policy year, to 2031-32, is covered) are recorded as unsupported. The page shows them as unavailable once #20's modules are wired in after #3.
 - **What "provisional" needs.** The measure must move in the declared direction. A measure that returns zero, or the wrong sign, is refused.
 - **Household check.** One hand-checked household per measure, through the deployed route: add its fixture to `data_inputs/household_fixtures/` and run the `household_route` command from G0, writing `receipts/<id>-households.json`.
 - **Review rows.** Before the pull request is opened, the Reconciler moves each `reconciliation.json` **outside the checkout**, for example to `~/private/uk-budget-2026/reconciliation/<id>/`, and runs `uv run uk-budget-data publish review-rows --reviewer <name> --staged-by <Integrator>`.
@@ -534,6 +535,33 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **Totals check.** The importer (#16) checks the rows against Table 4.1's printed totals and stops on a mis-keyed row.
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
+
+## Budget day: OBR forecast (Living standards tab, from 13:40)
+
+The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026 forecast as "pre-Budget". Once the OBR publishes the Budget EFO, load its economy tables as the "post" series, so every chart draws both lines and the tiles show the change. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
+
+1. **Download** the EFO's *detailed forecast tables: economy* (.xlsx) in a browser, as above, and record its SHA-256.
+2. **Load it** (Vahid):
+
+   ```sh
+   uv run uk-budget-data obr-forecast \
+     --efo ~/Downloads/<economy tables>.xlsx \
+     --label "OBR October 2026 (Autumn Budget)" \
+     --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
+   ```
+
+   It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending.
+3. **Check what it printed:**
+   - every series: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, with the table and column it read each from; CPI after housing costs and social rent recomputed by PolicyEngine;
+   - the file name and SHA-256 match the download;
+   - any "kept at the pre-Budget value" line (only mortgage interest 2030 may say this, if the OBR stops forecasting it before 2030).
+
+   If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
+4. **Commit** both files and the review row in a pull request; the page then reads "OBR March 2026 (pre-Budget)" against the new label.
+
+**This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
+
+**To regenerate the baseline projections** (any time the bundle changes): `export HUGGING_FACE_TOKEN=…`, then `uv run uk-budget-data living-standards`. About 40 s and 8 GB. A new HBAI release: add `--hbai-ods <summary tables .ods>`; OBR household income per person from a new EFO: `--rhdi-efo <economy tables .xlsx>`. Sources and hashes are in `data_inputs/living_standards/README.md`.
 
 ## G3: rebase and reconcile (13:40 to 14:10)
 

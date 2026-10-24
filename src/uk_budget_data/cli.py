@@ -6,13 +6,20 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.geography import add_geography_parser, run_geography
-from uk_budget_data.lifetime_impact import (
-    GRADUATE_STARTING_INCOME,
-    calculate_lifetime_impact,
+from uk_budget_data.living_standards.commands import (
+    add_living_standards_parsers,
+    run_living_standards,
+    run_obr_forecast,
 )
 from uk_budget_data.models import DataConfig, Reform
-from uk_budget_data.pipeline import generate_all_data
+from uk_budget_data.pipeline import (
+    generate_age_impact,
+    generate_all_data,
+    generate_household_scatter,
+    generate_income_curve,
+)
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
     PrivateOutputError,
@@ -94,8 +101,11 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--years",
         nargs="+",
         type=int,
-        default=[2026, 2027, 2028, 2029, 2030],
-        help="Years to calculate (default: 2026 2027 2028 2029 2030)",
+        default=list(POLICY_YEARS),
+        help=(
+            "Years to calculate (default: the policy years in "
+            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+        ),
     )
 
     generate_parser.add_argument(
@@ -120,101 +130,54 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
 
+    generate_parser.add_argument(
+        "--only",
+        choices=["age_impact", "household_scatter"],
+        default=None,
+        help=(
+            "Write only this file to --output-dir, leaving the others as "
+            "they are. age_impact: results by age band (age_impact.csv). "
+            "household_scatter: households by income band and income "
+            "change band, binned (household_scatter_binned.csv)."
+        ),
+    )
+
     add_generate_arguments(generate_parser)
+
+    # The example households alone: household simulations, no survey data
+    income_curve_parser = subparsers.add_parser(
+        "income-curve",
+        help=(
+            "Write only income_curve.csv: the example households' net "
+            "income across their income grids (no dataset needed)"
+        ),
+    )
+    income_curve_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("./public/data"),
+        help="Output directory (default: ./public/data)",
+    )
+    income_curve_parser.add_argument(
+        "--reforms",
+        nargs="+",
+        default=None,
+        help="Reform IDs to process (default: all Autumn Budget reforms)",
+    )
+    income_curve_parser.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=list(POLICY_YEARS),
+        help=(
+            "Years to calculate (default: the policy years in "
+            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+        ),
+    )
+
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
-
-    # Lifetime impact command
-    lifetime_parser = subparsers.add_parser(
-        "lifetime",
-        help="Calculate lifetime impact of budget policies on a graduate",
-    )
-
-    lifetime_parser.add_argument(
-        "--income",
-        type=str,
-        choices=["p25", "p50", "p75", "p90"],
-        default="p50",
-        help=f"Graduate income percentile: p25=£{GRADUATE_STARTING_INCOME['p25']:,}, "
-        f"p50=£{GRADUATE_STARTING_INCOME['p50']:,}, p75=£{GRADUATE_STARTING_INCOME['p75']:,}, "
-        f"p90=£{GRADUATE_STARTING_INCOME['p90']:,} (default: p50)",
-    )
-
-    lifetime_parser.add_argument(
-        "--marriage-age",
-        type=int,
-        default=31,
-        help="Age of marriage (default: 31, use 0 for never married)",
-    )
-
-    lifetime_parser.add_argument(
-        "--children",
-        type=int,
-        default=2,
-        help="Number of children (default: 2, born every 2 years after marriage)",
-    )
-
-    lifetime_parser.add_argument(
-        "--student-loan",
-        type=float,
-        default=45000,
-        help="Student loan balance at graduation (default: £45,000)",
-    )
-
-    lifetime_parser.add_argument(
-        "--salary-sacrifice",
-        type=float,
-        default=0,
-        help="Annual salary sacrifice pension contributions (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--rail-spending",
-        type=float,
-        default=1500,
-        help="Annual rail spending (default: £1,500)",
-    )
-
-    lifetime_parser.add_argument(
-        "--fuel-spending",
-        type=float,
-        default=1200,
-        help="Annual fuel spending (default: £1,200)",
-    )
-
-    lifetime_parser.add_argument(
-        "--dividend-income",
-        type=float,
-        default=0,
-        help="Annual dividend income (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--savings-interest",
-        type=float,
-        default=500,
-        help="Annual savings interest (default: £500)",
-    )
-
-    lifetime_parser.add_argument(
-        "--property-income",
-        type=float,
-        default=0,
-        help="Annual property income (default: £0)",
-    )
-
-    lifetime_parser.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Output CSV file (default: print summary only)",
-    )
-
-    lifetime_parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress progress output",
-    )
+    add_living_standards_parsers(subparsers)
 
     return parser.parse_args(args)
 
@@ -301,6 +264,19 @@ def run_generate(parsed: argparse.Namespace) -> int:
     console.print(f"Reforms: {len(reforms)}")
     console.print()
 
+    if parsed.only is not None:
+        if parsed.artifacts or parsed.combined or parsed.legacy_geography:
+            console.print(
+                "[red]Error: --only writes one flat CSV; it does not combine "
+                "with --artifacts, --combined or --legacy-geography[/red]"
+            )
+            return 1
+        if parsed.only == "household_scatter":
+            generate_household_scatter(reforms=reforms, config=config)
+        else:
+            generate_age_impact(reforms=reforms, config=config)
+        return 0
+
     # Receipted artifacts: one write-once directory per measure, and one
     # per combined set. --combined alone generates only the combined runs.
     if parsed.artifacts or parsed.combined:
@@ -328,30 +304,17 @@ def run_generate(parsed: argparse.Namespace) -> int:
         raise
 
 
-def run_lifetime(parsed: argparse.Namespace) -> int:
-    """Run the lifetime impact command."""
-    marriage_age = parsed.marriage_age if parsed.marriage_age > 0 else None
-
-    df = calculate_lifetime_impact(
-        income_percentile=parsed.income,
-        marriage_age=marriage_age,
-        num_children=parsed.children,
-        student_loan_balance=parsed.student_loan,
-        salary_sacrifice=parsed.salary_sacrifice,
-        rail_spending=parsed.rail_spending,
-        fuel_spending=parsed.fuel_spending,
-        dividend_income=parsed.dividend_income,
-        savings_interest=parsed.savings_interest,
-        property_income=parsed.property_income,
-        verbose=not parsed.quiet,
-    )
-
-    if parsed.output:
-        df.to_csv(parsed.output, index=False)
-        console.print(
-            f"\n[green]Saved {len(df)} years to {parsed.output}[/green]"
-        )
-
+def run_income_curve(parsed: argparse.Namespace) -> int:
+    """Run the income-curve command."""
+    if parsed.reforms:
+        reforms = get_reforms_from_ids(parsed.reforms)
+        if not reforms:
+            console.print("[red]Error: No valid reforms specified[/red]")
+            return 1
+    else:
+        reforms = get_autumn_budget_2026_reforms()
+    config = DataConfig(output_dir=parsed.output_dir, years=parsed.years)
+    generate_income_curve(reforms=reforms, config=config)
     return 0
 
 
@@ -368,12 +331,16 @@ def main(args: list[str] = None) -> int:
 
     if parsed.command == "generate":
         return run_generate(parsed)
-    elif parsed.command == "lifetime":
-        return run_lifetime(parsed)
+    elif parsed.command == "income-curve":
+        return run_income_curve(parsed)
     elif parsed.command == "publish":
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command == "living-standards":
+        return run_living_standards(parsed)
+    elif parsed.command == "obr-forecast":
+        return run_obr_forecast(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -381,7 +348,7 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  generate  - Generate dashboard data from microsimulation"
         )
-        console.print("  lifetime  - Calculate lifetime impact on a graduate")
+        console.print("  income-curve - The example households' curves only")
         console.print(
             "  publish   - Reconcile, stage, approve and check publications"
         )
@@ -389,6 +356,10 @@ def main(args: list[str] = None) -> int:
             "  geography - Results by region and constituency, disclosure "
             "controlled"
         )
+        console.print(
+            "  living-standards - The Living standards tab's outlook data"
+        )
+        console.print("  obr-forecast - Load a new OBR forecast into that tab")
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."
         )

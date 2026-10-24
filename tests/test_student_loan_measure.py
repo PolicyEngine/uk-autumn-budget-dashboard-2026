@@ -1,4 +1,4 @@
-"""The student loan threshold freeze on the certified policyengine-uk.
+"""The Plan 2 threshold unfreeze on the certified policyengine-uk.
 
 These run household simulations, so they need no dataset. The household
 supplies its own ``student_loan_repayments`` value, as the dataset does.
@@ -8,10 +8,8 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data.reforms import (
-    _connect_student_loan_variables,
-    get_reform,
-)
+from uk_budget_data.budget_measures import connect_student_loan_repayments
+from uk_budget_data.reforms import get_reform
 
 REPORTED = 500.0
 YEAR = 2028
@@ -52,7 +50,7 @@ def test_without_the_modifier_the_reported_value_masks_the_model():
 def test_the_modifier_runs_and_counts_modelled_repayments_everywhere():
     plain = run()
     connected = run(
-        Scenario(simulation_modifier=_connect_student_loan_variables)
+        Scenario(simulation_modifier=connect_student_loan_repayments)
     )
     modelled = value(connected, "student_loan_repayment")
     assert value(connected, "student_loan_repayments") == pytest.approx(
@@ -69,21 +67,21 @@ def test_the_modifier_runs_and_counts_modelled_repayments_everywhere():
         ) == pytest.approx(sign * shift, abs=PENNY), variable
 
 
-def test_the_freeze_raises_repayments_for_a_graduate_above_the_threshold():
-    """Responsiveness: frozen thresholds mean more repaid than RPI ones."""
-    measure = get_reform("freeze_student_loan_thresholds")
+def test_the_unfreeze_lowers_repayments_for_a_graduate_above_the_threshold():
+    """Responsiveness: RPI thresholds mean less repaid than frozen ones."""
+    measure = get_reform("plan_2_threshold_unfreeze")
     baseline = run(measure.to_baseline_scenario())
     reformed = run(measure.to_scenario())
     gained = value(reformed, "gov_tax") - value(baseline, "gov_tax")
     repaid = value(reformed, "student_loan_repayments") - value(
         baseline, "student_loan_repayments"
     )
-    assert repaid > 0
+    assert repaid < 0
     assert gained == pytest.approx(repaid, abs=PENNY)
 
 
 def test_a_graduate_below_both_thresholds_is_unaffected():
-    measure = get_reform("freeze_student_loan_thresholds")
+    measure = get_reform("plan_2_threshold_unfreeze")
     baseline = run(measure.to_baseline_scenario(), employment_income=20_000)
     reformed = run(measure.to_scenario(), employment_income=20_000)
     assert value(reformed, "student_loan_repayments") == 0

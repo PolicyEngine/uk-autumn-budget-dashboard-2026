@@ -26,7 +26,7 @@ The checker:
   "route": "/api/personal-impact",
   "request": {"employment_income": 30000},
   "expect": [
-    {"path": "policies.threshold_freeze_extension.years.2028.net_income_change", "value": -123.45}
+    {"path": "policies.fuel_duty_rise_deferral.years.2027.net_income_change", "value": 123.45}
   ],
   "source": "hand calculation, <name>, <date>"
 }
@@ -36,9 +36,9 @@ The checker:
 
 ## The plumbing fixture
 
-`plumbing-single-12k-no-measure-applies.json` is a **plumbing check, not an accuracy check**. Its household is a single employee on £12,000 with nothing else. By statute, and by each measure's own definition, seven of the route's eight measures change its net income by exactly £0 in every year, and it gets no Universal Credit. Its `reasoning` gives one line per measure.
+`plumbing-single-12k-no-measure-applies.json` is a **plumbing check, not an accuracy check**. Its household is a single employee on £12,000 with nothing else. By statute, and by each measure's own definition, every one of the route's nine measures changes its net income by exactly £0 in every year, and it gets no Universal Credit. Its `reasoning` gives one line per measure.
 
-It shows that the deployed route answers on the bundle's versions, with the response's shape, and that the seven measures that can't affect this household give it £0. It checks no non-zero answer. The salary sacrifice cap's net income change, and so the total, are left out: policyengine-uk spreads the cap's employer NI over every worker's pay, which moves this household's income. The cap's Universal Credit is checked, on both sides in every year: it stays nil.
+It shows that the deployed route answers on the bundle's versions, with the response's shape, and that the measures, none of which can affect this household, give it £0. It checks no non-zero answer. Its baseline Universal Credit is checked in every year: it stays nil.
 
 A run passes with this fixture alone, so G0 can pass. The accuracy check is a set of specimen households with independently computed, non-zero answers.
 

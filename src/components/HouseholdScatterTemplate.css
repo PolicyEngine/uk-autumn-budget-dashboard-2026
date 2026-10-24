@@ -1,0 +1,74 @@
+.household-scatter-template-plot {
+  position: relative;
+}
+
+/* The empty plot's note, centred over the plot area */
+.household-scatter-template-note {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 8px 14px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  max-width: min(90%, 420px);
+  text-align: center;
+}
+
+.household-scatter-template-note p {
+  margin: 0;
+}
+
+.household-scatter-template-note .household-scatter-template-detail {
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+/* The plot's drawing: the 2025 chart's height when the cards stack */
+.household-scatter-template-canvas {
+  height: 400px;
+}
+
+/* Side by side with the map, the plot takes the map's controls, map and
+   colour scale rows (3 to 5) and fills them: it starts level with the
+   map's view switch, and its x-axis title ends level with the colour
+   scale. Absolutely placed, the drawing adds no height of its own, so the
+   map's rows (its body is a fixed 440px) set the card's height. */
+@media (min-width: 1025px) {
+  .charts-grid > div.household-scatter-template:not(:only-child) > .chart-plot {
+    grid-row: 3 / span 3;
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .charts-grid > div.household-scatter-template:not(:only-child) .household-scatter-template-canvas {
+    position: absolute;
+    inset: 0;
+    height: auto;
+  }
+}
+
+/* A dot's group, beside the dot */
+.household-scatter-tooltip {
+  position: absolute;
+  z-index: 2;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--c-text);
+  background-color: white;
+  border: 1px solid var(--c-axis);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.household-scatter-tooltip p {
+  margin: 2px 0;
+}

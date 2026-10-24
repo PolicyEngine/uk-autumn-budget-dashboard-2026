@@ -1,0 +1,29 @@
+/* "Young people (under 25)": the chart cards in the page's charts grid,
+   two pairs; the first pair has a choice box above each plot. */
+
+.young-people-heading {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.young-people-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* The choice box above a plot, with room before the plot's top tick; both
+   cards of the first pair have one, so their plots still start level */
+.young-people-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+/* The outcome legend: one centred row, no group headings */
+.young-people-outcome-legend .grouped-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+}

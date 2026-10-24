@@ -8,6 +8,7 @@ columns and duplicate keys are refused, so a table that would mislead never
 gets a digest.
 """
 
+import bisect
 import csv
 import hashlib
 import io
@@ -91,17 +92,23 @@ TABLES: dict[str, TableSpec] = {
             ),
             ("reform_id", "year"),
         ),
+        # The example households' net income across one income each
+        # (uk_budget_data.example_households): ``household`` names the
+        # household, ``x_variable`` the income on its x-axis, ``income``
+        # that income's value.
         TableSpec(
             "income_curve",
             (
                 ("reform_id", STR),
                 ("reform_name", STR),
                 ("year", INT),
-                ("employment_income", FLOAT),
+                ("household", STR),
+                ("x_variable", STR),
+                ("income", FLOAT),
                 ("baseline_net_income", FLOAT),
                 ("reform_net_income", FLOAT),
             ),
-            ("reform_id", "year", "employment_income"),
+            ("reform_id", "year", "household", "income"),
         ),
         # The household scatter the dashboard has always published (cos
         # d1397): the same columns as public/data/household_scatter.csv, for
@@ -130,9 +137,17 @@ TABLES: dict[str, TableSpec] = {
                 ("year", INT),
                 ("income_band", FLOAT),
                 ("change_band", FLOAT),
+                ("change_band_upper", FLOAT),
                 ("households", FLOAT),
+                ("income_basis_year", INT),
             ),
-            ("reform_id", "year", "income_band", "change_band"),
+            (
+                "reform_id",
+                "year",
+                "income_band",
+                "change_band",
+                "change_band_upper",
+            ),
         ),
         TableSpec(
             "constituency",
@@ -167,6 +182,27 @@ TABLES: dict[str, TableSpec] = {
                 "num_children",
                 "is_married",
             ),
+            required=False,
+        ),
+        # UK results by age band (calculators.AgeImpactCalculator). Not
+        # required, so artifacts generated before it existed stay complete.
+        TableSpec(
+            "age_impact",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("age_band", STR),
+                ("people", FLOAT),
+                ("sample_size", INT),
+                ("mean_change", FLOAT),
+                ("mean_equivalised_change", FLOAT),
+                ("pct_better_off", FLOAT),
+                ("pct_worse_off", FLOAT),
+                ("pct_unchanged", FLOAT),
+                ("people_directly_affected", FLOAT),
+            ),
+            ("reform_id", "year", "age_band"),
             required=False,
         ),
     )
@@ -294,20 +330,64 @@ def records(table: Any) -> list[dict]:
 
 # The household scatter is published binned, never household by household:
 # each row is one cell of baseline income band by income change band, with
-# the weighted number of households in it. A band is named by its lower edge
-# in pounds a year. Values beyond the outer bands are counted in them, so the
-# outer bands are open-ended. Cells with fewer than SCATTER_MIN_HOUSEHOLDS
-# survey households are left out, and counts are rounded to the nearest
-# SCATTER_ROUND_TO households.
+# the weighted number of households in it, in pounds a year.
+#
+# Income bands are SCATTER_BINS["income_band_width"] wide and named by their
+# lower edge; values beyond the outer bands are counted in them, so the outer
+# income bands are open-ended.
+#
+# Change bands are set by the edges in SCATTER_BINS["change_edges"], which
+# are symmetric about zero: most measures move most households by a few
+# pounds, so the bands are narrow near zero and widen outwards. A cell names
+# its change band by both edges, ``change_band`` (lower) and
+# ``change_band_upper``:
+#   - the exact-zero band holds changes strictly between -1 and 1 and is
+#     named (-1, 1);
+#   - a gain is in [lower, upper) and a loss in (lower, upper], so a band and
+#     its mirror image hold the same sizes of change;
+#   - changes beyond the outermost edge fall in an open-ended band, named by
+#     that edge on both sides: (5000, 5000) for gains of £5,000 or more and
+#     (-5000, -5000) for losses of £5,000 or more.
+#
+# Cells with fewer than SCATTER_MIN_HOUSEHOLDS survey households are left
+# out, and counts are rounded to the nearest SCATTER_ROUND_TO households.
+SCATTER_CHANGE_EDGES = (
+    1.0,
+    10.0,
+    25.0,
+    50.0,
+    75.0,
+    100.0,
+    150.0,
+    200.0,
+    300.0,
+    400.0,
+    500.0,
+    750.0,
+    1_000.0,
+    1_500.0,
+    2_000.0,
+    3_000.0,
+    5_000.0,
+)
 SCATTER_BINS = {
     "income_band_width": 5_000.0,
     "income_min": 0.0,
     "income_max": 150_000.0,
-    "change_band_width": 100.0,
-    "change_min": -2_000.0,
-    "change_max": 2_000.0,
+    "change_edges": [-edge for edge in reversed(SCATTER_CHANGE_EDGES)]
+    + list(SCATTER_CHANGE_EDGES),
 }
 SCATTER_MIN_HOUSEHOLDS = 10
+# Every year's households are put in income bands by their baseline net
+# income in one year, the basis year, not by that year's own income: a
+# household then sits in the same income band in every year, so the page can
+# follow the same groups of households from year to year (as last year's
+# chart followed its 500 sampled households). The basis year is
+# SCATTER_INCOME_BASIS_YEAR, the first year the dashboard shows, when a run
+# covers it, and otherwise the run's first year (scatter_basis_year). Each
+# cell names its basis year in ``income_basis_year``. Only the bands are
+# fixed: a cell's count is the households' weight in its own year.
+SCATTER_INCOME_BASIS_YEAR = 2027
 # Survey weights run to thousands, so counts are rounded to the nearest
 # thousand households: finer rounding would let differences between cells
 # reveal one household's weight.
@@ -415,46 +495,110 @@ def band(value: float, width: float, low: float, high: float) -> float:
     return float(min(max(edge, low), high - width))
 
 
+def change_band(value: float) -> tuple[float, float]:
+    """The (lower, upper) edges of the change band holding ``value``.
+
+    See SCATTER_BINS: (-1, 1) for no change, [lower, upper) for a gain,
+    (lower, upper] for a loss, and (edge, edge) beyond the outermost edge.
+    """
+    size = abs(value)
+    if size < SCATTER_CHANGE_EDGES[0]:
+        return (-SCATTER_CHANGE_EDGES[0], SCATTER_CHANGE_EDGES[0])
+    if size >= SCATTER_CHANGE_EDGES[-1]:
+        lower = upper = SCATTER_CHANGE_EDGES[-1]
+    else:
+        index = bisect.bisect_right(SCATTER_CHANGE_EDGES, size) - 1
+        lower = SCATTER_CHANGE_EDGES[index]
+        upper = SCATTER_CHANGE_EDGES[index + 1]
+    if value < 0:
+        return (-upper, -lower)
+    return (lower, upper)
+
+
+def scatter_basis_year(years: Iterable[int]) -> int:
+    """The year whose baseline income sets every year's income bands.
+
+    SCATTER_INCOME_BASIS_YEAR when ``years`` include it, else the first of
+    ``years``.
+    """
+    years = sorted({int(year) for year in years})
+    if not years:
+        raise ValueError("No years to choose the scatter's basis year from")
+    if SCATTER_INCOME_BASIS_YEAR in years:
+        return SCATTER_INCOME_BASIS_YEAR
+    return years[0]
+
+
 def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
     """Bin household-level scatter rows into publishable cells.
 
     Args:
         rows: One row per household, with ``reform_id``, ``reform_name``,
             ``year``, ``baseline_income``, ``income_change`` and
-            ``household_weight``.
+            ``household_weight``. A row may also carry
+            ``survey_household``: the survey household it was made from.
+            Microcosm builds several records from one survey household, so
+            when any row carries it, a cell's floor counts distinct survey
+            households, not records.
+            A row may also carry ``reference_income`` and
+            ``income_basis_year``: the household's baseline net income in
+            the basis year, by which it is then banded in every year (see
+            SCATTER_INCOME_BASIS_YEAR). A row without them is banded by its
+            own year's ``baseline_income``, and its basis year is its year.
 
     Returns:
         One row per cell with at least SCATTER_MIN_HOUSEHOLDS households.
     """
     b = SCATTER_BINS
+    rows = list(rows)
+    by_survey = any("survey_household" in row for row in rows)
+    if by_survey and not all("survey_household" in row for row in rows):
+        raise ValueError(
+            "Some scatter rows name their survey household and some do not"
+        )
+    by_reference = any("reference_income" in row for row in rows)
+    if by_reference and not all(
+        "reference_income" in row and "income_basis_year" in row
+        for row in rows
+    ):
+        raise ValueError(
+            "Some scatter rows carry a basis-year income and some do not"
+        )
     cells: dict[tuple, list] = {}
     for row in rows:
+        if by_reference:
+            income = float(row["reference_income"])
+            basis = int(row["income_basis_year"])
+        else:
+            income = float(row["baseline_income"])
+            basis = int(row["year"])
         key = (
             row["reform_id"],
             row["reform_name"],
             int(row["year"]),
+            basis,
             band(
-                float(row["baseline_income"]),
+                income,
                 b["income_band_width"],
                 b["income_min"],
                 b["income_max"],
             ),
-            band(
-                # Round to the penny first, so float noise around zero is
-                # not counted as a loss.
-                round(float(row["income_change"]), 2),
-                b["change_band_width"],
-                b["change_min"],
-                b["change_max"],
-            ),
+            # Round to the penny first, so float noise around zero is not
+            # counted as a change.
+            *change_band(round(float(row["income_change"]), 2)),
         )
-        cell = cells.setdefault(key, [0, 0.0])
-        cell[0] += 1
+        cell = cells.setdefault(key, [set() if by_survey else 0, 0.0])
+        if by_survey:
+            cell[0].add(row["survey_household"])
+        else:
+            cell[0] += 1
         cell[1] += float(row["household_weight"])
     binned = []
-    for (reform_id, name, year, income, change), (count, weight) in sorted(
-        cells.items()
-    ):
+    for (reform_id, name, year, basis, income, change, upper), (
+        members,
+        weight,
+    ) in sorted(cells.items()):
+        count = len(members) if by_survey else members
         if count < SCATTER_MIN_HOUSEHOLDS:
             continue
         binned.append(
@@ -464,9 +608,11 @@ def bin_scatter(rows: Iterable[Mapping[str, Any]]) -> list[dict]:
                 "year": year,
                 "income_band": income,
                 "change_band": change,
+                "change_band_upper": upper,
                 "households": float(
                     round(weight / SCATTER_ROUND_TO) * SCATTER_ROUND_TO
                 ),
+                "income_basis_year": basis,
             }
         )
     return binned

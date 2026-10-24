@@ -9,25 +9,27 @@
   justify-content: center;
   gap: 10px;
   padding: 10px 18px;
-  background: linear-gradient(to bottom, #ffffff, #f9fafb);
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 6px;
   font-family: var(--pe-font-family-primary);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 500;
-  color: #374151;
+  color: var(--pe-gray-700);
   cursor: pointer;
-  transition: all 0.2s ease;
+  /* Only the colours move: a width or badge never tweens, so changing the
+     value does not flicker */
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
   min-width: 220px;
-  height: 44px;
+  height: 40px;
   box-sizing: border-box;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .policy-selector-toggle:hover {
-  border-color: #0f766e;
-  background: linear-gradient(to bottom, #ffffff, #f0fdfa);
-  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.12);
+  border-color: var(--pe-teal-700);
 }
 
 .policy-selector-toggle:focus {
@@ -39,29 +41,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  background: #0f766e;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  background: var(--pe-teal-700);
   color: white;
-  font-size: 0.9rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  border-radius: 14px;
+  border-radius: var(--card-radius);
   flex-shrink: 0;
 }
 
 .policy-selector-label {
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 500;
-  color: #374151;
+  color: var(--pe-gray-700);
 }
 
 .policy-selector-icon {
   font-size: 0.7rem;
-  color: #6b7280;
+  color: var(--pe-gray-500);
   transition: transform 0.2s ease;
   flex-shrink: 0;
   margin-left: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .policy-selector-toggle {
+    transition: none;
+  }
 }
 
 .policy-selector-dropdown {
@@ -69,11 +77,13 @@
   top: calc(100% + 8px);
   right: 0;
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: var(--pe-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   width: 380px;
-  max-height: 500px;
+  max-width: calc(100vw - 32px);
+  /* Never taller than the screen below the sticky title row */
+  max-height: min(500px, calc(100dvh - var(--title-row-height, 68px) - 24px));
   overflow-y: auto;
   animation: dropdownSlideIn 0.2s ease;
 }
@@ -104,14 +114,14 @@
 }
 
 .policy-item:hover {
-  background: #f9fafb;
+  background: var(--pe-gray-50);
 }
 
 .policy-item input[type="checkbox"] {
   margin-top: 4px;
   width: 18px;
   height: 18px;
-  accent-color: #0f766e;
+  accent-color: var(--pe-teal-700);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -125,12 +135,35 @@
 
 .policy-name {
   font-weight: 500;
-  color: #374151;
-  font-size: 1rem;
+  color: var(--pe-gray-700);
+  font-size: var(--fs-body-lg);
 }
 
 .policy-description {
-  font-size: 0.9rem;
-  color: #6b7280;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
   line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .policy-selector-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .policy-selector-icon {
+    margin-left: auto;
+  }
+
+  .policy-selector-dropdown {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* The short label ("9 selected") is for the compact phone title row */
+.policy-selector-label-short {
+  display: none;
 }

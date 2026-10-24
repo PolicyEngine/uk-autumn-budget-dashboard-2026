@@ -60,7 +60,9 @@ import numpy as np
 from policyengine_core.periods import YEAR
 from policyengine_core.reforms import Reform as CoreReform
 from policyengine_uk.model_api import Variable
+from policyengine_uk.utils.data_source import built_from_data
 from policyengine_uk.utils.scenario import _apply_reform_class
+from policyengine_uk.utils.stochastic import splitmix64_uniform
 
 
 class DataLimitedWarning(UserWarning):
@@ -703,9 +705,29 @@ _BENEFIT_RECEIPT_GATES = {
     "savings_credit": "pension_credit",
 }
 
+# The salt of policyengine-uk's Warm Home Discount receipt draw
+# (warm_home_discount_random_draw, policyengine-uk #2616), so a household
+# draws the same here as it will there.
+RECEIPT_DRAW_SALT = 2
+
+
+def _validated_rate(value, name):
+    rate = _finite_number(value, name)
+    if not 0 <= rate <= 1:
+        raise ValueError(f"{name} must be between 0 and 1")
+    return rate
+
 
 def apply_benefit_receipt_payment(
-    sim, *, amount, eligible_benefits, geography, channel, year
+    sim,
+    *,
+    amount,
+    eligible_benefits,
+    geography,
+    channel,
+    year,
+    pension_credit_receipt_rate=None,
+    other_receipt_rate=None,
 ):
     """Add a lump sum once per household, based on actual annual receipt.
 
@@ -721,6 +743,16 @@ def apply_benefit_receipt_payment(
     Choose an existing household income/benefit channel with a formula and
     the appropriate tax/means-test treatment, e.g. the cost-of-living channel.
     Its native payment is preserved in every year.
+
+    With ``pension_credit_receipt_rate`` and ``other_receipt_rate`` (both or
+    neither), not every eligible household receives the payment, as
+    policyengine-uk #2616 models the Warm Home Discount: a household where
+    any benefit unit receives Pension Credit receives it when its draw is
+    below the first rate, any other eligible household when its draw is
+    below the second. The draw is policyengine-uk's deterministic hash of
+    the household id (``splitmix64_uniform``, salt 2, stored as float32) in
+    a simulation built from data, and 0 in a household situation, so a
+    calculator's household receives it.
     """
     _annual_years(year, year)
     amount = _finite_number(amount, "amount")
@@ -744,6 +776,18 @@ def apply_benefit_receipt_payment(
         raise ValueError(
             "Payment channel must be annual: the payment is a one-off "
             "amount in the year"
+        )
+    if (pension_credit_receipt_rate is None) != (other_receipt_rate is None):
+        raise ValueError(
+            "Give both receipt rates (Pension Credit and other) or neither"
+        )
+    receipt_rates = None
+    if pension_credit_receipt_rate is not None:
+        receipt_rates = (
+            _validated_rate(
+                pension_credit_receipt_rate, "pension_credit_receipt_rate"
+            ),
+            _validated_rate(other_receipt_rate, "other_receipt_rate"),
         )
     benefits = {}
     for name in eligible_benefits:
@@ -783,10 +827,29 @@ def apply_benefit_receipt_payment(
         country = household("country", period)
         if geography == "GB":
             eligible &= country != country.possible_values.NORTHERN_IRELAND
+        if receipt_rates is not None:
+            eligible &= _receives(household, period, *receipt_rates)
         return current + eligible * amount
 
     _replace_formula(sim, channel, formula)
     return sim
+
+
+def _receives(household, period, pension_credit_rate, other_rate):
+    """Whether each household receives a payment with a receipt rate by
+    group, as policyengine-uk #2616's would_receive_warm_home_discount."""
+    if built_from_data(household.simulation):
+        ids = household("household_id", period)
+        draw = splitmix64_uniform(ids, salt=RECEIPT_DRAW_SALT).astype(
+            np.float32
+        )
+    else:
+        draw = np.zeros(household.count, dtype=np.float32)
+    pension_credit = household.any(
+        household.members.benunit("pension_credit", period) > 0
+    )
+    rate = np.where(pension_credit, pension_credit_rate, other_rate)
+    return draw < rate
 
 
 def apply_age_conditioned_allowance(

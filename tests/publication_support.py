@@ -21,6 +21,7 @@ import pytest
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.certified_data import load_bundle_manifest
+from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import receipt as receipt_module
 from uk_budget_data.publication.artifacts import (
     RECEIPT_FILE,
@@ -130,22 +131,26 @@ def make_tables(
             tables["winners_losers"].append(
                 {**base, "decile": group, "avg_change": value * 100}
             )
-        for point in range(201):
-            income = point * 750.0
-            tables["income_curve"].append(
-                {
-                    **base,
-                    "employment_income": income,
-                    "baseline_net_income": income * 0.7,
-                    "reform_net_income": income * 0.7 + value,
-                }
-            )
+        for household in EXAMPLE_HOUSEHOLDS:
+            for income in household.grid():
+                tables["income_curve"].append(
+                    {
+                        **base,
+                        "household": household.id,
+                        "x_variable": household.x_variable,
+                        "income": income,
+                        "baseline_net_income": income * 0.7,
+                        "reform_net_income": income * 0.7 + value,
+                    }
+                )
         tables["household_scatter_binned"].append(
             {
                 **base,
                 "income_band": 20000.0,
-                "change_band": -100.0 if value < 0 else 0.0,
+                "change_band": -75.0 if value < 0 else 50.0,
+                "change_band_upper": -50.0 if value < 0 else 75.0,
                 "households": 1000.0,
+                "income_basis_year": min(values),
             }
         )
     return tables
@@ -165,6 +170,8 @@ def make_household_rows(
             "income_change": -50.0 if value < 0 else 50.0,
             "household_weight": 100.0,
             "household_id": household,
+            "reference_income": 20_100.0,
+            "income_basis_year": min(values),
         }
         for year, value in values.items()
         for household in range(1, 11)

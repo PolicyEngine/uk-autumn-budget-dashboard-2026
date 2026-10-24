@@ -7,9 +7,9 @@ to write each value on 1 January of the year afterwards, and a formula
 reads a period's parameters on its first day (policyengine-core
 ``get_parameters_at_instant``), so:
 
-- monthly ``fuel_duty`` saw the change in January only: the registered
-  fuel_duty_freeze showed exactly 1/12 of its national effect for every
-  household, in every year 2026-2030;
+- monthly ``fuel_duty`` saw the change in January only: the 2025
+  placeholder fuel duty measure showed exactly 1/12 of its national effect
+  for every household, in every year 2026-2030;
 - a duty kept on its statutory dates (``preserve_calendar_dates``: the
   alcohol duties) saw none;
 - a parameter derived from the changed one (the NIC thresholds from the
@@ -26,10 +26,20 @@ from policyengine_uk.utils.scenario import Scenario
 from uk_budget_data import personal_impact
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
-# The year every registered measure has an effect in (the threshold freeze
-# from 2028, the savings and property rates from 2028, the salary sacrifice
-# cap from 2029).
-YEAR = 2029
+# A year each candidate measure the calculator shows is in force.
+MEASURE_YEARS = {
+    "fuel_duty_rise_deferral": 2027,
+    "state_pension_income_tax_protection": 2027,
+    "warm_home_discount_top_up": 2026,
+    "domestic_electricity_zero_vat": 2027,
+    "employer_ni_relief_under_25s": 2027,
+    "threshold_freeze_2031_32": 2031,
+    "badr_lifetime_limit_cut": 2027,
+    "road_fuel_vat_cut": 2026,
+    "plan_2_threshold_unfreeze": 2027,
+}
+# Wages are held fixed, so employer NI moves no household's income.
+NO_HOUSEHOLD_EFFECT = {"employer_ni_relief_under_25s"}
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
     "employee_60k": personal_impact.HouseholdInput(employment_income=60_000),
@@ -47,6 +57,27 @@ HOUSEHOLDS = {
     "dividends_30k": personal_impact.HouseholdInput(
         employment_income=30_000, dividend_income=20_000
     ),
+    "sacrifice_50k": personal_impact.HouseholdInput(
+        employment_income=50_000, pension_contributions_salary_sacrifice=5_000
+    ),
+}
+# Circumstances the calculator's form doesn't ask for, added to the first
+# probe person or household so that each measure has someone to move.
+EXTRA_PEOPLE = {
+    "pensioner": {"age": 70, "state_pension": 13_100},
+    "graduate": {
+        "age": 30,
+        "employment_income": 45_000,
+        "student_loan_plan": "PLAN_2",
+        "student_loan_balance": 60_000,
+        "student_loan_repayments": 500,
+    },
+    "founder": {
+        "age": 55,
+        "employment_income": 100_000,
+        "capital_gains": 800_000,
+        "capital_gains_badr": 800_000,
+    },
 }
 
 
@@ -67,7 +98,13 @@ def situation(year: int) -> dict:
         entry = dict(built["households"]["household"])
         entry["members"] = [rename[m] for m in entry["members"]]
         entry["petrol_litres"] = {year: 1_200}
+        entry["petrol_spending"] = {year: 1_800}
+        entry["electricity_consumption"] = {year: 1_000}
         households[name] = entry
+    for name, inputs in EXTRA_PEOPLE.items():
+        people[name] = {key: {year: value} for key, value in inputs.items()}
+        benunits[name] = {"members": [name]}
+        households[name] = {"members": [name], "region": {year: "LONDON"}}
     return {"people": people, "benunits": benunits, "households": households}
 
 
@@ -135,57 +172,22 @@ def _measure(changes):
         pytest.param(reform, id=reform.id)
         for reform in get_autumn_budget_2026_reforms()
         if reform.id in personal_impact.POLICY_IDS
-        # Its modifier shares a fixed Treasury cost over whoever is
-        # simulated, so it is checked one household at a time below.
-        and reform.id != "rail_fares_freeze"
     ],
 )
 def test_each_measure_the_calculator_shows_moves_households_alike(reform):
     """Differential: a household's impact from the household calculator
-    equals the national route's, for every measure it shows (the fuel duty
-    freeze was 1/12 of it before), and some probe household is affected,
+    equals the national route's, for every measure it shows (a fuel duty
+    change was 1/12 of it before), and some probe household is affected,
     so the comparison is not of two zeros."""
-    household = household_route(reform, YEAR)
-    assert same(household, national_route(reform, YEAR))
-    assert any(abs(change) > 1 for change in household)
+    year = MEASURE_YEARS[reform.id]
+    household = household_route(reform, year)
+    assert same(household, national_route(reform, year))
+    if reform.id not in NO_HOUSEHOLD_EFFECT:
+        assert any(abs(change) > 1 for change in household)
 
 
-def test_the_rail_fares_freeze_moves_a_rail_user_alike():
-    reform = next(
-        r
-        for r in get_autumn_budget_2026_reforms()
-        if r.id == "rail_fares_freeze"
-    )
-    probe = {
-        "people": {
-            "p": {"age": {2027: 40}, "employment_income": {2027: 30_000}}
-        },
-        "benunits": {"b": {"members": ["p"]}},
-        "households": {
-            "h": {
-                "members": ["p"],
-                "rail_usage": {2027: 2_000},
-                "household_weight": {2027: 1},
-            }
-        },
-    }
-    household = _impact(
-        lambda changes, modifier: personal_impact.create_simulation(
-            probe,
-            2027,
-            reform_param_changes=changes,
-            simulation_modifier=modifier,
-        ),
-        reform,
-        2027,
-    )
-    national = _impact(
-        lambda changes, modifier: _national(probe, changes, modifier),
-        reform,
-        2027,
-    )
-    assert same(household, national)
-    assert household[0] > 1
+def test_every_measure_the_calculator_shows_has_a_year():
+    assert set(MEASURE_YEARS) == set(personal_impact.POLICY_IDS)
 
 
 def _national(probe, changes, modifier):

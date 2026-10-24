@@ -1,5 +1,6 @@
 {
   "name": "uk-autumn-budget-dashboard-2026",
+  "description": "PolicyEngine dashboard for the UK Autumn Budget 2026: candidate measures, household impacts and living standards",
   "private": true,
   "version": "0.0.0",
   "scripts": {

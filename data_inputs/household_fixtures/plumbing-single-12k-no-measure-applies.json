@@ -1,5 +1,5 @@
 {
-  "name": "PLUMBING CHECK: single employee on £12,000, seven measures change nothing",
+  "name": "PLUMBING CHECK: single employee on £12,000, nine measures change nothing",
   "kind": "plumbing check, not an accuracy check",
   "route": "/api/personal-impact",
   "request": {
@@ -83,571 +83,235 @@
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2025.net_income_change",
+      "path": "policies.fuel_duty_rise_deferral.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2025.baseline_metrics.universal_credit",
+      "path": "policies.fuel_duty_rise_deferral.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2025.reformed_metrics.universal_credit",
+      "path": "policies.fuel_duty_rise_deferral.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2026.net_income_change",
+      "path": "policies.fuel_duty_rise_deferral.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2026.baseline_metrics.universal_credit",
+      "path": "policies.fuel_duty_rise_deferral.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2026.reformed_metrics.universal_credit",
+      "path": "policies.fuel_duty_rise_deferral.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2027.net_income_change",
+      "path": "policies.state_pension_income_tax_protection.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2027.baseline_metrics.universal_credit",
+      "path": "policies.state_pension_income_tax_protection.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2027.reformed_metrics.universal_credit",
+      "path": "policies.state_pension_income_tax_protection.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2028.net_income_change",
+      "path": "policies.state_pension_income_tax_protection.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2028.baseline_metrics.universal_credit",
+      "path": "policies.state_pension_income_tax_protection.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2028.reformed_metrics.universal_credit",
+      "path": "policies.state_pension_income_tax_protection.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2029.net_income_change",
+      "path": "policies.warm_home_discount_top_up.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2029.baseline_metrics.universal_credit",
+      "path": "policies.warm_home_discount_top_up.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2029.reformed_metrics.universal_credit",
+      "path": "policies.warm_home_discount_top_up.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2030.net_income_change",
+      "path": "policies.warm_home_discount_top_up.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2030.baseline_metrics.universal_credit",
+      "path": "policies.warm_home_discount_top_up.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.two_child_limit.years.2030.reformed_metrics.universal_credit",
+      "path": "policies.warm_home_discount_top_up.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2025.net_income_change",
+      "path": "policies.domestic_electricity_zero_vat.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2025.baseline_metrics.universal_credit",
+      "path": "policies.domestic_electricity_zero_vat.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2025.reformed_metrics.universal_credit",
+      "path": "policies.domestic_electricity_zero_vat.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2026.net_income_change",
+      "path": "policies.domestic_electricity_zero_vat.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2026.baseline_metrics.universal_credit",
+      "path": "policies.domestic_electricity_zero_vat.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2026.reformed_metrics.universal_credit",
+      "path": "policies.domestic_electricity_zero_vat.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2027.net_income_change",
+      "path": "policies.employer_ni_relief_under_25s.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2027.baseline_metrics.universal_credit",
+      "path": "policies.employer_ni_relief_under_25s.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2027.reformed_metrics.universal_credit",
+      "path": "policies.employer_ni_relief_under_25s.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2028.net_income_change",
+      "path": "policies.employer_ni_relief_under_25s.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2028.baseline_metrics.universal_credit",
+      "path": "policies.employer_ni_relief_under_25s.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2028.reformed_metrics.universal_credit",
+      "path": "policies.employer_ni_relief_under_25s.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2029.net_income_change",
+      "path": "policies.threshold_freeze_2031_32.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2029.baseline_metrics.universal_credit",
+      "path": "policies.threshold_freeze_2031_32.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2029.reformed_metrics.universal_credit",
+      "path": "policies.threshold_freeze_2031_32.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2030.net_income_change",
+      "path": "policies.threshold_freeze_2031_32.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2030.baseline_metrics.universal_credit",
+      "path": "policies.threshold_freeze_2031_32.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.fuel_duty_freeze.years.2030.reformed_metrics.universal_credit",
+      "path": "policies.threshold_freeze_2031_32.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2025.net_income_change",
+      "path": "policies.badr_lifetime_limit_cut.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2025.baseline_metrics.universal_credit",
+      "path": "policies.badr_lifetime_limit_cut.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2025.reformed_metrics.universal_credit",
+      "path": "policies.badr_lifetime_limit_cut.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2026.net_income_change",
+      "path": "policies.badr_lifetime_limit_cut.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2026.baseline_metrics.universal_credit",
+      "path": "policies.badr_lifetime_limit_cut.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2026.reformed_metrics.universal_credit",
+      "path": "policies.badr_lifetime_limit_cut.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2027.net_income_change",
+      "path": "policies.road_fuel_vat_cut.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2027.baseline_metrics.universal_credit",
+      "path": "policies.road_fuel_vat_cut.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2027.reformed_metrics.universal_credit",
+      "path": "policies.road_fuel_vat_cut.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2028.net_income_change",
+      "path": "policies.road_fuel_vat_cut.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2028.baseline_metrics.universal_credit",
+      "path": "policies.road_fuel_vat_cut.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2028.reformed_metrics.universal_credit",
+      "path": "policies.road_fuel_vat_cut.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2029.net_income_change",
+      "path": "policies.plan_2_threshold_unfreeze.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2029.baseline_metrics.universal_credit",
+      "path": "policies.plan_2_threshold_unfreeze.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2029.reformed_metrics.universal_credit",
+      "path": "policies.plan_2_threshold_unfreeze.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2030.net_income_change",
+      "path": "policies.plan_2_threshold_unfreeze.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2030.baseline_metrics.universal_credit",
+      "path": "policies.plan_2_threshold_unfreeze.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.rail_fares_freeze.years.2030.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2025.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2025.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2026.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2026.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2027.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2027.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2028.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2028.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2029.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2029.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2030.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.threshold_freeze_extension.years.2030.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2025.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2025.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2026.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2026.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2027.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2027.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2028.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2028.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2029.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2029.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2030.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.dividend_tax_increase_2pp.years.2030.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2025.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2025.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2026.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2026.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2027.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2027.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2028.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2028.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2029.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2029.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2030.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.savings_tax_increase_2pp.years.2030.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2025.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2025.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2026.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2026.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2027.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2027.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2028.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2028.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2029.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2029.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2030.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.property_tax_increase_2pp.years.2030.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2025.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2025.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2026.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2026.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2027.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2027.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2028.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2028.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2029.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2029.reformed_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2030.baseline_metrics.universal_credit",
-      "value": 0.0
-    },
-    {
-      "path": "policies.salary_sacrifice_cap.years.2030.reformed_metrics.universal_credit",
+      "path": "policies.plan_2_threshold_unfreeze.years.2030.net_income_change",
       "value": 0.0
     }
   ],
   "reasoning": {
     "household": "A single adult aged 35 to 40 with £12,000 of employment income in every year, and nothing else: no children, no savings, dividend or property income, no salary sacrifice, no fuel or rail spending, no rent or mortgage, and no disability or caring. The route's situation sets none of those (build_situation), and the request gives none.",
     "income tax and NI": "£12,000 (£11,980.80 in 2029 and 2030, that is 2029-30 and 2030-31, after the cap's haircut) is below the personal allowance (£12,570, or more where a measure's baseline uprates it) and below the employee National Insurance primary threshold (£12,570 a year in every year here, which the model applies as £241.73 a week, £12,570 / 52; the regulations set £242 a week for 2026-27; no measure changes it). So income tax and employee NI are £0 in every year. Asserted for the baseline each year.",
-    "universal_credit": "Nil in every year, so no measure can move it. A single adult with no children, housing costs, disability or caring has no work allowance and no housing element, so the 55% taper applies to all of the month's earnings. That is £1,000 a month, so the taper takes £550; in 2029 and 2030 (2029-30 and 2030-31), while the salary sacrifice cap applies, the model's broad-base haircut (0.16%) leaves £998.40 a month and a taper of £549.12. Either exceeds the single 25-and-over standard allowance in every year: £400.14 a month in 2025-26 and £424.90 in 2026-27, the statutory rates, and policyengine-uk's projections of £434.67, £443.36, £452.23 and £461.28 for 2027 to 2030. Asserted for the baseline and for both sides of all eight measures, the salary sacrifice cap's included, so a later uplift that made this household eligible fails here instead of quietly changing what the fixture means.",
-    "two_child_limit": "Changes only the UC and child tax credit child limit (child_count). The household has no children and no UC: £0.",
-    "fuel_duty_freeze": "Changes only the petrol and diesel duty rate. The household buys no fuel, so pays no fuel duty under either rate: £0.",
-    "rail_fares_freeze": "Adds rail subsidy in proportion to each household's existing rail subsidy (rail_subsidy_spending). This household's is £0, so its share is £0.",
-    "threshold_freeze_extension": "Changes only the income tax personal allowance and basic rate limit (frozen at £12,570 and £37,700, against CPI uprating from 2028). £12,000 is below the allowance on both sides, so income tax is £0 on both: £0.",
-    "dividend_tax_increase_2pp": "Changes only dividend tax rates. No dividends: £0.",
-    "savings_tax_increase_2pp": "Changes only savings income tax rates. No savings income: £0.",
-    "property_tax_increase_2pp": "Changes only property income tax rates. No property income: £0.",
-    "employer side": "None of these seven changes employer National Insurance or anything derived from it; each changes only the parameters named above. So employer NI, and any pass-through of it, is the same on both sides.",
-    "salary_sacrifice_cap (its net income change, and the total, left out; its UC is checked)": "Not £0 under the model, though the household sacrifices nothing. policyengine-uk spreads the cap's extra employer NI over all workers' pay (salary_sacrifice_broad_base_haircut, 0.16% of employment income while the cap applies), so this household loses £19.20 in 2029 and in 2030. That is a modelling choice, not statute, so it isn't asserted."
+    "universal_credit": "Nil in every year, so no measure can move it. A single adult with no children, housing costs, disability or caring has no work allowance and no housing element, so the 55% taper applies to all of the month's earnings. That is £1,000 a month, so the taper takes £550; in 2029 and 2030 (2029-30 and 2030-31), while the salary sacrifice cap applies in current law, the model's broad-base haircut (0.16%) leaves £998.40 a month and a taper of £549.12. Either exceeds the single 25-and-over standard allowance in every year: £400.14 a month in 2025-26 and £424.90 in 2026-27, the statutory rates, and policyengine-uk's projections of £434.67, £443.36, £452.23 and £461.28 for 2027 to 2030. Asserted for the baseline, so a later uplift that made this household eligible fails here instead of quietly changing what the fixture means.",
+    "fuel_duty_rise_deferral": "Changes the petrol and diesel duty rate and the VAT on fuel spending. The household buys no fuel: £0.",
+    "state_pension_income_tax_protection": "An extra allowance for people over State Pension age. The adult is 35 to 40, and below the personal allowance anyway: £0.",
+    "warm_home_discount_top_up": "£100 in 2026 to households receiving Universal Credit or Pension Credit. The household receives neither: £0.",
+    "domestic_electricity_zero_vat": "Removes VAT from electricity spending. The route sets no electricity spending: £0.",
+    "employer_ni_relief_under_25s": "Changes employer National Insurance for employees aged 21 to 24 only, with wages fixed. The adult is over 25, and no household income depends on employer NI: £0.",
+    "threshold_freeze_2031_32": "Changes the personal allowance and basic rate band in 2031 only, a year the route does not calculate: £0.",
+    "badr_lifetime_limit_cut": "Changes the Business Asset Disposal Relief lifetime limit. No capital gains: £0.",
+    "road_fuel_vat_cut": "Cuts VAT on petrol and diesel spending in 2026 and 2027. No fuel: £0.",
+    "plan_2_threshold_unfreeze": "Raises the Plan 2 student loan threshold. No student loan: £0."
   },
-  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure but the salary sacrifice cap reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check."
+  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; rewritten for the candidate measures on 24 October 2026, and for the nine left when the salary sacrifice cap measure was dropped that day; see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check."
 }

@@ -225,8 +225,9 @@ steps:
         echo "Smoke checker from main at $$(git -C /workspace/history rev-parse main)"
 
   # What the candidate's image says it is, as data: its identity and the
-  # years and policies its calculator covers (deploy_smoke's
-  # print_expectations, written out). Nothing here decides pass or fail.
+  # years and policies its calculator covers, and whether it has the
+  # single-year route
+  # (deploy_smoke's print_expectations, written out). Nothing here decides pass or fail.
   - id: expectations
     name: 'gcr.io/cloud-builders/docker'
     entrypoint: bash
@@ -234,10 +235,10 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import json
+        docker run --rm "$$(cat /workspace/image_ref)" uv run --no-sync python -c 'import importlib.util, json
         from uk_budget_data import personal_impact
         from uk_budget_data.runtime_identity import runtime_identity
-        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS)}, sort_keys=True))' > /workspace/expectations.json
+        print(json.dumps({"identity": runtime_identity(), "years": [str(y) for y in personal_impact.YEARS], "policies": list(personal_impact.POLICY_IDS), "household_impact": {"declared": importlib.util.find_spec("uk_budget_data.household_impact") is not None}}, sort_keys=True))' > /workspace/expectations.json
 
   # Smoke-test the candidate with main's checker, on plain Python.
   - id: smoke

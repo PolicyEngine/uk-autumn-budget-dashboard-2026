@@ -188,11 +188,7 @@ class TestDataConfig:
         """DataConfig has income curve settings."""
         from uk_budget_data.models import DataConfig
 
-        config = DataConfig(
-            income_curve_max=200_000,
-            income_curve_points=101,
-        )
-        assert config.income_curve_max == 200_000
+        config = DataConfig(income_curve_points=101)
         assert config.income_curve_points == 101
 
     def test_global_baseline_parameter_changes(self):

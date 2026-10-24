@@ -14,6 +14,8 @@ import {
 } from "./svgHelpers";
 import { measureTextWidth, wrapText, estimateTextHeight } from "./textMeasure";
 import { downloadSvg } from "./downloadFile";
+import { GROUP_GAP, SUB_GAP, legendLayout, subColumns, wrapLabel } from "./legendLayout";
+import { CHART_COLOURS } from "./chartTheme";
 
 /**
  * Convert an image URL to a base64 data URL.
@@ -51,9 +53,9 @@ const STYLES = {
   legendIconTextGap: 6,
   legendItemGap: 24,
   colors: {
-    title: "#374151",
-    description: "#4b5563",
-    legendText: "#374151",
+    title: CHART_COLOURS.text,
+    description: CHART_COLOURS.axisTitle,
+    legendText: CHART_COLOURS.text,
     background: "white",
   },
 };
@@ -226,6 +228,7 @@ function createLegend(items, maxWidth, yPosition, options = {}) {
           y2: currentY,
           stroke: item.color,
           strokeWidth: 2,
+          dash: item.dash,
         });
         itemGroup.appendChild(line);
       } else {
@@ -370,21 +373,48 @@ export async function exportChartAsSvg(
   filename = "chart",
   options = {},
 ) {
-  const { title, description, legendItems = [], logo } = options;
+  const built = await buildChartSvg(containerRef, options);
+  if (!built) return false;
+  downloadSvg(built.svg, filename);
+  return true;
+}
+
+/**
+ * Build the export SVG (title, description, chart, legend and logo) without
+ * downloading it, for the SVG and PNG downloads alike.
+ *
+ * Takes the same options as exportChartAsSvg, plus:
+ * @param {string} [options.svgSelector] - Selector for the chart's SVG when
+ *   it is not a Recharts chart (default: the Recharts wrapper's SVG)
+ * @param {number} [options.reservedLegendHeight] - Space the chart keeps for
+ *   a legend when it has no Recharts legend (default 60)
+ * @returns {Promise<{svg: string, width: number, height: number}|null>}
+ */
+export async function buildChartSvg(containerRef, options = {}) {
+  const {
+    title,
+    description,
+    legendItems = [],
+    logo,
+    svgSelector,
+    reservedLegendHeight = 60,
+  } = options;
 
   if (!containerRef?.current) {
     console.error("exportChartAsSvg: No container ref provided");
-    return false;
+    return null;
   }
 
-  // Find the SVG element within the Recharts container
-  const rechartsWrapper =
-    containerRef.current.querySelector(".recharts-wrapper");
-  const svgElement = rechartsWrapper?.querySelector("svg");
+  // Find the SVG element within the Recharts container (or the selector)
+  const svgElement = svgSelector
+    ? containerRef.current.querySelector(svgSelector)
+    : containerRef.current
+        .querySelector(".recharts-wrapper")
+        ?.querySelector("svg");
 
   if (!svgElement) {
     console.error("exportChartAsSvg: No SVG element found in container");
-    return false;
+    return null;
   }
 
   // Get dimensions
@@ -401,7 +431,7 @@ export async function exportChartAsSvg(
   const originalLegendWrapper = svgElement
     .closest(".recharts-wrapper")
     ?.querySelector(".recharts-legend-wrapper");
-  let originalLegendHeight = 60; // Default fallback
+  let originalLegendHeight = reservedLegendHeight; // Default fallback
   if (originalLegendWrapper) {
     const legendRect = originalLegendWrapper.getBoundingClientRect();
     originalLegendHeight = legendRect.height;
@@ -424,151 +454,233 @@ export async function exportChartAsSvg(
     }
   });
 
-  // Calculate layout - no extra footer height needed since chart already has legend space
-  const headerHeight = calculateHeaderHeight(
-    { title, description },
-    chartWidth,
-  );
-  const totalHeight = chartHeight + headerHeight;
+  // Layout: the plot (with its unit label and axes), the legend, then the
+  // logo at the bottom right, inside a uniform padding. No title or
+  // description is drawn: the title names the file and the SVG <title>.
+  const PAD = 24;
+  const plotHeight = Math.max(0, chartHeight - originalLegendHeight);
+  const legend = legendItems.length
+    ? legendItems.some((item) => item.group)
+      ? createGroupedLegend(legendItems, chartWidth)
+      : createLegend(legendItems, chartWidth - STYLES.padding * 2, 0, {
+          legendAreaWidth: chartWidth,
+        })
+    : null;
+  const legendGap = legend ? 16 : 0;
+  const legendHeight = legend ? legend.height : 0;
+  const logoWidth = logo?.href ? logo.width : 0;
+  const logoHeight = logo?.href ? logo.height : 0;
+  const logoGap = logo?.href ? 12 : 0;
 
-  // Update SVG dimensions
-  clonedSvg.setAttribute("width", chartWidth);
-  clonedSvg.setAttribute("height", totalHeight);
-  clonedSvg.setAttribute("viewBox", `0 0 ${chartWidth} ${totalHeight}`);
+  const width = chartWidth + PAD * 2;
+  const height =
+    PAD + plotHeight + legendGap + legendHeight + logoGap + logoHeight + PAD;
+
+  clonedSvg.setAttribute("width", width);
+  clonedSvg.setAttribute("height", height);
+  clonedSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   addSvgNamespaces(clonedSvg);
 
-  // Wrap existing content and translate down
+  // The plot, clipped to its own height (the on-screen legend space goes)
   const existingContent = Array.from(clonedSvg.childNodes);
-  const contentGroup = createSvgGroup({
-    transform: `translate(0, ${headerHeight})`,
-  });
+  const contentGroup = createSvgGroup({ transform: `translate(${PAD}, ${PAD})` });
   existingContent.forEach((child) => contentGroup.appendChild(child));
-  clonedSvg.appendChild(contentGroup);
+  const clipId = `export-plot-clip-${Math.random().toString(36).slice(2, 8)}`;
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  const clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+  clip.setAttribute("id", clipId);
+  clip.appendChild(createSvgRect({ x: 0, y: 0, width: chartWidth, height: plotHeight }));
+  defs.appendChild(clip);
+  contentGroup.setAttribute("clip-path", `url(#${clipId})`);
 
-  // Add white background
   const background = createSvgRect({
     x: 0,
     y: 0,
-    width: chartWidth,
-    height: totalHeight,
+    width,
+    height,
     fill: STYLES.colors.background,
   });
-  clonedSvg.insertBefore(background, contentGroup);
 
-  // Add title
-  let currentY = STYLES.padding;
+  // Accessible name: the chart's title, not drawn
   if (title) {
-    const titleElement = createTitle(title, currentY + STYLES.titleFontSize);
-    clonedSvg.insertBefore(titleElement, contentGroup);
-    currentY += STYLES.titleFontSize + STYLES.titleDescGap;
+    const titleElement = document.createElementNS("http://www.w3.org/2000/svg", "title");
+    titleElement.textContent = title;
+    clonedSvg.appendChild(titleElement);
   }
+  clonedSvg.appendChild(defs);
+  clonedSvg.appendChild(background);
+  clonedSvg.appendChild(contentGroup);
 
-  // Add description
-  if (description) {
-    const maxWidth = chartWidth - STYLES.padding * 2;
-    const descElement = createDescription(
-      description,
-      currentY + STYLES.descriptionFontSize,
-      maxWidth,
-    );
-    clonedSvg.insertBefore(descElement, contentGroup);
-  }
-
-  // Footer layout: legend (auto width, centered) | logo (fixed width, right-aligned)
-  // The legend wraps to multiple rows if needed, and the footer height adjusts dynamically
-  const footerPadding = 20;
-  const logoRightPadding = 10;
-  const legendLogoGap = 20; // Gap between legend area and logo
-
-  // Calculate logo dimensions
-  const logoWidth = logo?.href ? logo.width : 0;
-  const logoHeight = logo?.href ? logo.height : 0;
-
-  // Calculate available width for legend (chart width minus logo space)
-  const legendAreaWidth = logo?.href
-    ? chartWidth - logoWidth - logoRightPadding - legendLogoGap
-    : chartWidth - STYLES.padding * 2;
-
-  // Pre-calculate legend layout to determine footer height
-  let legendResult = null;
-  if (legendItems.length > 0) {
-    // Create a temporary legend to measure its height
-    // Use a smaller max width to ensure wrapping works well
-    const maxLegendWidth = legendAreaWidth - STYLES.padding;
-    legendResult = createLegend(legendItems, maxLegendWidth, 0, {
-      legendAreaWidth: legendAreaWidth,
+  if (legend) {
+    const legendGroup = createSvgGroup({
+      transform: `translate(${PAD}, ${PAD + plotHeight + legendGap})`,
     });
-  }
-
-  const legendHeight = legendResult ? legendResult.height : 0;
-  const footerContentHeight = Math.max(legendHeight, logoHeight);
-  const footerHeight = footerContentHeight + footerPadding * 2;
-
-  // The chart already has legend space built in (originalLegendHeight).
-  // We need to add extra height only if our new footer is taller than what was there.
-  const extraFooterHeight = Math.max(0, footerHeight - originalLegendHeight);
-
-  // Update SVG dimensions with the new footer height
-  const finalTotalHeight = headerHeight + chartHeight + extraFooterHeight;
-  clonedSvg.setAttribute("height", finalTotalHeight);
-  clonedSvg.setAttribute("viewBox", `0 0 ${chartWidth} ${finalTotalHeight}`);
-
-  // Update background to cover the full height
-  background.setAttribute("height", finalTotalHeight);
-
-  // Calculate footer Y position - place legend where the original legend space started
-  const footerY =
-    headerHeight + chartHeight - originalLegendHeight + footerPadding;
-
-  // Add legend (centered in the legend area, left of logo)
-  if (legendItems.length > 0 && legendResult) {
-    // Recreate the legend at the correct Y position
-    const maxLegendWidth = legendAreaWidth - STYLES.padding;
-    const { element: legendGroup } = createLegend(
-      legendItems,
-      maxLegendWidth,
-      footerY,
-      { legendAreaWidth: legendAreaWidth },
-    );
+    legendGroup.appendChild(legend.element);
     clonedSvg.appendChild(legendGroup);
   }
 
-  // Calculate logo position (anchored to right, vertically centered with legend)
-  const logoX = chartWidth - logoWidth - logoRightPadding;
-  const logoY = footerY + (legendHeight - logoHeight) / 2;
-
-  // Embed logo on the right
   if (logo?.href) {
     try {
-      // Convert logo to base64 for standalone SVG
       const base64Logo = await imageToBase64(logo.href);
       const logoImage = createSvgElement("image", {
-        width: logo.width,
-        height: logo.height,
+        width: logoWidth,
+        height: logoHeight,
       });
-      // Set both href and xlink:href for maximum browser compatibility
       logoImage.setAttribute("href", base64Logo);
-      logoImage.setAttributeNS(
-        "http://www.w3.org/1999/xlink",
-        "xlink:href",
-        base64Logo,
-      );
-
-      // Position logo (logoX and logoY calculated above)
-      logoImage.setAttribute("x", logoX);
-      logoImage.setAttribute("y", logoY);
-
+      logoImage.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", base64Logo);
+      logoImage.setAttribute("x", width - PAD - logoWidth);
+      logoImage.setAttribute("y", height - PAD - logoHeight);
       clonedSvg.appendChild(logoImage);
     } catch (error) {
       console.warn("exportChartAsSvg: Failed to embed logo", error);
     }
   }
 
-  // Serialize and download
-  const svgString = serializeSvg(clonedSvg);
-  downloadSvg(svgString, filename);
+  return {
+    svg: serializeSvg(clonedSvg),
+    width,
+    height,
+  };
+}
 
-  return true;
+/**
+ * The on-screen grouped legend, drawn in SVG with the same layout
+ * (legendLayout): each group's heading ("Raise revenue", "Cost revenue")
+ * over its own column, the groups side by side, a group of more than three
+ * items in two sub-columns (filled down then across), labels wrapped where
+ * a column is narrower; one column when the width is narrow. Then the net
+ * line centred under them; the block centred in `areaWidth`.
+ *
+ * @param {Array<{color: string, label: string, type: string, group?: string}>} items
+ *   Items with `group` "raise" or "cost"; items without a group (the net
+ *   line) go under the columns.
+ */
+export function createGroupedLegend(items, areaWidth) {
+  const { legendFontSize, legendIconSize, legendIconTextGap, colors } = STYLES;
+  const font = { fontSize: legendFontSize, fontWeight: "500" };
+  const headingFont = { fontSize: 11, fontWeight: "600" };
+  const lineHeight = legendFontSize + 4;
+  const itemGap = 6;
+  const headingHeight = 18;
+  const groupGap = 12;
+  const iconWidth = legendIconSize + legendIconTextGap;
+  // A pixel of slack, as on screen
+  const measureLabel = (text) => measureTextWidth(text, font) + 1;
+  const groups = [
+    ["Raise revenue", items.filter((item) => item.group === "raise")],
+    ["Cost revenue", items.filter((item) => item.group === "cost")],
+  ].filter(([, groupItems]) => groupItems.length > 0);
+  const rest = items.filter((item) => !item.group);
+
+  const layout = legendLayout({
+    groups: groups.map(([heading, groupItems]) => ({
+      heading,
+      labels: groupItems.map((item) => item.label),
+    })),
+    available: areaWidth,
+    measure: measureLabel,
+    measureHeading: (text) => measureTextWidth(text, headingFont),
+    iconWidth,
+  });
+  const stacked = layout.mode === "stacked";
+  const left = Math.max(0, (areaWidth - layout.width) / 2);
+
+  const group = createSvgGroup({ className: "exported-legend" });
+  const drawSwatch = (item, itemX, itemY) => {
+    if (item.type === "line") {
+      group.appendChild(
+        createSvgLine({
+          x1: itemX,
+          y1: itemY,
+          x2: itemX + legendIconSize,
+          y2: itemY,
+          stroke: item.color,
+          strokeWidth: 2,
+        }),
+      );
+    } else {
+      group.appendChild(
+        createSvgRect({
+          x: itemX,
+          y: itemY - legendIconSize / 2 + 2,
+          width: legendIconSize - 4,
+          height: legendIconSize - 4,
+          fill: item.color,
+        }),
+      );
+    }
+  };
+  // One item: its swatch by the first line, the label in its lines
+  const drawItem = (item, itemX, top, lines) => {
+    const firstY = top + lineHeight / 2;
+    drawSwatch(item, itemX, firstY);
+    const text = createSvgText("", {
+      x: itemX + iconWidth,
+      y: firstY + legendFontSize / 3,
+      ...font,
+      fill: colors.legendText,
+    });
+    lines.forEach((line, index) => {
+      text.appendChild(
+        createSvgTspan(line, {
+          x: itemX + iconWidth,
+          dy: index === 0 ? "0" : `${lineHeight}px`,
+        }),
+      );
+    });
+    group.appendChild(text);
+  };
+
+  // One group at (x, top): its heading, then its sub-columns, each row as
+  // tall as its tallest item. Returns its height.
+  const drawGroup = ([heading, groupItems], laid, x, top) => {
+    group.appendChild(
+      createSvgText(heading, { x, y: top + 11, ...headingFont, fill: CHART_COLOURS.tick }),
+    );
+    const columns = subColumns(groupItems, laid.columns);
+    const labelWidth = Math.max(1, laid.width - iconWidth);
+    const wrapped = columns.map((column) =>
+      column.map((item) => wrapLabel(item.label, labelWidth, measureLabel)),
+    );
+    const rows = Math.max(0, ...columns.map((column) => column.length));
+    let y = top + headingHeight;
+    for (let row = 0; row < rows; row += 1) {
+      columns.forEach((column, columnIndex) => {
+        if (!column[row]) return;
+        drawItem(
+          column[row],
+          x + columnIndex * (laid.width + SUB_GAP),
+          y,
+          wrapped[columnIndex][row],
+        );
+      });
+      const rowLines = Math.max(1, ...wrapped.map((column) => column[row]?.length ?? 0));
+      y += rowLines * lineHeight + (row < rows - 1 ? itemGap : 0);
+    }
+    return y - top;
+  };
+
+  let height = 0;
+  if (stacked) {
+    groups.forEach((entry, index) => {
+      if (index > 0) height += groupGap;
+      height += drawGroup(entry, layout.groups[index], left, height);
+    });
+  } else {
+    let x = left;
+    groups.forEach((entry, index) => {
+      const laid = layout.groups[index];
+      height = Math.max(height, drawGroup(entry, laid, x, 0));
+      x += laid.width * laid.columns + SUB_GAP * (laid.columns - 1) + GROUP_GAP;
+    });
+  }
+  rest.forEach((item) => {
+    const restWidth = iconWidth + measureTextWidth(item.label, font);
+    height += 10;
+    drawItem(item, (areaWidth - restWidth) / 2, height, [item.label]);
+    height += lineHeight;
+  });
+  return { element: group, height };
 }
 
 export default exportChartAsSvg;
