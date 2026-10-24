@@ -1,7 +1,7 @@
 // Depth of poverty: people below 40%, 40-50% and 50-60% of median income
 // (AHC), stacked by year. The 40% and 50% lines come from deep_poverty; the
 // 60% line is the relative AHC poverty rate for all people. Ported from
-// PolicyEngine/uk-living-standards-outlook. The change runs from 2026-27.
+// PolicyEngine/uk-living-standards-outlook. The change runs from 2027-28.
 // The Depth view of the Poverty over time card.
 
 import { useMemo } from "react";

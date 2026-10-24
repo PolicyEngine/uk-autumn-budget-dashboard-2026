@@ -24,29 +24,39 @@ from policyengine_uk.system import system
 
 from uk_budget_data.living_standards.engine import (
     BASE_YEAR,
+    OBR_FORECAST_LAST_YEAR,
     certified_dataset,
     fy,
     headline_end_year,
     headline_end_year_note,
 )
+from uk_budget_data.living_standards.uc_health_element import (
+    EXTENSION_YEARS,
+    needs_uc_health_element_extension,
+)
 
-PRICE_BASE_YEAR = BASE_YEAR  # fiscal 2026-27, the year of Autumn Budget 2026
+PRICE_BASE_YEAR = BASE_YEAR  # fiscal 2027-28, as on the rest of the dashboard
 # Income, poverty and inequality series start at the model's own 2024-25
 # point, so the level gap to HBAI shows within 2024-25 rather than as a
 # one-year change. Everything else (growth, deciles, depth, groups) starts in
-# 2026-27, the base year.
+# 2027-28, the base year.
 JOIN_START = 2024
 PROJECTION_START = BASE_YEAR
-HEADLINE_START_YEAR = BASE_YEAR  # headline changes run from 2026-27
-# The end year (2029-30 before policyengine-uk 2.134.4, 2030-31 from it)
-# comes from the installed engine: see engine.headline_end_year.
+HEADLINE_START_YEAR = BASE_YEAR  # headline changes run from 2027-28
+# The end year, 2031-32: engine.END_YEAR. Before policyengine-uk 2.134.4 the
+# UC health element for 2030-31 and 2031-32 follows that release's fix
+# (uc_health_element.py, PolicyEngine/policyengine-uk#2428).
 POST_PUBLISHED = (
     False  # Autumn Budget 2026 OBR forecast loaded into forecast.post
 )
 MIN_HOUSEHOLDS = (
     100  # suppress poverty_by_group cells below this unweighted count
 )
-FORECAST_YEARS = range(2026, 2031)
+# OBR calendar years the Forecast changes sub-tab shows: 2027, the first year
+# of the dashboard's 2027-28 to 2031-32 period, to 2030, the last year of the
+# OBR March 2026 forecast. 2031 is a policyengine-uk long-run assumption, not
+# an OBR forecast, so it is not shown.
+FORECAST_YEARS = range(BASE_YEAR, OBR_FORECAST_LAST_YEAR + 1)
 
 # (key, label, parameter leaf under gov.economic_assumptions.yoy_growth.obr)
 SECTIONS = [
@@ -116,7 +126,7 @@ SOURCES = {
     "rent": f"{EFO}, Table 1.7, actual rents for housing (ONS D7GQ, calendar year)",
     "social_rent": "England social rent policy cap (CPI + 1%, MHCLG policy statement on rents for social housing); not an OBR forecast",
     "mortgage_interest": (
-        f"{EFO}, Table 1.7, mortgage interest payments (calendar year), 2026-2029; "
+        f"{EFO}, Table 1.7, mortgage interest payments (calendar year), 2027-2029; "
         "OBR stops forecasting this series after 2030 Q1, so the 2030 value (5.5%) is "
         "carried over from policyengine-uk's November 2025 update, not an OBR March 2026 figure"
     ),
@@ -147,13 +157,22 @@ def build_outlook(
         raise ValueError(
             "The projections were run on another engine than the installed one."
         )
+    uc_fix = run_meta.get("uc_health_element_extension", {"applied": False})
+    if needs_uc_health_element_extension(pe_uk) and uc_fix.get(
+        "years"
+    ) != list(EXTENSION_YEARS):
+        raise ValueError(
+            "The projections were run without the UC health element "
+            f"extension for {list(EXTENSION_YEARS)}, which policyengine-uk "
+            f"{pe_uk} needs."
+        )
     HEADLINE_END_YEAR = headline_end_year(pe_uk)
     params = system.parameters.gov.economic_assumptions
 
     # Real terms: chained OBR CPI index (BHC) and CPI after housing costs (AHC)
     # from the pinned package; the value for calendar key Y is applied to
     # fiscal year Y-(Y+1), as policyengine-uk does when uprating.
-    # real = nominal * P(base) / P(Y), base = PRICE_BASE_YEAR (2026-27 = 1).
+    # real = nominal * P(base) / P(Y), base = PRICE_BASE_YEAR (2027-28 = 1).
     indices = {
         "bhc": params.indices.obr.consumer_price_index,
         "ahc": params.indices.obr.consumer_price_index_ahc,
@@ -193,7 +212,7 @@ def build_outlook(
     }
 
     # HBAI equivalised income outturn (Table 1.2b) is GBP per week in average
-    # 2024/25 prices. Annualise (x 52) and express in 2026-27 prices. BHC cash
+    # 2024/25 prices. Annualise (x 52) and express in 2027-28 prices. BHC cash
     # values are recovered with OBR CPI. AHC outturn is real only: pe-uk's
     # CPI-AHC index is flat before 2022, so recovered 2021-22 cash values come
     # out about 10.7% too high (PolicyEngine/policyengine-uk#2531 does not fix it).
@@ -618,6 +637,7 @@ def build_outlook(
             "headline_start_year": fy(HEADLINE_START_YEAR),
             "headline_end_year": fy(HEADLINE_END_YEAR),
             "headline_end_year_note": headline_end_year_note(pe_uk),
+            "uc_health_element_extension": uc_fix,
             "cpi_ahc_note": cpi_ahc_note(
                 living["median_equivalised_income_ahc"], HEADLINE_END_YEAR
             ),
@@ -800,11 +820,13 @@ def decile_note(ahc_growth: list[float]) -> str:
     if ahc_growth[0] < 0 and abs(ahc_growth[0]) > max(
         abs(g) for g in ahc_growth[1:]
     ):
-        # Drivers from the issue #1 decomposition (2025-26 base); both fall inside the 2026-27 base window too.
+        # The issue #1 decomposition ran on a 2025-26 base to 2029-30; the
+        # 2027-28 base window keeps falling after 2029-30, which it did not
+        # cover, so the note names its drivers only for the years it covered.
         return (
-            f"{noisy}, and its fall sits in the bottom 5%. The largest driver is the State Pension age rise to 67 on "
-            "a dataset whose ages are held fixed; next is Local Housing Allowance frozen beyond 2026-27, an "
-            "assumption rather than law."
+            f"{noisy}, and its fall sits in the bottom 5%. To 2029-30 the main drivers were the State Pension age rise "
+            "to 67 on a dataset whose ages are held fixed and Local Housing Allowance frozen beyond 2026-27; later "
+            "years are not decomposed."
         )
     return f"{noisy}."
 
@@ -821,6 +843,9 @@ CPI_AHC_2531 = {
     2028: 0.0194,
     2029: 0.0194,
     2030: 0.0192,
+    # #2531 states no 2031 value, so the series holds its 2030 rate, as
+    # policyengine-uk does for a growth series past its last value.
+    2031: 0.0192,
 }
 
 

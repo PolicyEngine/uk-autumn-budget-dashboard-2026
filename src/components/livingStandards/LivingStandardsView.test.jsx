@@ -71,10 +71,10 @@ describe("the Living standards view", () => {
     // beside Growth across the distribution, Poverty over time beside Who is
     // in poverty. The period is in each title.
     const card = (name) => within(panel()).getByRole("heading", { level: 3, name }).closest(".ls-card");
-    const incomes = card(/^Incomes over time, 2021-22 to 2029-30$/);
-    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution, 2026-27 to 2029-30$/).closest(".charts-grid"));
-    const poverty = card(/^Poverty over time, 2021-22 to 2029-30$/);
-    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty, 2026-27 to 2029-30$/).closest(".charts-grid"));
+    const incomes = card(/^Incomes over time, 2021-22 to 2031-32$/);
+    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution, 2027-28 to 2031-32$/).closest(".charts-grid"));
+    const poverty = card(/^Poverty over time, 2021-22 to 2031-32$/);
+    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty, 2027-28 to 2031-32$/).closest(".charts-grid"));
     expect(panel().querySelectorAll(".ls-card")).toHaveLength(4);
     for (const name of ["Child poverty", "What the baseline leaves out", "Data"]) {
       expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
@@ -84,13 +84,13 @@ describe("the Living standards view", () => {
     // "About this chart"
     expect(panel().querySelector(".ls-section > .note")).toBeNull();
     expect(panel().querySelectorAll(".ls-card-footer > :not(.disclosure)")).toHaveLength(0);
-    expect(within(panel()).queryByText(/^Series end in 2029-30/)).toBeNull();
+    expect(within(panel()).queryByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeNull();
     expect(within(panel()).queryByText(/Source:/)).toBeNull();
     // The series note is stated once, in Incomes over time's About this
     // chart, after the definition and notes, with the source line last
     fireEvent.click(within(incomes).getByRole("button", { name: "About this chart" }));
-    expect(within(incomes).getByText(/^Series end in 2029-30/)).toBeInTheDocument();
-    expect(document.body.textContent.match(/Series end in 2029-30/g)).toHaveLength(1);
+    expect(within(incomes).getByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeInTheDocument();
+    expect(document.body.textContent.match(/is past the OBR March 2026 forecast/g)).toHaveLength(1);
     const about = incomes.querySelector(".disclosure-content");
     expect(about.lastElementChild).toHaveClass("ls-source");
     expect(about.lastElementChild).toHaveTextContent(/^Source: DWP, Households Below Average Income/);
@@ -130,7 +130,7 @@ describe("the Living standards view", () => {
     expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
     expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
     fireEvent.click(within(views).getByRole("button", { name: "Depth" }));
-    poverty = (await heading(/^Poverty over time, 2026-27 to 2029-30$/)).closest(".ls-card");
+    poverty = (await heading(/^Poverty over time, 2027-28 to 2031-32$/)).closest(".ls-card");
     expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
@@ -145,7 +145,7 @@ describe("the Living standards view", () => {
     fireEvent.focus(area);
     const tip = within(who).getByRole("tooltip");
     expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2026-2719.8%");
+    expect(tip).toHaveTextContent("2027-2819.8%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
@@ -209,7 +209,14 @@ describe("the Living standards view", () => {
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
     expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
-    expect(within(section).getByText(/2026-27 prices/)).toBeInTheDocument();
+    expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
+    expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
+    // The UC health element fix, with its upstream pull request
+    expect(within(section).getByRole("link", { name: "PolicyEngine/policyengine-uk#2428" })).toHaveAttribute(
+      "href",
+      "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
+    );
+    expect(within(section).getByText(/For 2030-31 and 2031-32 this baseline applies that fix itself/)).toBeInTheDocument();
     expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });

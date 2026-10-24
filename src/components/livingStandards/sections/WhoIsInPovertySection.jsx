@@ -1,5 +1,5 @@
 // Who is in poverty: one dot plot for every breakdown, from the headline
-// start year, 2026-27 (grey), to the headline end year (teal), with an arrow
+// start year, 2027-28 (grey), to the headline end year (teal), with an arrow
 // for the direction, the values and a change chip per row, and a dashed
 // line for the reference group (all people, or all children). Family type
 // and tenure come from poverty_by_group; children by number of children and

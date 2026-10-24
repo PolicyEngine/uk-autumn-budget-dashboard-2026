@@ -7,7 +7,7 @@ import { plainWords } from "./sources";
 
 /**
  * A Living standards chart card in the dashboard's card layout: the title
- * with its period ("…, 2026-27 to 2029-30") and the Download menu, the
+ * with its period ("…, 2027-28 to 2031-32") and the Download menu, the
  * summary sentence as the description, the in-card controls on one row,
  * the plot (with its legend and logo), and a closed "About this chart".
  * Nothing else sits under the plot: the definition (about), the notes and

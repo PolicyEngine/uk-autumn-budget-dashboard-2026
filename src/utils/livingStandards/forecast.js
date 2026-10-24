@@ -2,7 +2,14 @@
 
 import { formatOneDp, round1, signedChange } from "./outlook";
 
-export const HERO_YEAR = "2026";
+/**
+ * The year the headline tiles show: the first year of the forecast series
+ * (2027, the first year of the dashboard's period), read from the data.
+ */
+export function heroYear(forecast) {
+  const years = (forecast?.sections || []).flatMap((s) => s.series.flatMap((series) => (series.pre || []).map((p) => p.year)));
+  return years.length ? years.reduce((a, b) => (Number(b) < Number(a) ? b : a)) : null;
+}
 
 export const pctLabel = (v) => (v == null ? "—" : `${formatOneDp(v)}%`);
 /** A change in points, signed after rounding: "+0.3pp", "−0.2pp", "0.0pp". */

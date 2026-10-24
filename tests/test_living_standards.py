@@ -2,7 +2,7 @@
 
 Logic tests on tiny synthetic inputs: the weighted statistics, a whole
 projection year from a stand-in simulation, the build's deflator rebasing,
-decile growth and poverty-line maths, the engine-version end year, the OBR
+decile growth and poverty-line maths, the end year and its note, the OBR
 forecast reader on a synthetic workbook in the OBR layout, the derived
 series, and the review row. A contract test runs the CLI on synthetic
 projections and checks its output, and the committed file, against
@@ -46,6 +46,10 @@ from uk_budget_data.living_standards.projections import (
     wquantile,
 )
 from uk_budget_data.living_standards.review import set_pending
+from uk_budget_data.living_standards.uc_health_element import (
+    EXTENSION_YEARS,
+    needs_uc_health_element_extension,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 INPUTS = ROOT / INPUTS_DIR
@@ -203,6 +207,12 @@ def projections():
         "meta": {
             "dataset_sha256": engine.certified_dataset()["sha256"],
             **engine.engine_versions(),
+            # What run_projections records when it applies the extension.
+            "uc_health_element_extension": {
+                "applied": True,
+                "years": list(EXTENSION_YEARS),
+                "upstream_fix": "PolicyEngine/policyengine-uk#2428",
+            },
         }
     }
     for year in range(engine.FIRST_YEAR, end + 1):
@@ -292,7 +302,12 @@ def test_decile_growth_runs_from_the_base_year(outlook):
     assert block["cumulative_growth_to_end"] == last["cumulative_growth"]
     for i in range(10):
         growth = last["real_median"][i] / first["real_median"][i] - 1
-        assert last["cumulative_growth"][i] == pytest.approx(growth, abs=2e-5)
+        # Growth comes from the unrounded values; the medians are rounded to
+        # whole pounds, which moves their ratio by up to about 1 / median.
+        tolerance = 1 / first["real_median"][i] + 1e-5
+        assert last["cumulative_growth"][i] == pytest.approx(
+            growth, abs=tolerance
+        )
 
 
 def test_poverty_lines_are_shares_of_the_models_own_median(
@@ -328,24 +343,33 @@ def test_the_build_refuses_projections_from_another_dataset(projections):
         build_outlook(other, {}, {})
 
 
-# --- End year from the engine version --------------------------------------
+def test_the_build_refuses_projections_without_the_uc_extension(projections):
+    other = json.loads(json.dumps(projections))
+    other["meta"].pop("uc_health_element_extension")
+    if needs_uc_health_element_extension(other["meta"]["policyengine_uk"]):
+        with pytest.raises(ValueError, match="UC health element"):
+            build_outlook(other, {}, {})
+
+
+# --- Period: 2027-28 to 2031-32 on every engine -----------------------------
 
 
 @pytest.mark.parametrize(
-    "pe_uk, end",
+    "pe_uk, patched",
     [
-        ("2.132.6", 2029),
-        ("2.134.3", 2029),
-        ("2.134.4", 2030),
-        ("2.140.0", 2030),
+        ("2.132.6", True),
+        ("2.134.3", True),
+        ("2.134.4", False),
+        ("2.140.0", False),
     ],
 )
-def test_end_year_follows_the_engine(pe_uk, end):
-    assert engine.headline_end_year(pe_uk) == end
-    assert engine.projection_years(pe_uk)[-1] == end
+def test_the_period_is_the_same_on_every_engine(pe_uk, patched):
+    assert (engine.BASE_YEAR, engine.END_YEAR) == (2027, 2031)
+    assert engine.headline_end_year(pe_uk) == 2031
+    assert engine.projection_years(pe_uk) == list(range(2024, 2032))
     note = engine.headline_end_year_note(pe_uk)
-    assert note.startswith(f"Series end in {engine.fy(end)}")
-    assert pe_uk in note
+    assert note.startswith("2031-32 is past the OBR March 2026 forecast")
+    assert needs_uc_health_element_extension(pe_uk) is patched
 
 
 # --- Contract: the CLI's output and the committed file -----------------------
@@ -390,10 +414,14 @@ def check_contract(doc: dict) -> None:
     for key in META_KEYS:
         assert key in meta, key
     assert set(meta["dataset"]) >= {"name", "tag", "sha256", "hf_repo"}
-    assert meta["real_price_base"] == meta["headline_start_year"] == "2026-27"
+    assert meta["real_price_base"] == meta["headline_start_year"] == "2027-28"
     end = meta["headline_end_year"]
-    assert FY.match(end)
-    assert meta["headline_end_year_note"].startswith(f"Series end in {end}")
+    assert end == "2031-32"
+    assert meta["headline_end_year_note"].startswith(
+        f"{end} is past the OBR March 2026 forecast"
+    )
+    if needs_uc_health_element_extension(meta["policyengine_uk"]):
+        assert meta["uc_health_element_extension"]["years"] == [2030, 2031]
     for note in meta["notes"] + meta["caveats"]:
         assert len(note) <= 160
 
@@ -410,10 +438,17 @@ def check_contract(doc: dict) -> None:
             assert all(0 <= p["rate"] <= 1 for p in series)
             years(series)
     dec = doc["income_by_decile"]
-    assert dec["base_year"] == "2026-27" and dec["end_year"] == end
+    assert dec["base_year"] == "2027-28" and dec["end_year"] == end
     for basis in ("bhc", "ahc"):
         assert len(dec[basis]["cumulative_growth_to_end"]) == 10
-    assert doc["poverty_by_group"]["years"] == ["2026-27", end]
+    assert doc["poverty_by_group"]["years"] == ["2027-28", end]
+    for key in ("child_poverty_by_family", "deep_poverty"):
+        block = doc[key]["projection"]
+        first = next(iter(block.values()))
+        first = (
+            first if isinstance(first, list) else next(iter(first.values()))
+        )
+        assert first[0]["year"] == "2027-28" and first[-1]["year"] == end
 
     forecast = doc["forecast"]
     assert forecast["pre_label"] == "OBR March 2026 (pre-Budget)"
@@ -421,6 +456,13 @@ def check_contract(doc: dict) -> None:
     assert forecast["headline"] == ["cpi", "rpi", "earnings"]
     for section in forecast["sections"]:
         for s in section["series"]:
+            # OBR calendar years 2027 to 2030; 2031 is not an OBR forecast.
+            assert [p["year"] for p in s["pre"]] == [
+                "2027",
+                "2028",
+                "2029",
+                "2030",
+            ]
             assert [p["year"] for p in s["pre"]] == [
                 p["year"] for p in s["post"]
             ]
@@ -669,15 +711,14 @@ def test_the_post_document_and_derived_series(tmp_path):
     assert (
         "kept at the pre-Budget value" in series["mortgage_interest"]["source"]
     )
-    # CPI after housing costs moves with CPI: +0.2 points in 2026.
-    cpi_change = series["cpi"]["values"]["2026"] - pre["cpi"]["2026"]
-    assert series["cpi_ahc"]["values"]["2026"] == pytest.approx(
-        pre["cpi_ahc"]["2026"] + cpi_change
+    # CPI after housing costs moves with CPI in the same year.
+    cpi_change = series["cpi"]["values"]["2027"] - pre["cpi"]["2027"]
+    assert series["cpi_ahc"]["values"]["2027"] == pytest.approx(
+        pre["cpi_ahc"]["2027"] + cpi_change
     )
-    # Social rent: CPI for the year before (rounded) + 1 point; 2026 fixed.
-    assert (
-        series["social_rent"]["values"]["2026"] == pre["social_rent"]["2026"]
-    )
+    # Social rent: CPI for the year before (rounded) + 1 point. 2027 takes
+    # 2026 CPI (2.46 -> 2.5), read from the EFO though 2026 is not shown.
+    assert "2026" not in series["social_rent"]["values"]
     assert series["social_rent"]["values"]["2027"] == pytest.approx(
         0.025 + 0.01
     )
@@ -701,7 +742,7 @@ def test_the_post_document_and_derived_series(tmp_path):
         for s in sec["series"]
         if s["key"] == "cpi"
     )
-    assert [p["value"] for p in cpi["post"]][0] == 0.025
+    assert cpi["post"][0] == {"year": "2027", "value": 0.02}
     assert cpi["post_source"].startswith("Table 2.5 Inflation")
     # Only the forecast block changes.
     assert {k: v for k, v in published.items() if k != "forecast"} == {
