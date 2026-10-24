@@ -5,8 +5,8 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -52,7 +52,14 @@ const card = (name) => screen.getByRole("heading", { level: 3, name }).closest("
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
 const cpiPre = () => REAL.forecast.sections[0].series.find((s) => s.key === "cpi").pre[0].value;
 
+// Warm Vite's real chart dependency tree separately from the assertions.
+// renderForecast still resets modules per case to isolate the outlook cache.
+beforeAll(async () => {
+  await import("./LivingStandardsTab");
+}, 90_000);
+
 afterEach(() => {
+  cleanup();
   vi.unstubAllGlobals();
 });
 

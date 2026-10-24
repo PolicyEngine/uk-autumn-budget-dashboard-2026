@@ -7,9 +7,9 @@ import { chooseReform } from "../utils/geography/selection";
 import { scatterView } from "../utils/householdScatter";
 import { ALPHA, BETA, COMBINED, YEAR, bindFlatFiles, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
-const geography = (level, packageAs = COMBINED) => [
+const geography = (level, packageAs = COMBINED, includePackage = true) => [
   "level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,tier,reason,support_band,noise,estimator",
-  ...[ALPHA, BETA, packageAs].flatMap((id) => [YEAR, YEAR + 1].map((year) =>
+  ...[ALPHA, BETA, ...(includePackage ? [packageAs] : [])].flatMap((id) => [YEAR, YEAR + 1].map((year) =>
     [level, level === "region" ? "E12000001" : "Z14000001", "Synthetic area", id, year, "relative_change", "0.01", "0.005", "0.015", "gain", "reported", "", "30+", "False", "direct"].join(","),
   )),
 ].join("\n");
@@ -21,10 +21,10 @@ const scatterTables = () => Object.fromEntries([ALPHA, BETA, COMBINED].map((id) 
 }]));
 
 /** A catalogue as the page builds it, with the geography files bound to its manifest. */
-async function verifiedCatalogue(fixture, { packageAs = COMBINED } = {}) {
+async function verifiedCatalogue(fixture, { packageAs = COMBINED, includePackage = true } = {}) {
   const aliases = packageAs === COMBINED ? {} : { [packageAs]: COMBINED };
   const served = await bindFlatFiles(fixture.manifest, {
-    "regional.csv": geography("region", packageAs), "constituency.csv": geography("constituency", packageAs),
+    "regional.csv": geography("region", packageAs, includePackage), "constituency.csv": geography("constituency", packageAs, includePackage),
   }, aliases);
   vi.stubGlobal("fetch", vi.fn(async (url) => {
     const name = String(url).slice(String(url).indexOf("/data/") + 6);
@@ -45,10 +45,12 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("catalogue gates on additional population files", () => {
-  it.each(["staged", "withdrawn", "not_computable"])("refuses a %s combined run in both geography tables and the household scatter", async (status) => {
+  it.each(["staged", "withdrawn", "not_computable"])("rejects area files containing a %s combined run and removes it from the verified household scatter", async (status) => {
     const fixture = measureCatalogueFixture({ held: false });
     fixture.manifest.combined[COMBINED].status = status;
     for (const entry of [...Object.values(fixture.manifest.measures), ...Object.values(fixture.manifest.combined)]) entry.years = [YEAR];
+    // These files still contain the held package. The approved area
+    // provenance records only alpha and beta, so neither file is publishable.
     const catalogue = await verifiedCatalogue(fixture);
     const { result } = renderHook(() => ({
       regional: useGeographyData("regional"),
@@ -56,19 +58,46 @@ describe("catalogue gates on additional population files", () => {
       scatter: useHouseholdScatterData(),
     }), { wrapper: wrapperFor(catalogue) });
     await waitFor(() => {
+      expect(result.current.regional.status).toBe("error");
+      expect(result.current.constituency.status).toBe("error");
+      expect(result.current.scatter.status).toBe("ready");
+    });
+    expect(catalogue.combinedId).toBeNull();
+    for (const name of ["regional", "constituency"]) {
+      expect(result.current[name].table).toBeNull();
+      expect(result.current[name].error).toMatch(/reform has no verified provenance/);
+    }
+    // Receipt-verified artifacts are independent of the rejected flat files:
+    // supported individual rows remain, and the held package contributes none.
+    expect(result.current.scatter.rows).toHaveLength(2);
+    expect(new Set(result.current.scatter.rows.map((row) => row.reform_id))).toEqual(new Set([ALPHA, BETA]));
+    expect(result.current.scatter.rows.every((row) => row.reform_id !== COMBINED && row.year === YEAR)).toBe(true);
+    expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: [ALPHA, BETA], packageId: catalogue.combinedId }).kind).toBe("no-package");
+    expect(scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId }).kind).toBe("notice");
+  });
+
+  it("keeps approved individual area figures when a withdrawn package has no rows in the verified files", async () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    fixture.manifest.combined[COMBINED].status = "withdrawn";
+    for (const entry of [...Object.values(fixture.manifest.measures), ...Object.values(fixture.manifest.combined)]) entry.years = [YEAR];
+    const catalogue = await verifiedCatalogue(fixture, { includePackage: false });
+    const { result } = renderHook(() => ({
+      regional: useGeographyData("regional"),
+      constituency: useGeographyData("constituency"),
+    }), { wrapper: wrapperFor(catalogue) });
+    await waitFor(() => {
       expect(result.current.regional.status).toBe("ready");
       expect(result.current.constituency.status).toBe("ready");
-      expect(result.current.scatter.status).toBe("ready");
     });
     expect(catalogue.combinedId).toBeNull();
     for (const name of ["regional", "constituency"]) {
       const table = result.current[name].table;
       expect(table.reforms).toEqual([ALPHA, BETA]);
+      expect(table.rows).toHaveLength(2);
       expect(table.rows.every((row) => row.year === YEAR)).toBe(true);
+      expect(chooseReform({ selectedIds: [ALPHA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId })).toEqual({ kind: "measure", reform: ALPHA });
       expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId }).kind).toBe("no-package");
     }
-    expect(result.current.scatter.rows.every((row) => row.reform_id !== COMBINED && row.year === YEAR)).toBe(true);
-    expect(scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId }).kind).toBe("notice");
   });
 
   it("keeps supported approved rows and removes unsupported years including a combined member's year", async () => {
