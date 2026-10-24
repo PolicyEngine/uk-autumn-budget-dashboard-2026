@@ -623,7 +623,7 @@ An approval or an exception carries over only where the outputs are byte-identic
 1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py` and merges to `main` on the usual gates.
 2. **Run (automatic).** The merge starts the "Publish measures (Budget day)" workflow (`.github/workflows/publish-measure.yml`):
    - it finds the measures the merge added or changed, comparing the registry on `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach): `uv run uk-budget-data changed-measures`;
-   - it runs `uk-budget-data publish-measure <id>` for each one in parallel, on the larger runner;
+   - it runs `uk-budget-data publish-measure <id>` for each one in parallel, one job per measure on `larger-runner` (or on Modal, below);
    - it opens **one draft data PR** with their rows and a summary (revenue by year, the 2029 decile change, and the change against the rows they replace). Its review rows are **pending**: kind `pending`, the Reconciler named, expiring in 7 days.
 3. **Signed (María, the Reconciler).** Review the data PR's summary and diff. Then, on its branch:
 
@@ -660,7 +660,9 @@ On the 24 October rerun, the sum of measures was within £0.13bn of the combined
 
 **Two data PRs touching the same files.** Merge one, then rerun the other's workflow (dispatch with its measures): the upsert is idempotent, so the rerun writes onto the new `main` cleanly.
 
-**Runner.** The compute jobs need more memory than a standard runner has. Their label comes from the dispatch input `runner`, else the repository variable `PUBLISH_MEASURE_RUNNER`, else `ubuntu-latest-16-cores` (64 GB). That label must exist as an organisation larger runner, or the job queues until it times out. Budget about 20 GB per measure once results by area are included. The secret is `PE_UK_PRIVATE_HF_READ_TOKEN`, as the Certified data check uses. A later PR can move the compute to Modal, one container per measure.
+**Runner.** The compute jobs need more memory than a standard runner has: about 5.4 GB per measure for one year, about 20 GB for every year, more with results by area. Their label comes from the dispatch input `runner`, else the repository variable `PUBLISH_MEASURE_RUNNER`, else `larger-runner`, the organisation's GitHub-hosted larger runner (Max, 24 October). Its size and concurrency limit are in the organisation's settings, which need an admin; each compute job prints `nproc` and `free -g`, so the first run records them. publish-measure runs one job per measure with no `max-parallel`, so the larger runner's concurrency limit is the only cap. A label the organisation lacks queues until it times out. The secret is `PE_UK_PRIVATE_HF_READ_TOKEN`, as the Certified data check uses.
+
+**Modal backend (publish-measure only; not ready yet).** Dispatch with `backend: modal`, or set the repository variable `PUBLISH_MEASURE_BACKEND=modal`. Each matrix job then runs on a standard runner and calls `uv run --with modal==1.6.2 uk-budget-data publish-measure <id> --backend modal`, one Modal container (2 CPU, 28 GB) per measure. It uses the organisation secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` (as #97 does), in that step only, and the Modal workspace secret `uk-budget-2026-hf-token`. **It needs two things first:** the faster-generation PR, which adds `--backend modal` to `generate`, and a follow-up that gives `publish-measure` the same option. Until then the job stops at "Check the Modal backend is available" with an error saying so; rerun with `backend: runner`. `refresh-combined` has no Modal backend.
 
 **Timings.**
 

@@ -11,12 +11,19 @@ name: Publish measures (Budget day)
 # (`uk-budget-data sign-pending`) before it merges. Merging deploys, and the
 # measure is live. Nothing here signs a row or merges anything.
 #
-# Runner: one measure peaks at about 6 GB for one year, and about 20 GB for
-# every year with results by area (#59), so the compute job runs on a larger
-# runner. Its label comes from the `runner` input, else the repository
-# variable PUBLISH_MEASURE_RUNNER, else ubuntu-latest-16-cores (64 GB). That
-# label must exist as an organisation larger runner, or the job queues
-# until it times out. A later PR can move the compute job to Modal.
+# Runner: one measure peaks at about 5.4 GB for one year and about 20 GB for
+# every year (more with results by area, #59), so the compute job runs on the
+# organisation's larger runner, one job per measure. Its label comes from the
+# `runner` input, else the repository variable PUBLISH_MEASURE_RUNNER, else
+# larger-runner. A label the organisation lacks queues until it times out.
+#
+# Backend: the `backend` input, else the repository variable
+# PUBLISH_MEASURE_BACKEND, else `runner`. With `modal`, each matrix job runs
+# on a standard runner and sends its measure to Modal (`publish-measure
+# --backend modal`, one container per measure), with the organisation
+# secrets MODAL_TOKEN_ID and MODAL_TOKEN_SECRET. That needs the
+# faster-generation PR (`--backend modal`) and publish-measure wired to it;
+# until then the job stops at its first check with an error saying so.
 on:
   push:
     branches: [main]
@@ -33,16 +40,23 @@ on:
         required: false
         default: ""
       runner:
-        description: Runner label for the simulations (empty for vars.PUBLISH_MEASURE_RUNNER or ubuntu-latest-16-cores)
+        description: Runner label for the simulations (empty for vars.PUBLISH_MEASURE_RUNNER or larger-runner)
+        required: false
+        default: ""
+      backend:
+        description: runner or modal (empty for vars.PUBLISH_MEASURE_BACKEND or runner); modal needs the faster-generation PR
         required: false
         default: ""
 
 permissions: {}
 
-# One run per commit: a re-run of the same push waits, never doubles up.
-# Data PRs go on a branch per run, so runs never write to one branch.
+# One run per commit and set of measures: the same work waits, never doubles
+# up, while dispatches for different measures on one commit run side by side
+# (a group keeps one pending run and cancels an older pending one, so keying
+# on the commit alone would drop a queued dispatch). Data PRs go on a branch
+# per run, so runs never write to one branch.
 concurrency:
-  group: publish-measure-${{ github.sha }}
+  group: publish-measure-${{ github.sha }}-${{ inputs.measures || 'changed' }}
   cancel-in-progress: false
 
 jobs:
@@ -55,7 +69,18 @@ jobs:
     outputs:
       measures: ${{ steps.ids.outputs.measures }}
       count: ${{ steps.ids.outputs.count }}
+      backend: ${{ steps.backend.outputs.backend }}
     steps:
+      - name: Backend
+        id: backend
+        env:
+          BACKEND: ${{ inputs.backend || vars.PUBLISH_MEASURE_BACKEND || 'runner' }}
+        run: |
+          case "${BACKEND}" in
+            runner|modal) echo "backend=${BACKEND}" >> "$GITHUB_OUTPUT"; echo "Backend: ${BACKEND}" ;;
+            *) echo "::error::backend must be runner or modal, not '${BACKEND}'"; exit 1 ;;
+          esac
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
@@ -92,7 +117,10 @@ jobs:
     name: Run ${{ matrix.measure }}
     needs: detect
     if: needs.detect.outputs.count != '0'
-    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'ubuntu-latest-16-cores' }}
+    # Modal does the computing on its side, so its jobs need only a standard
+    # runner. One job per measure; no max-parallel, so the cap is the larger
+    # runner's concurrency limit set in the organisation's settings.
+    runs-on: ${{ needs.detect.outputs.backend == 'modal' && 'ubuntu-latest' || (inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner') }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -104,6 +132,7 @@ jobs:
       HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
       MEASURE: ${{ matrix.measure }}
       YEARS: ${{ inputs.years }}
+      BACKEND: ${{ needs.detect.outputs.backend }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -121,11 +150,41 @@ jobs:
         run: uv sync --locked
 
       - name: Run the measure's tables
+        if: env.BACKEND == 'runner'
         run: |
           years=()
           if [ -n "${YEARS}" ]; then read -r -a years <<< "${YEARS}"; years=(--years "${years[@]}"); fi
+          nproc; free -g
           /usr/bin/time -v uv run uk-budget-data publish-measure "${MEASURE}" \
             --rows-dir fragments "${years[@]}"
+
+      # The Modal backend is the faster-generation PR's (`--backend modal`);
+      # this only calls it. Stop with a clear error until publish-measure
+      # takes the flag, rather than run the measure somewhere else.
+      - name: Check the Modal backend is available
+        if: env.BACKEND == 'modal'
+        env:
+          HAS_MODAL: ${{ secrets.MODAL_TOKEN_ID != '' && secrets.MODAL_TOKEN_SECRET != '' }}
+        run: |
+          if ! uv run uk-budget-data publish-measure --help | grep -q -- '--backend'; then
+            echo "::error::backend modal: publish-measure has no --backend option on this commit. It needs the faster-generation PR (generate --backend modal) and publish-measure wired to its runner. Rerun with backend runner."
+            exit 1
+          fi
+          if [ "${HAS_MODAL}" != true ]; then
+            echo "::error::backend modal: the MODAL_TOKEN_ID and MODAL_TOKEN_SECRET secrets are not available to this repository."
+            exit 1
+          fi
+
+      - name: Run the measure's tables on Modal
+        if: env.BACKEND == 'modal'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          years=()
+          if [ -n "${YEARS}" ]; then read -r -a years <<< "${YEARS}"; years=(--years "${years[@]}"); fi
+          uv run --with modal==1.6.2 uk-budget-data publish-measure "${MEASURE}" \
+            --backend modal --rows-dir fragments "${years[@]}"
 
       - uses: actions/upload-artifact@v4
         with:

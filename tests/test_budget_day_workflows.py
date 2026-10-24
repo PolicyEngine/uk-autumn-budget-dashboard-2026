@@ -45,9 +45,10 @@ def test_publish_measure_runs_each_measure_on_the_configured_runner():
         "${{ fromJSON(needs.detect.outputs.measures) }}"
     )
     assert compute["runs-on"] == (
-        "${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || "
-        "'ubuntu-latest-16-cores' }}"
+        "${{ needs.detect.outputs.backend == 'modal' && 'ubuntu-latest' || "
+        "(inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner') }}"
     )
+    assert "max-parallel" not in compute["strategy"]
     assert compute["env"]["HUGGING_FACE_TOKEN"] == (
         "${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}"
     )
@@ -106,3 +107,55 @@ def test_refresh_combined_runs_every_half_hour_on_budget_day():
         "group": "refresh-combined",
         "cancel-in-progress": False,
     }
+
+
+def test_both_workflows_default_to_the_org_larger_runner():
+    for name in ("publish-measure.yml", "refresh-combined.yml"):
+        text = (WORKFLOWS / name).read_text()
+        assert "ubuntu-latest-16-cores" not in text
+        assert "'larger-runner'" in text
+    combined = load("refresh-combined.yml")["jobs"]["compute"]
+    assert combined["runs-on"] == (
+        "${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner' }}"
+    )
+
+
+def test_dispatches_for_different_measures_do_not_share_a_group():
+    group = load("publish-measure.yml")["concurrency"]["group"]
+    assert "github.sha" in group and "inputs.measures" in group
+
+
+def test_modal_backend_is_opt_in_and_guarded():
+    workflow = load("publish-measure.yml")
+    inputs = workflow["on"]["workflow_dispatch"]["inputs"]
+    assert inputs["backend"]["default"] == ""
+    detect = workflow["jobs"]["detect"]
+    backend = next(s for s in detect["steps"] if s.get("id") == "backend")
+    assert backend["env"]["BACKEND"] == (
+        "${{ inputs.backend || vars.PUBLISH_MEASURE_BACKEND || 'runner' }}"
+    )
+    assert "runner|modal)" in backend["run"] and "exit 1" in backend["run"]
+
+    steps = workflow["jobs"]["compute"]["steps"]
+    by_name = {step.get("name"): step for step in steps}
+    local = by_name["Run the measure's tables"]
+    assert local["if"] == "env.BACKEND == 'runner'"
+    assert "--backend" not in local["run"]
+    guard = by_name["Check the Modal backend is available"]
+    assert guard["if"] == "env.BACKEND == 'modal'"
+    assert "publish-measure --help | grep -q -- '--backend'" in guard["run"]
+    assert "exit 1" in guard["run"]
+    modal = by_name["Run the measure's tables on Modal"]
+    assert modal["if"] == "env.BACKEND == 'modal'"
+    assert steps.index(guard) < steps.index(modal)
+    assert "--backend modal" in modal["run"]
+    assert "uv run --with modal==1.6.2" in modal["run"]
+    # The Modal token reaches only the step that calls Modal
+    assert modal["env"] == {
+        "MODAL_TOKEN_ID": "${{ secrets.MODAL_TOKEN_ID }}",
+        "MODAL_TOKEN_SECRET": "${{ secrets.MODAL_TOKEN_SECRET }}",
+    }
+    for step in steps:
+        if step is not modal:
+            assert "MODAL_TOKEN_ID" not in step.get("env", {})
+    assert "MODAL_TOKEN_ID" not in workflow["jobs"]["compute"]["env"]

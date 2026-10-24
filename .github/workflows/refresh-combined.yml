@@ -14,7 +14,9 @@ name: Refresh the combined run (Budget day)
 # public/data/budgetary_impact.csv on main) and opens a draft data pull
 # request, pending review, as publish-measure.yml does. When nothing
 # changed it opens nothing. Until that PR merges, the page labels totals as
-# the sum of measures. Runner: as publish-measure.yml.
+# the sum of measures. Runner: as publish-measure.yml (default
+# larger-runner). It has no Modal backend: the combined run is one unit,
+# and the faster-generation PR's Modal path runs single measures only.
 on:
   schedule:
     - cron: "30 12-17 28 10 *"
@@ -30,7 +32,7 @@ on:
         required: false
         default: ""
       runner:
-        description: Runner label (empty for vars.PUBLISH_MEASURE_RUNNER or ubuntu-latest-16-cores)
+        description: Runner label (empty for vars.PUBLISH_MEASURE_RUNNER or larger-runner)
         required: false
         default: ""
 
@@ -67,7 +69,7 @@ jobs:
     name: Run the live measures together
     needs: gate
     if: needs.gate.outputs.run == 'true'
-    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'ubuntu-latest-16-cores' }}
+    runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner' }}
     timeout-minutes: 120
     permissions:
       contents: read
@@ -97,6 +99,7 @@ jobs:
           args=()
           if [ -n "${MEASURES}" ]; then read -r -a m <<< "${MEASURES}"; args+=(--measures "${m[@]}"); fi
           if [ -n "${YEARS}" ]; then read -r -a y <<< "${YEARS}"; args+=(--years "${y[@]}"); fi
+          nproc; free -g
           /usr/bin/time -v uv run uk-budget-data refresh-combined --rows-dir fragments "${args[@]}"
 
       - uses: actions/upload-artifact@v4
