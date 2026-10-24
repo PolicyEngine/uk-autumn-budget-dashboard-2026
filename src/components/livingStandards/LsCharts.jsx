@@ -54,23 +54,25 @@ function xTicksFor({ width, count, yAxisWidth, fiscal, xFormat }) {
 // the ticks a little more room.
 const tickWidth = (ticks, format) => axisWidth(ticks?.length ? ticks : [0], format) + 12;
 
-// The plot's height. An x-axis title adds its own height, so the x axes of
-// two cards side by side stay level.
+// The plot's least height. Every chart keeps room for an x-axis title,
+// with one or not, so the x axes of two cards side by side stay level.
 const X_AXIS_HEIGHT = 30;
 const X_TITLE_HEIGHT = 18;
-const plotHeight = (narrow, xLabel) => (narrow ? 280 : 300) + (xLabel ? X_TITLE_HEIGHT : 0);
+const plotHeight = (narrow) => (narrow ? 280 : 300) + X_TITLE_HEIGHT;
 // Room for the unit label above the plot, and for the last x tick at the right
 const MARGIN = { top: 10, right: 30, left: 0, bottom: 0 };
 
 /**
  * The card rows a chart fills: the plot, then its legend, then the logo
- * (each its own row, so two cards side by side keep them level).
+ * (each its own row, so two cards side by side keep them level). The plot
+ * is at least `height` tall and fills its row, so beside a taller plot
+ * (a dot plot with many rows) its x axis still sits on the same line.
  */
-function ChartRows({ plotRef, children, legendItems }) {
+function ChartRows({ plotRef, children, legendItems, height }) {
   return (
     <>
-      <div className="chart-plot" ref={plotRef}>
-        {children}
+      <div className="chart-plot ls-plot-fill" ref={plotRef} style={{ minHeight: height }}>
+        <div className="ls-plot-canvas">{children}</div>
       </div>
       <div className="chart-legend">
         <GroupedLegend items={legendItems} />
@@ -110,8 +112,8 @@ export function LsLineChart({
   const xTicks = xTicksFor({ width, count: data.length, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat });
 
   return (
-    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)}>
-      <ResponsiveContainer width="100%" height={plotHeight(narrow)}>
+    <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
@@ -119,7 +121,7 @@ export function LsLineChart({
             tick={TICK_STYLE}
             axisLine={AXIS_LINE}
             tickLine={false}
-            height={X_AXIS_HEIGHT}
+            height={X_AXIS_HEIGHT + X_TITLE_HEIGHT}
             {...xTicks}
           />
           <YAxis
@@ -186,8 +188,8 @@ export function LsBarChart({
   const items = legendItems ?? series.map((s) => ({ label: s.name, color: s.colour }));
 
   return (
-    <ChartRows plotRef={ref} legendItems={items}>
-      <ResponsiveContainer width="100%" height={plotHeight(narrow, xLabel)}>
+    <ChartRows plotRef={ref} legendItems={items} height={plotHeight(narrow)}>
+      <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={MARGIN} barCategoryGap="20%">
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
@@ -196,7 +198,7 @@ export function LsBarChart({
             axisLine={AXIS_LINE}
             tickLine={false}
             {...xTicks}
-            height={X_AXIS_HEIGHT + (xLabel ? X_TITLE_HEIGHT : 0)}
+            height={X_AXIS_HEIGHT + X_TITLE_HEIGHT}
             label={xLabel ? { value: xLabel, position: "insideBottom", offset: 4, style: AXIS_TITLE_STYLE } : undefined}
           />
           <YAxis

@@ -20,17 +20,6 @@
   margin: 12px 0 16px;
 }
 
-/* With a choice box in row 3, the plot (one Recharts SVG for plot, legend
-   and logo) takes rows 4 to 6 of the paired card's grid */
-@media (min-width: 1025px) {
-  .charts-grid > div:not(:only-child) > .young-people-plot {
-    grid-column: 1 / -1;
-    grid-row: 4 / span 3;
-    align-self: start;
-    min-width: 0;
-  }
-}
-
 /* The outcome legend: one centred row, no group headings */
 .young-people-outcome-legend .grouped-legend-items {
   display: flex;

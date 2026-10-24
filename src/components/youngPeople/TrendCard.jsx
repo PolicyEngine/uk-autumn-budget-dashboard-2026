@@ -3,7 +3,6 @@ import {
   CartesianGrid,
   ComposedChart,
   Customized,
-  Legend,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -11,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../../utils/chartLogo";
+import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
@@ -21,13 +20,12 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
-  chartMargin,
-  legendWrapperStyle,
   axisWidth,
   fiscalYearTick,
   shortFiscalYearTick,
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
+import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 import { AGE_GROUPS, YOUNG_BAND } from "../../utils/ageImpact";
 import { GROUP_STYLES, changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
 import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
@@ -40,7 +38,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION =
-  "Average change in household net income per person in each year, by age group, in pounds a year, adding up the selected policies' own effects. 16 to 24 is drawn thicker; the shaded year is the one selected above.";
+  "Average change per person in each year, by age group (£ a year). 16 to 24 is thicker; the shaded year is the one selected.";
 
 const UNIT = "Change per person (£ a year)";
 // Room beside the ticks for the rotated axis title
@@ -126,6 +124,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     title,
     description: TREND_DESCRIPTION,
     logo: CHART_LOGO,
+    reservedLegendHeight: 0,
     legendItems: SERIES.map((series) => ({
       color: series.color,
       label: series.label,
@@ -171,9 +170,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={chartRef}>
+      <div ref={chartRef} className="chart-plot young-people-plot">
         <ResponsiveContainer width="100%" height={height}>
-          <ComposedChart data={data} margin={{ ...chartMargin(narrow, { top: 16 }), right: 16 }}>
+          <ComposedChart data={data} margin={plotMargin(narrow, { right: 16 })}>
             <CartesianGrid {...GRID_PROPS} />
             <Customized
               component={
@@ -191,7 +190,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               tickLine={false}
               interval={0}
               padding={{ left: 28, right: 28 }}
-              height={28}
+              height={X_AXIS_HEIGHT}
             />
             <YAxis
               domain={domain}
@@ -222,14 +221,6 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 />
               }
             />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              content={
-                <GroupedLegend
-                  items={SERIES.map((series) => ({ ...series, type: "line" }))}
-                />
-              }
-            />
             {/* 16 to 24 drawn last, on top */}
             {[...SERIES.filter((series) => series.key !== YOUNG_BAND), ...SERIES.filter((series) => series.key === YOUNG_BAND)].map((series) => (
               <Line
@@ -249,9 +240,15 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 {...chartMotion()}
               />
             ))}
-            <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+      <div className="chart-legend">
+        <GroupedLegend items={SERIES.map((series) => ({ ...series, type: "line" }))} />
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
     </div>
   );

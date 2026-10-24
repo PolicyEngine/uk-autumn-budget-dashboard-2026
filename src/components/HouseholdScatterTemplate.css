@@ -32,14 +32,14 @@
 
 /* The plot's drawing: the 2025 chart's height when the cards stack */
 .household-scatter-template-canvas {
-  height: 500px;
+  height: 400px;
 }
 
 /* Side by side with the map, the plot takes the map's controls, map and
    colour scale rows (3 to 5) and fills them: it starts level with the
    map's view switch, and its x-axis title ends level with the colour
    scale. Absolutely placed, the drawing adds no height of its own, so the
-   map's rows (its body is a fixed 560px) set the card's height. */
+   map's rows (its body is a fixed 440px) set the card's height. */
 @media (min-width: 1025px) {
   .charts-grid > div.household-scatter-template:not(:only-child) > .chart-plot {
     grid-row: 3 / span 3;
