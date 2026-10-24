@@ -102,7 +102,6 @@ EVERYTHING = Answers(
 # Disposal Relief measure has no probe: the form takes no capital gains.
 MOVED_BY = {
     "threshold_freeze_2031_32": ("employee_60k", 2031),
-    "salary_sacrifice_cap_2028": ("salary_sacrifice_60k", 2028),
     "plan_2_threshold_unfreeze": ("graduate_35k", YEAR),
 }
 
@@ -538,43 +537,16 @@ SINGLE_RENTER = Answers(
 def test_a_30k_single_renter_in_2028():
     """£30,000, single, renting, 2028-29:
 
-    - salary sacrifice cap from 2028: the household uses none, but the
-      broad-base haircut cuts every employee's pay by 0.16%: £48 less pay,
-      of which 20% income tax and 8% National Insurance would have gone,
-      so £48 x 0.72 = £34.56 less net income. Reported as affected.
     - threshold freeze to 2031-32: nothing in 2028, exactly £0.
     - Business Asset Disposal Relief: no gains, exactly £0.
     """
-    measures = [
-        "salary_sacrifice_cap_2028",
-        "threshold_freeze_2031_32",
-        "badr_lifetime_limit_cut",
-    ]
+    measures = ["threshold_freeze_2031_32", "badr_lifetime_limit_cut"]
     result = calculate(SINGLE_RENTER, measures, 2028, include=("by_policy",))
     by_measure = changes_by_measure(result)
-
-    haircut_rate = PARAMETERS.gov.contrib.behavioral_responses.salary_sacrifice_broad_base_haircut_rate(  # noqa: E501
-        "2028-04-06"
-    )
-    haircut = 30_000 * haircut_rate
-    assert haircut == pytest.approx(48)
-    cap = by_measure["salary_sacrifice_cap_2028"]
-    assert cap["change"] == pytest.approx(
-        -haircut * (1 - 0.20 - 0.08), abs=0.01
-    )
-    assert cap["status"] == "affected"
-    for measure in ("threshold_freeze_2031_32", "badr_lifetime_limit_cut"):
+    for measure in measures:
         change = by_measure[measure]
         assert change["change"] == 0 and change["status"] == "not_affected"
-
-    # The programmes say where the change lands
-    assert programme(result, "salary_sacrifice_haircut")["change"] == -48
-    assert programme(result, "income_tax")["change"] == pytest.approx(
-        -0.20 * haircut, abs=0.01
-    )
-    assert programme(result, "national_insurance")["change"] == pytest.approx(
-        -0.08 * haircut, abs=0.01
-    )
+    assert result["net_income"]["change"] == 0
     split = result["by_policy"]
     assert split["residual"] == pytest.approx(0, abs=0.01)
     assert result["net_income"]["change"] == split["combined"]

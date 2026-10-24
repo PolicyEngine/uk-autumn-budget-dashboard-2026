@@ -45,7 +45,6 @@ CANDIDATES = (
     "employer_ni_relief_under_25s",
     "threshold_freeze_2031_32",
     "badr_lifetime_limit_cut",
-    "salary_sacrifice_cap_2028",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
 )
@@ -580,37 +579,7 @@ def test_an_800000_pound_qualifying_gain():
     assert reformed == pytest.approx(161_280, abs=PENNY)
 
 
-# --- 8. Salary sacrifice cap ------------------------------------------------
-
-
-def test_5000_pounds_sacrificed_on_50000_pounds_in_2028():
-    """The £3,000 above the cap is paid as earnings, less the 0.16%
-    broad-base haircut on £50,000 (£80): £52,920. Employee NI: 8% of
-    £37,700 plus 2% of £2,650, £3,069.00 (from £2,994.40). Employer NI:
-    15% of £47,920, £7,188.00 (from £6,750.00)."""
-    year = 2028
-    sit = situation(
-        {
-            "worker": {
-                "age": {year: 40},
-                "employment_income": {year: 50_000},
-                "pension_contributions_via_salary_sacrifice": {year: 5_000},
-            }
-        }
-    )
-    measure = "salary_sacrifice_cap_2028"
-    assert change(measure, sit, "employment_income", year) == pytest.approx(
-        (50_000, 52_920), abs=PENNY
-    )
-    assert change(measure, sit, "ni_employee", year) == pytest.approx(
-        (2_994.40, 3_069.00), abs=PENNY
-    )
-    assert change(measure, sit, "ni_employer", year) == pytest.approx(
-        (6_750.00, 7_188.00), abs=PENNY
-    )
-
-
-# --- 9. Road fuel VAT -------------------------------------------------------
+# --- 8. Road fuel VAT -------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -629,7 +598,7 @@ def test_vat_on_1508_pounds_of_petrol(year, saving):
     assert baseline - reformed == pytest.approx(saving, abs=PENNY)
 
 
-# --- 10. Plan 2 -------------------------------------------------------------
+# --- 9. Plan 2 --------------------------------------------------------------
 
 
 def test_the_unfrozen_thresholds_follow_rpi_from_29385_pounds():
@@ -735,15 +704,6 @@ FIRST_YEARS = {
             "employment_income": 100_000,
             "capital_gains": 800_000,
             "capital_gains_badr": 800_000,
-        },
-        {},
-    ),
-    "salary_sacrifice_cap_2028": (
-        2028,
-        "ni_employee",
-        {
-            "employment_income": 50_000,
-            "pension_contributions_via_salary_sacrifice": 5_000,
         },
         {},
     ),

@@ -57,7 +57,6 @@ POLICY_IDS = [
     "employer_ni_relief_under_25s",
     "threshold_freeze_2031_32",
     "badr_lifetime_limit_cut",
-    "salary_sacrifice_cap_2028",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
 ]

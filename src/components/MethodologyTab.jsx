@@ -14,7 +14,6 @@ import "./methodology/Methodology.css";
 
 const RESEARCH = [
   ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
 ];
 
 /**
@@ -247,7 +246,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Static",
-                  "Households do not change their behaviour in response to a measure, except where a measure's modelling says otherwise (the salary sacrifice cap). Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
+                  "Households do not change their behaviour in response to a measure. Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                 ],
                 [
                   "Years",

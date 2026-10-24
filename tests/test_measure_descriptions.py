@@ -6,23 +6,14 @@ it changes, and its copy may name only those, so a new measure must
 declare its taxes too. Copy that names a tax this module doesn't know
 fails until the tax is added. An unnamed "tax" or "taxed" reads as income
 tax, an unnamed "duty" as a duty and an unnamed "levy" as a levy, so each
-fails in the copy of a measure that declares none. The salary sacrifice
-cap's description said that contributions above the cap were charged
-income tax, though the cap is a National Insurance measure (coordinator,
-23 October, from the UK hub).
+fails in the copy of a measure that declares none. A salary sacrifice
+cap measure's description once said that contributions above the cap were
+charged income tax, though the cap is a National Insurance measure
+(coordinator, 23 October, from the UK hub); the check below keeps that
+copy failing.
 
-Second-round and modelling effects don't count as moving a tax. The cap's
-broad-base haircut lowers every worker's employment income, and so their
-income tax, a little. In the model the excess above the cap also raises
-some people's income tax. It raises their adjusted net income, and so the
-High Income Child Benefit Charge, from £60,000, and the personal allowance
-taper, from £100,000. And the model relieves it only up to the person's
-annual allowance, and charges more annual allowance charge where the
-higher income tapers that allowance further below their pension savings,
-or raises the marginal rate the charge is levied at (see
-``reforms._create_salary_sacrifice_cap_2028``). The cap changes no income
-tax rule, and the OBR describes it as raising NICs, so it declares
-National Insurance alone.
+Second-round and modelling effects don't count as moving a tax: a measure
+declares the taxes whose rules its code changes.
 """
 
 import re
@@ -174,14 +165,6 @@ DECLARED = {
     # those holds them too.
     "threshold_freeze_2031_32": {"income tax", "National Insurance"},
     "badr_lifetime_limit_cut": {"capital gains tax"},
-    # The excess above the cap is treated as earnings for National
-    # Insurance. In the model it also raises some people's income tax:
-    # through the High Income Child Benefit Charge and the personal
-    # allowance taper, and through the annual allowance, which limits its
-    # relief and whose charge rises where the allowance tapers further or
-    # the rate it is levied at rises. But the cap changes no income tax
-    # rule.
-    "salary_sacrifice_cap_2028": {"National Insurance"},
     "road_fuel_vat_cut": {"VAT"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
@@ -333,29 +316,18 @@ def test_parameter_changes_agree_with_the_declarations():
     assert not undeclared, f"changed but not declared: {undeclared}"
 
 
-def test_the_salary_sacrifice_copy_reads_its_haircut_from_the_model():
-    measure = get_reform("salary_sacrifice_cap_2028")
-    haircut = (
-        installed_system.parameters.gov.contrib.behavioral_responses
-    ).salary_sacrifice_broad_base_haircut_rate
-    assert f"({haircut('2028-04-06'):.2%})" in measure.description
-    assert (
-        "The excess above the cap is treated as earnings for National "
-        "Insurance."
-    ) in measure.description
-
-
 def test_the_old_salary_sacrifice_copy_fails():
+    """The dropped salary sacrifice cap measure's old copy, on a measure
+    declaring National Insurance alone."""
+    national_insurance = {"National Insurance"}
     old = (
         "Contributions above the cap become employment income subject to "
         "income tax and NICs."
     )
-    assert taxes_named(old) - DECLARED["salary_sacrifice_cap_2028"] == {
-        "income tax"
-    }
+    assert taxes_named(old) - national_insurance == {"income tax"}
     # And without "income", it says tax unnamed.
     old = old.replace("income tax", "tax")
-    assert bare_words(old, DECLARED["salary_sacrifice_cap_2028"]) == ["tax"]
+    assert bare_words(old, national_insurance) == ["tax"]
 
 
 def test_the_threshold_freeze_copy_states_the_frozen_thresholds():
