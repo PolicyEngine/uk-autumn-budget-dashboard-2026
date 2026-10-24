@@ -133,7 +133,7 @@ const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
 
-function BudgetaryImpactChart({ data, selectedYear }) {
+function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -294,7 +294,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               content={
                 <GroupedLegend
                   names={activePolicies}
-                  netLabel={activePolicies.length > 1 ? "Net impact" : undefined}
+                  netLabel={activePolicies.length > 1 ? netLabel : undefined}
                 />
               }
             />

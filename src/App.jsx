@@ -21,6 +21,8 @@ import SectionHeading from "./components/SectionHeading";
 import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import Note from "./components/Note";
+import { SUM_OF_MEASURES, combinedValue, totalSource } from "./utils/combinedTotal";
 import {
   ALL_POLICY_NAMES,
   POLICY_COLORS,
@@ -300,6 +302,9 @@ function App() {
       // Build budgetary impact data for chart (2026-2029)
       // Always include all policy keys for smooth animations
       const years = [2026, 2027, 2028, 2029, 2030];
+      // With every live measure selected, the total is the combined run's
+      // when it is current, else the sum of the measures, labelled (#105)
+      const source = totalSource(budgetaryData, selectedPolicies);
       const budgetData = years.map((year) => {
         const dataPoint = { year };
         let netImpact = 0;
@@ -312,7 +317,8 @@ function App() {
           dataPoint[policy.name] = value;
           netImpact += value;
         });
-        dataPoint.netImpact = netImpact;
+        const combined = source === "combined" ? combinedValue(budgetaryData, year) : null;
+        dataPoint.netImpact = combined ?? netImpact;
         return dataPoint;
       });
 
@@ -417,6 +423,7 @@ function App() {
           povertyRateChange,
         },
         budgetData,
+        totalSource: source,
         distributionalData:
           distributionalChartData.length > 0 ? distributionalChartData : null,
         waterfallData: waterfallData.length > 0 ? waterfallData : null,
@@ -667,7 +674,15 @@ function App() {
                             },
                         )}
                         selectedYear={distributionalYear}
+                        netLabel={results.totalSource === "sum-stale" ? SUM_OF_MEASURES : undefined}
                       />
+                      {results.totalSource === "sum-stale" && (
+                        <Note>
+                          {SUM_OF_MEASURES}: the total adds up each measure&apos;s own
+                          costing. The costing of all measures together, which
+                          captures how they interact, is being updated.
+                        </Note>
+                      )}
                       {/* OBR comparison: an expandable row at the foot of the card */}
                       <Disclosure
                         id="obr-comparison"
