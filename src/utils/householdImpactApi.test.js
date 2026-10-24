@@ -5,7 +5,15 @@ import {
   normaliseHouseholdImpact,
   requestKey,
 } from "./householdImpactApi";
-import { areaName, policyRows, programmeGroups, programmeNotes } from "./singleYear";
+import {
+  areaName,
+  pinnedRound,
+  policyRows,
+  programmeGroups,
+  programmeNotes,
+  roundProgrammeGroups,
+} from "./singleYear";
+import { headlineTotals } from "../components/personal/SingleYearResults";
 import { WIZARD_DEFAULTS } from "../components/LifecycleCalculator";
 import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
@@ -57,6 +65,7 @@ describe("buildHouseholdRequest", () => {
     // The stage is not part of the cache key
     expect(requestKey(family)).toBe(requestKey({ ...family, include: [] }));
   });
+
 });
 
 describe("consistentRound", () => {
@@ -185,6 +194,87 @@ describe("programmeGroups", () => {
     );
     const groups = programmeGroups(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, programmes }).programmes);
     expect(programmeNotes(groups).map((item) => item.id)).not.toContain("employment_income");
+  });
+});
+
+describe("the programme table's whole pounds", () => {
+  // A pensioner: fuel duty falls by £3.60 under the freeze, income tax rises
+  // by £2.40 under the dividend rate. Each rounded on its own, the table
+  // said +£4 and −£2 against a tile of +£1, and fuel duty's bar said +£3.
+  const byPolicy = {
+    measures: [
+      { id: "fuel_duty_freeze", name: "Fuel duty freeze", change: 3.6, status: "affected" },
+      { id: "dividend_tax_increase_2pp", name: "Dividend tax", change: -2.4, status: "affected" },
+    ],
+    residual: 0,
+  };
+  const programmes = [
+    { id: "income_tax", group: "tax", before: 43.75, after: 46.15, children: [] },
+    { id: "fuel_duty", group: "tax", before: 339.49, after: 335.89, children: [] },
+    { id: "state_pension", group: "benefit", before: 13696.98, after: 13696.98, children: [] },
+    { id: "dividend_income", group: "income", before: 1000, after: 1000, children: [] },
+  ];
+  const net = { before: 14313.74, after: 14314.94 };
+
+  it("adds up to the tiles and shows a policy's change as its bar does", () => {
+    const totals = headlineTotals(net);
+    expect(totals.change).toBe(1);
+    const bars = policyRows(byPolicy, totals.change, POLICIES_FOR_TEST);
+    const fuelBar = bars.all.find((row) => row.id === "fuel_duty_freeze").rounded;
+    const groups = roundProgrammeGroups(programmeGroups(programmes), totals, bars.all);
+    const rows = groups.flatMap((group) => group.rows);
+    const fuel = rows.find((row) => row.id === "fuel_duty");
+    const tax = rows.find((row) => row.id === "income_tax");
+    expect(fuel.shown.change).toBe(fuelBar);
+    expect(tax.shown.change).toBe(bars.all.find((row) => row.id === "dividend_tax_increase_2pp").rounded);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+    for (const row of rows) expect(row.shown.after).toBe(row.shown.before + row.shown.change);
+  });
+
+  it("adds up to the tiles before the split by policy is in", () => {
+    const data = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
+    const totals = headlineTotals(data.net);
+    const groups = roundProgrammeGroups(programmeGroups(data.programmes), totals);
+    const rows = groups.flatMap((group) => group.rows);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+    for (const row of rows) {
+      expect(row.shown.after).toBe(row.shown.before + row.shown.change);
+      expect(Math.abs(row.shown.change - row.change)).toBeLessThan(1.5);
+    }
+    // Income tax's parts add up to it
+    const tax = rows.find((row) => row.id === "income_tax");
+    expect(tax.children.reduce((sum, child) => sum + child.shown.change, 0)).toBe(tax.shown.change);
+  });
+
+  it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
+    const bars = [{ id: "a", change: 3.5, rounded: 3 }];
+    expect(pinnedRound([3.5, 3.5], 7, bars)).toEqual([3, 4]);
+    // The only row pinned to £3 but the tile says £4: plain rounding instead
+    expect(pinnedRound([3.5], 4, bars)).toEqual([4]);
+  });
+
+  it("pins a row a penny off its bar (the API rounds each amount to the penny)", () => {
+    // A couple in 2031-32: fuel duty's row +£4.60, its bar +£4.61 (£4)
+    const byPolicy = {
+      measures: [
+        { id: "two_child_limit", change: 4038.71, status: "affected" },
+        { id: "threshold_freeze_extension", change: -107.11, status: "affected" },
+        { id: "salary_sacrifice_cap", change: -18.75, status: "affected" },
+        { id: "fuel_duty_freeze", change: 4.61, status: "affected" },
+      ],
+      residual: 0,
+    };
+    const bars = policyRows(byPolicy, 3917, POLICIES_FOR_TEST);
+    expect(bars.all.find((row) => row.id === "fuel_duty_freeze").rounded).toBe(4);
+    const rounded = pinnedRound([-158.42, -63.39, 4.6, 4192.54, -57.88], 3917, bars.all);
+    expect(rounded[2]).toBe(4);
+    expect(rounded.reduce((sum, value) => sum + value, 0)).toBe(3917);
+    // Rounded on its own the row would be £5 against the bar's £4
+    expect(pinnedRound([4.6, 10.4], 15, [{ id: "fuel_duty_freeze", change: 4.61, rounded: 4 }])).toEqual([4, 11]);
   });
 });
 

@@ -111,7 +111,7 @@ export function programmeGroups(programmes) {
       note: row.note ?? null,
       before,
       after,
-      change: after - before,
+      change: typeof row.change === "number" ? sign * row.change : after - before,
       children: (row.children ?? [])
         .filter((child) => Math.round(child.before) !== 0 || Math.round(child.after) !== 0)
         .map((child) => toRow(child, sign)),
@@ -201,12 +201,118 @@ export function policyRows(byPolicy, total, policies) {
     row.rounded = rounded[index];
   });
   return {
+    // Every row with its whole pounds, £0 ones too (for the table's rows)
+    all: rows,
     rows: rows
       .filter((row) => row.rounded !== 0)
       .sort((a, b) => Math.abs(b.rounded) - Math.abs(a.rounded)),
     noEffect: byPolicy.measures.filter((row) => row.status === "not_affected").map(nameOf),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
+}
+
+// A table row's change is a bar's when they are the same to within the
+// API's rounding: it rounds each net income and each programme to the
+// penny, so the same amount can differ by a penny or two between them
+const SAME_CHANGE = 0.025;
+
+/**
+ * Whole pounds for the change column that add up to `total` (largest
+ * remainder, as the bars), with each row whose change is one policy bar's
+ * change (the same measure-driven amount, to within the API's
+ * penny rounding) shown as that
+ * bar's whole pounds, so the table and the bars never disagree on it. Each
+ * bar pins one row at most. Falls back to plain consistent rounding if the
+ * pinned rows leave the rest unable to reach the total.
+ *
+ * @param {number[]} values - The rows' changes
+ * @param {number} total - The headline change, as the tile shows it
+ * @param {Array<{change: number, rounded: number}>} [bars] - policyRows(...).all
+ * @returns {number[]}
+ */
+export function pinnedRound(values, total, bars = []) {
+  const pins = values.map(() => null);
+  const used = new Set();
+  values.forEach((value, index) => {
+    if (Math.abs(value) < SAME_CHANGE) return;
+    const bar = bars.findIndex(
+      (row, barIndex) =>
+        !used.has(barIndex) && row.id !== "interaction" && Math.abs(row.change - value) < SAME_CHANGE,
+    );
+    if (bar >= 0) {
+      used.add(bar);
+      pins[index] = bars[bar].rounded;
+    }
+  });
+  const free = values.map((_, index) => index).filter((index) => pins[index] === null);
+  const pinnedSum = pins.reduce((sum, pin) => sum + (pin ?? 0), 0);
+  const rest = consistentRound(
+    free.map((index) => values[index]),
+    Math.round(total) - pinnedSum,
+  );
+  const out = pins.slice();
+  free.forEach((index, i) => {
+    out[index] = rest[i];
+  });
+  const sum = out.reduce((acc, value) => acc + value, 0);
+  return sum === Math.round(total) ? out : consistentRound(values, total);
+}
+
+/**
+ * The whole pounds the programme table shows, as `shown: {before, after,
+ * change}` on each row and part. The before column adds up to the before
+ * tile and the change column to the change tile (consistentRound; the
+ * change pinned to the policy bars by `pinnedRound`), and each row's after
+ * is its before plus its change, so the after column adds up to the after
+ * tile and no row's figures contradict each other. A row's parts add up to
+ * the row where their amounts do (income tax's), else round on their own.
+ *
+ * @param {ReturnType<typeof programmeGroups>} groups
+ * @param {{before: number, after: number, change: number}} totals - headlineTotals
+ * @param {Array<{change: number, rounded: number}>} [bars] - policyRows(...).all
+ */
+export function roundProgrammeGroups(groups, totals, bars = []) {
+  const shown = (before, change) => ({ before, change, after: before + change });
+  const parts = (children, parent) => {
+    if (children.length === 0) return [];
+    const fits = (side) =>
+      Math.abs(children.reduce((sum, child) => sum + child[side], 0) - parent.raw[side]) < 1;
+    const before = fits("before")
+      ? consistentRound(
+          children.map((child) => child.before),
+          parent.shown.before,
+        )
+      : children.map((child) => Math.round(child.before));
+    const change = fits("change")
+      ? consistentRound(
+          children.map((child) => child.change),
+          parent.shown.change,
+        )
+      : children.map((child) => Math.round(child.change));
+    return children.map((child, index) => ({ ...child, shown: shown(before[index], change[index]) }));
+  };
+  const rows = groups.flatMap((group) => group.rows);
+  const before = consistentRound(
+    rows.map((row) => row.before),
+    totals.before,
+  );
+  const change = pinnedRound(
+    rows.map((row) => row.change),
+    totals.change,
+    bars,
+  );
+  const byId = new Map(rows.map((row, index) => [row.id, shown(before[index], change[index])]));
+  return groups.map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => {
+      const rowShown = byId.get(row.id);
+      return {
+        ...row,
+        shown: rowShown,
+        children: parts(row.children, { raw: row, shown: rowShown }),
+      };
+    }),
+  }));
 }
 
 /** The sweep's points: salary, net income before and after, and the change. */

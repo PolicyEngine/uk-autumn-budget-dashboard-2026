@@ -216,7 +216,7 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
       />
       <section className="report-section">
         {data.programmes ? (
-          <ProgrammeTable programmes={data.programmes} yearLabel={yearLabel} />
+          <ProgrammeTable programmes={data.programmes} totals={totals} bars={bars?.all} yearLabel={yearLabel} />
         ) : (
           <div className="card single-year-card">
             <p className="single-year-quiet">The breakdown by tax and benefit is not available for this answer.</p>

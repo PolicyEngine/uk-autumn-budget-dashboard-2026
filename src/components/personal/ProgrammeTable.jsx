@@ -1,7 +1,14 @@
 import { Fragment, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { useNarrowViewport } from "../../utils/chartTheme";
-import { largestChangesSentence, money, programmeGroups, programmeNotes, signedMoney } from "../../utils/singleYear";
+import {
+  largestChangesSentence,
+  money,
+  programmeGroups,
+  programmeNotes,
+  roundProgrammeGroups,
+  signedMoney,
+} from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { downloadFile } from "../../utils/downloadFile";
 
@@ -20,14 +27,21 @@ const changeClass = (value) => {
  * parts, closed at first. On a phone the table is Programme | Change, and
  * each row opens to its before and after.
  *
+ * Whole pounds that agree with the rest of the page (roundProgrammeGroups):
+ * each column adds up to its tile, each row's after is its before plus its
+ * change, and a row whose change is one policy's bar shows the bar's
+ * figure.
+ *
  * @param {Object} props
  * @param {Array} props.programmes - normaliseHouseholdImpact's programmes
+ * @param {{before: number, after: number, change: number}} props.totals - The tiles (headlineTotals)
+ * @param {Array} [props.bars] - policyRows(...).all, once the split by policy is in
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function ProgrammeTable({ programmes, yearLabel }) {
+export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel }) {
   const narrow = useNarrowViewport();
   const [open, setOpen] = useState(() => new Set());
-  const groups = programmeGroups(programmes);
+  const groups = roundProgrammeGroups(programmeGroups(programmes), totals, bars);
   const notes = programmeNotes(groups);
   const title = `Taxes and benefits before and after, ${yearLabel}`;
   const toggle = (id) =>
@@ -54,13 +68,11 @@ export default function ProgrammeTable({ programmes, yearLabel }) {
           ],
           rows: groups.flatMap((group) =>
             group.rows.flatMap((row) => [
-              { group: group.label, programme: row.label, before: row.before, after: row.after, change: row.change },
+              { group: group.label, programme: row.label, ...row.shown },
               ...row.children.map((child) => ({
                 group: group.label,
                 programme: `${row.label}: ${child.label}`,
-                before: child.before,
-                after: child.after,
-                change: child.change,
+                ...child.shown,
               })),
             ]),
           ),
@@ -102,14 +114,14 @@ export default function ProgrammeTable({ programmes, yearLabel }) {
               label
             )}
           </th>
-          {!narrow && <td className="num">{money(row.before)}</td>}
-          {!narrow && <td className="num">{money(row.after)}</td>}
-          <td className={`num change ${changeClass(row.change)}`}>{signedMoney(row.change)}</td>
+          {!narrow && <td className="num">{money(row.shown.before)}</td>}
+          {!narrow && <td className="num">{money(row.shown.after)}</td>}
+          <td className={`num change ${changeClass(row.shown.change)}`}>{signedMoney(row.shown.change)}</td>
         </tr>
         {isOpen && narrow && depth === 0 && (
           <tr className="programme-detail">
             <td colSpan={columns}>
-              Before {money(row.before)} → after {money(row.after)}
+              Before {money(row.shown.before)} → after {money(row.shown.after)}
             </td>
           </tr>
         )}

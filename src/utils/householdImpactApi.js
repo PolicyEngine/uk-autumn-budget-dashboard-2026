@@ -251,6 +251,8 @@ function normaliseProgramme(row) {
     note: row.note ?? null,
     before: num(row.baseline),
     after: num(row.reform),
+    // The API's own change: before and after are each rounded to the penny
+    change: typeof row.change === "number" ? row.change : num(row.reform) - num(row.baseline),
     children: Array.isArray(row.children) ? row.children.map(normaliseProgramme) : [],
   };
 }
