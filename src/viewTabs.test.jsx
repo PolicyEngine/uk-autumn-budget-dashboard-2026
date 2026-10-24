@@ -37,7 +37,7 @@ describe("the view tabs", () => {
     // The intro holds for every view, and sits above the tabs
     const intro = container.querySelector(".dashboard-intro");
     expect(intro).toHaveTextContent(
-      "The fiscal and distributional effects of the UK Autumn Budget 2026 measures. Choose policies and a year in the bar above.",
+      "How the UK Autumn Budget 2026 measures affect the public finances, households across the income distribution, regions and constituencies, example households and individuals, and young people, alongside the baseline outlook for living standards. Choose a year and policies in the bar above.",
     );
     expect(intro.compareDocumentPosition(screen.getByRole("tablist"))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
