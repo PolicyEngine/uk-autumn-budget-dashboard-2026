@@ -46,7 +46,7 @@ export default function RhdiSection({ data }) {
             Real household disposable income per person <strong>{verb || "stays flat"}</strong> in the OBR
             forecast, from {formatPounds(a.value)} in {fyDash(a.year)} to{" "}
             {formatPounds(b.value)} by {fyDash(b.year)} (national accounts, not comparable in level with the
-            Incomes section).
+            Incomes charts in Baseline outlook).
           </>
         )
       }
