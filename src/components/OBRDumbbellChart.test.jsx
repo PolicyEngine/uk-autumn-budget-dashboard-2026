@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import OBRDumbbellChart, {
+  OBR_COLOUR,
+  PE_COLOUR,
   formatBn,
   bandFor,
   obrValue,
@@ -120,7 +122,65 @@ describe("OBRDumbbellChart", () => {
       '[data-policy="threshold_freeze_extension"]',
     );
     expect(row.querySelectorAll(".obr-dumbbell-dot")).toHaveLength(2);
-    expect(row.querySelector(".obr-dumbbell-value").textContent).toBe("£0.0bn");
+    expect(row.querySelector(".obr-dumbbell-value").textContent).toBe(
+      "£0.0bn (both)",
+    );
+  });
+
+  it("keeps both marks visible when the estimates are equal: a dot inside a ring", () => {
+    const equal = [
+      [
+        "rail_fares_freeze",
+        {
+          name: "Rail fares freeze",
+          years: {
+            2029: { policyengine: -0.2, obr_static: -0.2, obr_behavioural: -0.2 },
+          },
+        },
+      ],
+    ];
+    const { container } = render(
+      <OBRDumbbellChart policies={equal} year={2029} showBehavioural />,
+    );
+    const row = container.querySelector('[data-policy="rail_fares_freeze"]');
+    const pe = row.querySelector(".obr-dumbbell-dot.pe");
+    const obr = row.querySelector(".obr-dumbbell-dot.obr");
+    // A solid teal dot, and a hollow grey ring drawn over it, larger
+    expect(pe.getAttribute("fill")).toBe(PE_COLOUR);
+    expect(obr.getAttribute("fill")).toBe("none");
+    expect(obr.getAttribute("stroke")).toBe(OBR_COLOUR);
+    expect(Number(obr.getAttribute("r"))).toBeGreaterThan(
+      Number(pe.getAttribute("r")),
+    );
+    expect(pe.getAttribute("cx")).toBe(obr.getAttribute("cx"));
+    const circles = [...row.querySelectorAll("circle")];
+    expect(circles.indexOf(obr)).toBeGreaterThan(circles.indexOf(pe));
+    // One label for both values, not two on top of each other
+    const labels = [...row.querySelectorAll(".obr-dumbbell-value")].map(
+      (n) => n.textContent,
+    );
+    expect(labels).toEqual(["−£0.2bn (both)"]);
+  });
+
+  it("labels close but different estimates separately", () => {
+    const { container } = render(
+      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
+    );
+    const labels = [
+      ...container.querySelectorAll(
+        '[data-policy="threshold_freeze_extension"] .obr-dumbbell-value',
+      ),
+    ].map((n) => n.textContent);
+    expect(labels.sort()).toEqual(["£7.6bn", "£7.8bn"]);
+  });
+
+  it("keys the OBR as a ring, as the chart draws it", () => {
+    const { container } = render(
+      <OBRDumbbellChart policies={policies} year={2029} showBehavioural />,
+    );
+    const legend = container.querySelector('[aria-label="Legend"]');
+    expect(legend.querySelector(".obr-dumbbell-key-ring")).not.toBeNull();
+    expect(legend.querySelectorAll(".obr-dumbbell-key-dot")).toHaveLength(1);
   });
 });
 

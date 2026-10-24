@@ -98,6 +98,23 @@ export function createSvgLine({ x1, y1, x2, y2, stroke, strokeWidth = 2, dash })
 }
 
 /**
+ * Create an SVG circle: filled, or a hollow ring when `stroke` is set and
+ * `fill` is "none".
+ *
+ * @param {Object} options - Circle options
+ * @returns {SVGCircleElement}
+ */
+export function createSvgCircle({ cx, cy, r, fill, stroke, strokeWidth = 2 }) {
+  return createSvgElement("circle", {
+    cx,
+    cy,
+    r,
+    fill,
+    ...(stroke ? { stroke, "stroke-width": strokeWidth } : {}),
+  });
+}
+
+/**
  * Create an SVG group element with optional transform.
  *
  * @param {Object} options - Group options

@@ -239,8 +239,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
-  padding: 8px 14px;
+  /* With the switch's 1px border, as tall as the 36px OBR basis pill */
+  height: 34px;
+  padding: 0 14px;
   border: 0;
   background: transparent;
   color: var(--pe-gray-600);
@@ -270,7 +271,7 @@
 
 /* The intro runs the full width of the card; the controls sit below it */
 .obr-comparison-section {
-  padding-top: 12px;
+  padding-top: 18px;
 }
 
 .obr-intro-row {
@@ -280,4 +281,15 @@
 .obr-intro-row .comparison-description {
   max-width: none;
   margin: 0;
+}
+
+/* On a phone the switch drops under the basis pill: both start at the left */
+@media (max-width: 480px) {
+  .obr-controls {
+    justify-content: flex-start;
+  }
+
+  .obr-controls .obr-view-switch {
+    margin-left: 0;
+  }
 }
