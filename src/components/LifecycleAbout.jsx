@@ -11,7 +11,8 @@ export const RAISER_KEYS = new Set([
 ]);
 
 // What the lifetime model does for each policy (its own values, from
-// uk_budget_data/lifecycle_calculator.py)
+// uk_budget_data/lifecycle_calculator.py). Some differ from the policy
+// notes on Population impact; they are left as the model has them.
 const ABOUT_POLICIES = [
   { key: "impact_threshold_freeze", text: "income tax thresholds frozen until 2030-31." },
   { key: "impact_unearned_income_tax", text: "tax on that income up 5%." },
@@ -22,20 +23,33 @@ const ABOUT_POLICIES = [
   { key: "impact_rail_fare_freeze", text: "regulated fares held for one year in 2026." },
 ];
 
+// The model's assumptions, from run_lifecycle_model and LifecycleInputs in
+// uk_budget_data/lifecycle_calculator.py
+const ASSUMPTIONS = [
+  "The projection starts in 2026 at the age and salary entered, and runs to the life expectancy entered.",
+  "Earnings follow an age profile that starts at 22: they rise to 2.2 times their level at 22 by 50, then stay there. A salary entered before 22 is held flat until 22.",
+  "On top of that profile, earnings grow by 1% a year.",
+  "After the retirement age entered, income is the State Pension.",
+  "CPI and RPI follow the OBR forecast, then 2% and 2.39%.",
+];
+
 const reform = (key) => LIFECYCLE_REFORMS.find((r) => r.key === key);
 
 /**
  * The lifetime model behind the Personal impact view: what it estimates,
  * the policies as it models them, and its assumptions. Shown on the
- * Methodology view.
+ * Methodology view, under a level-3 heading, so its own headings are
+ * level 4.
  */
 function LifecycleAbout() {
   return (
     <div className="methodology-content lifecycle-about">
-      <p>
-        Estimates the lifetime change in take-home pay for a graduate who starts
-        work at 22, from the selected policies, allowing for earnings growth, tax
-        thresholds and student loan repayments.
+      <p className="method-lead">
+        Estimates the lifetime change in take-home pay for one person from the
+        selected policies, allowing for earnings growth, tax thresholds and
+        student loan repayments. It is a separate, simpler model with its own
+        policy values, not the PolicyEngine UK model behind the national
+        figures.
       </p>
 
       <div className="about-columns">
@@ -67,9 +81,9 @@ function LifecycleAbout() {
         <div>
           <h4>Assumptions</h4>
           <ul className="about-bullets">
-            <li>Work starts at 22 on the chosen salary.</li>
-            <li>Earnings rise with age to 2.2 times the starting salary by 50.</li>
-            <li>CPI and RPI follow the OBR forecast, then 2% and 2.39%.</li>
+            {ASSUMPTIONS.map((text) => (
+              <li key={text}>{text}</li>
+            ))}
           </ul>
         </div>
       </div>

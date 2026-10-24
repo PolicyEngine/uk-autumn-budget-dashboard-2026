@@ -1,0 +1,426 @@
+/* ------------------------------------------------------------------
+   Methodology view: a sticky contents list at the left (a jump menu on
+   a phone), then the sections, each with its title outside its cards.
+   ------------------------------------------------------------------ */
+
+.methodology-tab {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
+  padding-top: 8px;
+}
+
+.method-body {
+  min-width: 0;
+}
+
+/* Contents ----------------------------------------------------------- */
+
+.method-contents {
+  position: sticky;
+  top: calc(var(--sticky-offset) + 16px);
+  max-height: calc(100vh - var(--sticky-offset) - 32px);
+  overflow-y: auto;
+}
+
+.method-contents-title {
+  margin: 0 0 8px;
+  padding-left: 14px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}
+
+.method-contents-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 2px solid var(--card-border);
+}
+
+.method-contents-list a {
+  display: block;
+  margin-left: -2px;
+  padding: 6px 12px;
+  border-left: 2px solid transparent;
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--pe-gray-600);
+  text-decoration: none;
+  transition: color var(--pe-transition-fast), border-color var(--pe-transition-fast);
+}
+
+.method-contents-list a:hover {
+  color: var(--pe-gray-900);
+}
+
+.method-contents-list a[aria-current="location"] {
+  border-left-color: var(--band-teal);
+  color: var(--band-teal);
+  font-weight: 600;
+}
+
+.method-contents-list a:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+  border-radius: var(--pe-radius-sm);
+}
+
+/* The jump menu, for a phone */
+.method-jump {
+  display: none;
+}
+
+/* Sections ----------------------------------------------------------- */
+
+.methodology-tab .method-section {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.methodology-tab .method-section + .method-section {
+  margin-top: 48px;
+}
+
+/* The section title takes focus from the contents, without a ring on
+   a mouse click */
+.method-section h2:focus {
+  outline: none;
+}
+
+.method-section h2:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 4px;
+  border-radius: var(--pe-radius-sm);
+}
+
+.method-section > .card + .card {
+  margin-top: 16px;
+}
+
+.method-anchor {
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
+}
+
+.method-card-title {
+  margin: 0 0 12px;
+  font-size: var(--fs-card-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-800);
+}
+
+.method-card .method-lead {
+  margin: 0 0 16px;
+  color: var(--pe-gray-700);
+}
+
+.method-card .method-more {
+  margin: 16px 0 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.method-card code {
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: var(--pe-radius-sm);
+  background: var(--pe-gray-100);
+  color: var(--pe-gray-800);
+}
+
+/* Fact grids: the term at the left, what it means at the right */
+.method-facts {
+  display: grid;
+  row-gap: 14px;
+  margin: 0;
+}
+
+.method-fact {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  column-gap: 24px;
+}
+
+.method-facts-wide .method-fact {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.method-fact dt {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.method-fact dd {
+  margin: 0;
+  color: var(--pe-gray-700);
+}
+
+/* How the numbers are made: five numbered steps in a row */
+.method-flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.method-flow-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  background: var(--pe-gray-50);
+}
+
+/* A chevron between steps */
+.method-flow-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  right: -12px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid var(--pe-teal-500);
+  border-right: 2px solid var(--pe-teal-500);
+  transform: rotate(45deg);
+}
+
+.method-flow-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--band-teal);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+}
+
+.method-flow-title {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.method-flow-text {
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+/* How each measure is modelled */
+.method-measures {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.method-measures thead th {
+  padding: 0 12px 8px 0;
+  border-bottom: 1px solid var(--card-border);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.method-measures tbody th,
+.method-measures td {
+  padding: 10px 12px 10px 0;
+  vertical-align: top;
+  text-align: left;
+}
+
+.method-measures tbody tr + tr th,
+.method-measures tbody tr + tr td {
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.method-measures tbody th {
+  width: 30%;
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.method-measures td {
+  color: var(--pe-gray-700);
+}
+
+.method-measure-year {
+  width: 72px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.method-cell-label {
+  display: none;
+}
+
+.method-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+/* The single-year calculation's slot, until its method lands */
+.method-placeholder {
+  border-style: dashed;
+  background: var(--pe-gray-50);
+}
+
+.method-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pe-teal-50);
+  color: var(--pe-teal-700);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* The lifetime model inside its card: its headings at level 4 */
+.method-card .lifecycle-about h4 {
+  margin: 16px 0 8px;
+  font-size: var(--fs-body);
+}
+
+/* Narrower screens ---------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .method-flow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .method-flow-step {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 12px 14px;
+  }
+
+  .method-flow-number {
+    grid-row: span 2;
+  }
+
+  /* The chevron points down between stacked steps */
+  .method-flow-step:not(:last-child)::after {
+    top: auto;
+    bottom: -9px;
+    right: auto;
+    left: 23px;
+    transform: rotate(135deg);
+    background: var(--pe-surface);
+  }
+}
+
+@media (max-width: 899px) {
+  .methodology-tab {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0;
+  }
+
+  .method-contents {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    margin-bottom: 24px;
+  }
+
+  .method-contents-title,
+  .method-contents-list {
+    display: none;
+  }
+
+  .method-jump {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--fs-small);
+    color: var(--pe-gray-600);
+  }
+
+  .method-jump-label {
+    flex: none;
+    font-weight: 600;
+  }
+
+  .method-jump select {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: var(--pe-radius-md);
+    background: var(--pe-surface);
+    font: inherit;
+    color: var(--pe-gray-800);
+  }
+
+  .method-jump select:focus-visible {
+    outline: 2px solid var(--pe-teal-500);
+    outline-offset: 2px;
+  }
+
+  .method-fact,
+  .method-facts-wide .method-fact {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+
+  /* The measures table as one block per measure */
+  .method-measures thead {
+    display: none;
+  }
+
+  .method-measures,
+  .method-measures tbody,
+  .method-measures tr,
+  .method-measures tbody th,
+  .method-measures td {
+    display: block;
+    width: auto;
+  }
+
+  .method-measures tbody th,
+  .method-measures td {
+    padding: 0;
+    border: 0 !important;
+  }
+
+  .method-measures tr {
+    padding: 12px 0;
+  }
+
+  .method-measures tbody tr + tr {
+    border-top: 1px solid var(--pe-gray-100);
+  }
+
+  .method-measures td {
+    margin-top: 4px;
+  }
+
+  .method-measure-year {
+    color: var(--pe-gray-500);
+  }
+
+  .method-cell-label {
+    display: inline;
+  }
+}

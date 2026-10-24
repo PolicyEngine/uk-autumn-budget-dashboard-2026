@@ -125,14 +125,34 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     const panel = screen.getByRole("tabpanel", { name: "Methodology" });
-    for (const name of ["Figures by area", "Lifetime model", "Sources and versions"]) {
-      expect(within(panel).getByRole("heading", { name })).toBeInTheDocument();
+    for (const name of [
+      "At a glance",
+      "Data",
+      "Model and measures",
+      "Population impact",
+      "Figures by area",
+      "Young people",
+      "Personal impact",
+      "Living standards",
+      "Limitations",
+      "Versions and replication",
+    ]) {
+      expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
+    expect(within(panel).getByRole("heading", { level: 3, name: "Lifetime model" })).toBeInTheDocument();
     expect(panel).toHaveTextContent("dominance and p% rules");
-    expect(panel).toHaveTextContent("Work starts at 22 on the chosen salary.");
+    expect(panel).toHaveTextContent("Earnings follow an age profile that starts at 22");
     expect(panel).toHaveTextContent("Methods and sources: our research on the");
-    expect(within(panel).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
+    const living = panel.querySelector("#method-living");
+    expect(within(living).getByRole("link", { name: "Living standards" })).toBeInTheDocument();
     // Said once on the page
-    expect(container.textContent.match(/Methods and sources/g)).toHaveLength(1);
+    for (const phrase of [
+      /Methods and sources/g,
+      /dominance and p% rules/g,
+      /interactions between measures are not included/g,
+      /line at the foot of the page/g,
+    ]) {
+      expect(container.textContent.match(phrase)).toHaveLength(1);
+    }
   });
 });
