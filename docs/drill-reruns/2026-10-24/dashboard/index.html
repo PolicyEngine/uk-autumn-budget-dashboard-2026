@@ -37,7 +37,7 @@ main.wrap{padding-top:24px;padding-bottom:48px}
 .sec{margin-bottom:40px}
 .sh{font-size:13px;font-weight:600;color:var(--muted);margin:0 0 12px;letter-spacing:.01em}
 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px}
-.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:20px;align-items:stretch}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 @media(max-width:1000px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.grid3,.grid4,.grid2{grid-template-columns:minmax(0,1fr)}}
@@ -157,14 +157,19 @@ table.yt{border-collapse:collapse;width:100%;font-size:14px}
 .mini{margin:8px 0 4px}
 .oleg{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:13px;color:var(--muted);margin:-8px 0 14px}
 .oleg span{display:inline-flex;gap:5px;align-items:center}.oleg .sw{width:10px;height:10px}
-.info{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;padding-top:16px;border-top:1px solid #f0f1f3}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:auto;height:104px;align-content:start;padding-top:16px;border-top:1px solid #f0f1f3}
 .ilab{font-size:12.5px;color:var(--faint);margin-bottom:8px}
 .ofoot{font-size:13px;color:var(--faint);display:flex;justify-content:space-between;align-items:center;gap:8px;margin:24px -24px -24px;padding:16px 24px;border-top:1px solid var(--line)}
 .ofoot .ol a{color:var(--muted)}
 .ofoot .open{margin:0;font-size:13.5px}
+@media(max-width:760px){.grid4{grid-auto-rows:auto}.info{height:auto}}
 @media(max-width:420px){.info{grid-template-columns:1fr}}
 .mtitle{font-size:13px;color:var(--muted);margin-bottom:6px}
-.mrow{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) 52px;gap:10px;align-items:center;font-size:13.5px;padding:2px 4px;border-radius:5px;cursor:help}
+.mrows{height:140px}
+.mrow.un .mn,.mrow.un .mv{color:var(--faint)}.mrow.un{cursor:default}.mrow.un:hover{background:none}
+.mextra{font-size:13px;color:var(--faint);height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 4px 14px}
+.mextra .open.more{margin:0;font-size:13px}
+.mrow{height:28px;display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr) 52px;gap:10px;align-items:center;font-size:13.5px;padding:2px 4px;border-radius:5px;cursor:help}
 .mrow:hover{background:#f3f6f7}
 .mn{color:var(--strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtr{position:relative;height:14px;background:#f3f4f6;border-radius:3px}
@@ -279,8 +284,9 @@ function mini(d,fuel){
   const unch=items.length-moved.length;const top=moved.slice(0,5),more=moved.length-top.length;
   const span=Math.max(5,...moved.map(h=>Math.abs(h.pct)))*1.05;
   const rows=top.map(h=>{const w=Math.abs(h.pct)/span*50;return `<div class="mrow"${T(rowTip(h),true)}><div class="mn">${esc(short(h))}</div><div class="mtr"><span class="z"></span><i class="${cls(h)}" style="left:${h.pct<0?50-w:50}%;width:${Math.max(w,0.8)}%"></i></div><div class="mv">${pw(h.pct)}</div></div>`}).join('');
-  return `<div class="mini"><div class="mtitle">How much each measure changed (rerun vs drill day)${fuel?` <span class="yi"${T("Fuel duty is not compared: this drill set it month by month, and today's engine ignores month-by-month rates. See the drill tab.",true)}>ⓘ</span>`:''}</div>${rows}
-   ${more>0?`<button class="open more" data-tab="drill${d}">+${more} more →</button>`:''}${unch>0?`<div class="tiny">${unch} measure${unch>1?'s':''} unchanged</div>`:''}</div>`}
+  const unNames=items.filter(([h,rs])=>!moved.includes(h)).map(([h])=>short(h));
+  const extra=[more>0?`<button class="open more" data-tab="drill${d}">+${more} more →</button>`:'',unch>0?`<span${T('Unchanged (under 0.05%)\n'+unNames.join('\n'),true)}>${unch} unchanged</span>`:''].filter(Boolean).join(' · ');
+  return `<div class="mini"><div class="mtitle">How much each measure changed (rerun vs drill day)${fuel?` <span class="yi"${T("Fuel duty is not compared: this drill set it month by month, and today's engine ignores month-by-month rates. See the drill tab.",true)}>ⓘ</span>`:''}</div><div class="mrows">${rows}${unNames.slice(0,Math.min(3,5-top.length)).map(n=>`<div class="mrow un"><div class="mn">${esc(n)}</div><div class="mtr"><span class="z"></span></div><div class="mv">0%</div></div>`).join('')}</div><div class="mextra">${extra||'&nbsp;'}</div></div>`}
 function dirw(ours,off){const d=Math.abs(Math.abs(ours)-Math.abs(off)).toFixed(1);const more=Math.abs(ours)>Math.abs(off);return off<0?`costs £${d}bn ${more?'more':'less'}`:`raises £${d}bn ${more?'more':'less'}`}
 function gapSub(){const grew=D.gaps.filter(g=>Math.abs(g.gap)>Math.abs(g.gap_drill_day)*1.2);
   let t='These gaps were there on drill day too; they come from the model and data, not from the rerun.';
