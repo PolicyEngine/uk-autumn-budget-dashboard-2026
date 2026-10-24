@@ -441,18 +441,42 @@ def generate_artifacts(
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
-        decided), reporting every slot in order."""
-        jobs = [slot for slot in slots if isinstance(slot, ArtifactRun)]
-        outcomes = iter(runner.map(run_artifact, jobs))
-        for slot in slots:
-            outcome = next(outcomes) if isinstance(slot, ArtifactRun) else slot
-            if outcome.reference is not None:
-                report.written.append(outcome.reference)
-                written_outputs[outcome.key] = outcome.reference.outputs_sha256
-            if outcome.refused is not None:
-                report.refused[outcome.key] = outcome.refused
-            for line in outcome.progress:
-                on_progress(line)
+        decided), reporting each slot in order as soon as it and every slot
+        before it are done, so a serial run reports as it goes."""
+        positions = [
+            i for i, slot in enumerate(slots) if isinstance(slot, ArtifactRun)
+        ]
+        done = {
+            i: slot
+            for i, slot in enumerate(slots)
+            if not isinstance(slot, ArtifactRun)
+        }
+        reported = 0
+
+        def report_ready():
+            nonlocal reported
+            while reported < len(slots) and reported in done:
+                outcome = done[reported]
+                if outcome.reference is not None:
+                    report.written.append(outcome.reference)
+                    written_outputs[outcome.key] = (
+                        outcome.reference.outputs_sha256
+                    )
+                if outcome.refused is not None:
+                    report.refused[outcome.key] = outcome.refused
+                for line in outcome.progress:
+                    on_progress(line)
+                reported += 1
+
+        def finished(index, outcome):
+            done[positions[index]] = outcome
+            report_ready()
+
+        report_ready()
+        runner.map(
+            run_artifact, [slots[i] for i in positions], on_result=finished
+        )
+        report_ready()
 
     slots: list = []
     for reform in reforms:
