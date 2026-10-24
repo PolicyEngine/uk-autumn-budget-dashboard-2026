@@ -177,9 +177,12 @@ unit). Each slow unit added lengthens the run.
 The page builds one measure catalogue from the publication manifest
 (`public/data/manifest.json`) and shows no figure without one. The file itself
 must name this Budget (`release: uk-autumn-budget-2026`, and `budget` with that
-id and the date 2026-10-28). With no manifest the page says that no Budget
-results are published yet; an unreadable, invalid or other-Budget manifest shows
-that published results are unavailable. Neither ever falls back to the flat CSVs.
+id and the date 2026-10-28). With no manifest the Budget views say that no
+Budget results are published yet; an unreadable, invalid or other-Budget
+manifest makes them unavailable. Neither ever falls back to the flat CSVs, and
+Living standards and Methodology render either way. An open page checks the
+manifest on focus and every five minutes, and moves to a newer one's verified
+figures, or drops them when it is withdrawn.
 
 The frontend contains no measure list. Labels, descriptions, selection, legends,
 ordering and chart colours all come from the catalogue. Colours depend only on
