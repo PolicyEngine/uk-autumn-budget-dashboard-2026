@@ -58,3 +58,24 @@ export function measureCatalogueFixture({ held = true } = {}) {
   ].join("\n");
   return { manifest, budgetary, distributional, winnersLosers, household, ageCsv };
 }
+
+/**
+ * Bind flat files to a test manifest as `publish index` does: the manifest
+ * names each file's SHA-256, and the release index names the manifest's
+ * revision and the SHA-256 of its bytes. Returns the files to serve.
+ */
+export async function bindFlatFiles(manifest, files) {
+  const { sha256Hex } = await import("../utils/publication/digest");
+  const { RELEASE_INDEX_FILE, RELEASE_INDEX_SCHEMA } = await import("../utils/publication/flat");
+  manifest.revision ??= 1;
+  manifest.flat_files = Object.fromEntries(
+    await Promise.all(Object.entries(files).map(async ([name, text]) => [name, await sha256Hex(text)])),
+  );
+  const snapshot = await sha256Hex(JSON.stringify(manifest));
+  Object.defineProperty(manifest, "snapshotSha256", { value: snapshot, configurable: true });
+  const index = {
+    schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget,
+    manifest_revision: manifest.revision, manifest_sha256: snapshot, files: manifest.flat_files,
+  };
+  return { [RELEASE_INDEX_FILE]: JSON.stringify(index), ...files };
+}
