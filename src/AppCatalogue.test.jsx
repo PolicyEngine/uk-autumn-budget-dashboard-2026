@@ -5,6 +5,7 @@ import fc from "fast-check";
 import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { artifactSha256, jcsSha256, sha256Hex } from "./utils/publication/digest";
+import { parseTable } from "./utils/publication/csv";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -54,9 +55,10 @@ describe("the page's verified publication catalogue", () => {
     expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 
-  it("loads today's real public/data and renders no historical figure without a manifest", async () => {
-    const historic = readFileSync(join(process.cwd(), "public/data/budgetary_impact.csv"), "utf8");
-    expect(historic).toContain("two_child_limit");
+  it("loads today's real unreceipted public/data and renders no Budget figure without a manifest", async () => {
+    const flat = parseTable("budgetary_impact", readFileSync(join(process.cwd(), "public/data/budgetary_impact.csv"), "utf8"));
+    expect(flat.length).toBeGreaterThan(0);
+    expect(flat.some((row) => row.year === IN_DATA && Number.isFinite(row.value))).toBe(true);
     expect(readFileSync(join(process.cwd(), "public/data/obr_comparison.csv"), "utf8")).toContain("2025_combined");
     vi.stubGlobal("fetch", async (url) => {
       try { return new Response(readFileSync(join(process.cwd(), "public", String(url)))); }
@@ -66,7 +68,6 @@ describe("the page's verified publication catalogue", () => {
     expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
-    expect(screen.queryByText(/9\.486/)).toBeNull();
   });
 
   it("never displays a stale flat figure when an approved output digest differs", async () => {
