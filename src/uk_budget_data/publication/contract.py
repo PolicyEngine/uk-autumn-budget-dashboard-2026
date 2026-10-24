@@ -16,7 +16,7 @@ Regenerate the file with::
 import json
 import sys
 
-from uk_budget_data import data_limits, model_limits
+from uk_budget_data import data_limits, measure_templates, model_limits
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.receipt import receipt_api
@@ -88,7 +88,22 @@ def contract() -> dict:
         ],
         "displayable": sorted(m.DISPLAYABLE),
         "data_limits_registry_sha256": data_limits.REGISTRY_SHA256,
+        "data_limits_active": bool(data_limits.DATA_LIMITS),
         "model_limits_registry_sha256": model_limits.REGISTRY_SHA256,
+        "measure_templates": list(measure_templates.TEMPLATES),
+        # JavaScript has lowercasing but no Unicode case-fold operation.
+        # Export non-identity folds, so checker names follow Python's
+        # Unicode version too (for example, Straße equals STRASSE).
+        "name_casefold": {
+            char: char.casefold()
+            for codepoint in range(sys.maxunicode + 1)
+            if (char := chr(codepoint)).casefold() != char
+        },
+        "name_whitespace": "".join(
+            char
+            for codepoint in range(sys.maxunicode + 1)
+            if (char := chr(codepoint)).isspace()
+        ),
         "digest_vectors": digest_vectors(),
         "scatter_bins": {
             **SCATTER_BINS,

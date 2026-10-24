@@ -14,9 +14,11 @@ import {
 } from "../../test/publicationFixture";
 
 const manifest = parseManifest(fixtureJson("manifest.json"));
+// A not-computable entry's artifact is its receipt alone: it has no tables.
 const tablesByKey = Object.fromEntries(
-  Object.entries({ ...manifest.measures, ...manifest.combined }).map(
-    ([key, entry]) => [
+  Object.entries({ ...manifest.measures, ...manifest.combined })
+    .filter(([, entry]) => entry.status !== "not_computable")
+    .map(([key, entry]) => [
       key,
       {
         household_scatter_binned: parseTable(
@@ -24,8 +26,7 @@ const tablesByKey = Object.fromEntries(
           fixtureText(`${entry.artifact}/household_scatter_binned.csv`),
         ),
       },
-    ],
-  ),
+    ]),
 );
 
 describe("the published scatter tables", () => {

@@ -9,7 +9,9 @@ still decided by bytes and versions exactly as in production.
 import copy
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,9 +22,17 @@ from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.publication import receipt as receipt_module
-from uk_budget_data.publication.artifacts import write_artifact
-from uk_budget_data.publication.receipt import projection_end_year
+from uk_budget_data.publication.artifacts import (
+    RECEIPT_FILE,
+    table_files,
+    write_artifact,
+)
+from uk_budget_data.publication.receipt import (
+    artifact_sha256,
+    projection_end_year,
+)
 from uk_budget_data.publication.reconcile import reconcile_artifact
+from uk_budget_data.publication.tables import sha256_bytes
 from uk_budget_data.publication.validate import DECILES, WINNERS_GROUPS
 
 # The installed bundle's certified default dataset. Read from the bundle, so
@@ -82,9 +92,16 @@ SOURCE_HEADER = (
 )
 
 
-def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
+def default_name(key: str) -> str:
+    """The display name World gives a key's tables and receipt."""
+    return key.replace("_", " ").title()
+
+
+def make_tables(
+    key: str, values: dict[int, float], name: str = None
+) -> dict[str, list[dict]]:
     """A complete, valid set of tables whose fiscal impact is ``values``."""
-    name = key.replace("_", " ").title()
+    name = name or default_name(key)
     tables = {
         "budgetary_impact": [],
         "distributional_impact": [],
@@ -134,9 +151,11 @@ def make_tables(key: str, values: dict[int, float]) -> dict[str, list[dict]]:
     return tables
 
 
-def make_household_rows(key: str, values: dict[int, float]) -> list[dict]:
+def make_household_rows(
+    key: str, values: dict[int, float], name: str = None
+) -> list[dict]:
     """Household-level scatter rows that bin to make_tables' scatter cells."""
-    name = key.replace("_", " ").title()
+    name = name or default_name(key)
     return [
         {
             "reform_id": key,
@@ -196,6 +215,60 @@ class World:
         shutil.rmtree(self.root, ignore_errors=True)
 
     @staticmethod
+    def commit_attestation(path: Path) -> None:
+        """Commit only one review input in its temporary, local Git repo.
+
+        Never reuse a worktree's external Git metadata or stage datasets
+        and generated artifacts beside the review input.
+        """
+        path = Path(path).resolve()
+        directory = path.parent
+        metadata = directory / ".git"
+        if metadata.is_symlink() or (
+            metadata.exists() and not metadata.is_dir()
+        ):
+            raise ValueError("attestation tests require local Git metadata")
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("GIT_")
+        }
+
+        def git(*arguments):
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(directory),
+                    "-c",
+                    "user.name=Attestation tests",
+                    "-c",
+                    "user.email=attestations@example.invalid",
+                    "-c",
+                    "commit.gpgSign=false",
+                    "-c",
+                    "core.hooksPath=/dev/null",
+                    *arguments,
+                ],
+                check=True,
+                capture_output=True,
+                env=environment,
+            )
+
+        if not metadata.exists():
+            git("init")
+        git("add", "--", path.name)
+        git(
+            "commit",
+            "--only",
+            "--allow-empty",
+            "-m",
+            "Commit attestation test input",
+            "--",
+            path.name,
+        )
+
+    @staticmethod
     def _bundle_for(dataset: Path) -> dict:
         digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
         bundle = copy.deepcopy(load_bundle_manifest())
@@ -250,9 +323,13 @@ class World:
         member_outputs=None,
         dataset_name: str = DATASET_NAME,
         reform_identity=None,
+        baseline_identity=None,
         config_baseline=None,
         data_limits=(),
         model_limits=(),
+        name=None,
+        with_tables=None,
+        modifier_templates=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -260,6 +337,12 @@ class World:
         the artifact is a combined run: its identities are the members'
         composition, as ``receipt.combined_identities`` builds them, unless
         ``reform_identity`` is given to test a receipt that is not.
+
+        The receipt records ``name`` (by default the tables' own, or the
+        key's default name). An artifact recording a data limit is
+        receipt-only, as generation writes it; ``with_tables=True`` writes
+        one with its tables anyway, as generation did before, to test that
+        the gates refuse it.
         """
         revision = self.revision(clean)
         scenario = Scenario(
@@ -267,8 +350,11 @@ class World:
                 RATE_PATH: {str(y): rate for y in sorted(values)}
             }
         )
-        baseline_identity = receipt_module.scenario_identity(
-            None, name=f"{key} baseline", revision=revision
+        baseline_identity = (
+            baseline_identity
+            or receipt_module.scenario_identity(
+                None, name=f"{key} baseline", revision=revision
+            )
         )
         composition = None
         requested_config_baseline, config_baseline = config_baseline, None
@@ -281,15 +367,32 @@ class World:
             ].ReformIdentity.model_validate(
                 requested_config_baseline or World.configured_baseline()
             )
+        reform_identity = reform_identity or receipt_module.scenario_identity(
+            scenario, name=key, revision=revision
+        )
+        if modifier_templates is None:
+            counts = receipt_module.template_proof.modifier_counts(
+                {
+                    "dashboard": {"members": members},
+                    "execution_receipt": {
+                        "baseline": json.loads(
+                            baseline_identity.model_dump_json()
+                        ),
+                        "reform": json.loads(
+                            reform_identity.model_dump_json()
+                        ),
+                    },
+                }
+            )
+            modifier_templates = {
+                side: [None] * count for side, count in counts.items()
+            }
         inputs = dict(
             key=key,
             measure_ids=measure_ids or [key],
             years=sorted(values),
             baseline_identity=baseline_identity,
-            reform_identity=reform_identity
-            or receipt_module.scenario_identity(
-                scenario, name=key, revision=revision
-            ),
+            reform_identity=reform_identity,
             basis=BASIS,
             revision=revision,
             members=members,
@@ -298,8 +401,13 @@ class World:
             config_baseline_identity=config_baseline,
             data_limits=list(data_limits),
             model_limits=list(model_limits),
+            modifier_templates=modifier_templates,
             generator_argv=["test"],
         )
+        if name is None:
+            rows = (tables or {}).get("budgetary_impact") or []
+            name = rows[0]["reform_name"] if rows else default_name(key)
+        inputs["name"] = name
         sim = self.sim(dataset, dataset_years, dataset_name)
 
         def build(file_digests):
@@ -311,8 +419,36 @@ class World:
                 ),
             )
 
+        if with_tables is None:
+            with_tables = not data_limits
+        tables = tables or make_tables(key, values, name)
+        if with_tables and data_limits:
+            return self._write_with_tables(tables, key, build)
         return write_artifact(
-            tables or make_tables(key, values), key, build, self.artifacts
+            tables if with_tables else None, key, build, self.artifacts
+        )
+
+    def _write_with_tables(self, tables, key, build):
+        """Write a data-limited artifact holding its tables, as generation
+        did before not-computable artifacts became receipt-only, which
+        ``write_artifact`` now refuses to write."""
+        files = table_files(tables, key)
+        document = build(
+            {name: sha256_bytes(data) for name, data in files.items()}
+        )
+        target = self.artifacts / key / artifact_sha256(document)[:16]
+        target.mkdir(parents=True)
+        for name, data in files.items():
+            (target / name).write_bytes(data)
+        (target / RECEIPT_FILE).write_text(
+            json.dumps(document, indent=2, sort_keys=True) + "\n"
+        )
+        digests = document["dashboard"]["digests"]
+        return SimpleNamespace(
+            key=key,
+            path=target,
+            outputs_sha256=digests["outputs_sha256"],
+            artifact_sha256=artifact_sha256(document),
         )
 
     @staticmethod

@@ -9,7 +9,10 @@ members, checked beforehand to contain each member's changes.
 A measure that cannot be receipted is refused and reported; the others are
 still written. One that leaves out a scored year of an uprated amount is
 refused the same way, before any simulation is built
-(``uk_budget_data.scored_years``).
+(``uk_budget_data.scored_years``). A measure or combined run the certified
+data cannot cost (its run records a data limit) is still processed, since
+the limits are observed while it runs, but its artifact is receipt-only: it
+is listed as not computable and binds no figure, so no table is written.
 """
 
 import atexit
@@ -45,6 +48,10 @@ from uk_budget_data.publication.receipt import (
     scenario_identity,
 )
 from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.template_proof import (
+    combined_templates_proof,
+    measure_templates_proof,
+)
 from uk_budget_data.scored_years import missing_scored_years
 
 
@@ -279,6 +286,7 @@ def generate_artifacts(
         member_outputs=None,
         composition=None,
         uses_config_baseline=False,
+        modifier_templates=None,
     ):
         baseline_identity, reform_identity = identities
         baseline_scenario = _scenarios(
@@ -330,22 +338,31 @@ def generate_artifacts(
                 composition=composition,
                 data_limits=limits,
                 model_limits=held,
+                name=reform.name,
+                modifier_templates=(
+                    modifier_templates
+                    if modifier_templates is not None
+                    else measure_templates_proof(reform, config, revision)
+                ),
             )
             if argv is not None:
                 inputs.generator_argv = argv
             return build_receipt_document(baseline, reformed, inputs)
 
+        # A run the data cannot cost writes its receipt alone: its tables
+        # hold no figure the page may show, so none is published.
         reference = write_artifact(
-            result_tables(result, list(config.years)),
+            None if limits else result_tables(result, list(config.years)),
             key,
             build_receipt,
             artifacts_root,
         )
         report.written.append(reference)
         written_outputs[key] = reference.outputs_sha256
+        note = " (not computable on current data: receipt only)"
         on_progress(
             f"{key}: {'wrote' if reference.created else 'unchanged'} "
-            f"{reference.path}"
+            f"{reference.path}{note if limits else ''}"
         )
 
     for reform in reforms:
@@ -435,6 +452,9 @@ def generate_artifacts(
                 member_outputs=(snapshot if all(snapshot.values()) else None),
                 composition=composition,
                 uses_config_baseline=uses_config,
+                modifier_templates=combined_templates_proof(
+                    ordered, config, revision
+                ),
             )
         except ReceiptUnavailable as error:
             report.refused[key] = error.reason

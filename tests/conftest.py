@@ -18,12 +18,22 @@ the first four slow units start on separate workers and the rest follow as
 each worker's next unit (see ``pytest_collection_modifyitems``).
 """
 
+import importlib
 import os
 
 import pytest
 
 CERTIFIED_DATA = "certified_data"
 SLOW = "slow"
+# Where the warnings the tests can let through are defined. Under
+# pytest-xdist the main process imports a worker's warning's module to
+# report it, in one thread per worker, so two workers' first warnings at
+# once can deadlock on the import lock and crash the session. Importing
+# them before the workers start leaves nothing to import then.
+WARNING_MODULES = (
+    "uk_budget_data.data_limits",
+    "uk_budget_data.measure_templates",
+)
 
 
 def certified_data_required() -> bool:
@@ -46,6 +56,9 @@ def pytest_configure(config):
         "markers",
         f"{SLOW}: takes minutes; collected first under pytest-xdist",
     )
+    if not is_xdist_worker(config):
+        for module in WARNING_MODULES:
+            importlib.import_module(module)
 
 
 def pytest_collection_modifyitems(config, items):

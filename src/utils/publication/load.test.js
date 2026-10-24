@@ -1,9 +1,12 @@
 // @vitest-environment node
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
 import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
+  FIXTURE_ROOT,
   fixtureFetch,
   fixtureJson,
   fixtureText,
@@ -40,6 +43,16 @@ describe("loadPublication", () => {
     const result = await loadPublication(BASE_PATH, ["delta"], { fetchImpl });
     expect(result.tablesByKey).toEqual({});
     expect(fetchImpl.calls.some((url) => url.includes("/delta/"))).toBe(false);
+  });
+
+  it("has only a receipt, binding no files, for a not-computable measure", () => {
+    const entry = manifest.measures.epsilon;
+    expect(readdirSync(join(FIXTURE_ROOT, entry.artifact))).toEqual([
+      "receipt.json",
+    ]);
+    const receipt = fixtureJson(`${entry.artifact}/receipt.json`);
+    expect(receipt.dashboard.files).toEqual({});
+    expect(receipt.dashboard.name).toBe(entry.name);
   });
 
   it("never fetches a not-computable measure's files", async () => {
@@ -80,6 +93,8 @@ describe("loadPublication", () => {
   it.each([
     ["zeta", 0.9],
     ["eta", 1.1],
+    ["theta", 1.3],
+    ["iota", 1.5],
   ])("loads %s's model-limited figures as provisional", async (key, value) => {
     const fetchImpl = fixtureFetch();
     const result = await loadPublication(BASE_PATH, [key], { fetchImpl });
@@ -87,10 +102,10 @@ describe("loadPublication", () => {
     expect(result.tablesByKey[key].budgetary_impact[0].value).toBe(value);
   });
 
-  it.each(["zeta", "eta"])(
+  it.each(["zeta", "eta", "theta", "iota"])(
     "refuses %s's model-limited artifact relabelled as approved",
     async (key) => {
-      // A manifest edited by hand to approve either model-limited measure
+      // A manifest edited by hand to approve any model-limited measure
       // cannot make its figures load while its receipt records the limit.
       const edited = structuredClone(manifest);
       edited.measures[key].status = "approved";
