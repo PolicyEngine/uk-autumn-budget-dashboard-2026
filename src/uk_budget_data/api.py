@@ -363,6 +363,23 @@ class HouseholdAnswersRequest(BaseModel):
     salary_sacrifice_pension_contributions: float = Field(
         default=0, ge=0, le=MAX_AMOUNT
     )
+    state_pension: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100_000,
+        description=(
+            "State Pension, £ a year in the chosen year (not grown like the "
+            "salary), read only at State Pension age. Left out: the full "
+            "new State Pension for the chosen year, from policyengine-uk's "
+            "parameter."
+        ),
+    )
+    partner_state_pension: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=100_000,
+        description="The partner's State Pension, as state_pension",
+    )
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()

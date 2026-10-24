@@ -87,6 +87,14 @@ def _with(change):
             {"household": {"children_ages": [3]}},
             ["body", "household", "children_ages"],
         ),
+        (
+            {"household": {"state_pension": -1}},
+            ["body", "household", "state_pension"],
+        ),
+        (
+            {"household": {"partner_state_pension": 200_000}},
+            ["body", "household", "partner_state_pension"],
+        ),
         ({"household": {"salary_year": 2024}}, ["body", "household"]),
         ({"year": 2027, "household": {"salary_year": 2028}}, ["body"]),
     ],
@@ -116,6 +124,13 @@ def test_with_no_measures_named_it_uses_every_measure_it_knows(monkeypatch):
     response = client.post(ROUTE, json={"year": 2029})
     assert response.status_code == 200, response.text
     assert calls == [(household_impact.measure_ids(), ("by_policy", "sweep"))]
+
+
+def test_the_state_pension_reaches_the_answers_or_is_left_to_the_model():
+    request = api.HouseholdAnswersRequest(age=72, partner_state_pension=9e3)
+    answers = request.answers()
+    assert answers.state_pension is None
+    assert answers.partner_state_pension == 9_000
 
 
 def test_answers_are_kept_by_request(monkeypatch):

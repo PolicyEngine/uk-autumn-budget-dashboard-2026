@@ -18,6 +18,8 @@
  * into the page's own shape.
  */
 
+import statePensionTable from "../uk_budget_data/state_pension.json";
+
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
 /** The route's own limit is 60 s; give up a little after it. */
@@ -54,7 +56,30 @@ export const FIELD_LABELS = {
   council_tax_band: "Council tax band",
   monthly_childcare: "Monthly childcare",
   salary_year: "Salary year",
+  state_pension: "State Pension",
+  partner_state_pension: "Partner's State Pension",
 };
+
+/**
+ * policyengine-uk's State Pension age and full new State Pension (£ a
+ * year) in `year`, from state_pension.json (a test checks it against the
+ * model). The wizard shows its State Pension fields from this age and
+ * prefills them with this amount; the API reads the model itself, so a
+ * field left as prefilled is not sent.
+ *
+ * @param {number} year
+ * @returns {{ age: number, full: number }}
+ */
+export function statePensionFor(year) {
+  const years = statePensionTable.years;
+  const known = Object.keys(years).map(Number).sort((a, b) => a - b);
+  const nearest = known.find((y) => y >= year) ?? known[known.length - 1];
+  const row = years[String(known.includes(year) ? year : nearest)];
+  return { age: row.state_pension_age, full: row.full_new_state_pension };
+}
+
+/** Whether someone of `age` is at State Pension age in `year`. */
+export const atStatePensionAge = (age, year) => age >= statePensionFor(year).age;
 
 /** The API's URL, or null when the build has none. */
 export function householdApiUrl() {
@@ -124,10 +149,22 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       // Childcare only counts with children
       monthly_childcare: children.length ? inputs.monthly_childcare : 0,
       salary_year: SALARY_YEAR,
+      // The State Pension only as entered: left as prefilled, the API uses
+      // the full new State Pension for the year
+      ...(statePensionEntered(inputs.state_pension_per_year) && atStatePensionAge(inputs.current_age, year)
+        ? { state_pension: inputs.state_pension_per_year }
+        : {}),
+      ...(inputs.has_partner &&
+      statePensionEntered(inputs.partner_state_pension_per_year) &&
+      atStatePensionAge(inputs.partner_age, year)
+        ? { partner_state_pension: inputs.partner_state_pension_per_year }
+        : {}),
     },
     include: [...include],
   };
 }
+
+const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 
 /** One request's cache key: the body without the stage. */
 export function requestKey(body) {

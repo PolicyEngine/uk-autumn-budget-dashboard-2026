@@ -15,6 +15,8 @@ policyengine-uk's ``Scenario`` from the same measures, modifiers included.
 The hand checks recompute the main changes from the parameters.
 """
 
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import policyengine as pe
@@ -23,6 +25,7 @@ from policyengine_uk import Simulation
 from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
+from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -764,6 +767,121 @@ def test_the_default_local_authority_changes_no_result(council_tax):
     assert maidstone["area"]["local_authority_source"] == "entered"
     assert default["net_income"] == maidstone["net_income"]
     assert default["programmes"] == maidstone["programmes"]
+
+
+# --- the State Pension -------------------------------------------------------
+
+NEW_STATE_PENSION = "gov.dwp.state_pension.new_state_pension.amount"
+STATE_PENSION_JSON = (
+    Path(household_impact.__file__).parent / "state_pension.json"
+)
+
+
+def test_the_full_new_state_pension_is_the_models_parameter():
+    weekly = PARAMETERS.get_child(NEW_STATE_PENSION)
+    for year in POLICY_YEARS:
+        assert household_impact.full_new_state_pension(year) == (
+            pytest.approx(weekly(f"{year}-01-01") * 52)
+        )
+
+
+@pytest.mark.parametrize("year", POLICY_YEARS)
+def test_state_pension_age_is_the_models(year):
+    age = household_impact.state_pension_age(year)
+
+    def over(person_age):
+        return bool(
+            Simulation(
+                situation={
+                    "people": {"p": {"age": {year: person_age}}},
+                    "benunits": {"b": {"members": ["p"]}},
+                    "households": {"h": {"members": ["p"]}},
+                }
+            ).calculate("is_SP_age", year)[0]
+        )
+
+    assert over(age) and not over(age - 1)
+
+
+def test_the_pages_state_pension_table_is_the_models():
+    """The wizard's copy (state_pension.json) of the age and the rate."""
+    table = json.loads(STATE_PENSION_JSON.read_text())["years"]
+    assert sorted(int(year) for year in table) == list(POLICY_YEARS)
+    for year in POLICY_YEARS:
+        row = table[str(year)]
+        assert row["state_pension_age"] == household_impact.state_pension_age(
+            year
+        )
+        assert row["full_new_state_pension"] == round(
+            household_impact.full_new_state_pension(year), 2
+        )
+
+
+def test_the_state_pension_is_entered_only_at_state_pension_age():
+    age = household_impact.state_pension_age(YEAR)
+    full = household_impact.full_new_state_pension(YEAR)
+    people, _, _ = household_impact.household_entities(
+        Answers(age=age, has_partner=True, partner_age=age - 1), YEAR
+    )
+    assert people[0]["state_pension_reported"] == pytest.approx(full)
+    assert "state_pension_reported" not in people[1]
+    people, _, _ = household_impact.household_entities(
+        Answers(
+            age=75,
+            state_pension=9_000,
+            has_partner=True,
+            partner_age=80,
+            partner_state_pension=None,
+        ),
+        YEAR,
+    )
+    assert people[0]["state_pension_reported"] == 9_000
+    assert people[1]["state_pension_reported"] == pytest.approx(full)
+    # A single pensioner is one person: the partner's answers stay unused
+    people, _, _ = household_impact.household_entities(Answers(age=72), YEAR)
+    assert len(people) == 1
+    # An amount entered under State Pension age is not used
+    people, _, _ = household_impact.household_entities(
+        Answers(age=40, state_pension=9_000), YEAR
+    )
+    assert "state_pension_reported" not in people[0]
+
+
+def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
+    """A 72-year-old with £2,000 savings interest and £1,000 dividends:
+    before, with no State Pension entered, policyengine-uk paid £13,172 of
+    Pension Credit instead. Now the full new State Pension, and too much
+    income for Pension Credit."""
+    answers = Answers(
+        age=72,
+        employment_income=0,
+        region="SOUTH_WEST",
+        tenure="OWNED_OUTRIGHT",
+        savings_interest_income=2_000,
+        dividend_income=1_000,
+    )
+    result = calculate(answers, ["dividend_tax_increase_2pp"])
+    full = household_impact.full_new_state_pension(YEAR)
+    assert programme(result, "state_pension")["baseline"] == pytest.approx(
+        full, abs=0.01
+    )
+    assert programme(result, "pension_credit")["baseline"] == 0
+    used = result["state_pension_used"]
+    assert used["state_pension"] == pytest.approx(full, abs=0.01)
+    assert used["partner_state_pension"] is None
+    assert used["state_pension_age"] == household_impact.state_pension_age(
+        YEAR
+    )
+    # Dividends over the £500 allowance are taxed: the State Pension uses
+    # the Personal Allowance, and savings interest is in the starting rate
+    assert programme(result, "income_tax")["baseline"] > 0
+    entered = calculate(
+        Answers(**{**vars(answers), "state_pension": 9_000}),
+        ["dividend_tax_increase_2pp"],
+    )
+    assert programme(entered, "state_pension")["baseline"] == (
+        pytest.approx(9_000, abs=0.01)
+    )
 
 
 # --- the earnings sweep ---------------------------------------------------------

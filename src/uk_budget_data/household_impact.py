@@ -36,10 +36,12 @@ which a household calculation has none of.
 """
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Optional
 
 import numpy as np
 import policyengine as pe
+from policyengine_uk.model_api import WEEKS_IN_YEAR
 from policyengine_uk.parameters.gov.simulation.labour_supply_responses.aliases import (  # noqa: E501
     canonicalize_parameter_changes,
 )
@@ -105,8 +107,6 @@ DEFAULT_BRMA = {
     region.name: brma.name for region, brma in REGION_DEFAULT_BRMA.items()
 }
 
-# The age from which a child's education decides whether they are a
-# dependant (policyengine-uk's Child Benefit and Universal Credit child age
 # Where a household with no local authority given is placed: a local
 # authority inside its region's default BRMA, so the area the answer shows
 # is one place. policyengine-uk's own default is Maidstone whatever the
@@ -130,6 +130,8 @@ DEFAULT_LOCAL_AUTHORITY = {
     "NORTHERN_IRELAND": "BELFAST",  # Belfast
 }
 
+# The age from which a child's education decides whether they are a
+# dependant (policyengine-uk's Child Benefit and Universal Credit child age
 # limit: under 16 is a child whatever their education), and the oldest age
 # the form takes (policyengine-uk's qualifying young person age limit is
 # under 20).
@@ -537,6 +539,10 @@ class HouseholdAnswers:
     petrol_spending: float = 0
     diesel_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
+    # State Pension, £ a year in the year calculated, for an adult at State
+    # Pension age; None is the full new State Pension (``state_pensions``)
+    state_pension: Optional[float] = None
+    partner_state_pension: Optional[float] = None
 
 
 # policyengine-uk's age-derived education stage
@@ -597,6 +603,66 @@ def salaries_in(answers: HouseholdAnswers, year: int) -> tuple[float, float]:
     )
 
 
+def full_new_state_pension(year: int) -> float:
+    """The full new State Pension, £ a year, in ``year``: the model's
+    weekly rate (``gov.dwp.state_pension.new_state_pension.amount``, read
+    as ``new_state_pension`` reads it) times its weeks in a year."""
+    from uk_budget_data.calculators import full_new_state_pension as weekly
+
+    return weekly([year])[year] * WEEKS_IN_YEAR
+
+
+@lru_cache(maxsize=None)
+def state_pension_age(year: int) -> int:
+    """The youngest whole age policyengine-uk places over State Pension age
+    in ``year`` (its ``is_SP_age``: reached by 6 October) for a person
+    entered, as the form enters them, by age alone."""
+    from policyengine_uk import Simulation
+
+    ages = range(YOUNG_PERSON_AGE, 101)
+    names = [f"p{age}" for age in ages]
+    simulation = Simulation(
+        situation={
+            "people": {
+                name: {"age": {year: age}} for name, age in zip(names, ages)
+            },
+            "benunits": {name: {"members": [name]} for name in names},
+            "households": {"household": {"members": names}},
+        }
+    )
+    over = simulation.calculate("is_SP_age", year)
+    return min(age for age, is_over in zip(ages, over) if is_over)
+
+
+def state_pensions(
+    answers: HouseholdAnswers, year: int
+) -> tuple[Optional[float], Optional[float]]:
+    """The head's and partner's State Pension, £ a year in ``year``: None
+    under State Pension age (or with no partner), else as entered, or the
+    full new State Pension when not entered.
+
+    policyengine-uk takes the State Pension as an input
+    (``state_pension_reported``): without it, a pensioner has none, and
+    Pension Credit makes up the difference. The model splits the amount at
+    the year's full rate, so an amount above it is a protected payment.
+    """
+    age = state_pension_age(year)
+
+    def amount(person_age, entered):
+        if person_age < age:
+            return None
+        return full_new_state_pension(year) if entered is None else entered
+
+    return (
+        amount(answers.age, answers.state_pension),
+        (
+            amount(answers.partner_age, answers.partner_state_pension)
+            if answers.has_partner
+            else None
+        ),
+    )
+
+
 def household_entities(
     answers: HouseholdAnswers, year: Optional[int] = None
 ) -> tuple[list, dict, dict]:
@@ -616,6 +682,9 @@ def household_entities(
         partner_salary = answers.partner_employment_income
     else:
         salary, partner_salary = salaries_in(answers, year)
+    pension, partner_pension = state_pensions(
+        answers, answers.salary_year if year is None else year
+    )
     people = [
         {
             "age": answers.age,
@@ -630,6 +699,8 @@ def household_entities(
             "is_claimant_or_partner": True,
         }
     ]
+    if pension is not None:
+        people[0]["state_pension_reported"] = pension
     if answers.has_partner:
         people.append(
             {
@@ -639,6 +710,8 @@ def household_entities(
                 "is_claimant_or_partner": True,
             }
         )
+        if partner_pension is not None:
+            people[-1]["state_pension_reported"] = partner_pension
     children = [child_inputs(child) for child in answers.children]
     if children and answers.monthly_childcare:
         # The household's childcare, on its first child, as policyengine-uk
@@ -1020,6 +1093,7 @@ def calculate_household_impact(
     sides = measure_sides(reform_ids)
     people, benunit, household = household_entities(answers, year)
     salary, partner_salary = salaries_in(answers, year)
+    pension, partner_pension = state_pensions(answers, year)
 
     def job(reform, axes=None, net_income_only=False):
         return (
@@ -1066,6 +1140,18 @@ def calculate_household_impact(
             "note": (
                 f"Salary as entered for {answers.salary_year}, grown to "
                 f"{fiscal_year(year)} with the OBR average earnings index."
+            ),
+        },
+        "state_pension_used": {
+            "state_pension_age": state_pension_age(year),
+            "full_new_state_pension": _money(full_new_state_pension(year)),
+            "state_pension": None if pension is None else _money(pension),
+            "partner_state_pension": (
+                None if partner_pension is None else _money(partner_pension)
+            ),
+            "note": (
+                "At State Pension age, the State Pension as entered, or "
+                f"else the full new State Pension for {fiscal_year(year)}."
             ),
         },
         "net_income": {

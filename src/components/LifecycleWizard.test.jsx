@@ -61,6 +61,20 @@ describe("the personal impact form", () => {
     expect(screen.getByText(/Plan 5, for courses starting from August 2023, is not modelled/)).toBeInTheDocument();
   });
 
+  it("asks for the State Pension only at State Pension age, prefilled with the full rate", () => {
+    render(<LifecycleCalculator year={2029} />);
+    toStep("Other income");
+    expect(screen.queryByLabelText("State Pension a year")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /About you/ }));
+    fireEvent.change(screen.getByLabelText("Age"), { target: { value: "72" } });
+    toStep("Other income");
+    const field = screen.getByLabelText("State Pension a year");
+    expect(field).toHaveAttribute("aria-valuetext", "£13,697");
+    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,697\)/)).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "9000" } });
+    expect(screen.getByLabelText("State Pension a year")).toHaveAttribute("aria-valuetext", "£9,000");
+  });
+
   it("asks where you live first, and keeps seven steps", () => {
     render(<LifecycleCalculator />);
     expect(screen.getByLabelText("Region")).toHaveValue("LONDON");

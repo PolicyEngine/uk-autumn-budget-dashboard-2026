@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import { LIFECYCLE_REFORMS } from "../utils/policyConfig";
 import { CHART_LOGO } from "../utils/chartLogo";
-import { Y_TITLE_GUTTER } from "../utils/chartTheme";
+import { Y_TITLE_GUTTER, fiscalYearTick } from "../utils/chartTheme";
 import { buildChartSvg } from "../utils/exportChartAsSvg";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
@@ -19,7 +19,7 @@ import Disclosure from "./Disclosure";
 import SubTabs, { SubTabPanel, subTabId } from "./SubTabs";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
-import { isRenting } from "../utils/householdImpactApi";
+import { atStatePensionAge, isRenting, statePensionFor } from "../utils/householdImpactApi";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import "./LifecycleCalculator.css";
 
@@ -101,6 +101,9 @@ export const HOUSEHOLD_DEFAULTS = {
   council_tax_band: "D",
   diesel_spending_per_year: 0,
   monthly_childcare: 0,
+  // At State Pension age; null is the full new State Pension for the year
+  state_pension_per_year: null,
+  partner_state_pension_per_year: null,
 };
 
 export const WIZARD_DEFAULTS = { ...DEFAULT_INPUTS, ...HOUSEHOLD_DEFAULTS };
@@ -124,7 +127,7 @@ const WIZARD_STEPS = [
   { title: "Earnings", fields: ["current_salary", "salary_sacrifice_per_year"] },
   {
     title: "Other income",
-    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+    fields: ["state_pension_per_year", "dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
   },
   { title: "Student loan", fields: ["student_loan_plan", "student_loan_debt"] },
   {
@@ -134,7 +137,14 @@ const WIZARD_STEPS = [
   },
   {
     title: "Family",
-    fields: ["has_partner", "partner_age", "partner_salary", "children_ages", "claims_universal_credit"],
+    fields: [
+      "has_partner",
+      "partner_age",
+      "partner_salary",
+      "partner_state_pension_per_year",
+      "children_ages",
+      "claims_universal_credit",
+    ],
     more: ["monthly_childcare"],
   },
   { title: "Results", fields: [] },
@@ -198,7 +208,22 @@ const FIELD_APPLIES = {
   partner_age: (inputs) => inputs.has_partner,
   partner_salary: (inputs) => inputs.has_partner,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
+  state_pension_per_year: (inputs, childrenCount, year) => atStatePensionAge(inputs.current_age, year),
+  partner_state_pension_per_year: (inputs, childrenCount, year) =>
+    inputs.has_partner && atStatePensionAge(inputs.partner_age, year),
 };
+
+// Fields left as prefilled until changed (null): the full new State Pension
+const PREFILLED = {
+  state_pension_per_year: (year) => statePensionFor(year).full,
+  partner_state_pension_per_year: (year) => statePensionFor(year).full,
+};
+
+// The State Pension fields' note: what the prefill is
+const statePensionHint = (year) =>
+  `Prefilled with the full new State Pension for ${fiscalYearTick(year)} (£${d3.format(",.0f")(
+    statePensionFor(year).full,
+  )}); change it if yours differs.`;
 
 // Hints for fields whose config has no explanation of its own
 const FIELD_HINTS = {
@@ -366,6 +391,22 @@ const SLIDER_CONFIGS = [
     min: 0,
     max: 10000,
     step: 100,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
+  {
+    id: "state_pension_per_year",
+    label: "State Pension a year",
+    min: 0,
+    max: 25000,
+    step: 50,
+    format: (v) => `£${d3.format(",.0f")(v)}`,
+  },
+  {
+    id: "partner_state_pension_per_year",
+    label: "Partner's State Pension a year",
+    min: 0,
+    max: 25000,
+    step: 50,
     format: (v) => `£${d3.format(",.0f")(v)}`,
   },
   {
@@ -1126,7 +1167,7 @@ function LifecycleCalculator({
   const noneSelected = householdPolicies.length === 0;
 
   // Whether a field applies to the answers so far (rent only when renting)
-  const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount);
+  const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
 
   // One question of the form
   const renderField = (id) => {
@@ -1205,6 +1246,8 @@ function LifecycleCalculator({
       );
     }
     const config = SLIDER_CONFIGS.find((item) => item.id === id);
+    const value = inputs[id] ?? PREFILLED[id]?.(year) ?? 0;
+    const hint = PREFILLED[id] ? statePensionHint(year) : (FIELD_HINTS[id] ?? config.tooltip);
     return (
       <div className="control-group" key={id}>
         <label htmlFor={`field-${id}`}>{config.label}</label>
@@ -1212,18 +1255,18 @@ function LifecycleCalculator({
           <input
             id={`field-${id}`}
             type="range"
-            value={inputs[id]}
+            value={value}
             min={config.min}
             max={config.max}
             step={config.step}
             aria-describedby={`hint-${id}`}
-            aria-valuetext={config.format(inputs[id])}
+            aria-valuetext={config.format(value)}
             onChange={(e) => handleInputChange(id, e.target.value)}
           />
-          <span className="slider-value">{config.format(inputs[id])}</span>
+          <span className="slider-value">{config.format(value)}</span>
         </div>
         <p className="field-hint" id={`hint-${id}`}>
-          {FIELD_HINTS[id] ?? config.tooltip}
+          {hint}
         </p>
       </div>
     );

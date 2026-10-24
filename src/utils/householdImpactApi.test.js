@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
   normaliseHouseholdImpact,
   requestKey,
+  statePensionFor,
 } from "./householdImpactApi";
 import {
   areaName,
@@ -66,6 +68,37 @@ describe("buildHouseholdRequest", () => {
     expect(requestKey(family)).toBe(requestKey({ ...family, include: [] }));
   });
 
+  it("sends a State Pension only as entered, and only at State Pension age", () => {
+    const { age, full } = statePensionFor(2029);
+    expect(age).toBe(67);
+    expect(full).toBeCloseTo(13696.98, 2);
+    expect(atStatePensionAge(67, 2029)).toBe(true);
+    expect(atStatePensionAge(66, 2029)).toBe(false);
+    expect(atStatePensionAge(66, 2026)).toBe(true);
+    const options = { year: 2029, policies: ["two_child_limit"] };
+    // Left as prefilled: not sent, so the API uses the year's full rate
+    const prefilled = buildHouseholdRequest({ ...WIZARD_DEFAULTS, current_age: 72 }, options);
+    expect(prefilled.household).not.toHaveProperty("state_pension");
+    const entered = buildHouseholdRequest(
+      {
+        ...WIZARD_DEFAULTS,
+        current_age: 72,
+        state_pension_per_year: 9000,
+        has_partner: true,
+        partner_age: 70,
+        partner_state_pension_per_year: 6000,
+      },
+      options,
+    );
+    expect(entered.household).toMatchObject({ state_pension: 9000, partner_state_pension: 6000 });
+    // Under State Pension age, or with no partner, it is not sent
+    const young = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, current_age: 66, state_pension_per_year: 9000, partner_state_pension_per_year: 6000 },
+      options,
+    );
+    expect(young.household).not.toHaveProperty("state_pension");
+    expect(young.household).not.toHaveProperty("partner_state_pension");
+  });
 });
 
 describe("consistentRound", () => {
