@@ -21,8 +21,8 @@ describe("the personal impact form", () => {
       within(steps())
         .getAllByRole("button")
         .map((b) => b.textContent.replace(/^[0-9✓]+Step \d+: /, "")),
-    ).toEqual(["Your household", "More details", "Results"]);
-    expect(within(steps()).getByRole("button", { current: "step" })).toHaveTextContent("Your household");
+    ).toEqual(["Essentials", "More details", "Results"]);
+    expect(within(steps()).getByRole("button", { current: "step" })).toHaveTextContent("Essentials");
     // Every step is open: every answer has a default
     within(steps())
       .getAllByRole("button")
@@ -57,9 +57,9 @@ describe("the personal impact form", () => {
     expect(within(group("Housing")).getByRole("radio", { name: "Rent privately" })).toBeChecked();
     expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
     expect(screen.getByText(/average private rent in North West \(ONS, September 2026\)/)).toBeInTheDocument();
-    expect(within(group("Student loan plan")).getByRole("radio", { name: "No loan" })).toBeChecked();
 
     moreDetails();
+    expect(within(group("Student loan plan")).getByRole("radio", { name: "No loan" })).toBeChecked();
     expect(box("Petrol")).toHaveValue(DEFAULT_SPENDING.petrol);
     expect(box("Diesel")).toHaveValue(DEFAULT_SPENDING.diesel);
     // Rail fares are not asked: no measure the household calculation
@@ -133,12 +133,14 @@ describe("the personal impact form", () => {
     // policyengine-uk's repayment depends on the plan and income; a
     // balance only caps one year's repayment
     render(<HouseholdCalculator />);
+    // An optional question, on the second step
+    expect(screen.queryByRole("radiogroup", { name: "Student loan plan" })).not.toBeInTheDocument();
+    moreDetails();
     const plans = within(group("Student loan plan"))
       .getAllByRole("radio")
       .map((radio) => radio.closest("label").querySelector(".choice-tile-label").textContent);
     expect(plans).toEqual(["No loan", "Plan 1", "Plan 2", "Plan 4", "Plan 5", "Postgraduate"]);
     choose("Student loan plan", /^Plan 2/);
-    moreDetails();
     expect(screen.queryByRole("spinbutton", { name: "Student loan balance" })).not.toBeInTheDocument();
   });
 
@@ -188,11 +190,13 @@ describe("the personal impact form", () => {
       fireEvent.click(screen.getByRole("button", { name: label }));
 
       expect(within(group("Region")).getByRole("radio", { name: "North West" })).toBeChecked();
-      expect(within(group("Student loan plan")).getByRole("radio", { name: expected.plan })).toBeChecked();
       expect(within(group("Housing")).getByRole("radio", { name: "Rent privately" })).toBeChecked();
       expect(box("Rent")).toHaveValue(expected.rent);
       expect(within(group("Do you live with a partner?")).getByRole("radio", { name: "No" })).toBeChecked();
       expect(within(group("Number of children")).getByRole("radio", { name: "0" })).toBeChecked();
+      // The loan plan is on the optional step
+      moreDetails();
+      expect(within(group("Student loan plan")).getByRole("radio", { name: expected.plan })).toBeChecked();
       unmount();
     }
   });

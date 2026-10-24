@@ -52,14 +52,13 @@ export const WIZARD_DEFAULTS = {
 // the results. Each step's questions come in groups with a heading.
 export const WIZARD_STEPS = [
   {
-    title: "Your household",
-    intro: "The essentials. Every answer starts at a typical value; change what differs for you.",
+    title: "Essentials",
+    intro: "Every answer starts at a typical value; change what differs for you.",
     groups: [
       { title: "You", fields: ["current_age", "current_salary", "region"] },
       { title: "Partner", fields: ["has_partner", "partner_age", "partner_salary"] },
       { title: "Children", fields: ["children_count", "children_ages"] },
       { title: "Home", fields: ["tenure", "monthly_rent"] },
-      { title: "Student loan", fields: ["student_loan_plan"] },
     ],
   },
   {
@@ -77,6 +76,7 @@ export const WIZARD_STEPS = [
         ],
       },
       { title: "Work", fields: ["salary_sacrifice_per_year"] },
+      { title: "Student loan", fields: ["student_loan_plan"] },
       { title: "Spending", fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
       { title: "Home and family", fields: ["council_tax_band", "monthly_childcare", "claims_universal_credit"] },
     ],
@@ -441,7 +441,7 @@ function HouseholdCalculator({
         title="Your household"
         subtitle="Answer a few questions to see how the selected policies change your household's net income."
       />
-      <div className="wizard">
+      <div className={`wizard ${isResults ? "is-results" : "is-form"}`}>
 
         <nav className="wizard-steps" aria-label="Steps">
           <ol style={{ "--step-progress": step / (WIZARD_STEPS.length - 1) }}>
@@ -502,7 +502,7 @@ function HouseholdCalculator({
           </div>
 
           {step === 0 && (
-            <div className="wizard-examples" role="group" aria-labelledby="wizard-examples-label">
+            <div className="wizard-examples wizard-box" role="group" aria-labelledby="wizard-examples-label">
               <p id="wizard-examples-label" className="wizard-examples-label">
                 Start from an example
               </p>
@@ -532,10 +532,10 @@ function HouseholdCalculator({
               {WIZARD_STEPS[step].groups
                 .filter((group) => group.fields.some((id) => fieldApplies(id)))
                 .map((group) => (
-                  <section className="wizard-group" key={group.title} aria-label={group.title}>
-                    <h4 className="wizard-group-title">{group.title}</h4>
+                  <fieldset className="wizard-group wizard-box" key={group.title}>
+                    <legend className="wizard-group-title">{group.title}</legend>
                     <div className="wizard-group-fields">{group.fields.map(renderField)}</div>
-                  </section>
+                  </fieldset>
                 ))}
             </div>
           )}

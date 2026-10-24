@@ -649,10 +649,8 @@
 }
 
 /* "Start from an example": young-person presets on the first step */
-.wizard-examples {
-  margin: 0 0 20px;
-  padding: 0 0 20px;
-  border-bottom: 1px solid var(--card-border, var(--pe-gray-200));
+.wizard-examples.wizard-box {
+  margin: 0 0 16px;
 }
 
 .wizard-examples-label {
@@ -688,21 +686,67 @@
   color: var(--pe-gray-600);
 }
 
-.wizard-group {
-  padding: 20px 0;
-  border-top: 1px solid var(--pe-gray-100);
+/* Each question group in its own box: two columns on a desktop, one on a
+   phone; the boxes in a row share a height */
+.wizard-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 
-.wizard-group:first-child {
-  padding-top: 4px;
-  border-top: none;
+.wizard-box {
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
 }
 
+/* The legend as the box heading, inside the border rather than on it */
 .wizard-group-title {
+  float: left;
+  width: 100%;
   margin: 0 0 12px;
-  font-size: var(--fs-small);
+  padding: 0;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-gray-900);
+}
+
+.wizard-group-title + * {
+  clear: both;
+}
+
+/* The 12 regions: a compact tile grid that fits a half-width box */
+.wizard-box .choice-grid .choice-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.wizard-box .choice-grid .choice-tile {
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
+/* On the question steps the boxes sit on the page background, not in a
+   card of their own */
+.wizard.is-form {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.wizard.is-form .wizard-actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .wizard-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .wizard-group-fields {

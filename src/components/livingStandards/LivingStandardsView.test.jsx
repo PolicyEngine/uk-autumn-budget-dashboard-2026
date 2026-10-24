@@ -82,7 +82,9 @@ describe("the Living standards view", () => {
     expect(forecast).toHaveAttribute("aria-selected", "true");
     expect(panel()).toHaveAccessibleName("Forecast changes");
     expect(within(panel()).getByRole("heading", { name: "Forecast changes" })).toBeInTheDocument();
-    expect(within(panel()).getByRole("heading", { level: 2, name: "Household income" })).toBeInTheDocument();
+    // The OBR's household income per person card is gone
+    expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
+    expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
     expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
 
