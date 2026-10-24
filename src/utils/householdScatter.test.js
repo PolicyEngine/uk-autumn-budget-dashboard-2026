@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   changeBandLabel,
+  EDGE_STRIP,
+  edgeOf,
   incomeBandLabel,
   parseScatterCsv,
   scatterCsv,
+  scatterDots,
   scatterView,
 } from "./householdScatter";
 
@@ -110,3 +113,50 @@ function view_points() {
   return scatterView({ data: ready, selectedIds: ["a"], policyIds: POLICY_IDS, year: 2029 })
     .points;
 }
+
+describe("scatterDots", () => {
+  const cells = [
+    { incomeBand: 20000, changeBand: -300, households: 151000 },
+    { incomeBand: 25000, changeBand: 0, households: 4000 },
+    { incomeBand: 60000, changeBand: 1900, households: 60000 },
+    { incomeBand: 90000, changeBand: -2000, households: 40000 },
+  ];
+
+  it("draws about one dot per 20,000 households, and at least one a cell", () => {
+    const dots = scatterDots(cells);
+    const count = (band) => dots.filter((dot) => dot.changeBand === band).length;
+    expect(count(-300)).toBe(8);
+    expect(count(0)).toBe(1);
+    expect(count(1900)).toBe(3);
+    expect(count(-2000)).toBe(2);
+  });
+
+  it("places the same dots on every call", () => {
+    expect(scatterDots(cells)).toEqual(scatterDots(cells));
+  });
+
+  it("keeps each dot inside its own cell, and carries the cell's count", () => {
+    for (const dot of scatterDots(cells).filter((d) => !d.edge)) {
+      expect(dot.income).toBeGreaterThan(dot.incomeBand);
+      expect(dot.income).toBeLessThan(dot.incomeBand + 5000);
+      expect(dot.change).toBeGreaterThan(dot.changeBand);
+      expect(dot.change).toBeLessThan(dot.changeBand + 100);
+      expect([151000, 4000]).toContain(dot.households);
+    }
+  });
+
+  it("draws the open-ended outer bands in the strips beyond the plotted range", () => {
+    expect(edgeOf(-2000)).toBe("lower");
+    expect(edgeOf(1900)).toBe("upper");
+    expect(edgeOf(1800)).toBeNull();
+    const dots = scatterDots(cells);
+    for (const dot of dots.filter((d) => d.edge === "upper")) {
+      expect(dot.change).toBeGreaterThan(1900);
+      expect(dot.change).toBeLessThan(1900 + EDGE_STRIP);
+    }
+    for (const dot of dots.filter((d) => d.edge === "lower")) {
+      expect(dot.change).toBeLessThan(-1900);
+      expect(dot.change).toBeGreaterThan(-1900 - EDGE_STRIP);
+    }
+  });
+});

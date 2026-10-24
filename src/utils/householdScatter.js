@@ -200,3 +200,92 @@ export function scatterCsv(points, { title }) {
     ],
   });
 }
+
+/** Households each dot of the scatter stands for. */
+export const HOUSEHOLDS_PER_DOT = 20000;
+
+/**
+ * Where the open-ended outer change bands are drawn: a strip beyond the
+ * plotted range at each end, marked as "£1,900 or more", so the clamped
+ * cells never read as households at exactly that change.
+ */
+export const EDGE_STRIP = 300;
+
+/** Whether a cell is an open-ended outer change band ("lower" or "upper"). */
+export function edgeOf(changeBand, bins = SCATTER_BINS) {
+  if (changeBand <= bins.change_min) return "lower";
+  if (changeBand + bins.change_band_width >= bins.change_max) return "upper";
+  return null;
+}
+
+// A small seeded generator (mulberry32), so the dots sit in the same
+// places on every render and in every download.
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * The cells as a dot cloud: each cell becomes about one dot per
+ * `perDot` households (at least one), placed at random, deterministically,
+ * inside the cell's own rectangle, so the cloud reads as density. A dot is
+ * never a household: it carries its cell's band and count, and its place
+ * within the cell is arbitrary.
+ *
+ * The outer change bands, which hold every change beyond them, are drawn
+ * in a strip of `EDGE_STRIP` beyond the plotted range instead of at their
+ * band, and marked `edge`.
+ *
+ * @param {Array<{incomeBand: number, changeBand: number, households: number}>} cells
+ * @returns {Array<Object>} dots with `income`, `change`, `edge` and the cell's fields
+ */
+export function scatterDots(cells, { perDot = HOUSEHOLDS_PER_DOT, bins = SCATTER_BINS } = {}) {
+  const inset = 0.08;
+  const dots = [];
+  for (const cell of cells) {
+    const count = Math.max(1, Math.round(cell.households / perDot));
+    const random = seeded(hash(`${cell.incomeBand}:${cell.changeBand}`));
+    const edge = edgeOf(cell.changeBand, bins);
+    let low;
+    let high;
+    if (edge === "upper") {
+      low = bins.change_max - bins.change_band_width;
+      high = low + EDGE_STRIP;
+    } else if (edge === "lower") {
+      high = bins.change_min + bins.change_band_width;
+      low = high - EDGE_STRIP;
+    } else {
+      low = cell.changeBand;
+      high = cell.changeBand + bins.change_band_width;
+    }
+    const incomeLow = cell.incomeBand;
+    const incomeWidth = bins.income_band_width;
+    for (let i = 0; i < count; i += 1) {
+      const u = inset + (1 - 2 * inset) * random();
+      const v = inset + (1 - 2 * inset) * random();
+      dots.push({
+        ...cell,
+        income: incomeLow + u * incomeWidth,
+        change: low + v * (high - low),
+        edge,
+        key: `${cell.incomeBand}:${cell.changeBand}:${i}`,
+      });
+    }
+  }
+  return dots;
+}

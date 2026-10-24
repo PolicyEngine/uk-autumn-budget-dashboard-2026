@@ -60,9 +60,17 @@
   border-radius: 50%;
 }
 
-.scatter-key-size {
+
+/* The scatter's key, in the controls row beside the map's controls */
+.household-scatter-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scatter-key-dots {
   width: 14px;
-  height: 14px;
-  border: 1.5px solid var(--pe-gray-400);
-  border-radius: 50%;
+  height: 10px;
+  background-image: radial-gradient(circle, var(--pe-gray-500, #6B7280) 1.5px, transparent 1.6px);
+  background-size: 5px 5px;
 }
