@@ -1,9 +1,12 @@
-// Headline forecast figures as tiles. Ported from
-// PolicyEngine/uk-living-standards-outlook; text and figures unchanged.
+// Headline forecast figures as tiles: CPI, RPI and earnings growth in 2026,
+// and once the Budget forecast is published, both forecasts and the change
+// ("2.3% → 2.6%", "+0.3pp"). Their definition and source sit in an "About
+// these figures" disclosure, as every chart's do.
 
-import { HERO_YEAR, changeClass, pctLabel, ppLabel, toRows } from "../../../utils/livingStandards/forecast";
+import { HERO_YEAR, changeClass, forecastName, pctLabel, ppWords, toRows } from "../../../utils/livingStandards/forecast";
+import Disclosure from "../../Disclosure";
 import StatTiles from "../../StatTiles";
-import { ObrSource } from "../sources";
+import { ForecastSource } from "../sources";
 
 // ONS series pages for the tile names (checked 20 Oct 2026). Earnings is not
 // linked: the tile is OBR's calendar-year average earnings growth, and ONS
@@ -31,8 +34,11 @@ export default function ForecastHeadlineSection({ data }) {
 
   if (!cards.length) return null;
 
-  // One source line for the three figures; the section subtitle says when
-  // the Budget forecast will be added
+  const pre = forecastName(forecast.pre_label);
+  const about = published
+    ? `Calendar-year growth in the annual average: ${pre} (pre-Budget), then the ${forecastName(forecast.post_label)} forecast, and the change in percentage points.`
+    : `Calendar-year growth in the annual average, ${pre} forecast.`;
+
   return (
     <StatTiles
       items={cards.map((card) => ({
@@ -45,13 +51,16 @@ export default function ForecastHeadlineSection({ data }) {
         ) : (
           card.label
         ),
-        sub: published ? ppLabel(card.change) : null,
-        subClassName: changeClass(card.change),
+        sub: published ? ppWords(card.shownChange) : null,
+        subClassName: changeClass(card.shownChange),
       }))}
       footer={
-        <p className="ls-source">
-          <ObrSource />
-        </p>
+        <Disclosure inCard title="About these figures">
+          <p>{about}</p>
+          <p className="ls-source">
+            <ForecastSource forecast={forecast} />
+          </p>
+        </Disclosure>
       }
     />
   );

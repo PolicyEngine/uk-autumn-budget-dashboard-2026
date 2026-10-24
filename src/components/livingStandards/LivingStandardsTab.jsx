@@ -3,7 +3,8 @@
 // Ported from PolicyEngine/uk-living-standards-outlook (branch
 // review-1-fixes, db0c8e4): its two tabs are this view's two sub-tabs,
 // Baseline outlook and Forecast changes, in the dashboard's layout. The
-// intro sits above the sub-tabs, since it holds for both. It reads
+// sub-tab pill comes first, under the view tabs, then the intro, which holds
+// for both sub-tabs. It reads
 // public/data/living_standards_outlook.json and runs on its own engine
 // version; the Methodology view states that version, the data's status,
 // its notes and what the baseline leaves out.
@@ -13,38 +14,28 @@ import SectionHeading from "../SectionHeading";
 import PillSelect from "../PillSelect";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
-import LivingStandardsSection from "./sections/LivingStandardsSection";
-import DecileGrowthSection from "./sections/DecileGrowthSection";
-import NonPensionerSplitSection from "./sections/NonPensionerSplitSection";
-import InequalitySection from "./sections/InequalitySection";
-import PovertySection from "./sections/PovertySection";
-import DeepPovertySection from "./sections/DeepPovertySection";
-import PovertyByGroupSection from "./sections/PovertyByGroupSection";
-import ChildPovertyFamilySection from "./sections/ChildPovertyFamilySection";
+import { GrowthCard, IncomesOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
+import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
+import { forecastName } from "../../utils/livingStandards/forecast";
 import "./LivingStandards.css";
 
-// The baseline sections, in order. blocks: [A, B] is a two-up row whose
-// cards line up; [A] is full width. Notes sit in the cards they apply to.
+// The baseline sections, in order: each one row of two cards that line up
+// (a card alone takes the full width). A card shows one view at a time, with
+// a Show pill; notes and sources sit in its "About this chart".
 const BASELINE_ROWS = [
   {
     id: "incomes",
     title: "Incomes",
-    subtitle: "Household income, income growth across the distribution, and inequality.",
-    blocks: [
-      [LivingStandardsSection, DecileGrowthSection],
-      [NonPensionerSplitSection, InequalitySection],
-    ],
+    subtitle: "Household income and inequality over time, and income growth across the distribution.",
+    blocks: [[IncomesOverTimeCard, GrowthCard]],
   },
   {
     id: "poverty",
     title: "Poverty",
-    subtitle: "Poverty rates, how far below the line people are, and poverty by group and by family.",
-    blocks: [
-      [PovertySection, DeepPovertySection],
-      [PovertyByGroupSection, ChildPovertyFamilySection],
-    ],
+    subtitle: "Poverty rates and how far below the line people are, and who is in poverty.",
+    blocks: [[PovertyOverTimeCard, WhoIsInPovertySection]],
   },
 ];
 
@@ -100,7 +91,7 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
             title="Forecast changes"
             subtitle={
               forecast.post_published
-                ? `The OBR economic forecast behind the baseline. This compares the ${forecast.pre_label.replace(/\s*\(pre-Budget\)/, "")} forecast with the Autumn Budget 2026 forecast.`
+                ? `The OBR economic forecast behind the baseline. This compares the ${forecastName(forecast.pre_label)} forecast with the ${forecastName(forecast.post_label)} forecast.`
                 : "The OBR economic forecast behind the baseline. Each figure and chart will add the Autumn Budget 2026 forecast once the OBR publishes it on 28 October."
             }
           />
@@ -147,14 +138,6 @@ export default function LivingStandardsTab() {
 
   return (
     <>
-      <div className="tab-lede">
-        <p>
-          Projections of UK household incomes and poverty under current legislated policy: the baseline against which
-          Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget measures are
-          not modelled.
-        </p>
-      </div>
-
       {loading && (
         <p className="view-status" role="status">
           Loading outlook data…
@@ -175,6 +158,13 @@ export default function LivingStandardsTab() {
             ariaLabel="Living standards sections"
             idPrefix="living"
           />
+          <div className="tab-lede">
+            <p>
+              Projections of UK household incomes and poverty under current legislated policy: the baseline against
+              which Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget
+              measures are not modelled.
+            </p>
+          </div>
           <SubTabPanel idPrefix="living" value={sub}>
             {sub === "forecast" ? (
               <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />

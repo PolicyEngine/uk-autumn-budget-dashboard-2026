@@ -1,9 +1,10 @@
 // Lower- vs higher-income half of non-pensioners: mean equivalised AHC income
 // in real terms (income_by_decile.non_pensioner_split). Ported from
-// PolicyEngine/uk-living-standards-outlook. Change runs from 2026-27.
+// PolicyEngine/uk-living-standards-outlook. Change runs from 2026-27. The
+// Lower- vs higher-income halves view of the Growth across the distribution
+// card.
 
 import { useMemo, useState } from "react";
-import LsCard from "../LsCard";
 import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, PALETTE, joinSeries, niceAxis, rangeAxis } from "../../../utils/livingStandards/baseline";
@@ -16,6 +17,7 @@ import {
   fyStart,
   headlineSpan,
   headlineStartYear,
+  rowsPeriod,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
@@ -23,7 +25,8 @@ import { CSV_SOURCES, PeSource } from "../sources";
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 
-export default function NonPensionerSplitSection({ data }) {
+/** The halves view: card parts for the Growth across the distribution card. */
+export default function useHalvesView(data) {
   const split = data.income_by_decile.non_pensioner_split;
   const [view, setView] = useState("change");
   const lower = split.series.below_middle;
@@ -58,51 +61,48 @@ export default function NonPensionerSplitSection({ data }) {
     { key: "upper", name: "Higher-income half", colour: PALETTE.teal, dash: DASH.long },
   ];
 
-  return (
-    <LsCard
-      title="Non-pensioner income halves"
-      about={`${split.statistic}. People in families with no pensioner, split at their own median.`}
-      notes={[
-        ...(data.income_by_decile.notes || []).filter((n) => /halves/i.test(n)),
-        view === "level" && data.meta.units?.mean_equivalised_income_ahc && `Incomes are in ${data.meta.units.mean_equivalised_income_ahc}.`,
-      ]}
-      summary={
-        sl &&
-        su && (
-          <>
-            From {fyDash(sl[0].year)} to {fyDash(sl[1].year)}, real mean income (AHC) of the lower-income half of
-            non-pensioners <strong>{say(change(sl))}</strong>; that of the higher-income half{" "}
-            <strong>{say(change(su))}</strong>.
-          </>
-        )
-      }
-      source={<PeSource />}
-      download={{
-        filename: `non-pensioner-halves-${view}`,
-        legendItems: lineLegendItems(series),
-        csv: () =>
-          seriesCsv({
-            title: "Non-pensioner income halves",
-            units: yLabel,
-            source: CSV_SOURCES.pe,
-            rows,
-            series,
-          }),
-      }}
-      controls={
-        <PillSelect
-          variant="light"
-          prefix="Show"
-          name="Show"
-          value={view}
-          onChange={setView}
-          options={[
-            { value: "change", label: `Change since ${fyDash((lower.find((d) => d.year === start) || lower[0])?.year)}` },
-            { value: "level", label: `Level (${fyDash(base)} prices)` },
-          ]}
-        />
-      }
-    >
+  return {
+    period: rowsPeriod(rows),
+    summary: sl && su && (
+      <>
+        From {fyDash(sl[0].year)} to {fyDash(sl[1].year)}, real mean income (AHC) of the lower-income half of
+        non-pensioners <strong>{say(change(sl))}</strong>; that of the higher-income half{" "}
+        <strong>{say(change(su))}</strong>.
+      </>
+    ),
+    about: `${split.statistic}. People in families with no pensioner, split at their own median.`,
+    notes: [
+      ...(data.income_by_decile.notes || []).filter((n) => /halves/i.test(n)),
+      view === "level" && data.meta.units?.mean_equivalised_income_ahc && `Incomes are in ${data.meta.units.mean_equivalised_income_ahc}.`,
+    ],
+    source: <PeSource />,
+    sourceText: CSV_SOURCES.pe,
+    download: {
+      filename: `non-pensioner-halves-${view}`,
+      legendItems: lineLegendItems(series),
+      csv: () =>
+        seriesCsv({
+          title: "Non-pensioner income halves",
+          units: yLabel,
+          source: CSV_SOURCES.pe,
+          rows,
+          series,
+        }),
+    },
+    controls: (
+      <PillSelect
+        variant="light"
+        prefix="Values"
+        name="Change or level"
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "change", label: `Change since ${fyDash((lower.find((d) => d.year === start) || lower[0])?.year)}` },
+          { value: "level", label: `Level (${fyDash(base)} prices)` },
+        ]}
+      />
+    ),
+    chart: (
       <LsLineChart
         data={rows}
         series={series}
@@ -113,9 +113,6 @@ export default function NonPensionerSplitSection({ data }) {
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />
-    </LsCard>
-  );
+    ),
+  };
 }
-
-// Rendered only when the outlook data has this block.
-NonPensionerSplitSection.requires = "income_by_decile";

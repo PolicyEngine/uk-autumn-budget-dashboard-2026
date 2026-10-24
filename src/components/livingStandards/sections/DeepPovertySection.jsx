@@ -2,9 +2,9 @@
 // (AHC), stacked by year. The 40% and 50% lines come from deep_poverty; the
 // 60% line is the relative AHC poverty rate for all people. Ported from
 // PolicyEngine/uk-living-standards-outlook. The change runs from 2026-27.
+// The Depth view of the Poverty over time card.
 
 import { useMemo } from "react";
-import LsCard from "../LsCard";
 import { LsBarChart } from "../LsCharts";
 import { PALETTE, niceAxis } from "../../../utils/livingStandards/baseline";
 import {
@@ -15,13 +15,16 @@ import {
   formatPctAxis,
   headlineStartYear,
   headlineYear,
+  periodLabel,
+  round1,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
 
 const EMPTY_ROWS = [];
 
-export default function DeepPovertySection({ data }) {
+/** The Depth view: card parts for the Poverty over time card. */
+export default function useDepthView(data) {
   const deep = data.deep_poverty.projection;
   const rel = data.poverty?.projection?.relative_ahc?.all || EMPTY_ROWS;
 
@@ -39,8 +42,8 @@ export default function DeepPovertySection({ data }) {
         total: b60[d.year] * 100,
       }));
   }, [deep, rel]);
-  if (!rows.length) return null;
 
+  if (!rows.length) return null;
   const axis = niceAxis(Math.max(...rows.map((r) => r.total)));
   const series = [
     { key: "below40", name: "Below 40%", colour: PALETTE.dark },
@@ -49,34 +52,37 @@ export default function DeepPovertySection({ data }) {
   ];
   const first = rows.find((r) => r.fy === headlineStartYear(data)) || rows[0];
   const end = rows.find((r) => r.fy === headlineYear(data)) || rows[rows.length - 1];
-  const verb = changeVerb(end.below40 - first.below40, "pp");
+  // From the one-decimal values shown
+  const verb = changeVerb(round1(end.below40) - round1(first.below40), "pp");
 
-  return (
-    <LsCard
-      title="Depth of poverty"
-      about="People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is JRF's very deep poverty; the three bands add up to the relative poverty rate."
-      summary={
-        <>
-          In {fyDash(end.fy)}, {formatPct(end.below40)} of people are in very deep poverty (below 40% of median
-          income, AHC), of {formatPct(end.total)} below 60%; very deep poverty{" "}
-          <strong>{verb || "stays flat"}</strong> from {fyDash(first.fy)}.
-        </>
-      }
-      notes={(data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n))}
-      source={<PeSource />}
-      download={{
-        filename: "depth-of-poverty",
-        legendItems: series.map((s) => ({ color: s.colour, label: s.name, type: "rect" })),
-        csv: () =>
-          seriesCsv({
-            title: "Depth of poverty (AHC)",
-            units: "% of people, by band of the model's median income after housing costs",
-            source: CSV_SOURCES.pe,
-            rows,
-            series: [...series, { key: "total", name: "Below 60% (total)" }],
-          }),
-      }}
-    >
+  return {
+    period: periodLabel(rows[0].fy, rows[rows.length - 1].fy),
+    summary: (
+      <>
+        In {fyDash(end.fy)}, {formatPct(end.below40)} of people are in very deep poverty (below 40% of median income,
+        AHC), of {formatPct(end.total)} below 60%; very deep poverty <strong>{verb || "stays flat"}</strong> from{" "}
+        {fyDash(first.fy)}.
+      </>
+    ),
+    about:
+      "People in households below 40%, 50% and 60% of the model's own median income after housing costs each year. Below 40% is JRF's very deep poverty; the three bands add up to the relative poverty rate.",
+    notes: (data.deep_poverty.notes || []).filter((n) => /JRF's figure/.test(n)),
+    source: <PeSource />,
+    sourceText: CSV_SOURCES.pe,
+    download: {
+      filename: "depth-of-poverty",
+      legendItems: series.map((s) => ({ color: s.colour, label: s.name, type: "rect" })),
+      csv: () =>
+        seriesCsv({
+          title: "Depth of poverty (AHC)",
+          units: "% of people, by band of the model's median income after housing costs",
+          source: CSV_SOURCES.pe,
+          rows,
+          series: [...series, { key: "total", name: "Below 60% (total)" }],
+        }),
+    },
+    controls: null,
+    chart: (
       <LsBarChart
         data={rows}
         series={series}
@@ -87,9 +93,6 @@ export default function DeepPovertySection({ data }) {
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />
-    </LsCard>
-  );
+    ),
+  };
 }
-
-// Rendered only when the outlook data has this block.
-DeepPovertySection.requires = "deep_poverty";

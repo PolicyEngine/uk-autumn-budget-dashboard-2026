@@ -105,9 +105,33 @@ export const round1 = (v) => (v == null ? v : Math.round(v * 10) / 10);
 
 /** "rises 10.0%" / "falls 1.3pp" / null when the change rounds to zero. */
 export function changeVerb(delta, unit) {
-  if (delta == null || Math.abs(delta) < 0.05) return null;
-  return `${delta > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(delta))}${unit}`;
+  const r = round1(delta);
+  if (r == null || r === 0) return null;
+  return `${r > 0 ? "rises" : "falls"} ${formatOneDp(Math.abs(r))}${unit}`;
 }
+
+/**
+ * A change at one decimal place, signed after rounding: "+0.3pp", "−1.2%",
+ * or `zero` ("no change") when it rounds to 0, never "−0.0".
+ */
+export function signedChange(delta, unit, zero = "no change") {
+  const r = round1(delta);
+  if (r == null || Number.isNaN(r)) return "—";
+  if (r === 0) return zero;
+  return `${r > 0 ? "+" : "−"}${formatOneDp(Math.abs(r))}${unit}`;
+}
+
+/** The years a card covers: "2026-27 to 2029-30" (or one year alone). */
+export function periodLabel(from, to) {
+  if (from == null || to == null) return null;
+  const a = typeof from === "number" ? fyLabel(from) : fyDash(from);
+  const b = typeof to === "number" ? fyLabel(to) : fyDash(to);
+  return a === b ? a : `${a} to ${b}`;
+}
+
+/** The first and last x values of chart rows, as a period. */
+export const rowsPeriod = (rows, key = "year", format = (v) => v) =>
+  rows?.length ? periodLabel(format(rows[0][key]), format(rows[rows.length - 1][key])) : null;
 
 /** 2030 -> "30-31", for phone axes. */
 export const fyShortLabel = (start) => `${String(start).slice(-2)}-${String(start + 1).slice(-2)}`;

@@ -1,13 +1,12 @@
-// Inequality: Gini and 90:10, BHC or AHC; HBAI outturn solid, projection
-// dashed. Ported from PolicyEngine/uk-living-standards-outlook; text and
-// figures unchanged.
+// Inequality: the Inequality view of the Incomes over time card. Gini and
+// 90:10, BHC or AHC; HBAI outturn solid, projection dashed. Ported from
+// PolicyEngine/uk-living-standards-outlook.
 
 import { useMemo, useState } from "react";
-import LsCard from "../LsCard";
 import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { EMPTY, VIEW_OPTIONS, lineSeries, mergeSeries, rangeAxis, visibleRows } from "../../../utils/livingStandards/baseline";
-import { fyDash, headlineSpan } from "../../../utils/livingStandards/outlook";
+import { fyDash, headlineSpan, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, HbaiSource } from "../sources";
 
@@ -16,7 +15,8 @@ const FORMAT = {
   p90_p10: (v) => v.toFixed(2),
 };
 
-export default function InequalitySection({ data }) {
+/** The Inequality view: card parts for the Incomes over time card. */
+export default function useInequalityView(data) {
   const ineq = data.inequality;
   const [measure, setMeasure] = useState("gini");
   const [basis, setBasis] = useState("bhc");
@@ -56,56 +56,54 @@ export default function InequalitySection({ data }) {
     );
   }
 
-  return (
-    <LsCard
-      title="Inequality"
-      about="Gini: 0 is perfect equality, 1 is one person holding all income. 90:10: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b."
-      summary={summary}
-      boxes={[data.meta.headline_end_year_note]}
-      notes={(ineq.notes || []).filter((n) => !/^Outturn is/.test(n))}
-      source={<HbaiSource />}
-      download={
-        rows.length
-          ? {
-              filename: `inequality-${measure}-${basis}`,
-              legendItems: lineLegendItems(series),
-              csv: () =>
-                seriesCsv({
-                  title: `Inequality: ${ineq.measures[measure]} (${basis.toUpperCase()})`,
-                  units: ineq.measures[measure],
-                  source: CSV_SOURCES.hbai,
-                  rows,
-                  series,
-                }),
-            }
-          : null
-      }
-      controls={
-        <>
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Inequality measure"
-            value={measure}
-            onChange={setMeasure}
-            options={Object.keys(ineq.measures).map((id) => ({
-              value: id,
-              label: ineq.measures[id],
-              badge: ineq.measures[id].replace(/ coefficient$/, ""),
-            }))}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Housing costs"
-            name="Housing costs"
-            value={basis}
-            onChange={setBasis}
-            options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
-          />
-          <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
-        </>
-      }
-    >
+  return {
+    period: rowsPeriod(rows),
+    summary,
+    about:
+      "Gini: 0 is perfect equality, 1 is one person holding all income. 90:10: income at the 90th percentile over income at the 10th. Official figures: Households Below Average Income, Table 1.2b.",
+    notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
+    source: <HbaiSource />,
+    sourceText: CSV_SOURCES.hbai,
+    download: rows.length
+      ? {
+          filename: `inequality-${measure}-${basis}`,
+          legendItems: lineLegendItems(series),
+          csv: () =>
+            seriesCsv({
+              title: `Inequality: ${ineq.measures[measure]} (${basis.toUpperCase()})`,
+              units: ineq.measures[measure],
+              source: CSV_SOURCES.hbai,
+              rows,
+              series,
+            }),
+        }
+      : null,
+    controls: (
+      <>
+        <PillSelect
+          variant="light"
+          prefix="Measure"
+          name="Inequality measure"
+          value={measure}
+          onChange={setMeasure}
+          options={Object.keys(ineq.measures).map((id) => ({
+            value: id,
+            label: ineq.measures[id],
+            badge: ineq.measures[id].replace(/ coefficient$/, ""),
+          }))}
+        />
+        <PillSelect
+          variant="light"
+          prefix="Housing costs"
+          name="Housing costs"
+          value={basis}
+          onChange={setBasis}
+          options={Object.keys(ineq.bases).map((id) => ({ value: id, label: id === "bhc" ? "Before (BHC)" : "After (AHC)", badge: id === "bhc" ? "Before" : "After" }))}
+        />
+        <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+      </>
+    ),
+    chart: (
       <LsLineChart
         data={rows}
         series={series}
@@ -115,9 +113,6 @@ export default function InequalitySection({ data }) {
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />
-    </LsCard>
-  );
+    ),
+  };
 }
-
-// Rendered only when the outlook data has this block.
-InequalitySection.requires = "inequality";
