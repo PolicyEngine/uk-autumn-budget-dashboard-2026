@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
-import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import { loadVerifiedFlat, SnapshotChangedError } from "../utils/publication/flat";
 import { indexRows } from "../utils/geography/rows";
 import { FILES } from "../utils/geography/columns";
 import { parseGeographyTable } from "../utils/geography/parse";
@@ -87,10 +87,16 @@ export async function loadGeographyFile(
   // Not in this build: not published, and not requested
   if (published && !published.includes(file)) return failure("unavailable", null);
   try {
-    const text = await loadVerifiedFlatCsv(file, catalogue, { fetchImpl, basePath: base });
-    const table = parseGeographyTable(text, { level });
+    const { text, aliases } = await loadVerifiedFlat(file, catalogue, { fetchImpl, basePath: base });
+    const parsed = parseGeographyTable(text, { level });
+    // The area run names a package by its alias; the index says which
+    // manifest key (the combined run) it stands for
+    const table = Object.keys(aliases).length
+      ? indexRows(level, parsed.rows.map((row) => (Object.hasOwn(aliases, row.reform) ? { ...row, reform: aliases[row.reform] } : row)))
+      : parsed;
     return Object.freeze({ status: "ready", table, features: null, error: null });
   } catch (error) {
+    if (error instanceof SnapshotChangedError) return failure("stale", error.message);
     return failure("error", `${file}: ${error.message}`);
   }
 }
@@ -181,8 +187,16 @@ const LOADERS = {
 // One entry per resource and base path: its settled state, and who to tell.
 const entries = new Map();
 
+// A failure is kept only while something shows it: the next view to mount
+// loads the file again, so one network error does not last the session.
+const RETRY = new Set(["error", "stale"]);
+
 function entryFor(key, name, catalogue) {
   let entry = entries.get(key);
+  if (entry && RETRY.has(entry.state?.status) && entry.listeners.size === 0) {
+    entries.delete(key);
+    entry = undefined;
+  }
   if (!entry) {
     entry = { state: null, listeners: new Set() };
     entries.set(key, entry);

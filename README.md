@@ -193,16 +193,17 @@ Where each view's figures come from:
 |---|---|
 | Public finances, deciles, winners and losers, headline metrics, household scatter | Receipt-verified artifacts (`loadDashboard`, #20's `loadPublication`) |
 | Example households, young people | The same artifacts, each table re-read through its receipt (`loadVerifiedTable`) |
-| OBR comparison | PolicyEngine figures from the artifacts; OBR figures from `obr_comparison.csv` through the release index |
-| Results by area | `regional.csv` and `constituency.csv` through the release index |
+| OBR comparison | Unavailable: `obr_comparison.csv` is built from the November 2025 costings (`data_inputs/obr_estimates.csv`), so nothing binds it. It needs a 2026 OBR source. |
+| Results by area | `regional.csv` and `constituency.csv` through the release index, which `publish index` writes only for tables the area run made from the entries now approved (`area_provenance.json`) |
 | Personal impact (lifetime and single year) | The household API. Every measure is listed as not modelled, with no total, unless a reviewed mapping says the calculation implements its published parameters and years. There are none today. |
 
 A row is shown only when its measure or combined run is displayable (approved or
 provisional), the year is supported, and its artifact verified in the browser
 against its receipt and the manifest. Package figures come from the combined run
 of exactly the displayable measures. `uk-budget-data publish index` binds the
-flat view files to the manifest's revision and bytes (`release-index.json`); the
-page checks each file's SHA-256 before using it (runbook, G4).
+area files to the manifest's revision and bytes (`release-index.json`); the page
+checks each file's SHA-256 before using it, and asks a reader to reload when the
+manifest has changed since the page loaded (runbook, G4).
 
 Frontend tests cover unfamiliar measure ids, held and stale entries, tampered
 artifacts and flat files, mismatched index revisions, today's real

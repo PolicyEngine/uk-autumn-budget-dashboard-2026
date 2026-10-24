@@ -73,7 +73,7 @@ export function measureCatalogueFixture({ held = true } = {}) {
  * names each file's SHA-256, and the release index names the manifest's
  * revision and the SHA-256 of its bytes. Returns the files to serve.
  */
-export async function bindFlatFiles(manifest, files) {
+export async function bindFlatFiles(manifest, files, aliases = {}) {
   const { sha256Hex } = await import("../utils/publication/digest");
   const { RELEASE_INDEX_FILE, RELEASE_INDEX_SCHEMA } = await import("../utils/publication/flat");
   manifest.revision ??= 1;
@@ -84,7 +84,7 @@ export async function bindFlatFiles(manifest, files) {
   Object.defineProperty(manifest, "snapshotSha256", { value: snapshot, configurable: true });
   const index = {
     schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget,
-    manifest_revision: manifest.revision, manifest_sha256: snapshot, files: manifest.flat_files,
+    manifest_revision: manifest.revision, manifest_sha256: snapshot, files: manifest.flat_files, aliases,
   };
   return { [RELEASE_INDEX_FILE]: JSON.stringify(index), ...files };
 }

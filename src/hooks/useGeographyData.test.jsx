@@ -21,13 +21,10 @@ import {
 
 import { GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
 
-vi.mock("../utils/publication/flat", () => ({
-  loadVerifiedFlatCsv: async (name, _catalogue, { fetchImpl = fetch, basePath = "" } = {}) => {
-    const response = await fetchImpl(`${basePath}/data/${name}`);
-    if (!response.ok) throw new Error(`${name} is unavailable`);
-    return new TextDecoder("utf-8", { fatal: true }).decode(await response.arrayBuffer());
-  },
-}));
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
 
 const renderHook = (callback, options = {}) => renderHookReact(callback, { wrapper: GeographyCatalogueProvider, ...options });
 

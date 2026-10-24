@@ -56,7 +56,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   }, [catalogue]);
 
   if (selectedPolicies.length === 0) return null;
-  if (loadFailure === catalogue) return <UnavailableNotice reason="The OBR comparison is unavailable for the approved publication snapshot." />;
+  // Today no OBR file can be bound (it holds the November 2025 costings; see
+  // FLAT_VIEW_FILES in utils/publication/flat.js), so this is what shows
+  if (loadFailure === catalogue) return <UnavailableNotice reason="The OBR comparison is unavailable: no OBR costings for this Budget are bound to the approved results." />;
   if (comparisonData?.catalogue !== catalogue) return null;
 
   // Filter to selected policies

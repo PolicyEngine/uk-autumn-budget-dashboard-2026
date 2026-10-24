@@ -30,6 +30,19 @@ describe("published measure catalogue", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
+  it("takes the package from the combined run of exactly the displayable measures", () => {
+    // A held measure is listed as unavailable, never part of the package: the
+    // combined run that leaves it out is the one the page shows
+    const fixture = measureCatalogueFixture();
+    fixture.manifest.combined[COMBINED].measures = [ALPHA, BETA];
+    fixture.manifest.combined[COMBINED].member_outputs_sha256 = { [ALPHA]: "a".repeat(64), [BETA]: "a".repeat(64) };
+    expect(buildMeasureCatalogue(fixture).combinedId).toBe(COMBINED);
+    expect(isCatalogueRowDisplayable(buildMeasureCatalogue(fixture), COMBINED, 2029)).toBe(true);
+    // A run that includes the held measure describes no selection the page offers
+    fixture.manifest.combined[COMBINED].measures = [ALPHA, BETA, HELD];
+    expect(buildMeasureCatalogue(fixture).combinedId).toBeNull();
+  });
+
   it("requires a manifest even when historical CSVs or receipts exist", () => {
     const fixture = measureCatalogueFixture();
     const catalogue = buildMeasureCatalogue({ ...fixture, manifest: null });

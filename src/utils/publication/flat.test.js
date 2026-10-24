@@ -3,17 +3,19 @@ import fc from "fast-check";
 import { fixtureFetch, fixtureJson, fixtureText, BASE_PATH, IN_DATA } from "../../test/publicationFixture";
 import { loadManifest } from "./load";
 import { sha256Hex } from "./digest";
-import { loadVerifiedFlatCsv, RELEASE_INDEX_SCHEMA } from "./flat";
+import { loadVerifiedFlat, loadVerifiedFlatCsv, RELEASE_INDEX_SCHEMA } from "./flat";
 import { budgetChartData, loadDashboard } from "../loadDashboard";
 
-const file = "age_impact.csv";
-const csv = "reform_id,reform_name,year,value\nalpha,Alpha,2032,12\n";
+// TEST DATA ONLY: a synthetic area table's bytes (the loader checks bytes,
+// not columns)
+const file = "regional.csv";
+const csv = "level,area_code,reform,year,value\nregion,E12000001,alpha,2032,12\n";
 
-async function flatSnapshot() {
+async function flatSnapshot({ aliases = {} } = {}) {
   const manifest = fixtureJson("manifest.json");
   manifest.flat_files = { [file]: await sha256Hex(csv) };
   const text = JSON.stringify(manifest);
-  const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files };
+  const index = { schema: RELEASE_INDEX_SCHEMA, release: manifest.release, budget: manifest.budget, manifest_revision: manifest.revision, manifest_sha256: await sha256Hex(text), files: manifest.flat_files, aliases };
   const overrides = { "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
   const loaded = await loadManifest(BASE_PATH, { fetchImpl: fixtureFetch({ overrides }) });
   return { manifest: loaded, index, overrides };
@@ -78,5 +80,65 @@ describe("national receipt binding", () => {
         expect(loaded.budgetary.every((row) => row.year === IN_DATA)).toBe(true);
       }
     }), { numRuns: 30 });
+  });
+});
+
+describe("the flat view files", () => {
+  it("are the same list in the page, the build check and the area files", async () => {
+    const { FLAT_VIEW_FILES } = await import("./flat");
+    const build = await import("../../../scripts/check-public-files.mjs");
+    const { FILES } = await import("../geography/columns");
+    expect([...FLAT_VIEW_FILES].sort()).toEqual([...build.FLAT_VIEW_FILES].sort());
+    expect(Object.values(FILES).map(({ file }) => file).sort()).toEqual([...FLAT_VIEW_FILES].sort());
+  });
+
+  it("never include the OBR comparison: its file holds the November 2025 costings", async () => {
+    const { manifest, overrides } = await flatSnapshot();
+    await expect(loadVerifiedFlatCsv("obr_comparison.csv", { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) })).rejects.toThrow(/not a flat view file/);
+  });
+});
+
+describe("aliases in the release index", () => {
+  it("returns the package alias the area run used, mapped to its manifest key", async () => {
+    const { manifest, overrides } = await flatSnapshot({ aliases: { package_alias: "combined--alpha+beta" } });
+    const loaded = await loadVerifiedFlat(file, { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) });
+    expect(loaded.text).toBe(csv);
+    expect({ ...loaded.aliases }).toEqual({ package_alias: "combined--alpha+beta" });
+  });
+
+  it.each([
+    ["a key the manifest does not list", { package_alias: "combined--alpha+gamma" }],
+    ["an alias that is itself a manifest key", { alpha: "combined--alpha+beta" }],
+    ["no alias map", null],
+  ])("refuses %s", async (_, aliases) => {
+    const { manifest, index, overrides } = await flatSnapshot();
+    index.aliases = aliases ?? undefined;
+    overrides["release-index.json"] = JSON.stringify(index);
+    await expect(loadVerifiedFlat(file, { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) })).rejects.toThrow(/aliases/);
+  });
+});
+
+describe("a page left open across a deploy", () => {
+  it("says newer results are published when the live manifest has moved on", async () => {
+    const { SnapshotChangedError } = await import("./flat");
+    const { manifest } = await flatSnapshot();
+    // The next deploy: a new manifest revision with its own index
+    const next = fixtureJson("manifest.json");
+    next.revision += 1;
+    next.flat_files = { [file]: await sha256Hex(csv) };
+    const text = JSON.stringify(next);
+    const index = { schema: RELEASE_INDEX_SCHEMA, release: next.release, budget: next.budget, manifest_revision: next.revision, manifest_sha256: await sha256Hex(text), files: next.flat_files, aliases: {} };
+    const overrides = { "manifest.json": text, "release-index.json": JSON.stringify(index), [file]: csv };
+    await expect(loadVerifiedFlat(file, { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) })).rejects.toBeInstanceOf(SnapshotChangedError);
+  });
+
+  it("still fails as unavailable when only the index is wrong", async () => {
+    const { SnapshotChangedError } = await import("./flat");
+    const { manifest, index, overrides } = await flatSnapshot();
+    index.manifest_revision += 1;
+    overrides["release-index.json"] = JSON.stringify(index);
+    const failure = await loadVerifiedFlat(file, { manifest }, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) }).catch((error) => error);
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure).not.toBeInstanceOf(SnapshotChangedError);
   });
 });
