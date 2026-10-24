@@ -386,6 +386,8 @@ def _area_run(world, manifest, reforms):
         "reforms": {
             reform: {
                 "key": key,
+                "artifact_sha256": manifest.entries()[key].artifact_sha256,
+                "receipt_sha256": manifest.entries()[key].receipt_sha256,
                 "outputs_sha256": manifest.entries()[key].outputs_sha256,
             }
             for reform, key in reforms.items()
@@ -491,7 +493,8 @@ def test_an_area_alias_maps_to_the_combined_run_it_stands_for(world):
 
 @pytest.mark.parametrize(
     "aliases",
-    [{ALIAS: "combined--not-listed"}, {KEY: KEY}, None],
+    # The last: round-2 review, relabelling a package as a measure
+    [{ALIAS: "combined--not-listed"}, {KEY: KEY}, None, {ALIAS: KEY}],
 )
 def test_the_gates_refuse_index_aliases_that_name_no_manifest_key(
     world, aliases
@@ -679,3 +682,25 @@ def test_every_gate_reads_the_manifest_files_own_identity(world, identity):
     assert manifest_identity_problems(world.data_root)
     assert check(manifest, **args)
     assert _build_index_problems(world)
+
+
+def test_publish_check_recomputes_aliases_from_the_area_runs_record(world):
+    """Round-2 review: an alias written into both the index and the
+    manifest still has to be the one the area run recorded."""
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    path = m.manifest_path(world.data_root)
+    raw = json.loads(path.read_bytes())
+    raw["flat_aliases"] = {ALIAS: KEY}
+    path.write_text(json.dumps(raw, indent=2, sort_keys=True) + "\n")
+    index_path = world.data_root / INDEX_FILE
+    index = json.loads(index_path.read_bytes())
+    index["aliases"] = {ALIAS: KEY}
+    index["manifest_sha256"] = sha256_bytes(path.read_bytes())
+    index_path.write_text(json.dumps(index))
+    problems = release_index_problems(
+        world.data_root, m.load_manifest(world.data_root)
+    )
+    assert (
+        "release index: aliases differ from the area run's record" in problems
+    )

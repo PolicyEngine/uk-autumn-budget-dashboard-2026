@@ -41,3 +41,16 @@ it("keeps the shell and independent views available for every unavailable manife
     },
   ), { numRuns: 16 });
 });
+
+
+it("renders an independent view while the manifest request is still pending", async () => {
+  vi.stubGlobal("fetch", async (url) => {
+    if (String(url).endsWith("manifest.json")) return new Promise(() => {});
+    if (String(url).endsWith("living_standards_outlook.json")) return new Response(outlook);
+    return new Response(null, { status: 404 });
+  });
+  window.history.replaceState({}, "", "/?tab=methodology");
+  render(<App />);
+  expect(screen.getByRole("tablist", { name: "Views" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "At a glance" })).toBeInTheDocument();
+});

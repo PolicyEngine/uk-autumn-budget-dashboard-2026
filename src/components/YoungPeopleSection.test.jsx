@@ -210,7 +210,7 @@ it("keeps the age trend unavailable when a selected measure has no supported row
     { reform_id: "two_child_limit", year: 2029, age_band: "16-24", mean_change: 100, sample_size: 5000 },
     { reform_id: "two_child_limit", year: 2029, age_band: "all", mean_change: 120, sample_size: 5000 },
   ];
-  expect(changeByYear(rows, POLICIES, ALL, [2029])).toEqual([{ year: 2029, published: false, suppressed: false, young: null, all: null }]);
+  expect(changeByYear(rows, POLICIES, ALL, [2029])[0]).toMatchObject({ year: 2029, published: false, suppressed: [], "16-24": null, all: null });
   const unknownSelection = meanChangeByBand(rows, [POLICIES[0]], [POLICIES[0].id, "unpublished_measure"], 2029);
   expect(unknownSelection.find((point) => point.band === "16-24").netChange).toBeNull();
 });

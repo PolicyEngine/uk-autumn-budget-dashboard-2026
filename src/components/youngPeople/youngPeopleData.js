@@ -95,7 +95,7 @@ export function changeByYear(rows, policies, selected, years) {
   return years.map((year) => {
     const point = { year, published: false, suppressed: [] };
     for (const group of AGE_GROUPS) point[group.key] = null;
-    if (!completeSelection || !(rows ?? []).some((row) => row.year === Number(year) && selected.includes(row.reform_id))) return point;
+    if (!completeSelection || chosen.some((policy) => !(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === policy.id))) return point;
     point.published = true;
     for (const group of AGE_GROUPS) {
       let total = 0;

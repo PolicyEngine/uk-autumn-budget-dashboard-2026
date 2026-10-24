@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
 import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
@@ -20,8 +20,8 @@ vi.mock("./components/EmploymentIncomeDiffChart", () => ({ default: () => null }
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
-vi.mock("./components/MethodologyTab", () => ({ default: () => null, METHOD_SECTIONS: { geography: "geography" } }));
-vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => null }));
+vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
 
 beforeEach(() => { window.history.replaceState({}, "", "/"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -79,4 +79,61 @@ describe("the page's verified publication catalogue", () => {
     expect(JSON.parse(screen.getByTestId("budget-figures").dataset.rows).every((row) => row.netImpact === null)).toBe(true);
     expect(screen.getByText(/Alpha: Results unavailable/)).toBeInTheDocument();
   });
+
+  it.each(["?tab=living", "?tab=methodology"])("keeps the shell and %s without a manifest", async (search) => {
+    // Round-2 review: the views that need no Budget figures stay
+    window.history.replaceState({}, "", `/${search}`);
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
+    render(<App />);
+    const view = search.includes("living") ? "living-view" : "methodology-view";
+    expect(await screen.findByTestId(view)).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(screen.queryByText("No Budget results are published yet")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
+    expect(screen.getByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+  });
 });
+
+describe("an open page follows the publication", () => {
+  const twoMeasures = (status = "approved") => {
+    const manifest = fixtureJson("manifest.json");
+    manifest.measures = { alpha: { ...manifest.measures.alpha }, beta: { ...manifest.measures.beta, status } };
+    return manifest;
+  };
+  const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
+
+  it("replaces the figures when a newer manifest is published", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+    // A correction withdraws beta while the page is open
+    const next = twoMeasures("withdrawn");
+    next.revision += 1;
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
+    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+  });
+
+  it("takes the figures away when the manifest is withdrawn or invalid", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": 404 } }));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+  });
+
+  it("keeps the verified snapshot through a network failure", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+    vi.stubGlobal("fetch", async () => { throw new TypeError("Failed to fetch"); });
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+  });
+});
+

@@ -42,6 +42,10 @@ export async function verifyReleaseIndex(index, manifest) {
   if (!isMap(aliases) || Object.entries(aliases).some(([alias, key]) => isKey(alias) || !isKey(key))) {
     throw new Error("The release index aliases do not name manifest keys");
   }
+  // The aliases are part of the approved snapshot, as the file digests are
+  if (await jcsSha256(aliases) !== await jcsSha256(manifest.flat_aliases ?? {})) {
+    throw new Error("The release index aliases are not the manifest's");
+  }
   return { files, aliases: Object.freeze(Object.assign(Object.create(null), aliases)) };
 }
 

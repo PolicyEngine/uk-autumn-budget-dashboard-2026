@@ -165,12 +165,15 @@ def area_problems(
             problems.append(f"{name}: not a readable CSV with a reform column")
     entries = manifest.entries()
     aliases = {}
+    identity = ("artifact_sha256", "receipt_sha256", "outputs_sha256")
     for reform_id in sorted(used):
         record = reforms.get(reform_id)
         if (
             not isinstance(record, dict)
             or not isinstance(record.get("key"), str)
-            or not isinstance(record.get("outputs_sha256"), str)
+            or any(
+                not isinstance(record.get(field), str) for field in identity
+            )
         ):
             problems.append(
                 f"area results: {reform_id} is not recorded by the area run"
@@ -183,7 +186,7 @@ def area_problems(
             problems.append(
                 f"area results: {reform_id} stands for {key}, which is {status}"
             )
-        elif entry.outputs_sha256 != record["outputs_sha256"]:
+        elif any(getattr(entry, field) != record[field] for field in identity):
             problems.append(
                 f"area results for {reform_id} were made for an earlier "
                 f"{key}; rerun the area run"
@@ -248,6 +251,8 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
     if index.get("manifest_sha256") != sha256_bytes(manifest_bytes):
         problems.append("release index: manifest bytes differ")
     aliases = index.get("aliases")
+    if aliases != (raw.get("flat_aliases") or {}):
+        problems.append("release index: aliases differ from the manifest's")
     keys = set(raw.get("measures") or {}) | set(raw.get("combined") or {})
     if not isinstance(aliases, dict) or any(
         not isinstance(alias, str)
@@ -291,6 +296,22 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
             problems.append(f"release index: {name}: not a regular file")
         elif sha256_bytes(path.read_bytes()) != digest:
             problems.append(f"release index: {name}: bytes differ")
+    # The area run's record still matches the entries, and names the aliases
+    bound = {
+        name: (data_root / name).read_bytes()
+        for name in files
+        if name in AREA_FILES and (data_root / name).is_file()
+    }
+    try:
+        model = m.parse_manifest(manifest_bytes, str(manifest_path))
+    except ValueError:
+        return problems + ["release index: the manifest does not parse"]
+    found, expected = area_problems(model, bound, data_root)
+    problems += [f"release index: {problem}" for problem in found]
+    if aliases != expected:
+        problems.append(
+            "release index: aliases differ from the area run's record"
+        )
     return problems
 
 
@@ -370,6 +391,7 @@ def write_release_index(
     working.flat_files = {
         name: sha256_bytes(content) for name, content in files.items()
     }
+    working.flat_aliases = dict(sorted(aliases.items()))
     working.revision += 1
     working.updated_at = m.now()
     manifest_bytes = (
@@ -388,7 +410,7 @@ def write_release_index(
         "manifest_sha256": sha256_bytes(manifest_bytes),
         "files": working.flat_files,
         # The ids the bound tables use for manifest keys (a package alias)
-        "aliases": aliases,
+        "aliases": working.flat_aliases,
     }
     index_bytes = (json.dumps(index, indent=2, sort_keys=True) + "\n").encode()
     staged = []

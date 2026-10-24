@@ -2055,18 +2055,23 @@ def area_provenance(
     manifest_bytes: bytes,
     reform_ids: Sequence[str],
 ) -> dict:
-    """The approved outputs each reform's area results were made for.
+    """The approved entry each reform's area results were made beside.
 
     ``publish index`` refuses to bind the area tables once any of these
-    entries has changed, so a correction cannot leave old results by area
-    bound to the new figures.
+    entries has changed (its artifact, receipt or outputs), so a correction
+    cannot leave old results by area bound to the new figures. It does not
+    prove the area run simulated the approved definition: the run simulates
+    the registry at its own commit (see the runbook, G4).
     """
     reforms = {}
     for reform_id in reform_ids:
         key = manifest_key(reform_id)
+        entry = manifest.entries()[key]
         reforms[reform_id] = {
             "key": key,
-            "outputs_sha256": manifest.entries()[key].outputs_sha256,
+            "artifact_sha256": entry.artifact_sha256,
+            "receipt_sha256": entry.receipt_sha256,
+            "outputs_sha256": entry.outputs_sha256,
         }
     return {
         "manifest_revision": manifest.revision,
