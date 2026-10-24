@@ -427,7 +427,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Not modelled for one household",
-    "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only.",
+    "Six of the candidate measures change a formula in code, not just parameters, which policyengine.py's household calculation cannot apply, so they are in the national figures only: the fuel duty deferral (the VAT on the lower pump price), the State Pension income tax protection, the Warm Home Discount top-up, zero VAT on domestic electricity, the road fuel VAT cut and the employer NI relief for under-25s. Two would be £0 for a household anyway: the form takes no electricity spending, and the employer NI relief changes what employers pay, with wages held fixed.",
   ],
   [
     "Who counts as a child",

@@ -155,8 +155,38 @@ NOT_MODELLED_REASON = (
     "household calculation can't apply."
 )
 # Reasons for particular measures, where the general one doesn't say enough.
-# None of the candidate measures needs one.
-NOT_MODELLED_REASONS: dict[str, str] = {}
+# policyengine.py's household calculation takes parameter changes only
+# (``pe.uk.calculate_household(reform=...)``), so a measure whose modifier
+# changes a formula can't be applied there in part or in whole.
+NOT_MODELLED_REASONS: dict[str, str] = {
+    "fuel_duty_rise_deferral": (
+        "The duty rates are parameters, but the VAT on the lower pump price "
+        "changes the VAT formula in code, which policyengine.py's household "
+        "calculation can't apply; the duty alone would understate the "
+        "measure, so it is in the national figures only."
+    ),
+    "state_pension_income_tax_protection": (
+        "The new allowance changes the personal allowance formula in code, "
+        "which policyengine.py's household calculation can't apply."
+    ),
+    "warm_home_discount_top_up": (
+        "The £100 payment is added to the cost-of-living payment formula in "
+        "code, which policyengine.py's household calculation can't apply."
+    ),
+    "domestic_electricity_zero_vat": (
+        "The zero rate changes the VAT formula in code, which "
+        "policyengine.py's household calculation can't apply; and the form "
+        "takes no electricity spending, so it would be £0 here anyway."
+    ),
+    "road_fuel_vat_cut": (
+        "The lower rate changes the VAT formula in code, which "
+        "policyengine.py's household calculation can't apply."
+    ),
+    "employer_ni_relief_under_25s": (
+        "It changes what employers pay. Wages are held fixed, so it changes "
+        "no household's net income: £0 for every household."
+    ),
+}
 
 INTERACTION_METHOD = (
     "Each measure's change is that measure switched to its Budget setting, "

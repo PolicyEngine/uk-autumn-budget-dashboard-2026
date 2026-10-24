@@ -7,7 +7,7 @@ import OBRDumbbellChart from "./OBRDumbbellChart";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
 export const OBR_UNAVAILABLE =
-  "Not available until the OBR publishes its costings with the Budget on 28 October.";
+  "Shown once the OBR publishes its costings for these measures.";
 
 function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const [comparisonData, setComparisonData] = useState(null);

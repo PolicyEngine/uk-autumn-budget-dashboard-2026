@@ -205,7 +205,7 @@ describe("before the OBR costs the measures", () => {
     );
     expect(
       await screen.findByText(
-        "Not available until the OBR publishes its costings with the Budget on 28 October.",
+        "Shown once the OBR publishes its costings for these measures.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();

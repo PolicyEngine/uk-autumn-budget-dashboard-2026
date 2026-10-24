@@ -221,7 +221,19 @@ def test_a_measure_with_a_modifier_is_not_modelled_and_says_why():
     assert sides.included == ["threshold_freeze_2031_32"]
     [payment] = sides.not_modelled
     assert payment["id"] == "warm_home_discount_top_up"
-    assert payment["reason"] == household_impact.NOT_MODELLED_REASON
+    assert payment["reason"] == (
+        household_impact.NOT_MODELLED_REASONS["warm_home_discount_top_up"]
+    )
+    assert "can't apply" in payment["reason"]
+
+
+def test_each_measure_not_modelled_has_its_own_reason():
+    sides = household_impact.measure_sides(household_impact.measure_ids())
+    assert sorted(household_impact.NOT_MODELLED_REASONS) == NOT_MODELLED_IDS
+    for measure in sides.not_modelled:
+        assert measure["reason"] == (
+            household_impact.NOT_MODELLED_REASONS[measure["id"]]
+        )
 
 
 def test_six_candidates_are_not_modelled_for_a_household():
@@ -506,7 +518,9 @@ def test_the_runs_it_asks_policyengine_py_for(monkeypatch):
         sides.singles[id_] for id_ in sides.included
     ]
     assert calls[2]["axes"][0]["name"] == "employment_income"
-    assert calls[2]["reform"] == sides.before
+    # The sweep's baseline is the before side: current law, so no reform
+    assert sides.before == {}
+    assert calls[2]["reform"] is None
     assert result["net_income"] == {
         "baseline": 40_100.0,
         "reform": 40_200.0,
@@ -1018,7 +1032,47 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     assert [p["private_pension_income"] for p in people] == [1_000, 2_000]
 
 
-def test_the_benefit_cap_is_its_own_row_so_a_capped_family_reconciles():
+# The two-child limit's repeal, measured against the limit of two: no
+# candidate measure raises a benefit, so the benefit cap tests register this
+# one for themselves.
+TWO_CHILD_LIMIT = Reform(
+    id="two_child_limit",
+    name="2 child limit repeal",
+    baseline_parameter_changes={
+        path: {str(year): 2 for year in POLICY_YEARS}
+        for path in (
+            "gov.dwp.tax_credits.child_tax_credit.limit.child_count",
+            "gov.dwp.universal_credit.elements.child.limit.child_count",
+        )
+    },
+    parameter_changes={},
+)
+
+
+@pytest.fixture
+def two_child_limit(monkeypatch):
+    registered = household_impact.get_autumn_budget_2026_reforms()
+    monkeypatch.setattr(
+        household_impact,
+        "get_autumn_budget_2026_reforms",
+        lambda: [*registered, TWO_CHILD_LIMIT],
+    )
+    get_registered = household_impact.get_reform
+    monkeypatch.setattr(
+        household_impact,
+        "get_reform",
+        lambda id_: (
+            TWO_CHILD_LIMIT
+            if id_ == TWO_CHILD_LIMIT.id
+            else get_registered(id_)
+        ),
+    )
+    return TWO_CHILD_LIMIT.id
+
+
+def test_the_benefit_cap_is_its_own_row_so_a_capped_family_reconciles(
+    two_child_limit,
+):
     """The QA's E3b: a London couple with no earnings and six children,
     capped. Lifting the two-child limit raises the child element by four
     children's, the benefit cap takes it all back, and every row adds up."""
@@ -1034,7 +1088,7 @@ def test_the_benefit_cap_is_its_own_row_so_a_capped_family_reconciles():
         claims_universal_credit=True,
         council_tax=0,
     )
-    result = calculate(answers, ["two_child_limit"])
+    result = calculate(answers, [two_child_limit])
     child = _programme(result, "uc_child_element")["change"]
     cap = _programme(result, "benefit_cap")
     assert child > 10_000
@@ -1048,8 +1102,8 @@ def test_the_benefit_cap_is_its_own_row_so_a_capped_family_reconciles():
     _rows_add_up(result)
 
 
-def test_an_uncapped_family_has_no_benefit_cap():
-    result = calculate(PROBES["uc_family"], ["two_child_limit"])
+def test_an_uncapped_family_has_no_benefit_cap(two_child_limit):
+    result = calculate(PROBES["uc_family"], [two_child_limit])
     assert _programme(result, "benefit_cap")["baseline"] == 0
     assert _programme(result, "benefit_cap")["reform"] == 0
     _rows_add_up(result)
@@ -1093,9 +1147,12 @@ def test_council_tax_is_estimated_from_the_band_and_region():
 
 
 def test_the_estimated_council_tax_is_taken_off_net_income():
-    estimated = calculate(Answers(region="NORTH_WEST"), ["fuel_duty_freeze"])
+    estimated = calculate(
+        Answers(region="NORTH_WEST"), ["threshold_freeze_2031_32"]
+    )
     none = calculate(
-        Answers(region="NORTH_WEST", council_tax=0), ["fuel_duty_freeze"]
+        Answers(region="NORTH_WEST", council_tax=0),
+        ["threshold_freeze_2031_32"],
     )
     tax = _programme(estimated, "council_tax")["baseline"]
     assert tax == pytest.approx(
@@ -1122,10 +1179,10 @@ def test_a_young_person_in_school_counts_as_a_child():
     )
     school = calculate(
         Answers(**base, children=(Child(18, in_education=True),)),
-        ["fuel_duty_freeze"],
+        ["threshold_freeze_2031_32"],
     )
     default = calculate(
-        Answers(**base, children=(Child(18),)), ["fuel_duty_freeze"]
+        Answers(**base, children=(Child(18),)), ["threshold_freeze_2031_32"]
     )
     assert school["dependants"][0]["counts_for_child_benefit"]
     assert school["dependants"][0]["counts_for_universal_credit"]

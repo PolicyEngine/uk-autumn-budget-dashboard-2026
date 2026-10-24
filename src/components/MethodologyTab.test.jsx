@@ -107,7 +107,8 @@ describe("MethodologyTab", () => {
     expect(slot).not.toHaveTextContent("To follow");
     expect(slot).toHaveTextContent("same measures as the national figures");
     expect(slot).toHaveTextContent("OBR's average earnings forecast");
-    expect(slot).toHaveTextContent("rail fares freeze");
+    expect(slot).toHaveTextContent("in the national figures only");
+    expect(slot).toHaveTextContent("employer NI relief for under-25s");
   });
 
   it("switches views from its links, in place", () => {
