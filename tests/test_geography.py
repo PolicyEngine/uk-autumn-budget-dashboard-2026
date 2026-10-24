@@ -2029,7 +2029,9 @@ def test_a_package_needs_two_measures(monkeypatch):
         g.build_package("a_combined", [Reform(id="a", name="a")], [2026])
 
 
-def test_reforms_against_current_law_share_one_baseline(monkeypatch):
+def test_each_reform_is_simulated_on_its_own_baseline(monkeypatch):
+    # The data-limit watch reads a variable calculated before it starts as
+    # touching every limit, so no baseline is shared between reforms.
     from uk_budget_data.models import Reform
 
     built = []
@@ -2040,19 +2042,33 @@ def test_reforms_against_current_law_share_one_baseline(monkeypatch):
 
     monkeypatch.setattr(g, "build_microsimulation", build)
     plain = Reform(id="plain", name="plain", parameter_changes={})
-    own = Reform(
-        id="own",
-        name="own",
-        parameter_changes={},
-        baseline_parameter_changes={"gov.x": {"2026": 1}},
+    first, _ = g.simulate_reform(plain, None, [2026])
+    second, _ = g.simulate_reform(plain, None, [2026])
+    assert first is not second and len(built) == 4
+
+
+def test_a_package_the_manifest_does_not_approve_is_refused(tmp_path):
+    from uk_budget_data.publication import manifest as m
+
+    def parsed(path):
+        return m.parse_manifest(path.read_bytes(), str(path))
+
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+
+    measures_only = parsed(
+        publication_manifest(tmp_path / "a", ["alpha", "beta"])
     )
-    shared = object()
-    baseline, _ = g.simulate_reform(plain, None, [2026], current_law=shared)
-    assert baseline is shared and len(built) == 1
-    baseline, _ = g.simulate_reform(own, None, [2026], current_law=shared)
-    assert baseline is not shared and len(built) == 3
-    assert g.uses_current_law(plain, [2026])
-    assert not g.uses_current_law(own, [2026])
+    with pytest.raises(ValueError, match="absent from the manifest"):
+        g.approved_package(measures_only, "new_combined", ["alpha", "beta"])
+    approved = parsed(
+        publication_manifest(
+            tmp_path / "b",
+            ["pkg", "alpha", "beta"],
+            packages={"pkg": ("alpha", "beta")},
+        )
+    )
+    g.approved_package(approved, "new_combined", ["beta", "alpha"])
 
 
 def write_audit(path, rows):
