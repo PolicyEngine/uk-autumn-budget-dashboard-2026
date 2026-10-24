@@ -1,0 +1,121 @@
+{
+  "d2": {
+    "drill": 2,
+    "code_sha": "e05274b",
+    "reform_ids": [
+      "mock2_cgt_rates",
+      "mock2_electricity_vat_zero",
+      "mock2_employer_ni_threshold",
+      "mock2_energy_price_payment",
+      "mock2_fuel_duty_hold",
+      "mock2_hvcts_band",
+      "mock2_state_pension_personal_allowance",
+      "mock2_state_pension_uprating"
+    ],
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "command": "uv run --no-sync uk-budget-data generate --output-dir <work-dir>/out/d2 --reforms mock2_cgt_rates mock2_electricity_vat_zero mock2_employer_ni_threshold mock2_energy_price_payment mock2_fuel_duty_hold mock2_hvcts_band mock2_state_pension_personal_allowance mock2_state_pension_uprating --years 2026 2027 2028 2029 2030 --skip-input-check --dataset /Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "started_utc": "2026-10-24T17:01:06+00:00",
+    "wall_seconds": 815.4,
+    "peak_rss_gb": 8.6,
+    "exit_code": 0,
+    "dataset": "/Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+  },
+  "d3": {
+    "drill": 3,
+    "code_sha": "8aef1c1",
+    "reform_ids": [
+      "mock3_additional_rate_threshold",
+      "mock3_cgt_higher_rate_aea",
+      "mock3_class4_main_rate",
+      "mock3_employer_ni_under_22",
+      "mock3_fuel_duty_phasing",
+      "mock3_hvcts_top_bands",
+      "mock3_lha_30th_percentile",
+      "mock3_pensioner_allowance",
+      "mock3_salary_sacrifice_cap",
+      "mock3_threshold_freeze_2032",
+      "mock3_whd_top_up"
+    ],
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ],
+    "command": "uv run --no-sync uk-budget-data generate --output-dir <work-dir>/out/d3 --reforms mock3_additional_rate_threshold mock3_cgt_higher_rate_aea mock3_class4_main_rate mock3_employer_ni_under_22 mock3_fuel_duty_phasing mock3_hvcts_top_bands mock3_lha_30th_percentile mock3_pensioner_allowance mock3_salary_sacrifice_cap mock3_threshold_freeze_2032 mock3_whd_top_up --years 2026 2027 2028 2029 2030 2031 --skip-input-check --dataset /Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "started_utc": "2026-10-24T17:14:42+00:00",
+    "wall_seconds": 2429.3,
+    "peak_rss_gb": 9.43,
+    "exit_code": 0,
+    "dataset": "/Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+  },
+  "d4": {
+    "drill": 4,
+    "code_sha": "ab79af1",
+    "reform_ids": [
+      "mock4_carers_allowance_limit",
+      "mock4_cb_early_years_addition",
+      "mock4_cgt_higher_rate",
+      "mock4_combined",
+      "mock4_employer_ni_under23",
+      "mock4_fuel_duty",
+      "mock4_fuel_vat_cut",
+      "mock4_lha_reset",
+      "mock4_savings_starting_band",
+      "mock4_state_pension_topup_allowance",
+      "mock4_threshold_freeze_2032",
+      "mock4_uc_child_element",
+      "mock4_whd_topup"
+    ],
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ],
+    "command": "bash scripts/drill4_generate.sh --output-dir <work-dir>/out/d4 --reforms mock4_carers_allowance_limit mock4_cb_early_years_addition mock4_cgt_higher_rate mock4_combined mock4_employer_ni_under23 mock4_fuel_duty mock4_fuel_vat_cut mock4_lha_reset mock4_savings_starting_band mock4_state_pension_topup_allowance mock4_threshold_freeze_2032 mock4_uc_child_element mock4_whd_topup --years 2026 2027 2028 2029 2030 2031 --skip-input-check",
+    "started_utc": "2026-10-24T19:00:21+00:00",
+    "wall_seconds": 1754.4,
+    "peak_rss_gb": 7.82,
+    "exit_code": 0,
+    "dataset": "/Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+  },
+  "d1": {
+    "drill": 1,
+    "code_sha": "1b2d8bd9216ded58707dee660bf95234824c0471",
+    "reform_ids": [
+      "mock_child_benefit_increase",
+      "mock_energy_vat_zero_rate",
+      "mock_fuel_duty_freeze",
+      "mock_hvcts_extension",
+      "mock_nics_threshold_rise"
+    ],
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030
+    ],
+    "command": "uv run --no-sync uk-budget-data generate --output-dir <work-dir>/out/d1 --reforms mock_child_benefit_increase mock_energy_vat_zero_rate mock_fuel_duty_freeze mock_hvcts_extension mock_nics_threshold_rise --years 2026 2027 2028 2029 2030 --skip-input-check --dataset /Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "started_utc": "2026-10-24T20:05:37+00:00",
+    "wall_seconds": 417.3,
+    "peak_rss_gb": 7.98,
+    "exit_code": 0,
+    "dataset": "/Users/vahid/drill4-data/microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71/microcosm_uk_2024_25.h5",
+    "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece"
+  }
+}
