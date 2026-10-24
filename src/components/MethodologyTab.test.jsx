@@ -111,7 +111,9 @@ describe("MethodologyTab", () => {
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");
-    fireEvent.click(screen.getByRole("link", { name: "See the Young people tab" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("young");
+    const young = screen.getByRole("link", { name: "See Young people under Population impact" });
+    expect(young).toHaveAttribute("href", "?tab=dashboard&sub=young#young-people");
+    fireEvent.click(young);
+    expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "young");
   });
 });

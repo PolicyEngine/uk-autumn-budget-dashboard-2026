@@ -29,17 +29,17 @@ afterEach(() => {
 const band = (container) => container.querySelector(".title-row");
 
 describe("the Living standards view", () => {
-  it("is the fourth view tab, and choosing it shows the outlook", async () => {
+  it("is the third view tab, and choosing it shows the outlook", async () => {
     const { container } = render(<App />);
     // The Population view has the year and policy pills
     expect(band(container).querySelector(".band-year")).not.toHaveAttribute("aria-hidden");
     expect(band(container).querySelector(".band-policy")).not.toHaveAttribute("aria-hidden");
 
     const tabs = within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab");
-    expect(tabs[3]).toHaveTextContent("Living standards");
-    fireEvent.click(tabs[3]);
+    expect(tabs[2]).toHaveTextContent("Living standards");
+    fireEvent.click(tabs[2]);
 
-    expect(tabs[3]).toHaveAttribute("aria-selected", "true");
+    expect(tabs[2]).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: "Living standards" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     // Baseline outlook is the sub-tab it opens on

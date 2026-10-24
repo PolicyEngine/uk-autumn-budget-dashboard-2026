@@ -99,14 +99,15 @@ function MethodSection({ id, title, subtitle, children }) {
   );
 }
 
-/** A link to another view, switched to in place. */
-function ViewLink({ tab, hash, onShowTab, children }) {
+/** A link to another view (at one of its sub-tabs), switched to in place. */
+function ViewLink({ tab, sub, hash, onShowTab, children }) {
   return (
     <a
-      href={`?tab=${tab}${hash ? `#${hash}` : ""}`}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        onShowTab(tab);
+        if (sub) onShowTab(tab, sub);
+        else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
             document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
@@ -142,7 +143,7 @@ function SectionLink({ id, children }) {
  * that view's own baseline.
  *
  * @param {Object} props
- * @param {(tab: string) => void} props.onShowTab - Switch to another view
+ * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
   const policyNotes = (text) => (
@@ -411,7 +412,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.young}
           title="Young people"
-          subtitle="The definitions behind the Young people tab."
+          subtitle="The definitions behind Population impact's Young people results."
         >
           <div className="card method-card">
             <FactList
@@ -451,8 +452,8 @@ function MethodologyTab({ onShowTab }) {
               ]}
             />
             <p className="method-more">
-              <ViewLink tab="young" onShowTab={onShowTab}>
-                See the Young people tab
+              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
+                See Young people under Population impact
               </ViewLink>
               .
             </p>
