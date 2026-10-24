@@ -107,6 +107,29 @@ DEFAULT_BRMA = {
 
 # The age from which a child's education decides whether they are a
 # dependant (policyengine-uk's Child Benefit and Universal Credit child age
+# Where a household with no local authority given is placed: a local
+# authority inside its region's default BRMA, so the area the answer shows
+# is one place. policyengine-uk's own default is Maidstone whatever the
+# region (``local_authority`` has no formula), and it has no "none". The
+# model reads the local authority only to choose the working-age Council
+# Tax Reduction schemes it simulates (Kingston upon Thames, Merton, Newham,
+# Oxford and Westminster), and none of these is one of them, so the
+# default changes no result.
+DEFAULT_LOCAL_AUTHORITY = {
+    "NORTH_EAST": "NEWCASTLE_UPON_TYNE",  # Tyneside
+    "NORTH_WEST": "MANCHESTER",  # Central Greater Manchester
+    "YORKSHIRE": "LEEDS",  # Leeds
+    "EAST_MIDLANDS": "LEICESTER",  # Leicester
+    "WEST_MIDLANDS": "BIRMINGHAM",  # Birmingham
+    "EAST_OF_ENGLAND": "NORWICH",  # Central Norfolk and Norwich
+    "LONDON": "SOUTHWARK",  # Inner South East London
+    "SOUTH_EAST": "SOUTHAMPTON",  # Southampton
+    "SOUTH_WEST": "BRISTOL_CITY_OF",  # Bristol
+    "WALES": "CARDIFF",  # Cardiff
+    "SCOTLAND": "CITY_OF_EDINBURGH",  # Lothian
+    "NORTHERN_IRELAND": "BELFAST",  # Belfast
+}
+
 # limit: under 16 is a child whatever their education), and the oldest age
 # the form takes (policyengine-uk's qualifying young person age limit is
 # under 20).
@@ -645,8 +668,11 @@ def household_entities(
     }
     if answers.brma is not None:
         household["brma"] = answers.brma
-    if answers.local_authority is not None:
-        household["local_authority"] = answers.local_authority
+    household["local_authority"] = (
+        answers.local_authority
+        if answers.local_authority is not None
+        else DEFAULT_LOCAL_AUTHORITY[answers.region]
+    )
     return people, benunit, household
 
 
@@ -1067,7 +1093,7 @@ def calculate_household_impact(
             "local_authority_source": (
                 "entered"
                 if answers.local_authority is not None
-                else "policyengine-uk default"
+                else "region default"
             ),
         },
         "sweep": None,

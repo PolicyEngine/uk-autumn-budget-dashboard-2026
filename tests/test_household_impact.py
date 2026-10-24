@@ -311,9 +311,10 @@ def test_childcare_goes_on_the_first_child_a_year():
     assert "childcare_expenses" not in people[2]
 
 
-def test_the_area_and_council_tax_are_passed_only_when_entered():
+def test_the_brma_and_council_tax_are_passed_only_when_entered():
     _, _, household = household_impact.household_entities(Answers())
-    assert "brma" not in household and "local_authority" not in household
+    assert "brma" not in household
+    assert household["local_authority"] == "SOUTHWARK"
     _, _, household = household_impact.household_entities(
         Answers(brma="CAMBRIDGE", local_authority="CAMBRIDGE", council_tax=2e3)
     )
@@ -708,6 +709,61 @@ def test_rent_support_uses_the_entered_brma_or_the_regions_default():
         programme(cambridge, housing)["baseline"]
         != programme(default, housing)["baseline"]
     )
+
+
+# The working-age Council Tax Reduction schemes policyengine-uk chooses by
+# local authority (council_tax_reduction/config.py)
+LOCAL_AUTHORITY_SCHEMES = {
+    "KINGSTON_UPON_THAMES",
+    "MERTON",
+    "NEWHAM",
+    "OXFORD",
+    "WESTMINSTER",
+}
+
+
+def test_every_region_defaults_to_a_local_authority_in_its_default_brma():
+    """Not policyengine-uk's Maidstone for every region: a local authority
+    of the region's default BRMA, and never one whose own Council Tax
+    Reduction scheme the model simulates."""
+    defaults = household_impact.DEFAULT_LOCAL_AUTHORITY
+    assert set(defaults) == set(household_impact.REGIONS)
+    assert set(defaults.values()) <= set(household_impact.LOCAL_AUTHORITIES)
+    assert not set(defaults.values()) & LOCAL_AUTHORITY_SCHEMES
+    assert defaults["NORTH_WEST"] == "MANCHESTER"
+    assert household_impact.DEFAULT_BRMA["NORTH_WEST"] == (
+        "CENTRAL_GREATER_MANCHESTER"
+    )
+    for region, authority in defaults.items():
+        _, _, household = household_impact.household_entities(
+            Answers(region=region)
+        )
+        assert household["local_authority"] == authority
+
+
+@pytest.mark.parametrize("council_tax", [0, 2_000])
+def test_the_default_local_authority_changes_no_result(council_tax):
+    """A working-age renter on Universal Credit, the household a local
+    scheme could reach: the same answer under the region's default local
+    authority as under policyengine-uk's own default, Maidstone."""
+    answers = Answers(
+        employment_income=12_000,
+        tenure="RENT_PRIVATELY",
+        monthly_rent=800,
+        claims_universal_credit=True,
+        region="NORTH_WEST",
+        council_tax=council_tax,
+    )
+    default = calculate(answers, ["two_child_limit"])
+    maidstone = calculate(
+        Answers(**{**vars(answers), "local_authority": "MAIDSTONE"}),
+        ["two_child_limit"],
+    )
+    assert default["area"]["local_authority"] == "MANCHESTER"
+    assert default["area"]["local_authority_source"] == "region default"
+    assert maidstone["area"]["local_authority_source"] == "entered"
+    assert default["net_income"] == maidstone["net_income"]
+    assert default["programmes"] == maidstone["programmes"]
 
 
 # --- the earnings sweep ---------------------------------------------------------

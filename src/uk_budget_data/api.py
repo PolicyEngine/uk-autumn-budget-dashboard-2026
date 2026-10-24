@@ -329,7 +329,9 @@ class HouseholdAnswersRequest(BaseModel):
             description=(
                 "Local authority. policyengine-uk reads it only for the few "
                 "Council Tax Reduction schemes it models, so it matters only "
-                "with council_tax entered; it does not choose the BRMA."
+                "with council_tax entered; it does not choose the BRMA. Left "
+                "out: a local authority in the region's default BRMA (none "
+                "with a modelled working-age scheme)."
             ),
         )
     )
