@@ -333,6 +333,7 @@ class World:
         model_limits=(),
         name=None,
         description="",
+        personal=None,
         with_tables=None,
         modifier_templates=None,
     ):
@@ -414,6 +415,7 @@ class World:
             name = rows[0]["reform_name"] if rows else default_name(key)
         inputs["name"] = name
         inputs["description"] = description
+        inputs["personal"] = personal
         sim = self.sim(dataset, dataset_years, dataset_name)
 
         def build(file_digests):

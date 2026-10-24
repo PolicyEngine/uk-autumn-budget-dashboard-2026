@@ -52,6 +52,7 @@ from uk_budget_data.publication.template_proof import (
     combined_templates_proof,
     measure_templates_proof,
 )
+from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES
 from uk_budget_data.scored_years import missing_scored_years
 
 
@@ -341,6 +342,7 @@ def generate_artifacts(
                 model_limits=held,
                 name=reform.name,
                 description=reform.description,
+                personal=PUBLIC_PERSONAL_SERIES.get(reform.id),
                 modifier_templates=(
                     modifier_templates
                     if modifier_templates is not None

@@ -164,6 +164,13 @@ def binding_problems(
         problems.append("the entry's name is not the artifact's")
     if entry.description != dashboard.get("description", ""):
         problems.append("the entry's description is not the artifact's")
+    personal = (
+        entry.personal.model_dump(exclude_none=True)
+        if entry.personal
+        else None
+    )
+    if personal != dashboard.get("personal"):
+        problems.append("the entry's personal mapping is not the artifact's")
     if entry.years != document["execution_receipt"]["years"]:
         problems.append("the entry's years are not the artifact's")
     if entry.unsupported_years != dashboard["unsupported_years"]:
@@ -202,6 +209,11 @@ def _name_problems(dashboard: dict, tables: dict) -> list[str]:
         return ["its receipt records no name for the page to show"]
     if not isinstance(dashboard.get("description", ""), str):
         return ["its receipt's public description is not text"]
+    if dashboard.get("personal") is not None:
+        try:
+            m.PersonalSeries.model_validate(dashboard["personal"])
+        except ValueError:
+            return ["its receipt's personal mapping is invalid"]
     differing = sorted(
         table
         for table, rows in tables.items()
@@ -687,6 +699,7 @@ def stage(
         # too: never the key.
         name=info["document"]["dashboard"]["name"],
         description=dashboard.get("description", ""),
+        personal=dashboard.get("personal"),
         status=level,
         artifact=relative.as_posix(),
         outputs_sha256=digests["outputs_sha256"],

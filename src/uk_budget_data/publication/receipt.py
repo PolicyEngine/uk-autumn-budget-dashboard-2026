@@ -501,6 +501,7 @@ class ReceiptInputs:
     name: str = field(kw_only=True)
     # The registry's public description, included in the artifact digest.
     description: str = field(default="", kw_only=True)
+    personal: Optional[dict] = field(default=None, kw_only=True)
     # One proof per bound modifier on each side: registered template ids,
     # or None for a hand-written modifier. Required so omission fails shut.
     modifier_templates: dict[str, list] = field(kw_only=True)
@@ -589,6 +590,8 @@ def build_receipt_document(
         "publishable": not reasons,
         "reasons": reasons,
     }
+    if inputs.personal is not None:
+        dashboard["personal"] = inputs.personal
     # A hand-written regeneration must void any prior attestation, even
     # when the figures and code are identical. Other runs keep deduplicating.
     if any(

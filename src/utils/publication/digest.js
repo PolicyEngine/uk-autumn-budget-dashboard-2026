@@ -14,7 +14,7 @@
 
 import canonicalize from "canonicalize";
 import contract from "./contract.json";
-import { attestationProblems } from "./manifest";
+import { attestationProblems, personalSeriesProblems } from "./manifest";
 
 function toBytes(input) {
   if (typeof input === "string") return new TextEncoder().encode(input);
@@ -198,6 +198,10 @@ export async function receiptProblems(receipt, key, entry) {
   }
   if ((dashboard.description ?? "") !== (entry.description ?? "")) {
     problems.push("the receipt's description is not the manifest's");
+  }
+  problems.push(...personalSeriesProblems(dashboard.personal).map((problem) => `the receipt's ${problem}`));
+  if (canonicalize(dashboard.personal ?? null) !== canonicalize(entry.personal ?? null)) {
+    problems.push("the receipt's personal mapping is not the manifest's");
   }
   const digests = dashboard.digests ?? {};
   for (const field of [
