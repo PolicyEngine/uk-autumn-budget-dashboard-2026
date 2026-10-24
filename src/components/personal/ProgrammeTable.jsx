@@ -11,6 +11,7 @@ import {
   signedMoney,
 } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import Disclosure from "../Disclosure";
 import { downloadFile } from "../../utils/downloadFile";
 
 const changeClass = (value) => {
@@ -182,31 +183,39 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           </tbody>
         </table>
       </div>
-      {notes.length > 0 && (
-        <ul className="programme-notes">
-          {notes.map((item) => (
-            <li key={item.id}>
-              <strong>{item.label}:</strong> {item.note}
-            </li>
-          ))}
-        </ul>
-      )}
-      <details className="breakdown-method">
-        <summary>How is this calculated?</summary>
-        <ul className="single-year-method">
+      <Disclosure inCard title="About these figures" contentClassName="breakdown-about">
+        {notes.length > 0 && (
+          <>
+            <h4 className="breakdown-about-heading">Rows in the table</h4>
+            <dl className="breakdown-notes">
+              {notes.map((item) => (
+                <div key={item.id}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.note}</dd>
+                </div>
+              ))}
+            </dl>
+            <h4 className="breakdown-about-heading">How it is calculated</h4>
+          </>
+        )}
+        <dl className="breakdown-notes">
           {SINGLE_YEAR_METHOD.map(([term, text]) => (
-            <li key={term}>
-              <strong>{term}.</strong> {text}
-            </li>
+            <div key={term}>
+              <dt>{term}</dt>
+              <dd>{text}</dd>
+            </div>
           ))}
           {engine.policyengine && (
-            <li>
-              <strong>Versions.</strong> policyengine {engine.policyengine}
-              {engine["policyengine-uk"] ? `, policyengine-uk ${engine["policyengine-uk"]}` : ""}.
-            </li>
+            <div>
+              <dt>Versions</dt>
+              <dd>
+                policyengine {engine.policyengine}
+                {engine["policyengine-uk"] ? `, policyengine-uk ${engine["policyengine-uk"]}` : ""}.
+              </dd>
+            </div>
           )}
-        </ul>
-      </details>
+        </dl>
+      </Disclosure>
     </div>
   );
 }

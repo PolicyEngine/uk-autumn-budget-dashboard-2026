@@ -139,7 +139,7 @@ describe("YoungPeopleSection", () => {
     const pill = await screen.findByRole("button", { name: /Average change by age shown/ });
     fireEvent.click(pill);
     fireEvent.click(screen.getByRole("option", { name: /By single year of age/ }));
-    expect(screen.getByText(/by single year of age, in pounds a year/)).toBeInTheDocument();
+    expect(screen.getByText(/by single year of age \(80 and over as one bar\), in pounds a year/)).toBeInTheDocument();
   });
 
   it("says when the selection has no whole run, never showing zero", async () => {

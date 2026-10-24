@@ -2,7 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
-import { changeByYear, measureComparison, niceRange, wrapWords } from "./youngPeopleData";
+import {
+  SINGLE_AGE_OLDEST,
+  changeByYear,
+  fitRange,
+  measureComparison,
+  niceRange,
+  singleAgeBars,
+  wrapWords,
+} from "./youngPeopleData";
 import { MIN_SAMPLE_SIZE } from "../../utils/ageImpact";
 import { DISPLAY_YEARS } from "../../utils/displayYears";
 
@@ -143,5 +151,45 @@ describe("young people cards", () => {
     expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download chart: Change by year/ })).toBeInTheDocument();
     expect(screen.getByTestId("recharts-responsive-container")).toBeInTheDocument();
+  });
+});
+
+describe("single-year bars", () => {
+  const aged = (age_band, mean_change, people = 100, sample_size = 500) => ({
+    reform_id: "two_child_limit",
+    year: 2029,
+    age_band,
+    mean_change,
+    people,
+    sample_size,
+  });
+  const old = [];
+  for (let age = 80; age < 90; age += 1) old.push(aged(String(age), 10));
+  old.push(aged("90+", 30, 300));
+
+  it("has one bar per age to 79 and one people-weighted bar for 80 and over", () => {
+    const bars = singleAgeBars([aged("22", 150), ...old], POLICIES, ["two_child_limit"], 2029);
+    expect(SINGLE_AGE_OLDEST).toBe(80);
+    expect(bars).toHaveLength(81);
+    expect(bars[22]).toMatchObject({ age: 22, label: "22", netChange: 150 });
+    expect(bars[21].netChange).toBeNull();
+    expect(bars[80].label).toBe("80+");
+    // (10 x 100 x 10 + 30 x 300) / 1,300
+    expect(bars[80].netChange).toBeCloseTo(19000 / 1300, 6);
+  });
+
+  it("leaves the 80+ bar out when any of its ages is missing or thin", () => {
+    const missing = old.filter((r) => r.age_band !== "85");
+    expect(singleAgeBars(missing, POLICIES, ["two_child_limit"], 2029)[80].netChange).toBeNull();
+    const thin = old.map((r) => (r.age_band === "85" ? { ...r, sample_size: MIN_SAMPLE_SIZE - 1 } : r));
+    expect(singleAgeBars(thin, POLICIES, ["two_child_limit"], 2029)[80].netChange).toBeNull();
+  });
+
+  it("fits the axis to the data with a little headroom", () => {
+    expect(fitRange(21, 944)).toEqual({ domain: [0, 1000], ticks: [0, 200, 400, 600, 800, 1000] });
+    expect(fitRange(-1118, 821).domain).toEqual([-1200, 1200]);
+    expect(fitRange(-1118, 821).ticks).toContain(0);
+    // A maximum on a step still gets room above it
+    expect(fitRange(0, 800).domain[1]).toBeGreaterThan(800);
   });
 });

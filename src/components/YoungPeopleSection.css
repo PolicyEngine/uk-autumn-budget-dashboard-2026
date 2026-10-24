@@ -11,12 +11,13 @@
   gap: 20px;
 }
 
-/* The choice box above a plot */
+/* The choice box above a plot, with room before the plot's top tick; both
+   cards of the first pair have one, so their plots still start level */
 .young-people-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin: 12px 0 16px;
 }
 
 /* With a choice box in row 3, the plot (one Recharts SVG for plot, legend

@@ -8,7 +8,14 @@
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.
  */
-import { AGE_GROUPS, ALL_BAND, MIN_SAMPLE_SIZE, YOUNG_BAND } from "../../utils/ageImpact";
+import {
+  AGE_GROUPS,
+  ALL_BAND,
+  MIN_SAMPLE_SIZE,
+  SINGLE_AGE_TOP,
+  YOUNG_BAND,
+  singleAgeKey,
+} from "../../utils/ageImpact";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -131,4 +138,87 @@ export function wrapWords(text, max) {
     else lines.push(word);
   }
   return lines;
+}
+
+/**
+ * The single-year view's oldest bar: ages from here up are one bar ("80+").
+ * Fewer people are this old, so single years above it are noisier, and
+ * every policy's effect is flat past 80.
+ */
+export const SINGLE_AGE_OLDEST = 80;
+
+/**
+ * One bar per single year of age, 0 to SINGLE_AGE_OLDEST - 1, and one for
+ * SINGLE_AGE_OLDEST and over: the selected policies' mean changes added up
+ * (`netChange`). The top bar is each policy's people-weighted mean over its
+ * ages. A bar is null where any selected policy has no row for an age in it
+ * (the generator leaves out an age with too few survey records) or a thin
+ * one.
+ *
+ * @param {Array<Object>} rows - Typed age_impact rows
+ * @param {Array<{id: string}>} policies - Every policy
+ * @param {Array<string>} selected - Selected policy ids
+ * @param {number} year
+ */
+export function singleAgeBars(rows, policies, selected, year) {
+  const byKey = new Map();
+  for (const row of rows ?? []) {
+    if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
+  }
+  const chosen = policies.filter((policy) => selected.includes(policy.id));
+  const topKeys = [];
+  for (let age = SINGLE_AGE_OLDEST; age <= SINGLE_AGE_TOP; age += 1) topKeys.push(singleAgeKey(age));
+  const bars = [];
+  for (let age = 0; age <= SINGLE_AGE_OLDEST; age += 1) {
+    const top = age === SINGLE_AGE_OLDEST;
+    const keys = top ? topKeys : [String(age)];
+    let net = 0;
+    let complete = chosen.length > 0;
+    for (const policy of chosen) {
+      let people = 0;
+      let total = 0;
+      for (const key of keys) {
+        const row = byKey.get(`${policy.id}|${key}`);
+        if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
+          complete = false;
+          break;
+        }
+        people += row.people;
+        total += row.people * row.mean_change;
+      }
+      if (!complete || people <= 0) {
+        complete = false;
+        break;
+      }
+      net += total / people;
+    }
+    bars.push({
+      age,
+      label: top ? `${SINGLE_AGE_OLDEST}+` : String(age),
+      netChange: complete ? net : null,
+    });
+  }
+  return bars;
+}
+
+/**
+ * A y-axis fitted to the data: a nice step (25 to 5,000) giving at most six
+ * intervals, from a little below the minimum to a little above the maximum
+ * (4% of the span either side), always including zero.
+ */
+export function fitRange(min, max) {
+  const low = Math.min(0, min);
+  const high = Math.max(0, max);
+  const pad = Math.max(high - low, 1) * 0.04;
+  const lo = low < 0 ? low - pad : 0;
+  const hi = high > 0 ? high + pad : 0;
+  const span = Math.max(hi - lo, 1);
+  const steps = [25, 50, 100, 200, 250, 400, 500, 1000, 2000, 2500, 5000];
+  const step = steps.find((candidate) => span / candidate <= 6) ?? 10000;
+  const bottom = Math.floor(lo / step) * step;
+  const top = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let tick = bottom; tick <= top + 1e-9; tick += step) ticks.push(tick);
+  if (ticks.length < 2) ticks.push(bottom + step);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
 }

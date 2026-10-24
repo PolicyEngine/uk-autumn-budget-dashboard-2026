@@ -180,7 +180,6 @@ describe("the household calculation, from the fixture", () => {
     // And a programme to its parts
     fireEvent.click(within(table).getByRole("button", { name: /Income tax/ }));
     expect(within(table).getByText("On earnings")).toBeInTheDocument();
-    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
 
     // The top rows add up to net income, in every column
     const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
@@ -190,10 +189,20 @@ describe("the household calculation, from the fixture", () => {
     const sums = [0, 1, 2].map((col) => top.reduce((acc, row) => acc + row[col], 0));
     expect(sums).toEqual([65371, 69136, 3765]);
 
-    // How it is calculated: closed, under the table
-    const method = screen.getByText("How is this calculated?").closest("details");
-    expect(method).not.toHaveAttribute("open");
-    expect(within(method).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    // About these figures: closed under the table, then the rows' notes
+    // and the method as definition lists
+    const about = screen.getByRole("button", { name: "About these figures" });
+    expect(about).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/Elements are before the earnings taper/)).not.toBeInTheDocument();
+    fireEvent.click(about);
+    expect(about).toHaveAttribute("aria-expanded", "true");
+    const panel = about.closest(".disclosure");
+    expect(panel).toHaveClass("disclosure-in-card");
+    const terms = [...panel.querySelectorAll("dt")].map((term) => term.textContent);
+    expect(terms).toContain("Universal Credit");
+    expect(terms).toContain("Change by policy");
+    expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
+    expect(within(panel).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
   });
 
   it("marks you on the earnings chart, with the marginal rate in a closed expander", async () => {

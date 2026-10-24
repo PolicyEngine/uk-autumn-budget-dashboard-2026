@@ -273,7 +273,6 @@ export function resetSavedWizard() {
 function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
-  onShowMethod,
   year = DEFAULT_DISPLAY_YEAR,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
@@ -584,7 +583,6 @@ function HouseholdCalculator({
             result={householdResult}
             year={year}
             policies={policies}
-            onShowMethod={onShowMethod}
           />
         </div>
       )}

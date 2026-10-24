@@ -370,32 +370,15 @@ body {
   padding: 0;
 }
 
-.method-card a,
-.household-method-link a {
+.method-card a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
   text-underline-offset: 3px;
 }
 
-.method-card a:hover,
-.household-method-link a:hover {
+.method-card a:hover {
   text-decoration-color: currentColor;
-}
-
-/* One-line pointer from a card to its note on the Methodology view */
-.household-method-link {
-  margin: 0;
-  padding-top: 16px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-/* Under the household's results, with one rule above it, as under the
-   map */
-.household-method-link {
-  margin-top: 16px;
-  border-top: 1px solid var(--card-border);
 }
 
 .visually-hidden {

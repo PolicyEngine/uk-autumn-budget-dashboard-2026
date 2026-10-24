@@ -525,14 +525,6 @@ function App() {
     if (window.scrollY > top) window.scrollTo({ top });
   }, [activeTab]);
 
-  // Open the Methodology view at one of its sections
-  const showMethod = (sectionId) => {
-    handleTabChange("methodology");
-    setTimeout(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-  };
-
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   const yearShown = yearPillShown(activeTab);
 
@@ -645,7 +637,6 @@ function App() {
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
-            onShowMethod={showMethod}
             year={distributionalYear}
           />
         ) : (

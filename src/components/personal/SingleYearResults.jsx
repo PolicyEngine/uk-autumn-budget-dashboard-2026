@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
-import { METHOD_SECTIONS } from "../MethodologyTab";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { areaName, headlineVerb, money, policyRows, signedPercent } from "../../utils/singleYear";
 import PolicyBars from "./PolicyBars";
@@ -172,7 +171,7 @@ function Pending({ text }) {
  * then this dashboard's extras, change by policy and across earnings (with
  * the marginal tax rate in a closed expander).
  */
-export function SingleYearDetails({ result, year, policies, onShowMethod }) {
+export function SingleYearDetails({ result, year, policies }) {
   const yearLabel = fiscalYearTick(year);
   const { data, detailStatus, detailError, retry } = result;
   if (!data || result.status === "error") return null;
@@ -242,21 +241,6 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
           <Pending text="Calculating across earnings…" />
         )}
       </section>
-
-      {onShowMethod && (
-        <p className="household-method-link single-year-about">
-          <a
-            href={`?tab=methodology#${METHOD_SECTIONS.singleYear}`}
-            onClick={(event) => {
-              event.preventDefault();
-              onShowMethod(METHOD_SECTIONS.singleYear);
-            }}
-          >
-            About this calculation
-          </a>{" "}
-          is on the Methodology tab.
-        </p>
-      )}
     </div>
   );
 }
