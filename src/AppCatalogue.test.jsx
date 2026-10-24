@@ -4,6 +4,7 @@ import App from "./App";
 import fc from "fast-check";
 import { fixtureJson, fixtureText, IN_DATA } from "./test/publicationFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
+import { artifactSha256, jcsSha256, sha256Hex } from "./utils/publication/digest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -114,7 +115,7 @@ describe("an open page follows the publication", () => {
   };
   const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
 
-  it("replaces the figures when a newer manifest is published", async () => {
+  it("takes the full selection figures away when one selected measure is withdrawn", async () => {
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -124,7 +125,42 @@ describe("an open page follows the publication", () => {
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
+    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
+    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+  });
+
+  it("replaces an approved measure's figures with its newly verified artifact", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
+    render(<App />);
+    await screen.findByTestId("distributional-figures");
+
+    const next = twoMeasures();
+    next.revision += 1;
+    const entry = next.measures.alpha;
+    const previousArtifact = entry.artifact;
+    const receipt = fixtureJson(`${previousArtifact}/receipt.json`);
+    // A synthetic corrected output, bound through the production digest
+    // functions, not injected into the chart or publication loader.
+    const corrected = fixtureText(`${previousArtifact}/distributional_impact.csv`).replace(/,-?\d+(?:\.\d+)?(?=\r?\n|$)/g, ",42.25");
+    receipt.dashboard.files["distributional_impact.csv"] = await sha256Hex(corrected);
+    entry.outputs_sha256 = receipt.dashboard.digests.outputs_sha256 = await jcsSha256(receipt.dashboard.files);
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    entry.artifact = `artifacts/alpha/${entry.artifact_sha256.slice(0, 16)}`;
+    entry.approval = { ...entry.approval, outputs_sha256: entry.outputs_sha256, artifact_sha256: entry.artifact_sha256 };
+    const overrides = { "manifest.json": JSON.stringify(next), [`${entry.artifact}/receipt.json`]: JSON.stringify(receipt) };
+    for (const file of Object.keys(receipt.dashboard.files)) {
+      overrides[`${entry.artifact}/${file}`] = file === "distributional_impact.csv" ? corrected : fixtureText(`${previousArtifact}/${file}`);
+    }
+    vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides }));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await waitFor(() => {
+      const rows = JSON.parse(screen.getByTestId("distributional-figures").dataset.rows);
+      expect(rows.filter((row) => row.reform_id === "alpha").map((row) => row.value)).toEqual(Array(10).fill(42.25));
+    });
+    expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
     expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
   });
 
