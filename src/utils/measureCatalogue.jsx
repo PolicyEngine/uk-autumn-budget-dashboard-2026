@@ -64,10 +64,8 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   return {
     measures, displayable, manifest, tablesByKey, failures,
     byId: new Map(measures.map((measure) => [measure.id, measure])),
-    byName: new Map(measures.map((measure) => [measure.name, measure])),
     bySeriesKey: new Map(measures.map((measure) => [measure.seriesKey, measure])),
     policyColors: Object.fromEntries(displayable.map((measure) => [measure.seriesKey, measure.color])),
-    policyColorsByKey: Object.fromEntries(displayable.map((measure) => [measure.id, measure.color])),
     allPolicyNames: displayable.map((measure) => measure.seriesKey),
     revenueRaisingNames: new Set(displayable.filter((measure) => measure.direction === "revenue").map((measure) => measure.seriesKey)),
     combinedId: combinedIds.length === 1 ? combinedIds[0] : null,
