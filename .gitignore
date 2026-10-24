@@ -47,3 +47,7 @@ public/data/household_scatter_full.csv
 .env
 .env.local
 .env.*.local
+
+# Local W5 validation snapshots and commit storage
+/.w5-probes/
+/.w5-commits.git/

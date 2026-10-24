@@ -79,7 +79,11 @@ def publication():
         )
         stage(manifest, limited.path, **args)
         model_limit = model_limits.record(
-            model_limits.MODEL_LIMITS[0],
+            next(
+                limit
+                for limit in model_limits.MODEL_LIMITS
+                if limit.key == "state_pension_add_on_uprating"
+            ),
             ["gov.dwp.state_pension.new_state_pension.amount"],
         )
         model_limited = world.ready(
