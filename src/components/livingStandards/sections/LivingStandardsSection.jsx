@@ -12,7 +12,6 @@ import {
   formatPounds,
   formatPoundsKAxis,
   formatPoundsWholeAxis,
-  withBaseYear,
 } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
@@ -197,7 +196,7 @@ export default function LivingStandardsSection({ data }) {
           </Note>
         )
       }
-      boxes={[meta.headline_end_year_note, /_ahc$/.test(metric) && withBaseYear(meta.cpi_ahc_note, data)]}
+      boxes={[meta.headline_end_year_note, /_ahc$/.test(metric) && meta.cpi_ahc_note]}
       notes={[units && `Incomes are in ${units}.`]}
     >
       {chartData.length === 0 ? (

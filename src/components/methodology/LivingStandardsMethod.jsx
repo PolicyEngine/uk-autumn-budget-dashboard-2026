@@ -57,7 +57,7 @@ export default function LivingStandardsMethod() {
           items={[
             ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
             ["Data", dataset],
-            ["Status", "Demo output, unvalidated. The Budget views use a different engine version."],
+            ["Status", "Demo output, unvalidated. Same engine version as the Budget views."],
             meta.real_price_base && [
               "Prices",
               [`${fyDash(meta.real_price_base)} prices`, deflatorWords(meta.deflator)].filter(Boolean).join("; "),
