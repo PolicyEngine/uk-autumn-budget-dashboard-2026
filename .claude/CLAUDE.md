@@ -1,21 +1,23 @@
-# UK Autumn Budget Dashboard - Style & Architecture Guide
+# UK Autumn Budget 2026 dashboard: style and architecture guide
 
-When working on the UK Autumn Budget dashboard project, follow these comprehensive guidelines:
+When working on the UK Autumn Budget 2026 dashboard, follow these guidelines. What the dashboard shows, its architecture, local development, data generation, review and deployment are in the [README](../README.md); this file does not repeat them.
 
 ## Critical: Dependency Management
 
 ### uv.lock Controls Installed Versions
 **IMPORTANT**: The `uv.lock` file pins exact dependency versions. Manual `uv pip install` commands will be overridden by the lockfile on next `uv sync`.
 
-When upgrading dependencies (especially policyengine-uk):
+When upgrading a dependency:
 ```bash
 # CORRECT: Upgrade via lockfile
-uv lock --upgrade-package policyengine-uk
+uv lock --upgrade-package <package>
 uv sync
 
 # WRONG: This will be overridden by uv.lock
-uv pip install policyengine-uk==X.Y.Z
+uv pip install <package>==X.Y.Z
 ```
+
+For the model and data, the package is `policyengine`, never `policyengine-uk` (below).
 
 ### Verifying Installed Package Contents
 When checking if a package has specific changes:
@@ -43,19 +45,10 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 
 ## Visual Style Guide
 
-### Colour Palette
-- **Primary colour**: Teal `#319795` - use for main actions, highlights, and primary data series
-- **Secondary colours for charts**:
-  - `#5A8FB8` (Blue-grey)
-  - `#B8875A` (Tan)
-  - `#5FB88A` (Mint)
-  - `#4A7BA7` (Steel blue)
-  - `#C59A5A` (Gold)
-- **Neutral grey for baseline data**: `#9CA3AF`
-- **Text colours**:
-  - Primary text: `#374151`
-  - Secondary text: `#4B5563`
-  - Muted text: `#666`
+### Colour palette
+- Colours are tokens, not hex in components: the `--c-*` tokens in `src/app/globals.css` (on top of `@policyengine/ui-kit/theme.css`) give each colour a meaning (gain, loss, before, after, OBR, grid and so on).
+- Charts take the same colours from `src/utils/chartTheme.js`, the JS mirror of those tokens (SVG and PNG exports need literal values); `chartTheme.test.js` keeps the two equal.
+- Each measure's colour is in `src/utils/policyConfig.js`.
 
 ### Typography
 - **Heading case**: Sentence case everywhere (e.g., "Budgetary impact", not "Budgetary Impact")
@@ -81,34 +74,16 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 
 ## Component Architecture
 
-### Tech Stack
-- **Framework**: React 18.2+ with Vite
-- **Charts**: Recharts 3.2+ (built on D3)
-- **State management**: React hooks (useState, useEffect, useRef, useMemo)
-- **No UI library**: Custom CSS for full control
+### Tech stack
+The stack is in the README's "Architecture" section. For components: React 19 hooks for state, Recharts 2 for charts, Tailwind CSS 4 and `@policyengine/ui-kit` (theme and page shell) plus component CSS.
 
-### Key Components
-
-#### App.jsx (Main Controller)
-- Manages global state (selectedPolicies, policyParams, results)
-- Handles URL synchronization (policies and parameters in query string)
-- CSV data fetching and parsing
-- Auto-runs analysis when policies/parameters change
-- Coordinates between Sidebar and Results
-
-#### Sidebar.jsx
-- Policy selection (checkboxes)
-- Parameter configuration (sliders, number inputs)
-- Year selector (if needed)
-- Compact, sticky sidebar design
-
-#### Results.jsx
-- Introduction section with external links
-- Multiple chart sections with descriptions
-- Chart toggles (e.g., reduction vs absolute rate)
-- Distributional analysis with year selector
-- CSV/TXT data export functionality
-- AnimatedNumber component for smooth value transitions
+### Key components
+- `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; fetches the precomputed CSVs from `public/data/`; keeps tab, sub-tab, measures and Personal impact answers in the address.
+- `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people).
+- `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
+- `src/components/livingStandards/`: the Living standards tab.
+- `src/components/MethodologyTab.jsx`: Methodology.
+- `src/components/SubTabs.jsx` and `ViewTabs.jsx`: tab and sub-tab bars (`?sub=`).
 
 ### React Patterns
 - **Hooks**: Use useState, useEffect, useRef, useMemo, useCallback
@@ -156,9 +131,7 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 ```
 
 ### Chart Best Practices
-- Heights: 350px standard for all charts
-- Margins: Left margin 90px to accommodate rotated Y-axis labels
-- Grid: Light grey #e0e0e0, dashed 3 3
+- Grid, ticks, margins and legend layout: take them from `src/utils/chartTheme.js`, not literals (the example above shows the shape only)
 - Tooltips: Always include units and context
 - Legend: Positioned below chart with 20px padding
 - Responsive: Always wrap in ResponsiveContainer
@@ -172,27 +145,10 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 
 ## Data Handling
 
-### CSV Data Structure
-- Comprehensive data file: /data/all-results.csv
-- Distributional analysis files: /data/distributional-analysis-{policy}-{year}-{params}.csv
-- Parse with string split (no heavy CSV library needed)
-- Handle parameter matching for policies with configurable values
-
-### Data Processing Pattern
-```javascript
-// 1. Fetch CSV
-const response = await fetch('/data/filename.csv')
-const csvText = await response.text()
-
-// 2. Parse lines
-const lines = csvText.trim().split('\n')
-
-// 3. Process (skip header at index 0)
-for (let i = 1; i < lines.length; i++) {
-  const values = lines[i].split(',')
-  // Extract and convert values
-}
-```
+### Data files
+- The page reads files under `public/data/` written by `uk-budget-data` (for example `budgetary_impact.csv`, `distributional_impact.csv`, `winners_losers.csv`, `metrics.csv`, `regional.csv`, `income_curve.csv`, `living_standards_outlook.json`). Fetch them under the base path: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/<file>`.
+- Every file under `public/` is a publication and needs a review row; see "Review and sign-off" in the README.
+- The Living standards file's shape is in `docs/DATA_CONTRACT.md`.
 
 ## URL State Management
 - Sync state to URL: Update query params when policies/params change
@@ -220,26 +176,20 @@ for (let i = 1; i < lines.length; i++) {
 
 ## Dashboard Architecture
 
-### File Structure
+### File structure
 ```
 src/
+├── app/                 # Next.js App Router: layout.tsx, page.tsx, globals.css
 ├── App.jsx              # Main controller
-├── App.css              # App-level styles
-├── main.jsx             # Entry point
-├── index.css            # Global styles
-└── components/
-    ├── Sidebar.jsx      # Policy selection & params
-    ├── Sidebar.css
-    ├── PolicyForm.jsx   # Parameter configuration
-    ├── PolicyForm.css
-    ├── Results.jsx      # Charts & analysis display
-    └── Results.css
+├── components/          # React components (tabs, charts, calculator)
+├── hooks/               # Data-fetching hooks
+├── utils/               # Chart theme, downloads, policy config, API client
+└── uk_budget_data/      # Python package: CLI, API, measures, pipeline
 ```
 
 ### Routing
-- No router needed: Single page application
-- URL state: Use query parameters for shareable links
-- Navigation: Internal sections only
+- One Next.js page under the base path `/uk/autumn-budget-2026`; no client router
+- Tabs and sub-tabs are query parameters (`?tab=`, `?sub=`), so links are shareable
 
 ## Performance Considerations
 - Lazy loading: Delay loading indicator to avoid flash
@@ -265,10 +215,8 @@ src/
 
 ## Download & Export Features
 
-### Data Export Formats
-- TXT: Human-readable formatted text
-- CSV: Machine-readable structured data
-- Both include metadata (generation date, policy names)
+### Data export formats
+- Each chart's download menu (`ChartDownloadMenu.jsx`, `src/utils/chartDownloads.js`) offers CSV, PNG, SVG and TXT
 
 ### Export Pattern
 ```javascript
