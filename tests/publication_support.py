@@ -335,6 +335,7 @@ class World:
         data_limits=(),
         model_limits=(),
         name=None,
+        description="",
         with_tables=None,
         modifier_templates=None,
     ):
@@ -415,6 +416,7 @@ class World:
             rows = (tables or {}).get("budgetary_impact") or []
             name = rows[0]["reform_name"] if rows else default_name(key)
         inputs["name"] = name
+        inputs["description"] = description
         sim = self.sim(dataset, dataset_years, dataset_name)
 
         def build(file_digests):

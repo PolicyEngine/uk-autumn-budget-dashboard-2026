@@ -499,6 +499,8 @@ class ReceiptInputs:
     # as the limits are: a not-computable artifact has no tables to carry
     # it, and its entry's name is never the key.
     name: str = field(kw_only=True)
+    # The registry's public description, included in the artifact digest.
+    description: str = field(default="", kw_only=True)
     # One proof per bound modifier on each side: registered template ids,
     # or None for a hand-written modifier. Required so omission fails shut.
     modifier_templates: dict[str, list] = field(kw_only=True)
@@ -552,6 +554,7 @@ def build_receipt_document(
     dashboard = {
         "key": inputs.key,
         "name": inputs.name,
+        "description": inputs.description,
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,

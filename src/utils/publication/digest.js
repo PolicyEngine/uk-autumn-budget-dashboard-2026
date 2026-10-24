@@ -190,6 +190,15 @@ export async function receiptProblems(receipt, key, entry) {
   if (dashboard.key !== key) {
     problems.push("the receipt is for a different entry");
   }
+  if (dashboard.name !== entry.name) {
+    problems.push("the receipt's name is not the manifest's");
+  }
+  if (dashboard.description !== undefined && typeof dashboard.description !== "string") {
+    problems.push("the receipt's description is not text");
+  }
+  if ((dashboard.description ?? "") !== (entry.description ?? "")) {
+    problems.push("the receipt's description is not the manifest's");
+  }
   const digests = dashboard.digests ?? {};
   for (const field of [
     "outputs_sha256",

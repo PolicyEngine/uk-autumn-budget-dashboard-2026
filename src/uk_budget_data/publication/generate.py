@@ -377,6 +377,7 @@ def generate_artifacts(
                 data_limits=limits,
                 model_limits=held,
                 name=reform.name,
+                description=reform.description,
                 modifier_templates=(
                     modifier_templates
                     if modifier_templates is not None
