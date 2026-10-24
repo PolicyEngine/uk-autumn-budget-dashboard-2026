@@ -401,7 +401,10 @@ class DataPipeline:
 
         for key, filename in file_mapping.items():
             if key in data and len(data[key]) > 0:
-                save_csv(data[key], output_dir / filename)
+                frame = data[key]
+                if key == "budgetary_impact" and "reform_id" in frame:
+                    frame = with_members_column(frame)
+                save_csv(frame, output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
 
@@ -415,6 +418,30 @@ class DataPipeline:
                         data[key], directory / f"legacy_{key}.csv"
                     )
             console.print(f"[green]Saved legacy rows to {directory}/[/green]")
+
+
+def with_members_column(frame: pd.DataFrame) -> pd.DataFrame:
+    """Budgetary rows naming the members of the combined run (#105).
+
+    ``reform_members`` is ``a+b+c`` (ids, sorted) on the combined run's
+    rows and empty on a single measure's. The page uses the combined run's
+    totals only when its members are exactly the published measures; after
+    ``publish-measure`` adds one, until ``refresh-combined`` runs, it shows
+    the sum of measures instead.
+    """
+    from uk_budget_data.reforms import (
+        AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+        AUTUMN_BUDGET_2026_COMBINED_ID,
+    )
+
+    members = "+".join(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
+    return frame.assign(
+        reform_members=frame["reform_id"].map(
+            lambda reform_id: (
+                members if reform_id == AUTUMN_BUDGET_2026_COMBINED_ID else ""
+            )
+        )
+    )
 
 
 def aggregate_results(

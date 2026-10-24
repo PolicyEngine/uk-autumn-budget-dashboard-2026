@@ -175,6 +175,8 @@ class Row:
     kind: str
     sha256: str
     basis: str
+    # Only a pending row expires (scripts/check_public_data.py).
+    expires_on: str = ""
 
 
 @dataclass
@@ -837,7 +839,15 @@ def row_text(row: Row, reviewer: str, reviewed_on: str) -> str:
     """One row, quoted as the review list's own rows are."""
     buffer = io.StringIO()
     csv.writer(buffer, lineterminator="\n").writerow(
-        [row.path, row.kind, row.sha256, reviewer, reviewed_on, "", row.basis]
+        [
+            row.path,
+            row.kind,
+            row.sha256,
+            reviewer,
+            reviewed_on,
+            row.expires_on,
+            row.basis,
+        ]
     )
     return buffer.getvalue()
 

@@ -30,6 +30,11 @@ from uk_budget_data.publication.commands import (
     run_generate_artifacts,
     run_publish,
 )
+from uk_budget_data.publish_measure_cli import (
+    PUBLISH_MEASURE_COMMANDS,
+    add_publish_measure_parsers,
+    run_publish_measure_command,
+)
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
     get_reform,
@@ -176,6 +181,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_publish_parser(subparsers)
     add_geography_parser(subparsers)
+    add_publish_measure_parsers(subparsers)
 
     # Lifetime impact command
     lifetime_parser = subparsers.add_parser(
@@ -456,6 +462,8 @@ def main(args: list[str] = None) -> int:
         return run_publish(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
+    elif parsed.command in PUBLISH_MEASURE_COMMANDS:
+        return run_publish_measure_command(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -471,6 +479,13 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  geography - Results by region and constituency, disclosure "
             "controlled"
+        )
+        console.print(
+            "  publish-measure  - Budget day: one measure's rows, pending "
+            "review (#105)"
+        )
+        console.print(
+            "  refresh-combined - Budget day: the live measures combined"
         )
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."
