@@ -26,7 +26,8 @@ import {
   POLICY_COLORS,
   REVENUE_RAISING_NAMES,
 } from "./utils/policyConfig";
-import { DISPLAY_YEARS } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+import { buildBudgetData } from "./utils/budgetData";
 
 // Autumn Budget 2026 policy provisions
 const POLICIES = [
@@ -197,10 +198,10 @@ function App() {
   const [selectedPolicies, setSelectedPolicies] = useState(
     POLICIES.map((p) => p.id),
   );
-  // Default to 2029 so more policies have visible impact
-  const [selectedYear, setSelectedYear] = useState(2030);
-  // Shared year for distributional analysis charts (WaterfallChart and DistributionalChart)
-  const [distributionalYear, setDistributionalYear] = useState(2029);
+  // Both start on DEFAULT_DISPLAY_YEAR (2027-28); there is no ?year param
+  const [selectedYear] = useState(DEFAULT_DISPLAY_YEAR);
+  // The year every chart shows, chosen with the header pill
+  const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   // One example household for both household cards, so they always match
   const [exampleHouseholdId, setExampleHouseholdId] = useState(
     EXAMPLE_HOUSEHOLDS[0].id,
@@ -297,24 +298,13 @@ function App() {
         selectedPolicies.includes(row.reform_id),
       );
 
-      // Build budgetary impact data for chart (2026-2029)
-      // Always include all policy keys for smooth animations
-      const years = [2026, 2027, 2028, 2029, 2030];
-      const budgetData = years.map((year) => {
-        const dataPoint = { year };
-        let netImpact = 0;
-        POLICIES.forEach((policy) => {
-          const isSelected = selectedPolicies.includes(policy.id);
-          const dataRow = budgetaryData.find(
-            (row) => row.reform_id === policy.id && parseInt(row.year) === year,
-          );
-          const value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-          dataPoint[policy.name] = value;
-          netImpact += value;
-        });
-        dataPoint.netImpact = netImpact;
-        return dataPoint;
-      });
+      // One point per shown year, from the years the file covers (the
+      // year list used to be hardcoded and stopped at 2030-31)
+      const budgetData = buildBudgetData(
+        budgetaryData,
+        POLICIES,
+        selectedPolicies,
+      );
 
       // Calculate budgetary impact for 2026 (metrics always show 2026)
       const budgetaryImpact2026 = filteredBudgetary
@@ -657,15 +647,7 @@ function App() {
                     />
                     <section id="revenue" className="report-section hero-chart">
                       <BudgetaryImpactChart
-                        data={DISPLAY_YEARS.map(
-                          (year) =>
-                            results.budgetData.find((point) => point.year === year) ?? {
-                              // In the config, not yet in the published files
-                              year,
-                              netImpact: null,
-                              unpublished: true,
-                            },
-                        )}
+                        data={results.budgetData}
                         selectedYear={distributionalYear}
                       />
                       {/* OBR comparison: an expandable row at the foot of the card */}

@@ -29,6 +29,7 @@ import { fiscalYearLabel } from "../utils/publication/format";
 import { CHART_LOGO } from "../utils/chartLogo";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./RegionView.css";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 
 const TITLE = "Results by region";
 
@@ -76,7 +77,7 @@ function RegionRow({ region, row }) {
  * support band and tier. Withheld figures say "Not
  * published"; a region with no row says "No data". Nothing is summed.
  */
-function RegionView({ selectedPolicies = [], selectedYear = 2029, policies = [] }) {
+function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR, policies = [] }) {
   const regional = useGeographyData("regional");
   const [outcome, setOutcome] = useState("relative_change");
   const titleId = useId();

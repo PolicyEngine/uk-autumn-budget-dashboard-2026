@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import "./PillSelect.css";
+import PillChevron from "./PillChevron";
 
 /**
- * A pill that opens a short list of options: [badge] label ▼.
+ * A pill that opens a short list of options: [badge] label, then a chevron.
  *
  * The badge shows the chosen option; the list marks it with a check. The
  * band variant matches the year and policy pills in the title band (it
@@ -143,9 +144,7 @@ function PillSelect({
         ) : (
           face(chosen)
         )}
-        <span className="policy-selector-icon" aria-hidden="true">
-          {open ? "▲" : "▼"}
-        </span>
+        <PillChevron />
       </button>
 
       {open && (

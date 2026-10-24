@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
   ComposedChart,
   Bar,
@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Customized,
+  Scatter,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
@@ -32,7 +33,8 @@ import {
   legendLabelStyle,
   axisWidth,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion, netDot } from "../utils/chartMotion";
 
 // Order for distributional chart: good for households first, then bad
 // Every legend uses one order, set in policyConfig: revenue raisers, then
@@ -45,7 +47,44 @@ const CHART_DESCRIPTION =
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
-function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
+const POLICIES = [
+  { id: "two_child_limit", name: "2 child limit repeal" },
+  { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
+  { id: "rail_fares_freeze", name: "Rail fares freeze" },
+  { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
+  { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
+  {
+    id: "savings_tax_increase_2pp",
+    name: "Savings income tax increase (+2pp)",
+  },
+  {
+    id: "property_tax_increase_2pp",
+    name: "Property income tax increase (+2pp)",
+  },
+  {
+    id: "freeze_student_loan_thresholds",
+    name: "Freeze student loan repayment thresholds",
+  },
+  { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
+];
+
+const decileOrder = [
+  "1st",
+  "2nd",
+  "3rd",
+  "4th",
+  "5th",
+  "6th",
+  "7th",
+  "8th",
+  "9th",
+  "10th",
+];
+
+// Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
+const FLIP_SIGN_POLICIES = [];
+
+function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
 
@@ -57,69 +96,37 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   };
 
   // Build chart data for internal year
-  const POLICIES = [
-    { id: "two_child_limit", name: "2 child limit repeal" },
-    { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-    { id: "rail_fares_freeze", name: "Rail fares freeze" },
-    { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-    { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-    {
-      id: "savings_tax_increase_2pp",
-      name: "Savings income tax increase (+2pp)",
-    },
-    {
-      id: "property_tax_increase_2pp",
-      name: "Property income tax increase (+2pp)",
-    },
-    {
-      id: "freeze_student_loan_thresholds",
-      name: "Freeze student loan repayment thresholds",
-    },
-    { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
-  ];
+  // Memoised: a re-render with the same year and policies keeps the same
+  // array, so Recharts tweens once from the old year instead of restarting
+  const data = useMemo(() => {
+    const distributionalSelectedYear = rawData
+      ? rawData.filter(
+          (row) =>
+            parseInt(row.year) === selectedYear &&
+            selectedPolicies.includes(row.reform_id),
+        )
+      : [];
 
-  const decileOrder = [
-    "1st",
-    "2nd",
-    "3rd",
-    "4th",
-    "5th",
-    "6th",
-    "7th",
-    "8th",
-    "9th",
-    "10th",
-  ];
-  const distributionalSelectedYear = rawData
-    ? rawData.filter(
-        (row) =>
-          parseInt(row.year) === selectedYear &&
-          selectedPolicies.includes(row.reform_id),
-      )
-    : [];
-
-  // Policies that need sign flip (raise revenue but data shows positive household impact incorrectly)
-  const FLIP_SIGN_POLICIES = [];
-
-  const data = decileOrder.map((decile) => {
-    const dataPoint = { decile };
-    let netChange = 0;
-    POLICIES.forEach((policy) => {
-      const isSelected = selectedPolicies.includes(policy.id);
-      const dataRow = distributionalSelectedYear.find(
-        (row) => row.reform_id === policy.id && row.decile === decile,
-      );
-      let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
-      // Flip sign for policies with incorrect data sign
-      if (FLIP_SIGN_POLICIES.includes(policy.id)) {
-        value = -value;
-      }
-      dataPoint[policy.name] = value;
-      netChange += value;
+    return decileOrder.map((decile) => {
+      const dataPoint = { decile };
+      let netChange = 0;
+      POLICIES.forEach((policy) => {
+        const isSelected = selectedPolicies.includes(policy.id);
+        const dataRow = distributionalSelectedYear.find(
+          (row) => row.reform_id === policy.id && row.decile === decile,
+        );
+        let value = isSelected && dataRow ? parseFloat(dataRow.value) : 0;
+        // Flip sign for policies with incorrect data sign
+        if (FLIP_SIGN_POLICIES.includes(policy.id)) {
+          value = -value;
+        }
+        dataPoint[policy.name] = value;
+        netChange += value;
+      });
+      dataPoint.netChange = netChange;
+      return dataPoint;
     });
-    dataPoint.netChange = netChange;
-    return dataPoint;
-  });
+  }, [rawData, selectedPolicies, selectedYear]);
 
   // Calculate y-axis domain across ALL years, symmetrical around zero
   const calculateYAxisDomain = () => {
@@ -345,9 +352,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                   fill={POLICY_COLORS[policyName]}
                   name={policyName}
                   stackId="stack"
-                  animationDuration={500}
-                  animationBegin={0}
-                  hide={!hasNonZeroValues(policyName)}
+                  {...chartMotion()}
+                  // Always mounted (a zero series has no height), so a series that
+                  // starts in a later year grows in place instead of remounting
                 />
               ))}
               <Line
@@ -356,9 +363,20 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                 dataKey="netChange"
                 stroke="#000000"
                 strokeWidth={2}
-                dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
+                dot={false}
                 name="netChange"
-                animationDuration={500}
+                {...chartMotion()}
+                hide={activePolicies.length <= 1}
+              />
+              {/* The net dots as a Scatter: Recharts hides a Line's own dots while
+                  it animates, so they would vanish and pop back on every year
+                  change; a Scatter's points tween with the line instead */}
+              <Scatter
+                dataKey="netChange"
+                shape={netDot}
+                legendType="none"
+                tooltipType="none"
+                {...chartMotion()}
                 hide={activePolicies.length <= 1}
               />
               <Customized component={<ChartUnitLabel text="Change in net income (%)" />} />

@@ -28,6 +28,7 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -116,7 +117,7 @@ function GroupTooltip({ active, payload }) {
  * Cells are published per reform: one measure shows its own, every measure
  * the package's, and any other selection a notice.
  */
-function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
+function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const data = useHouseholdScatterData();

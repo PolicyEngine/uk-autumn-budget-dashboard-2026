@@ -112,3 +112,20 @@
     gap: 4px 14px;
   }
 }
+
+/* A year change (or the Play control) slides the dots, the connecting line
+   and the value labels to their new places instead of redrawing them */
+.obr-dumbbell-move {
+  transition: transform 850ms ease-in-out;
+}
+
+.obr-dumbbell-dot-move {
+  transition: cx 850ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-dumbbell-move,
+  .obr-dumbbell-dot-move {
+    transition: none;
+  }
+}

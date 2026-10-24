@@ -14,6 +14,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Scatter,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
@@ -54,6 +55,7 @@ import {
   youngPopulation,
 } from "../utils/ageImpact";
 import "./YoungPeopleSection.css";
+import { chartMotion, netDot } from "../utils/chartMotion";
 
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
@@ -290,9 +292,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                   name={name}
                   fill={POLICY_COLORS[name]}
                   stackId="stack"
-                  animationDuration={500}
-                  animationBegin={0}
-                  hide={!activeNames.includes(name)}
+                  {...chartMotion()}
+                  // Always mounted (a zero series has no height), so a series that
+                  // starts in a later year grows in place instead of remounting
                 />
               ))}
               <Line
@@ -301,8 +303,19 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 name="netChange"
                 stroke="#000000"
                 strokeWidth={2}
-                dot={{ fill: "#000000", stroke: "#ffffff", strokeWidth: 1.5, r: 3.5 }}
-                animationDuration={500}
+                dot={false}
+                {...chartMotion()}
+                hide={activeNames.length <= 1}
+              />
+              {/* The net dots as a Scatter: Recharts hides a Line's own dots while
+                  it animates, so they would vanish and pop back on every year
+                  change; a Scatter's points tween with the line instead */}
+              <Scatter
+                dataKey="netChange"
+                shape={netDot}
+                legendType="none"
+                tooltipType="none"
+                {...chartMotion()}
                 hide={activeNames.length <= 1}
               />
               <Customized component={<ChartUnitLabel text="Average change per person (£ a year)" />} />
@@ -429,8 +442,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow }) 
                   name={outcome.label}
                   fill={outcome.color}
                   stackId="share"
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 >
                   {/* The share on the segment, where it fits */}
                   <LabelList

@@ -1,0 +1,25 @@
+/* The pill chevron: a fixed 14px box, turned over while the list is open */
+.policy-selector-icon.pill-chevron,
+.pill-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  transition: transform 150ms ease;
+}
+
+.pill-chevron svg {
+  display: block;
+}
+
+[aria-expanded="true"] > .pill-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .policy-selector-icon.pill-chevron,
+  .pill-chevron {
+    transition: none;
+  }
+}

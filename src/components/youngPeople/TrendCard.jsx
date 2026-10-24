@@ -29,6 +29,7 @@ import {
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
 import { changeByYear, niceRange, pounds, signedPounds } from "./youngPeopleData";
+import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../../utils/chartMotion";
 
 /** The two lines: young people aged 16 to 24, and all ages. */
 export const SERIES = [
@@ -67,7 +68,20 @@ function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
   return (
     <g className="young-people-year-shading">
       {selected && !unpublishedYears.includes(selectedYear) && (
-        <rect x={selected.x} y={yAxis.y} width={selected.width} height={yAxis.height} fill={SELECTED_FILL} />
+        // Moved by a transform, so a year change slides the shading
+        <rect
+          x={0}
+          y={yAxis.y}
+          width={selected.width}
+          height={yAxis.height}
+          fill={SELECTED_FILL}
+          style={{
+            transform: `translateX(${selected.x}px)`,
+            transition: prefersReducedMotion()
+              ? undefined
+              : `transform ${CHART_MOTION_MS}ms ease-in-out, width ${CHART_MOTION_MS}ms ease-in-out`,
+          }}
+        />
       )}
       {unpublishedYears.map((year) => {
         const area = band(year);
@@ -213,7 +227,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 stroke={series.color}
                 strokeWidth={series.key === "young" ? 2.5 : 2}
                 dot={{ fill: series.color, stroke: "#ffffff", strokeWidth: 1.5, r: 4 }}
-                animationDuration={500}
+                {...chartMotion()}
               />
             ))}
             <Customized component={PolicyEngineLogo} />

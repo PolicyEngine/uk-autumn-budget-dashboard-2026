@@ -30,6 +30,7 @@ import {
 } from "../../utils/chartTheme";
 import { isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds, wrapWords } from "./youngPeopleData";
+import { chartMotion } from "../../utils/chartMotion";
 
 /** The two groups each measure is shown for. */
 export const GROUPS = [
@@ -177,8 +178,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                   name={group.label}
                   fill={group.color}
                   maxBarSize={18}
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 />
               ))}
               <Customized component={PolicyEngineLogo} />

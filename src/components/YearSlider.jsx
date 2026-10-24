@@ -1,9 +1,14 @@
 import { useEffect, useId, useRef, useState } from "react";
 import "./YearSlider.css";
+import PillChevron from "./PillChevron";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 
 // The years the dashboard shows (from 2027-28; see utils/displayYears.js)
 const YEARS = DISPLAY_YEARS;
+
+// Play shows each year for 2.25s: long enough for the charts' 850ms
+// tween (utils/chartMotion.js) to settle and the year to be read
+export const PLAY_STEP_MS = 2250;
 
 function YearSlider({ selectedYear, onYearChange }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -21,7 +26,7 @@ function YearSlider({ selectedYear, onYearChange }) {
           }
           return YEARS[currentIndex + 1];
         });
-      }, 1500); // Change year every 1.5 seconds
+      }, PLAY_STEP_MS);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -137,9 +142,21 @@ function YearSlider({ selectedYear, onYearChange }) {
           {label(selectedYear)}
         </span>
         <span className="policy-selector-label">{isPlaying ? "playing" : "year"}</span>
-        <span className="policy-selector-icon" aria-hidden="true">
-          {isPlaying ? "❚❚" : open ? "▲" : "▼"}
-        </span>
+        {isPlaying ? (
+          <span className="policy-selector-icon pill-chevron" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
+              <path
+                d="M5.5 4v8M10.5 4v8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+        ) : (
+          <PillChevron />
+        )}
       </button>
 
       {open && (

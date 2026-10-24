@@ -37,6 +37,8 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
 } from "../utils/chartTheme";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion } from "../utils/chartMotion";
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
@@ -54,7 +56,7 @@ const LEGEND_ITEMS = [
  */
 function EmploymentIncomeDiffChart({
   selectedPolicies,
-  selectedYear = 2029,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
   defaultHousehold = EXAMPLE_HOUSEHOLDS[1].id,
   household: controlledHousehold,
   onHouseholdChange,
@@ -227,8 +229,7 @@ function EmploymentIncomeDiffChart({
                   fillOpacity={0.6}
                   baseValue={0}
                   connectNulls={false}
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 />
               )}
               {hasNegative && (
@@ -241,8 +242,7 @@ function EmploymentIncomeDiffChart({
                   fillOpacity={0.6}
                   baseValue={0}
                   connectNulls={false}
-                  animationDuration={500}
-                  animationBegin={0}
+                  {...chartMotion()}
                 />
               )}
               <Customized component={<ChartUnitLabel text="Change in net income" />} />

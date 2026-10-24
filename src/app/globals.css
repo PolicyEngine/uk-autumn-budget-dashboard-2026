@@ -428,9 +428,14 @@ body {
   cursor: not-allowed;
 }
 
-.title-row .policy-selector-toggle:hover {
+.title-row .policy-selector-toggle:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.title-row .policy-selector-toggle:active:not(:disabled),
+.title-row .policy-selector-toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .title-row .policy-selector-toggle:focus-visible {

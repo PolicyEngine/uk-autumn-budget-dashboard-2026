@@ -256,13 +256,19 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     const w = approxWidth(text, 12);
     // Only where it fits inside the chart
     if (!fits(text, side, cx)) return null;
+    // Drawn at the origin and moved by a transform, so a year change
+    // slides the label with its dot (OBRDumbbellChart.css)
     return (
-      <g key={key}>
-        {backing(side === "left" ? tx - w : tx, cy, w)}
+      <g
+        key={key}
+        className="obr-dumbbell-move"
+        style={{ transform: `translate(${tx}px, ${cy}px)` }}
+      >
+        {backing(side === "left" ? -w : 0, 0, w)}
         <text
           className="obr-dumbbell-value"
-          x={tx}
-          y={cy}
+          x={0}
+          y={0}
           dy="0.35em"
           {...HALO}
           textAnchor={side === "left" ? "end" : "start"}
@@ -303,15 +309,24 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
     if (pePart && obrPart) {
       const xPe = x(row.pe);
       const xObr = x(row.obr);
+      // A unit line moved and stretched by a transform, so it slides with
+      // the dots; the stroke keeps its width (non-scaling-stroke)
       parts.push(
         <line
           key="gap"
-          className="obr-dumbbell-gap"
+          className="obr-dumbbell-gap obr-dumbbell-move"
           data-band={row.band.key}
-          x1={xPe}
-          x2={xObr}
-          y1={cy}
-          y2={cy}
+          x1={0}
+          x2={1}
+          y1={0}
+          y2={0}
+          style={{
+            transform: `translate(${Math.min(xPe, xObr)}px, ${cy}px) scaleX(${Math.max(
+              Math.abs(xObr - xPe),
+              0.001,
+            )})`,
+          }}
+          vectorEffect="non-scaling-stroke"
           stroke={row.band.colour}
           strokeWidth={3}
           strokeLinecap="round"
@@ -395,6 +410,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="obr-backing"
+          className="obr-dumbbell-dot-move"
           cx={x(row.obr)}
           cy={cy}
           r={OBR_RADIUS}
@@ -406,7 +422,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="pe"
-          className="obr-dumbbell-dot pe"
+          className="obr-dumbbell-dot pe obr-dumbbell-dot-move"
           cx={x(row.pe)}
           cy={cy}
           r={PE_RADIUS}
@@ -418,7 +434,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
       parts.push(
         <circle
           key="obr"
-          className="obr-dumbbell-dot obr"
+          className="obr-dumbbell-dot obr obr-dumbbell-dot-move"
           cx={x(row.obr)}
           cy={cy}
           r={OBR_RADIUS - 1}

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
 import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 
-function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const [comparisonData, setComparisonData] = useState(null);
-  const [showBehavioural, setShowBehavioural] = useState(true);
+  // Static by default: like for like with PolicyEngine's static estimates
+  const [showBehavioural, setShowBehavioural] = useState(false);
   // The comparison shows as a chart or as a table, never both
   const [view, setView] = useState("chart");
   const showTable = view === "table";
@@ -143,17 +144,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
       {/* Intro across the full width; the controls sit below it */}
       <div className="obr-intro-row">
         <p className="comparison-description">
-          PolicyEngine's static estimates, which leave out behavioural
-          responses, against the OBR's costings from the November 2025{" "}
+          PolicyEngine's static estimates against the OBR's November 2025
+          costings (
           <a
             href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Economic and Fiscal Outlook
+            EFO
           </a>
-          , in £ billion a year. Positive values raise revenue or reduce
-          spending; negative values do the opposite.
+          ), £bn a year; positive values raise revenue.
         </p>
       </div>
 
