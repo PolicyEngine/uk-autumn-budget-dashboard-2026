@@ -1,19 +1,5 @@
-/* The method note for figures by area, on the Methodology view */
-.geography-method p {
-  margin: 0;
-}
-
-/* The checks use the card's full width: no list indent or bullets */
-.geography-method ul {
-  margin: 12px 0;
-  padding-left: 0;
-  list-style: none;
-}
-
-.geography-method li {
-  margin-bottom: 8px;
-}
-
-.geography-method strong {
-  color: var(--pe-gray-800);
+/* The method note for figures by area, on the Methodology view. Its fact
+   grid is styled with the view's other grids (methodology/Methodology.css). */
+.geography-method .method-more {
+  margin-top: 16px;
 }
