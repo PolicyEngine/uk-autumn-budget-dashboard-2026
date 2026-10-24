@@ -361,7 +361,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Household scatter bands",
-                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart's change axis is symmetric-logarithmic, so the small bands near zero and the large ones both show.`,
+                  `Households are grouped by baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, and by change in net income, in bands that are narrow near zero and wider further out: edges at ±${SCATTER_CHANGE_EDGES}. Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end. The chart draws about 500 dots, as the 2025 dashboard's sample of households did: each group gets a share in proportion to its households, placed at random within the group. Its change axis runs from −£5,000 to £5,000, so the open bands fall outside it.`,
                 ],
                 [
                   "Gain, loss, no change",

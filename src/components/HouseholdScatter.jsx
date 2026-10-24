@@ -2,7 +2,6 @@ import { useRef } from "react";
 import {
   CartesianGrid,
   Customized,
-  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Scatter,
@@ -12,108 +11,107 @@ import {
   YAxis,
 } from "recharts";
 import { CHART_LOGO } from "../utils/chartLogo";
-import {
-  CHANGE_MAX,
-  CHANGE_MIN,
-  SCATTER_BINS,
-  toChangeAxis,
-} from "../utils/publication/scatter";
+import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
   CHANGE_AXIS_DOMAIN,
-  changeBandLabel,
-  HOUSEHOLDS_PER_DOT,
-  incomeBandLabel,
+  householdsPerDot,
+  INCOME_AXIS_DOMAIN,
   scatterCsv,
   scatterDots,
   scatterView,
 } from "../utils/householdScatter";
-import {
-  useNarrowViewport,
-  GRID_PROPS,
-  TICK_STYLE,
-  AXIS_LINE,
-  AXIS_TITLE_STYLE,
-  axisWidth,
-} from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import { TOOLTIP_PROPS } from "./ChartTooltip";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 
+// The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
+// 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
+// dot size and colours. Its dots were sampled households; these are not.
 const CHART_TITLE = "Household income impacts";
-const CHART_DESCRIPTION =
-  "Households by baseline income and the change in it. Each dot stands for about 20,000 households in a group of similar incomes and changes, placed at random within that group.";
-
-const pounds = (value) =>
-  `${value < 0 ? "-" : ""}£${new Intl.NumberFormat("en-GB", {
-    maximumFractionDigits: 0,
-  }).format(Math.abs(value))}`;
-const thousands = (value) => (value === 0 ? "£0" : `£${value / 1000}k`);
-const perDot = new Intl.NumberFormat("en-GB").format(HOUSEHOLDS_PER_DOT);
-const households = (value) =>
-  `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value)} households`;
-
-/** A shaded edge strip, named on hover ("Gains of £1,900 or more"). */
-function StripRect({ x, y, width, height, fill, fillOpacity, title }) {
-  if (![x, y, width, height].every(Number.isFinite)) return null;
-  return (
-    <rect
-      className="household-scatter-strip"
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      fill={fill}
-      fillOpacity={fillOpacity}
-    >
-      <title>{title}</title>
-    </rect>
-  );
-}
+const CHANGE_TICKS = [-5000, -2500, 0, 2500, 5000];
+const INCOME_TICKS = [0, 20000, 40000, 60000, 80000, 100000, 120000, 140000];
+const thousands = (value) => `${value / 1000}`;
+// 2025: Recharts' default scatter symbol (area 64, so r ≈ 4.5) at an
+// opacity of 0.5 to 0.95 by household weight, which its Cell set as both
+// `opacity` and `fill-opacity` (so a dot showed at about its square).
+// Every dot here stands for the same number of households, so all take
+// the 2025 sample's typical value (its median, 0.51), set both ways.
+const DOT_RADIUS = Math.sqrt(64 / Math.PI);
+const DOT_OPACITY = 0.51;
+const GRID = { strokeDasharray: "3 3", stroke: "#e0e0e0" };
+const TICK = { fontSize: 11, fill: "#666" };
+const AXIS_TITLE = { fontSize: 12, fill: "#374151" };
 
 const KEY = [
-  { label: "Gain", color: "#319795" },
-  { label: "Loss", color: "#D97706" },
+  { label: "Gains", color: "#319795" },
+  { label: "Losses", color: "#D97706" },
   { label: "No change", color: "#9CA3AF" },
 ];
 
-function CellTooltip({ active, payload }) {
+const number = (value) =>
+  new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
+const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
+const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
+
+const describe = (perDot) =>
+  `This chart plots net income change against baseline income. Each of about 500 dots stands for about ${roundedThousands(perDot)} households, placed at random within a group of households with similar incomes and changes. Green dots indicate gains, amber shows losses, and grey shows minimal change.`;
+const DESCRIPTION_LOADING =
+  "This chart plots net income change against baseline income. Each of about 500 dots stands for a group of households with similar incomes and changes. Green dots indicate gains, amber shows losses, and grey shows minimal change.";
+
+/** The tooltip, in the 2025 chart's style, describing the dot's group. */
+function GroupTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
+  const incomeTop = Math.min(
+    point.incomeBand + SCATTER_BINS.income_band_width,
+    SCATTER_BINS.income_max,
+  );
+  const kind = changeKind(point.changeBand, point.changeBandUpper);
+  const change =
+    kind === "zero"
+      ? "no change"
+      : `a change of ${pounds(point.changeBand)} to ${pounds(point.changeBandUpper)}`;
   return (
-    <div className="chart-tooltip">
-      <p className="chart-tooltip-label">{households(point.households)} in this group</p>
-      <div className="chart-tooltip-row">
-        <span className="chart-tooltip-swatch" style={{ background: "transparent" }} />
-        <span className="chart-tooltip-name">Baseline income</span>
-        <span className="chart-tooltip-value">{incomeBandLabel(point.incomeBand)}</span>
-      </div>
-      <div className="chart-tooltip-row">
-        <span className="chart-tooltip-swatch" style={{ background: colourFor(point) }} />
-        <span className="chart-tooltip-name">Change a year</span>
-        <span className="chart-tooltip-value">
-          {changeBandLabel(point.changeBand, point.changeBandUpper)}
-        </span>
-      </div>
+    <div
+      style={{
+        backgroundColor: "white",
+        padding: "10px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        fontSize: "12px",
+        maxWidth: "280px",
+        color: "#374151",
+      }}
+    >
+      <p style={{ margin: "2px 0" }}>
+        About <strong>{number(point.households)} households</strong> with income{" "}
+        <strong>
+          {pounds(point.incomeBand)}–{pounds(incomeTop)}
+        </strong>{" "}
+        and{" "}
+        <strong style={{ color: colourFor(point) }}>{change}</strong>
+      </p>
     </div>
   );
 }
 
 /**
- * Households by baseline net income and the change in it, from the binned
- * cells in household_scatter_binned.csv (£5,000 income bands by change
- * bands narrow near zero, from contract.scatter_bins.change_edges). The
- * change axis is symlog, so the small bands near zero and the large ones
- * both read. Each cell is drawn as about one dot per 20,000 weighted
- * households, placed at random (deterministically) inside the cell on that
- * axis, so the cloud reads as density; the no-change band is a line of dots
- * at £0, and the open-ended outer change bands sit in shaded strips beyond
- * the plotted range. No survey household is shown on its own (#30): a dot's
- * tooltip gives its cell.
+ * Households by baseline net income and the change in it, drawn as the
+ * 2025 dashboard drew its 500 sampled households: change on the x axis
+ * (fixed ±£5,000, ticks every £2,500), baseline household net income on
+ * the y axis (£0 to £150,000), a 500px plot, uniform dots coloured by gain,
+ * loss or no change, and changes beyond ±£5,000 off the plot.
+ *
+ * The dots come from the binned cells in household_scatter_binned.csv
+ * (£5,000 income bands by change bands): about 500 in all, shared out by
+ * each cell's weighted households and placed at random (deterministically)
+ * within the cell, so the cloud has the 2025 sample's density. No survey
+ * household is shown on its own (#30): a dot's tooltip gives its group.
  *
  * Cells are published per reform: one measure shows its own, every measure
  * the package's, and any other selection a notice.
@@ -130,63 +128,18 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
   });
   const yearLabel = fiscalYearLabel(selectedYear);
   const chartTitle = `${CHART_TITLE}, ${yearLabel}`;
-  const incomeTicks = [];
-  for (
-    let value = SCATTER_BINS.income_min;
-    value <= SCATTER_BINS.income_max;
-    value += narrow ? 50000 : 25000
-  ) {
-    incomeTicks.push(value);
-  }
-  // The change axis is symlog: positions are toChangeAxis(£). The outer
-  // bands, which hold every change beyond ±£5,000, sit in a marked strip
-  // beyond the plotted range.
-  const innerMax = toChangeAxis(CHANGE_MAX);
-  const innerMin = toChangeAxis(CHANGE_MIN);
-  const changeDomain = CHANGE_AXIS_DOMAIN;
-  // The strips' own ticks, at their middles, name them as open-ended
-  const upperTick = (innerMax + changeDomain[1]) / 2;
-  const lowerTick = (innerMin + changeDomain[0]) / 2;
-  const tickPounds = narrow
-    ? [0, 50, 100, 500, 1000]
-    : [0, 10, 50, 100, 250, 500, 1000, 2500];
-  const innerPounds = [
-    ...tickPounds.slice(1).map((value) => -value).reverse(),
-    ...tickPounds,
-  ];
-  const innerTicks = innerPounds.map((value) => toChangeAxis(value));
-  const poundsAt = new Map(
-    [...innerPounds, CHANGE_MIN, CHANGE_MAX].map((value) => [toChangeAxis(value), value]),
-  );
-  const changeTick = (value) => {
-    if (value === upperTick) return `≥ ${pounds(CHANGE_MAX)}`;
-    if (value === lowerTick) return `≤ ${pounds(CHANGE_MIN)}`;
-    return pounds(poundsAt.get(value) ?? 0);
-  };
-  const dots =
-    view.kind === "points"
-      ? scatterDots(view.points).map((dot) => ({ ...dot, fill: colourFor(dot) }))
-      : [];
-  const hasEdge = {
-    upper: dots.some((dot) => dot.edge === "upper"),
-    lower: dots.some((dot) => dot.edge === "lower"),
-  };
-  // A strip's tick only when the strip is drawn
-  // and, without a strip, the edge itself (±£5,000) on wide screens
-  const changeTicks = [
-    ...(hasEdge.lower ? [lowerTick] : narrow ? [] : [innerMin]),
-    ...innerTicks,
-    ...(hasEdge.upper ? [upperTick] : narrow ? [] : [innerMax]),
-  ];
-  const dotRadius = narrow ? 1.6 : 2;
+  const points = view.kind === "points" ? view.points : [];
+  const dots = scatterDots(points).map((dot) => ({ ...dot, fill: colourFor(dot) }));
+  const description =
+    view.kind === "points" ? describe(householdsPerDot(points)) : DESCRIPTION_LOADING;
 
   const exportName = `household-income-impacts-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
-    description: CHART_DESCRIPTION,
+    description,
     legendItems: KEY.map((item) => ({ ...item, type: "rect" })),
     logo: CHART_LOGO,
-    // The key is outside the chart's SVG: the whole SVG is the plot
+    // No Recharts legend: the whole SVG is the plot, so crop nothing
     reservedLegendHeight: 0,
   };
   const download =
@@ -206,7 +159,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
           <h3>
             <NoBreakYear text={chartTitle} />
           </h3>
-          <p className="chart-description">{CHART_DESCRIPTION}</p>
+          <p className="chart-description">{description}</p>
         </div>
         <ChartDownloadMenu
           download={download}
@@ -217,87 +170,54 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
         />
       </div>
 
-      {/* Rows shared with the map beside it */}
-      {/* The key sits in the row the map beside it uses for its controls */}
-      <div className="chart-controls household-scatter-controls">
-        <div className="scatter-key" aria-hidden="true">
-          {KEY.map((item) => (
-            <span key={item.label} className="scatter-key-item">
-              <span className="scatter-key-dot" style={{ background: item.color }} />
-              {item.label}
-            </span>
-          ))}
-          <span className="scatter-key-item">
-            <span className="scatter-key-dots" />
-            Each dot: about {perDot} households
-          </span>
-        </div>
-      </div>
+      {/* The row the map beside it uses for its controls: empty here, as
+          the 2025 chart had no legend (the description names the colours) */}
+      <div className="chart-controls" />
 
       <div className="chart-plot household-scatter-template-plot" ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 360 : 383}>
-          <ScatterChart margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-            <CartesianGrid {...GRID_PROPS} />
-            {hasEdge.upper && (
-              <ReferenceArea
-                y1={innerMax}
-                y2={changeDomain[1]}
-                fill="#F3F4F6"
-                fillOpacity={1}
-                stroke="none"
-                ifOverflow="hidden"
-                shape={(props) => (
-                  <StripRect {...props} title={`Gains of ${pounds(CHANGE_MAX)} or more`} />
-                )}
-              />
-            )}
-            {hasEdge.lower && (
-              <ReferenceArea
-                y1={changeDomain[0]}
-                y2={innerMin}
-                fill="#F3F4F6"
-                fillOpacity={1}
-                stroke="none"
-                ifOverflow="hidden"
-                shape={(props) => (
-                  <StripRect {...props} title={`Losses of ${pounds(CHANGE_MAX)} or more`} />
-                )}
-              />
-            )}
+        <ResponsiveContainer width="100%" height={500}>
+          <ScatterChart
+            margin={{ top: 20, right: narrow ? 12 : 30, left: 0, bottom: 30 }}
+          >
+            <CartesianGrid {...GRID} />
             <XAxis
               type="number"
-              dataKey="income"
-              domain={[SCATTER_BINS.income_min, SCATTER_BINS.income_max]}
-              ticks={incomeTicks}
+              dataKey="change"
+              name="Income change"
+              domain={CHANGE_AXIS_DOMAIN}
+              allowDataOverflow
+              ticks={CHANGE_TICKS}
+              interval={0}
               tickFormatter={thousands}
-              tick={TICK_STYLE}
-              axisLine={AXIS_LINE}
-              tickLine={false}
-              height={48}
+              tick={TICK}
+              height={60}
               label={{
-                value: "Baseline household net income (£ a year)",
+                value: "Net income change (£k)",
                 position: "insideBottom",
-                offset: 4,
-                style: AXIS_TITLE_STYLE,
+                offset: 10,
+                style: AXIS_TITLE,
               }}
             />
             <YAxis
               type="number"
-              dataKey="y"
-              domain={changeDomain}
-              ticks={changeTicks}
+              dataKey="income"
+              name="Baseline income"
+              domain={INCOME_AXIS_DOMAIN}
               allowDataOverflow
-              tickFormatter={changeTick}
-              tick={TICK_STYLE}
-              axisLine={false}
-              tickLine={false}
-              width={axisWidth([lowerTick, ...innerTicks, upperTick], changeTick)}
+              ticks={INCOME_TICKS}
               interval={0}
+              tickFormatter={thousands}
+              tick={TICK}
+              width={narrow ? 30 + Y_TITLE_GUTTER : 60 + Y_TITLE_GUTTER}
             />
-            <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
             {view.kind === "points" && (
-              <Tooltip {...TOOLTIP_PROPS} cursor={false} content={<CellTooltip />} />
+              <Tooltip
+                content={<GroupTooltip />}
+                cursor={{ strokeDasharray: "3 3" }}
+                isAnimationActive={false}
+              />
             )}
+            <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
             {view.kind === "points" && (
               <Scatter
                 data={dots}
@@ -306,14 +226,16 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = 2029 }) {
                   <circle
                     cx={cx}
                     cy={cy}
-                    r={dotRadius}
+                    r={DOT_RADIUS}
                     fill={payload.fill}
-                    fillOpacity={0.6}
+                    fillOpacity={DOT_OPACITY}
+                    opacity={DOT_OPACITY}
+                    strokeWidth={0}
                   />
                 )}
               />
             )}
-            <Customized component={<ChartUnitLabel text="Change in net income (£ a year)" />} />
+            <Customized component={<ChartUnitLabel text="Household net income (£k)" />} />
           </ScatterChart>
         </ResponsiveContainer>
         {view.kind !== "points" && (

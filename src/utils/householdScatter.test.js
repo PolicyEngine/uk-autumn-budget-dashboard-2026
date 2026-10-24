@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { toChangeAxis } from "./publication/scatter";
 import {
-  CHANGE_AXIS_DOMAIN,
+  allocateDots,
   changeBandLabel,
-  EDGE_STRIP,
   edgeOf,
+  householdsPerDot,
   incomeBandLabel,
   parseScatterCsv,
   scatterCsv,
@@ -157,8 +157,10 @@ describe("scatterDots", () => {
     { incomeBand: 30000, changeBand: 1, changeBandUpper: 10, households: 4000 },
     { incomeBand: 35000, changeBand: -10, changeBandUpper: -1, households: 40000 },
     { incomeBand: 60000, changeBand: 5000, changeBandUpper: 5000, households: 60000 },
-    { incomeBand: 90000, changeBand: -5000, changeBandUpper: -5000, households: 40000 },
+    { incomeBand: 145000, changeBand: -5000, changeBandUpper: -5000, households: 40000 },
+    { incomeBand: 145000, changeBand: 100, changeBandUpper: 150, households: 45000 },
   ];
+  const total = 40;
   const of = (dots, cell) =>
     dots.filter(
       (dot) =>
@@ -167,69 +169,55 @@ describe("scatterDots", () => {
         dot.changeBandUpper === cell.changeBandUpper,
     );
 
-  it("draws about one dot per 20,000 households, and at least one a cell", () => {
-    const dots = scatterDots(cells);
-    expect(cells.map((cell) => of(dots, cell).length)).toEqual([8, 3, 1, 2, 3, 2]);
+  it("shares the dots out by households, adding up to the total exactly", () => {
+    // 400,000 households over 40 dots: 10,000 a dot
+    expect(householdsPerDot(cells, total)).toBe(10000);
+    const counts = allocateDots(cells, total);
+    expect(counts).toEqual([15, 6, 0, 4, 6, 4, 5]);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(total);
+    expect(allocateDots(cells).reduce((a, b) => a + b, 0)).toBe(500);
   });
 
   it("places the same dots on every call", () => {
-    expect(scatterDots(cells)).toEqual(scatterDots(cells));
+    expect(scatterDots(cells, { total })).toEqual(scatterDots(cells, { total }));
   });
 
-  it("keeps each dot inside its own cell on the symlog axis, and carries the cell's count", () => {
-    for (const dot of scatterDots(cells).filter((d) => !d.edge)) {
-      expect(dot.income).toBeGreaterThan(dot.incomeBand);
+  it("keeps each dot inside its own cell, in £, and carries the cell's count", () => {
+    for (const dot of scatterDots(cells, { total })) {
+      expect(dot.income).toBeGreaterThanOrEqual(dot.incomeBand);
       expect(dot.income).toBeLessThan(dot.incomeBand + 5000);
-      expect(dot.y).toBeCloseTo(toChangeAxis(dot.change));
+      expect(dot.income).toBeLessThanOrEqual(150000);
+      expect(dot.change).toBeGreaterThanOrEqual(dot.changeBand);
+      expect(dot.change).toBeLessThanOrEqual(dot.changeBandUpper);
       expect(cells.map((cell) => cell.households)).toContain(dot.households);
     }
   });
 
-  it("spreads the mirrored half-open bands within their own edges", () => {
-    const dots = scatterDots(cells);
+  it("spreads each band within its own edges", () => {
+    const dots = scatterDots(cells, { total });
     for (const dot of of(dots, cells[0])) {
       expect(dot.change).toBeGreaterThan(-400);
       expect(dot.change).toBeLessThan(-300);
-    }
-    for (const dot of of(dots, cells[2])) {
-      expect(dot.change).toBeGreaterThan(1);
-      expect(dot.change).toBeLessThan(10);
     }
     for (const dot of of(dots, cells[3])) {
       expect(dot.change).toBeGreaterThan(-10);
       expect(dot.change).toBeLessThan(-1);
     }
+    const zero = of(dots, cells[1]);
+    expect(zero).toHaveLength(6);
+    for (const dot of zero) expect(Math.abs(dot.change)).toBeLessThan(1);
+    expect(new Set(zero.map((dot) => dot.income)).size).toBe(6);
   });
 
-  it("draws the no-change band as a line of dots at £0", () => {
-    const zero = of(scatterDots(cells), cells[1]);
-    expect(zero).toHaveLength(3);
-    for (const dot of zero) {
-      expect(dot.y).toBe(0);
-      expect(dot.change).toBe(0);
-      expect(dot.edge).toBeNull();
-    }
-    expect(new Set(zero.map((dot) => dot.income)).size).toBe(3);
-  });
-
-  it("draws the open-ended outer bands in the strips beyond the plotted range", () => {
+  it("counts the open outer bands but leaves them off the plot, as in 2025", () => {
     expect(edgeOf(-5000, -5000)).toBe("lower");
     expect(edgeOf(5000, 5000)).toBe("upper");
     expect(edgeOf(3000, 5000)).toBeNull();
     expect(edgeOf(-1, 1)).toBeNull();
-    const dots = scatterDots(cells);
-    const upper = dots.filter((d) => d.edge === "upper");
-    const lower = dots.filter((d) => d.edge === "lower");
-    expect(upper).toHaveLength(3);
-    expect(lower).toHaveLength(2);
-    for (const dot of upper) {
-      expect(dot.y).toBeGreaterThan(toChangeAxis(5000));
-      expect(dot.y).toBeLessThan(toChangeAxis(5000) + EDGE_STRIP);
-      expect(dot.y).toBeLessThan(CHANGE_AXIS_DOMAIN[1]);
-    }
-    for (const dot of lower) {
-      expect(dot.y).toBeLessThan(toChangeAxis(-5000));
-      expect(dot.y).toBeGreaterThan(CHANGE_AXIS_DOMAIN[0]);
-    }
+    const dots = scatterDots(cells, { total });
+    expect(of(dots, cells[4])).toHaveLength(0);
+    expect(of(dots, cells[5])).toHaveLength(0);
+    expect(dots).toHaveLength(total - 6 - 4);
+    for (const dot of dots) expect(Math.abs(dot.change)).toBeLessThan(5000);
   });
 });
