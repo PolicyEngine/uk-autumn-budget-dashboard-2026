@@ -9,6 +9,7 @@ import { AGE_BANDS, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { POLICY_COLORS } from "../utils/policyConfig";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
@@ -448,18 +449,14 @@ function MethodologyTab({ onShowTab }) {
             <h3 className="method-card-title">Lifetime model</h3>
             <LifecycleAbout />
           </div>
-          {/* Placeholder: the single-year calculation's method goes here
-              when it lands on Personal impact. */}
-          <div
-            id={METHOD_SECTIONS.singleYear}
-            className="card method-card method-anchor method-placeholder"
-          >
-            <h3 className="method-card-title">
-              Single-year calculation <span className="method-badge">To follow</span>
-            </h3>
-            <p>
-              It uses the same engine and measures as the national figures.
-              Its method will be described here.
+          <div id={METHOD_SECTIONS.singleYear} className="card method-card method-anchor">
+            <h3 className="method-card-title">Single-year calculation</h3>
+            <FactList items={SINGLE_YEAR_METHOD} />
+            <p className="method-more">
+              <ViewLink tab="personal" onShowTab={onShowTab}>
+                See the Personal impact tab
+              </ViewLink>
+              .
             </p>
           </div>
         </MethodSection>

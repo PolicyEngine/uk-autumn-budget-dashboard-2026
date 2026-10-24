@@ -276,24 +276,6 @@
   vertical-align: baseline;
 }
 
-/* The single-year calculation's slot, until its method lands */
-.method-placeholder {
-  border-style: dashed;
-  background: var(--pe-gray-50);
-}
-
-.method-badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--pe-teal-50);
-  color: var(--pe-teal-700);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  vertical-align: middle;
-}
-
 /* The lifetime model inside its card: its headings at level 4 */
 .method-card .lifecycle-about h4 {
   margin: 16px 0 8px;

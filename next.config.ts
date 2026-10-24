@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkLifecycleApiEnv } from './scripts/lifecycle-api-env.mjs';
+import { checkPersonalApiEnv } from './scripts/lifecycle-api-env.mjs';
 
 /**
  * The version uv.lock pins for a Python package, or '' if it is not there.
@@ -37,10 +37,10 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   : '/uk/autumn-budget-2026';
 
 
-// The Personal impact tab's API URL is baked in at build time: fail a
-// production build that lacks it, and every build that has it in the wrong
-// form (scripts/lifecycle-api-env.mjs).
-checkLifecycleApiEnv(process.env);
+// The Personal impact tab's two API URLs (lifecycle and household) are
+// baked in at build time: fail a production build that lacks either, and
+// every build that has one in the wrong form (scripts/lifecycle-api-env.mjs).
+checkPersonalApiEnv(process.env);
 
 const nextConfig: NextConfig = {
   ...(basePath ? { basePath } : {}),

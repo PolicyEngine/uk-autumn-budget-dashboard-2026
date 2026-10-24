@@ -1,0 +1,341 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import PersonalImpactTab from "../PersonalImpactTab";
+import { resetSavedWizard } from "../LifecycleCalculator";
+import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
+import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+
+const HOUSEHOLD_API = "https://api.test/api/household-impact";
+const LIFECYCLE_API = "https://api.test/api/lifecycle";
+
+let household;
+
+/** Answer the household API with `respond(body)`; the lifecycle API empty. */
+function serve(respond) {
+  household = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init = {}) => {
+      if (url === HOUSEHOLD_API) {
+        const body = JSON.parse(init.body);
+        household.push(body);
+        return respond(body, init);
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    }),
+  );
+}
+
+const json = (value, status = 200) =>
+  new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+
+beforeEach(() => {
+  resetSavedWizard();
+  clearHouseholdImpactCache();
+  window.history.replaceState({}, "", "/?tab=personal");
+  vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", HOUSEHOLD_API);
+  vi.stubEnv("NEXT_PUBLIC_LIFECYCLE_API_URL", LIFECYCLE_API);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.useRealTimers();
+});
+
+function renderTab(props = {}) {
+  const onSubTabChange = vi.fn();
+  const utils = render(
+    <PersonalImpactTab
+      selectedPolicies={POLICIES_FOR_TEST.map((policy) => policy.id)}
+      policies={POLICIES_FOR_TEST}
+      year={2029}
+      onSubTabChange={onSubTabChange}
+      {...props}
+    />,
+  );
+  return { ...utils, onSubTabChange };
+}
+
+function toResults() {
+  for (let i = 0; i < 5; i += 1) fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  fireEvent.click(screen.getByRole("button", { name: "See results" }));
+}
+
+const subTabs = () => within(screen.getByRole("tablist", { name: "Personal impact results" }));
+
+describe("Personal impact's result sub-tabs", () => {
+  it("open on Single-year effect, and keep the choice in ?sub=", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { onSubTabChange } = renderTab();
+    toResults();
+    expect(subTabs().getByRole("tab", { name: "Single-year effect" })).toHaveAttribute("aria-selected", "true");
+    expect(onSubTabChange).toHaveBeenLastCalledWith("single");
+    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
+    // The prices pill is the lifetime chart's
+    expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
+
+    fireEvent.click(subTabs().getByRole("tab", { name: "Multi-year effect" }));
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("multi");
+    expect(onSubTabChange).toHaveBeenLastCalledWith("multi");
+    expect(screen.getByRole("tabpanel", { name: "Multi-year effect" })).toHaveTextContent(
+      "The lifetime model does not use your region, home, loan plan, partner",
+    );
+    expect(screen.getByRole("button", { name: /Prices/ })).toBeInTheDocument();
+    expect(screen.queryByText("Net income before")).not.toBeInTheDocument();
+
+    fireEvent.click(subTabs().getByRole("tab", { name: "Single-year effect" }));
+    expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
+    expect(await screen.findByText("Net income before")).toBeInTheDocument();
+  });
+
+  it("open on Multi-year effect from a link, without asking the household API", async () => {
+    window.history.replaceState({}, "", "/?tab=personal&sub=multi");
+    serve((body) => json(householdAnswerFor(body)));
+    const { onSubTabChange } = renderTab();
+    expect(onSubTabChange).toHaveBeenLastCalledWith("multi");
+    toResults();
+    expect(subTabs().getByRole("tab", { name: "Multi-year effect" })).toHaveAttribute("aria-selected", "true");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(household).toEqual([]);
+  });
+});
+
+describe("the Single-year effect, from the fixture", () => {
+  it("asks for the headline first, then the breakdown, with the wizard's answers", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    expect(household.map((body) => body.include)).toEqual([[], ["by_policy", "sweep"]]);
+    const [first] = household;
+    expect(first.year).toBe(2029);
+    expect(first.household).toMatchObject({
+      age: 22,
+      employment_income: 30000,
+      region: "LONDON",
+      tenure: "RENT_PRIVATELY",
+      monthly_rent: 900,
+      student_loan_plan: "PLAN_2",
+      has_partner: false,
+      claims_universal_credit: false,
+      council_tax_band: "D",
+      salary_year: 2026,
+      children: [],
+    });
+    expect(first.household).not.toHaveProperty("children_ages");
+  });
+
+  it("shows the three tiles, the salary used and what is not included", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    toResults();
+    const panel = await screen.findByRole("tabpanel", { name: "Single-year effect" });
+    await within(panel).findByText("Net income before");
+    const values = [...panel.querySelectorAll(".single-year-tiles .stat-value")].map((node) => node.textContent);
+    expect(values).toEqual(["£65,371", "£69,136", "+£3,765 (+5.8%)"]);
+    expect(panel.querySelector(".single-year-change")).toHaveClass("is-gain");
+    expect(panel).toHaveTextContent(
+      "Your salary in 2029-30: £34,192, and your partner's £12,822, grown from 2026",
+    );
+    expect(panel).toHaveTextContent("Not included in this view: Rail fares freeze.");
+    // Renting (the wizard's default): the rent area the API used, once
+    expect(panel).toHaveTextContent("Rent area: Central Greater Manchester, the region's default.");
+    expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
+    // No child of 16 or over: no note on who counts as a child
+    expect(panel).not.toHaveTextContent("Who counts as a child");
+  });
+
+  it("draws one bar per policy that changes the household, adding up to the change", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Change in net income by policy/ });
+    const bars = [...container.querySelectorAll(".policy-bar")];
+    expect(bars.map((bar) => bar.dataset.policy)).toEqual([
+      "two_child_limit",
+      "threshold_freeze_extension",
+      "salary_sacrifice_cap",
+      "fuel_duty_freeze",
+    ]);
+    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    const sum = bars
+      .map((bar) => parse(bar.querySelector(".policy-bar-value").textContent))
+      .reduce((a, b) => a + b, 0);
+    const tile = container.querySelector(".single-year-change .stat-value").firstChild.textContent;
+    expect(sum).toBe(parse(tile));
+    expect(sum).toBe(3765);
+    expect(screen.getByText(/No effect on your household: Dividend tax increase/)).toBeInTheDocument();
+    expect(container.querySelector('[data-policy="interaction"]')).toBeNull();
+  });
+
+  it("lists taxes and benefits before and after, with no total row", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    toResults();
+    const table = await screen.findByRole("table");
+    const rowNames = within(table).getAllByRole("rowheader").map((cell) => cell.textContent.replace(/[▸▾]/g, ""));
+    expect(rowNames).toEqual([
+      "Income tax",
+      "National Insurance",
+      "Fuel duty",
+      "TV licence",
+      "Universal Credit",
+      "Child Benefit",
+      "Free childcare hours",
+      "Employment income",
+    ]);
+    expect(screen.getByText("The largest changes are to Universal Credit and income tax.")).toBeInTheDocument();
+    const incomeTax = within(table).getByRole("row", { name: /Income tax/ });
+    expect(incomeTax).toHaveTextContent("−£4,164−£4,360−£196");
+    expect(within(incomeTax).getByText("−£196")).toHaveClass("is-loss");
+    expect(screen.getByText(/Elements are before the earnings taper/)).toBeInTheDocument();
+    expect(within(table).queryByText(/Net income/)).not.toBeInTheDocument();
+    // Parts open on demand
+    expect(within(table).queryByText("On earnings")).not.toBeInTheDocument();
+    fireEvent.click(within(table).getByRole("button", { name: /Income tax/ }));
+    expect(within(table).getByText("On earnings")).toBeInTheDocument();
+  });
+
+  it("marks you on the earnings chart, with the marginal rate in a closed expander", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { container } = renderTab();
+    toResults();
+    await screen.findByRole("heading", { name: /Net income across earnings/ });
+    expect(container.querySelector(".earnings-you")).toHaveTextContent("You");
+    const expander = screen.getByRole("button", { name: "Marginal tax rate across earnings" });
+    expect(expander).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(expander);
+    expect(screen.getByText("At £34,192 your marginal tax rate is 68% before and 68% after.")).toBeInTheDocument();
+    const method = screen.getByRole("button", { name: "How this is calculated" });
+    expect(method).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(method);
+    expect(screen.getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
+  });
+
+  it("asks again for another year, and shows nothing without a policy", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const { rerender } = renderTab();
+    toResults();
+    await screen.findByText("Net income before");
+    rerender(
+      <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
+    );
+    await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
+    rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
+    expect(screen.getByText(/Select at least one policy/)).toBeInTheDocument();
+  });
+});
+
+describe("the Single-year effect's errors", () => {
+  it("names a refused child's age as the children's, not yours", async () => {
+    serve(() =>
+      json({ detail: [{ loc: ["body", "household", "children", 0, "age"], msg: "Input should be less than or equal to 19" }] }, 422),
+    );
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Children's ages: Input should be less than or equal to 19");
+  });
+
+  it("names the answers the API refused", async () => {
+    serve(() =>
+      json(
+        {
+          detail: [
+            { loc: ["body", "household", "monthly_rent"], msg: "Input should be less than or equal to 100000" },
+            { loc: ["body", "household", "age"], msg: "Input should be greater than or equal to 16" },
+          ],
+        },
+        422,
+      ),
+    );
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Results are not available here.");
+    expect(alert).toHaveTextContent("Monthly rent: Input should be less than or equal to 100000");
+    expect(alert).toHaveTextContent("Age: Input should be greater than or equal to 16");
+    expect(within(alert).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("says when the build has no API URL", async () => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    toResults();
+    expect(await screen.findByRole("alert")).toHaveTextContent("NEXT_PUBLIC_HOUSEHOLD_API_URL is not set");
+    expect(household).toEqual([]);
+  });
+
+  it("offers to try again after a server error, and recovers", async () => {
+    let fail = true;
+    serve((body) => (fail ? json({ detail: "boom" }, 500) : json(householdAnswerFor(body))));
+    renderTab();
+    toResults();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("answered with an error (500)");
+    fail = false;
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Net income before")).toBeInTheDocument();
+  });
+
+  it("keeps the headline when only the breakdown fails", async () => {
+    serve((body) =>
+      body.include.length ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body)),
+    );
+    renderTab();
+    toResults();
+    expect(await screen.findByText("The split by policy is not available.")).toBeInTheDocument();
+    expect(screen.getByText("The earnings chart is not available.")).toBeInTheDocument();
+    expect(screen.getByText("Net income before")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
+
+  it("gives up on a calculation that takes too long", async () => {
+    serve((_body, init) =>
+      new Promise((_resolve, reject) => {
+        init.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      }),
+    );
+    const { postHouseholdImpact, buildHouseholdRequest } = await import("../../utils/householdImpactApi");
+    const body = buildHouseholdRequest(
+      { current_age: 30, current_salary: 30000, children_ages: "" },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    await expect(postHouseholdImpact(body, { timeoutMs: 20 })).rejects.toMatchObject({
+      kind: "timeout",
+      message: expect.stringMatching(/took longer than/),
+    });
+  });
+});
+
+describe("the fixture", () => {
+  it("is a real answer: per-policy rows plus the residual make the change", () => {
+    const { by_policy: byPolicy, net_income: net } = HOUSEHOLD_FIXTURE;
+    const singles = byPolicy.measures.reduce((sum, row) => sum + row.change, 0);
+    expect(singles + byPolicy.residual).toBeCloseTo(net.change, 1);
+    expect(byPolicy.combined).toBe(net.change);
+    expect(Object.keys(HOUSEHOLD_FIXTURE).sort()).toEqual(
+      [
+        "area",
+        "by_policy",
+        "dependants",
+        "dependants_note",
+        "engine",
+        "fiscal_year",
+        "included",
+        "net_income",
+        "not_in_breakdown",
+        "not_modelled",
+        "programmes",
+        "salary_used",
+        "sweep",
+        "year",
+      ].sort(),
+    );
+    expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});

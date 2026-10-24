@@ -35,18 +35,36 @@ def lifecycle_answer(
     }
 
 
+def household_impact_answer(baseline=25_000.0, reform=24_895.2) -> dict:
+    """A /api/household-impact headline of the real route's shape."""
+    return {
+        "year": 2029,
+        "net_income": {
+            "baseline": baseline,
+            "reform": reform,
+            "change": round(reform - baseline, 2),
+        },
+        "by_policy": None,
+        "sweep": None,
+        "engine": {"policyengine": "6.10.1", "policyengine-uk": "2.132.6"},
+    }
+
+
 @contextmanager
 def serving(
     version: dict,
     impact: dict,
     health_status: int = 200,
     lifecycle: Optional[dict] = None,
+    household_impact: Optional[dict] = None,
 ):
-    """Serve /api/health, /api/version, /api/personal-impact and
-    /api/lifecycle/calculate; yield the base URL. Each POST body is
-    recorded on ``server.posted``."""
+    """Serve /api/health, /api/version, /api/personal-impact,
+    /api/lifecycle/calculate and /api/household-impact; yield the base URL.
+    Each POST body is recorded on ``server.posted``."""
     posted = []
     lifecycle = lifecycle_answer() if lifecycle is None else lifecycle
+    if household_impact is None:
+        household_impact = household_impact_answer()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -75,6 +93,8 @@ def serving(
                 self._send(200, impact)
             elif self.path == "/api/lifecycle/calculate":
                 self._send(200, lifecycle)
+            elif self.path == "/api/household-impact":
+                self._send(200, household_impact)
             else:
                 self._send(404, {"detail": "not found"})
 
