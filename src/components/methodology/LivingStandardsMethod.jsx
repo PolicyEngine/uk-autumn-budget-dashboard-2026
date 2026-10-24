@@ -2,8 +2,8 @@
 // and data its baseline runs on and their status, the prices and sources,
 // the notes on the data, and what the baseline leaves out. Each is said
 // here and nowhere else. Read from public/data/living_standards_outlook.json
-// (meta), the file the Living standards view draws; the notes are the
-// outlook pipeline's own (PolicyEngine/uk-living-standards-outlook).
+// (meta), the file the Living standards view draws; the notes are written by
+// this repo's pipeline (uk-budget-data living-standards).
 
 import { useEffect, useState } from "react";
 import FactList from "./FactList";

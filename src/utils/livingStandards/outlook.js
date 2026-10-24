@@ -1,7 +1,7 @@
 // Data loading and formatting helpers for the Living standards view, which
-// reads public/data/living_standards_outlook.json: a copy of outlook.json
-// from PolicyEngine/uk-living-standards-outlook (shape in that repo's
-// DATA_CONTRACT.md).
+// reads public/data/living_standards_outlook.json, written by
+// `uk-budget-data living-standards` (src/uk_budget_data/living_standards/;
+// shape in docs/DATA_CONTRACT.md).
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const OUTLOOK_PATH = "/data/living_standards_outlook.json";
