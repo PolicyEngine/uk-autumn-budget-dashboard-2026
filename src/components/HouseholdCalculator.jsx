@@ -367,6 +367,7 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  publicationKey = "",
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
@@ -408,6 +409,7 @@ function HouseholdCalculator({
     year,
     policies: householdPolicies,
     enabled: true,
+    publicationKey,
   });
   const noneSelected = householdPolicies.length === 0;
 

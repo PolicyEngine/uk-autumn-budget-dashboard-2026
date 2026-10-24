@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
+import { fixtureJson } from "../../test/publicationFixture";
 import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
@@ -42,6 +44,21 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const baseEntry = fixtureJson("manifest.json").measures.alpha;
+const testCatalogue = buildMeasureCatalogue({
+  manifest: {
+    ...fixtureJson("manifest.json"),
+    measures: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, {
+      ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
+    }])),
+    combined: {},
+  },
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, {}])),
+});
+function PublishedMeasures({ children }) {
+  return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;
+}
+
 function renderTab(props = {}) {
   return render(
     <PersonalImpactTab
@@ -50,6 +67,7 @@ function renderTab(props = {}) {
       year={2029}
       {...props}
     />,
+    { wrapper: PublishedMeasures },
   );
 }
 

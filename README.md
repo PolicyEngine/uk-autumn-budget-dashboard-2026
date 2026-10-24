@@ -1,6 +1,6 @@
 # UK Autumn Budget 2026 dashboard
 
-PolicyEngine's dashboard for the UK Autumn Budget on 28 October 2026. It shows how nine candidate Budget measures would change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. The measures are candidates modelled before the Budget, not announced policy, and the page says so on every tab that shows them. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
+PolicyEngine's dashboard for the UK Autumn Budget on 28 October 2026. It models how nine candidate Budget measures would change public finances and household incomes, by income decile, area and age, and for a household you describe, alongside a living standards outlook to 2031-32. The measures are candidates modelled before the Budget, not announced policy, and the page says so on every tab that shows them. Budget figures appear only after verified publication. Figures come from [PolicyEngine UK](https://policyengine.org/uk) microsimulation on the certified Microcosm dataset.
 
 Live: <https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026>
 
@@ -12,7 +12,7 @@ The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-ta
 |---|---|
 | Population impact | Budgetary impact, distributional impact, winners and losers, and results by region and constituency, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** and **Young people**. |
 | Personal impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR's pre-Budget forecast against the Budget forecast). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR's pre-Budget forecast against the Budget forecast). Sub-tabs: **Baseline outlook** and **Forecast changes**. The latter currently shows the pre-Budget forecast; the Budget-day comparison awaits verified provenance. |
 | Methodology | Data, model, measures, limitations, and the versions needed to replicate the figures. |
 
 Every chart downloads as CSV, PNG, SVG or plain text.
@@ -44,6 +44,24 @@ List them from the command line with `uv run uk-budget-data generate --list-refo
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
 **Engine.** The project depends on `policyengine[uk]` 6.10.2 (`pyproject.toml`, `uv.lock`), which pins policyengine-uk 2.132.6 and the certified Microcosm national dataset that goes with it. Population results are built with `pe.uk.managed_microsimulation()`, which downloads that dataset from a private Hugging Face repository and so needs `HUGGING_FACE_TOKEN`. Household calculations need no dataset. Upgrade the bundle, never policyengine-uk alone (see [`.claude/CLAUDE.md`](.claude/CLAUDE.md)).
+
+## Publication and verified routes
+
+Candidate definitions do not authorise publication. The page builds its measure catalogue from `public/data/manifest.json`, which must identify the 28 October 2026 Budget (`release: uk-autumn-budget-2026` and the matching `budget` id and date). Labels, descriptions, selection, chart series and colours come from that catalogue. A Budget row requires an approved or provisional entry, a supported year and an artifact verified against its receipt and manifest. Package figures require the combined run of exactly the displayable measures. Chart series use `measure:<id>` keys; ordering and colours depend on the measure id and supported budgetary direction.
+
+| Figures | Verified route |
+|---|---|
+| Public finances, deciles, winners and losers, metrics and household scatter | Receipt-verified artifacts through `loadDashboard` and `loadPublication` |
+| Example households and young people | Artifact tables rechecked against their receipts with `loadVerifiedTable` |
+| Regional and constituency results | SHA-256-bound release index plus `area_provenance.json`, with approved artifact, receipt and actual baseline/reform identities |
+| Personal impact | Live single-year household API after the same catalogue and year gate; held, unpublished or failed selections are unavailable, never zero |
+| OBR comparison | Unavailable until a 2026 source is verified; the existing CSV contains November 2025 costings |
+
+The page shell, Methodology, Living standards baseline and March 2026 forecast remain available without a Budget manifest. The Budget-day forecast remains unavailable until verified provenance exists; `post_published` alone does not authorise it. Missing, invalid, unreachable or other-Budget manifests remove Budget figures, with no fallback to unverified flat files. Focus and five-minute checks replace changed snapshots or restore verified results after recovery; Personal impact caches are bound to the publication snapshot.
+
+Before simulation, the area run compares its actual baseline and reform identities with approved receipts. `uk-budget-data publish index` binds exactly the CSV files the run wrote, their aliases and the provenance sidecar to the manifest revision and bytes; the page verifies those digests before showing figures. A changed or incomplete area snapshot stays unavailable until its matching index is published.
+
+Frontend tests include unfamiliar measure ids, held and stale entries, tampered artifacts and flat files, mismatched revisions and the real unreceipted `public/data`. Fast-check properties cover the publication gates, catalogue membership, colours and series keys; Hypothesis tests pin area identity and provenance invariants. The legacy-name guard covers frontend source; Python owns the candidate definitions.
 
 ## Local development
 
@@ -111,6 +129,7 @@ The figures derive from UKDS-licensed survey microdata, and this repository and 
 - Each file under `public/` must be listed in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`). Any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights.
 - The one exception is `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`: it takes no review entry, and may hold only one of the few texts that module writes.
 - Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) are reviewed as kind `disclosure_table` and must also pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
+- `area_provenance.json` is reviewed as `publication_provenance` under its closed metadata schema; each area CSV still passes disclosure validation.
 - Two checks enforce the list: `uv run python scripts/check_public_data.py` (CI's Public data check) and `bun scripts/check-public-files.mjs` (run by `bun run build`, so a deploy fails too). They print file paths and rule names, never values.
 - `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate).
 - `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.

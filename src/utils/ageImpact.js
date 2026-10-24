@@ -12,7 +12,6 @@
  * from a single policy's row or, with every policy selected, from the
  * combined run; any other selection has none.
  */
-import { COMBINED_REFORM_ID } from "./policyConfig";
 
 /**
  * The age bands, in order, with a label for the page and a short one: the
@@ -54,7 +53,7 @@ export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
 
 /**
  * One point per age band: each selected policy's mean change (keyed by its
- * name), the net change, and whether the band is too thin to show.
+ * namespaced id), the net change, and whether the band is too thin to show.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string, name: string}>} policies - Every policy
@@ -67,19 +66,23 @@ export function meanChangeByBand(rows, policies, selected, year) {
     const point = { band: band.key, label: band.label, short: band.short };
     let net = 0;
     let suppressed = false;
+    let incomplete = selected.some((id) => !policies.some((policy) => policy.id === id));
     for (const policy of policies) {
-      const row = selected.includes(policy.id)
+      const isSelected = selected.includes(policy.id);
+      const row = isSelected
         ? yearRows.find((r) => r.reform_id === policy.id && r.age_band === band.key)
         : null;
       if (row && row.sample_size < MIN_SAMPLE_SIZE) suppressed = true;
-      const value = row ? row.mean_change : 0;
-      point[policy.name] = value;
-      net += value;
+      const value = row && Number.isFinite(row.mean_change) ? row.mean_change : null;
+      if (isSelected && value === null) incomplete = true;
+      point[policy.seriesKey ?? `measure:${policy.id}`] = value;
+      if (value !== null) net += value;
     }
-    point.netChange = net;
+    point.netChange = incomplete ? null : net;
+    point.incomplete = incomplete;
     point.suppressed = suppressed;
     if (suppressed) {
-      for (const policy of policies) point[policy.name] = 0;
+      for (const policy of policies) point[policy.seriesKey ?? `measure:${policy.id}`] = null;
       point.netChange = null;
     }
     return point;
@@ -88,13 +91,17 @@ export function meanChangeByBand(rows, policies, selected, year) {
 
 /**
  * The run whose rows hold non-additive statistics for this selection: the
- * policy's own run when one is selected, the combined run when all are,
- * else null.
+ * policy's own run when one is selected, the package's combined run
+ * (`combinedId`, the catalogue's) when every displayable measure is, else
+ * null. A held measure is never part of the package.
  */
-export function wholeSelectionRun(policies, selected) {
-  if (selected.length === 1) return selected[0];
-  if (selected.length > 1 && policies.every((policy) => selected.includes(policy.id))) {
-    return COMBINED_REFORM_ID;
+export function wholeSelectionRun(policies, selected, combinedId = null) {
+  const offered = policies.filter((policy) => policy.displayable !== false);
+  if (selected.length === 1) {
+    return offered.some((policy) => policy.id === selected[0]) ? selected[0] : null;
+  }
+  if (selected.length > 1 && selected.length === offered.length && offered.every((policy) => selected.includes(policy.id))) {
+    return combinedId ?? null;
   }
   return null;
 }
@@ -118,10 +125,10 @@ export function meanChangeBySingleAge(rows, policies, selected, year) {
   for (let age = 0; age <= SINGLE_AGE_TOP; age += 1) {
     const key = singleAgeKey(age);
     let net = 0;
-    let complete = chosen.length > 0;
+    let complete = chosen.length > 0 && chosen.length === selected.length;
     for (const policy of chosen) {
       const row = byKey.get(`${policy.id}|${key}`);
-      if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
         complete = false;
         break;
       }
@@ -139,8 +146,8 @@ export function meanChangeBySingleAge(rows, policies, selected, year) {
  * group whose row is missing or too thin has `row: null` and
  * `suppressed: true`.
  */
-export function sharesByGroup(rows, policies, selected, year) {
-  const run = wholeSelectionRun(policies, selected);
+export function sharesByGroup(rows, policies, selected, year, combinedId = null) {
+  const run = wholeSelectionRun(policies, selected, combinedId);
   if (!run) return null;
   const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
   if (!yearRows.length) return null;

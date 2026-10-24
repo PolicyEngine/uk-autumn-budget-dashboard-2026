@@ -1,4 +1,5 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { parseScatterCsv, SCATTER_FILE } from "../utils/householdScatter";
 
 /**
@@ -68,7 +69,14 @@ export function useHouseholdScatterData() {
     [key],
   );
   const getSnapshot = () => entries.get(key)?.state ?? LOADING;
-  return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
+  const state = useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
+  const catalogue = useMeasureCatalogue();
+  return useMemo(() => {
+    if (state.status !== "ready" || (!catalogue.manifest && catalogue.measures.length === 0)) return state;
+    return { ...state, rows: state.rows.filter((row) =>
+      isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
+    ) };
+  }, [state, catalogue]);
 }
 
 /** Forget the fetched file (for tests). */

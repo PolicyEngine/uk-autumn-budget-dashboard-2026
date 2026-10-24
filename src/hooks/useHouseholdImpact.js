@@ -35,12 +35,12 @@ const DEBOUNCE_MS = 400;
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "" }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
   );
-  const key = requestKey(body);
+  const key = `${publicationKey}:${requestKey(body)}`;
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
