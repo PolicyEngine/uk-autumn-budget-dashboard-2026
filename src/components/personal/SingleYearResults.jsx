@@ -3,14 +3,7 @@ import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
 import { METHOD_SECTIONS } from "../MethodologyTab";
 import { fiscalYearTick } from "../../utils/chartTheme";
-import {
-  SINGLE_YEAR_METHOD,
-  areaName,
-  money,
-  policyRows,
-  signedMoney,
-  signedPercent,
-} from "../../utils/singleYear";
+import { areaName, headlineVerb, money, policyRows, signedPercent } from "../../utils/singleYear";
 import PolicyBars from "./PolicyBars";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
@@ -93,9 +86,9 @@ export function showDependantsNote(data) {
 const changeClass = (value) => (value > 0 ? "is-gain" : value < 0 ? "is-loss" : "is-zero");
 
 /**
- * The Single-year effect inside the wizard's card: the lede, the three
- * tiles (the only place the totals appear), the salary used and what is
- * not included.
+ * The Single-year effect inside the wizard's card: the lede, the headline
+ * sentence (the only place the change appears), the salary used and what
+ * is not included.
  */
 export function SingleYearHeadline({ result, year, policies = [], noPolicies, renting = false }) {
   const yearLabel = fiscalYearTick(year);
@@ -116,7 +109,7 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
   return (
     <div className="single-year-headline" aria-busy={status === "loading"}>
       <p className="single-year-lede">
-        Your household&apos;s net income in {yearLabel}, with and without the selected policies.
+        Your household&apos;s net income in {yearLabel}, before and after the selected policies.
         {showUpdating && <span className="single-year-updating"> Updating…</span>}
       </p>
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
@@ -127,27 +120,21 @@ export function SingleYearHeadline({ result, year, policies = [], noPolicies, re
       )}
       {data && status !== "error" && (
         <>
-          <div className={`stat-tiles-row single-year-tiles ${stale ? "is-stale" : ""}`} style={{ "--stat-count": 3 }}>
-            <div className="stat-tile">
-              <p className="stat-value">{money(totals.before)}</p>
-              <p className="stat-label">Net income before</p>
-              <p className="stat-sub">Pre-Budget law, {yearLabel}</p>
-            </div>
-            <div className="stat-tile">
-              <p className="stat-value">{money(totals.after)}</p>
-              <p className="stat-label">Net income after</p>
-              <p className="stat-sub">With the selected policies, {yearLabel}</p>
-            </div>
-            <div className={`stat-tile single-year-change ${changeClass(totals.change)}`}>
-              <p className="stat-value">
-                {signedMoney(totals.change)}
-                {signedPercent(totals.change, totals.before) && (
-                  <span className="stat-extra"> ({signedPercent(totals.change, totals.before)})</span>
-                )}
-              </p>
-              <p className="stat-label">Change a year</p>
-              <p className="stat-sub">{totals.change > 0 ? "Higher" : totals.change < 0 ? "Lower" : "Unchanged"} with the selected policies</p>
-            </div>
+          {/* The headline, as Spring Statement 2026 words it: one sentence,
+              the change in it; the before and after are in the breakdown */}
+          <div className={`single-year-banner ${changeClass(totals.change)} ${stale ? "is-stale" : ""}`}>
+            <p>
+              {`The selected policies would ${headlineVerb(totals.change)} your household's annual net income`}
+              {totals.change !== 0 && (
+                <>
+                  {" "}by <span className="single-year-amount">{money(Math.abs(totals.change))}</span>
+                  {signedPercent(totals.change, totals.before) && (
+                    <span className="single-year-pct"> ({signedPercent(totals.change, totals.before)})</span>
+                  )}
+                </>
+              )}{" "}
+              in {yearLabel}
+            </p>
           </div>
           <div className="single-year-notes">
             {salaryNote(data, yearLabel) && <p>{salaryNote(data, yearLabel)}</p>}
@@ -180,9 +167,10 @@ function Pending({ text }) {
 }
 
 /**
- * The Single-year effect below the wizard's card: change by policy,
- * change by tax and benefit, and across earnings (with the marginal tax
- * rate in a closed expander), then how it is calculated.
+ * The Single-year effect below the wizard's card, in Spring Statement
+ * 2026's order: the breakdown of net income (with how it is calculated),
+ * then this dashboard's extras, change by policy and across earnings (with
+ * the marginal tax rate in a closed expander).
  */
 export function SingleYearDetails({ result, year, policies, onShowMethod }) {
   const yearLabel = fiscalYearTick(year);
@@ -194,6 +182,26 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
 
   return (
     <div className="single-year-details">
+      <SectionHeading
+        title="Breakdown of household net income"
+        subtitle="Market income, taxes and benefits before and after the selected policies. Open a row to see each tax or benefit."
+      />
+      <section className="report-section">
+        {data.programmes ? (
+          <ProgrammeTable
+            programmes={data.programmes}
+            totals={totals}
+            bars={bars?.all}
+            yearLabel={yearLabel}
+            engine={data.engine}
+          />
+        ) : (
+          <div className="card single-year-card">
+            <p className="single-year-quiet">The breakdown is not available for this answer.</p>
+          </div>
+        )}
+      </section>
+
       <SectionHeading
         title="Change by policy"
         subtitle="How much each selected policy adds to or takes from your household's net income."
@@ -207,20 +215,6 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
           </div>
         ) : (
           <Pending text="Working out each policy's share…" />
-        )}
-      </section>
-
-      <SectionHeading
-        title="Change by tax and benefit"
-        subtitle="Each tax and benefit before and after the selected policies."
-      />
-      <section className="report-section">
-        {data.programmes ? (
-          <ProgrammeTable programmes={data.programmes} totals={totals} bars={bars?.all} yearLabel={yearLabel} />
-        ) : (
-          <div className="card single-year-card">
-            <p className="single-year-quiet">The breakdown by tax and benefit is not available for this answer.</p>
-          </div>
         )}
       </section>
 
@@ -249,37 +243,20 @@ export function SingleYearDetails({ result, year, policies, onShowMethod }) {
         )}
       </section>
 
-      <section className="report-section single-year-about">
-        <Disclosure title="How this is calculated">
-          <ul className="single-year-method">
-            {SINGLE_YEAR_METHOD.map(([term, text]) => (
-              <li key={term}>
-                <strong>{term}.</strong> {text}
-              </li>
-            ))}
-            {data.engine?.policyengine && (
-              <li>
-                <strong>Versions.</strong> policyengine {data.engine.policyengine}
-                {data.engine["policyengine-uk"] ? `, policyengine-uk ${data.engine["policyengine-uk"]}` : ""}.
-              </li>
-            )}
-          </ul>
-        </Disclosure>
-        {onShowMethod && (
-          <p className="lifecycle-method-link">
-            <a
-              href={`?tab=methodology#${METHOD_SECTIONS.singleYear}`}
-              onClick={(event) => {
-                event.preventDefault();
-                onShowMethod(METHOD_SECTIONS.singleYear);
-              }}
-            >
-              About this calculation
-            </a>{" "}
-            is on the Methodology tab.
-          </p>
-        )}
-      </section>
+      {onShowMethod && (
+        <p className="lifecycle-method-link single-year-about">
+          <a
+            href={`?tab=methodology#${METHOD_SECTIONS.singleYear}`}
+            onClick={(event) => {
+              event.preventDefault();
+              onShowMethod(METHOD_SECTIONS.singleYear);
+            }}
+          >
+            About this calculation
+          </a>{" "}
+          is on the Methodology tab.
+        </p>
+      )}
     </div>
   );
 }

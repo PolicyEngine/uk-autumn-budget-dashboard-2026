@@ -9,6 +9,8 @@ import {
 } from "./householdImpactApi";
 import {
   areaName,
+  groupTotals,
+  headlineVerb,
   pinnedRound,
   policyRows,
   programmeGroups,
@@ -17,6 +19,7 @@ import {
 } from "./singleYear";
 import { headlineTotals } from "../components/personal/SingleYearResults";
 import { WIZARD_DEFAULTS } from "../components/LifecycleCalculator";
+import { DEFAULT_SALARY, REGIONAL_RENT } from "./householdDefaults";
 import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
 
@@ -32,12 +35,24 @@ describe("buildHouseholdRequest", () => {
       { ...WIZARD_DEFAULTS, children_ages: "4, 7", monthly_childcare: 400, has_partner: true },
       { year: 2029, policies: ["two_child_limit"], include: ["by_policy"] },
     );
+    // Rent left as prefilled: the region's average private rent (ONS)
     expect(family.household).toMatchObject({
       children: [{ age: 4 }, { age: 7 }],
       monthly_childcare: 400,
-      monthly_rent: 900,
-      partner_employment_income: 25000,
+      region: "NORTH_WEST",
+      monthly_rent: REGIONAL_RENT.NORTH_WEST,
+      partner_employment_income: DEFAULT_SALARY,
     });
+    const entered = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, region: "LONDON", monthly_rent: 1200 },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(entered.household.monthly_rent).toBe(1200);
+    const london = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, region: "LONDON" },
+      { year: 2029, policies: ["two_child_limit"] },
+    );
+    expect(london.household.monthly_rent).toBe(REGIONAL_RENT.LONDON);
     expect(family.include).toEqual(["by_policy"]);
     // Only fields the API's HouseholdAnswersRequest takes (it refuses others)
     expect(Object.keys(family.household).sort()).toEqual(
@@ -192,8 +207,10 @@ describe("programmeGroups", () => {
   it("shows taxes as negative amounts, in sentence case, and hides rows that are £0 throughout", () => {
     const data = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
     const groups = programmeGroups(data.programmes);
-    expect(groups.map((group) => group.label)).toEqual(["Taxes", "Benefits", "Earnings and other income"]);
-    const tax = groups[0].rows.find((row) => row.id === "income_tax");
+    // Spring Statement's top rows, in its order; pension contributions from
+    // pay are a row of their own when the household has them
+    expect(groups.map((group) => group.label)).toEqual(["Market income", "Taxes", "Benefits"]);
+    const tax = groups.find((group) => group.id === "tax").rows.find((row) => row.id === "income_tax");
     expect(tax.label).toBe("Income tax");
     expect(tax.before).toBeCloseTo(-4163.65);
     expect(tax.change).toBeCloseTo(-196.18);
@@ -216,7 +233,7 @@ describe("programmeGroups", () => {
 
   it("keeps a note only for a row it shows", () => {
     const groups = programmeGroups(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).programmes);
-    expect(programmeNotes(groups).map((item) => item.id)).toEqual(["fuel_duty", "universal_credit", "free_childcare", "employment_income"]);
+    expect(programmeNotes(groups).map((item) => item.id)).toEqual(["employment_income", "fuel_duty", "universal_credit", "free_childcare"]);
   });
 
   it("drops employment income's pay-cut note in a year without the pay cut", () => {
@@ -315,5 +332,33 @@ describe("areaName", () => {
   it("names a rent area from the API's BRMA", () => {
     expect(areaName("INNER_SOUTH_EAST_LONDON")).toBe("Inner South East London");
     expect(areaName(null)).toBeNull();
+  });
+});
+
+describe("the breakdown's top rows", () => {
+  it("add up to net income before and after, with pension contributions on their own", () => {
+    const data = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
+    const totals = headlineTotals(data.net);
+    const groups = groupTotals(roundProgrammeGroups(programmeGroups(data.programmes), totals));
+    for (const side of ["before", "after", "change"]) {
+      expect(groups.reduce((sum, group) => sum + group.shown[side], 0)).toBe(totals[side]);
+    }
+    const programmes = [
+      ...HOUSEHOLD_FIXTURE.programmes,
+      { id: "pension_contributions", group: "tax", baseline: 1200, reform: 1200, change: 0, children: [] },
+    ];
+    const withPension = programmeGroups(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, programmes }).programmes);
+    const pension = withPension.find((group) => group.id === "pension");
+    expect(pension.label).toBe("Pension contributions");
+    expect(pension.rows[0].before).toBe(-1200);
+    expect(withPension.find((group) => group.id === "tax").rows.map((row) => row.id)).not.toContain(
+      "pension_contributions",
+    );
+  });
+
+  it("words the headline as Spring Statement does", () => {
+    expect(headlineVerb(103)).toBe("raise");
+    expect(headlineVerb(-570)).toBe("lower");
+    expect(headlineVerb(0)).toBe("not change");
   });
 });
