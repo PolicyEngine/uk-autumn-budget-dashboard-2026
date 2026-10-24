@@ -11,6 +11,7 @@ from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.living_standards.commands import (
     add_living_standards_parsers,
     run_living_standards,
+    run_obr_forecast,
 )
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import (
@@ -338,6 +339,8 @@ def main(args: list[str] = None) -> int:
         return run_geography(parsed)
     elif parsed.command == "living-standards":
         return run_living_standards(parsed)
+    elif parsed.command == "obr-forecast":
+        return run_obr_forecast(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -356,6 +359,7 @@ def main(args: list[str] = None) -> int:
         console.print(
             "  living-standards - The Living standards tab's outlook data"
         )
+        console.print("  obr-forecast - Load a new OBR forecast into that tab")
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."
         )

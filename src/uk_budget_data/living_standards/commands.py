@@ -1,4 +1,4 @@
-"""``uk-budget-data living-standards``."""
+"""``uk-budget-data living-standards`` and ``uk-budget-data obr-forecast``."""
 
 import argparse
 import json
@@ -7,6 +7,15 @@ from pathlib import Path
 from rich.console import Console
 
 from uk_budget_data.living_standards import INPUTS_DIR, OUTPUT_PATH
+from uk_budget_data.living_standards.forecast import (
+    DEFAULT_POST_LABEL,
+    OBR_FORECAST_URL,
+    POST_FILE_NAME,
+    apply_post,
+    read_post_document,
+    read_saved_post,
+    save_post,
+)
 from uk_budget_data.living_standards.hbai import (
     OUTPUT_NAME as HBAI_OUTPUT,
 )
@@ -24,7 +33,7 @@ DEFAULT_REVIEWER = "vahid-ahmadi"
 
 
 def add_living_standards_parsers(subparsers) -> None:
-    """Register the living-standards command."""
+    """Register the living-standards and obr-forecast commands."""
     ls = subparsers.add_parser(
         "living-standards",
         help=(
@@ -67,6 +76,32 @@ def add_living_standards_parsers(subparsers) -> None:
         type=Path,
         default=None,
         help="Also write the projections (aggregates only) to this file",
+    )
+
+    fc = subparsers.add_parser(
+        "obr-forecast",
+        help=(
+            "Load a new OBR forecast (EFO detailed forecast tables, "
+            "economy) into the Living standards forecast series"
+        ),
+    )
+    _common(fc)
+    fc.add_argument(
+        "--efo",
+        type=Path,
+        required=True,
+        help="The new EFO detailed forecast tables: economy (.xlsx)",
+    )
+    fc.add_argument(
+        "--label",
+        default=None,
+        help='Name of the new forecast (default: "OBR October 2026 '
+        '(Autumn Budget)")',
+    )
+    fc.add_argument(
+        "--url",
+        default=None,
+        help="The OBR page the file comes from (default: obr.uk/efo/)",
     )
 
 
@@ -142,6 +177,10 @@ def run_living_standards(parsed: argparse.Namespace) -> int:
         json.loads((inputs / HBAI_OUTPUT).read_text()),
         json.loads((inputs / RHDI_OUTPUT_NAME).read_text()),
     )
+    post = read_saved_post(inputs / POST_FILE_NAME)
+    apply_post(outlook, post)
+    if post:
+        console.print(f"Budget forecast kept from {inputs / POST_FILE_NAME}")
     text = outlook_text(outlook)
     parsed.output.parent.mkdir(parents=True, exist_ok=True)
     parsed.output.write_text(text)
@@ -160,6 +199,61 @@ def run_living_standards(parsed: argparse.Namespace) -> int:
             f"{meta['headline_start_year']} base year and prices, to "
             f"{meta['headline_end_year']}. Demo output, unvalidated. No "
             "area below the UK."
+        ),
+    )
+    return 0
+
+
+def run_obr_forecast(parsed: argparse.Namespace) -> int:
+    """Read the new EFO into the outlook's post series (forecast block)."""
+    from uk_budget_data.living_standards.build import outlook_text
+    from uk_budget_data.living_standards.obr import ForecastTableError
+
+    if not parsed.efo.is_file():
+        console.print(f"[red]No such file: {parsed.efo}[/red]")
+        return 1
+    outlook = json.loads(parsed.output.read_text())
+    label = parsed.label or DEFAULT_POST_LABEL
+    try:
+        post = read_post_document(
+            parsed.efo, outlook, label, parsed.url or OBR_FORECAST_URL
+        )
+    except ForecastTableError as error:
+        console.print(f"[red]Not loaded: {error}[/red]")
+        return 1
+    before = {k: v for k, v in outlook.items() if k != "forecast"}
+    apply_post(outlook, post)
+    assert {k: v for k, v in outlook.items() if k != "forecast"} == before
+
+    save_post(post, parsed.inputs_dir / POST_FILE_NAME)
+    text = outlook_text(outlook)
+    parsed.output.write_text(text)
+
+    source = post["source"]
+    console.print(f"Loaded {source['file']} (sha256 {source['file_sha256']})")
+    for key, series in post["series"].items():
+        values = ", ".join(
+            f"{y} {v * 100:.2f}%" for y, v in series["values"].items()
+        )
+        console.print(f"  {key}: {values}")
+        if series["carried"]:
+            console.print(
+                f"  [yellow]{key}: {', '.join(series['carried'])} kept at "
+                "the pre-Budget value[/yellow]"
+            )
+    console.print(f"Wrote {parsed.inputs_dir / POST_FILE_NAME}")
+    console.print(f"Wrote {parsed.output} (forecast block only)")
+    _mark_pending(
+        parsed,
+        text,
+        (
+            "Living standards view data: UK-level baseline projections and "
+            f"OBR forecast series; Budget forecast loaded by uk-budget-data "
+            f"obr-forecast from {source['file']} "
+            f"({source['file_sha256'][:8]}), {label}. Baseline projections "
+            f"unchanged (policyengine {outlook['meta']['policyengine']}, "
+            f"policyengine-uk {outlook['meta']['policyengine_uk']}). Demo "
+            "output, unvalidated. No area below the UK."
         ),
     )
     return 0

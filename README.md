@@ -160,6 +160,10 @@ config = DataConfig(
 generate_all_data(config=config)
 ```
 
+### Living standards tab
+
+`uv run uk-budget-data living-standards` writes `public/data/living_standards_outlook.json` (shape in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md)): baseline projections on the bundle's certified Microcosm dataset (needs `HUGGING_FACE_TOKEN`), DWP HBAI outturn and OBR series, from the inputs in `data_inputs/living_standards/`. `uv run uk-budget-data obr-forecast --efo <EFO economy tables .xlsx>` loads a new OBR forecast into the tab's Forecast changes series (see the Budget-day runbook). The tab's data used to be copied from PolicyEngine/uk-living-standards-outlook; that repository is no longer its source.
+
 ### Running tests
 
 - Run all tests: `uv run pytest`

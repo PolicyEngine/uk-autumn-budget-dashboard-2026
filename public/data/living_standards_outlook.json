@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-24T15:46:05+00:00",
+    "generated_at": "2026-10-24T15:50:34+00:00",
     "policyengine": "6.10.2",
     "policyengine_uk": "2.132.6",
     "dataset": {
@@ -1614,7 +1614,13 @@
           }
         ]
       }
-    ]
+    ],
+    "pre_source": {
+      "release": "OBR Economic and fiscal outlook, March 2026",
+      "url": "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+      "via": "policyengine-uk parameters gov.economic_assumptions.yoy_growth.obr.*"
+    },
+    "post_source": null
   },
   "income_by_decile": {
     "base_year": "2026-27",

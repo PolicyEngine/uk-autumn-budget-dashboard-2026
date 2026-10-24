@@ -523,6 +523,33 @@ uv run python -m uk_budget_data.treasury_import <Table 4.1 xlsx> \
 - **Static costings.** María fills `AB2026-static.csv` from the policy costings document. These static costings are the gated comparator.
 - **Mapping.** María fills `data_inputs/treasury/mapping.csv` (measure to row). A row outside scope or on a different basis is marked `not_comparable`, with a reason and reviewer. A `scale` other than 1 also needs a reason and reviewer, and must be above zero (#17).
 
+## Budget day: OBR forecast (Living standards tab, from 13:40)
+
+The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026 forecast as "pre-Budget". Once the OBR publishes the Budget EFO, load its economy tables as the "post" series, so every chart draws both lines and the tiles show the change. The tab's data come from this repository (`uk-budget-data living-standards`, `src/uk_budget_data/living_standards/`); PolicyEngine/uk-living-standards-outlook is no longer its source.
+
+1. **Download** the EFO's *detailed forecast tables: economy* (.xlsx) in a browser, as above, and record its SHA-256.
+2. **Load it** (Vahid):
+
+   ```sh
+   uv run uk-budget-data obr-forecast \
+     --efo ~/Downloads/<economy tables>.xlsx \
+     --label "OBR October 2026 (Autumn Budget)" \
+     --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
+   ```
+
+   It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending.
+3. **Check what it printed:**
+   - every series: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, with the table and column it read each from; CPI after housing costs and social rent recomputed by PolicyEngine;
+   - the file name and SHA-256 match the download;
+   - any "kept at the pre-Budget value" line (only mortgage interest 2030 may say this, if the OBR stops forecasting it before 2030).
+
+   If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
+4. **Commit** both files and the review row in a pull request; the page then reads "OBR March 2026 (pre-Budget)" against the new label.
+
+**This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The engine version also sets the tab's end year: 2029-30 before policyengine-uk 2.134.4, 2030-31 from it.
+
+**To regenerate the baseline projections** (any time the bundle changes): `export HUGGING_FACE_TOKEN=…`, then `uv run uk-budget-data living-standards`. About 40 s and 8 GB. A new HBAI release: add `--hbai-ods <summary tables .ods>`; OBR household income per person from a new EFO: `--rhdi-efo <economy tables .xlsx>`. Sources and hashes are in `data_inputs/living_standards/README.md`.
+
 ## G3: rebase and reconcile (13:40 to 14:10)
 
 - **If the forecast is rebased** on the Budget's OBR tables: update `data_inputs/publication_basis.json` (`forecast.status: updated`, with source and vintage), regenerate every measure, and stage with `--adopt-basis`. Every entry on the old basis becomes stale.
