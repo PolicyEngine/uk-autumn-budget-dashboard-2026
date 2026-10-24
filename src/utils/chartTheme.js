@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from "react";
 
-// At or below this width (the page's phone breakpoint) a chart drops its rotated y-axis title, tightens its
+// At or below this width (the page's phone breakpoint) a chart tightens its
 // margins and puts the PolicyEngine logo under the legend, not beside it.
 export const NARROW_QUERY = "(max-width: 768px)";
 
@@ -41,18 +41,27 @@ export const AXIS_TITLE_STYLE = {
 };
 
 /**
- * Chart margins: the plot spans the card's width. The unit is a label above
- * the plot (ChartUnitLabel), so the left margin needs only the ticks, which
- * the YAxis width covers; the top margin leaves room for that label.
+ * Width kept at the left of a YAxis for its rotated title (ChartUnitLabel),
+ * left of the tick labels.
+ */
+export const Y_TITLE_GUTTER = 18;
+
+/**
+ * Chart margins: the plot spans the card's width. The y-axis title is
+ * rotated in the YAxis's own gutter (axisWidth), so the left margin is 0;
+ * the top margin only keeps the top tick label inside the chart.
  */
 export function chartMargin(narrow, { top } = {}) {
-  return { top: top ?? 24, right: 8, left: 0, bottom: 0 };
+  return { top: top ?? 10, right: 8, left: 0, bottom: 0 };
 }
 
-/** A YAxis width that fits its longest tick label (12px text). */
-export function axisWidth(ticks, format = String) {
+/**
+ * A YAxis width that fits its longest tick label (12px text), plus the
+ * gutter for the rotated y-axis title (pass { title: false } without one).
+ */
+export function axisWidth(ticks, format = String, { title = true } = {}) {
   const longest = Math.max(...ticks.map((tick) => format(tick).length), 1);
-  return Math.ceil(longest * 7) + 10;
+  return Math.ceil(longest * 7) + 10 + (title ? Y_TITLE_GUTTER : 0);
 }
 
 /**

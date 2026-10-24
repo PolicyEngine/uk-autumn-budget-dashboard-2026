@@ -224,7 +224,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
           <ComposedChart
             data={data}
-            margin={chartMargin(narrow, { top: 36 })}
+            margin={chartMargin(narrow, { top: 24 })}
             stackOffset="sign"
           >
             <CartesianGrid {...GRID_PROPS} />

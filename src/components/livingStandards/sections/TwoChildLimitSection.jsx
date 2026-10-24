@@ -67,7 +67,7 @@ export default function TwoChildLimitSection({ data }) {
         series={series}
         yFormat={formatPctAxis}
         tooltipFormat={formatPct}
-        yLabel="Children in relative poverty, AHC (%)"
+        yLabel="Relative child poverty, AHC (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
       />

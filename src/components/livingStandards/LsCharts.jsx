@@ -60,7 +60,7 @@ const X_AXIS_HEIGHT = 30;
 const X_TITLE_HEIGHT = 18;
 const plotHeight = (narrow, xLabel) => (narrow ? 280 : 300) + (xLabel ? X_TITLE_HEIGHT : 0);
 // Room for the unit label above the plot, and for the last x tick at the right
-const MARGIN = { top: 24, right: 30, left: 0, bottom: 0 };
+const MARGIN = { top: 10, right: 30, left: 0, bottom: 0 };
 
 /**
  * The card rows a chart fills: the plot, then its legend, then the logo

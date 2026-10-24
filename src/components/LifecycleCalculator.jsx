@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import { LIFECYCLE_REFORMS } from "../utils/policyConfig";
 import { CHART_LOGO } from "../utils/chartLogo";
+import { Y_TITLE_GUTTER } from "../utils/chartTheme";
 import { buildChartSvg } from "../utils/exportChartAsSvg";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
@@ -456,7 +457,8 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
     const existingSvg = d3.select(container).select("svg");
     const isUpdate = existingSvg.size() > 0;
 
-    const margin = { top: 30, right: 8, bottom: 40, left: 56 };
+    // The left margin keeps the ticks and, left of them, the rotated y-axis title
+    const margin = { top: 12, right: 8, bottom: 40, left: 56 + Y_TITLE_GUTTER };
     const width = container.clientWidth - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -728,12 +730,17 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
 
-      // The unit, above the plot at its left edge (also in the downloads)
+      // The y-axis title, rotated along the axis left of the ticks (also in
+      // the downloads)
+      const titleX = Y_TITLE_GUTTER - 5;
+      const titleY = margin.top + height / 2;
       svg
         .append("text")
         .attr("class", "chart-unit-label")
-        .attr("x", 0)
-        .attr("y", 12)
+        .attr("x", titleX)
+        .attr("y", titleY)
+        .attr("transform", `rotate(-90, ${titleX}, ${titleY})`)
+        .attr("text-anchor", "middle")
         .attr("font-size", 12)
         .attr("font-weight", 500)
         .attr("fill", "#4B5563")

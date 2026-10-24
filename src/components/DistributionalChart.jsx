@@ -361,7 +361,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                 animationDuration={500}
                 hide={activePolicies.length <= 1}
               />
-              <Customized component={<ChartUnitLabel text="Percentage change in net income (%)" />} />
+              <Customized component={<ChartUnitLabel text="Change in net income (%)" />} />
             <Customized component={PolicyEngineLogo} />
             </ComposedChart>
           </ResponsiveContainer>

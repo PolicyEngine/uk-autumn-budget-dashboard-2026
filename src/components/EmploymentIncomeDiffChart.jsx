@@ -149,8 +149,8 @@ function EmploymentIncomeDiffChart({
               data={data}
               margin={
                 narrow
-                  ? { top: 24, right: 16, left: 0, bottom: 0 }
-                  : { top: 24, right: 16, left: 0, bottom: 0 }
+                  ? { top: 10, right: 16, left: 0, bottom: 0 }
+                  : { top: 10, right: 16, left: 0, bottom: 0 }
               }
             >
               <CartesianGrid {...GRID_PROPS} />
