@@ -361,7 +361,7 @@ def built(world, modifier, side):
         changes = getattr(scenario, "parameter_changes", None) or None
         reform_side = bool(changes) and BASIC_RATE in changes
         sim = world.sim()
-        sim.tax_benefit_system = Simulation(
+        real = Simulation(
             situation=HOUSEHOLD,
             scenario=Scenario(
                 parameter_changes=changes,
@@ -369,7 +369,11 @@ def built(world, modifier, side):
                     modifier if reform_side == (side == "reform") else None
                 ),
             ),
-        ).tax_benefit_system
+        )
+        sim.tax_benefit_system = real.tax_benefit_system
+        # The data-limit check reads stored inputs through the holders: the
+        # real ones, so both sides store the same household.
+        sim.get_holder = real.get_holder
         return sim
 
     return build
