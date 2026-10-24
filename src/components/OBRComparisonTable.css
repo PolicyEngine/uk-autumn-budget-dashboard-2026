@@ -221,7 +221,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 28px;
 }
 
 .obr-controls .obr-view-switch {
@@ -239,7 +239,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  min-height: 40px;
+  padding: 8px 14px;
   border: 0;
   background: transparent;
   color: var(--pe-gray-600);
@@ -268,8 +269,12 @@
 }
 
 /* The intro runs the full width of the card; the controls sit below it */
+.obr-comparison-section {
+  padding-top: 12px;
+}
+
 .obr-intro-row {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .obr-intro-row .comparison-description {

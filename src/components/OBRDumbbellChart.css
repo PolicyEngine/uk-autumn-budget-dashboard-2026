@@ -1,15 +1,15 @@
 /* PolicyEngine and OBR estimates: dumbbell chart */
 
 .obr-dumbbell {
-  margin: 8px 0 20px;
+  margin: 0 0 20px;
 }
 
 .obr-dumbbell-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .obr-dumbbell-heading {
