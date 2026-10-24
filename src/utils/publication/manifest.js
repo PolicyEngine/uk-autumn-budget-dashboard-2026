@@ -42,6 +42,26 @@ function isYearList(value) {
   return Array.isArray(value) && value.every(Number.isInteger);
 }
 
+/** Optional public mapping onto an existing lifetime API response column. */
+export function personalSeriesProblems(value) {
+  if (value === undefined || value === null) return [];
+  if (!isPlainObject(value)) return ["personal mapping is not an object"];
+  const problems = [];
+  if (Object.keys(value).some((key) => !["key", "policies"].includes(key))) {
+    problems.push("personal mapping has unknown fields");
+  }
+  if (typeof value.key !== "string" || value.key.length === 0) {
+    problems.push("personal mapping key is missing");
+  }
+  if (value.policies != null && (
+    !Array.isArray(value.policies) || value.policies.length === 0 ||
+    value.policies.some((id) => typeof id !== "string" || id.length === 0)
+  )) {
+    problems.push("personal mapping policies is not a non-empty list of ids");
+  }
+  return problems;
+}
+
 /** Python's whitespace and Unicode case-fold rules for attestor names. */
 function stripped(value) {
   const whitespace = new Set(contract.name_whitespace);
@@ -149,6 +169,7 @@ function entryProblems(key, entry, { combined }) {
   if (entry.description !== undefined && typeof entry.description !== "string") {
     problems.push(`${where}.description is not text`);
   }
+  problems.push(...personalSeriesProblems(entry.personal).map((problem) => `${where}.${problem}`));
   if (!STATUSES.includes(entry.status)) {
     problems.push(`${where}.status is ${JSON.stringify(entry.status)}`);
   }
