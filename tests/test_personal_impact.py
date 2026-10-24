@@ -237,10 +237,11 @@ class TestPersonalImpactCalculator:
         household = HouseholdInput(employment_income=0)
         results = calculator.calculate(household)
 
-        # Most policies should have ~zero impact on zero income
+        # A single adult with no income claims Universal Credit, so the
+        # Warm Home Discount top-up pays £100 in 2026; nothing else reaches
+        # a household with no income, fuel, loans or gains.
         total = results["totals"]["cumulative"]
-        # Allow for small floating point errors
-        assert abs(total) < 100  # Less than £100 total impact
+        assert abs(total - 100) < 1
 
     @pytest.mark.slow
     def test_income_echoed_back(self, calculator):
