@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
@@ -11,7 +11,6 @@ import {
   asksEducation,
   atStatePensionAge,
   isRenting,
-  monthlyRent,
   parseChildrenAges,
   statePensionFor,
 } from "../utils/householdImpactApi";
@@ -58,42 +57,45 @@ export const WIZARD_DEFAULTS = {
   partner_state_pension_per_year: null,
 };
 
-// The form: the essentials, then optional details (all prefilled), then
-// the results. Each step's questions come in groups with a heading.
-export const WIZARD_STEPS = [
+// The form: one list of questions, each a row showing its answer that opens
+// in place to change it. The essentials first, then the optional details.
+// `children` stands for one row per child (their age and, from 16, their
+// education).
+export const FORM_SECTIONS = [
   {
-    title: "Essentials",
-    intro: "Every answer starts at a typical value; change what differs for you.",
-    groups: [
-      { title: "You", fields: ["current_age", "current_salary", "region"] },
-      { title: "Partner", fields: ["has_partner", "partner_age", "partner_salary"] },
-      { title: "Children", fields: ["children_count", "children_ages"] },
-      { title: "Home", fields: ["tenure", "monthly_rent"] },
+    title: null,
+    fields: [
+      "current_age",
+      "current_salary",
+      "region",
+      "has_partner",
+      "partner_age",
+      "partner_salary",
+      "children_count",
+      "children",
+      "tenure",
+      "monthly_rent",
     ],
   },
   {
     title: "More details",
-    intro: "Optional. Each answer is already filled in; skip to the results if they fit.",
-    groups: [
-      {
-        title: "Other income",
-        fields: [
-          "state_pension_per_year",
-          "partner_state_pension_per_year",
-          "private_pension_per_year",
-          "partner_private_pension_per_year",
-          "savings_interest_per_year",
-          "dividends_per_year",
-          "property_income_per_year",
-        ],
-      },
-      { title: "Work", fields: ["salary_sacrifice_per_year"] },
-      { title: "Student loan", fields: ["student_loan_plan"] },
-      { title: "Spending", fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
-      { title: "Home and family", fields: ["council_tax_band", "monthly_childcare", "claims_universal_credit"] },
+    fields: [
+      "savings_interest_per_year",
+      "dividends_per_year",
+      "property_income_per_year",
+      "private_pension_per_year",
+      "partner_private_pension_per_year",
+      "state_pension_per_year",
+      "partner_state_pension_per_year",
+      "salary_sacrifice_per_year",
+      "student_loan_plan",
+      "petrol_spending_per_year",
+      "diesel_spending_per_year",
+      "council_tax_band",
+      "monthly_childcare",
+      "claims_universal_credit",
     ],
   },
-  { title: "Results", groups: [] },
 ];
 
 export const REGION_OPTIONS = [
@@ -129,12 +131,14 @@ const CHOICE_CONFIGS = {
     hint: "Scotland has its own income tax rates, and housing support follows local rents.",
   },
   has_partner: {
-    label: "Do you live with a partner?",
+    label: "Partner",
+    question: "Do you live with a partner?",
     options: YES_NO,
     hint: "Universal Credit and the High Income Child Benefit Charge are assessed per couple.",
   },
   children_count: {
-    label: "Number of children",
+    label: "Children",
+    question: "Number of children",
     layout: "compact",
     options: Array.from({ length: MAX_CHILDREN + 1 }, (_, n) => ({ value: n, label: String(n) })),
   },
@@ -162,12 +166,14 @@ const CHOICE_CONFIGS = {
   },
   council_tax_band: {
     label: "Council tax band",
+    summary: (value) => `Band ${value}`,
     layout: "compact",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
     hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), grown with the OBR's forecast. Band D if you are not sure.",
   },
   claims_universal_credit: {
-    label: "Would your household claim Universal Credit if entitled?",
+    label: "Universal Credit",
+    question: "Would your household claim Universal Credit if entitled?",
     options: [
       { value: true, label: "Yes" },
       { value: false, label: "No" },
@@ -289,17 +295,61 @@ const PREFILL_HINTS = {
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, step: 0, presetId: null };
+const savedWizard = { inputs: null, open: null, presetId: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, step: 0, presetId: null });
+  Object.assign(savedWizard, { inputs: null, open: null, presetId: null });
+}
+
+const money = (value) => `£${d3.format(",.0f")(value)}`;
+
+/** A row's answer, as the closed row shows it. */
+function summaryOf(id, inputs, year) {
+  if (CHOICE_CONFIGS[id]) {
+    const config = CHOICE_CONFIGS[id];
+    if (config.summary) return config.summary(inputs[id]);
+    return config.options.find((option) => option.value === inputs[id])?.label ?? String(inputs[id]);
+  }
+  const config = NUMBER_CONFIGS[id];
+  const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
+  if (!config.money) return String(value);
+  return config.suffix ? `${money(value)} ${config.suffix}` : money(value);
 }
 
 /**
- * The Personal impact view: a step-by-step form for one household, then
- * its net income in the year chosen in the title band before and after the
- * selected policies, from policyengine.py's household calculation
+ * One question: a row showing its label and answer that opens in place to
+ * change it.
+ */
+function FormRow({ rowId, label, summary, open, onToggle, children }) {
+  const panelId = `household-row-${rowId}`;
+  const buttonId = `${panelId}-button`;
+  return (
+    <li className={`household-row ${open ? "is-open" : ""}`} data-row={rowId}>
+      <button
+        type="button"
+        id={buttonId}
+        className="household-row-button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={onToggle}
+      >
+        <span className="household-row-label">{label}</span>
+        <span className="household-row-value">{summary}</span>
+        <span className="household-row-chevron" aria-hidden="true" />
+      </button>
+      <div id={panelId} role="region" aria-labelledby={buttonId} className="household-row-panel" hidden={!open}>
+        {open && children}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * The Personal impact view: one list of questions about a household, each
+ * opening in place, with its net income in the year chosen in the title
+ * band before and after the selected policies shown alongside and updated
+ * as the answers change, from policyengine.py's household calculation
  * (POST /api/household-impact).
  */
 function HouseholdCalculator({
@@ -310,13 +360,10 @@ function HouseholdCalculator({
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
+  // The row open (one at a time); kept between tab switches for the session
+  const [openRow, setOpenRow] = useState(() => savedWizard.open);
   const selectionKey = selectedPolicies.join(",");
-  // The form's step; kept between tab switches for the session
-  const [step, setStep] = useState(() => savedWizard.step);
-  const stepHeadingRef = useRef(null);
-  const isResults = step === WIZARD_STEPS.length - 1;
 
-  // Handle input change
   const handleInputChange = (id, value) => {
     setPresetId(null);
     // The controls give typed values: numbers from the number boxes,
@@ -326,27 +373,12 @@ function HouseholdCalculator({
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
-  const goToStep = (next) => {
-    const target = Math.max(0, Math.min(WIZARD_STEPS.length - 1, next));
-    setStep(target);
-  };
-
-  // Focus the step's heading when the step changes (not on first load)
-  const firstStepRender = useRef(true);
-  useEffect(() => {
-    if (firstStepRender.current) {
-      firstStepRender.current = false;
-      return;
-    }
-    stepHeadingRef.current?.focus();
-  }, [step]);
-
-  // Remember the inputs and step for this session, across tab switches
+  // Remember the inputs and the open row for this session
   useEffect(() => {
     savedWizard.inputs = inputs;
-    savedWizard.step = step;
+    savedWizard.open = openRow;
     savedWizard.presetId = presetId;
-  }, [inputs, step, presetId]);
+  }, [inputs, openRow, presetId]);
 
   // Fill the form from an example; every value stays editable
   const applyPreset = (preset) => {
@@ -355,24 +387,7 @@ function HouseholdCalculator({
   };
   const activePreset = YOUNG_PERSON_PRESETS.find((preset) => preset.id === presetId);
 
-  const money = (value) => `£${d3.format(",.0f")(value)}`;
-  const optionLabel = (id) =>
-    CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id])?.label ?? inputs[id];
-  const inputSummary = [
-    `Age ${inputs.current_age}`,
-    regionName(inputs.region),
-    `salary ${money(inputs.current_salary)}`,
-    isRenting(inputs.tenure)
-      ? `rent ${money(monthlyRent(inputs))} a month`
-      : optionLabel("tenure").toLowerCase(),
-    inputs.has_partner ? `partner on ${money(inputs.partner_salary)}` : "no partner",
-    childrenCount === 0
-      ? "no children"
-      : `${childrenCount} ${childrenCount === 1 ? "child" : "children"}`,
-    inputs.student_loan_plan === "NONE" ? "no student loan" : `${optionLabel("student_loan_plan")} loan`,
-  ].join(" · ");
-
-  // The results: asked for only while they are shown
+  // The results, updated as the answers change
   const householdPolicies = useMemo(
     () => (selectionKey ? selectionKey.split(",") : []),
     [selectionKey],
@@ -381,7 +396,7 @@ function HouseholdCalculator({
     inputs,
     year,
     policies: householdPolicies,
-    enabled: isResults,
+    enabled: true,
   });
   const noneSelected = householdPolicies.length === 0;
 
@@ -408,58 +423,30 @@ function HouseholdCalculator({
     }));
   };
 
-  // One question of the form
-  const renderField = (id) => {
-    if (!fieldApplies(id)) return null;
+  const toggle = (rowId) => setOpenRow((current) => (current === rowId ? null : rowId));
+
+  // A question's input, inside its open row
+  const renderInput = (id) => {
     if (id === "children_count") {
       return (
         <ChoiceTiles
-          key={id}
           id={id}
           {...CHOICE_CONFIGS.children_count}
+          label={CHOICE_CONFIGS.children_count.question}
+          hideLabel
           value={childrenCount}
           onChange={setChildrenCount}
         />
       );
     }
-    if (id === "children_ages") {
-      return (
-        <div className="field-row children-ages" key={id}>
-          {childAges.map((age, index) => (
-            <div className="child-answers" key={index}>
-              <NumberField
-                id={`child_age_${index}`}
-                label={`Child ${index + 1}'s age`}
-                value={age}
-                min={0}
-                max={OLDEST_CHILD_AGE}
-                step={1}
-                outOfRangeMessage={CHILD_AGE_MESSAGE}
-                onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
-              />
-              {asksEducation(age) && (
-                <ChoiceTiles
-                  id={`child_in_education_${index}`}
-                  label={`Child ${index + 1} in full-time education (non-advanced)`}
-                  layout="compact"
-                  options={YES_NO.slice().reverse()}
-                  value={childEducation(index)}
-                  onChange={(value) => setChildEducation(index, value)}
-                  hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
-                />
-              )}
-            </div>
-          ))}
-          <p className="field-hint field-row-hint">Ages in 2026, from 0 to 19.</p>
-        </div>
-      );
-    }
     if (CHOICE_CONFIGS[id]) {
+      const config = CHOICE_CONFIGS[id];
       return (
         <ChoiceTiles
-          key={id}
           id={id}
-          {...CHOICE_CONFIGS[id]}
+          {...config}
+          label={config.question ?? config.label}
+          hideLabel={!config.question}
           value={inputs[id]}
           onChange={(value) => handleInputChange(id, value)}
         />
@@ -470,10 +457,11 @@ function HouseholdCalculator({
     const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
     const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
     return (
-      <div className="number-field-wrap" key={id}>
+      <div className="number-field-wrap">
         <NumberField
           id={id}
           {...config}
+          hideLabel
           hint={hint}
           value={value}
           onChange={(next) => handleInputChange(id, next)}
@@ -487,161 +475,130 @@ function HouseholdCalculator({
     );
   };
 
+  // One child's row: their age and, from 16, whether they are in school or
+  // college
+  const renderChild = (age, index) => {
+    const rowId = `child_${index}`;
+    const education = asksEducation(age) ? (childEducation(index) ? " · in education" : " · not in education") : "";
+    return (
+      <FormRow
+        key={rowId}
+        rowId={rowId}
+        label={`Child ${index + 1}`}
+        summary={`Age ${age}${education}`}
+        open={openRow === rowId}
+        onToggle={() => toggle(rowId)}
+      >
+        <div className="child-answers">
+          <NumberField
+            id={`child_age_${index}`}
+            label={`Child ${index + 1}'s age`}
+            value={age}
+            min={0}
+            max={OLDEST_CHILD_AGE}
+            step={1}
+            hint="Age in 2026, from 0 to 19."
+            outOfRangeMessage={CHILD_AGE_MESSAGE}
+            onChange={(value) => setChildAges(childAges.map((a, i) => (i === index ? value : a)))}
+          />
+          {asksEducation(age) && (
+            <ChoiceTiles
+              id={`child_in_education_${index}`}
+              label={`Child ${index + 1} in full-time education (non-advanced)`}
+              layout="compact"
+              options={YES_NO.slice().reverse()}
+              value={childEducation(index)}
+              onChange={(value) => setChildEducation(index, value)}
+              hint="School or college, not university or an apprenticeship. Only then does a 16- to 19-year-old count as a child."
+            />
+          )}
+        </div>
+      </FormRow>
+    );
+  };
+
+  const renderRow = (id) => {
+    if (!fieldApplies(id)) return null;
+    if (id === "children") return childAges.map(renderChild);
+    const config = CHOICE_CONFIGS[id] ?? NUMBER_CONFIGS[id];
+    const summary = id === "children_count" ? String(childrenCount) : summaryOf(id, inputs, year);
+    return (
+      <FormRow
+        key={id}
+        rowId={id}
+        label={config.label}
+        summary={summary}
+        open={openRow === id}
+        onToggle={() => toggle(id)}
+      >
+        {renderInput(id)}
+      </FormRow>
+    );
+  };
+
   return (
     <div className="household-calculator">
-      {/* A step-by-step form in one card: a few questions per step, then
-          the results. Inputs keep their values between steps and tabs. */}
       <SectionHeading
         title="Your household"
-        subtitle="Answer a few questions to see how the selected policies change your household's net income."
+        subtitle="Every answer starts at a typical value. Open a row to change it; the results update as you go."
       />
-      <div className={`wizard ${isResults ? "is-results" : "is-form"}`}>
-
-        <nav className="wizard-steps" aria-label="Steps">
-          <ol style={{ "--step-progress": step / (WIZARD_STEPS.length - 1) }}>
-            {WIZARD_STEPS.map((wizardStep, index) => (
-              <li
-                key={wizardStep.title}
-                className={`${index < step ? "is-done" : ""} ${
-                  index === step ? "is-current-item" : ""
-                }`}
-                // Circles evenly spaced, the first and last at the edges
-                style={{ "--step-position": index / (WIZARD_STEPS.length - 1) }}
-              >
-                <button
-                  type="button"
-                  className={`wizard-step-tab ${index === step ? "is-current" : ""} ${
-                    index < step ? "is-done" : ""
-                  } is-reachable`}
-                  // Every answer has a default, so every step is open
-                  aria-current={index === step ? "step" : undefined}
-                  onClick={() => goToStep(index)}
-                >
-                  <span className="wizard-step-number" aria-hidden="true">
-                    {index < step ? "✓" : index + 1}
-                  </span>
-                  <span className="visually-hidden">Step {index + 1}: </span>
-                  <span className="wizard-step-name">{wizardStep.title}</span>
-                </button>
-              </li>
-            ))}
-          </ol>
-          {/* On a phone: "Step 2 of 3 · More details" and a progress bar */}
-          <p className="wizard-steps-compact" aria-hidden="true">
-            Step {step + 1} of {WIZARD_STEPS.length} · {WIZARD_STEPS[step].title}
-          </p>
-          <div className="wizard-progress" aria-hidden="true">
-            <span style={{ width: `${((step + 1) / WIZARD_STEPS.length) * 100}%` }} />
-          </div>
-        </nav>
-
-        <section className="wizard-step" aria-labelledby="wizard-step-heading">
-          <div className={`wizard-step-header ${isResults ? "is-results" : ""}`}>
-            <h3 id="wizard-step-heading" ref={stepHeadingRef} tabIndex={-1}>
-              {WIZARD_STEPS[step].title}
-            </h3>
-            {isResults && (
-              <div className="wizard-results-controls">
-                <button
-                  type="button"
-                  className="light-pill-button"
-                  onClick={() => goToStep(0)}
-                >
-                  Edit details
-                </button>
-              </div>
-            )}
-            {isResults && <p className="wizard-summary">{inputSummary}</p>}
-            {!isResults && <p className="wizard-intro">{WIZARD_STEPS[step].intro}</p>}
-          </div>
-
-          {step === 0 && (
-            <div className="wizard-examples wizard-box" role="group" aria-labelledby="wizard-examples-label">
-              <p id="wizard-examples-label" className="wizard-examples-label">
-                Start from an example
-              </p>
-              <div className="wizard-examples-buttons">
-                {YOUNG_PERSON_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`example-tile ${presetId === preset.id ? "is-active" : ""}`}
-                    aria-pressed={presetId === preset.id}
-                    onClick={() => applyPreset(preset)}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-              {activePreset && (
-                <p className="wizard-examples-note" role="status">
-                  {activePreset.note} Change any value in the steps that follow.
-                </p>
-              )}
-            </div>
-          )}
-
-          {!isResults && (
-            <div className="wizard-fields">
-              {WIZARD_STEPS[step].groups
-                .filter((group) => group.fields.some((id) => fieldApplies(id)))
-                .map((group) => (
-                  <fieldset className="wizard-group wizard-box" key={group.title}>
-                    <legend className="wizard-group-title">{group.title}</legend>
-                    <div className="wizard-group-fields">{group.fields.map(renderField)}</div>
-                  </fieldset>
-                ))}
-            </div>
-          )}
-
-          {isResults && (
-            <div className="wizard-results">
-              <SingleYearHeadline
-                result={householdResult}
-                year={year}
-                policies={policies}
-                noPolicies={noneSelected}
-                renting={isRenting(inputs.tenure)}
-              />
-            </div>
-          )}
-        </section>
-
-        {!isResults && (
-        <div className="wizard-actions">
-            <>
-              {step === 0 ? (
-                <button type="button" className="light-pill-button" onClick={() => goToStep(1)}>
-                  More details (optional)
-                </button>
-              ) : (
-                <button type="button" className="light-pill-button" onClick={() => goToStep(step - 1)}>
-                  Back
-                </button>
-              )}
+      <div className="household-layout">
+        <div className="household-form">
+          <div className="household-examples" role="group" aria-labelledby="household-examples-label">
+            <span id="household-examples-label" className="household-examples-label">
+              Start from an example
+            </span>
+            {YOUNG_PERSON_PRESETS.map((preset) => (
               <button
+                key={preset.id}
                 type="button"
-                className="wizard-next"
-                onClick={() => goToStep(WIZARD_STEPS.length - 1)}
+                className={`example-chip ${presetId === preset.id ? "is-active" : ""}`}
+                aria-pressed={presetId === preset.id}
+                onClick={() => applyPreset(preset)}
               >
-                See results
+                {preset.label}
               </button>
-            </>
+            ))}
+          </div>
+          {activePreset && (
+            <p className="household-examples-note" role="status">
+              {activePreset.note}
+            </p>
+          )}
+          {FORM_SECTIONS.map((section, index) => (
+            <section
+              className="household-section"
+              key={section.title ?? "essentials"}
+              aria-labelledby={section.title ? `household-section-${index}` : undefined}
+              aria-label={section.title ? undefined : "Essentials"}
+            >
+              {section.title && (
+                <h3 className="household-section-title" id={`household-section-${index}`}>
+                  {section.title}
+                </h3>
+              )}
+              <ul className="household-list">{section.fields.map(renderRow)}</ul>
+            </section>
+          ))}
         </div>
-        )}
-      </div>
 
-      {/* The results' sections, below the form card */}
-      {isResults && !noneSelected && (
-        <div role="region" aria-label="Your household's results">
-          <SingleYearDetails
+        <div className="household-results" role="region" aria-label="Results">
+          <SingleYearHeadline
             result={householdResult}
             year={year}
             policies={policies}
+            noPolicies={noneSelected}
+            renting={isRenting(inputs.tenure)}
           />
         </div>
-      )}
+      </div>
 
+      {/* The results' sections, below the form and headline */}
+      {!noneSelected && (
+        <div role="region" aria-label="Your household's results">
+          <SingleYearDetails result={householdResult} year={year} policies={policies} />
+        </div>
+      )}
     </div>
   );
 }

@@ -430,6 +430,10 @@ export const SINGLE_YEAR_METHOD = [
     "The rail fares freeze: it spreads a national cost over households by how much they use rail, which one household's answers cannot show, so it is in the national figures only.",
   ],
   [
+    "Who counts as a child",
+    "Everyone under 16, and a 16- to 19-year-old in full-time non-advanced education (school or college) begun before 19, as you answer for each. Child Benefit counts such a young person until 20; Universal Credit stops at the 1 September after their 19th birthday, so a 19-year-old counts for Child Benefit but not Universal Credit.",
+  ],
+  [
     "Council Tax",
     "Estimated from your band and your region's average Band D for 2026-27 (MHCLG for England, tax-base weighted by region; the Welsh and Scottish governments), grown to the chosen year with policyengine-uk's OBR Council Tax forecast, and taken off net income. Northern Ireland has domestic rates, which are not modelled. No selected policy changes it.",
   ],

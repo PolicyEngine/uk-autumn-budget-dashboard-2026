@@ -26,7 +26,7 @@ import { marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
-import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS } from "./EarningsChart";
+import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS, earningsChartHeight } from "./EarningsChart";
 
 const Y_TICKS = [0, 0.25, 0.5, 0.75, 1];
 const pct = (value) => `${Math.round(value * 100)}%`;
@@ -126,7 +126,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
   };
 
   return (
-    <div className="single-year-mtr">
+    <div className="card single-year-card single-year-mtr">
       <div className="chart-header">
         <div>
           <h3>{title}</h3>
@@ -140,8 +140,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div ref={chartRef} className="chart-plot">
-        <ResponsiveContainer width="100%" height={narrow ? 280 : 320}>
-          <LineChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={earningsChartHeight(narrow)}>
+          <LineChart data={data} margin={{ top: 12, right: 20, left: 0, bottom: 0 }}>
             <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="income"
@@ -152,7 +152,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               tickFormatter={formatPoundsShort}
               ticks={xTicks}
               domain={[0, xTicks[xTicks.length - 1]]}
-              height={48}
+              // As the earnings chart beside it: axis line 44 px from the foot
+              height={44}
               label={{
                 value: `Your salary in ${yearLabel}`,
                 position: "insideBottom",
@@ -204,10 +205,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="single-year-legend">
+      <div className="single-year-legend chart-legend">
         <GroupedLegend items={LEGEND_ITEMS} />
       </div>
-      <div className="card-logo">
+      <div className="card-logo chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>

@@ -12,11 +12,13 @@ import { useId, useState } from "react";
  * @param {*} props.value - The chosen option's value
  * @param {(value: *) => void} props.onChange
  * @param {string} [props.hint] - A line under the boxes
+ * @param {boolean} [props.hideLabel] - Keep the question for screen readers
+ *   only (a row above already shows it)
  * @param {"wide"|"compact"|"grid"} [props.layout] - wide: two to five boxes
  *   that share the row; compact: short labels (A to H, 0 to 6); grid: many
  *   boxes that wrap (regions)
  */
-export function ChoiceTiles({ id, label, options, value, onChange, hint, layout = "wide" }) {
+export function ChoiceTiles({ id, label, options, value, onChange, hint, layout = "wide", hideLabel = false }) {
   const uid = useId();
   const legendId = `${uid}-legend`;
   const hintId = hint ? `hint-${id}` : undefined;
@@ -28,7 +30,7 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, layout 
       aria-describedby={hintId}
       data-field={id}
     >
-      <legend id={legendId} className="field-label">
+      <legend id={legendId} className={hideLabel ? "visually-hidden" : "field-label"}>
         {label}
       </legend>
       <div className="choice-tiles" style={{ "--choice-count": options.length }}>
@@ -78,6 +80,8 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param {string} [props.suffix] - A unit after the number ("a month")
  * @param {string} [props.hint]
  * @param {string} [props.inputLabel] - The box's accessible name, when it differs from the visible label
+ * @param {boolean} [props.hideLabel] - Keep the label for screen readers
+ *   only (a row above already shows it)
  * @param {string} [props.outOfRangeMessage] - Said while the typed value is
  *   outside min to max, and after leaving the box moved it into range, so a
  *   value is never changed without a word
@@ -95,6 +99,7 @@ export function NumberField({
   hint,
   inputLabel,
   outOfRangeMessage,
+  hideLabel = false,
 }) {
   const hintId = hint ? `hint-${id}` : undefined;
   const fieldId = `field-${id}`;
@@ -120,7 +125,7 @@ export function NumberField({
   const name = inputLabel ?? label;
   return (
     <div className="number-field" data-field={id}>
-      <label className="field-label" htmlFor={fieldId}>
+      <label className={hideLabel ? "visually-hidden" : "field-label"} htmlFor={fieldId}>
         {label}
       </label>
       <div className="number-stepper">

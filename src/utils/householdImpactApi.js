@@ -427,6 +427,13 @@ export function normaliseHouseholdImpact(raw) {
       countsForUniversalCredit: Boolean(child.counts_for_universal_credit),
     })),
     dependantsNote: raw.dependants_note ?? null,
+    councilTax: raw.council_tax_used
+      ? {
+          amount: num(raw.council_tax_used.council_tax),
+          band: raw.council_tax_used.band ?? null,
+          source: raw.council_tax_used.source ?? null,
+        }
+      : null,
     area: area
       ? {
           region: area.region ?? null,

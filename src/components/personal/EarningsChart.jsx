@@ -74,9 +74,8 @@ function valueAt(points, income, key) {
  * @param {Object} props.sweep - normaliseHouseholdImpact's sweep
  * @param {number|null} props.salary - The salary used, in the year
  * @param {string} props.yearLabel - "2029-30"
- * @param {React.ReactNode} [props.footer] - The card's foot (an expander)
  */
-export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
+export default function EarningsChart({ sweep, salary, yearLabel }) {
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
@@ -97,13 +96,9 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
     axisWidth(cTicks, formatPoundsShort),
   );
   const right = 20;
-  const topH = narrow ? 210 : 250;
-  const gap = 28;
-  const bottomH = narrow ? 120 : 140;
-  const axisH = 44;
-  const top1 = 12;
+  const { topH, gap, bottomH, axisH, top1 } = earningsLayout(narrow);
   const top2 = top1 + topH + gap;
-  const height = top2 + bottomH + axisH;
+  const height = earningsChartHeight(narrow);
   const plotW = Math.max(width - left - right, 40);
 
   const x = (v) => left + (v / xMax) * plotW;
@@ -176,7 +171,7 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={wrapperRef} className="earnings-plot">
+      <div ref={wrapperRef} className="earnings-plot chart-plot">
         <div ref={chartRef} className="earnings-plot-inner">
           <svg
             className="earnings-svg"
@@ -313,17 +308,30 @@ export default function EarningsChart({ sweep, salary, yearLabel, footer }) {
             </div>
           )}
         </div>
-        <div className="single-year-legend">
-          <GroupedLegend items={legendItems} />
-        </div>
-        <div className="card-logo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={CHART_LOGO.href} alt="PolicyEngine" />
-        </div>
       </div>
-      {footer}
+      <div className="single-year-legend chart-legend">
+        <GroupedLegend items={legendItems} />
+      </div>
+      <div className="card-logo chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
     </div>
   );
 }
 
 export { valueAt, changeTicks };
+
+/** The earnings chart's panels, in px: net income on top, the change below. */
+export function earningsLayout(narrow) {
+  return { topH: narrow ? 210 : 250, gap: 28, bottomH: narrow ? 120 : 140, axisH: 44, top1: 12 };
+}
+
+/**
+ * The earnings chart's height, which the marginal tax rate chart beside it
+ * takes too, so their x-axes line up.
+ */
+export function earningsChartHeight(narrow) {
+  const { topH, gap, bottomH, axisH, top1 } = earningsLayout(narrow);
+  return top1 + topH + gap + bottomH + axisH;
+}

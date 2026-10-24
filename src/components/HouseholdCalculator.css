@@ -159,107 +159,6 @@
   border-radius: 0;
 }
 
-/* ---------- Step-by-step form ---------- */
-.wizard {
-  margin: 0;
-  padding: var(--card-padding);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-}
-
-/* Numbered step tabs */
-.wizard-steps ol {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.wizard-step-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px 0 4px;
-  font-family: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-  background: var(--pe-surface);
-  border: 1px solid var(--pe-gray-200);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.wizard-step-tab:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
-.wizard-step-tab.is-reachable {
-  color: var(--pe-gray-700);
-  border-color: var(--pe-gray-300);
-}
-
-.wizard-step-tab.is-current {
-  color: #ffffff;
-  background: var(--band-teal);
-  border-color: var(--band-teal);
-  font-weight: 600;
-}
-
-.wizard-step-tab:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.wizard-step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  background: var(--pe-gray-100);
-  border-radius: 999px;
-}
-
-.wizard-step-tab.is-current .wizard-step-number {
-  color: var(--band-teal);
-  background: #ffffff;
-}
-
-.wizard-steps-compact,
-.wizard-progress {
-  display: none;
-}
-
-/* The step itself */
-.wizard-step {
-  margin-top: 24px;
-}
-
-.wizard-step h3 {
-  margin: 0 0 16px;
-  font-size: var(--fs-lead);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.wizard-step h3:focus {
-  outline: none;
-}
-
-.wizard-step h3:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 4px;
-}
-
 .field-hint {
   margin: 6px 0 0;
   font-size: var(--fs-caption);
@@ -267,52 +166,8 @@
   color: var(--pe-gray-500);
 }
 
-.wizard-summary {
-  margin: -8px 0 16px;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-500);
-}
-
-/* Results inside the form card: no nested card borders */
-.wizard-results .chart-container {
-  padding: 0;
-  border: none;
-  border-radius: 0;
-}
-
-/* Back / Next */
-.wizard-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--card-border);
-}
-
-.wizard-actions .light-pill-button:disabled {
-  visibility: hidden;
-}
-
-.wizard-next {
-  height: 40px;
-  padding: 0 22px;
-  font-family: inherit;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: #ffffff;
-  background: var(--band-teal);
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.wizard-next:hover {
-  background: var(--pe-teal-800);
-}
-
 /* The API-not-set message, tidy inside the results */
-.wizard-results .household-error {
+.household-results .household-error {
   position: static;
   transform: none;
   margin: 8px 0 16px;
@@ -336,240 +191,6 @@
   color: var(--pe-gray-800);
 }
 
-@media (max-width: 768px) {
-  .wizard-steps ol {
-    display: none;
-  }
-
-  .wizard-steps-compact {
-    display: block;
-    margin: 0 0 8px;
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    color: var(--pe-gray-700);
-  }
-
-  .wizard-progress {
-    display: block;
-    height: 4px;
-    background: var(--pe-gray-100);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  .wizard-progress span {
-    display: block;
-    height: 100%;
-    background: var(--band-teal);
-  }
-
-  .wizard-actions {
-    flex-direction: column-reverse;
-  }
-
-  .wizard-actions button {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .wizard-actions .light-pill-button:disabled {
-    display: none;
-  }
-}
-
-/* ---------- Connected stepper ---------- */
-.wizard-steps ol {
-  flex-wrap: nowrap;
-  gap: 0;
-  align-items: flex-start;
-}
-
-.wizard-steps li {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* The line joining each step to the next */
-.wizard-steps li + li::before {
-  content: "";
-  position: absolute;
-  top: 13px;
-  right: calc(50% + 16px);
-  left: calc(-50% + 16px);
-  height: 2px;
-  background: var(--pe-gray-200);
-}
-
-.wizard-steps li.is-done + li::before,
-.wizard-steps li.is-done + li.is-current-item::before {
-  background: var(--band-teal);
-}
-
-.wizard-step-tab,
-.wizard-step-tab.is-reachable,
-.wizard-step-tab.is-current {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  height: auto;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  color: var(--pe-gray-500);
-}
-
-.wizard-step-tab.is-reachable {
-  color: var(--pe-gray-700);
-}
-
-.wizard-step-tab.is-current {
-  color: var(--band-teal);
-  font-weight: 600;
-}
-
-.wizard-step-number {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  height: 28px;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-500);
-  background: var(--pe-surface);
-  border: 2px solid var(--pe-gray-300);
-}
-
-.wizard-step-tab.is-done .wizard-step-number {
-  color: #ffffff;
-  background: var(--band-teal);
-  border-color: var(--band-teal);
-}
-
-.wizard-step-tab.is-current .wizard-step-number {
-  color: #ffffff;
-  background: var(--band-teal);
-  border-color: var(--band-teal);
-  box-shadow: 0 0 0 3px var(--pe-teal-100);
-}
-
-.wizard-step-name {
-  max-width: 100%;
-  font-size: var(--fs-micro);
-  line-height: 1.25;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.wizard-step-tab:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-
-/* The stepper: circles at fixed positions from the left edge to the
-   right edge; one line behind them, teal up to the current step */
-.wizard-steps ol {
-  position: relative;
-  display: block;
-  height: 52px;
-}
-
-.wizard-steps ol::before,
-.wizard-steps ol::after {
-  content: "";
-  position: absolute;
-  top: 13px;
-  left: 14px;
-  height: 2px;
-}
-
-.wizard-steps ol::before {
-  right: 14px;
-  background: var(--pe-gray-200);
-}
-
-.wizard-steps ol::after {
-  width: calc((100% - 28px) * var(--step-progress, 0));
-  background: var(--band-teal);
-}
-
-.wizard-steps li {
-  position: absolute;
-  top: 0;
-  left: calc((100% - 28px) * var(--step-position));
-  width: 28px;
-  flex: none;
-  min-width: 0;
-}
-
-.wizard-steps li + li::before {
-  content: none;
-}
-
-.wizard-step-tab,
-.wizard-step-tab.is-reachable,
-.wizard-step-tab.is-current {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  align-items: center;
-}
-
-/* Labels centred under their circle; the first and last keep to the edges */
-.wizard-step-name {
-  position: absolute;
-  top: 34px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: none;
-  overflow: visible;
-}
-
-.wizard-steps li:first-child .wizard-step-name {
-  left: 0;
-  transform: none;
-  text-align: left;
-}
-
-.wizard-steps li:last-child .wizard-step-name {
-  left: auto;
-  right: 0;
-  transform: none;
-  text-align: right;
-}
-
-/* Results header: "Results" left; Edit details right, centred
-   with the heading; the summary on its own line below */
-.wizard-step-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.wizard-step-header h3 {
-  margin: 0;
-}
-
-.wizard-step:not(:has(.wizard-step-header.is-results)) .wizard-step-header {
-  margin-bottom: 16px;
-}
-
-.wizard-results-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.wizard-results .wizard-summary {
-  margin: 12px 0 20px;
-}
-
 .household-empty {
   margin: 0 0 16px;
   line-height: 1.5;
@@ -583,181 +204,6 @@
 
 .chart-container[hidden] {
   display: none;
-}
-
-/* One left edge: plot, legend and expanders start at the content edge */
-.wizard-results .chart-container,
-.wizard-results .methodology {
-  margin-left: 0;
-  margin-right: 0;
-}
-
-@media (max-width: 768px) {
-  .wizard-step-header.is-results {
-    flex-wrap: wrap;
-  }
-
-  .wizard-results-controls {
-    order: 3;
-    flex: 1 1 100%;
-  }
-
-  .wizard-results-controls > * {
-    flex: 1 1 0;
-  }
-
-  .wizard-results-controls .pill-select-toggle,
-  .wizard-results-controls .light-pill-button {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .wizard-step-header.is-results + .wizard-results .wizard-summary,
-  .wizard-results .wizard-summary {
-    margin-top: 12px;
-  }
-}
-
-/* Results header rows: heading and controls, then the summary */
-.wizard-step-header.is-results {
-  flex-wrap: wrap;
-  row-gap: 0;
-}
-
-.wizard-step-header.is-results .wizard-summary {
-  order: 3;
-  flex: 1 1 100%;
-  margin: 12px 0 20px;
-}
-
-@media (max-width: 768px) {
-  .wizard-step-header.is-results .wizard-summary {
-    order: 2;
-    margin: 12px 0 12px;
-  }
-
-  .wizard-results-controls {
-    margin-bottom: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Phone: "Step N of 7" and the progress bar replace the circles */
-  .wizard-steps ol {
-    display: none;
-  }
-}
-
-/* "Start from an example": young-person presets on the first step */
-.wizard-examples.wizard-box {
-  margin: 0 0 16px;
-}
-
-.wizard-examples-label {
-  margin: 0 0 8px;
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-.wizard-examples-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.wizard-examples-buttons .light-pill-button.is-active {
-  border-color: var(--pe-teal-700);
-  color: var(--pe-teal-800);
-  background: var(--pe-teal-50, var(--pe-teal-50));
-}
-
-.wizard-examples-note {
-  margin: 12px 0 0;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-600);
-}
-
-/* ---------- The form's questions: groups, choice boxes, number boxes ---------- */
-.wizard-intro {
-  margin: -8px 0 20px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-}
-
-/* Each question group in its own box: two columns on a desktop, one on a
-   phone; the boxes in a row share a height */
-.wizard-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: stretch;
-}
-
-.wizard-box {
-  min-width: 0;
-  margin: 0;
-  padding: 20px;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-}
-
-/* The legend as the box heading, inside the border rather than on it */
-.wizard-group-title {
-  float: left;
-  width: 100%;
-  margin: 0 0 12px;
-  padding: 0;
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.wizard-group-title + * {
-  clear: both;
-}
-
-/* The 12 regions: a compact tile grid that fits a half-width box */
-.wizard-box .choice-grid .choice-tiles {
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 6px;
-}
-
-.wizard-box .choice-grid .choice-tile {
-  min-height: 40px;
-  padding: 6px 10px;
-}
-
-/* On the question steps the boxes sit on the page background, not in a
-   card of their own */
-.wizard.is-form {
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-
-.wizard.is-form .wizard-actions {
-  margin-top: 16px;
-}
-
-@media (max-width: 760px) {
-  .wizard-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.wizard-group-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  align-items: flex-start;
-}
-
-.wizard-group-fields > .choice-field {
-  flex: 1 1 100%;
 }
 
 .field-label {
@@ -972,42 +418,6 @@
   cursor: pointer;
 }
 
-/* "Start from an example": three boxes */
-.wizard-examples-buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.example-tile {
-  min-height: 44px;
-  padding: 8px 12px;
-  font-family: inherit;
-  font-size: var(--fs-small);
-  text-align: left;
-  color: var(--pe-gray-700);
-  background: var(--pe-gray-50);
-  border: 1px dashed var(--pe-gray-300);
-  border-radius: var(--pe-radius-md);
-  cursor: pointer;
-}
-
-.example-tile:hover {
-  border-color: var(--pe-teal-500);
-}
-
-.example-tile.is-active {
-  color: var(--pe-teal-800);
-  font-weight: 600;
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-600);
-}
-
-.example-tile:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 @media (max-width: 600px) {
   .choice-wide .choice-tiles {
     grid-template-columns: 1fr 1fr;
@@ -1040,4 +450,179 @@
   font-size: var(--fs-caption);
   line-height: 1.45;
   color: #b45309;
+}
+
+/* ---------- The form: one list of questions, each opening in place ---------- */
+.household-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Desktop: the list on the left, the headline beside it, kept in view */
+@media (min-width: 1024px) {
+  .household-layout {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 32px;
+  }
+
+  .household-results {
+    position: sticky;
+    top: calc(var(--sticky-offset, 72px) + 16px);
+  }
+}
+
+.household-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 12px;
+}
+
+.household-examples-label {
+  flex: 1 1 100%;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.example-chip {
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.example-chip:hover {
+  border-color: var(--pe-teal-500);
+}
+
+.example-chip.is-active {
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-600);
+}
+
+.example-chip:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.household-examples-note {
+  margin: 0 0 12px;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.household-section + .household-section {
+  margin-top: 20px;
+}
+
+.household-section-title {
+  margin: 0 0 4px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.household-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--card-border);
+}
+
+.household-row {
+  border-bottom: 1px solid var(--card-border);
+}
+
+.household-row-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 4px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  color: var(--pe-gray-800);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.household-row-button:hover .household-row-label {
+  color: var(--pe-teal-700);
+}
+
+.household-row-button:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+  border-radius: var(--pe-radius-sm, 4px);
+}
+
+.household-row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--pe-gray-700);
+}
+
+.household-row-value {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  text-align: right;
+  color: var(--pe-gray-900);
+  overflow-wrap: anywhere;
+}
+
+.household-row-chevron {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px 4px 2px;
+  border-right: 1.5px solid var(--pe-gray-500);
+  border-bottom: 1.5px solid var(--pe-gray-500);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.household-row.is-open .household-row-chevron {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+.household-row-panel {
+  padding: 4px 4px 16px;
+}
+
+.household-row-panel .choice-field,
+.household-row-panel .number-field-wrap,
+.household-row-panel .child-answers {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .household-row-chevron {
+    transition: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .household-row-button {
+    gap: 8px;
+  }
+
+  .household-row-value {
+    max-width: 60%;
+  }
 }
