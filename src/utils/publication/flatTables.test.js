@@ -96,8 +96,15 @@ describe("the flat tables the page reads", () => {
     for (const [name] of CONTRACT_TABLES) {
       expect(standaloneIds(tables[name]()), name).toEqual(expected);
     }
+    // The OBR comparison covers the same measures once the OBR has costed
+    // them. Until 28 October it holds last year's costings, under last
+    // year's ids, so it shares none with the candidates and pairs nothing
+    // (OBRComparisonTable says it is not yet available).
     const [, ...obr] = parseCsv(read("obr_comparison.csv").trimEnd());
-    expect(standaloneIds(obr.map(([reform_id]) => ({ reform_id })))).toEqual(expected);
+    const obrIds = standaloneIds(obr.map(([reform_id]) => ({ reform_id })));
+    const shared = obrIds.filter((id) => expected.includes(id));
+    expect(shared.length === 0 || shared.length === expected.length, "obr_comparison").toBe(true);
+    if (shared.length) expect(obrIds).toEqual(expected);
   });
 
   it("each decile table has the decile labels App.jsx matches on", () => {

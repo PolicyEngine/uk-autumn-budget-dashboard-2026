@@ -200,6 +200,8 @@ class SerialRunner:
     """One unit after another, in this process."""
 
     jobs = 1
+    # Its units never leave this process, so a measure need not pickle.
+    in_process = True
 
     def map(self, function, units, on_result=lambda i, r: None) -> list:
         results = []
@@ -414,13 +416,20 @@ class RegisteredReform:
     id: str
 
 
-def portable(reform):
+def portable(reform, runner=None):
     """``reform`` itself if it can be pickled, else its registered id.
+
+    A runner that keeps its units in this process (``in_process``, as
+    :class:`SerialRunner` does) takes ``reform`` as it is, so a serial run
+    still takes a measure that neither pickles nor is registered.
 
     Raises ValueError for an unpicklable measure the registry does not
     hold under its id, since a worker could not rebuild it.
     """
     import pickle
+
+    if getattr(runner, "in_process", False):
+        return reform
 
     try:
         pickle.dumps(reform)

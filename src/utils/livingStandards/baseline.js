@@ -1,11 +1,35 @@
 // Helpers shared by the baseline sections (living standards, poverty).
 
 import { fyStart } from "./outlook";
+import { CHART_COLOURS } from "../chartTheme";
 
 export const EMPTY = [];
 
-export const OUTTURN_COLOUR = "#9CA3AF";
-export const PROJECTION_COLOUR = "#319795";
+export const OUTTURN_COLOUR = CHART_COLOURS.before;
+export const PROJECTION_COLOUR = CHART_COLOURS.after;
+
+/**
+ * A short form of a measure or group name for a closed in-card pill, so a
+ * card's pills fit one line; the list keeps the full name. "Absolute (BHC)"
+ * becomes "Abs. BHC", "All people" "All".
+ */
+export function shortLabel(label) {
+  const text = String(label);
+  const fixed = {
+    "All people": "All",
+    "All children": "All",
+    "Working-age adults": "Working age",
+    "Gini coefficient": "Gini",
+    "90:10 ratio": "90:10",
+    "Cash terms": "Cash",
+  };
+  if (fixed[text]) return fixed[text];
+  const basis = text.match(/^(Absolute|Relative) \((BHC|AHC)\)$/);
+  if (basis) return `${basis[1] === "Absolute" ? "Abs." : "Rel."} ${basis[2]}`;
+  const income = text.match(/^(Mean|Median) equivalised income \((BHC|AHC)\)$/);
+  if (income) return `${income[1]} ${income[2]}`;
+  return text;
+}
 
 export const VIEW_OPTIONS = [
   { value: "outturn", label: "Outturn" },
@@ -29,7 +53,7 @@ export const NO_OFFICIAL_SERIES = "No official series on this definition";
  * anywhere in the file (2024-25 with the current data). The model's own point
  * for that year is drawn next to the official one, so the level gap shows
  * within one year instead of as a one-year change; earlier model years are
- * not drawn. Headline changes start at 2026-27 (headlineStartYear).
+ * not drawn. Headline changes start at 2027-28 (headlineStartYear).
  */
 export function projectionStartYear(data) {
   let last = -Infinity;
@@ -40,8 +64,8 @@ export function projectionStartYear(data) {
 }
 
 /**
- * Projection rows from startYear to the headline end year (2029-30): the
- * 2030-31 model year is distorted (meta.headline_end_year_note).
+ * Projection rows from startYear to the headline end year (2031-32,
+ * meta.headline_end_year).
  */
 export const trimProjection = (rows, startYear, endYear = Infinity) =>
   (rows || EMPTY).filter((d) => fyStart(d.year) >= startYear && fyStart(d.year) <= endYear);
@@ -155,12 +179,16 @@ export function joinSeries(entries) {
   return Object.values(out).sort((a, b) => a.year - b.year);
 }
 
-/** Chart palette (teal ramp + neutral), as the published UK dashboards. */
+/**
+ * Chart palette (teal ramp + neutral), as the published UK dashboards: the
+ * shared chart colours (chartTheme.CHART_COLOURS), so a rise is the gain
+ * teal and a fall the loss amber on every tab. `light` is the ramp's third
+ * step, for a series beside dark and teal.
+ */
 export const PALETTE = {
-  dark: "#285E61",
-  teal: "#319795",
-  light: "#81E6D9",
-  grey: "#9CA3AF",
-  amber: "#D97706",
-  red: "#B91C1C",
+  dark: CHART_COLOURS.highlight,
+  teal: CHART_COLOURS.gain,
+  light: CHART_COLOURS.gainLight,
+  grey: CHART_COLOURS.noChange,
+  amber: CHART_COLOURS.loss,
 };

@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "policyengine[uk]>=6.10.0",
+    "policyengine[uk]>=6.10.2",
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "h5py>=3.0.0",
@@ -30,6 +30,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "httpx>=0.27.0",
+    "odfpy>=1.4.1",
 ]
 
 [project.optional-dependencies]

@@ -1,0 +1,91 @@
+{
+  "source": {
+    "release": "OBR Economic and fiscal outlook, March 2026: detailed forecast tables, economy",
+    "url": "https://obr.uk/download/march-2026-economic-and-fiscal-outlook-detailed-forecast-tables-economy/",
+    "file_sha256": "fde1de4bc5424dcf16c7b5c42eb75a35198e347f54db47690e95ede7541db510",
+    "table": "Table 1.5 (Per person), By total population: Real household disposable income, columns D (index, 2008Q1=100) and G (\u00a3 thousands, 2023 prices), fiscal-year rows",
+    "definition": "RHDI (chained volume measure, ONS NRJR) divided by total population (ONS EBAQ)"
+  },
+  "series": [
+    {
+      "year": "2021-22",
+      "index_2008q1_100": 111.773,
+      "gbp_2023_prices": 26124,
+      "growth": null,
+      "type": "outturn",
+      "cell_row": 137
+    },
+    {
+      "year": "2022-23",
+      "index_2008q1_100": 108.25,
+      "gbp_2023_prices": 25301,
+      "growth": -0.03152,
+      "type": "outturn",
+      "cell_row": 138
+    },
+    {
+      "year": "2023-24",
+      "index_2008q1_100": 109.133,
+      "gbp_2023_prices": 25507,
+      "growth": 0.00815,
+      "type": "outturn",
+      "cell_row": 139
+    },
+    {
+      "year": "2024-25",
+      "index_2008q1_100": 112.495,
+      "gbp_2023_prices": 26293,
+      "growth": 0.03081,
+      "type": "outturn",
+      "cell_row": 140
+    },
+    {
+      "year": "2025-26",
+      "index_2008q1_100": 112.621,
+      "gbp_2023_prices": 26322,
+      "growth": 0.00112,
+      "type": "forecast",
+      "cell_row": 141
+    },
+    {
+      "year": "2026-27",
+      "index_2008q1_100": 113.134,
+      "gbp_2023_prices": 26442,
+      "growth": 0.00455,
+      "type": "forecast",
+      "cell_row": 142
+    },
+    {
+      "year": "2027-28",
+      "index_2008q1_100": 113.588,
+      "gbp_2023_prices": 26548,
+      "growth": 0.00402,
+      "type": "forecast",
+      "cell_row": 143
+    },
+    {
+      "year": "2028-29",
+      "index_2008q1_100": 114.067,
+      "gbp_2023_prices": 26660,
+      "growth": 0.00421,
+      "type": "forecast",
+      "cell_row": 144
+    },
+    {
+      "year": "2029-30",
+      "index_2008q1_100": 114.512,
+      "gbp_2023_prices": 26764,
+      "growth": 0.00391,
+      "type": "forecast",
+      "cell_row": 145
+    },
+    {
+      "year": "2030-31",
+      "index_2008q1_100": 115.168,
+      "gbp_2023_prices": 26917,
+      "growth": 0.00573,
+      "type": "forecast",
+      "cell_row": 146
+    }
+  ]
+}

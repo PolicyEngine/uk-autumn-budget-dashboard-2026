@@ -186,3 +186,29 @@ describe("the OBR comparison at 2031-32", () => {
     expect(cells[column + 1]).toHaveTextContent("—");
   });
 });
+
+describe("before the OBR costs the measures", () => {
+  it("says the comparison is not available and pairs nothing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        // Last year's costings, under last year's ids
+        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": [
+          "reform_id,reform_name,year,value",
+          "threshold_freeze_2031_32,Threshold freeze to 2031-32,2031,3.1",
+        ].join("\n"),
+      }),
+    );
+    render(
+      <OBRComparisonTable selectedPolicies={["threshold_freeze_2031_32"]} />,
+    );
+    expect(
+      await screen.findByText(
+        "Shown once the OBR publishes its costings for these measures.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Table" })).not.toBeInTheDocument();
+  });
+});

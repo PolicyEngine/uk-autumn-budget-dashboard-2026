@@ -1,5 +1,5 @@
 import { measureTextWidth } from "./textMeasure";
-import { Y_TITLE_GUTTER } from "./chartTheme";
+import { Y_TITLE_GUTTER, CHART_COLOURS } from "./chartTheme";
 
 const FONT_SIZE = 12;
 const MIN_FONT_SIZE = 10;
@@ -42,7 +42,7 @@ function ChartUnitLabel({ text, yAxisMap }) {
       transform={`rotate(-90, ${x}, ${y})`}
       fontSize={fontSize}
       fontWeight={500}
-      fill="#4B5563"
+      fill={CHART_COLOURS.axisTitle}
       textAnchor="middle"
     >
       {text}

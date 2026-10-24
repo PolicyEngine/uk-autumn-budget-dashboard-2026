@@ -23,6 +23,7 @@ import {
 } from "../../utils/publication/scatter";
 import UnavailableNotice from "./UnavailableNotice";
 import "./publication.css";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 
 const pounds = (value) =>
   `${value < 0 ? "−" : ""}£${new Intl.NumberFormat("en-GB", {
@@ -31,7 +32,7 @@ const pounds = (value) =>
 const thousands = (value) =>
   `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(value / 1000)}k`;
 
-const COLOURS = { loss: "#D97706", gain: "#319795", zero: "#9CA3AF" };
+const COLOURS = { loss: CHART_COLOURS.loss, gain: CHART_COLOURS.gain, zero: CHART_COLOURS.noChange };
 
 // Losses amber, gains teal; the no-change band, (−£1, £1), grey.
 export function colourFor(point) {
@@ -104,7 +105,7 @@ function BinnedHouseholdScatter({ series }) {
       )}
       <ResponsiveContainer width="100%" height={350}>
         <ScatterChart margin={{ top: 20, right: 30, left: 90, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLOURS.grid} />
           <XAxis
             type="number"
             dataKey="income"
@@ -134,7 +135,7 @@ function BinnedHouseholdScatter({ series }) {
             }}
           />
           <ZAxis type="number" dataKey="households" range={[20, 400]} />
-          <ReferenceLine y={0} stroke="#9CA3AF" />
+          <ReferenceLine y={0} stroke={CHART_COLOURS.noChange} />
           <Tooltip content={<CellTooltip />} />
           <Scatter data={points} shape="circle" isAnimationActive={false}>
             {points.map((point) => (

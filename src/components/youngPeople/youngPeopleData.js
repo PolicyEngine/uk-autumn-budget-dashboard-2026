@@ -12,10 +12,10 @@ import {
   AGE_GROUPS,
   ALL_BAND,
   MIN_SAMPLE_SIZE,
-  SINGLE_AGE_TOP,
   YOUNG_BAND,
   singleAgeKey,
 } from "../../utils/ageImpact";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -23,13 +23,13 @@ import {
  * darker with age, and all ages in grey (dashed where drawn as a line).
  */
 export const GROUP_STYLES = {
-  "0-15": { color: "#8DB8E3" },
-  "16-24": { color: "#319795" },
-  "25-34": { color: "#5A8FCB" },
-  "35-49": { color: "#3165A8" },
-  "50-64": { color: "#7C5CB8" },
-  "65+": { color: "#2E1F5E" },
-  all: { color: "#6B7280", dash: "5 3" },
+  "0-15": { color: CHART_COLOURS.ageChildren },
+  "16-24": { color: CHART_COLOURS.gain },
+  "25-34": { color: CHART_COLOURS.ageYoungAdults },
+  "35-49": { color: CHART_COLOURS.ageAdults },
+  "50-64": { color: CHART_COLOURS.ageOlder },
+  "65+": { color: CHART_COLOURS.agePension },
+  all: { color: CHART_COLOURS.reference, dash: "5 3" },
 };
 
 /** Below this (in £ a year) a mean change counts as no change. */
@@ -140,20 +140,15 @@ export function wrapWords(text, max) {
   return lines;
 }
 
-/**
- * The single-year view's oldest bar: ages from here up are one bar ("80+").
- * Fewer people are this old, so single years above it are noisier, and
- * every policy's effect is flat past 80.
- */
-export const SINGLE_AGE_OLDEST = 80;
+/** The single-year view's ages: one bar per year of age, 10 to 40. */
+export const SINGLE_AGE_FIRST = 10;
+export const SINGLE_AGE_LAST = 40;
 
 /**
- * One bar per single year of age, 0 to SINGLE_AGE_OLDEST - 1, and one for
- * SINGLE_AGE_OLDEST and over: the selected policies' mean changes added up
- * (`netChange`). The top bar is each policy's people-weighted mean over its
- * ages. A bar is null where any selected policy has no row for an age in it
- * (the generator leaves out an age with too few survey records) or a thin
- * one.
+ * One bar per single year of age, SINGLE_AGE_FIRST to SINGLE_AGE_LAST: the
+ * selected policies' mean changes added up (`netChange`). A bar is null
+ * where any selected policy has no row for the age (the generator leaves
+ * out an age with too few survey records) or a thin one.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string}>} policies - Every policy
@@ -166,37 +161,19 @@ export function singleAgeBars(rows, policies, selected, year) {
     if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
   }
   const chosen = policies.filter((policy) => selected.includes(policy.id));
-  const topKeys = [];
-  for (let age = SINGLE_AGE_OLDEST; age <= SINGLE_AGE_TOP; age += 1) topKeys.push(singleAgeKey(age));
   const bars = [];
-  for (let age = 0; age <= SINGLE_AGE_OLDEST; age += 1) {
-    const top = age === SINGLE_AGE_OLDEST;
-    const keys = top ? topKeys : [String(age)];
+  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
     let net = 0;
     let complete = chosen.length > 0;
     for (const policy of chosen) {
-      let people = 0;
-      let total = 0;
-      for (const key of keys) {
-        const row = byKey.get(`${policy.id}|${key}`);
-        if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
-          complete = false;
-          break;
-        }
-        people += row.people;
-        total += row.people * row.mean_change;
-      }
-      if (!complete || people <= 0) {
+      const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
         complete = false;
         break;
       }
-      net += total / people;
+      net += row.mean_change;
     }
-    bars.push({
-      age,
-      label: top ? `${SINGLE_AGE_OLDEST}+` : String(age),
-      netChange: complete ? net : null,
-    });
+    bars.push({ age, label: String(age), netChange: complete ? net : null });
   }
   return bars;
 }

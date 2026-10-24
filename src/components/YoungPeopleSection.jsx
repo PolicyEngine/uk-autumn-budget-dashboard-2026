@@ -8,7 +8,6 @@ import {
   ComposedChart,
   Customized,
   LabelList,
-  Legend,
   Line,
   ReferenceArea,
   ReferenceLine,
@@ -18,7 +17,7 @@ import {
   YAxis,
   Scatter,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { parseTable } from "../utils/publication/csv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
@@ -43,10 +42,9 @@ import {
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
-  chartMargin,
-  legendWrapperStyle,
   axisWidth,
   fiscalYearTick,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -55,7 +53,8 @@ import {
   meanChangeByBand,
   sharesByGroup,
 } from "../utils/ageImpact";
-import { SINGLE_AGE_OLDEST, fitRange, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, singleAgeBars } from "./youngPeople/youngPeopleData";
+import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
 import { chartMotion, netDot } from "../utils/chartMotion";
 
@@ -67,18 +66,18 @@ const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
 // on white)
 const YOUNG_FILL = "rgba(49, 151, 149, 0.10)";
-const YOUNG_SWATCH = "#EAF5F4";
+const YOUNG_SWATCH = CHART_COLOURS.highlightBand;
 // Better off, unchanged, worse off: the page's teal and amber, grey between
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: "#0D9488" },
-  { key: "pct_unchanged", label: "Unchanged", color: "#D1D5DB" },
-  { key: "pct_worse_off", label: "Worse off", color: "#D97706" },
+  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
 ];
 
 const MEAN_DESCRIPTION =
   "Average change in household net income per person, by age group, in pounds a year. Each person counts their household's change; bars add up each selected policy's own effect.";
 const SINGLE_AGE_DESCRIPTION =
-  `Average change in household net income per person, by single year of age (${SINGLE_AGE_OLDEST} and over as one bar), in pounds a year. Each person counts their household's change, so children show their household's; each bar adds up the selected policies' own effects.`;
+  `Average change in household net income per person, for each single year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}, in pounds a year. Each person counts their household's change, so children show their household's; each bar adds up the selected policies' own effects.`;
 const SHARES_DESCRIPTION =
   "The share of people whose household net income rises or falls by more than 0.01%, by age group and for all ages.";
 
@@ -87,13 +86,14 @@ const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
 ];
-// Ticks every ten years, with the 16 to 24 band's ends in place of 20
-const SINGLE_AGE_TICKS = ["0", "10", "16", "24", "30", "40", "50", "60", "70", `${SINGLE_AGE_OLDEST}+`];
-const SINGLE_AGE_TICKS_NARROW = ["0", "16", "24", "40", "60", `${SINGLE_AGE_OLDEST}+`];
+// Ticks every five years, with the 16 to 24 band's ends (in bold) in place
+// of 15 and 25: a bar apart, both labels would run together
+const SINGLE_AGE_TICKS = ["10", "16", "20", "24", "30", "35", "40"];
+const SINGLE_AGE_TICKS_NARROW = ["10", "16", "24", "30", "40"];
 const YOUNG_ENDS = new Set(["16", "24"]);
 // Gains teal, losses amber, under £1 either way grey (as the household
 // scatter)
-const SIGN_COLOURS = { gain: "#319795", loss: "#D97706", zero: "#9CA3AF" };
+const SIGN_COLOURS = { gain: CHART_COLOURS.gain, loss: CHART_COLOURS.loss, zero: CHART_COLOURS.noChange };
 const signColour = (value) =>
   Math.abs(value) < 1 ? SIGN_COLOURS.zero : value > 0 ? SIGN_COLOURS.gain : SIGN_COLOURS.loss;
 const UNIT = "Average change per person (£ a year)";
@@ -173,7 +173,7 @@ function AgeTick({ x, y, payload, narrow }) {
       y={y + 12}
       textAnchor="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young ? 600 : 400}
     >
       {narrow ? band?.short : payload.value}
@@ -211,7 +211,7 @@ function SingleAgeTick({ x, y, payload }) {
       y={y + 12}
       textAnchor="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young ? 600 : 400}
     >
       {payload.value}
@@ -220,7 +220,7 @@ function SingleAgeTick({ x, y, payload }) {
 }
 
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
-function SingleAgeTooltip(props) {
+function SingleAgeTooltip({ yearLabel, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!point || point.netChange === null) return null;
   return (
@@ -229,13 +229,13 @@ function SingleAgeTooltip(props) {
       format={(value) => `${pounds(value)} a year`}
       showPlus
       showZero
-      labelFormat={(label) => `Age ${label}`}
+      labelFormat={(label) => `Age ${label}, ${yearLabel}`}
       single={{ key: "netChange", label: "Net change", color: signColour(point.netChange) }}
     />
   );
 }
 
-function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow }) {
+function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const [view, setView] = useState("band");
   const single = view === "single";
@@ -275,6 +275,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     title,
     description,
     logo: CHART_LOGO,
+    reservedLegendHeight: 0,
     legendItems: single
       ? [
           { color: SIGN_COLOURS.gain, label: "Gain", type: "rect" },
@@ -289,7 +290,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
             group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
           })),
           ...(activeNames.length > 1
-            ? [{ color: "#000000", label: "Net change", type: "line" }]
+            ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
             : []),
         ],
   };
@@ -332,7 +333,6 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     csv: csvText,
     published,
   };
-  const height = narrow ? 560 : 440;
   const notShown = single
     ? missingAges.length > 0 && `ages ${missingAges.map((p) => p.label).join(", ")}`
     : suppressed.length > 0 && suppressed.map((p) => p.label).join(", ");
@@ -359,12 +359,12 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
           stableWidth
         />
       </div>
-      <div ref={chartRef} className="young-people-plot">
+      <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : single ? (
           <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={singleData} margin={chartMargin(narrow)} barCategoryGap="14%">
+            <BarChart data={singleData} margin={plotMargin(narrow)} barCategoryGap="14%">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
               <XAxis
@@ -374,7 +374,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 tick={<SingleAgeTick />}
                 axisLine={AXIS_LINE}
                 tickLine={false}
-                height={44}
+                height={X_AXIS_HEIGHT}
                 label={{ value: "Age", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
               />
               <YAxis
@@ -386,15 +386,11 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
-                content={<SingleAgeTooltip />}
-              />
-              <Legend
-                wrapperStyle={legendWrapperStyle(narrow)}
-                content={<RowLegend items={SINGLE_AGE_LEGEND} />}
+                content={<SingleAgeTooltip yearLabel={yearLabel} />}
               />
               <Bar dataKey="netChange" name="Net change" {...chartMotion()}>
                 {singleData.map((point) => (
@@ -402,12 +398,11 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 ))}
               </Bar>
               <Customized component={<ChartUnitLabel text={UNIT} />} />
-              <Customized component={PolicyEngineLogo} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
-            <ComposedChart data={data} margin={chartMargin(narrow)} stackOffset="sign">
+            <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />
               <XAxis
@@ -416,7 +411,8 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={AXIS_LINE}
                 tickLine={false}
                 interval={0}
-                height={28}
+                height={X_AXIS_HEIGHT}
+                label={{ value: "Age group", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
               />
               <YAxis
                 domain={domain}
@@ -427,25 +423,16 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 axisLine={false}
                 tickLine={false}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
                 content={
                   <ChartTooltip
                     format={pounds}
-                    labelFormat={(label) => `Aged ${label.toLowerCase()}`}
+                    labelFormat={(label) => `Aged ${label.toLowerCase()}, ${yearLabel}`}
                     netKey="netChange"
                     netLabel="Net change"
-                  />
-                }
-              />
-              <Legend
-                wrapperStyle={legendWrapperStyle(narrow)}
-                content={
-                  <GroupedLegend
-                    names={activeNames}
-                    netLabel={activeNames.length > 1 ? "Net change" : undefined}
                   />
                 }
               />
@@ -465,7 +452,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 type="linear"
                 dataKey="netChange"
                 name="netChange"
-                stroke="#000000"
+                stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
                 {...chartMotion()}
@@ -483,10 +470,24 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 hide={activeNames.length <= 1}
               />
               <Customized component={<ChartUnitLabel text={UNIT} />} />
-              <Customized component={PolicyEngineLogo} />
             </ComposedChart>
           </ResponsiveContainer>
         )}
+      </div>
+      <div className="chart-legend">
+        {published &&
+          (single ? (
+            <RowLegend items={SINGLE_AGE_LEGEND} />
+          ) : (
+            <GroupedLegend
+              names={activeNames}
+              netLabel={activeNames.length > 1 ? "Net change" : undefined}
+            />
+          ))}
+      </div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && notShown && <Note>Not shown, as too few survey records: {notShown}.</Note>}
     </div>
@@ -505,7 +506,7 @@ function GroupTick({ x, y, payload, narrow }) {
       textAnchor="end"
       dominantBaseline="middle"
       fontSize={TICK_STYLE.fontSize}
-      fill={young ? "#285E61" : TICK_STYLE.fill}
+      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
       fontWeight={young || !band ? 600 : 400}
     >
       {label}
@@ -531,6 +532,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
     title,
     description: SHARES_DESCRIPTION,
     logo: CHART_LOGO,
+    reservedLegendHeight: 0,
     legendItems: OUTCOMES.map((outcome) => ({
       color: outcome.color,
       label: outcome.label,
@@ -580,7 +582,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
           }
         />
       </div>
-      <div ref={chartRef}>
+      <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length ? (
@@ -588,7 +590,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             <BarChart
               data={data}
               layout="vertical"
-              margin={chartMargin(narrow, { top: 8 })}
+              margin={plotMargin(narrow)}
               barCategoryGap="22%"
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
@@ -607,7 +609,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                 tick={TICK_STYLE}
                 axisLine={AXIS_LINE}
                 tickLine={false}
-                height={44}
+                height={X_AXIS_HEIGHT}
                 label={{
                   value: "Share of people in the group",
                   position: "insideBottom",
@@ -631,11 +633,12 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                   <ChartTooltip
                     format={percent}
                     grouped={false}
-                    labelFormat={(label) => (label === "All ages" ? label : `Aged ${label.toLowerCase()}`)}
+                    labelFormat={(label) =>
+                      `${label === "All ages" ? label : `Aged ${label.toLowerCase()}`}, ${yearLabel}`
+                    }
                   />
                 }
               />
-              <Legend wrapperStyle={legendWrapperStyle(narrow)} content={<RowLegend />} />
               {OUTCOMES.map((outcome) => (
                 <Bar
                   key={outcome.key}
@@ -650,13 +653,12 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
                     dataKey={outcome.key}
                     position="center"
                     formatter={(value) => (value >= (narrow ? 14 : 8) ? `${Math.round(value)}%` : "")}
-                    fill={outcome.key === "pct_unchanged" ? "#374151" : "#FFFFFF"}
+                    fill={outcome.key === "pct_unchanged" ? CHART_COLOURS.text : CHART_COLOURS.surface}
                     fontSize={12}
                     fontWeight={600}
                   />
                 </Bar>
               ))}
-              <Customized component={PolicyEngineLogo} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -668,6 +670,11 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
             </p>
           </div>
         )}
+      </div>
+      <div className="chart-legend">{data.length > 0 && <RowLegend />}</div>
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       {published && thin.length > 0 && (
         <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
@@ -714,12 +721,13 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
         {status === "ready" ? (
           <>
             <div className="charts-grid">
-              <MeanChangeCard {...props} />
-              <MeasuresCard {...props} height={narrow ? 600 : 440} />
+              {/* Both plots the same height: the nine policy rows set it */}
+              <MeanChangeCard {...props} height={narrow ? 360 : 400} />
+              <MeasuresCard {...props} height={narrow ? 460 : 400} />
             </div>
             <div className="charts-grid">
-              <SharesCard {...props} height={narrow ? 400 : 380} />
-              <TrendCard {...props} height={narrow ? 400 : 380} />
+              <SharesCard {...props} height={narrow ? 340 : 330} />
+              <TrendCard {...props} height={narrow ? 340 : 330} />
             </div>
           </>
         ) : (

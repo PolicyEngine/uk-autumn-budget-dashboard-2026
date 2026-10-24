@@ -219,7 +219,7 @@
   height: 26px;
   border-radius: 50%;
   background: var(--band-teal);
-  color: #fff;
+  color: var(--c-surface);
   font-size: var(--fs-caption);
   font-weight: 600;
 }

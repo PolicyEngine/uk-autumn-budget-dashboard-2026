@@ -4,9 +4,11 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
+import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
+import { CHART_COLOURS } from "../../utils/chartTheme";
 
-const ZERO_LINE = "#374151";
-const NAME_COLOUR = "#374151";
+const ZERO_LINE = CHART_COLOURS.text;
+const NAME_COLOUR = CHART_COLOURS.text;
 
 // Text width without a canvas: close enough for 12–13px system sans
 const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
@@ -22,13 +24,20 @@ const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
  * @param {Array<{id, name, color, rounded}>} props.rows
  * @param {string[]} props.noEffect - Names of measures that do not move the household
  * @param {string[]} [props.underAPound] - Names of measures worth under £1
+ * @param {Array<{id, name, kind, text}>} [props.notes] - Notes on measures'
+ *   figures: an employer cost (£0 for every household) or "if received"
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel }) {
+export default function PolicyBars({ rows, noEffect, underAPound = [], notes = [], yearLabel }) {
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const width = measured > 0 ? measured : 640;
   const title = `Change in net income by policy, ${yearLabel}`;
+  // Cleared when the year or the figures change, so it never shows old ones
+  const { tip, handlers } = useFloatingTooltip(
+    wrapperRef,
+    `${yearLabel}:${rows.map((row) => `${row.id}=${row.rounded}`).join(",")}`,
+  );
 
   const fontSize = 13;
   const valueRoom = Math.max(64, ...rows.map((row) => approxWidth(signedMoney(row.rounded), fontSize) + 12));
@@ -82,7 +91,7 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
         <ChartDownloadMenu download={rows.length ? download : undefined} chartTitle={title} />
       </div>
       {rows.length > 0 ? (
-        <div ref={wrapperRef} className="policy-bars-plot">
+        <div ref={wrapperRef} className="policy-bars-plot" style={{ position: "relative" }}>
           <div ref={chartRef}>
             <svg
               width={width}
@@ -96,7 +105,29 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
                 const x0 = Math.min(zero, x(row.rounded));
                 const w = Math.max(Math.abs(x(row.rounded) - zero), 1.5);
                 return (
-                  <g key={row.id} className="policy-bar" data-policy={row.id}>
+                  <g
+                    key={row.id}
+                    className="policy-bar has-tooltip"
+                    data-policy={row.id}
+                    tabIndex={0}
+                    aria-label={`${row.name}: ${signedMoney(row.rounded)} a year in ${yearLabel}`}
+                    {...handlers(
+                      row.id,
+                      <TooltipRows
+                        label={`${row.name}, ${yearLabel}`}
+                        rows={[
+                          {
+                            key: "change",
+                            name: "Change in net income",
+                            text: `${signedMoney(row.rounded)} a year`,
+                            color: row.color,
+                          },
+                        ]}
+                      />,
+                    )}
+                  >
+                    {/* The whole row answers the pointer, not just its bar */}
+                    <rect x={0} y={y} width={width} height={rowHeight} fill="transparent" />
                     <text x={plotLeft} y={y + 13} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
@@ -139,6 +170,7 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={CHART_LOGO.href} alt="PolicyEngine" />
           </div>
+          <FloatingTooltip tip={tip} />
         </div>
       ) : (
         <p className="single-year-quiet">None of the selected policies changes your household&apos;s net income.</p>
@@ -149,6 +181,11 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], yearLabel
       {noEffect.length > 0 && rows.length > 0 && (
         <p className="single-year-quiet">No effect on your household: {noEffect.join(", ")}.</p>
       )}
+      {notes.map((note) => (
+        <p key={note.id} className="single-year-quiet" data-note={note.kind}>
+          <strong>{note.name}</strong>: {note.text}
+        </p>
+      ))}
     </div>
   );
 }

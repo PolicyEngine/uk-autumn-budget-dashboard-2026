@@ -7,12 +7,15 @@ own write-once directory. A combined set is one simulation of all its
 members, checked beforehand to contain each member's changes.
 
 A measure that cannot be receipted is refused and reported; the others are
-still written. One that leaves out a scored year of an uprated amount is
-refused the same way, before any simulation is built
-(``uk_budget_data.scored_years``). A measure or combined run the certified
-data cannot cost (its run records a data limit) is still processed, since
-the limits are observed while it runs, but its artifact is receipt-only: it
-is listed as not computable and binds no figure, so no table is written.
+still written. One that leaves out a scored year of an uprated amount
+(``uk_budget_data.scored_years``), or changes one of the engine's
+wealth-tax scales in its ``parameter_changes``, is refused the same way,
+before any simulation is built; one whose two built simulations differ in a
+wealth-tax scale (a modifier that edits it) is refused once they are built,
+before any figure is made. A measure or combined run the certified data
+cannot cost (its run records a data limit) is still processed, since the
+limits are observed while it runs, but its artifact is receipt-only: it is
+listed as not computable and binds no figure, so no table is written.
 """
 
 import atexit
@@ -26,6 +29,11 @@ from typing import Callable, Optional
 from pydantic import ValidationError
 
 from uk_budget_data import data_limits, model_limits
+from uk_budget_data.measure_templates import (
+    wealth_tax_paths,
+    wealth_tax_paths_differing,
+    wealth_tax_refusal,
+)
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
@@ -298,6 +306,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
         lambda: reform.baseline_scenario_for(config, job.uses_config_baseline),
     )
     reform_scenario = _scenarios(key, reform.to_scenario)
+    _refuse_wealth_tax_base(key, baseline_scenario, reform_scenario)
     _refuse_unscored_years(
         key, baseline_scenario, reform_scenario, config.years
     )
@@ -310,6 +319,7 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
     reformed = data_limits.watched_build(
         job.build, job.dataset_path, reform_scenario
     )
+    _refuse_wealth_tax_built(key, baseline, reformed)
     # What the code that differs reads is watched while the run makes the
     # figures; a measure the data cannot cost is then published as not
     # computable.
@@ -380,6 +390,33 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool]:
         job.artifacts_root,
     )
     return reference, bool(limits)
+
+
+def _refuse_wealth_tax_base(
+    subject: str, baseline_scenario, reform_scenario
+) -> None:
+    """Refuse a run whose either side changes one of the engine's
+    wealth-tax scales in its ``parameter_changes``: they tax gross wealth,
+    the wrong base for a wealth tax on net assets (the UK hub's
+    budget-triage/JUDGED.md, S4). The templates refuse the path; this
+    refuses it written as plain ``parameter_changes``."""
+    paths = wealth_tax_paths(baseline_scenario, reform_scenario)
+    if paths:
+        raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
+
+
+def _refuse_wealth_tax_built(subject: str, baseline, reformed) -> None:
+    """Refuse a run whose two built simulations differ in a wealth-tax
+    scale, as a modifier that edits one leaves them with no
+    ``parameter_changes``. Only for simulations with parameter trees, as
+    :func:`_model_limits` reads them (stand-ins in tests have none)."""
+    if not all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
+    ):
+        return
+    paths = wealth_tax_paths_differing(baseline, reformed)
+    if paths:
+        raise ReceiptUnavailable(subject, wealth_tax_refusal(*paths))
 
 
 def generate_artifacts(
@@ -506,7 +543,7 @@ def generate_artifacts(
             continue
         slots.append(
             ArtifactRun(
-                reform=portable(reform),
+                reform=portable(reform, runner),
                 key=reform.id,
                 identities=identities,
                 members=None,
@@ -531,6 +568,11 @@ def generate_artifacts(
         def prepare():
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
+            _refuse_wealth_tax_base(
+                key,
+                combined.baseline_scenario_for(config, uses_config),
+                combined.to_scenario(),
+            )
             _refuse_unscored_years(
                 key,
                 combined.baseline_scenario_for(config, uses_config),
@@ -577,7 +619,7 @@ def generate_artifacts(
             slots.append(
                 ArtifactRun(
                     reform=None,
-                    combine_members=[portable(m) for m in ordered],
+                    combine_members=[portable(m, runner) for m in ordered],
                     key=key,
                     identities=(baseline_identity, reform_identity),
                     members=records,

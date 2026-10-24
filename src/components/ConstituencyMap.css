@@ -282,7 +282,7 @@
 .tooltip-interval-emphasis {
   font-size: var(--fs-body-lg);
   padding: 4px 8px;
-  background: #fff7e6;
+  background: var(--c-notice-bg);
   border-radius: 4px;
 }
 

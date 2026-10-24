@@ -217,6 +217,17 @@ def test_an_unpicklable_unregistered_measure_is_refused():
     )
     with pytest.raises(ValueError, match="not a registered measure"):
         portable(reform)
+    with pytest.raises(ValueError, match="not a registered measure"):
+        portable(reform, ProcessRunner(2, 1.0))
+
+
+def test_a_serial_run_takes_an_unpicklable_unregistered_measure_as_is():
+    """Its units never leave this process, so a test's stand-in or an
+    unregistered template measure still runs serially, as before --jobs."""
+    reform = Reform(
+        id="not_registered", name="X", simulation_modifier=lambda sim: sim
+    )
+    assert portable(reform, SerialRunner()) is reform
 
 
 # --- the flat CSVs: same bytes whatever the order --------------------------

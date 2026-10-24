@@ -111,6 +111,54 @@ code {
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
   /* Solid PolicyEngine dark teal (rgb 40, 94, 97) */
   --band-teal: #285e61;
+
+  /* Chart colours by meaning, the same on every tab. The JS mirror is
+     CHART_COLOURS in src/utils/chartTheme.js (SVG exports need literal
+     values); src/utils/chartTheme.test.js keeps the two equal. Policy
+     colours are per measure, in src/utils/policyConfig.js. */
+  --c-gain: #319795; /* better off, rise in income, after the Budget */
+  --c-gain-text: #0f766e; /* a gain written as text */
+  --c-loss: #d97706; /* worse off, fall in income */
+  --c-loss-text: #b45309; /* a loss written as text */
+  --c-loss-soft: #fdf0e1; /* a loss chip's background */
+  --c-loss-border: #fde68a; /* a loss banner's border */
+  --c-no-change: #9ca3af; /* unchanged */
+  --c-before: #9ca3af; /* before the Budget, pre-Budget, baseline, outturn */
+  --c-after: #319795; /* after the Budget, Budget, projection */
+  --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
+  --c-highlight: #285e61; /* the highlighted group, such as the age band */
+  --c-highlight-band: #eaf5f4; /* behind a highlighted group */
+  --c-obr: #9ca3af; /* the OBR's figure (a ring) */
+  --c-obr-text: #6b7280;
+  --c-net: #000000; /* the net line and its dots */
+  --c-zero-line: #374151;
+  --c-grid: #e5e7eb;
+  --c-axis: #d1d5db;
+  --c-tick: #6b7280;
+  --c-axis-title: #4b5563;
+  --c-text: #374151;
+  --c-surface: #ffffff;
+  --c-muted-fill: #f3f4f6; /* a shaded area with no data */
+  /* How far PolicyEngine is from the OBR */
+  --c-diff-small: #10b981;
+  --c-diff-medium: #fbbf24;
+  --c-diff-large: #ef4444;
+  /* Categorical series: age bands (blues under 50, purples from 50, each
+     darker with age; 16 to 24 is --c-gain), the household breakdown's
+     market income and pension contributions */
+  --c-age-children: #8db8e3;
+  --c-age-young-adults: #5a8fcb;
+  --c-age-adults: #3165a8;
+  --c-age-older: #7c5cb8;
+  --c-age-pension: #2e1f5e;
+  --c-market-income: #4a7ba7;
+  --c-pension-contributions: #b8875a;
+  --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  --c-loss-light: #fbbf24; /* a small loss */
+  --c-ink: #1f2937; /* the map's approximate-figure dots */
+  /* Notices: data pending or provisional */
+  --c-notice-bg: #fff7e6;
+  --c-notice-text: #7a5a1f;
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;
@@ -1324,13 +1372,14 @@ body {
   }
 }
 
-/* About selected policies: one grouped list, no boxes */
+/* About selected policies: compact cards, grouped by revenue effect
+   (PolicyCards.jsx) */
 .policy-details-content {
   padding: 4px 0 20px;
 }
 
 .policy-group + .policy-group {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .policy-group-heading {
@@ -1341,43 +1390,132 @@ body {
   color: var(--pe-gray-500);
 }
 
-/* One list: each policy's name, then its description */
-.policy-grid {
+.policy-cards {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-}
-
-.main-content .policy-detail {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
   padding: 0;
-  border: none;
+  list-style: none;
 }
 
-.policy-detail-name {
+.policy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+}
+
+.policy-card-name {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 4px;
+  margin: 0;
   font-size: var(--fs-body);
   font-weight: 600;
+  line-height: 1.35;
   color: var(--pe-gray-900);
 }
 
-.policy-detail-swatch {
+.policy-card-swatch {
   width: 10px;
   height: 10px;
   flex: 0 0 auto;
+  border-radius: 2px;
 }
 
-.policy-detail-text {
+.policy-card-summary {
   margin: 0;
   font-size: var(--fs-small);
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--pe-gray-700);
 }
 
+.policy-card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.policy-chip {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  background: var(--pe-gray-100);
+  border-radius: 999px;
+}
+
+.policy-chip dt {
+  color: var(--pe-gray-500);
+}
+
+.policy-chip dd {
+  margin: 0;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+}
+
+.policy-card-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  font-size: var(--fs-caption);
+}
+
+.policy-card-details summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--pe-teal-700);
+}
+
+.policy-card-details p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-source {
+  width: fit-content;
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-source:hover {
+  text-decoration-color: currentColor;
+}
+
 @media (max-width: 768px) {
-  .policy-grid {
+  .policy-cards {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The candidate measures banner under the intro: the Note's line, in a
+   calm tinted box */
+.candidate-banner {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-100);
+  border-radius: var(--pe-radius-md);
+}
+
+.candidate-banner .note {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--pe-gray-800);
+}
+
+.candidate-banner .note svg {
+  color: var(--pe-teal-700);
 }

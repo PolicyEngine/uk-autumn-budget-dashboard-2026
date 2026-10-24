@@ -1,15 +1,15 @@
-// Poverty rate card. Ported from PolicyEngine/uk-living-standards-outlook
-// (PovertySection); text and figures unchanged.
+// Poverty rate: the Rate view of the Poverty over time card. Ported from
+// PolicyEngine/uk-living-standards-outlook (PovertySection).
 
 import { useMemo, useState } from "react";
-import LsCard from "../LsCard";
 import PillSelect from "../../PillSelect";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
-import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1 } from "../../../utils/livingStandards/outlook";
+import { changeVerb, fyDash, formatPct, formatPctAxis, headlineSpan, round1, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import {
   EMPTY,
   VIEW_OPTIONS,
   chartEndYear,
+  shortLabel,
   lineSeries,
   mergeSeries,
   niceAxis,
@@ -18,7 +18,6 @@ import {
   visibleRows,
 } from "../../../utils/livingStandards/baseline";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
-import Note from "../../Note";
 import { CSV_SOURCES, HbaiSource } from "../sources";
 
 const GROUP_SUFFIX = {
@@ -28,7 +27,8 @@ const GROUP_SUFFIX = {
   pensioners: " among pensioners",
 };
 
-export default function PovertySection({ data }) {
+/** The Rate view: card parts for the Poverty over time card. */
+export default function usePovertyRateView(data) {
   const poverty = data.poverty;
   const measureIds = Object.keys(poverty.measures);
   const groupIds = Object.keys(poverty.groups);
@@ -95,75 +95,79 @@ export default function PovertySection({ data }) {
       : "Relative poverty measures income below 60% of the contemporary median income."
   } ${isAHC ? "After housing costs." : "Before housing costs."}`;
 
-  return (
-    <LsCard
-      title="Poverty rate"
-      about={description}
-      summary={summary}
-      source={<HbaiSource />}
-      download={
-        visibleEmpty
-          ? null
-          : {
-              filename: `poverty-${measure}-${group}`,
-              legendItems: lineLegendItems(series),
-              csv: () =>
-                seriesCsv({
-                  title: `Poverty rate: ${poverty.measures[measure]}, ${poverty.groups[group]}`,
-                  units: "% of people",
-                  source: CSV_SOURCES.hbai,
-                  rows: chartData,
-                  series,
-                }),
-            }
-      }
-      controls={
-        <>
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Poverty measure"
-            value={measure}
-            onChange={setMeasure}
-            options={measureIds.map((id) => ({ value: id, label: poverty.measures[id] }))}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Group"
-            name="Population group"
-            value={group}
-            onChange={setGroup}
-            options={groupIds.map((id) => ({ value: id, label: poverty.groups[id] }))}
-          />
-          <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
-        </>
-      }
-      notes={poverty.notes}
-      footer={
-        !visibleEmpty &&
+  return {
+    period: visibleEmpty ? null : rowsPeriod(chartData),
+    summary,
+    about: description,
+    notes: [
+      !visibleEmpty &&
         noOutturn &&
-        viewMode === "both" && <Note>No official outturn series for {groupName} on this measure; projection only.</Note>
-      }
-    >
-      {visibleEmpty ? (
-        <div className="chart-plot">
-          <div className="plot-empty">
-            {viewMode === "outturn" && noOutturn
-              ? `No official outturn series for ${groupName} on this measure.`
-              : "No projection for this selection."}
-          </div>
-        </div>
-      ) : (
-        <LsLineChart
-          data={chartData}
-          series={series}
-          yFormat={formatPctAxis}
-          tooltipFormat={formatPct}
-          yLabel="Poverty rate"
-          yDomain={axis.domain}
-          yTicks={axis.ticks}
+        viewMode === "both" &&
+        `No official outturn series for ${groupName} on this measure; projection only.`,
+      ...(poverty.notes || []),
+    ],
+    source: <HbaiSource />,
+    sourceText: CSV_SOURCES.hbai,
+    download: visibleEmpty
+      ? null
+      : {
+          filename: `poverty-${measure}-${group}`,
+          legendItems: lineLegendItems(series),
+          csv: () =>
+            seriesCsv({
+              title: `Poverty rate: ${poverty.measures[measure]}, ${poverty.groups[group]}`,
+              units: "% of people",
+              source: CSV_SOURCES.hbai,
+              rows: chartData,
+              series,
+            }),
+        },
+    controls: (
+      <>
+        <PillSelect
+          variant="light"
+          name="Poverty measure"
+          value={measure}
+          onChange={setMeasure}
+          options={measureIds.map((id) => ({
+            value: id,
+            label: poverty.measures[id],
+            badge: shortLabel(poverty.measures[id]),
+          }))}
         />
-      )}
-    </LsCard>
-  );
+        <PillSelect
+          variant="light"
+          prefix="Group"
+          name="Population group"
+          value={group}
+          onChange={setGroup}
+          options={groupIds.map((id) => ({
+            value: id,
+            label: poverty.groups[id],
+            badge: shortLabel(poverty.groups[id]),
+          }))}
+        />
+        <PillSelect variant="light" prefix="Period" name="Series shown" value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+      </>
+    ),
+    chart: visibleEmpty ? (
+      <div className="chart-plot">
+        <div className="plot-empty">
+          {viewMode === "outturn" && noOutturn
+            ? `No official outturn series for ${groupName} on this measure.`
+            : "No projection for this selection."}
+        </div>
+      </div>
+    ) : (
+      <LsLineChart
+        data={chartData}
+        series={series}
+        yFormat={formatPctAxis}
+        tooltipFormat={formatPct}
+        yLabel="Poverty rate"
+        yDomain={axis.domain}
+        yTicks={axis.ticks}
+      />
+    ),
+  };
 }

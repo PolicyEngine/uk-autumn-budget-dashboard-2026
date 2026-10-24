@@ -1,79 +1,103 @@
-// Forecast series by section, as charts or tables (pre-Budget grey solid,
-// post-Budget teal dashed). Ported from PolicyEngine/uk-living-standards-outlook;
-// text and figures unchanged.
+// Forecast series by section, as charts or tables. Before the Budget
+// forecast is published only the pre-Budget line is drawn (teal, solid);
+// afterwards the pre-Budget line is grey and dashed and the Budget forecast
+// teal and solid, with a legend. Labels and sources come from the outlook
+// data (forecast.pre_label, post_label, pre_source, post_source).
 
 import LsCard from "../LsCard";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
-import { changeClass, pctLabel, percentAxis, ppLabel, toRows } from "../../../utils/livingStandards/forecast";
-import { formatOneDp } from "../../../utils/livingStandards/outlook";
+import { DASH, OUTTURN_COLOUR, PROJECTION_COLOUR } from "../../../utils/livingStandards/baseline";
+import {
+  changeClass,
+  forecastName,
+  pctLabel,
+  percentAxis,
+  ppLabel,
+  toRows,
+} from "../../../utils/livingStandards/forecast";
+import { formatOneDp, rowsPeriod } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
-import { CSV_SOURCES, ObrSource, PeDerivedSource } from "../sources";
+import { ForecastSource, forecastSourceText } from "../sources";
 
 // CPI after housing costs and social rent are PolicyEngine derivations, not OBR series.
 const DERIVED = new Set(["cpi_ahc", "social_rent"]);
-const sourceFor = (series) => (DERIVED.has(series.key) ? <PeDerivedSource /> : <ObrSource />);
-// Line names for derived series: they follow the OBR forecast but are not OBR's.
-const DERIVED_LABEL = "PolicyEngine derivation from the OBR March 2026 forecast";
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
 
-function seriesFor(published, preLabel, postLabel) {
+/** Line and column names: the forecasts' labels, or for a derived series what it is derived from. */
+export function forecastNames(forecast, derived) {
+  const pre = forecast.pre_label || "Pre-Budget forecast";
+  const post = forecast.post_label || "Budget forecast";
+  if (!derived) return { pre, post };
+  return {
+    pre: `PolicyEngine, from ${forecastName(pre)} (pre-Budget)`,
+    post: `PolicyEngine, from ${forecastName(post)}`,
+  };
+}
+
+function seriesFor(published, names) {
   // While unpublished only the pre line is drawn: teal, so it does not read
   // as a greyed-out comparison line.
-  if (!published) return [{ key: "previous", name: preLabel, colour: "#319795" }];
+  if (!published) return [{ key: "previous", name: names.pre, colour: PROJECTION_COLOUR }];
   return [
-    { key: "previous", name: preLabel, colour: "#9CA3AF" },
-    { key: "updated", name: postLabel, colour: "#319795", dashed: true },
+    { key: "previous", name: names.pre, colour: OUTTURN_COLOUR, dash: DASH.long },
+    { key: "updated", name: names.post, colour: PROJECTION_COLOUR, dash: DASH.solid },
   ];
 }
 
 /** The series' CSV: calendar years, pre and post (blank until published), change. */
-function forecastCsv(series, rows, published, preLabel, postLabel) {
+function forecastCsv(series, rows, published, names, source) {
   return buildChartCsv({
     title: series.label,
     units: "Annual growth (%); calendar years",
-    source: DERIVED.has(series.key) ? CSV_SOURCES.peDerived : CSV_SOURCES.obr,
+    source,
     columns: [
       { key: "year", label: "Year" },
-      { key: "previous", label: preLabel, decimals: 4 },
-      { key: "updated", label: postLabel, decimals: 4 },
-      { key: "change", label: "Change (pp)", decimals: 4 },
+      { key: "previous", label: names.pre, decimals: 4 },
+      { key: "updated", label: names.post, decimals: 4 },
+      { key: "change", label: "Difference (pp)", decimals: 4 },
     ],
     rows,
-    notes: published ? [] : [`${postLabel}: Not yet published`],
+    notes: published ? [] : [`${names.post}: not yet published`],
   });
 }
 
-function ForecastCard({ series, published, preLabel, postLabel, view }) {
+function ForecastCard({ series, forecast, published, view }) {
   const rows = toRows(series, published);
   if (!rows.length) return null;
   const derived = DERIVED.has(series.key);
-  const lines = seriesFor(
-    published,
-    derived ? DERIVED_LABEL : preLabel,
-    derived ? `PolicyEngine derivation from the ${postLabel}` : postLabel,
-  );
-  const csv = () =>
-    forecastCsv(series, rows, published, derived ? "PolicyEngine derivation (pre-Budget)" : preLabel, postLabel);
+  const names = forecastNames(forecast, derived);
+  const lines = seriesFor(published, names);
+  const sourceText = forecastSourceText(forecast, derived);
+  const csv = () => forecastCsv(series, rows, published, names, sourceText);
+  const period = rowsPeriod(rows);
+  const common = {
+    title: series.label,
+    period,
+    about: `Annual growth rate (%), calendar years: growth in the annual average.${
+      published ? "" : " The Budget forecast is not yet published."
+    }`,
+    notes: [
+      series.source && (published ? `Pre-Budget: ${series.source}` : series.source),
+      published && series.post_source && `Budget: ${series.post_source}`,
+    ],
+    source: <ForecastSource forecast={forecast} derived={derived} />,
+    sourceText,
+  };
 
   if (view === "table") {
     return (
-      <LsCard
-        title={series.label}
-        summary="Annual growth rate (%)."
-        source={sourceFor(series)}
-        download={{ filename: `forecast-${series.key}`, image: false, csv }}
-      >
+      <LsCard {...common} download={{ filename: `forecast-${series.key}`, image: false, csv }}>
         <div className="chart-plot ls-table-wrapper">
           <table className="ls-table">
             <thead>
               <tr>
                 <th>Year</th>
-                <th>{derived ? "PolicyEngine derivation (pre-Budget)" : preLabel}</th>
-                <th>{postLabel}</th>
-                <th>Change</th>
+                <th>{names.pre}</th>
+                <th>{names.post}</th>
+                <th>Difference</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +106,7 @@ function ForecastCard({ series, published, preLabel, postLabel, view }) {
                   <td>{row.year}</td>
                   <td>{pctLabel(row.previous)}</td>
                   {published ? <td>{pctLabel(row.updated)}</td> : <td className="pending">Not yet published</td>}
-                  <td className={changeClass(row.change)}>{ppLabel(row.change)}</td>
+                  <td className={changeClass(row.shownChange)}>{ppLabel(row.shownChange)}</td>
                 </tr>
               ))}
             </tbody>
@@ -95,11 +119,7 @@ function ForecastCard({ series, published, preLabel, postLabel, view }) {
   const values = rows.flatMap((d) => [d.previous, published ? d.updated : null]).filter((v) => v != null);
   const axis = percentAxis(values);
   return (
-    <LsCard
-      title={series.label}
-      source={sourceFor(series)}
-      download={{ filename: `forecast-${series.key}`, legendItems: lineLegendItems(lines), csv }}
-    >
+    <LsCard {...common} download={{ filename: `forecast-${series.key}`, legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart
         data={rows}
         series={lines}
@@ -129,14 +149,7 @@ export default function ForecastSeriesSection({ data, view, subtitles = {} }) {
       {pairs(section.series).map((pair) => (
         <div className="charts-grid" key={pair[0].key}>
           {pair.map((series) => (
-            <ForecastCard
-              key={series.key}
-              series={series}
-              published={published}
-              preLabel={forecast.pre_label}
-              postLabel={forecast.post_label}
-              view={view}
-            />
+            <ForecastCard key={series.key} series={series} forecast={forecast} published={published} view={view} />
           ))}
         </div>
       ))}

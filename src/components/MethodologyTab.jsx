@@ -2,7 +2,7 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
@@ -13,10 +13,7 @@ import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import "./methodology/Methodology.css";
 
 const RESEARCH = [
-  ["https://policyengine.org/uk/research/uk-two-child-limit", "two-child limit"],
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty freeze"],
-  ["https://policyengine.org/uk/research/rail-fares-freeze-2025", "rail fares freeze"],
-  ["https://policyengine.org/uk/research/uk-salary-sacrifice-cap", "salary sacrifice cap"],
+  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
 ];
 
 /**
@@ -64,7 +61,7 @@ const FLOW = [
   },
   {
     title: "Two scenarios",
-    text: "Each measure is run against a pre-Budget baseline, for every fiscal year shown.",
+    text: "Each candidate measure is run against current law, for every fiscal year shown.",
   },
   {
     title: "Static estimates",
@@ -234,7 +231,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.model}
           title="Model and measures"
-          subtitle="How the Budget measures are represented in the model."
+          subtitle="How the candidate measures are represented in the model."
         >
           <div className="card method-card">
             <FactList
@@ -245,11 +242,11 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Baseline",
-                  "policyengine-uk's current law already includes the Budget measures. Each measure's baseline sets the pre-Budget values back, so the difference between the two runs is the measure.",
+                  "Current law in policyengine-uk, before the Budget. Each candidate measure changes it, so the difference between the two runs is the measure. The Plan 2 measure's baseline also uses modelled student loan repayments.",
                 ],
                 [
                   "Static",
-                  "Households do not change their behaviour in response to a measure, except where a measure's modelling says otherwise (the salary sacrifice cap).",
+                  "Households do not change their behaviour in response to a measure. Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
                 ],
                 [
                   "Years",
@@ -291,9 +288,33 @@ function MethodologyTab({ onShowTab }) {
             </table>
             <p className="method-more">
               What each measure does is in the {policyNotes("policy notes on Population impact")}.
-              New measures on Budget day are written as parameter changes where
-              possible, or built from tested measure templates.
+              Measures are written as parameter changes where possible, or
+              built from tested measure templates.
             </p>
+          </div>
+
+          <div className="card method-card method-table-card">
+            <h3 className="method-card-title">Likely but not modelled</h3>
+            <p className="method-more">
+              Reported as likely for the Budget, but outside what the household
+              model can cost, so not on the page.
+            </p>
+            <table className="method-measures">
+              <thead>
+                <tr>
+                  <th scope="col">Measure</th>
+                  <th scope="col">Why it is not modelled</th>
+                </tr>
+              </thead>
+              <tbody>
+                {NOT_MODELLED.map((measure) => (
+                  <tr key={measure.name}>
+                    <th scope="row">{measure.name}</th>
+                    <td>{measure.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </MethodSection>
 
@@ -312,7 +333,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The student loan threshold freeze counts the change in loan repayments. The rail fares freeze counts the Treasury's cost estimate.",
+                  "The Plan 2 student loan measure counts the change in loan repayments. The employer National Insurance relief changes revenue only: with wages fixed, household incomes do not move.",
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
@@ -325,7 +346,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "OBR comparison",
-                  "Our figures are static. The comparison opens on the OBR's post-behavioural costings, which include its estimate of behavioural responses; choose Static to compare like with like.",
+                  "Shown once the OBR publishes its costings for these measures. Our figures are static; the OBR's post-behavioural costings include its estimate of behavioural responses.",
                 ],
               ]}
             />

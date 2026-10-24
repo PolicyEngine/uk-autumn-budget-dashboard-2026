@@ -22,6 +22,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import { ALL_POLICY_NAMES, POLICY_COLORS, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { POLICIES } from "../utils/policies";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -32,6 +33,7 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
   axisWidth,
+  CHART_COLOURS,
 } from "../utils/chartTheme";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -46,27 +48,6 @@ const CHART_DESCRIPTION =
 
 // Format year for display (e.g., 2026 -> "2026-27")
 const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
-
-const POLICIES = [
-  { id: "two_child_limit", name: "2 child limit repeal" },
-  { id: "fuel_duty_freeze", name: "Fuel duty freeze extension" },
-  { id: "rail_fares_freeze", name: "Rail fares freeze" },
-  { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
-  { id: "dividend_tax_increase_2pp", name: "Dividend tax increase (+2pp)" },
-  {
-    id: "savings_tax_increase_2pp",
-    name: "Savings income tax increase (+2pp)",
-  },
-  {
-    id: "property_tax_increase_2pp",
-    name: "Property income tax increase (+2pp)",
-  },
-  {
-    id: "freeze_student_loan_thresholds",
-    name: "Freeze student loan repayment thresholds",
-  },
-  { id: "salary_sacrifice_cap", name: "Salary sacrifice cap" },
-];
 
 const decileOrder = [
   "1st",
@@ -212,8 +193,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           style={{
             padding: "60px 20px",
             textAlign: "center",
-            color: "#666",
-            backgroundColor: "#f9f9f9",
+            color: CHART_COLOURS.tick,
+            backgroundColor: CHART_COLOURS.mutedFill,
             borderRadius: "8px",
           }}
         >
@@ -235,7 +216,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
     })),
     ...(activePolicies.length > 1
-      ? [{ color: "#000000", label: "Net change", type: "line" }]
+      ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
   ];
 
@@ -324,7 +305,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                   return ticks.sort((a, b) => a - b);
                 })()}
               />
-              <ReferenceLine y={0} stroke="#374151" strokeWidth={1} />
+              <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 
               <Tooltip
 
@@ -338,7 +319,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
                     format={(value) => `${value.toFixed(2)}%`}
 
-                    labelFormat={(label) => `Income decile ${String(label).replace(/st|nd|rd|th/g, "")}`}
+                    labelFormat={(label) =>
+                      `Income decile ${String(label).replace(/st|nd|rd|th/g, "")}, ${formatYearRange(selectedYear)}`
+                    }
 
                     netKey="netChange"
 
@@ -374,7 +357,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                 // Straight segments: deciles are categories, not a curve
                 type="linear"
                 dataKey="netChange"
-                stroke="#000000"
+                stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
                 name="netChange"

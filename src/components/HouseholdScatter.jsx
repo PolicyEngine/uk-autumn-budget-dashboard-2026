@@ -19,7 +19,7 @@ import {
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
@@ -43,18 +43,18 @@ const thousands = (value) => `${value / 1000}`;
 // the 2025 sample's typical value (its median, 0.51), set both ways.
 const DOT_RADIUS = Math.sqrt(64 / Math.PI);
 const DOT_OPACITY = 0.51;
-const GRID = { strokeDasharray: "3 3", stroke: "#e0e0e0" };
-const TICK = { fontSize: 11, fill: "#666" };
-const AXIS_TITLE = { fontSize: 12, fill: "#374151" };
+const GRID = { strokeDasharray: "3 3", stroke: CHART_COLOURS.grid };
+const TICK = { fontSize: 11, fill: CHART_COLOURS.tick };
+const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 // Below the side-by-side layout the plot keeps the 2025 chart's height; in
 // it, the plot fills the rows the map beside it uses for its controls, map
 // and colour scale (see HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
 
 const KEY = [
-  { label: "Gains", color: "#319795" },
-  { label: "Losses", color: "#D97706" },
-  { label: "No change", color: "#9CA3AF" },
+  { label: "Gains", color: CHART_COLOURS.gain },
+  { label: "Losses", color: CHART_COLOURS.loss },
+  { label: "No change", color: CHART_COLOURS.noChange },
 ];
 
 const number = (value) =>
@@ -322,7 +322,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
                 tick={TICK}
                 width={narrow ? 30 + Y_TITLE_GUTTER : 44 + Y_TITLE_GUTTER}
               />
-              <ReferenceLine x={0} stroke="#666" strokeWidth={2} />
+              <ReferenceLine x={0} stroke={CHART_COLOURS.tick} strokeWidth={2} />
               <Customized component={<DotLayer dots={shown} onHover={onHover} />} />
               <Customized component={<ChartUnitLabel text={incomeTitle} />} />
             </ScatterChart>

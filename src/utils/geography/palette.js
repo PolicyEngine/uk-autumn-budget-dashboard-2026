@@ -13,22 +13,23 @@
  */
 
 import { TOO_UNCERTAIN } from "./classify";
+import { CHART_COLOURS } from "../chartTheme";
 
 export const CATEGORY_COLOURS = Object.freeze({
-  large_loss: "#D97706",
-  small_loss: "#FBBF24",
-  little_change: "#9CA3AF",
-  small_gain: "#81E6D9",
-  large_gain: "#319795",
-  [TOO_UNCERTAIN]: "#E5E7EB",
+  large_loss: CHART_COLOURS.loss,
+  small_loss: CHART_COLOURS.lossLight,
+  little_change: CHART_COLOURS.noChange,
+  small_gain: CHART_COLOURS.gainLight,
+  large_gain: CHART_COLOURS.gain,
+  [TOO_UNCERTAIN]: CHART_COLOURS.grid,
 });
 
 /** Text colours with enough contrast on white for each direction. */
 export const DIRECTION_TEXT_COLOURS = Object.freeze({
-  gain: "#0F766E",
-  loss: "#B45309",
-  too_close_to_call: "#4B5563",
-  no_change: "#4B5563",
+  gain: CHART_COLOURS.gainText,
+  loss: CHART_COLOURS.lossText,
+  too_close_to_call: CHART_COLOURS.axisTitle,
+  no_change: CHART_COLOURS.axisTitle,
 });
 
 /**
@@ -37,7 +38,7 @@ export const DIRECTION_TEXT_COLOURS = Object.freeze({
  * keeps a single fill. Ids have no digits or colons, so url() resolves
  * anywhere, the exported file included.
  */
-export const APPROXIMATE_DOT_COLOUR = "#1F2937";
+export const APPROXIMATE_DOT_COLOUR = CHART_COLOURS.ink;
 export const approximatePatternId = (category) =>
   `approximate-dots-${category.replaceAll("_", "-")}`;
 export const approximateFill = (category) =>
@@ -47,10 +48,10 @@ export const approximateFill = (category) =>
 export const WITHHELD_PATTERN_ID = "withheld-hatch";
 export const WITHHELD_FILL = `url(#${WITHHELD_PATTERN_ID})`;
 export const HATCH_COLOURS = Object.freeze({
-  background: "#FFFFFF",
-  line: "#6B7280",
+  background: CHART_COLOURS.surface,
+  line: CHART_COLOURS.tick,
 });
 
 /** An area with no published row: white, outlined. */
-export const NO_DATA_FILL = "#FFFFFF";
-export const NO_DATA_STROKE = "#9CA3AF";
+export const NO_DATA_FILL = CHART_COLOURS.surface;
+export const NO_DATA_STROKE = CHART_COLOURS.noChange;

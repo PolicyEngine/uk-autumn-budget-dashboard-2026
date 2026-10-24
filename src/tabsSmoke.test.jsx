@@ -50,8 +50,9 @@ const FAILURE_TEXT = [
 const LOADED = {
   // App.jsx renders the Public finances section only once the CSVs are read.
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
-  // The wizard opens at its first step; the results are checked below.
-  personal: (panel) => within(panel).findAllByText(/Step 1 of 3/),
+  // The form's list: its first row (Age) and the optional details; the
+  // results are checked below.
+  personal: (panel) => within(panel).findAllByRole("heading", { name: "More details" }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
@@ -149,11 +150,10 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
       );
       expect(missing).toEqual([]);
       if (value === "personal") {
-        // Nothing is asked before the results
-        expect(requests.some((r) => r.url.startsWith(API))).toBe(false);
-        // Straight to the results from step 1 (every answer has a default):
-        // the tab asks the household API in two stages and shows the answer
-        fireEvent.click(within(panel).getByRole("button", { name: "See results" }));
+        // The form's first row is the head's age, with its default
+        expect(within(panel).getByRole("button", { name: /^Age/, expanded: false })).toHaveTextContent("Age30");
+        // The results beside the form (every answer has a default): the tab
+        // asks the household API in two stages and shows the answer
         expect(
           await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
@@ -180,7 +180,6 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "See results" }));
     await waitFor(() =>
       expect(document.body.textContent).toMatch(/NEXT_PUBLIC_HOUSEHOLD_API_URL is not set/),
     );

@@ -2510,9 +2510,10 @@ def _run_geography(
         collector = None
         limited = {}
         held = {}
+        runner = runner or SerialRunner()
         units = [
             GeographyUnit(
-                reform=portable(reform),
+                reform=portable(reform, runner),
                 dataset=dataset,
                 years=tuple(plan.years),
                 kind=parsed.dataset_kind,
@@ -2530,7 +2531,6 @@ def _run_geography(
             )
             for index, reform in enumerate(plan.reforms)
         ]
-        runner = runner or SerialRunner()
         for outcome in runner.map(
             simulate_area_unit,
             units,

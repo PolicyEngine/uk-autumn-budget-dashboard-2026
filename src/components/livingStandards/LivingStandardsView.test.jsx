@@ -57,25 +57,43 @@ describe("the Living standards view", () => {
     const subTabs = await screen.findByRole("tablist", { name: "Living standards sections" });
     const [baseline, forecast] = within(subTabs).getAllByRole("tab");
     expect([baseline, forecast].map((t) => t.textContent)).toEqual(["Baseline outlook", "Forecast changes"]);
+    // The sub-tab pill comes first, then the intro, once, for both sub-tabs
+    const intro = screen.getByText(/^Projections of UK household incomes and poverty/);
+    expect(subTabs.compareDocumentPosition(intro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByText(/^Projections of UK household incomes and poverty/)).toHaveLength(1);
 
     const panel = () => screen.getByRole("tabpanel", { name: /^(Baseline outlook|Forecast changes)$/ });
     expect(panel()).toHaveAccessibleName("Baseline outlook");
     for (const name of ["Incomes", "Poverty"]) {
       expect(within(panel()).getByRole("heading", { name })).toBeInTheDocument();
     }
-    // Child poverty by family sits beside Poverty by family type; the
-    // two-child limit card, the caveats and the data notes are gone
-    const byGroup = await within(panel()).findByRole("heading", { level: 3, name: "Poverty by family type" });
-    const byFamily = within(panel()).getByRole("heading", { level: 3, name: "Child poverty by family" });
-    expect(byGroup.closest(".charts-grid")).toBe(byFamily.closest(".charts-grid"));
+    // Each section is one row of two cards that line up: Incomes over time
+    // beside Growth across the distribution, Poverty over time beside Who is
+    // in poverty. The period is in each title.
+    const card = (name) => within(panel()).getByRole("heading", { level: 3, name }).closest(".ls-card");
+    const incomes = card(/^Incomes over time, 2021-22 to 2031-32$/);
+    expect(incomes.closest(".charts-grid")).toBe(card(/^Growth across the distribution, 2027-28 to 2031-32$/).closest(".charts-grid"));
+    const poverty = card(/^Poverty over time, 2021-22 to 2031-32$/);
+    expect(poverty.closest(".charts-grid")).toBe(card(/^Who is in poverty, 2027-28 to 2031-32$/).closest(".charts-grid"));
+    expect(panel().querySelectorAll(".ls-card")).toHaveLength(4);
     for (const name of ["Child poverty", "What the baseline leaves out", "Data"]) {
       expect(screen.queryByRole("heading", { level: 2, name })).toBeNull();
     }
     expect(screen.queryByRole("heading", { name: "Two-child limit" })).toBeNull();
-    // Series notes sit in the cards, not between sections
-    const income = within(panel()).getByRole("heading", { level: 3, name: "Household income" }).closest(".ls-card");
-    expect(within(income).getByText(/^Series end in 2029-30/)).toBeInTheDocument();
+    // Nothing sits loose under a plot: no notes or source lines outside
+    // "About this chart"
     expect(panel().querySelector(".ls-section > .note")).toBeNull();
+    expect(panel().querySelectorAll(".ls-card-footer > :not(.disclosure)")).toHaveLength(0);
+    expect(within(panel()).queryByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeNull();
+    expect(within(panel()).queryByText(/Source:/)).toBeNull();
+    // The series note is stated once, in Incomes over time's About this
+    // chart, after the definition and notes, with the source line last
+    fireEvent.click(within(incomes).getByRole("button", { name: "About this chart" }));
+    expect(within(incomes).getByText(/^2031-32 is past the OBR March 2026 forecast/)).toBeInTheDocument();
+    expect(document.body.textContent.match(/is past the OBR March 2026 forecast/g)).toHaveLength(1);
+    const about = incomes.querySelector(".disclosure-content");
+    expect(about.lastElementChild).toHaveClass("ls-source");
+    expect(about.lastElementChild).toHaveTextContent(/^Source: DWP, Households Below Average Income/);
     expect(within(panel()).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
 
     fireEvent.click(forecast);
@@ -87,11 +105,77 @@ describe("the Living standards view", () => {
     expect(within(panel()).queryByText(/disposable income per person/)).toBeNull();
     expect(within(panel()).queryByRole("heading", { name: "Incomes" })).toBeNull();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
-
+    expect(screen.getAllByText(/^Projections of UK household incomes and poverty/)).toHaveLength(1);
 
     fireEvent.click(baseline);
     expect(new URLSearchParams(window.location.search).has("sub")).toBe(false);
     expect(window.location.search).toBe("?tab=living");
+  });
+
+  it("switches each card's view with its switch, and never shows a signed zero", async () => {
+    window.history.replaceState({}, "", "/?tab=living");
+    render(<App />);
+    const heading = (re) => screen.findByRole("heading", { level: 3, name: re });
+    const choose = (card, pill, option) => {
+      fireEvent.click(within(card).getByRole("button", { name: new RegExp(`^${pill}:`) }));
+      fireEvent.click(within(card).getByRole("option", { name: option }));
+    };
+
+    // Poverty over time: Rate (with its Measure, Group and Period pills) or Depth
+    let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
+    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toBeInTheDocument();
+    // The view is a segmented switch (Rate | Depth), short labels in the pills
+    const views = within(poverty).getByRole("group", { name: "Poverty view" });
+    expect(within(views).getByRole("button", { name: "Rate" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
+    expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
+    fireEvent.click(within(views).getByRole("button", { name: "Depth" }));
+    poverty = (await heading(/^Poverty over time, 2027-28 to 2031-32$/)).closest(".ls-card");
+    expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
+    expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
+
+    // Who is in poverty: one dot plot for every breakdown, with its reference group
+    const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
+    // Couples with children: 19.8% in both years
+    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".dot-row");
+    expect(couples).toHaveTextContent("19.8% → 19.8%no change");
+    // Its tooltip, on hover or keyboard focus: both years, the change and
+    // the reference group
+    const area = couples.querySelector(".dot-plot-area");
+    fireEvent.focus(area);
+    const tip = within(who).getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("2027-2819.8%");
+    expect(tip).toHaveTextContent("ChangeNo change");
+    expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
+    fireEvent.blur(area);
+    expect(within(who).queryByRole("tooltip")).toBeNull();
+    expect(within(who).getByText(/^All people/)).toBeInTheDocument();
+    for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
+      choose(who, "Breakdown", option);
+      expect(who.querySelector(".ls-dot-plot")).not.toBeNull();
+    }
+    expect(within(who).getByText(/^All children/)).toBeInTheDocument();
+    choose(who, "Poverty measure", "Absolute poverty (AHC)");
+    expect(within(who).getByText(/absolute child poverty rate/)).toBeInTheDocument();
+
+    // Incomes over time and Growth across the distribution
+    const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
+    fireEvent.click(
+      within(within(incomes).getByRole("group", { name: "Income view" })).getByRole("button", { name: "Inequality" }),
+    );
+    expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
+    const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
+    const halves = within(within(growth).getByRole("group", { name: "Distribution view" })).getByRole("button", {
+      name: "Halves",
+    });
+    expect(halves).toHaveAttribute("title", "Lower- vs higher-income halves");
+    fireEvent.click(halves);
+    expect(within(growth).getByText(/lower-income half of non-pensioners/)).toBeInTheDocument();
+
+    // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
+    expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);
+    expect(document.body.textContent).not.toMatch(/(rises|falls) 0\.0/);
   });
 
   it("opens the sub-tab a link names, and drops it on another view", async () => {
@@ -125,7 +209,14 @@ describe("the Living standards view", () => {
     expect(await within(section).findByText("policyengine 6.10.2 (policyengine-uk 2.132.6)")).toBeInTheDocument();
     expect(within(section).getByText(/Microcosm UK national \(19 Oct 2026, 6cba5d71\)/)).toBeInTheDocument();
     expect(within(section).getByText(/Demo output, unvalidated/)).toBeInTheDocument();
-    expect(within(section).getByText(/2026-27 prices/)).toBeInTheDocument();
+    expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
+    expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
+    // The UC health element fix, with its upstream pull request
+    expect(within(section).getByRole("link", { name: "PolicyEngine/policyengine-uk#2428" })).toHaveAttribute(
+      "href",
+      "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
+    );
+    expect(within(section).getByText(/For 2030-31 and 2031-32 this baseline applies that fix itself/)).toBeInTheDocument();
     expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });

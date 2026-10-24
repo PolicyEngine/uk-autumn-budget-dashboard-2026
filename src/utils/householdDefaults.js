@@ -16,7 +16,8 @@
  *
  * Spending: ONS, Family Spending in the UK, FYE 2025, Workbook 1, Table A1,
  * average weekly household spending × 52, rounded to £10: petrol £11.90
- * (£620 a year), diesel £6.50 (£340).
+ * (£620 a year), diesel £6.50 (£340), electricity (line 4.4.1) £20.00
+ * (£1,040; the API's own default, ELECTRICITY_SPENDING).
  * https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
  */
 
@@ -49,4 +50,5 @@ export const regionalRent = (region) => REGIONAL_RENT[region] ?? 1406;
 export const DEFAULT_SPENDING = {
   petrol: 620,
   diesel: 340,
+  electricity: 1040,
 };

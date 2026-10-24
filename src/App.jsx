@@ -22,84 +22,11 @@ import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import {
-  ALL_POLICY_NAMES,
-  POLICY_COLORS,
-  REVENUE_RAISING_NAMES,
-} from "./utils/policyConfig";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
 import { buildBudgetData } from "./utils/budgetData";
-
-// Autumn Budget 2026 policy provisions
-const POLICIES = [
-  {
-    id: "two_child_limit",
-    name: "2 child limit repeal",
-    description: "Repeal the two-child limit on benefits",
-    explanation:
-      "Removes the two-child limit in Universal Credit from April 2026, so families receive the child element for every child. The Government estimates this reduces child poverty by 450,000 by 2029-30.",
-  },
-  {
-    id: "fuel_duty_freeze",
-    name: "Fuel duty freeze extension",
-    description: "Freeze fuel duty rates until September 2026",
-    explanation:
-      "Keeps fuel duty at 52.95p a litre until September 2026, then returns it to 57.95p in three steps (1p, 2p, 2p) by March 2027, with RPI uprating after that. Without the policy the 5p cut would end on 22 March 2026.",
-  },
-  {
-    id: "rail_fares_freeze",
-    name: "Rail fares freeze",
-    description: "Freeze regulated rail fares for one year from March 2026",
-    explanation:
-      "Freezes regulated rail fares in England for a year from March 2026, instead of a 5.8% RPI-linked rise. The Government estimates passengers pay £600 million less in 2026-27.",
-  },
-  {
-    id: "threshold_freeze_extension",
-    name: "Threshold freeze extension",
-    description: "Extend the freeze on income tax thresholds to 2030-31",
-    explanation:
-      "Keeps the personal allowance (£12,570), the higher-rate threshold (£50,270), the additional-rate threshold (£125,140) and the NICs secondary threshold frozen from 2027-28 to 2030-31. The OBR estimates 5.2 million more people pay income tax by 2030-31.",
-  },
-  {
-    id: "dividend_tax_increase_2pp",
-    name: "Dividend tax increase (+2pp)",
-    description:
-      "Increase dividend tax rates by 2 percentage points from April 2026",
-    explanation:
-      "Raises the basic and higher dividend tax rates by 2 points from April 2026 (8.75% → 10.75% and 33.75% → 35.75%); the additional rate stays at 39.35%. The OBR estimates £1.0–1.1bn a year from 2027-28.",
-  },
-  {
-    id: "savings_tax_increase_2pp",
-    name: "Savings income tax increase (+2pp)",
-    description:
-      "Increase savings income tax rates by 2 percentage points from April 2027",
-    explanation:
-      "Raises savings income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.5bn a year from 2028-29. Survey data under-record savings income.",
-  },
-  {
-    id: "property_tax_increase_2pp",
-    name: "Property income tax increase (+2pp)",
-    description:
-      "Increase property income tax rates by 2 percentage points from April 2027",
-    explanation:
-      "Raises property income tax rates by 2 points from April 2027 (to 22%, 42% and 47%). The OBR estimates £0.4–0.6bn a year from 2028-29. Survey data may not capture all property income.",
-  },
-  {
-    id: "freeze_student_loan_thresholds",
-    name: "Freeze student loan repayment thresholds",
-    description:
-      "Freeze Plan 2 repayment thresholds from 2027-28 to 2029-30",
-    explanation:
-      "Freezes the Plan 2 repayment threshold at £29,385 for three years from April 2027, instead of uprating it with RPI. The OBR estimates £255–355m a year in 2027-28 to 2029-30; its larger 2026-27 figure includes a one-off revaluation of loan balances, which this model leaves out.",
-  },
-  {
-    id: "salary_sacrifice_cap",
-    name: "Salary sacrifice cap",
-    description: "Cap NI-free salary sacrifice pension contributions at £2,000",
-    explanation:
-      "Caps National Insurance-free salary sacrifice pension contributions at £2,000 a year from April 2029; contributions above the cap pay employee and employer NICs. The model assumes employers spread the cost and employees keep their contributions. Compare PolicyEngine and OBR estimates in the Public finances section.",
-  },
-];
+import { POLICIES } from "./utils/policies";
+import Note from "./components/Note";
+import PolicyCards from "./components/PolicyCards";
 
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
@@ -147,11 +74,16 @@ export function viewFromLocation({ search, hash }) {
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
 
+// The banner under the intro, and the views it is left off
+export const CANDIDATE_BANNER =
+  "Candidate measures, modelled before the Budget on 28 October; not announced policy.";
+const VIEWS_WITHOUT_CANDIDATE_BANNER = new Set(["living", "methodology"]);
+
 // Preset policy combinations
 const PRESETS = [
   {
     id: "autumn-budget",
-    name: "Autumn Budget 2026",
+    name: "All candidate measures",
     policies: POLICIES.map((p) => p.id),
   },
 ];
@@ -607,12 +539,20 @@ function App() {
         {/* Lead: what the page shows, and where its controls are. It sits
             above the tabs, so it holds for every view. */}
         <p className="dashboard-intro">
-          How the Autumn Budget 2026 measures affect the public finances,
-          households across the income distribution, regions and
-          constituencies, example households and individuals, and young
-          people, with the living standards baseline. Choose a year and
-          policies in the bar above.
+          How nine candidate Autumn Budget 2026 measures would affect the
+          public finances and households: by income, area and age, and for
+          your own household, alongside the living standards outlook. Choose
+          a year and policies in the bar above.
         </p>
+
+        {/* Said once, under the intro, on the views that show the
+            measures: Living standards has its own demo line, and
+            Methodology describes them */}
+        {!VIEWS_WITHOUT_CANDIDATE_BANNER.has(activeTab) && (
+          <div className="candidate-banner" role="note">
+            <Note>{CANDIDATE_BANNER}</Note>
+          </div>
+        )}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
@@ -769,40 +709,10 @@ function App() {
                         title="About selected policies"
                         contentClassName="policy-details-content"
                       >
-                          {[
-                            ["Raise revenue", true],
-                            ["Cost revenue", false],
-                          ].map(([heading, raises]) => {
-                            const items = ALL_POLICY_NAMES.map((name) =>
-                              POLICIES.find((policy) => policy.name === name),
-                            ).filter(
-                              (policy) =>
-                                policy &&
-                                selectedPolicies.includes(policy.id) &&
-                                REVENUE_RAISING_NAMES.has(policy.name) === raises,
-                            );
-                            if (!items.length) return null;
-                            return (
-                              <div key={heading} className="policy-group">
-                                <h3 className="policy-group-heading">{heading}</h3>
-                                <div className="policy-grid">
-                                  {items.map((policy) => (
-                                    <div key={policy.id} className="policy-detail">
-                                      <p className="policy-detail-name">
-                                        <span
-                                          className="policy-detail-swatch"
-                                          style={{ background: POLICY_COLORS[policy.name] }}
-                                          aria-hidden="true"
-                                        />
-                                        {policy.name}
-                                      </p>
-                                      <p className="policy-detail-text">{policy.explanation}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <PolicyCards
+                          policies={POLICIES}
+                          selectedPolicies={selectedPolicies}
+                        />
                       </Disclosure>
                     </section>
                   </>
