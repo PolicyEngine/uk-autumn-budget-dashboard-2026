@@ -78,6 +78,9 @@ class Entry(_Strict):
     """One measure, or one combined run, in the manifest."""
 
     name: str
+    # Public registry text, copied from the artifact and covered by its
+    # digest. Empty keeps manifests written before descriptions compatible.
+    description: str = ""
     status: Status
     artifact: str
     outputs_sha256: str

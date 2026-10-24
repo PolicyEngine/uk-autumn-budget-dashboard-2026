@@ -401,7 +401,21 @@ class DataPipeline:
 
         for key, filename in file_mapping.items():
             if key in data and len(data[key]) > 0:
-                save_csv(data[key], output_dir / filename)
+                frame = data[key]
+                # The flat route carries the same public registry text as
+                # receipts. Keep it on the budgetary rows so labels,
+                # descriptions and direction can be read in one place.
+                if key == "budgetary_impact" and "reform_id" in frame:
+                    descriptions = {
+                        reform.id: reform.description
+                        for reform in self.reforms
+                    }
+                    frame = frame.assign(
+                        reform_description=frame["reform_id"]
+                        .map(descriptions)
+                        .fillna("")
+                    )
+                save_csv(frame, output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
 
