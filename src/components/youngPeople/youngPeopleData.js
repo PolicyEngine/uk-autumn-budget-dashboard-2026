@@ -73,15 +73,20 @@ export function changeByYear(rows, policies, selected, years) {
     point.published = true;
     let young = 0;
     let all = 0;
+    let incomplete = selected.some((id) => !policies.some((policy) => policy.id === id));
     for (const policy of policies) {
       if (!selected.includes(policy.id)) continue;
       const youngRow = findRow(rows, policy.id, year, YOUNG_BAND);
       const allRow = findRow(rows, policy.id, year, ALL_BAND);
       if (youngRow && youngRow.sample_size < MIN_SAMPLE_SIZE) point.suppressed = true;
-      young += youngRow ? youngRow.mean_change : 0;
-      all += allRow ? allRow.mean_change : 0;
+      if (!youngRow || !allRow || !Number.isFinite(youngRow.mean_change) || !Number.isFinite(allRow.mean_change)) incomplete = true;
+      else {
+        young += youngRow.mean_change;
+        all += allRow.mean_change;
+      }
     }
-    if (!point.suppressed) {
+    if (incomplete) point.published = false;
+    if (!point.suppressed && !incomplete) {
       point.young = young;
       point.all = all;
     }

@@ -35,7 +35,7 @@ export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
 
 /**
  * One point per age band: each selected policy's mean change (keyed by its
- * name), the net change, and whether the band is too thin to show.
+ * namespaced id), the net change, and whether the band is too thin to show.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string, name: string}>} policies - Every policy
@@ -48,7 +48,7 @@ export function meanChangeByBand(rows, policies, selected, year) {
     const point = { band: band.key, label: band.label, short: band.short };
     let net = 0;
     let suppressed = false;
-    let incomplete = false;
+    let incomplete = selected.some((id) => !policies.some((policy) => policy.id === id));
     for (const policy of policies) {
       const isSelected = selected.includes(policy.id);
       const row = isSelected
@@ -57,14 +57,14 @@ export function meanChangeByBand(rows, policies, selected, year) {
       if (row && row.sample_size < MIN_SAMPLE_SIZE) suppressed = true;
       const value = row && Number.isFinite(row.mean_change) ? row.mean_change : null;
       if (isSelected && value === null) incomplete = true;
-      point[policy.name] = value;
+      point[policy.seriesKey ?? `measure:${policy.id}`] = value;
       if (value !== null) net += value;
     }
     point.netChange = incomplete ? null : net;
     point.incomplete = incomplete;
     point.suppressed = suppressed;
     if (suppressed) {
-      for (const policy of policies) point[policy.name] = null;
+      for (const policy of policies) point[policy.seriesKey ?? `measure:${policy.id}`] = null;
       point.netChange = null;
     }
     return point;

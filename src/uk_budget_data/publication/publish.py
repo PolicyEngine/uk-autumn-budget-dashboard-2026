@@ -855,13 +855,21 @@ def check(
     *,
     data_root: Path,
     inputs: Path = TREASURY_INPUTS,
+    check_flat_index: bool = True,
 ) -> list[str]:
     """Re-run every gate over every entry the page lists.
 
     Returns one line per failure; an empty list means the manifest may be
     published as it stands.
     """
-    failures = []
+    from uk_budget_data.publication.release_index import (
+        identity_problems,
+        release_index_problems,
+    )
+
+    failures = identity_problems(manifest)
+    if check_flat_index:
+        failures += release_index_problems(data_root, manifest)
     for key, entry in sorted(manifest.entries().items()):
         if entry.status not in m.LISTED:
             continue

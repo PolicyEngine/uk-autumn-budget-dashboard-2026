@@ -269,7 +269,7 @@ function MethodologyTab({ onShowTab }) {
                     <th scope="row">
                       <span
                         className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.name] }}
+                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
                         aria-hidden="true"
                       />
                       {measure.name}

@@ -1,13 +1,10 @@
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App, { VIEWS, viewFromLocation } from "./App";
 
 beforeEach(() => {
-  // An empty CSV for every data file: these tests are about the views
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url) => String(url).endsWith("manifest.json") ? new Response(null, { status: 404 }) : new Response("reform_id,reform_name,year,value\nmock,Published measure,2029,1\n", { status: 200 })),
-  );
+  vi.stubGlobal("fetch", vi.fn(dashboardFixtureFetch()));
   window.history.replaceState({}, "", "/");
 });
 

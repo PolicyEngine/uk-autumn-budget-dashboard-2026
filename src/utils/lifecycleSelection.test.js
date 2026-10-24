@@ -2,63 +2,104 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { lifecycleSelection, lifecycleTotals } from "./lifecycleSelection";
 
-const alpha = { id: "ab2026_mock_alpha", label: "Mock alpha", description: "Alpha public description.", displayable: true, color: "#0D9488" };
-const beta = { id: "ab2026_mock_beta", label: "Mock beta", description: "Beta public description.", displayable: true, color: "#78350F" };
-const rows = [
-  { impact_ab2026_mock_alpha: 10, ab2026_mock_beta: -200 },
-  { impact_ab2026_mock_alpha: 12, ab2026_mock_beta: -250 },
-];
+const years = [2026, 2029];
+const measure = (id, overrides = {}) => ({
+  id, label: `Measure ${id}`, displayable: true, years, unsupported_years: [], color: "#0D9488",
+  personal: { key: `impact_${id}`, model: "lifecycle", reviewed: true, description: `Lifetime model for ${id}.`, years, unsupported_years: [] },
+  ...overrides,
+});
+const alpha = measure("alpha");
+const beta = measure("beta", { color: "#78350F" });
+const rows = [{ year: 2026, impact_alpha: 10, impact_beta: -200 }, { year: 2029, impact_alpha: 12, impact_beta: -250 }];
 const keys = (selection) => selection.reforms.map((reform) => reform.key);
+const shared = () => [alpha, beta].map((item) => ({
+  ...item, personal: { ...item.personal, key: "impact_shared", policies: ["alpha", "beta"], description: "Reviewed complete shared calculation." },
+}));
 
-describe("lifetime series for published measures", () => {
-  it("matches unfamiliar ids to response keys and keeps catalogue colours", () => {
-    const selection = lifecycleSelection([alpha.id, beta.id], [alpha, beta], rows);
-    expect(keys(selection)).toEqual(["impact_ab2026_mock_alpha", "ab2026_mock_beta"]);
-    expect(selection.reforms.map((reform) => reform.color)).toEqual([alpha.color, beta.color]);
-    expect(lifecycleSelection([beta.id, alpha.id], [alpha, beta], rows).reforms)
-      .toEqual(selection.reforms);
+describe("reviewed lifetime impact contracts", () => {
+  it("uses explicit model contracts, published colours and model-specific descriptions", () => {
+    const selection = lifecycleSelection(["beta", "alpha"], [alpha, beta], rows);
+    expect(keys(selection)).toEqual(["impact_alpha", "impact_beta"]);
+    expect(selection.reforms.map((item) => item.color)).toEqual([alpha.color, beta.color]);
+    expect(selection.reforms[0].description).toBe(alpha.personal.description);
     expect(selection.unmodelled).toEqual([]);
     expect(lifecycleTotals(rows, selection.reforms)).toEqual({ netTotal: -428, avgPerYear: -214 });
   });
 
-  it("requires every member of a published shared series", () => {
-    const measures = [alpha, beta].map((measure) => ({
-      ...measure, personal: { key: "shared_impact", policies: [alpha.id, beta.id] },
-    }));
-    const data = [{ shared_impact: 30 }];
-    const partial = lifecycleSelection([alpha.id], measures, data);
+  it("requires all members of a consistently declared shared series", () => {
+    const data = [{ year: 2026, impact_shared: 30 }];
+    const partial = lifecycleSelection(["alpha"], shared(), data);
     expect(keys(partial)).toEqual([]);
     expect(partial.partialCombined).toBe(true);
     expect(partial.unmodelled).toEqual([alpha.label]);
-    const full = lifecycleSelection([alpha.id, beta.id], measures, data);
-    expect(keys(full)).toEqual(["shared_impact"]);
-    expect(full.reforms[0].description).toBe(`${alpha.description} ${beta.description}`);
+    const full = lifecycleSelection(["alpha", "beta"], shared(), data);
+    expect(keys(full)).toEqual(["impact_shared"]);
     expect(lifecycleTotals(data, full.reforms).netTotal).toBe(30);
-    const heldMember = lifecycleSelection([alpha.id, beta.id], [measures[0], { ...measures[1], displayable: false }], data);
-    expect(keys(heldMember)).toEqual([]);
-    expect(heldMember.unmodelled).toEqual([alpha.label, beta.label]);
   });
 
-  it("names unsupported, held and incomplete measures instead of inserting zero", () => {
-    const held = { ...beta, displayable: false };
-    expect(lifecycleSelection([alpha.id, beta.id], [alpha, held], rows).unmodelled).toEqual([beta.label]);
-    expect(lifecycleSelection([alpha.id], [alpha], [{}, ...rows]).unmodelled).toEqual([alpha.label]);
-    expect(lifecycleSelection([alpha.id], [{ ...alpha, personal: { key: "missing_published_series" } }], rows).unmodelled)
-      .toEqual([alpha.label]);
-    const unknown = lifecycleSelection(["unknown"], [], rows);
-    expect(unknown.unmodelled).toEqual(["unknown"]);
-    expect(unknown.partialCombined).toBe(false);
-    expect(lifecycleTotals([{}], [{ key: "missing" }])).toEqual({ netTotal: null, avgPerYear: null });
-    expect(lifecycleTotals(rows, [])).toEqual({ netTotal: null, avgPerYear: null });
+  it.each([
+    ["undeclared owner", [alpha, { ...beta, personal: { ...beta.personal, key: alpha.personal.key } }]],
+    ["missing member mapping", [shared()[0], beta]],
+    ["different groups", [shared()[0], { ...shared()[1], personal: { ...shared()[1].personal, policies: ["beta"] } }]],
+    ["different model parameters", [shared()[0], { ...shared()[1], personal: { ...shared()[1].personal, description: "Different implementation." } }]],
+    ["duplicate members", shared().map((item) => ({ ...item, personal: { ...item.personal, policies: ["alpha", "beta", "alpha"] } }))],
+    ["held member", [shared()[0], { ...shared()[1], displayable: false }]],
+  ])("rejects invalid shared ownership: %s", (_, measures) => {
+    const selection = lifecycleSelection(["alpha", "beta"], measures, [{ year: 2026, impact_shared: 30, impact_alpha: 10, impact_beta: 20 }]);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([alpha.label, beta.label]);
   });
 
-  it("never totals unrelated API columns for an arbitrary published id", () => {
-    fc.assert(fc.property(fc.string({ minLength: 1 }), (id) => {
-      const measure = { id, label: `Measure ${id}`, displayable: true };
-      const data = [{ unrelated_api_column: 100 }];
-      const selection = lifecycleSelection([id], [measure], data);
-      if (id === "unrelated_api_column") expect(keys(selection)).toEqual([id]);
-      else expect(selection.unmodelled).toEqual([measure.label]);
+  it("requires publication years and personal years for every row", () => {
+    const selection = lifecycleSelection(["alpha"], [{ ...alpha, years: [2029], unsupported_years: [2026] }], rows);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([alpha.label]);
+    for (const personal of [
+      { key: "impact_alpha" },
+      { ...alpha.personal, years: undefined },
+      { ...alpha.personal, reviewed: false },
+      { ...alpha.personal, model: "personal" },
+      { ...alpha.personal, years: [2029], unsupported_years: [2026] },
+    ]) expect(lifecycleSelection(["alpha"], [{ ...alpha, personal }], rows).reforms).toEqual([]);
+  });
+
+  it("does not restore personal figures after publication receipt verification fails", () => {
+    const selection = lifecycleSelection([alpha.id], [{ ...alpha, availability: { available: false, reason: "Receipt digest mismatch" } }], rows);
+    expect(selection.reforms).toEqual([]);
+    expect(selection.unmodelled).toEqual([alpha.label]);
+  });
+
+  it("withholds totals when any selection or supported year is missing", () => {
+    expect(lifecycleTotals(rows, [alpha], false).netTotal).toBeNull();
+    expect(lifecycleTotals([{ year: 2030, impact_alpha: 99 }], [alpha]).netTotal).toBeNull();
+    expect(lifecycleTotals([{ year: 2026 }], [alpha]).netTotal).toBeNull();
+    expect(lifecycleTotals(rows, []).netTotal).toBeNull();
+  });
+
+  it("never infers an impact from arbitrary ids or impact-prefixed API columns", () => {
+    fc.assert(fc.property(fc.string({ minLength: 1 }), fc.integer(), (id, value) => {
+      const published = measure(id, { personal: null });
+      const data = [{ year: 2026, [id]: value, [`impact_${id}`]: value, gross_income: value }];
+      const selection = lifecycleSelection([id], [published], data);
+      expect(selection.reforms).toEqual([]);
+      expect(selection.unmodelled).toEqual([published.label]);
+    }));
+  });
+
+  it("rejects explicit mappings to non-impact numeric columns", () => {
+    fc.assert(fc.property(fc.constantFrom("gross_income", "year", "age", "baseline_net_income", "income_tax", "student_loan_payment"), fc.integer(), (key, value) => {
+      const published = measure(key, { personal: { ...alpha.personal, key } });
+      const selection = lifecycleSelection([key], [published], [{ [key]: value, year: 2026 }]);
+      expect(selection.reforms).toEqual([]);
+      expect(selection.unmodelled).toEqual([published.label]);
+    }));
+  });
+
+  it("never authorizes a lifetime projection containing an unsupported year", () => {
+    fc.assert(fc.property(fc.integer({ min: 2027, max: 2100 }).filter((year) => year !== 2029), fc.integer(), (year, value) => {
+      const selection = lifecycleSelection([alpha.id], [alpha], [{ year: 2026, impact_alpha: 10 }, { year, impact_alpha: value }]);
+      expect(selection.reforms).toEqual([]);
+      expect(selection.unmodelled).toEqual([alpha.label]);
     }));
   });
 });

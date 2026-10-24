@@ -14,6 +14,8 @@ const definitions = [
 export function measureCatalogueFixture({ held = true } = {}) {
   const measures = held ? definitions : definitions.slice(0, 2);
   const manifest = {
+    release: "uk-autumn-budget-2026",
+    budget: { id: "uk-autumn-budget-2026", date: "2026-10-28" },
     measures: Object.fromEntries(measures.map((measure) => [measure.id, {
       name: measure.name,
       description: measure.description,

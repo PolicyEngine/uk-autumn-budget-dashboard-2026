@@ -21,7 +21,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -46,12 +46,13 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  const catalogue = useMeasureCatalogue();
   const {
     displayable: POLICIES,
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
-    revenueRaisingNames: REVENUE_RAISING_NAMES,
-  } = useMeasureCatalogue();
+    bySeriesKey,
+  } = catalogue;
   const hasUnavailableSelection = selectedPolicies.some(
     (id) => !POLICIES.some((policy) => policy.id === id),
   );
@@ -79,7 +80,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
     ? rawData.filter(
         (row) =>
           parseInt(row.year) === selectedYear &&
-          selectedPolicies.includes(row.reform_id),
+          selectedPolicies.includes(row.reform_id) &&
+          isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
       )
     : [];
 
@@ -95,7 +97,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
       const parsedValue = dataRow ? Number.parseFloat(dataRow.value) : NaN;
       const value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
       if (isSelected && value === null) incomplete = true;
-      dataPoint[policy.name] = value;
+      dataPoint[policy.seriesKey] = value;
       if (value !== null) netChange += value;
     });
     dataPoint.netChange = incomplete ? null : netChange;
@@ -114,7 +116,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
         ? rawData.filter(
             (row) =>
               parseInt(row.year) === year &&
-              selectedPolicies.includes(row.reform_id),
+              selectedPolicies.includes(row.reform_id) &&
+              isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
           )
         : [];
 
@@ -190,9 +193,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
   const legendItems = [
     ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
-      label: name,
+      label: bySeriesKey.get(name)?.label ?? name,
       type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
       ? [{ color: "#000000", label: "Net change", type: "line" }]
@@ -211,15 +214,15 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
     legendItems,
     logo: CHART_LOGO,
   };
-  const selectedPolicyNames = POLICIES.filter((policy) =>
+  const selectedMeasures = POLICIES.filter((policy) =>
     selectedPolicies.includes(policy.id),
-  ).map((policy) => policy.name);
+  );
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => decileCsv(data, selectedPolicyNames, { kind: "relative", year: selectedYear }),
+    csv: () => decileCsv(data, selectedMeasures, { kind: "relative", year: selectedYear }),
     published,
   };
 
@@ -326,7 +329,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = 2029 })
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
-                  name={policyName}
+                  name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
                   animationDuration={500}
                   animationBegin={0}

@@ -2,27 +2,27 @@ import React, { useState, useEffect } from "react";
 import "./OBRComparisonTable.css";
 import "./ViewSwitch.css";
 import PillSelect from "./PillSelect";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
 
 function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   const catalogue = useMeasureCatalogue();
   const { byId } = catalogue;
   const [comparisonData, setComparisonData] = useState(null);
+  const [loadFailure, setLoadFailure] = useState(null);
   const [showBehavioural, setShowBehavioural] = useState(true);
   // The comparison shows as a chart or as a table, never both
   const [view, setView] = useState("chart");
   const showTable = view === "table";
 
   useEffect(() => {
-    // Fetch both OBR comparison data and PolicyEngine budgetary impact data
-    Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/obr_comparison.csv`).then((res) => res.text()),
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/budgetary_impact.csv`).then((res) => res.text()),
-    ])
-      .then(([obrCsvText, peCsvText]) => {
+    let live = true;
+    loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
+      .then((obrCsvText) => {
         const obrData = Object.create(null);
         const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
         for (const row of parseDashboardCsv(obrCsvText)) {
@@ -35,7 +35,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
             obr_behavioural: numeric(row.obr_post_behavioural_value),
           };
         }
-        for (const row of parseDashboardCsv(peCsvText)) {
+        for (const row of Object.values(catalogue.tablesByKey ?? {}).flatMap((tables) => tables.budgetary_impact ?? [])) {
           const key = `${row.reform_id}_${row.year}`;
           if (!obrData[key]) obrData[key] = {
             reform_id: row.reform_id,
@@ -49,15 +49,18 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
         // Convert to array
         const data = Object.values(obrData);
-        setComparisonData(data);
+        if (live) setComparisonData({ catalogue, rows: data });
       })
-      .catch((err) => console.error("Error loading comparison data:", err));
-  }, []);
+      .catch(() => { if (live) setLoadFailure(catalogue); });
+    return () => { live = false; };
+  }, [catalogue]);
 
-  if (!comparisonData || selectedPolicies.length === 0) return null;
+  if (selectedPolicies.length === 0) return null;
+  if (loadFailure === catalogue) return <UnavailableNotice reason="The OBR comparison is unavailable for the approved publication snapshot." />;
+  if (comparisonData?.catalogue !== catalogue) return null;
 
   // Filter to selected policies
-  const filteredData = comparisonData.filter((row) =>
+  const filteredData = comparisonData.rows.filter((row) =>
     selectedPolicies.includes(row.reform_id) && isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
   );
 
@@ -69,7 +72,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
   );
 
   // Group by policy
-  const policiesMap = {};
+  const policiesMap = Object.create(null);
   filteredData.forEach((row) => {
     if (!policiesMap[row.reform_id]) {
       policiesMap[row.reform_id] = {
@@ -86,7 +89,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = 2029 }) {
 
   // Every year shown; a year the file does not cover reads "—"
   const years = DISPLAY_YEARS;
-  const policies = Object.entries(policiesMap);
+  const policies = catalogue.measures
+    .filter((measure) => policiesMap[measure.id])
+    .map((measure) => [measure.id, policiesMap[measure.id]]);
 
   // Signed with a true minus; a value that rounds to zero reads "£0.0bn"
   const formatValue = (value) => {

@@ -114,6 +114,9 @@ def add_publish_parser(subparsers) -> None:
     withdrawing.add_argument("--reason", required=True)
 
     actions.add_parser("check", help="Re-run every gate (used by CI)")
+    actions.add_parser(
+        "index", help="Bind every flat CSV to this approved manifest snapshot"
+    )
     actions.add_parser("status", help="List manifest entries")
 
     rows = actions.add_parser(
@@ -211,6 +214,23 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
     if action == "review-rows":
         return run_review_rows(parsed, out)
 
+    if action == "index":
+        from uk_budget_data.publication.release_index import (
+            write_release_index,
+        )
+
+        try:
+            manifest = write_release_index(
+                m.load_manifest(data_root), data_root=data_root, inputs=inputs
+            )
+        except (PublishError, OSError, ValueError) as error:
+            out(f"REFUSED release index: {error}")
+            return 1
+        out(
+            f"release index bound to manifest revision {manifest.revision}; review these new bytes"
+        )
+        return 0
+
     manifest = m.load_manifest(data_root)
     if action == "status":
         out(f"revision {manifest.revision}")
@@ -254,7 +274,7 @@ def run_publish(parsed: argparse.Namespace, out=print) -> int:
         else:
             out(
                 "usage: uk-budget-data publish "
-                "{reconcile,stage,approve,withdraw,check,status,review-rows}"
+                "{reconcile,stage,approve,withdraw,check,index,status,review-rows}"
             )
             return 2
     except PublishError as error:

@@ -18,6 +18,7 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { parseTable } from "../utils/publication/csv";
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
@@ -55,7 +56,6 @@ import "./YoungPeopleSection.css";
 /** The section's anchor: link to it as #young-people. */
 export const YOUNG_PEOPLE_ANCHOR = "young-people";
 
-const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv`;
 
 // Highlight for the 16 to 24 band
 const YOUNG_FILL = "rgba(49, 151, 149, 0.10)";
@@ -87,27 +87,22 @@ function niceDomain(maxAbs) {
 }
 
 /** Load age_impact.csv once per mount, typed by the publication contract. */
-function useAgeImpactRows() {
-  const [state, setState] = useState({ status: "loading", rows: null });
+function useAgeImpactRows(catalogue) {
+  const [state, setState] = useState({ catalogue, status: "loading", rows: null });
   useEffect(() => {
     let cancelled = false;
-    fetch(DATA_URL)
-      .then((response) => {
-        if (!response.ok) throw new Error(`age_impact.csv: ${response.status}`);
-        return response.text();
-      })
+    loadVerifiedFlatCsv("age_impact.csv", catalogue)
       .then((text) => {
-        if (!cancelled) setState({ status: "ready", rows: parseTable("age_impact", text) });
+        if (!cancelled) setState({ catalogue, status: "ready", rows: parseTable("age_impact", text) });
       })
-      .catch((error) => {
-        console.error("Error loading results by age:", error);
-        if (!cancelled) setState({ status: "error", rows: null });
+      .catch(() => {
+        if (!cancelled) setState({ catalogue, status: "error", rows: null });
       });
     return () => {
       cancelled = true;
     };
-  }, []);
-  return state;
+  }, [catalogue]);
+  return state.catalogue === catalogue ? state : { status: "loading", rows: null };
 }
 
 /** The outcome legend: one row of swatches, in the grouped legend's style. */
@@ -152,7 +147,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   const {
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
-    revenueRaisingNames: REVENUE_RAISING_NAMES,
+    bySeriesKey,
   } = useMeasureCatalogue();
   const chartRef = useRef(null);
   const yearLabel = fiscalYearTick(selectedYear);
@@ -168,7 +163,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         let up = 0;
         let down = 0;
         for (const policy of policies) {
-          const value = point[policy.name] ?? 0;
+          const value = point[policy.seriesKey ?? `measure:${policy.id}`] ?? 0;
           if (value > 0) up += value;
           else down += value;
         }
@@ -194,9 +189,9 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
     legendItems: [
       ...activeNames.map((name) => ({
         color: POLICY_COLORS[name],
-        label: name,
+        label: bySeriesKey.get(name)?.label ?? name,
         type: "rect",
-        group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+        group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
       })),
       ...(activeNames.length > 1
         ? [{ color: "#000000", label: "Net change", type: "line" }]
@@ -205,7 +200,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
   };
   const selectedNames = policies
     .filter((policy) => selectedPolicies.includes(policy.id))
-    .map((policy) => policy.name);
+    .map((policy) => ({ key: policy.seriesKey ?? `measure:${policy.id}`, label: policy.label ?? policy.name, decimals: 2 }));
   const csvText = () =>
     buildChartCsv({
       title: `Average change in household net income per person by age, ${yearLabel}`,
@@ -213,7 +208,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
         "£ per person per year; each person counts their household's change in net income (not equivalised)",
       columns: [
         { key: "label", label: "Age" },
-        ...selectedNames.map((name) => ({ key: name, label: name, decimals: 2 })),
+        ...selectedNames,
         { key: "netChange", label: "Net change", decimals: 2 },
       ],
       rows: published ? data.filter((point) => !point.suppressed) : [],
@@ -293,7 +288,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 <Bar
                   key={name}
                   dataKey={name}
-                  name={name}
+                  name={bySeriesKey.get(name)?.label ?? name}
                   fill={POLICY_COLORS[name]}
                   stackId="stack"
                   animationDuration={500}
@@ -503,8 +498,8 @@ function Headline({ rows, policies, selectedPolicies, selectedYear, combinedId }
  */
 function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
-  const { status, rows: publishedRows } = useAgeImpactRows();
   const catalogue = useMeasureCatalogue();
+  const { status, rows: publishedRows } = useAgeImpactRows(catalogue);
   const { combinedId } = catalogue;
   const rows = useMemo(() => publishedRows?.filter((row) =>
     isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),

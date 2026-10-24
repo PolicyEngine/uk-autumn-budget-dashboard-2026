@@ -204,7 +204,12 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
   // The example the form was last filled from, while its values stand
   const [presetId, setPresetId] = useState(() => savedWizard.presetId ?? null);
   const catalogue = useMeasureCatalogue();
-  const publishedMeasures = policies.length ? policies : catalogue.measures;
+  // Props may narrow the selection, but published metadata and verification
+  // always come from the loaded catalogue snapshot.
+  const publishedMeasures = useMemo(() => policies.length ? policies.map((policy) => {
+    const published = catalogue.byId.get(policy.id);
+    return { ...published, id: policy.id, displayable: published?.displayable === true && policy.displayable !== false };
+  }) : catalogue.measures, [policies, catalogue]);
   // The lifetime series for the policies selected in the title band
   const selectionKey = selectedPolicies.join(",");
   const selection = useMemo(
@@ -263,8 +268,8 @@ function LifecycleCalculator({ selectedPolicies = [], policies = [], onShowMetho
 
   // Summary over the selected series only
   const summaryStats = useMemo(
-    () => lifecycleTotals(displayData, activeReforms),
-    [displayData, activeReforms],
+    () => lifecycleTotals(displayData, activeReforms, completeSelection),
+    [displayData, activeReforms, completeSelection],
   );
 
   // Parse children ages from string

@@ -27,29 +27,10 @@ from uk_budget_data.models import Reform
 # budget_years.json, which the page reads too (2026-27 to 2031-32)
 DEFAULT_YEARS = list(POLICY_YEARS)
 
-# Public response-column metadata for the existing lifetime calculator.
-# This describes its output; it changes neither a reform nor a calculation.
-# Its joint income-tax series must be used only for the complete group.
-_PUBLIC_UNEARNED_SERIES = {
-    "key": "impact_unearned_income_tax",
-    "policies": [
-        "dividend_tax_increase_2pp",
-        "savings_tax_increase_2pp",
-        "property_tax_increase_2pp",
-    ],
-}
-PUBLIC_PERSONAL_SERIES = {
-    "two_child_limit": {"key": "impact_two_child_limit"},
-    "fuel_duty_freeze": {"key": "impact_fuel_duty_freeze"},
-    "rail_fares_freeze": {"key": "impact_rail_fare_freeze"},
-    "threshold_freeze_extension": {"key": "impact_threshold_freeze"},
-    "freeze_student_loan_thresholds": {"key": "impact_sl_threshold_freeze"},
-    "salary_sacrifice_cap": {"key": "impact_salary_sacrifice_cap"},
-    **{
-        measure: _PUBLIC_UNEARNED_SERIES
-        for measure in _PUBLIC_UNEARNED_SERIES["policies"]
-    },
-}
+# No legacy lifetime response column has been reviewed as implementing the
+# published registry parameters and years. An empty mapping keeps all current
+# measures unavailable in personal views without changing any calculation.
+PUBLIC_PERSONAL_SERIES: dict[str, dict] = {}
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:

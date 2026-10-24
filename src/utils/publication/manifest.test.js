@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
   attestationProblems,
@@ -7,6 +6,7 @@ import {
   ManifestError,
   measureAvailability,
   parseManifest,
+  personalSeriesProblems,
   PROVISIONAL_LABEL,
   publicationLabel,
 } from "./manifest";
@@ -295,5 +295,31 @@ describe("availability", () => {
   it("labels provisional entries only", () => {
     expect(publicationLabel(manifest.measures.gamma)).toBe(PROVISIONAL_LABEL);
     expect(publicationLabel(manifest.measures.alpha)).toBe("");
+  });
+});
+
+
+describe("personal model contract metadata", () => {
+  const personal = { key: "impact_alpha", model: "lifecycle", reviewed: true, description: "Reviewed lifetime parameters.", years: [2026, 2029], unsupported_years: [2027] };
+
+  it("reads an explicit contract while retaining old receipts for inspection", () => {
+    expect(personalSeriesProblems(personal)).toEqual([]);
+    expect(personalSeriesProblems({ key: "impact_alpha" })).toEqual([]);
+    expect(parseManifest(edited((m) => { m.measures.alpha.personal = personal; })).measures.alpha.personal).toEqual(personal);
+  });
+
+  it.each([
+    { ...personal, model: "unknown" },
+    { ...personal, key: "gross_income" },
+    { ...personal, reviewed: "true" },
+    { ...personal, description: " " },
+    { ...personal, years: [] },
+    { ...personal, years: [2026, 2026] },
+    { ...personal, years: ["2026"] },
+    { ...personal, unsupported_years: [2026] },
+    { ...personal, policies: ["alpha", "alpha"] },
+  ])("rejects malformed per-model metadata: %j", (value) => {
+    expect(personalSeriesProblems(value).length).toBeGreaterThan(0);
+    expect(() => parseManifest(edited((m) => { m.measures.alpha.personal = value; }))).toThrow(ManifestError);
   });
 });

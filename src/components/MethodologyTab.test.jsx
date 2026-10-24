@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { MEASURE_MODELLING } from "./methodology/measures";
+import { measureModelling } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
-import { POLICY_COLORS } from "../utils/policyConfig";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
+const MEASURE_MODELLING = measureModelling(catalogue);
+const POLICY_COLORS = catalogue.policyColors;
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-const renderTab = (onShowTab = vi.fn()) => render(<MethodologyTab onShowTab={onShowTab} />);
+const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} /></MeasureCatalogueProvider>);
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
@@ -82,7 +86,7 @@ describe("MethodologyTab", () => {
     expect(rows).toHaveLength(MEASURE_MODELLING.length);
     for (const measure of MEASURE_MODELLING) {
       // Every measure is one the charts colour, by the same name
-      expect(POLICY_COLORS[measure.name]).toBeDefined();
+      expect(POLICY_COLORS[measure.seriesKey]).toBeDefined();
       expect(within(table).getByRole("rowheader", { name: measure.name })).toBeInTheDocument();
     }
 

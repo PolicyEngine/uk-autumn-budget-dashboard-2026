@@ -171,3 +171,14 @@ describe("years not yet published", () => {
     ]);
   });
 });
+
+
+it("uses published CSV headings while reading namespaced measure keys", () => {
+  const policy = { seriesKey: "measure:synthetic", label: "netImpact" };
+  const revenue = revenueCsv([{ year: 2029, [policy.seriesKey]: 2, netImpact: 2, unpublished: false }], [policy]);
+  expect(revenue).toContain("Fiscal year,netImpact,Net impact");
+  expect(revenue).toContain("2029-30,2,2");
+  const decile = decileCsv([{ decile: "1st", [policy.seriesKey]: 2, netChange: 2 }], [policy], { kind: "relative", year: 2029 });
+  expect(decile).toContain("Income decile,netImpact,Net change");
+  expect(decile).toContain("1,2,2");
+});

@@ -137,7 +137,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const {
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
-    revenueRaisingNames: REVENUE_RAISING_NAMES,
+    bySeriesKey,
   } = useMeasureCatalogue();
 
   if (!data || data.length === 0) return null;
@@ -180,9 +180,9 @@ function BudgetaryImpactChart({ data, selectedYear }) {
   const legendItems = [
     ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
-      label: name,
+      label: bySeriesKey.get(name)?.label ?? name,
       type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
       ? [{ color: "#000000", label: "Net impact", type: "line" }]
@@ -201,7 +201,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => revenueCsv(data, activePolicies),
+    csv: () => revenueCsv(data, activePolicies.map((key) => bySeriesKey.get(key))),
   };
 
   return (
@@ -304,7 +304,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                name={policyName}
+                name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 animationDuration={500}
                 animationBegin={0}

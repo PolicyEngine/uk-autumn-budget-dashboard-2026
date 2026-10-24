@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { curveFor, parseCurve } from "./useIncomeCurve";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import useIncomeCurve, { curveFor, parseCurve } from "./useIncomeCurve";
 import { COMBINED_REFORM_ID } from "../utils/policyConfig";
+import { buildMeasureCatalogue, isCatalogueRowDisplayable, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
+
+vi.mock("../utils/publication/flat", () => ({ loadVerifiedFlatCsv: vi.fn() }));
+import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+afterEach(cleanup);
 
 const HEADER =
   "reform_id,reform_name,year,household,x_variable,income,baseline_net_income,reform_net_income";
@@ -46,7 +54,47 @@ describe("the example households' curves", () => {
   it("keep households and years apart", () => {
     const rows = parseCurve(CSV);
     const pensioners = curveFor(rows, { household: "pensioner_couple", year: 2029, policies: ["a"] });
-    expect(pensioners).toEqual([{ income: 0, baseline: 5000, difference: -1000, reform: 4000 }]);
+    expect(pensioners).toEqual([]);
     expect(curveFor(rows, { household: "lone_parent", year: 2029, policies: ["a"] })).toEqual([]);
   });
+});
+
+
+describe("approved example-household baseline", () => {
+  const rows = [
+    { reformId: ALPHA, household: "example", year: YEAR, income: 0, baseline: 190, reformNet: 200 },
+    { reformId: BETA, household: "example", year: YEAR, income: 0, baseline: 195, reformNet: 200 },
+    { reformId: COMBINED, household: "example", year: YEAR, income: 0, baseline: 185, reformNet: 200 },
+  ];
+  it("uses the combined baseline rather than a member baseline", () => {
+    const catalogue = buildMeasureCatalogue(measureCatalogueFixture({ held: false }));
+    expect(curveFor(rows.filter((row) => isCatalogueRowDisplayable(catalogue, row.reformId, row.year)), { household: "example", year: YEAR, policies: [ALPHA, BETA], combinedId: catalogue.combinedId })).toEqual([{ income: 0, baseline: 185, difference: 15, reform: 200 }]);
+  });
+  it.each(["staged", "withdrawn", "not_computable"])("shows no absolute levels when the combined run is %s", (status) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    fixture.manifest.combined[COMBINED].status = status;
+    const catalogue = buildMeasureCatalogue(fixture);
+    expect(curveFor(rows.filter((row) => isCatalogueRowDisplayable(catalogue, row.reformId, row.year)), { household: "example", year: YEAR, policies: [ALPHA, BETA], combinedId: catalogue.combinedId })).toEqual([]);
+  });
+  it("requires the approved baseline at every income point", () => {
+    const missingPoint = { reformId: ALPHA, household: "example", year: YEAR, income: 100, baseline: 190, reformNet: 200 };
+    expect(curveFor([...rows, missingPoint], { household: "example", year: YEAR, policies: [ALPHA], combinedId: COMBINED })).toEqual([]);
+  });
+});
+
+
+it.each(["staged", "withdrawn", "not_computable"])("the real income curve hook supplies no figure for a %s combined run", async (status) => {
+  const fixture = measureCatalogueFixture({ held: false });
+  fixture.manifest.combined[COMBINED].status = status;
+  const catalogue = buildMeasureCatalogue(fixture);
+  const csv = [HEADER,
+    `${ALPHA},Alpha,${YEAR},single_renter,employment_income,0,190,200`,
+    `${BETA},Beta,${YEAR},single_renter,employment_income,0,195,200`,
+    `${COMBINED},Combined,${YEAR},single_renter,employment_income,0,185,200`,
+  ].join("\n");
+  vi.mocked(loadVerifiedFlatCsv).mockResolvedValue(csv);
+  const wrapper = ({ children }) => createElement(MeasureCatalogueProvider, { catalogue }, children);
+  const { result } = renderHook(() => useIncomeCurve({ household: "single_renter", year: YEAR, policies: [ALPHA, BETA] }), { wrapper });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(result.current.data).toEqual([]);
 });

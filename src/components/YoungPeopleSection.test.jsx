@@ -7,24 +7,32 @@ import {
   youngAndAll,
   MIN_SAMPLE_SIZE,
 } from "../utils/ageImpact";
+import { changeByYear } from "./youngPeople/youngPeopleData";
 import { COMBINED_REFORM_ID } from "../utils/policyConfig";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
-vi.mock("recharts", async () => {
-  const actual = await vi.importActual("recharts");
+// Multiple chart cards and accessible queries need room in the shared jsdom runner.
+vi.setConfig({ testTimeout: 30000 });
+
+vi.mock("../utils/publication/flat", () => ({
+  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
+}));
+
+vi.mock("recharts", () => {
+  const Empty = () => null;
+  const Chart = ({ children }) => <div>{children}</div>;
   return {
-    ...actual,
-    ResponsiveContainer: ({ children }) => (
-      <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
-        {children}
-      </div>
-    ),
+    ComposedChart: Chart, BarChart: Chart,
+    ResponsiveContainer: ({ children }) => <div data-testid="recharts-responsive-container">{children}</div>,
+    Bar: Empty, CartesianGrid: Empty, Customized: Empty, LabelList: Empty,
+    Legend: Empty, Line: Empty, ReferenceArea: Empty, ReferenceLine: Empty,
+    Tooltip: Empty, XAxis: Empty, YAxis: Empty,
   };
 });
 
 const POLICIES = [
-  { id: "two_child_limit", name: "2 child limit repeal" },
-  { id: "threshold_freeze_extension", name: "Threshold freeze extension" },
+  { id: "two_child_limit", seriesKey: "measure:two_child_limit", name: "2 child limit repeal" },
+  { id: "threshold_freeze_extension", seriesKey: "measure:threshold_freeze_extension", name: "Threshold freeze extension" },
 ];
 const ALL = POLICIES.map((policy) => policy.id);
 
@@ -52,8 +60,12 @@ const CSV = [
 ].join("\n");
 
 const catalogue = buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(POLICIES.map((policy) => [policy.id, { name: policy.name, status: "approved", years: [2029, 2031], unsupported_years: [], outputs_sha256: "a".repeat(64) }])),
+    combined: { [COMBINED_REFORM_ID]: { name: "All measures", status: "approved", years: [2029, 2031], unsupported_years: [], measures: ALL, member_outputs_sha256: Object.fromEntries(ALL.map((id) => [id, "a".repeat(64)])) } },
+  },
   budgetary: [
-    ...POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, value: index === 0 ? -1 : 1 })),
+    ...POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, year: 2029, value: index === 0 ? -1 : 1 })),
     { reform_id: COMBINED_REFORM_ID, reform_name: "All measures", value: 0 },
   ],
 });
@@ -78,8 +90,8 @@ describe("results by age", () => {
     ];
     const points = meanChangeByBand(rows, POLICIES, ALL, 2029);
     const young = points.find((point) => point.band === "16-24");
-    expect(young["2 child limit repeal"]).toBe(100);
-    expect(young["Threshold freeze extension"]).toBe(-60);
+    expect(young["measure:two_child_limit"]).toBe(100);
+    expect(young["measure:threshold_freeze_extension"]).toBe(-60);
     expect(young.netChange).toBe(40);
     const oldest = points.find((point) => point.band === "65+");
     expect(oldest.suppressed).toBe(true);
@@ -128,4 +140,15 @@ describe("YoungPeopleSection", () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2031} policies={POLICIES} />);
     expect(await screen.findAllByText("Results for 2031-32 are not yet published.")).toHaveLength(3);
   });
+});
+
+
+it("keeps the age trend unavailable when a selected measure has no supported rows", () => {
+  const rows = [
+    { reform_id: "two_child_limit", year: 2029, age_band: "16-24", mean_change: 100, sample_size: 5000 },
+    { reform_id: "two_child_limit", year: 2029, age_band: "all", mean_change: 120, sample_size: 5000 },
+  ];
+  expect(changeByYear(rows, POLICIES, ALL, [2029])).toEqual([{ year: 2029, published: false, suppressed: false, young: null, all: null }]);
+  const unknownSelection = meanChangeByBand(rows, [POLICIES[0]], [POLICIES[0].id, "unpublished_measure"], 2029);
+  expect(unknownSelection.find((point) => point.band === "16-24").netChange).toBeNull();
 });

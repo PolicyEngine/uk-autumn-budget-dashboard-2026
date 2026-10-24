@@ -558,6 +558,7 @@ export function createGroupedLegend(items, areaWidth) {
   const groups = [
     ["Raise revenue", items.filter((item) => item.group === "raise")],
     ["Cost revenue", items.filter((item) => item.group === "cost")],
+    ["Other measures", items.filter((item) => item.group === "other")],
   ].filter(([, groupItems]) => groupItems.length > 0);
   const rest = items.filter((item) => !item.group);
 

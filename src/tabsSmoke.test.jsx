@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import App, { VIEWS } from "./App";
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import lifecycleAnswer from "./test/fixtures/lifecycle/default-household.json";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
@@ -29,7 +30,7 @@ const LIFECYCLE_API = "https://lifecycle-api.test/api/lifecycle";
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/manifest.json"]);
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -50,7 +51,7 @@ const LOADED = {
   // checked below.
   personal: (panel) => within(panel).findAllByText(/Step 1 of 7/),
   // The head count comes from age_impact.csv.
-  young: (panel) => within(panel).findAllByText(/young people aged 16 to 24 in the UK/),
+  young: (panel) => within(panel).findAllByText(/Results by age are not available/),
   // The provenance line comes from the outlook's meta.
   living: (panel) => within(panel).findAllByText(/Baseline from policyengine \d/),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -62,6 +63,8 @@ const TEST_ONLY = /^An update to .* inside a test was not wrapped in act/;
 
 let requests;
 let consoleErrors;
+
+const publicationFetch = dashboardFixtureFetch();
 
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
@@ -77,6 +80,7 @@ function serve(input, init = {}) {
       : new Response("{}", { status: 404 });
   }
   const { pathname } = new URL(url, "http://localhost");
+  if (pathname === "/data/manifest.json" || pathname.startsWith("/data/artifacts/")) return publicationFetch(url, init);
   const path = normalize(join(PUBLIC, decodeURIComponent(pathname)));
   const found = path.startsWith(PUBLIC) && existsSync(path) && statSync(path).isFile();
   requests.push({ url: pathname, status: found ? 200 : 404 });
@@ -106,7 +110,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("each of the five tabs, on the real data", () => {
+describe("each of the five tabs, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(VIEWS.map((v) => v.value).sort()).toEqual(Object.keys(LOADED).sort());
   });

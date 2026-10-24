@@ -8,25 +8,29 @@ import PersonalImpactResults from "./PersonalImpactResults";
 
 vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
-  return {
-    ...actual,
-    ResponsiveContainer: ({ children }) => <div>{cloneElement(children, { width: 800, height: 400 })}</div>,
-  };
+  return { ...actual, ResponsiveContainer: ({ children }) => <div>{cloneElement(children, { width: 800, height: 400 })}</div> };
 });
 
-const catalogue = buildMeasureCatalogue({ budgetary: [
-  { reform_id: "ab2026_mock_alpha", reform_name: "Mock alpha", reform_description: "Alpha public explanation.", value: "-100" },
-  { reform_id: "ab2026_mock_beta", reform_name: "Mock beta", reform_description: "Beta public explanation.", value: "100" },
-] });
-const alpha = catalogue.byId.get("ab2026_mock_alpha");
-const beta = catalogue.byId.get("ab2026_mock_beta");
+const contract = (id, model = "lifecycle") => ({ key: `impact_${id}`, model, reviewed: true, description: `Reviewed ${model} calculation for ${id}.`, years: [2026], unsupported_years: [] });
+const createCatalogue = (personal = true, model = "lifecycle") => buildMeasureCatalogue({
+  manifest: {
+    measures: Object.fromEntries(["alpha", "beta"].map((id) => [id, {
+      name: `Mock ${id}`, description: `${id} public description.`, status: "approved", years: [2026], unsupported_years: [],
+      ...(personal ? { personal: contract(id, model) } : {}),
+    }])), combined: {},
+  },
+  budgetary: ["alpha", "beta"].map((id) => ({ reform_id: id, year: 2026, value: id === "alpha" ? -100 : 100 })),
+});
+const catalogue = createCatalogue();
+const alpha = catalogue.byId.get("alpha");
+const beta = catalogue.byId.get("beta");
 const apiRow = {
   age: 22, year: 2026, gross_income: 30000, income_tax: 3000,
   national_insurance: 1000, student_loan_payment: 0,
   student_loan_debt_remaining: 0, baseline_net_income: 26000,
-  impact_ab2026_mock_alpha: 10,
+  impact_alpha: 10,
 };
-const wrap = (children) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
+const wrap = (children, value = catalogue) => <MeasureCatalogueProvider catalogue={value}>{children}</MeasureCatalogueProvider>;
 const showResults = () => {
   if (screen.queryByRole("button", { name: "Edit details" })) fireEvent.click(screen.getByRole("button", { name: "Edit details" }));
   while (screen.queryByRole("button", { name: "Next" })) fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -39,62 +43,61 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-describe("catalogue measures in the personal impact view", () => {
-  it("shows published descriptions and uses the same catalogue colours", () => {
-    const { container } = render(wrap(<LifecycleAbout />));
+describe("reviewed compatibility in personal views", () => {
+  it("describes current measures as not modelled and keeps the accurate lifetime assumptions", () => {
+    const { container } = render(wrap(<LifecycleAbout />, createCatalogue(false)));
     expect(screen.getByText(alpha.label)).toBeInTheDocument();
     expect(screen.getByText(beta.label)).toBeInTheDocument();
-    expect(container.textContent).toContain(alpha.description);
-    expect(container.textContent).toContain(beta.description);
-    expect([...container.querySelectorAll(".about-swatch")].map((swatch) => swatch.style.background))
-      .toEqual([beta, alpha].map((measure) => {
-        const span = document.createElement("span"); span.style.background = measure.color; return span.style.background;
-      }));
+    expect(container.textContent).toContain("No such mappings are published today");
+    expect(container.textContent).toContain("On top of that profile, earnings grow by 1% a year.");
+    expect(container.textContent).not.toContain(alpha.description);
+    expect(container.textContent).not.toContain(beta.description);
   });
 
-  it("keeps measures without a costing in their own group", () => {
-    const neutral = buildMeasureCatalogue({ budgetary: [
-      { reform_id: "uncosted_measure", reform_name: "Uncosted measure", value: "" },
-    ] });
-    render(<MeasureCatalogueProvider catalogue={neutral}><LifecycleAbout /></MeasureCatalogueProvider>);
-    expect(screen.getByText("Other measures")).toBeInTheDocument();
-    expect(screen.queryByText("Cost revenue")).not.toBeInTheDocument();
-    expect(screen.queryByText("Raise revenue")).not.toBeInTheDocument();
+  it("withholds every legacy lifetime figure even when the API supplies matching columns", async () => {
+    fetch.mockResolvedValue({ ok: true, json: async () => ({ data: [{ ...apiRow, impact_beta: -4 }] }) });
+    const { container } = render(wrap(<LifecycleCalculator selectedPolicies={[alpha.id, beta.id]} />, createCatalogue(false)));
+    showResults();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.getByText(`Not modelled: ${beta.label}, ${alpha.label}.`)).toBeInTheDocument();
+    expect(container.querySelector(".age-group rect")).toBeNull();
+    expect(container.querySelector(".lifecycle-summary")).not.toBeVisible();
   });
 
-  it("keeps supported bars but withholds the total and names unsupported measures", async () => {
+  it("keeps reviewed supported bars but suppresses the total for a missing series", async () => {
     const { container } = render(wrap(<LifecycleCalculator selectedPolicies={[alpha.id, beta.id]} />));
     showResults();
     await waitFor(() => expect(container.querySelectorAll(".age-group rect")).toHaveLength(1));
     expect(screen.getByText(`Not modelled: ${beta.label}.`)).toBeInTheDocument();
-    expect(screen.getByText("The total for the selected measures is unavailable.")).toBeInTheDocument();
     expect(container.querySelector(".lifecycle-summary")).not.toBeVisible();
     expect(container.querySelector(".age-group rect")).toHaveAttribute("fill", alpha.color);
     expect(container.querySelector(".grouped-legend-net")).toBeNull();
     expect(container.querySelector(".net-line")).not.toHaveAttribute("d");
   });
 
-  it("renders every supported unfamiliar measure and its public detail", async () => {
-    fetch.mockResolvedValue({ ok: true, json: async () => ({ data: [{ ...apiRow, impact_ab2026_mock_beta: -4 }] }) });
+  it("renders a reviewed unfamiliar measure with its model-specific explanation", async () => {
+    fetch.mockResolvedValue({ ok: true, json: async () => ({ data: [{ ...apiRow, impact_beta: -4 }] }) });
     const { container } = render(wrap(<LifecycleCalculator selectedPolicies={[alpha.id, beta.id]} />));
     showResults();
     await waitFor(() => expect(container.querySelectorAll(".age-group rect")).toHaveLength(2));
     expect(container.querySelector(".lifecycle-summary")).toBeVisible();
     expect(container.querySelector(".lifecycle-summary")).toHaveTextContent("+£6");
-    expect([...container.querySelectorAll(".age-group rect")].map((bar) => bar.getAttribute("fill")))
-      .toEqual(catalogue.displayable.map((measure) => measure.color));
-    expect(container.querySelector(".grouped-legend-groups")).toHaveTextContent(alpha.label);
-    expect(container.querySelector(".grouped-legend-groups")).toHaveTextContent(beta.label);
-    fireEvent.mouseOver(container.querySelector(".age-group"));
-    expect(container.querySelector(".lifecycle-tooltip")).toHaveTextContent(alpha.label);
-    expect(container.querySelector(".lifecycle-tooltip")).toHaveTextContent(beta.label);
-    expect(container.querySelector(".lifecycle-tooltip")).not.toHaveTextContent("undefined");
     fireEvent.click(container.querySelector(".age-group"));
-    expect(screen.getByText(alpha.description)).toBeInTheDocument();
-    expect(screen.getByText(beta.description)).toBeInTheDocument();
+    expect(screen.getByText(alpha.personal.description)).toBeInTheDocument();
+    expect(screen.getByText(beta.personal.description)).toBeInTheDocument();
+    expect(screen.queryByText(alpha.description)).not.toBeInTheDocument();
   });
 
-  it("withholds a held measure even if the API returns its column", async () => {
+  it("never trusts supplied policy metadata without a loaded publication catalogue", async () => {
+    const { container } = render(<LifecycleCalculator policies={[alpha]} selectedPolicies={[alpha.id]} />);
+    showResults();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.getByText(`Not modelled: ${alpha.id}.`)).toBeInTheDocument();
+    expect(container.querySelector(".age-group rect")).toBeNull();
+    expect(container.querySelector(".lifecycle-summary")).not.toBeVisible();
+  });
+
+  it("withholds held measures despite numeric API output", async () => {
     const held = { ...alpha, displayable: false };
     const { container } = render(wrap(<LifecycleCalculator policies={[held]} selectedPolicies={[held.id]} />));
     showResults();
@@ -103,15 +106,25 @@ describe("catalogue measures in the personal impact view", () => {
     expect(container.querySelector(".age-group rect")).toBeNull();
   });
 
-  it("uses published labels for legacy household results and ignores an unrelated API total", () => {
+  it("rejects legacy household figures and ignores an unrelated API total", () => {
     const { container } = render(wrap(<PersonalImpactResults selectedPolicies={[alpha.id, beta.id]} results={{
       years: { 2026: {} }, totals: { cumulative: 9999 },
       policies: { [alpha.id]: { name: "API internal label", years: { 2026: { net_income_change: 10 } } } },
-    }} />));
-    expect(screen.getByText(`Not modelled: ${beta.label}.`)).toBeInTheDocument();
-    expect(screen.getAllByText(alpha.label).length).toBeGreaterThan(0);
+    }} />, createCatalogue(false)));
+    expect(screen.getByText(`Not modelled: ${beta.label}, ${alpha.label}.`)).toBeInTheDocument();
     expect(container.textContent).not.toContain("API internal label");
     expect(container.textContent).not.toContain("9,999");
     expect(container.querySelector(".summary-value")).toHaveTextContent("Unavailable");
+  });
+
+  it("shows only reviewed household series for supported years", () => {
+    const { container } = render(wrap(<PersonalImpactResults selectedPolicies={[alpha.id, beta.id]} results={{
+      years: { 2026: {} }, policies: {
+        impact_alpha: { years: { 2026: { net_income_change: 10 } } },
+        impact_beta: { years: { 2026: { net_income_change: -4 } } },
+      },
+    }} />, createCatalogue(true, "personal")));
+    expect(container.querySelector(".summary-value")).toHaveTextContent("+£6");
+    expect(screen.queryByText(/Not modelled:/)).not.toBeInTheDocument();
   });
 });

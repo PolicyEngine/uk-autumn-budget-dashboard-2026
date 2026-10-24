@@ -1,3 +1,4 @@
+import { dashboardFixtureFetch } from "../../test/dashboardFixture";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,13 +11,14 @@ const OUTLOOK = readFileSync(
 );
 
 beforeEach(() => {
+  const publicationFetch = dashboardFixtureFetch();
   // The outlook JSON for the Living standards view; an empty CSV for the rest
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) =>
       String(url).endsWith("living_standards_outlook.json")
         ? new Response(OUTLOOK, { status: 200, headers: { "Content-Type": "application/json" } })
-        : String(url).endsWith("manifest.json") ? new Response(null, { status: 404 }) : new Response("reform_id,year,value\n", { status: 200 }),
+        : publicationFetch(url),
     ),
   );
   window.history.replaceState({}, "", "/");

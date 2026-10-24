@@ -264,7 +264,7 @@ function Dashboard({ published }) {
         {catalogue.manifest && catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional") && (
           <p className="publication-provisional" role="status">{PROVISIONAL_LABEL}</p>
         )}
-        {catalogue.measures.filter((measure) => !measure.displayable).map((measure) => (
+        {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
             <p>{measure.description}</p>
             <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
@@ -464,7 +464,7 @@ function Dashboard({ published }) {
                                       <p className="policy-detail-name">
                                         <span
                                           className="policy-detail-swatch"
-                                          style={{ background: POLICY_COLORS[policy.name] }}
+                                          style={{ background: POLICY_COLORS[policy.seriesKey] }}
                                           aria-hidden="true"
                                         />
                                         {policy.name}
@@ -502,6 +502,7 @@ function App() {
     return () => controller.abort();
   }, []);
   if (error) return <UnavailableNotice reason="Published results are unavailable"><p>{error}</p></UnavailableNotice>;
+  if (published?.status === "no-manifest") return <UnavailableNotice reason="No Budget results are published yet" />;
   if (!published) return <p role="status">Loading published measures…</p>;
   return <MeasureCatalogueProvider catalogue={published.catalogue}><Dashboard published={published} /></MeasureCatalogueProvider>;
 }

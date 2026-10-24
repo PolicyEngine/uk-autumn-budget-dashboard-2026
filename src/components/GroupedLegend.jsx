@@ -29,10 +29,11 @@ export function legendGroups(items) {
 /** The dashboard's policy names as legend items, coloured as in the charts. */
 export const policyItems = (names, catalogue) =>
   names.map((name) => ({
-    label: name,
+    key: name,
+    label: catalogue.bySeriesKey.get(name)?.label ?? name,
     color: catalogue.policyColors[name],
     raises: catalogue.revenueRaisingNames.has(name),
-    direction: catalogue.byName.get(name)?.direction,
+    direction: catalogue.bySeriesKey.get(name)?.direction,
   }));
 
 /** A legend key: a square, or a short line (dashed when `dash` is set). */
@@ -134,7 +135,7 @@ function GroupedLegend({ names, items, netLabel }) {
               <span data-measure className="grouped-legend-heading">{heading}</span>
             )}
             {groupItems.map((item) => (
-              <span key={item.label} data-measure className="grouped-legend-measure-item">
+              <span key={item.key ?? item.label} data-measure className="grouped-legend-measure-item">
                 <Swatch item={item} measure />
                 {item.label}
               </span>
@@ -150,7 +151,7 @@ function GroupedLegend({ names, items, netLabel }) {
               {heading && <p className="grouped-legend-heading">{heading}</p>}
               <ul className={`grouped-legend-items ${split ? "is-split" : ""}`}>
                 {groupItems.map((item) => (
-                  <li key={item.label}>
+                  <li key={item.key ?? item.label}>
                     <Swatch item={item} />
                     <span className="grouped-legend-label">{item.label}</span>
                   </li>

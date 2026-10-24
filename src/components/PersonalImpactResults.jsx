@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
+import { personalSelection } from "../utils/personalSelection";
 import "./PersonalImpactResults.css";
 
 function formatCurrency(value, decimals = 0) {
@@ -24,24 +25,23 @@ function formatCurrency(value, decimals = 0) {
 }
 
 function PersonalImpactResults({ results, selectedPolicies }) {
-  const { displayable, measures } = useMeasureCatalogue();
+  const { measures } = useMeasureCatalogue();
   const selected = selectedPolicies ?? measures.map((measure) => measure.id);
-  const selectedMeasures = displayable.filter((measure) => selected.includes(measure.id));
-  const years = Object.keys(results?.years ?? {}).map(Number).sort((a, b) => a - b);
-  const modelled = selectedMeasures.filter((measure) => years.length > 0 && years.every((year) =>
-    Number.isFinite(results?.policies?.[measure.id]?.years?.[year]?.net_income_change),
-  ));
-  const POLICY_ORDER = modelled.map((measure) => measure.id);
-  const POLICY_COLOURS = Object.fromEntries(modelled.map((measure) => [measure.id, measure.color]));
-  const names = Object.fromEntries(modelled.map((measure) => [measure.id, measure.label]));
-  const unmodelled = selected.filter((id) => !POLICY_ORDER.includes(id))
-    .map((id) => measures.find((measure) => measure.id === id)?.label ?? id);
+  const selection = personalSelection(selected, measures, results);
+  const { years, unmodelled } = selection;
+  const modelled = selection.modelled.map((measure) => ({
+    ...measure, seriesKey: measure.seriesKey ?? `measure:${measure.id}`,
+  }));
+  const POLICY_ORDER = modelled.map((measure) => measure.seriesKey);
+  const bySeries = Object.fromEntries(modelled.map((measure) => [measure.seriesKey, measure]));
+  const POLICY_COLOURS = Object.fromEntries(modelled.map((measure) => [measure.seriesKey, measure.color]));
+  const names = Object.fromEntries(modelled.map((measure) => [measure.seriesKey, measure.label]));
   const complete = unmodelled.length === 0 && modelled.length > 0;
   const yearlyData = years.map((year) => {
     const row = { year, total: complete ? 0 : null };
     for (const measure of modelled) {
-      row[measure.id] = results.policies[measure.id].years[year].net_income_change;
-      if (complete) row.total += row[measure.id];
+      row[measure.seriesKey] = results.policies[measure.key].years[year].net_income_change;
+      if (complete) row.total += row[measure.seriesKey];
     }
     return row;
   });
@@ -51,9 +51,9 @@ function PersonalImpactResults({ results, selectedPolicies }) {
     return { year: row.year, yearly: row.total, cumulative };
   }) : [];
   const policySummary = modelled.map((measure) => ({
-    id: measure.id,
+    id: measure.seriesKey,
     name: measure.label,
-    total: yearlyData.reduce((sum, row) => sum + row[measure.id], 0),
+    total: yearlyData.reduce((sum, row) => sum + row[measure.seriesKey], 0),
   })).sort((a, b) => b.total - a.total);
 
   if (!results) return null;
@@ -118,7 +118,7 @@ function PersonalImpactResults({ results, selectedPolicies }) {
               <ReferenceLine y={0} stroke="#666" />
               {POLICY_ORDER.map(
                 (policyId) =>
-                  results.policies?.[policyId] && (
+                  bySeries[policyId] && (
                     <Bar
                       name={names[policyId]}
                       key={policyId}
@@ -197,7 +197,7 @@ function PersonalImpactResults({ results, selectedPolicies }) {
             ))
           ) : (
             <p className="no-impact">
-              None of the selected policies affect your household.
+              No selected measure has a reviewed personal-model result.
             </p>
           )}
         </div>
@@ -218,7 +218,7 @@ function PersonalImpactResults({ results, selectedPolicies }) {
               </tr>
             </thead>
             <tbody>
-              {POLICY_ORDER.filter((id) => results.policies?.[id]).map(
+              {POLICY_ORDER.map(
                 (policyId) => {
                   const total = yearlyData.reduce((sum, row) => sum + row[policyId], 0);
                   return (
@@ -278,12 +278,10 @@ function PersonalImpactResults({ results, selectedPolicies }) {
       <div className="methodology-note">
         <h4>About this calculation</h4>
         <p>
-          This calculation uses PolicyEngine UK to model how each Autumn Budget
-          2026 policy affects your household&apos;s net income. The model
-          accounts for income tax, National Insurance, benefits, and other taxes
-          and transfers. Children are automatically aged each year, and your
-          income grows at the specified rate. Results compare the budget
-          policies against a pre-budget baseline scenario.
+          Personal figures require a reviewed mapping confirming that this
+          model implements the published measure parameters and supports every
+          displayed year. A missing mapping or unsupported year makes that
+          measure unavailable. The net total requires every selected measure.
         </p>
       </div>
     </div>
