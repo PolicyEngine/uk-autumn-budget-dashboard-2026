@@ -41,12 +41,14 @@ from typing import Callable, Optional, Protocol, Sequence
 
 GB = 1024**3
 
-# Peak resident memory of one unit (a measure's two simulations), measured
-# on 24 October 2026 with policyengine 6.10.2 and the pinned Microcosm
-# national dataset: about 13 GB with one year calculated and 20 GB with
-# six. The peak grows with the years read, so it is estimated per year.
-UNIT_BASE_GB = 11.6
-UNIT_PER_YEAR_GB = 1.4
+# Peak resident memory of one unit (a measure's two simulations, the parent
+# process included), measured on 24 October 2026 with policyengine 6.10.2
+# and the pinned Microcosm national dataset: 18.3 GB for one measure over
+# two years (the flat CSVs, sampled every 2 s), and about 20 GB over six
+# (the serial flat run's peak). The peak grows a little with the years
+# read, so it is estimated per year.
+UNIT_BASE_GB = 17.1
+UNIT_PER_YEAR_GB = 0.6
 # Memory left for the system and everything else running.
 RESERVE_GB = 6.0
 # How often a waiting unit re-reads the free memory.

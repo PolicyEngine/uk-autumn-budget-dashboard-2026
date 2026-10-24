@@ -87,8 +87,8 @@ def test_auto_takes_no_more_than_the_cores_less_one_or_the_units():
 
 
 def test_a_measure_s_memory_grows_with_its_years():
-    assert parallel.unit_memory_gb(1) == pytest.approx(13.0)
-    assert parallel.unit_memory_gb(6) == pytest.approx(20.0)
+    assert parallel.unit_memory_gb(2) == pytest.approx(18.3)
+    assert parallel.unit_memory_gb(6) == pytest.approx(20.7)
 
 
 def test_one_job_is_the_serial_runner():
