@@ -367,28 +367,45 @@
 
 .ls-card .dot-legend i {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  vertical-align: -1px;
+  margin-right: 4px;
   border-radius: 50%;
-  margin-right: 3px;
 }
 
+/* The start year a hollow ring, the end year a smaller filled dot drawn
+   on top: equal values read as a dot in a ring, never one hiding the other */
 .ls-card .dot-legend i.from,
 .ls-dot-plot .dot.from {
-  background: var(--pe-gray-400);
+  width: 14px;
+  height: 14px;
+  background: var(--c-surface, #fff);
+  border: 2px solid var(--c-before);
+  box-sizing: border-box;
 }
 
 .ls-card .dot-legend i.to,
 .ls-dot-plot .dot.to {
-  background: var(--pe-teal-500);
+  width: 8px;
+  height: 8px;
+  background: var(--c-after);
 }
 
+/* From the start to the end year, coloured by direction: a rise in
+   poverty in the loss colour, a fall in the gain colour */
 .ls-dot-plot .dot-link {
   position: absolute;
   top: 50%;
   height: 2px;
   margin-top: -1px;
-  background: var(--c-axis);
+  background: var(--c-no-change);
+}
+
+.ls-dot-plot .dot-link.up {
+  background: var(--c-loss);
+}
+
+.ls-dot-plot .dot-link.down {
+  background: var(--c-gain);
 }
 
 .ls-dot-plot .dot-arrow {
@@ -401,24 +418,32 @@
 }
 
 .ls-dot-plot .dot-arrow.right {
-  right: 6px;
-  border-left: 6px solid var(--c-no-change);
+  right: 5px;
+  border-left: 6px solid currentColor;
 }
 
 .ls-dot-plot .dot-arrow.left {
-  left: 6px;
-  border-right: 6px solid var(--c-no-change);
+  left: 5px;
+  border-right: 6px solid currentColor;
+}
+
+.ls-dot-plot .dot-link.up .dot-arrow {
+  color: var(--c-loss);
+}
+
+.ls-dot-plot .dot-link.down .dot-arrow {
+  color: var(--c-gain);
 }
 
 .ls-dot-plot .dot {
   position: absolute;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  transform: translate(-50%, -50%);
+}
+
+.ls-dot-plot .dot.to {
+  z-index: 1;
 }
 
 .ls-dot-plot .dot-values {

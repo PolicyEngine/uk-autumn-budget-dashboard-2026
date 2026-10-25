@@ -316,8 +316,13 @@ export default function WhoIsInPovertySection({ data }) {
                     <span key={t} className="dot-grid" style={{ left: pos(t) }} />
                   ))}
                   {allValue != null && <span className="dot-all" style={{ left: pos(allValue) }} />}
-                  {both && (
-                    <span className="dot-link" style={{ left: pos(lo), width: `${scale(hi) - scale(lo)}%` }}>
+                  {/* A link once the dots no longer overlap, with an arrow when
+                      there is room for one */}
+                  {both && !flat(r.d) && scale(hi) - scale(lo) > 1.5 && (
+                    <span
+                      className={`dot-link ${rising ? "up" : "down"}`}
+                      style={{ left: pos(lo), width: `${scale(hi) - scale(lo)}%` }}
+                    >
                       {scale(hi) - scale(lo) > 6 && <span className={`dot-arrow ${rising ? "right" : "left"}`} />}
                     </span>
                   )}
