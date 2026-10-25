@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis, BEFORE_DASH } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -17,7 +17,6 @@ const LOSS_COLOUR = CHART_COLOURS.loss;
 const ZERO_LINE = CHART_COLOURS.text;
 const YOU_COLOUR = CHART_COLOURS.text;
 const DROP_FILL = CHART_COLOURS.mutedFill;
-const BEFORE_DASH = "6 4";
 
 export const LEGEND_ITEMS = [
   { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },

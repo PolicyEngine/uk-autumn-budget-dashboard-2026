@@ -21,6 +21,7 @@ import {
   useNarrowViewport,
   CHART_COLOURS,
   sweepAxis,
+  BEFORE_DASH,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
@@ -192,7 +193,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               name="Before"
               stroke={BEFORE_COLOUR}
               strokeWidth={2}
-              strokeDasharray="6 4"
+              strokeDasharray={BEFORE_DASH}
               dot={<EdgeMarker />}
               activeDot={false}
               isAnimationActive={false}

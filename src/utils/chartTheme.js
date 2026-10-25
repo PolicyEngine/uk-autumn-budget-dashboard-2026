@@ -71,6 +71,9 @@ export const CHART_COLOURS = {
 };
 
 // Light horizontal gridlines only.
+/** "Before" is a grey dashed line on every chart, "after" a teal solid one */
+export const BEFORE_DASH = "6 4";
+
 export const GRID_PROPS = {
   vertical: false,
   stroke: CHART_COLOURS.grid,
