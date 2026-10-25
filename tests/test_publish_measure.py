@@ -1,472 +1,345 @@
-"""publish-measure and refresh-combined, without a simulation (#105).
+"""publish-measure on #104's receipted artifacts, without a simulation (#105).
 
-The upsert must leave every other measure's bytes alone and be idempotent;
-review rows go pending, never signed, until the Reconciler signs; "live" is
-what budgetary_impact.csv publishes; the combined run names its members.
+A measure's artifact is staged, never approved, with its new files' review
+rows pending; "live" is what the manifest approves; approval is the
+Reconciler's step (sign-measures); the combined run is current only when
+its members are exactly the displayable measures.
 """
 
 import csv
-import hashlib
-import io
+import importlib.util
+from datetime import date
+from pathlib import Path
 
-import pandas as pd
 import pytest
 
+from tests.publication_support import World, other_dataset_name
 from uk_budget_data import publish_measure as pm
-from uk_budget_data.pipeline import with_members_column
-from uk_budget_data.reforms import (
-    AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
-    AUTUMN_BUDGET_2026_COMBINED_ID,
-)
+from uk_budget_data.publication import generate as generate_module
+from uk_budget_data.publication import manifest as m
 
-ORDER = ["autumn_budget_2026_combined", "alpha", "beta", "gamma"]
-
-BUDGET = (
-    "reform_id,reform_name,year,value\n"
-    "autumn_budget_2026_combined,Combined,2026,-3.4038755822481286\n"
-    "autumn_budget_2026_combined,Combined,2027,-1.6493821385719603\n"
-    "alpha,Alpha,2026,0.1\n"
-    "alpha,Alpha,2027,0.30000000000000004\n"
-    'gamma,"Gamma, with a comma",2026,-2.5\n'
-    'gamma,"Gamma, with a comma",2027,-2.25\n'
-)
-
-
-def rows(reform_id, name, values):
-    return [
-        {
-            "reform_id": reform_id,
-            "reform_name": name,
-            "year": str(year),
-            "value": value,
-        }
-        for year, value in values.items()
-    ]
-
-
-def lines_of(text, reform_id):
-    return [line for line in text.splitlines() if line.startswith(reform_id)]
-
-
-# ---------------------------------------------------------------------------
-# The upsert
-# ---------------------------------------------------------------------------
-
-
-def test_upsert_replaces_only_that_measures_rows_for_those_years():
-    new = pm.upsert_text(
-        BUDGET, "alpha", [2027], rows("alpha", "Alpha", {2027: "9.5"}), ORDER
-    )
-    assert lines_of(new, "alpha") == [
-        "alpha,Alpha,2026,0.1",
-        "alpha,Alpha,2027,9.5",
-    ]
-    for other in ("autumn_budget_2026_combined", "gamma"):
-        assert lines_of(new, other) == lines_of(BUDGET, other)
-    assert new.splitlines()[0] == BUDGET.splitlines()[0]
-
-
-def test_upsert_is_idempotent():
-    update = rows("alpha", "Alpha", {2026: "1.0", 2027: "2.0"})
-    once = pm.upsert_text(BUDGET, "alpha", [2026, 2027], update, ORDER)
-    twice = pm.upsert_text(once, "alpha", [2026, 2027], update, ORDER)
-    assert once == twice
-
-
-def test_upserting_the_same_rows_changes_no_byte():
-    same = list(csv.DictReader(io.StringIO(BUDGET)))
-    same = [row for row in same if row["reform_id"] == "gamma"]
-    assert pm.upsert_text(BUDGET, "gamma", [2026, 2027], same, ORDER) == BUDGET
-
-
-def test_a_new_measure_goes_in_registry_order():
-    new = pm.upsert_text(
-        BUDGET,
-        "beta",
-        [2026, 2027],
-        rows("beta", "Beta", {2026: "1", 2027: "2"}),
-        ORDER,
-    )
-    ids = [line.split(",")[0] for line in new.splitlines()[1:]]
-    assert ids == [
-        "autumn_budget_2026_combined",
-        "autumn_budget_2026_combined",
-        "alpha",
-        "alpha",
-        "beta",
-        "beta",
-        "gamma",
-        "gamma",
-    ]
-
-
-def test_a_measure_not_in_the_registry_order_goes_last():
-    new = pm.upsert_text(
-        BUDGET, "zeta", [2026], rows("zeta", "Zeta", {2026: "1"}), ORDER
-    )
-    assert new.splitlines()[-1] == "zeta,Zeta,2026,1"
-
-
-def test_one_year_rerun_keeps_the_blocks_year_order():
-    new = pm.upsert_text(
-        BUDGET, "gamma", [2026], rows("gamma", "G", {2026: "7"}), ORDER
-    )
-    assert lines_of(new, "gamma") == [
-        "gamma,G,2026,7",
-        'gamma,"Gamma, with a comma",2027,-2.25',
-    ]
-
-
-def test_upsert_fills_metadata_columns_the_file_has():
-    text = "reform_id,reform_name,year,value,reform_members\n" + (
-        "alpha,Alpha,2026,1,\n"
-    )
-    new = pm.upsert_text(
-        text,
-        "autumn_budget_2026_combined",
-        [2026],
-        rows("autumn_budget_2026_combined", "C", {2026: "2"}),
-        ORDER,
-        fill={"reform_members": "alpha+beta"},
-    )
-    assert (
-        new.splitlines()[1]
-        == "autumn_budget_2026_combined,C,2026,2,alpha+beta"
-    )
-
-
-def test_upsert_refuses_rows_that_do_not_fit_the_file():
-    with pytest.raises(pm.PublishMeasureError, match="columns"):
-        pm.upsert_text(
-            BUDGET,
-            "alpha",
-            [2026],
-            [{"reform_id": "alpha", "reform_name": "A", "year": "2026"}],
-            ORDER,
-        )
-
-
-def test_upsert_writes_a_new_file_with_the_rows_header():
-    new = pm.upsert_text(
-        "", "alpha", [2026], rows("alpha", "Alpha", {2026: "1"}), ORDER
-    )
-    assert new == "reform_id,reform_name,year,value\nalpha,Alpha,2026,1\n"
-
-
-def test_upserted_lines_match_what_pandas_writes():
-    frame = pd.DataFrame(
-        [
-            {
-                "reform_id": "alpha",
-                "reform_name": "A, b",
-                "year": 2026,
-                "value": 0.1 + 0.2,
-            },
-        ]
-    )
-    expected = frame.to_csv(index=False)
-    fresh = pm._frame_rows(frame.to_dict("records"))
-    assert pm.upsert_text("", "alpha", [2026], fresh, ORDER) == expected
-
-
-# ---------------------------------------------------------------------------
-# Live measures and the combined run's members
-# ---------------------------------------------------------------------------
-
-
-def test_live_measures_are_the_singles_in_budgetary_impact(tmp_path):
-    (tmp_path / pm.BUDGETARY).write_text(BUDGET)
-    assert pm.live_measure_ids(tmp_path) == ["alpha", "gamma"]
-    assert pm.live_measure_ids(tmp_path / "missing") == []
-
-
-def test_combined_members_come_from_the_members_column(tmp_path):
-    (tmp_path / pm.BUDGETARY).write_text(BUDGET)
-    assert pm.combined_members(tmp_path, ORDER[0]) is None
-    (tmp_path / pm.BUDGETARY).write_text(
-        "reform_id,reform_name,year,value,reform_members\n"
-        "autumn_budget_2026_combined,C,2026,1,alpha+gamma\n"
-        "alpha,A,2026,1,\n"
-    )
-    assert pm.combined_members(tmp_path, ORDER[0]) == ["alpha", "gamma"]
-
-
-def test_a_full_run_names_the_combined_runs_members():
-    frame = pd.DataFrame(
-        [
-            {"reform_id": AUTUMN_BUDGET_2026_COMBINED_ID, "value": 1.0},
-            {"reform_id": "two_child_limit", "value": 2.0},
-        ]
-    )
-    named = with_members_column(frame)
-    assert named["reform_members"].tolist() == [
-        "+".join(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)),
-        "",
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Applying fragments: review rows pending, the summary, signing
-# ---------------------------------------------------------------------------
-
+VALUES = {2027: -1.0, 2028: -2.0}
 REVIEW_HEADER = "path,kind,sha256,reviewer,reviewed_on,expires_on,basis\n"
 
 
-def sha(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 @pytest.fixture
-def repo(tmp_path):
-    data = tmp_path / "public" / "data"
-    data.mkdir(parents=True)
-    (data / pm.BUDGETARY).write_text(BUDGET)
-    (data / pm.DISTRIBUTIONAL).write_text(
-        "reform_id,reform_name,year,decile,value\n"
-        "alpha,Alpha,2029,1st,0.5\n"
-        "alpha,Alpha,2029,2nd,0.25\n"
+def world(monkeypatch):
+    instance = World()
+    monkeypatch.setattr(
+        generate_module, "code_revision", lambda root: instance.revision()
     )
-    other = tmp_path / "public" / "other.png"
-    other.write_bytes(b"png")
-    review = tmp_path / "data_inputs"
-    review.mkdir()
-    lines = [REVIEW_HEADER]
-    for path in sorted(
-        ["public/other.png"]
-        + [f"public/data/{name}" for name in (pm.BUDGETARY, pm.DISTRIBUTIONAL)]
-    ):
-        kind = "static_asset" if path.endswith(".png") else "national_table"
-        digest = sha((tmp_path / path).read_bytes())
-        lines.append(
-            f'{path},{kind},{digest},vahid-ahmadi,2026-10-24,,"Basis, {path}"\n'
-        )
-    (review / "public_data_review.csv").write_text("".join(lines))
-    return tmp_path
+    review = instance.root / pm.REVIEW_CSV
+    review.parent.mkdir(parents=True, exist_ok=True)
+    review.write_text(REVIEW_HEADER)
+    yield instance
+    instance.close()
 
 
-def fragment(values, deciles=None, reform_id="alpha"):
-    tables = {name: [] for name in pm.MEASURE_TABLES}
-    tables[pm.BUDGETARY] = rows(reform_id, "Alpha", values)
-    tables[pm.DISTRIBUTIONAL] = [
-        {
-            "reform_id": reform_id,
-            "reform_name": "Alpha",
-            "year": "2029",
-            "decile": decile,
-            "value": value,
-        }
-        for decile, value in (deciles or {}).items()
-    ]
-    return pm.Fragment(
-        reform_id=reform_id,
-        reform_name="Alpha",
-        years=sorted(values),
-        tables=tables,
-    )
-
-
-def review_rows(root):
-    with (root / "data_inputs" / "public_data_review.csv").open() as handle:
-        return {row["path"]: row for row in csv.DictReader(handle)}
-
-
-def apply(repo, frag, **kwargs):
-    return pm.apply_fragments(
-        [frag],
-        repo / "public" / "data",
-        root=repo,
-        order=ORDER,
+def collect(world, paths, **kwargs):
+    return pm.collect(
+        paths,
+        root=world.root,
+        data_root=world.data_root,
+        inputs=world.inputs,
         on="2026-10-28",
         **kwargs,
     )
 
 
-def test_changed_files_go_pending_and_nothing_is_signed(repo):
-    before = review_rows(repo)
-    report = apply(repo, fragment({2026: "0.2", 2027: "0.3"}))
-    assert report.changed_files == ["public/data/budgetary_impact.csv"]
-    after = review_rows(repo)
-    row = after["public/data/budgetary_impact.csv"]
-    assert row["kind"] == "pending"
-    assert row["reviewer"] == pm.RECONCILER
-    assert row["reviewed_on"] == "2026-10-28"
-    assert row["expires_on"] == "2026-11-04"
-    assert row["sha256"] == sha(
-        (repo / "public/data/budgetary_impact.csv").read_bytes()
+def review(world):
+    with (world.root / pm.REVIEW_CSV).open() as handle:
+        return {row["path"]: row for row in csv.DictReader(handle)}
+
+
+def combined_artifact(world, members):
+    from uk_budget_data.publication.artifacts import read_receipt
+
+    manifest = m.load_manifest(world.data_root)
+    records = []
+    for member in sorted(members):
+        receipt = read_receipt(
+            world.data_root / manifest.measures[member].artifact
+        )["execution_receipt"]
+        records.append(
+            {
+                "id": member,
+                "reform": receipt["reform"],
+                "baseline": receipt["baseline"],
+            }
+        )
+    return world.write(
+        "combined--" + "+".join(sorted(members)),
+        {2027: -2.0, 2028: -4.0},
+        members=records,
+        measure_ids=sorted(members),
+        member_outputs={
+            member: manifest.measures[member].outputs_sha256
+            for member in members
+        },
     )
-    assert "(was national_table)" in row["basis"]
-    assert row["basis"].endswith("Basis, public/data/budgetary_impact.csv")
-    # Files whose bytes did not change keep their signed rows
-    for path in ("public/other.png", "public/data/distributional_impact.csv"):
-        assert after[path] == before[path]
-    assert "Review rows are pending" in report.summary
 
 
-def test_applying_twice_gives_the_same_bytes(repo):
-    frag = fragment({2026: "0.2", 2027: "0.3"}, {"1st": "0.6"})
-    apply(repo, frag)
-    files = {
-        path: path.read_bytes()
-        for path in sorted(repo.rglob("*"))
-        if path.is_file()
-    }
-    second = apply(repo, frag)
-    assert second.pending == []
-    assert {
-        path: path.read_bytes()
-        for path in sorted(repo.rglob("*"))
-        if path.is_file()
-    } == files
-
-
-def test_a_rerun_with_identical_rows_marks_nothing(repo):
-    same = fragment({2026: "0.1", 2027: "0.30000000000000004"})
-    report = apply(repo, same)
-    assert report.changed_files == [] and report.pending == []
-
-
-def test_a_second_measure_joins_the_pending_row(repo):
-    apply(repo, fragment({2026: "0.2"}))
-    gamma = fragment({2026: "-1"}, reform_id="gamma")
-    apply(repo, gamma)
-    basis = review_rows(repo)["public/data/budgetary_impact.csv"]["basis"]
-    assert basis.startswith("Pending review: rows for alpha, gamma ")
-    assert basis.count("Pending review") == 1
-
-
-def test_summary_shows_revenue_deciles_and_the_change(repo):
-    report = apply(
-        repo, fragment({2026: "0.2"}, {"1st": "0.75", "2nd": "0.25"})
+def sign(world, **kwargs):
+    return pm.sign_measures(
+        by="María Juaristi",
+        reviewer="juaristi22",
+        root=world.root,
+        data_root=world.data_root,
+        inputs=world.inputs,
+        on="2026-10-28",
+        **kwargs,
     )
-    summary = report.summary
-    assert "| 2026 | 0.20 | 0.10 | 0.10 |" in summary
-    assert "| 1st | 0.750 | 0.500 | 0.250 |" in summary
-    assert "| 2nd | 0.250 | 0.250 | 0.000 |" in summary
 
 
-def test_sign_pending_restores_each_rows_kind(repo):
-    apply(repo, fragment({2026: "0.2"}, {"1st": "0.75"}))
-    signed = pm.sign_pending(repo, "juaristi22", on="2026-10-28")
-    assert signed == [
-        "public/data/budgetary_impact.csv",
-        "public/data/distributional_impact.csv",
-    ]
-    rows_after = review_rows(repo)
-    for path in signed:
-        row = rows_after[path]
-        assert row["kind"] == "national_table"
-        assert row["reviewer"] == "juaristi22"
-        assert row["expires_on"] == ""
-        assert row["basis"] == f"Basis, {path}"
+# ---------------------------------------------------------------------------
+# Staging
+# ---------------------------------------------------------------------------
 
 
-def test_sign_pending_refuses_a_file_changed_after_marking(repo):
-    apply(repo, fragment({2026: "0.2"}))
-    path = repo / "public/data/budgetary_impact.csv"
-    path.write_text(path.read_text() + "beta,Beta,2026,1\n")
-    before = (repo / "data_inputs/public_data_review.csv").read_bytes()
-    with pytest.raises(pm.PublishMeasureError, match="changed since"):
-        pm.sign_pending(repo, "juaristi22")
-    assert (repo / "data_inputs/public_data_review.csv").read_bytes() == before
+def test_a_measure_is_staged_never_approved(world):
+    world.costing("alpha", VALUES)
+    reference = world.write("alpha", VALUES)
+    result = collect(world, [reference.path])
+    assert result.staged == {"alpha": m.STAGED}
+    assert result.refused == {}
+    assert result.failures == []
+    entry = m.load_manifest(world.data_root).measures["alpha"]
+    assert entry.status == m.STAGED and entry.approval is None
+    assert pm.live_measure_ids(world.data_root) == []
+    assert result.revenue["alpha"] == VALUES
 
 
-def test_pending_rows_pass_the_public_data_check(repo):
-    import importlib.util
-    from datetime import date
-    from pathlib import Path
+def test_provisional_staging_is_displayable_but_not_live(world):
+    world.costing("alpha", VALUES)
+    reference = world.write("alpha", VALUES)
+    result = collect(world, [reference.path], provisional=True)
+    assert result.staged == {"alpha": m.PROVISIONAL}
+    assert pm.displayable_measure_ids(world.data_root) == ["alpha"]
+    assert pm.live_measure_ids(world.data_root) == []
 
-    apply(repo, fragment({2026: "0.2"}))
+
+def test_new_files_go_pending_and_nothing_is_signed(world):
+    world.costing("alpha", VALUES)
+    reference = world.write("alpha", VALUES)
+    result = collect(world, [reference.path])
+    rows = review(world)
+    assert result.pending and set(result.pending) == set(rows)
+    manifest = str(m.manifest_path(world.data_root).relative_to(world.root))
+    assert manifest in rows
+    for row in rows.values():
+        assert row["kind"] == "pending"
+        assert row["reviewer"] == pm.RECONCILER
+        assert row["expires_on"] == "2026-11-04"
+        assert "alpha" in row["basis"]
+
+
+def test_pending_rows_pass_the_public_data_check(world):
+    world.costing("alpha", VALUES)
+    collect(world, [world.write("alpha", VALUES).path])
     script = Path(__file__).resolve().parent.parent / "scripts"
     spec = importlib.util.spec_from_file_location(
         "check_public_data", script / "check_public_data.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    entries, problems = module.read_review(repo)
+    entries, problems = module.read_review(world.root)
     assert problems == []
-    assert entries["public/data/budgetary_impact.csv"].expires_on == date(
-        2026, 11, 4
+    assert {entry.expires_on for entry in entries.values()} == {
+        date(2026, 11, 4)
+    }
+
+
+def test_reconciliation_stays_outside_the_artifact(world, tmp_path):
+    world.costing("alpha", VALUES)
+    reference = world.write("alpha", VALUES)
+    private = tmp_path / "private"
+    result = collect(world, [reference.path], private_dir=private)
+    assert not (reference.path / "reconciliation.json").exists()
+    assert (private / "alpha" / "reconciliation.json").is_file()
+    assert result.reconciliation["alpha"] == "pass"
+
+
+def test_a_refused_artifact_leaves_the_manifest_alone(world):
+    # Staged on another execution identity: refused, and reported
+    world.costing("alpha", VALUES)
+    collect(world, [world.write("alpha", VALUES).path])
+    before = m.manifest_path(world.data_root).read_bytes()
+    other_name = other_dataset_name()
+    dataset = world.root / f"{other_name}.h5"
+    dataset.write_bytes(b"another dataset")
+    world.register(other_name, dataset)
+    other = world.write(
+        "beta", VALUES, dataset=dataset, dataset_name=other_name
+    )
+    result = collect(world, [other.path])
+    assert "beta" in result.refused and result.staged == {}
+    assert m.manifest_path(world.data_root).read_bytes() == before
+
+
+def test_only_the_artifacts_given_are_staged(world):
+    # Restaging an artifact main already holds would supersede its entry
+    world.costing("alpha", VALUES)
+    world.costing("beta", VALUES)
+    alpha = world.write("alpha", VALUES)
+    collect(world, [alpha.path])
+    sign(world)
+    beta = world.write("beta", VALUES)
+    result = collect(world, [beta.path])
+    assert list(result.staged) == ["beta"]
+    manifest = m.load_manifest(world.data_root)
+    assert manifest.measures["alpha"].status == m.APPROVED
+    assert manifest.superseded == []
+
+
+def test_no_artifact_is_refused(world):
+    with pytest.raises(pm.PublishMeasureError, match="no artifact"):
+        collect(world, [world.root / "nothing"])
+
+
+# ---------------------------------------------------------------------------
+# Approving, and what "live" means
+# ---------------------------------------------------------------------------
+
+
+def test_sign_measures_approves_then_writes_review_rows(world):
+    world.costing("alpha", VALUES)
+    collect(world, [world.write("alpha", VALUES).path])
+    approved, report = sign(world)
+    assert approved == ["alpha"]
+    entry = m.load_manifest(world.data_root).measures["alpha"]
+    assert entry.status == m.APPROVED
+    assert entry.approval.by == "María Juaristi"
+    assert pm.live_measure_ids(world.data_root) == ["alpha"]
+    kinds = {row["kind"] for row in review(world).values()}
+    assert "pending" not in kinds
+    assert report.revision == m.load_manifest(world.data_root).revision
+
+
+def test_sign_measures_refuses_a_failed_reconciliation(world):
+    from uk_budget_data.publication.publish import PublishError
+
+    world.costing("alpha", {2027: -9.0, 2028: -9.0})
+    collect(world, [world.write("alpha", VALUES).path])
+    with pytest.raises(PublishError):
+        sign(world)
+    entry = m.load_manifest(world.data_root).measures["alpha"]
+    assert entry.status == m.STAGED
+
+
+def test_nothing_staged_nothing_to_sign(world):
+    with pytest.raises(pm.PublishMeasureError, match="no staged entry"):
+        sign(world)
+
+
+def test_sign_needs_both_names(world):
+    with pytest.raises(pm.PublishMeasureError, match="--by and --reviewer"):
+        pm.sign_measures(by=" ", reviewer="x", root=world.root)
+
+
+# ---------------------------------------------------------------------------
+# The combined run
+# ---------------------------------------------------------------------------
+
+
+def test_no_manifest_means_nothing_live(tmp_path):
+    assert pm.live_measure_ids(tmp_path) == []
+    assert pm.combined_status(tmp_path) == {"members": [], "current": None}
+
+
+def test_the_package_is_current_only_with_exactly_the_displayable_measures(
+    world,
+):
+    for key in ("alpha", "beta"):
+        world.costing(key, VALUES)
+        collect(world, [world.write(key, VALUES).path])
+    sign(world)
+    status = pm.combined_status(world.data_root)
+    assert status == {"members": ["alpha", "beta"], "current": None}
+
+    combined = combined_artifact(world, ["alpha", "beta"])
+    collect(world, [combined.path])
+    sign(world)
+    assert pm.combined_status(world.data_root)["current"] == (
+        "combined--alpha+beta"
     )
 
-
-def test_fragments_round_trip(tmp_path):
-    frag = fragment({2026: "0.2"}, {"1st": "0.75"})
-    frag.members = ["alpha", "gamma"]
-    frag.warnings = ["Mis-costed by this model: x"]
-    directory = pm.write_fragment(tmp_path, frag)
-    assert pm.fragment_dirs([tmp_path]) == [directory]
-    back = pm.read_fragment(directory)
-    assert back.tables == frag.tables
-    assert (back.members, back.warnings, back.years) == (
-        ["alpha", "gamma"],
-        ["Mis-costed by this model: x"],
-        [2026],
-    )
+    # A new displayable measure makes the package out of date
+    world.costing("gamma", VALUES)
+    collect(world, [world.write("gamma", VALUES).path], provisional=True)
+    assert pm.combined_status(world.data_root) == {
+        "members": ["alpha", "beta", "gamma"],
+        "current": None,
+    }
 
 
-def test_the_combined_fragment_names_its_members(repo):
-    budget = repo / "public/data" / pm.BUDGETARY
-    budget.write_text(
-        "reform_id,reform_name,year,value,reform_members\n"
-        "autumn_budget_2026_combined,C,2026,1,alpha\n"
-        "alpha,Alpha,2026,0.1,\n"
-        "gamma,Gamma,2026,0.2,\n"
-    )
-    frag = fragment({2026: "0.35"}, reform_id="autumn_budget_2026_combined")
-    frag.members = ["alpha", "gamma"]
-    apply(repo, frag)
-    assert pm.combined_members(repo / "public/data", ORDER[0]) == [
-        "alpha",
-        "gamma",
-    ]
+def test_compute_combined_needs_members():
+    with pytest.raises(pm.PublishMeasureError, match="no approved measure"):
+        pm.compute_combined([], None, Path("."))
 
 
-def test_geography_waits_for_59():
-    with pytest.raises(pm.PublishMeasureError, match="#59"):
-        pm.publish_geography(None, None)
+def test_the_combined_run_is_not_a_measure():
+    from types import SimpleNamespace
+
+    with pytest.raises(pm.PublishMeasureError, match="refresh-combined"):
+        pm.compute_measure(
+            SimpleNamespace(id="combined--alpha+beta"), None, Path(".")
+        )
 
 
-def test_an_unknown_measure_is_refused(capsys):
+def test_compute_reports_a_refusal():
+    from types import SimpleNamespace
+
+    def refused(*args, **kwargs):
+        return SimpleNamespace(written=[], refused={"alpha": "data limit"})
+
+    with pytest.raises(pm.PublishMeasureError, match="alpha: data limit"):
+        pm.compute_measure(
+            SimpleNamespace(id="alpha"), None, Path("."), generate=refused
+        )
+
+
+def test_compute_generates_one_measure_alone(tmp_path):
+    from types import SimpleNamespace
+
+    calls = []
+
+    def generate(reforms, config, *, combined_sets, **kwargs):
+        calls.append(([r.id for r in reforms], combined_sets))
+        return SimpleNamespace(written=["ref"], refused={})
+
+    reform = SimpleNamespace(id="alpha")
+    assert pm.compute_measure(reform, None, tmp_path, generate) == "ref"
+    assert pm.compute_combined(["a", "b"], None, tmp_path, generate) == "ref"
+    assert calls == [(["alpha"], []), ([], [["a", "b"]])]
+
+
+# ---------------------------------------------------------------------------
+# The command line
+# ---------------------------------------------------------------------------
+
+
+def test_an_unknown_measure_is_refused():
     from uk_budget_data.cli import main
 
-    assert main(["publish-measure", "no_such_measure", "--years", "2029"]) == 1
+    assert main(["publish-measure", "no_such_measure", "--no-stage"]) == 1
 
 
-def test_a_changed_member_marks_the_combined_run_stale(repo):
-    budget = repo / "public/data" / pm.BUDGETARY
-    budget.write_text(
-        "reform_id,reform_name,year,value,reform_members\n"
-        "autumn_budget_2026_combined,C,2026,1,alpha+gamma\n"
-        "alpha,Alpha,2026,0.1,\n"
-        "gamma,Gamma,2026,0.2,\n"
-    )
-    report = apply(repo, fragment({2026: "0.5"}))
-    assert budget.read_text().splitlines()[1:] == [
-        "autumn_budget_2026_combined,C,2026,1,",
-        "alpha,Alpha,2026,0.5,",
-        "gamma,Gamma,2026,0.2,",
-    ]
-    assert pm.combined_members(repo / "public/data", ORDER[0]) is None
-    assert "marked stale" in report.summary
+def test_measure_status_prints_json(tmp_path, capsys):
+    import json
+
+    from uk_budget_data.cli import main
+
+    assert main(["measure-status", "--data-root", str(tmp_path)]) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "members": [],
+        "current": None,
+        "live": [],
+    }
 
 
-def test_an_unchanged_member_leaves_the_combined_run_current(repo):
-    budget = repo / "public/data" / pm.BUDGETARY
-    text = (
-        "reform_id,reform_name,year,value,reform_members\n"
-        "autumn_budget_2026_combined,C,2026,1,alpha+gamma\n"
-        "alpha,Alpha,2026,0.1,\n"
-    )
-    budget.write_text(text)
-    apply(repo, fragment({2026: "0.1"}))
-    assert budget.read_text() == text
+def test_the_old_flat_commands_are_gone():
+    from uk_budget_data.publish_measure_cli import PUBLISH_MEASURE_COMMANDS
 
-
-def test_the_combined_run_is_never_its_own_member():
-    from uk_budget_data.models import DataConfig
-
-    with pytest.raises(pm.PublishMeasureError, match="combined run"):
-        pm.combined_reform(
-            ["warm_home_discount_top_up", AUTUMN_BUDGET_2026_COMBINED_ID],
-            DataConfig(),
-        )
+    assert "apply-rows" not in PUBLISH_MEASURE_COMMANDS
+    assert "sign-pending" not in PUBLISH_MEASURE_COMMANDS
+    assert {"stage-artifacts", "sign-measures"} <= PUBLISH_MEASURE_COMMANDS

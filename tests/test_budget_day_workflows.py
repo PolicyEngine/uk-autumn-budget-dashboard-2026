@@ -1,4 +1,5 @@
-"""The Budget-day workflows' shape (#105): triggers, runner, schedule."""
+"""The Budget-day workflows' shape (#105, on #104): triggers, runner,
+schedule, and the receipted-artifact path (generate, stage, never approve)."""
 
 from pathlib import Path
 
@@ -57,25 +58,98 @@ def test_publish_measure_runs_each_measure_on_the_configured_runner():
     assert "uk-budget-data changed-measures --base HEAD^ --head HEAD" in detect
 
 
-def test_one_data_pr_for_all_measures_never_merged():
+def test_one_data_pr_for_all_measures_never_approved_or_merged():
     for name in ("publish-measure.yml", "refresh-combined.yml"):
         job = load(name)["jobs"]["data-pr"]
         runs = [step.get("run", "") for step in job["steps"]]
-        assert any("uk-budget-data apply-rows fragments" in r for r in runs)
-        assert runs[-1] == "bash scripts/budget_day/open_data_pr.sh"
-        text = (WORKFLOWS / name).read_text()
-        assert (
-            "gh pr merge" not in text
-            and "sign-pending" not in text.split("jobs:")[1]
+        assert any("uk-budget-data stage-artifacts" in r for r in runs)
+        assert any(
+            r == "bash scripts/budget_day/open_data_pr.sh" for r in runs
         )
+        text = (WORKFLOWS / name).read_text()
+        body = text.split("jobs:")[1]
+        for forbidden in (
+            "gh pr merge",
+            "publish approve",
+            "sign-measures --by",
+            "review-rows",
+            "apply-rows",
+            "budgetary_impact.csv",
+        ):
+            assert forbidden not in body, (name, forbidden)
     script = (
         WORKFLOWS.parent.parent / "scripts" / "budget_day" / "open_data_pr.sh"
     ).read_text()
     assert "gh pr create --draft --base main" in script
-    assert "Review rows are pending; the Reconciler signs before merge." in (
-        script
-    )
+    assert "git status --porcelain" in script
+    assert "reconciliation.json" in script and "-delete" in script
     assert "merge" not in script.split("gh pr create")[1]
+
+
+def test_measures_are_generated_as_receipted_artifacts_one_per_job():
+    workflow = load("publish-measure.yml")
+    steps = workflow["jobs"]["compute"]["steps"]
+    local = next(
+        s
+        for s in steps
+        if s.get("name") == "Generate the measure's receipted artifact"
+    )
+    assert local["if"] == "env.BACKEND == 'runner'"
+    assert 'publish-measure "${MEASURE}" --no-stage' in local["run"]
+    # Every policy year: a narrower run drops a scored year
+    runs = "\n".join(
+        step.get("run", "")
+        for job in workflow["jobs"].values()
+        for step in job["steps"]
+    )
+    assert "--years" not in runs
+    upload = next(s for s in steps if "upload-artifact" in s.get("uses", ""))
+    assert upload["with"]["path"] == "public/data/artifacts/"
+
+
+def test_only_new_artifacts_are_staged():
+    for name in ("publish-measure.yml", "refresh-combined.yml"):
+        job = load(name)["jobs"]["data-pr"]
+        stage = next(s for s in job["steps"] if s.get("id") == "stage")
+        assert 'if [ -e "${dest}" ]' in stage["run"]
+        assert '"${placed[@]}"' in stage["run"]
+        assert "--private-dir" in stage["run"]
+    checkout = next(
+        s
+        for s in load("refresh-combined.yml")["jobs"]["data-pr"]["steps"]
+        if "checkout" in s.get("uses", "")
+    )
+    assert checkout["with"]["ref"] == "${{ needs.compute.outputs.sha }}"
+
+
+def test_timing_runs_one_measure_end_to_end_without_a_pr():
+    workflow = load("publish-measure.yml")
+    inputs = workflow["on"]["workflow_dispatch"]["inputs"]
+    assert inputs["timing"]["type"] == "boolean"
+    assert inputs["timing"]["default"] is False
+    jobs = workflow["jobs"]
+    timing = jobs["timing"]
+    assert timing["runs-on"] == (
+        "${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner' }}"
+    )
+    run = "\n".join(s.get("run", "") for s in timing["steps"])
+    assert "publish-measure" in run and "stage-artifacts" in run
+    assert "GITHUB_STEP_SUMMARY" in run and "/usr/bin/time -v" in run
+    assert "open_data_pr" not in run
+    assert "!inputs.timing" in jobs["compute"]["if"]
+    assert "!inputs.timing" in jobs["data-pr"]["if"]
+
+
+def test_provisional_staging_is_a_dispatch_choice():
+    workflow = load("publish-measure.yml")
+    provisional = workflow["on"]["workflow_dispatch"]["inputs"]["provisional"]
+    assert provisional["default"] is False
+    stage = next(
+        s
+        for s in workflow["jobs"]["data-pr"]["steps"]
+        if s.get("id") == "stage"
+    )
+    assert "--provisional" in stage["run"]
 
 
 def test_refresh_combined_runs_every_half_hour_on_budget_day():
@@ -138,17 +212,18 @@ def test_modal_backend_is_opt_in_and_guarded():
 
     steps = workflow["jobs"]["compute"]["steps"]
     by_name = {step.get("name"): step for step in steps}
-    local = by_name["Run the measure's tables"]
+    local = by_name["Generate the measure's receipted artifact"]
     assert local["if"] == "env.BACKEND == 'runner'"
     assert "--backend" not in local["run"]
     guard = by_name["Check the Modal backend is available"]
     assert guard["if"] == "env.BACKEND == 'modal'"
-    assert "publish-measure --help | grep -q -- '--backend'" in guard["run"]
+    assert "generate --help | grep -q -- '--backend'" in guard["run"]
     assert "exit 1" in guard["run"]
-    modal = by_name["Run the measure's tables on Modal"]
+    modal = by_name["Generate the measure's receipted artifact on Modal"]
     assert modal["if"] == "env.BACKEND == 'modal'"
     assert steps.index(guard) < steps.index(modal)
     assert "--backend modal" in modal["run"]
+    assert "generate --artifacts" in modal["run"]
     assert "uv run --with modal==1.6.2" in modal["run"]
     # The Modal token reaches only the step that calls Modal
     assert modal["env"] == {

@@ -1,6 +1,7 @@
 name: Refresh the combined run (Budget day)
 
-# Budget day, #105: the live measures simulated together, in batches.
+# Budget day, #105, on #104: the approved measures simulated together, in
+# batches.
 #
 # Measures interact, so the package total is not the sum of the measures.
 # Rerunning it on every measure's merge would add minutes to each, so this
@@ -10,13 +11,17 @@ name: Refresh the combined run (Budget day)
 # date stops at its first step, so the schedule needs no disabling after the
 # day; remove it once the Budget is over.
 #
-# It runs `uk-budget-data refresh-combined` for the live measures (those in
-# public/data/budgetary_impact.csv on main) and opens a draft data pull
-# request, pending review, as publish-measure.yml does. When nothing
-# changed it opens nothing. Until that PR merges, the page labels totals as
-# the sum of measures. Runner: as publish-measure.yml (default
-# larger-runner). It has no Modal backend: the combined run is one unit,
-# and the faster-generation PR's Modal path runs single measures only.
+# It runs `uk-budget-data refresh-combined --no-stage` (`generate
+# --combined` over the measures approved in main's manifest; each member is
+# bound at the commit its approved receipt was made at), then stages the
+# combined artifact (`stage-artifacts`) and opens a draft data pull request,
+# pending review, as publish-measure.yml does. When nothing changed it opens
+# nothing. Approval needs every member approved; the Reconciler approves on
+# the data PR (`uk-budget-data sign-measures`). Until then the page shows
+# the package's figures as unavailable (#104): it shows a package only from
+# a displayable combined run whose members are exactly the displayable
+# measures. Runner: as publish-measure.yml (default larger-runner). It has
+# no Modal backend: the combined run is one unit.
 on:
   schedule:
     - cron: "30 12-17 28 10 *"
@@ -24,11 +29,7 @@ on:
   workflow_dispatch:
     inputs:
       measures:
-        description: Members, space separated (empty for the live measures)
-        required: false
-        default: ""
-      years:
-        description: Years, space separated (empty for every policy year)
+        description: Members, space separated (empty for the measures approved in main's manifest)
         required: false
         default: ""
       runner:
@@ -66,22 +67,27 @@ jobs:
           fi
 
   compute:
-    name: Run the live measures together
+    name: Run the approved measures together
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ${{ inputs.runner || vars.PUBLISH_MEASURE_RUNNER || 'larger-runner' }}
     timeout-minutes: 120
     permissions:
       contents: read
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
     env:
       HUGGING_FACE_TOKEN: ${{ secrets.PE_UK_PRIVATE_HF_READ_TOKEN }}
       MEASURES: ${{ inputs.measures }}
-      YEARS: ${{ inputs.years }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: main
           persist-credentials: false
+
+      - name: The commit main is at
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -94,18 +100,20 @@ jobs:
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked
 
+      # Every policy year, as the runbook says (no --years).
       - name: Run the combined package
         run: |
           args=()
           if [ -n "${MEASURES}" ]; then read -r -a m <<< "${MEASURES}"; args+=(--measures "${m[@]}"); fi
-          if [ -n "${YEARS}" ]; then read -r -a y <<< "${YEARS}"; args+=(--years "${y[@]}"); fi
           nproc; free -g
-          /usr/bin/time -v uv run uk-budget-data refresh-combined --rows-dir fragments "${args[@]}"
+          start=$SECONDS
+          /usr/bin/time -v uv run uk-budget-data refresh-combined --no-stage "${args[@]}"
+          echo "Combined run: $((SECONDS - start)) s" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fragment-combined
-          path: fragments/
+          name: artifact-combined
+          path: public/data/artifacts/
           retention-days: 7
           if-no-files-found: error
 
@@ -120,15 +128,16 @@ jobs:
     env:
       HAS_APP: ${{ secrets.APP_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
     steps:
+      # The commit compute checked out, so the receipt binds HEAD.
       - uses: actions/checkout@v6
         with:
-          ref: main
+          ref: ${{ needs.compute.outputs.sha }}
           persist-credentials: false
 
       - uses: actions/download-artifact@v4
         with:
-          name: fragment-combined
-          path: fragments
+          name: artifact-combined
+          path: incoming
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -141,8 +150,21 @@ jobs:
       - name: Install dependencies (lockfile must be current)
         run: uv sync --locked
 
-      - name: Upsert the combined rows; mark review rows pending
-        run: uv run uk-budget-data apply-rows fragments --summary summary.md
+      # Only the new artifact is staged: the members' artifacts are on main.
+      - name: Stage the combined run; mark review rows pending; publish check
+        id: stage
+        run: |
+          placed=()
+          for d in incoming/*/*/; do
+            rel="${d#incoming/}"; dest="public/data/artifacts/${rel%/}"
+            if [ -e "${dest}" ]; then continue; fi
+            mkdir -p "$(dirname "${dest}")"; mv "${d}" "${dest}"; placed+=("${dest}")
+          done
+          if [ "${#placed[@]}" -eq 0 ]; then echo "The combined run is unchanged."; echo "code=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          set +e
+          uv run uk-budget-data stage-artifacts "${placed[@]}" \
+            --private-dir "${RUNNER_TEMP}/reconciliation" --summary summary.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Mint an App token
         id: app
@@ -153,9 +175,16 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Open the draft data pull request
+        if: hashFiles('summary.md') != ''
         env:
           GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           BRANCH: data/refresh-combined-${{ github.run_id }}
           TITLE: "Data: refresh the combined run"
           SUMMARY: summary.md
         run: bash scripts/budget_day/open_data_pr.sh
+
+      - name: Fail if the combined run was refused or a gate failed
+        if: steps.stage.outputs.code != '0'
+        run: |
+          echo "::error::stage-artifacts reported a refusal or a gate failure; see the summary"
+          exit 1

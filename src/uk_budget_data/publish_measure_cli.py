@@ -1,13 +1,17 @@
-"""Command-line commands for publishing one measure at a time (#105).
+"""Command-line commands for publishing one measure at a time (#105, on #104).
 
-- ``publish-measure <id>``: run one measure's tables and upsert its rows
-  (or, with ``--rows-dir``, write them to a fragment for ``apply-rows``);
-- ``apply-rows DIR...``: upsert fragments, mark review rows pending and
-  write the summary (the workflow's collect job);
-- ``refresh-combined``: the live measures as one simulation, upserted as
-  the combined run;
+- ``publish-measure <id>``: generate one measure's receipted artifact (and,
+  without ``--no-stage``, reconcile and stage it, marking its review rows
+  pending);
+- ``stage-artifacts DIR...``: reconcile and stage artifacts generated
+  elsewhere, mark their review rows pending and write the summary (the
+  workflow's collect job);
+- ``refresh-combined``: the approved measures as one combined run, staged;
 - ``changed-measures``: the measure ids a registry change added or changed;
-- ``sign-pending --reviewer NAME``: the Reconciler signs, by hand.
+- ``sign-measures --by NAME --reviewer HANDLE``: the Reconciler approves the
+  staged entries and writes the review rows, by hand;
+- ``measure-status``: the manifest's live measures and whether the package
+  is current, as JSON.
 
 See ``publish_measure`` for the design, and docs/budget-day-runbook.md
 ("Budget day: publish one measure") for the steps.
@@ -17,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -30,27 +35,33 @@ console = Console(stderr=True)
 
 PUBLISH_MEASURE_COMMANDS = {
     "publish-measure",
-    "apply-rows",
+    "stage-artifacts",
     "refresh-combined",
     "changed-measures",
-    "sign-pending",
+    "sign-measures",
+    "measure-status",
 }
 
 
-def _common(parser: argparse.ArgumentParser, compute: bool = True) -> None:
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("./public/data"),
-        help="The public data directory (default: ./public/data)",
-    )
+def _staging(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--root",
         type=Path,
         default=Path("."),
+        help="Repository root (default: .)",
+    )
+    parser.add_argument(
+        "--provisional",
+        action="store_true",
+        help="Stage as provisional (G2's statement figures)",
+    )
+    parser.add_argument(
+        "--private-dir",
+        type=Path,
+        default=None,
         help=(
-            "Repository root, holding data_inputs/public_data_review.csv "
-            "(default: .)"
+            "Where reconciliation.json goes, outside the checkout (default: "
+            "$RUNNER_TEMP/reconciliation, else not written)"
         ),
     )
     parser.add_argument(
@@ -62,87 +73,79 @@ def _common(parser: argparse.ArgumentParser, compute: bool = True) -> None:
     parser.add_argument(
         "--reconciler",
         default=pm.RECONCILER,
-        help=(
-            "Who decides the pending review rows (default: "
-            f"{pm.RECONCILER})"
-        ),
+        help=f"Who decides the pending review rows (default: {pm.RECONCILER})",
     )
     parser.add_argument(
         "--on",
         default=None,
         help="Date for the pending rows, YYYY-MM-DD (default: today, UTC)",
     )
-    if compute:
-        parser.add_argument(
-            "--years",
-            nargs="+",
-            type=int,
-            default=list(POLICY_YEARS),
-            help=(
-                "Years to run (default: the policy years, "
-                f"{POLICY_YEARS[0]} to {POLICY_YEARS[-1]}); rows for other "
-                "years are kept"
-            ),
-        )
-        parser.add_argument(
-            "--dataset",
-            type=Path,
-            default=None,
-            help="Dataset path (default: the bundle's certified dataset)",
-        )
-        parser.add_argument(
-            "--rows-dir",
-            type=Path,
-            default=None,
-            help=(
-                "Write the rows to a fragment here instead of the public "
-                "files; apply-rows applies it"
-            ),
-        )
+
+
+def _compute(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=list(POLICY_YEARS),
+        help=(
+            "Years to run (default: the policy years, "
+            f"{POLICY_YEARS[0]} to {POLICY_YEARS[-1]}; leave it out on the "
+            "day, as the runbook says)"
+        ),
+    )
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=None,
+        help="Dataset path (default: the bundle's certified dataset)",
+    )
+    parser.add_argument(
+        "--artifacts-root",
+        type=Path,
+        default=None,
+        help="Artifacts directory (default: public/data/artifacts)",
+    )
+    parser.add_argument(
+        "--no-stage",
+        action="store_true",
+        help="Only generate the artifact (the workflow's matrix jobs)",
+    )
 
 
 def add_publish_measure_parsers(subparsers) -> None:
     one = subparsers.add_parser(
         "publish-measure",
-        help=(
-            "Budget day: run one measure's tables and upsert its rows, "
-            "review pending (#105)"
-        ),
+        help="Budget day: one measure's receipted artifact, staged (#105)",
     )
     one.add_argument("measure", help="The measure id, as in reforms.py")
-    one.add_argument(
-        "--geography",
-        action="store_true",
-        help=f"Results by area: refused until {pm.GEOGRAPHY_GATE} merges",
-    )
-    _common(one)
+    _compute(one)
+    _staging(one)
 
-    apply = subparsers.add_parser(
-        "apply-rows",
-        help="Upsert publish-measure fragments; review rows pending",
+    collect = subparsers.add_parser(
+        "stage-artifacts",
+        help="Reconcile and stage artifacts; review rows pending",
     )
-    apply.add_argument(
-        "fragments",
+    collect.add_argument(
+        "artifacts",
         nargs="+",
         type=Path,
-        help="Fragment directories, or directories holding them",
+        help="Artifact directories, or directories holding them",
     )
-    _common(apply, compute=False)
+    _staging(collect)
 
     combined = subparsers.add_parser(
         "refresh-combined",
-        help="Budget day: run the live measures together; upsert the rows",
+        help="Budget day: the approved measures as one combined run, staged",
     )
     combined.add_argument(
         "--measures",
         nargs="+",
         default=None,
-        help=(
-            "Members (default: the live measures, those in "
-            "budgetary_impact.csv)"
-        ),
+        help="Members (default: the approved measures in the manifest)",
     )
-    _common(combined)
+    _compute(combined)
+    _staging(combined)
 
     changed = subparsers.add_parser(
         "changed-measures",
@@ -153,48 +156,71 @@ def add_publish_measure_parsers(subparsers) -> None:
     changed.add_argument("--repo", type=Path, default=Path("."))
 
     sign = subparsers.add_parser(
-        "sign-pending",
-        help="The Reconciler signs the rows publish-measure marked pending",
+        "sign-measures",
+        help=(
+            "The Reconciler approves the staged entries and writes the "
+            "review rows"
+        ),
     )
-    sign.add_argument("--reviewer", required=True)
+    sign.add_argument("keys", nargs="*", help="Entries (default: all staged)")
+    sign.add_argument("--by", required=True, help="Who is approving")
+    sign.add_argument(
+        "--reviewer", required=True, help="Who reviewed these bytes"
+    )
+    sign.add_argument(
+        "--household-receipt",
+        action="append",
+        default=[],
+        metavar="KEY=PATH",
+        help="A measure's household receipt (repeatable)",
+    )
+    sign.add_argument("--staged-by", default=None)
     sign.add_argument("--root", type=Path, default=Path("."))
     sign.add_argument("--on", default=None)
+
+    status = subparsers.add_parser(
+        "measure-status",
+        help="Live measures and whether the package is current, as JSON",
+    )
+    status.add_argument("--data-root", type=Path, default=Path("public/data"))
 
 
 def _config(parsed):
     from uk_budget_data.models import DataConfig
 
-    return DataConfig(
-        output_dir=parsed.output_dir,
-        dataset_path=parsed.dataset,
-        years=parsed.years,
-    )
+    return DataConfig(dataset_path=parsed.dataset, years=parsed.years)
 
 
-def _finish(parsed, fragments: list[pm.Fragment]) -> int:
-    report = pm.apply_fragments(
-        fragments,
-        parsed.output_dir,
+def _private_dir(parsed):
+    if parsed.private_dir is not None:
+        return parsed.private_dir
+    runner_temp = os.environ.get("RUNNER_TEMP")
+    return Path(runner_temp) / "reconciliation" if runner_temp else None
+
+
+def _stage(parsed, paths) -> int:
+    started = time.monotonic()
+    result = pm.collect(
+        paths,
         root=parsed.root,
+        provisional=parsed.provisional,
+        private_dir=_private_dir(parsed),
         reconciler=parsed.reconciler,
         on=parsed.on,
     )
-    print(report.summary)
+    print(result.summary)
     if parsed.summary is not None:
-        parsed.summary.write_text(report.summary)
-    return 0
+        parsed.summary.write_text(result.summary)
+    for step, seconds in result.seconds.items():
+        console.print(f"{step}: {seconds:.1f} s")
+    console.print(f"staged in {time.monotonic() - started:.1f} s")
+    return 1 if (result.refused or result.failures) else 0
 
 
-def _emit(parsed, fragment: pm.Fragment, started: float) -> int:
-    console.print(
-        f"[green]✓[/green] {fragment.reform_id}: rows computed in "
-        f"{time.monotonic() - started:.0f}s"
-    )
-    if parsed.rows_dir is not None:
-        target = pm.write_fragment(parsed.rows_dir, fragment)
-        console.print(f"Fragment written to {target}")
-        return 0
-    return _finish(parsed, [fragment])
+def _artifacts_root(parsed) -> Path:
+    from uk_budget_data.publication.artifacts import ARTIFACTS_ROOT
+
+    return parsed.artifacts_root or parsed.root / ARTIFACTS_ROOT
 
 
 def run_publish_measure_command(parsed) -> int:
@@ -216,59 +242,69 @@ def _run(parsed) -> int:
         )
         return 0
 
-    if parsed.command == "sign-pending":
-        signed = pm.sign_pending(parsed.root, parsed.reviewer, parsed.on)
-        for path in signed:
-            print(f"signed {path}")
-        console.print(f"{len(signed)} row(s) signed by {parsed.reviewer}.")
+    if parsed.command == "measure-status":
+        status = pm.combined_status(parsed.data_root)
+        status["live"] = pm.live_measure_ids(parsed.data_root)
+        print(json.dumps(status))
         return 0
 
-    if parsed.command == "apply-rows":
-        directories = pm.fragment_dirs(parsed.fragments)
-        if not directories:
-            raise pm.PublishMeasureError("no fragment found")
-        return _finish(parsed, [pm.read_fragment(d) for d in directories])
+    if parsed.command == "sign-measures":
+        receipts = {}
+        for item in parsed.household_receipt:
+            key, _, path = item.partition("=")
+            receipts[key] = json.loads(Path(path).read_text())
+        approved, report = pm.sign_measures(
+            by=parsed.by,
+            reviewer=parsed.reviewer,
+            keys=parsed.keys or None,
+            root=parsed.root,
+            household_receipts=receipts,
+            staged_by=parsed.staged_by,
+            on=parsed.on,
+        )
+        for key in approved:
+            print(f"approved {key} by {parsed.by}")
+        print(
+            f"review rows: {len(report.added)} added, "
+            f"{len(report.replaced)} replaced, {len(report.removed)} removed"
+        )
+        for path, why in report.unreviewed:
+            print(f"  no row: {path} ({why})")
+        return 0
+
+    if parsed.command == "stage-artifacts":
+        return _stage(parsed, parsed.artifacts)
 
     started = time.monotonic()
     config = _config(parsed)
     if parsed.command == "publish-measure":
-        if parsed.geography:
-            pm.publish_geography(None, config)
         reform = get_reform(parsed.measure)
         if reform is None:
             raise pm.PublishMeasureError(
                 f"unknown measure id: {parsed.measure}"
             )
-        if pm.is_combined(reform.id):
-            raise pm.PublishMeasureError(
-                "the combined run is refreshed by refresh-combined"
-            )
-        return _emit(parsed, pm.compute_fragment(reform, config), started)
-
-    # refresh-combined
-    members = sorted(parsed.measures or pm.live_measure_ids(parsed.output_dir))
-    if not members:
-        raise pm.PublishMeasureError("no live measure to combine")
-    console.print(f"Combining {len(members)} measures: {', '.join(members)}")
-    reform = pm.combined_reform(members, config)
-    # As at G4: every member's own changes must hold in the combination
-    # (household simulations only; about a minute for nine measures)
-    from uk_budget_data.publication.combine import check_consistency
-
-    try:
-        check_consistency(
-            reform, [get_reform(m) for m in members], config, config.years
+        reference = pm.compute_measure(reform, config, _artifacts_root(parsed))
+    else:  # refresh-combined
+        members = sorted(
+            parsed.measures
+            or pm.live_measure_ids(parsed.root / "public" / "data")
         )
-    except ValueError as error:
-        raise pm.PublishMeasureError(str(error)) from error
-    if sorted(config.years) != sorted(POLICY_YEARS):
+        if not members:
+            raise pm.PublishMeasureError("no approved measure to combine")
         console.print(
-            "[yellow]Only some years: the page treats the combined run as "
-            "current only when every year names the same members.[/yellow]"
+            f"Combining {len(members)} measures: {', '.join(members)}"
         )
-    return _emit(
-        parsed, pm.compute_fragment(reform, config, members=members), started
+        reference = pm.compute_combined(
+            members, config, _artifacts_root(parsed)
+        )
+    console.print(
+        f"[green]✓[/green] {reference.key}: artifact written in "
+        f"{time.monotonic() - started:.0f} s"
     )
+    print(reference.path)
+    if parsed.no_stage:
+        return 0
+    return _stage(parsed, [reference.path])
 
 
 if __name__ == "__main__":

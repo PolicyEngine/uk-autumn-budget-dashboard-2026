@@ -365,11 +365,11 @@ def main(args: list[str] = None) -> int:
             "controlled"
         )
         console.print(
-            "  publish-measure  - Budget day: one measure's rows, pending "
-            "review (#105)"
+            "  publish-measure  - Budget day: one measure's receipted "
+            "artifact, staged (#105)"
         )
         console.print(
-            "  refresh-combined - Budget day: the live measures combined"
+            "  refresh-combined - Budget day: the approved measures combined"
         )
         console.print(
             "  living-standards - The Living standards tab's outlook data"
