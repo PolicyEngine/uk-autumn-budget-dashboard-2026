@@ -17,7 +17,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Business Asset Disposal Relief restricted",
-    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). Capital gains are imputed.",
+    how: "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value). Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
     from: 2027,
   },
   {
