@@ -1,0 +1,41 @@
+/* The marginal rate breakdown's legend: one centred, wrapping row of parts,
+   each with its note behind an "i", then the two totals */
+.mtr-parts-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--c-text);
+}
+
+.mtr-parts-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mtr-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.mtr-line {
+  width: 16px;
+  height: 0;
+  border-top: 2px solid var(--c-ink);
+  flex: none;
+}
+
+.mtr-line-dashed {
+  border-top: 2px dashed var(--c-before);
+}
+
+.mtr-parts-legend .info-icon-wrapper {
+  margin-left: -2px;
+}

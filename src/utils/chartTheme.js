@@ -68,6 +68,14 @@ export const CHART_COLOURS = {
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
+  mtrIncomeTax: "#5FB3A8",
+  mtrAllowanceTaper: "#285E61",
+  mtrNationalInsurance: "#A7E3DA",
+  mtrStudentLoan: "#E8B66A",
+  mtrChildBenefit: "#7C9CBF",
+  mtrUniversalCredit: "#3B6E8F",
+  mtrOtherBenefits: "#9DB7D5",
+  mtrOther: "#D1D5DB",
 };
 
 // Light horizontal gridlines only.
