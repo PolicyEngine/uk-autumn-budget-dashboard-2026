@@ -76,6 +76,19 @@ export const EXTERNAL = { target: "_blank", rel: "noopener noreferrer" };
  * plain text until it does.
  */
 Object.assign(SOURCES, {
+  // The forecast the page uses, linked in the intro.
+  // Update on Budget day (runbook step): the October 2026 EFO page.
+  obr_efo_current: {
+    label: "OBR, Economic and fiscal outlook – March 2026",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+  },
+  // Where the measures and their costings are read from, linked in the intro.
+  // Update on Budget day (runbook step): the Autumn Budget 2026 document and
+  // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
+  budget_documents: {
+    label: "HM Treasury",
+    url: "https://www.gov.uk/government/organisations/hm-treasury",
+  },
   // Published with the Budget on 28 October 2026; linked once it exists
   obr_budget_2026_costings: {
     label: "the OBR's Autumn Budget 2026 costings (28 October 2026)",

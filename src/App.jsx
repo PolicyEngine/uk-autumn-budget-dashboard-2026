@@ -13,6 +13,7 @@ import PersonalImpactTab from "./components/PersonalImpactTab";
 import HouseholdScatter from "./components/HouseholdScatter";
 import { EXAMPLE_HOUSEHOLDS } from "./utils/exampleHouseholds";
 import YearSlider from "./components/YearSlider";
+import SourceLink from "./components/SourceLink";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
@@ -556,7 +557,9 @@ function App() {
           This dashboard shows how Autumn Budget 2026 measures would affect
           the public finances and households: by income, area and age, and
           for your own household, alongside the living standards outlook.
-          Choose a year and policies in the bar above.
+          Measures and costings: <SourceLink source="budget_documents" />;
+          forecast: <SourceLink source="obr_efo_current" />. Choose a year and
+          policies in the bar above.
         </p>
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
