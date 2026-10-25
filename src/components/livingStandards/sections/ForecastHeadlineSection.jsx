@@ -1,12 +1,10 @@
 // Headline forecast figures as tiles: CPI, RPI and earnings growth in the
-// first forecast year (2027). Each tile has its full name, the figure, a
-// small line of the series over the forecast years (from 0), and a tag that
-// waits for the Budget forecast; once it is published the tile reads
+// first forecast year (2027). Each tile has its full name, then the figure
+// with, on its right, a tag that waits for the Budget forecast; once it is published the tile reads
 // "March 2.0% → Budget 2.3%" with the change. The definition and source are
 // in the section's intro, once.
 
 import { changeClass, forecastName, heroYear, pctLabel, ppWords, toRows } from "../../../utils/livingStandards/forecast";
-import { zeroBasedAxis } from "../../../utils/chartTheme";
 
 // ONS series pages for the tile names (checked 20 Oct 2026). Earnings is not
 // linked: the tile is OBR's calendar-year average earnings growth, and ONS
@@ -47,32 +45,6 @@ const ICONS = {
   ),
 };
 
-/** The series over the forecast years, from 0, the tile's year marked. */
-function Sparkline({ rows, year, max }) {
-  const width = 96;
-  const height = 30;
-  const values = rows.map((row) => row.updated ?? row.previous).filter((v) => v != null);
-  if (values.length < 2) return null;
-  const top = max || 1;
-  const x = (i) => (i / (rows.length - 1)) * (width - 6) + 3;
-  const y = (v) => height - 3 - (v / top) * (height - 6);
-  const line = (key) =>
-    rows
-      .map((row, i) => (row[key] == null ? null : `${x(i)},${y(row[key])}`))
-      .filter(Boolean)
-      .join(" ");
-  const at = rows.findIndex((row) => row.year === year);
-  const mark = rows[at]?.updated ?? rows[at]?.previous;
-  return (
-    <svg className="forecast-tile-spark" viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true">
-      <line x1="3" x2={width - 3} y1={y(0)} y2={y(0)} className="forecast-tile-spark-zero" />
-      <polyline points={line("previous")} className="forecast-tile-spark-pre" />
-      {rows.some((row) => row.updated != null) && <polyline points={line("updated")} className="forecast-tile-spark-post" />}
-      {at >= 0 && mark != null && <circle cx={x(at)} cy={y(mark)} r="2.6" className="forecast-tile-spark-dot" />}
-    </svg>
-  );
-}
-
 export default function ForecastHeadlineSection({ data }) {
   const forecast = data.forecast;
   const published = Boolean(forecast.post_published);
@@ -92,8 +64,6 @@ export default function ForecastHeadlineSection({ data }) {
     .filter(Boolean);
 
   if (!tiles.length) return null;
-  // One scale for every tile's line, from 0, so the lines compare
-  const { domain } = zeroBasedAxis(tiles.flatMap((tile) => tile.rows.flatMap((r) => [r.previous, r.updated])));
   const pre = forecastName(forecast.pre_label).replace(/^OBR /, "");
   const post = forecastName(forecast.post_label).replace(/^OBR /, "");
 
@@ -118,18 +88,17 @@ export default function ForecastHeadlineSection({ data }) {
               <p className="forecast-tile-value">{pctLabel(published && tile.updated != null ? tile.updated : tile.previous)}</p>
               <p className="forecast-tile-sub">growth in {year}</p>
             </div>
-            <Sparkline rows={tile.rows} year={year} max={domain[1]} />
+            {published && tile.updated != null ? (
+              <p className="forecast-tile-compare">
+                {pre} {pctLabel(tile.previous)} → {post} {pctLabel(tile.updated)}{" "}
+                <span className={`forecast-tile-delta ${changeClass(tile.shownChange)}`}>
+                  {tile.shownChange > 0 ? "▲" : tile.shownChange < 0 ? "▼" : ""} {ppWords(tile.shownChange)}
+                </span>
+              </p>
+            ) : (
+              <p className="forecast-tile-tag">Budget forecast from 28 October</p>
+            )}
           </div>
-          {published && tile.updated != null ? (
-            <p className="forecast-tile-compare">
-              {pre} {pctLabel(tile.previous)} → {post} {pctLabel(tile.updated)}{" "}
-              <span className={`forecast-tile-delta ${changeClass(tile.shownChange)}`}>
-                {tile.shownChange > 0 ? "▲" : tile.shownChange < 0 ? "▼" : ""} {ppWords(tile.shownChange)}
-              </span>
-            </p>
-          ) : (
-            <p className="forecast-tile-tag">Budget forecast from 28 October</p>
-          )}
         </div>
       ))}
     </div>

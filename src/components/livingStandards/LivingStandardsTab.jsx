@@ -166,8 +166,9 @@ export default function LivingStandardsTab({ active = true }) {
           <div className="tab-lede">
             <p>
               Projections of UK household incomes and poverty under current legislated policy: the baseline against
-              which Autumn Budget 2026 measures are scored. Pre-Budget baseline: OBR March 2026 forecast. Budget
-              measures are not modelled.
+              which Autumn Budget 2026 measures are scored. Pre-Budget baseline: the{" "}
+              <SourceLink source="obr_efo_march_2026">OBR&apos;s March 2026 forecast</SourceLink>. Budget measures are
+              not modelled.
             </p>
           </div>
           {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (

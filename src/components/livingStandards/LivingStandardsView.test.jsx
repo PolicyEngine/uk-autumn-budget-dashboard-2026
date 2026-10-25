@@ -133,14 +133,16 @@ describe("the Living standards view", () => {
     expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
 
-    // Who is in poverty: one dot plot for every breakdown, with its reference group
+    // Who is in poverty: a bar per group for the end year with a tick at the
+    // start year, for every breakdown, with its reference group
     const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
-    // Couples with children: 19.8% in both years
-    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".dot-row");
-    expect(couples).toHaveTextContent("19.8% → 19.8%no change");
+    // Couples with children: 19.8% in both years, said once on the bar
+    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
+    expect(couples).toHaveTextContent("Couples with children19.8%no change");
+    expect(couples.querySelector(".ls-bar-start")).not.toBeNull();
     // Its tooltip, on hover or keyboard focus: both years, the change and
     // the reference group
-    const area = couples.querySelector(".dot-plot-area");
+    const area = couples.querySelector(".ls-bar-area");
     fireEvent.focus(area);
     const tip = within(who).getByRole("tooltip");
     expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
@@ -152,7 +154,7 @@ describe("the Living standards view", () => {
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);
-      expect(who.querySelector(".ls-dot-plot")).not.toBeNull();
+      expect(who.querySelector(".ls-bars")).not.toBeNull();
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
     choose(who, "Poverty measure", "Absolute poverty (AHC)");

@@ -24,9 +24,66 @@
 /* 24px under the row, so the plot's top tick is never glued to it */
 .ls-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 4px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
   margin: 4px 0 24px;
+}
+
+/* The row is its own container, so a half-width card's pills can drop their
+   prefix words ("Breakdown", "Measure") and keep their choices readable on
+   one line */
+.ls-controls {
+  container: ls-controls / inline-size;
+}
+
+@container ls-controls (max-width: 640px) {
+  .ls-controls .pill-select-prefix {
+    display: none;
+  }
+}
+
+/* One line on desktop; wrapping only once the card is too narrow */
+@media (max-width: 900px) {
+  .ls-controls {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* The years compared: one pill holding the two year lists and an arrow */
+.ls-range {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 30px;
+  padding: 0 2px;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  background: var(--pe-surface);
+}
+
+.ls-range:focus-within,
+.ls-range:hover {
+  border-color: var(--pe-teal-500);
+}
+
+.ls-range .pill-select-light .pill-select-toggle {
+  height: 26px;
+  padding: 0 4px 0 6px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.ls-range .pill-select-light .pill-select-toggle:hover,
+.ls-range .pill-select-light .pill-select-toggle[aria-expanded="true"] {
+  border-color: transparent;
+  background: var(--pe-gray-50);
+}
+
+.ls-range-arrow {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
 }
 
 .ls-controls:empty {
@@ -86,6 +143,7 @@
    card does not jump when the view changes (ViewCard). */
 .ls-controls > .pill-select {
   flex: 0 1 auto;
+  min-width: 0;
 }
 
 .ls-controls-placeholder {
@@ -468,7 +526,7 @@
   white-space: nowrap;
 }
 
-.ls-dot-plot .dot-chip {
+:is(.ls-dot-plot, .ls-bars) .dot-chip {
   min-width: 52px;
   padding: 1px 6px;
   border-radius: 10px;
@@ -477,21 +535,21 @@
   text-align: center;
 }
 
-.ls-dot-plot .dot-chip.good {
+:is(.ls-dot-plot, .ls-bars) .dot-chip.good {
   background: var(--pe-teal-50);
   color: var(--pe-teal-700);
 }
 
-.ls-dot-plot .dot-chip.bad {
+:is(.ls-dot-plot, .ls-bars) .dot-chip.bad {
   background: var(--c-loss-soft);
   color: var(--c-loss-text);
 }
 
-.ls-dot-plot .dot-chip {
+:is(.ls-dot-plot, .ls-bars) .dot-chip {
   white-space: nowrap;
 }
 
-.ls-dot-plot .dot-chip.flat {
+:is(.ls-dot-plot, .ls-bars) .dot-chip.flat {
   background: var(--pe-gray-100);
   color: var(--pe-gray-500);
 }
@@ -566,8 +624,8 @@
   }
 }
 
-/* Forecast headline tiles: icon and name, the figure with a small line of
-   the series beside it, and the Budget tag or comparison */
+/* Forecast headline tiles: icon and name, then the figure with the Budget
+   tag or comparison on its right */
 .forecast-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -645,30 +703,9 @@
   color: var(--pe-gray-500);
 }
 
-.forecast-tile-spark-zero {
-  stroke: var(--pe-gray-200);
-  stroke-width: 1;
-}
-
-.forecast-tile-spark-pre {
-  fill: none;
-  stroke: var(--c-before);
-  stroke-width: 1.6;
-}
-
-.forecast-tile-spark-post {
-  fill: none;
-  stroke: var(--c-after);
-  stroke-width: 1.8;
-}
-
-.forecast-tile-spark-dot {
-  fill: var(--c-after);
-}
-
 .forecast-tile-tag {
-  align-self: flex-start;
-  margin: 0;
+  flex-shrink: 0;
+  margin: 0 0 4px;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--pe-gray-100);
@@ -677,11 +714,171 @@
 }
 
 .forecast-tile-compare {
-  margin: 0;
+  margin: 0 0 4px;
+  text-align: right;
   font-size: 0.75rem;
   color: var(--pe-gray-600);
 }
 
 .forecast-tile-delta {
   font-weight: 600;
+}
+
+/* Who is in poverty: a bar per group for the end year, a dark tick at the
+   start year, a change chip on the right, and a dashed reference line */
+.ls-card .chart-plot:has(> .ls-bars) {
+  container-type: inline-size;
+}
+
+.ls-bars {
+  display: grid;
+  grid-template-columns: minmax(120px, 30%) minmax(0, 1fr) 88px;
+  column-gap: 12px;
+  font-size: var(--fs-caption);
+}
+
+.ls-bar-row {
+  display: contents;
+}
+
+.ls-bar-row > * {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.ls-bar-label {
+  color: var(--pe-gray-700);
+  line-height: 1.3;
+}
+
+.ls-bar-area {
+  position: relative;
+  min-width: 0;
+}
+
+.ls-bar-area:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.ls-bar-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--pe-gray-100);
+}
+
+.ls-bar-fill {
+  position: relative;
+  height: 18px;
+  min-width: 2px;
+  border-radius: 0 3px 3px 0;
+  background: var(--c-after);
+}
+
+.ls-bar-value {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  margin-left: 6px;
+  transform: translateY(-50%);
+  color: var(--pe-gray-800);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ls-bar-value.inside {
+  left: auto;
+  right: 6px;
+  margin-left: 0;
+  color: var(--c-surface, #fff);
+  font-weight: 600;
+}
+
+.ls-bar-start {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 26px;
+  margin-left: -1.5px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: var(--pe-gray-800);
+}
+
+.ls-bar-all {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--c-reference);
+}
+
+.ls-bar-chip-cell {
+  justify-content: flex-end;
+}
+
+.ls-bar-head > * {
+  min-height: 20px;
+}
+
+.ls-bar-all-label {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  color: var(--c-reference);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.ls-bar-axis > * {
+  min-height: 22px;
+}
+
+.ls-bar-tick {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.ls-card .ls-bar-legend i.ls-key-bar {
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--c-after);
+}
+
+.ls-card .ls-bar-legend i.ls-key-start {
+  width: 3px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--pe-gray-800);
+}
+
+.ls-card .ls-bar-legend i.ls-key-all {
+  width: 0;
+  height: 12px;
+  border-radius: 0;
+  border-left: 1px dashed var(--c-reference);
+}
+
+/* A phone or half-width card: the label above its bar, the chip still right */
+@container (max-width: 520px) {
+  .ls-bars {
+    grid-template-columns: minmax(0, 1fr) 80px;
+  }
+
+  .ls-bar-row > .ls-bar-label {
+    grid-column: 1 / -1;
+    min-height: 0;
+    padding-top: 6px;
+  }
+
+  .ls-bar-head > .ls-bar-label,
+  .ls-bar-axis > .ls-bar-label {
+    display: none;
+  }
 }
