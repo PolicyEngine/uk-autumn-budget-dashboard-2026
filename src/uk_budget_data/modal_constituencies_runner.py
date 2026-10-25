@@ -23,8 +23,9 @@ from uk_budget_data import geography
 
 SECRET_MISSING = (
     "Modal secret missing: the policyengine workspace needs the secret "
-    "'uk-budget-2026-hf-token' (key HUGGING_FACE_TOKEN, an organisation "
-    "read token) before the constituency run can read the local-area cut. "
+    "'pe-uk-private-hf-read-token' (key HUGGING_FACE_TOKEN, a read-only "
+    "token for populace-uk-private) before the constituency run can read "
+    "the local-area cut. "
     "Owner: Anthony. Until then, run locally (--backend local)."
 )
 

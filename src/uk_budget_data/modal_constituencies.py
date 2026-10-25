@@ -40,7 +40,10 @@ from pathlib import Path
 import modal
 
 APP_NAME = "uk-budget-2026-constituencies"
-HF_SECRET = "uk-budget-2026-hf-token"
+# The workspace's existing fine-grained read token for
+# policyengine/populace-uk-private (key HUGGING_FACE_TOKEN), created by
+# Anthony; checked on Modal on 25 October (#119). No new secret is needed.
+HF_SECRET = "pe-uk-private-hf-read-token"
 VOLUME = "uk-budget-2026-constituencies-private"
 SMOKE_VOLUME = "uk-budget-2026-constituencies-smoke"
 MOUNT = "/private"
