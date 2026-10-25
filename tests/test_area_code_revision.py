@@ -562,6 +562,14 @@ REFUSED = st.one_of(
     st.builds(".github/workflows/{}.yml".format, NAME),
     st.builds("src/{}.py".format, NAME),
     NAME.map("{}.txt".format),
+    # Review of 428d209: Python is code even under public/ and docs/
+    st.builds(
+        "{}/{}/{}{}".format,
+        st.sampled_from(["public", "docs"]),
+        NAME,
+        NAME,
+        st.sampled_from([".py", ".pyc", ".PY"]),
+    ),
 )
 
 

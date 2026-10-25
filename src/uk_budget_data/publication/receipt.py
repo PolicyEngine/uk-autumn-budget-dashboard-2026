@@ -51,6 +51,9 @@ BASIS_STATUSES = ("pre_budget", "updated")
 # manifest file.
 ARTIFACTS_PREFIX = "public/data/artifacts/"
 MANIFEST_PATH = "public/data/manifest.json"
+# Python files, which is_non_calculation_path never treats as published
+# files or docs: wherever they sit, an import could reach them.
+PYTHON_SUFFIXES = (".py", ".pyc")
 # Suffixes of the page's own files under src/, outside the Python package
 # (is_non_calculation_path). Python reads nothing there.
 FRONTEND_SUFFIXES = (
@@ -201,7 +204,10 @@ def is_non_calculation_path(path: str) -> bool:
 
     These are what the commits after an approval touch: attestations,
     published files, the disclosure review, docs and the page. Everything
-    else, including any path not listed here, could change a calculation.
+    else, including any path not listed here and any Python file under
+    ``public/`` or ``docs/``, could change a calculation. Inputs a command
+    is given explicitly are its run's inputs, not the repository's code,
+    and this does not cover them.
     """
     parts = path.split("/")
     if not path or any(part in ("", ".", "..") for part in parts):
@@ -211,7 +217,7 @@ def is_non_calculation_path(path: str) -> bool:
     if path == "data_inputs/public_data_review.csv":
         return True
     if parts[0] in ("public", "docs"):
-        return len(parts) > 1
+        return len(parts) > 1 and not path.casefold().endswith(PYTHON_SUFFIXES)
     if len(parts) == 1:
         return path.endswith(".md")
     # On a case-insensitive filesystem src/UK_Budget_Data is the package.
