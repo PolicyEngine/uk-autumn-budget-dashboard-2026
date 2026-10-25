@@ -1120,3 +1120,9 @@
   font-weight: 500;
   color: var(--pe-gray-500);
 }
+
+/* Before / After / Change, above the chart */
+.chart-view-switch {
+  display: flex;
+  margin: 0 0 12px;
+}

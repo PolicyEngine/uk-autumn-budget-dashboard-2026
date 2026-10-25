@@ -10,6 +10,8 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import TitleIcon from "../TitleIcon";
+import ViewSwitch from "../ViewSwitch";
+import { CHART_VIEWS } from "./chartViews";
 
 export const BEFORE_COLOUR = CHART_COLOURS.before;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
@@ -23,6 +25,29 @@ export const LEGEND_ITEMS = [
   { label: "After the selected policies", color: AFTER_COLOUR, type: "line" },
 ];
 const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
+const CHANGE_ITEM = { label: "Change in net income", color: AFTER_COLOUR };
+
+// What each view draws: its tooltip name, colour, axis and description
+const SERIES = {
+  before: {
+    name: "Net income before",
+    color: BEFORE_COLOUR,
+    axis: "Net income (£ a year)",
+    description: "net income before the selected policies",
+  },
+  after: {
+    name: "Net income after",
+    color: AFTER_COLOUR,
+    axis: "Net income (£ a year)",
+    description: "net income after the selected policies",
+  },
+  change: {
+    name: "Change in net income",
+    color: AFTER_COLOUR,
+    axis: "Change (£ a year)",
+    description: "the change the selected policies make to net income",
+  },
+};
 
 /** Ticks for a change: symmetric about zero in a 1/2/5 step. */
 function changeTicks(maxAbs) {
@@ -63,12 +88,12 @@ function valueAt(points, income, key) {
 }
 
 /**
- * Across earnings: the household's net income before and after the
- * selected policies as the salary varies (top), and the change (bottom),
- * on one salary axis. A dashed line marks "You"; the figures at your
- * salary are the headline tiles, so the label says only "You". Where net
- * income after the policies falls as salary rises by more than £100 a
- * step, the band is shaded.
+ * Across earnings: the household's net income as the salary varies, in
+ * one of three views chosen above the chart: before the selected policies,
+ * after them, or the change. Each view draws one series, and the tooltip
+ * gives that series only. A dashed line marks "You". In the After view,
+ * where net income falls as salary rises by more than £100 a step, the
+ * band is shaded.
  *
  * @param {Object} props
  * @param {Object} props.sweep - normaliseHouseholdImpact's sweep
@@ -80,34 +105,35 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const [hover, setHover] = useState(null);
+  const [view, setView] = useState("change");
   const width = measured > 0 ? measured : narrow ? 358 : 900;
   const title = `Net income across earnings, ${yearLabel}`;
+  const series = SERIES[view];
 
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
-  const drops = useMemo(() => netIncomeDrops(points), [points]);
+  const drops = useMemo(() => (view === "after" ? netIncomeDrops(points) : []), [points, view]);
 
   const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
   const xMax = xDomain[1];
-  const yTicks = roundTicks(Math.max(1, ...points.map((p) => Math.max(p.before, p.after))));
-  const cTicks = changeTicks(Math.max(...points.map((p) => Math.abs(p.change))));
+  const isChange = view === "change";
+  const yTicks = isChange
+    ? changeTicks(Math.max(...points.map((p) => Math.abs(p.change))))
+    : roundTicks(Math.max(1, ...points.map((p) => p[view])));
+  const yLo = yTicks[0];
+  const yHi = yTicks[yTicks.length - 1];
 
-  const left = Math.max(
-    axisWidth(yTicks, formatPoundsShort),
-    axisWidth(cTicks, formatPoundsShort),
-  );
+  const left = axisWidth(yTicks, formatPoundsShort);
   const right = 20;
-  const { topH, gap, bottomH, axisH, top1 } = earningsLayout(narrow);
-  const top2 = top1 + topH + gap;
+  const { topH, gap, bottomH, top1 } = earningsLayout(narrow);
+  const plotH = topH + gap + bottomH;
   const height = earningsChartHeight(narrow);
   const plotW = Math.max(width - left - right, 40);
 
   const x = (v) => left + (v / xMax) * plotW;
-  const y1 = (v) => top1 + topH - (v / yTicks[yTicks.length - 1]) * topH;
-  const cMax = cTicks[cTicks.length - 1];
-  const y2 = (v) => top2 + bottomH / 2 - (v / cMax) * (bottomH / 2);
+  const y = (v) => top1 + plotH - ((v - yLo) / (yHi - yLo || 1)) * plotH;
 
   const youX = salary !== null && salary <= xMax ? x(salary) : null;
-  const youNet = salary !== null ? valueAt(points, salary, "after") : null;
+  const youValue = salary !== null ? valueAt(points, salary, view) : null;
 
   const onMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -121,14 +147,17 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
   };
 
   const hovered = hover !== null ? points[hover] : null;
-  const legendItems = drops.length ? [...LEGEND_ITEMS, DROP_ITEM] : LEGEND_ITEMS;
+  const legendItems = [
+    isChange ? CHANGE_ITEM : view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1],
+    ...(drops.length ? [DROP_ITEM] : []),
+  ];
 
   const download = {
     chartRef,
-    name: `net-income-across-earnings-${yearLabel}`,
+    name: `net-income-across-earnings-${view}-${yearLabel}`,
     exportOptions: {
       title,
-      description: `Your household's net income in ${yearLabel} as your salary varies, before and after the selected policies, and the change.`,
+      description: `Your household's net income in ${yearLabel} as your salary varies: ${series.description}.`,
       legendItems: legendItems.map((item) => ({ ...item, type: item.type ?? "rect" })),
       logo: CHART_LOGO,
       svgSelector: "svg.earnings-svg",
@@ -149,13 +178,9 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
       }),
   };
 
-  // The shared tooltip, fed the hovered point
+  // The tooltip: the hovered point of the series drawn, nothing else
   const tooltipPayload = hovered
-    ? [
-        { dataKey: "before", name: "Before", value: hovered.before, color: BEFORE_COLOUR },
-        { dataKey: "after", name: "After", value: hovered.after, color: AFTER_COLOUR },
-        { dataKey: "change", name: "Change", value: hovered.change },
-      ]
+    ? [{ dataKey: view, name: series.name, value: hovered[view], color: series.color }]
     : [];
   const tipLeft = hovered ? x(hovered.income) : 0;
   const tipOnLeft = tipLeft > width * 0.6;
@@ -174,6 +199,9 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
+      <div className="chart-view-switch">
+        <ViewSwitch options={CHART_VIEWS} value={view} onChange={setView} label="Net income view" compact />
+      </div>
       <div ref={wrapperRef} className="earnings-plot chart-plot">
         <div ref={chartRef} className="earnings-plot-inner">
           <svg
@@ -181,7 +209,8 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             width={width}
             height={height}
             role="img"
-            aria-label={`${title}. Net income before and after the selected policies, and the change, for salaries from £0 to ${formatPounds(xMax)}.`}
+            data-view={view}
+            aria-label={`${title}: ${series.description}, for salaries from £0 to ${formatPounds(xMax)}.`}
           >
             {/* Bands where net income falls as salary rises */}
             {drops.map((drop) => (
@@ -191,50 +220,46 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
                 x={x(drop.from)}
                 y={top1}
                 width={Math.max(x(drop.to) - x(drop.from), 1)}
-                height={topH}
+                height={plotH}
                 fill={DROP_FILL}
               />
             ))}
 
-            {/* Gridlines and tick labels, top panel */}
             {yTicks.map((tick) => (
-              <g key={`y1-${tick}`}>
-                <line x1={left} x2={left + plotW} y1={y1(tick)} y2={y1(tick)} stroke={GRID_PROPS.stroke} />
-                <text x={left - 8} y={y1(tick)} dy="0.35em" textAnchor="end" {...TICK_STYLE}>
-                  {formatPoundsShort(tick)}
-                </text>
-              </g>
-            ))}
-            {/* Bottom panel */}
-            {cTicks.map((tick) => (
-              <g key={`y2-${tick}`}>
+              <g key={`y-${tick}`}>
                 <line
                   x1={left}
                   x2={left + plotW}
-                  y1={y2(tick)}
-                  y2={y2(tick)}
-                  stroke={tick === 0 ? ZERO_LINE : GRID_PROPS.stroke}
+                  y1={y(tick)}
+                  y2={y(tick)}
+                  stroke={isChange && tick === 0 ? ZERO_LINE : GRID_PROPS.stroke}
                 />
-                <text x={left - 8} y={y2(tick)} dy="0.35em" textAnchor="end" {...TICK_STYLE}>
+                <text x={left - 8} y={y(tick)} dy="0.35em" textAnchor="end" {...TICK_STYLE}>
                   {formatPoundsShort(tick)}
                 </text>
               </g>
             ))}
-            <ChartUnitLabel text="Net income (£ a year)" yAxisMap={{ 0: { x: 0, y: top1, height: topH } }} />
-            <ChartUnitLabel text="Change (£ a year)" yAxisMap={{ 0: { x: 0, y: top2, height: bottomH } }} />
+            <ChartUnitLabel text={series.axis} yAxisMap={{ 0: { x: 0, y: top1, height: plotH } }} />
 
-            {/* Change, as areas from zero */}
-            <path d={areaPath(points, x, y2, 1)} fill={AFTER_COLOUR} fillOpacity={0.6} stroke="none" />
-            <path d={areaPath(points, x, y2, -1)} fill={LOSS_COLOUR} fillOpacity={0.6} stroke="none" />
-
-            {/* Net income lines */}
-            <path d={linePath(points, x, y1, "before")} fill="none" stroke={BEFORE_COLOUR} strokeWidth={2.5} strokeDasharray={BEFORE_DASH} />
-            <path d={linePath(points, x, y1, "after")} fill="none" stroke={AFTER_COLOUR} strokeWidth={2.5} />
+            {isChange ? (
+              <>
+                <path d={areaPath(points, x, y, 1)} fill={AFTER_COLOUR} fillOpacity={0.6} stroke="none" />
+                <path d={areaPath(points, x, y, -1)} fill={LOSS_COLOUR} fillOpacity={0.6} stroke="none" />
+              </>
+            ) : (
+              <path
+                d={linePath(points, x, y, view)}
+                fill="none"
+                stroke={series.color}
+                strokeWidth={2.5}
+                strokeDasharray={view === "before" ? BEFORE_DASH : undefined}
+              />
+            )}
 
             {/* X axis */}
-            <line x1={left} x2={left + plotW} y1={top2 + bottomH} y2={top2 + bottomH} stroke={CHART_COLOURS.axis} />
+            <line x1={left} x2={left + plotW} y1={top1 + plotH} y2={top1 + plotH} stroke={CHART_COLOURS.axis} />
             {xTicks.map((tick) => (
-              <text key={`x-${tick}`} x={x(tick)} y={top2 + bottomH + 18} textAnchor="middle" {...TICK_STYLE}>
+              <text key={`x-${tick}`} x={x(tick)} y={top1 + plotH + 18} textAnchor="middle" {...TICK_STYLE}>
                 {formatPoundsShort(tick)}
               </text>
             ))}
@@ -252,8 +277,10 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             {/* You */}
             {youX !== null && (
               <g className="earnings-you">
-                <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
-                {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />}
+                <line x1={youX} x2={youX} y1={top1} y2={top1 + plotH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
+                {youValue !== null && !isChange && (
+                  <circle cx={youX} cy={y(youValue)} r={5} fill={series.color} stroke={CHART_COLOURS.surface} strokeWidth={2} />
+                )}
                 <text
                   x={youX + (youX > left + plotW - 40 ? -6 : 6)}
                   y={top1 + 12}
@@ -270,19 +297,18 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
               </g>
             )}
 
-            {/* Hover guide */}
+            {/* Hover guide, on the series drawn */}
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
-                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top2 + bottomH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
-                <circle cx={x(hovered.income)} cy={y1(hovered.before)} r={3.5} fill={BEFORE_COLOUR} />
-                <circle cx={x(hovered.income)} cy={y1(hovered.after)} r={3.5} fill={AFTER_COLOUR} />
+                <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top1} y2={top1 + plotH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
+                <circle cx={x(hovered.income)} cy={y(hovered[view])} r={3.5} fill={series.color} />
               </g>
             )}
             <rect
               x={left}
               y={top1}
               width={plotW}
-              height={top2 + bottomH - top1}
+              height={plotH}
               fill="transparent"
               onMouseMove={onMove}
               onMouseLeave={() => setHover(null)}
@@ -304,8 +330,6 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
                 format={formatPounds}
                 labelFormat={(v) => `Salary ${formatPounds(v)}, ${yearLabel}`}
                 grouped={false}
-                netKey="change"
-                netLabel="Change"
                 showZero
               />
             </div>
