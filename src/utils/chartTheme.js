@@ -196,3 +196,34 @@ export function sweepAxis(max) {
   for (let value = 0; value <= top + 1e-9; value += step) ticks.push(value);
   return { domain: [0, top], ticks };
 }
+
+// Width a full fiscal-year tick ("2027-28") needs at 12px, with a gap
+const FISCAL_TICK_WIDTH = 64;
+
+/**
+ * Fiscal-year ticks that fit the plot: the full "2027-28" label, every
+ * year if there is room, otherwise every second or third year counted from
+ * `base` (the base year, 2027-28, is always a tick when given), and always
+ * the first and last year. A tick too close to the first or last is
+ * dropped, so labels never touch. The tooltip still names every year.
+ * Returns the years to label (for Recharts' `ticks`).
+ */
+export function fiscalYearTicks(years, plotWidth, { base } = {}) {
+  const list = [...years];
+  if (list.length <= 2 || !plotWidth) return list;
+  const per = plotWidth / list.length;
+  const step = Math.max(1, Math.ceil(FISCAL_TICK_WIDTH / per));
+  if (step === 1) return list;
+  const anchor = list.includes(base) ? list.indexOf(base) : 0;
+  const first = 0;
+  const last = list.length - 1;
+  const picked = new Set([first, last]);
+  for (let i = 0; i < list.length; i += 1) {
+    if ((i - anchor) % step !== 0) continue;
+    // Keep clear of the first and last, which are always shown
+    if (i !== first && i - first < step) continue;
+    if (i !== last && last - i < step) continue;
+    picked.add(i);
+  }
+  return [...picked].sort((a, b) => a - b).map((i) => list[i]);
+}
