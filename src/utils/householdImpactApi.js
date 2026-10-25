@@ -20,6 +20,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { definitionDifferences, definitionQuery } from "./publication/definitions";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -251,19 +252,26 @@ function fieldErrors(detail) {
  * HouseholdApiError (an abort by the caller rejects with the AbortError).
  *
  * @param {Object} body - From buildHouseholdRequest
- * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch }} [options]
+ * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch,
+ *   definitions?: Object<string, {git_sha: string}> }} [options] -
+ *   `definitions`: the selected measures' approved definitions, whose
+ *   commits the request names so the answer reports each measure's
+ *   definition at its own (`definitions` in the answer)
  */
 export async function postHouseholdImpact(
   body,
-  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl } = {},
+  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, definitions } = {},
 ) {
-  const url = householdApiUrl();
-  if (!url) {
+  const apiUrl = householdApiUrl();
+  if (!apiUrl) {
     throw new HouseholdApiError(
       "config",
       `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
     );
   }
+  // A query, not the body: a build that predates them still takes the body
+  const query = definitionQuery(definitions);
+  const url = query ? `${apiUrl}${apiUrl.includes("?") ? "&" : "?"}${query}` : apiUrl;
   const doFetch = fetchImpl ?? globalThis.fetch;
   const controller = new AbortController();
   let timedOut = false;
@@ -448,6 +456,12 @@ export function normaliseHouseholdImpact(raw) {
         }
       : null,
     engine: raw.engine ?? {},
+    // Each named measure's definition as the API's code gives it at the
+    // approved commit; null from a build that reports none
+    definitions:
+      raw.definitions && typeof raw.definitions === "object" && !Array.isArray(raw.definitions)
+        ? raw.definitions
+        : null,
   };
 }
 
@@ -479,6 +493,48 @@ export function engineDifferences(expected, reported) {
   return Object.keys(expected ?? {})
     .filter((name) => typeof given[name] !== "string" || given[name] !== expected[name])
     .sort();
+}
+
+/**
+ * The household API's code does not compute some selected measures from
+ * the definitions their published figures were approved on (or could not
+ * say). Personal impact is then unavailable for them: `refused` names each,
+ * with how its definition differs.
+ */
+export class DefinitionMismatchError extends Error {
+  constructor(refused) {
+    super(
+      `The household calculator does not compute ${refused.map((item) => item.id).join(", ")} ` +
+        "from the definitions their published figures were approved on",
+    );
+    this.name = "DefinitionMismatchError";
+    this.kind = "definition";
+    this.refused = refused;
+  }
+}
+
+/**
+ * The selected measures whose reported definition differs from the
+ * approved one, in id order. A measure with no approved definition, or
+ * none reported, is refused: nothing is answered unchecked.
+ *
+ * @param {Object<string, Object>} expected - Approved definitions by id
+ * @param {Object<string, Object>|null} reported - The answer's `definitions`
+ * @param {string[]} [ids] - The selected measures (default: those expected)
+ * @returns {Array<{id: string, problems: string[]}>}
+ */
+export function definitionRefusals(expected, reported, ids = Object.keys(expected ?? {})) {
+  const approved = expected ?? {};
+  const given = reported && typeof reported === "object" && !Array.isArray(reported) ? reported : {};
+  return [...new Set(ids)]
+    .sort()
+    .map((id) => ({
+      id,
+      problems: Object.hasOwn(approved, id)
+        ? definitionDifferences(approved[id], Object.hasOwn(given, id) ? given[id] : undefined)
+        : ["no approved definition to check it against"],
+    }))
+    .filter((item) => item.problems.length > 0);
 }
 
 const sameEngine = (a, b) => {

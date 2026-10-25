@@ -8,6 +8,7 @@
  */
 
 import { parseTable, tableForFile, TABLES } from "./csv";
+import { receiptDefinition } from "./definitions";
 import { receiptProblems, sha256Hex, verifyFile, verifyReceiptFiles } from "./digest";
 import { assertCurrentRelease } from "./release";
 import {
@@ -77,7 +78,8 @@ export function receiptEngine(receipt) {
 
 /**
  * Fetch one entry's artifact and return its verified, typed tables, with
- * the package versions its receipt records as `engine`.
+ * the package versions its receipt records as `engine` and the definition
+ * it approved (its commit and reform identities) as `definition`.
  *
  * @throws {Error} naming the first check that failed.
  */
@@ -122,6 +124,7 @@ export async function loadArtifact(
     }),
   );
   loaded.engine = receiptEngine(receipt);
+  loaded.definition = receiptDefinition(receipt);
   return loaded;
 }
 

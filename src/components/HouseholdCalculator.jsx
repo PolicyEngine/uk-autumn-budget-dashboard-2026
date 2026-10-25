@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import SectionHeading from "./SectionHeading";
+import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
@@ -370,7 +371,9 @@ function HouseholdCalculator({
   year = DEFAULT_DISPLAY_YEAR,
   publicationKey = "",
   expectedEngine = null,
+  expectedDefinitions = null,
   confirmPublication = null,
+  onRemoveUnavailable = null,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
@@ -414,6 +417,7 @@ function HouseholdCalculator({
     enabled: true,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
     confirmPublication,
   });
   const noneSelected = householdPolicies.length === 0;
@@ -422,6 +426,16 @@ function HouseholdCalculator({
   const unavailableNames = unmodelled.map((measure) =>
     policies.find((policy) => policy.id === measure.id)?.name ?? measure.name ?? measure.id,
   );
+  // Measures the API's code does not compute from their approved
+  // definitions (useHouseholdImpact): unavailable, with the remove action
+  const refusedDefinitions =
+    householdResult.status === "error" && householdResult.error?.kind === "definition"
+      ? householdResult.error.refused.map((item) => ({
+          id: item.id,
+          name: policies.find((policy) => policy.id === item.id)?.name ?? item.id,
+          why: item.problems,
+        }))
+      : [];
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
@@ -606,7 +620,14 @@ function HouseholdCalculator({
         </div>
 
         <div className="household-results" role="region" aria-label="Results">
-          {selectionUnavailable ? (
+          {refusedDefinitions.length > 0 ? (
+            <UnavailableMeasures
+              reason="Personal impact is unavailable for the selected measures"
+              summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
+              measures={refusedDefinitions}
+              onRemove={onRemoveUnavailable}
+            />
+          ) : selectionUnavailable ? (
             <UnavailableNotice reason="Personal impact is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
               <p>Select measures that can all be calculated to see your household&apos;s results.</p>
@@ -624,7 +645,7 @@ function HouseholdCalculator({
       </div>
 
       {/* The results' sections, below the form and headline */}
-      {!noneSelected && !selectionUnavailable && (
+      {!noneSelected && !selectionUnavailable && refusedDefinitions.length === 0 && (
         <div role="region" aria-label="Your household's results">
           <SingleYearDetails result={householdResult} year={year} policies={policies} />
         </div>

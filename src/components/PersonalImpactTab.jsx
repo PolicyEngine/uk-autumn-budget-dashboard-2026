@@ -1,6 +1,7 @@
 import HouseholdCalculator from "./HouseholdCalculator";
+import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice, { RemoveUnavailable } from "./publication/UnavailableNotice";
-import { isCatalogueRowDisplayable, publishedEngine, useMeasureCatalogue } from "../utils/measureCatalogue";
+import { isCatalogueRowDisplayable, publishedDefinitions, publishedEngine, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { usePublicationCheck } from "../utils/publication/check";
 import "./PersonalImpactTab.css";
 
@@ -33,6 +34,19 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
       </UnavailableNotice>
     );
   }
+  // And it must compute each measure from the definition its receipt
+  // approved: a measure with none to check is unavailable, never unchecked
+  const { definitions: expectedDefinitions, missing } = publishedDefinitions(catalogue, selectedPolicies);
+  if (missing.length) {
+    return (
+      <UnavailableMeasures
+        reason="Personal impact is unavailable for the selected measures"
+        summary="The household calculator cannot be checked against these measures' published figures:"
+        measures={missing.map(({ id, reason }) => ({ id, name: catalogue.byId.get(id)?.name ?? id, why: [reason] }))}
+        onRemove={onRemoveUnavailable}
+      />
+    );
+  }
   const publicationKey = catalogue.manifest.snapshotSha256 ?? String(catalogue.manifest.revision);
   return (
     <div className="personal-impact-tab">
@@ -43,7 +57,9 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
         policies={policies}
         year={year}
         expectedEngine={expectedEngine}
+        expectedDefinitions={expectedDefinitions}
         confirmPublication={confirmPublication}
+        onRemoveUnavailable={onRemoveUnavailable}
       />
     </div>
   );

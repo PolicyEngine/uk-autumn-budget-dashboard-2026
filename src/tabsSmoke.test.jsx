@@ -28,6 +28,7 @@ import { householdAnswerFor } from "./test/householdFixture";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
+import { receiptDefinitionFor, reportedDefinitions, requestedDefinitions, route } from "./test/definitionsFixture";
 
 // The receipt fixture's supported year follows the engine's projection
 // end (currently beyond the dashboard's Budget-year window). Exercise the
@@ -87,19 +88,26 @@ const publicationFetch = dashboardFixtureFetch();
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
-function publishedAnswerFor(body) {
+// And compute each measure from the definition its receipt approved: answer
+// with each requested measure's.
+const publishedDefinition = receiptDefinitionFor(fixtureJson);
+function publishedAnswerFor(body, url) {
   const answer = householdAnswerFor(body);
-  return { ...answer, engine: { ...answer.engine, ...PUBLISHED_ENGINE } };
+  return {
+    ...answer,
+    engine: { ...answer.engine, ...PUBLISHED_ENGINE },
+    definitions: reportedDefinitions(url, publishedDefinition),
+  };
 }
 
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
   if (url.startsWith(HOUSEHOLD_API)) {
-    const ok = url === HOUSEHOLD_API && method === "POST";
+    const ok = route(url) === HOUSEHOLD_API && method === "POST";
     requests.push({ url, status: ok ? 200 : 404, body: init.body });
     return ok
-      ? new Response(JSON.stringify(publishedAnswerFor(init.body)), {
+      ? new Response(JSON.stringify(publishedAnswerFor(init.body, url)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })
@@ -184,11 +192,15 @@ describe("each of the four tabs and the Young people sub-tab, on a verified publ
           await within(panel).findByText(/The selected policies would/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
         await within(panel).findByRole("heading", { name: /Change in net income by policy/ }, { timeout: 5000 });
-        const stages = requests
-          .filter((r) => r.url === HOUSEHOLD_API)
-          .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["by_policy", "sweep"]]);
-        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
+        const asked = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
+        expect(asked.map((r) => JSON.parse(r.body).include)).toEqual([[], ["by_policy", "sweep"]]);
+        // Both stages name each selected measure's approved commit
+        for (const r of asked) {
+          const named = requestedDefinitions(r.url);
+          expect(named.map(([id]) => id)).toEqual([...JSON.parse(r.body).policies].sort());
+          for (const [id, commit] of named) expect(commit).toBe(publishedDefinition(id).git_sha);
+        }
+        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => route(r.url) === HOUSEHOLD_API)).toBe(
           true,
         );
         for (const pattern of FAILURE_TEXT) {

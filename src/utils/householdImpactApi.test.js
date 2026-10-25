@@ -1,16 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import {
+  DefinitionMismatchError,
   EngineMismatchError,
   atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
+  definitionRefusals,
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdImpact,
   requestKey,
   statePensionFor,
 } from "./householdImpactApi";
+import { definitionDifferences } from "./publication/definitions";
+import { approvedDefinition, requestedDefinitions } from "../test/definitionsFixture";
 import {
   areaName,
   groupTotals,
@@ -501,5 +506,76 @@ describe("the breakdown's top rows", () => {
     expect(headlineVerb(103)).toBe("raise");
     expect(headlineVerb(-570)).toBe("lower");
     expect(headlineVerb(0)).toBe("not change");
+  });
+});
+
+describe("the household answer's definitions", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const ask = async (apiUrl, definitions) => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", apiUrl);
+    const fetchImpl = vi.fn(async () => Response.json(HOUSEHOLD_FIXTURE));
+    await postHouseholdImpact({ year: 2029 }, { fetchImpl, definitions });
+    return fetchImpl.mock.calls[0][0];
+  };
+
+  it("names each selected measure's approved commit in the query, the body unchanged", async () => {
+    const definitions = { beta: { ...approvedDefinition(), git_sha: "b".repeat(64) }, alpha: approvedDefinition() };
+    const url = await ask("https://api.test/api/household-impact", definitions);
+    expect(url.startsWith("https://api.test/api/household-impact?")).toBe(true);
+    expect(requestedDefinitions(url)).toEqual([["alpha", "c".repeat(40)], ["beta", "b".repeat(64)]]);
+    expect(await ask("https://api.test/api/household-impact?key=1", definitions)).toMatch(/\?key=1&definition=/);
+  });
+
+  it("asks the route as before when no definitions are named", async () => {
+    expect(await ask("https://api.test/api/household-impact", undefined)).toBe("https://api.test/api/household-impact");
+    expect(await ask("https://api.test/api/household-impact", {})).toBe("https://api.test/api/household-impact");
+  });
+
+  it("keeps the reported definitions, and null from a build that reports none", () => {
+    const definitions = { alpha: approvedDefinition() };
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, definitions }).definitions).toEqual(definitions);
+    for (const value of [undefined, null, [], "x"]) {
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, definitions: value }).definitions).toBeNull();
+    }
+  });
+
+  it("refuses each selected measure whose definition differs, and only those, in id order", () => {
+    const measureIds = fc.uniqueArray(fc.constantFrom("alpha", "beta", "gamma", "delta", "constructor", "toString"), { minLength: 1 });
+    fc.assert(fc.property(measureIds, fc.func(fc.constantFrom("same", "commit", "reform", "error", "missing")), (ids, how) => {
+      const expected = Object.fromEntries(ids.map((id) => [id, approvedDefinition()]));
+      const reported = {};
+      for (const id of ids) {
+        const kind = how(id);
+        if (kind === "same") reported[id] = approvedDefinition();
+        if (kind === "commit") reported[id] = { ...approvedDefinition(), git_sha: "e".repeat(40) };
+        if (kind === "reform") reported[id] = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "f".repeat(64) } };
+        if (kind === "error") reported[id] = { git_sha: "c".repeat(40), error: "not a measure the running code registers" };
+      }
+      const refused = definitionRefusals(expected, reported, ids);
+      expect(refused.map((item) => item.id)).toEqual(ids.filter((id) => how(id) !== "same").sort());
+      for (const item of refused) expect(item.problems).toEqual(definitionDifferences(expected[item.id], reported[item.id]));
+    }));
+  });
+
+  it("refuses every measure when the answer reports no definitions", () => {
+    const expected = { alpha: approvedDefinition(), beta: approvedDefinition() };
+    for (const reported of [null, undefined, [], {}]) {
+      expect(definitionRefusals(expected, reported)).toEqual([
+        { id: "alpha", problems: ["no definition reported"] },
+        { id: "beta", problems: ["no definition reported"] },
+      ]);
+    }
+  });
+
+  it("refuses a selected measure with no approved definition to check it against", () => {
+    const refused = definitionRefusals({ alpha: approvedDefinition() }, { alpha: approvedDefinition(), beta: approvedDefinition() }, ["beta", "alpha", "beta"]);
+    expect(refused).toEqual([{ id: "beta", problems: ["no approved definition to check it against"] }]);
+  });
+
+  it("explains a refusal as a definition mismatch naming the measures", () => {
+    const error = new DefinitionMismatchError([{ id: "alpha", problems: ["no definition reported"] }]);
+    expect(error.kind).toBe("definition");
+    expect(error.refused).toEqual([{ id: "alpha", problems: ["no definition reported"] }]);
+    expect(error.message).toMatch(/does not compute alpha from the definitions/);
   });
 });

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DETAIL_INCLUDE,
   DETAIL_TIMEOUT_MS,
+  DefinitionMismatchError,
   EngineMismatchError,
   HEADLINE_INCLUDE,
   buildHouseholdRequest,
+  definitionRefusals,
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
@@ -37,6 +39,11 @@ const DEBOUNCE_MS = 400;
  * @param {Object<string, string>} [params.expectedEngine] - The package
  *   versions the selected measures' receipts record; an answer from others
  *   is refused, and is an error
+ * @param {Object<string, Object>} [params.expectedDefinitions] - Each
+ *   selected measure's approved definition (`publishedDefinitions`). Both
+ *   stages name their commits, and an answer whose reported definitions
+ *   differ, or that reports none, is refused: a DefinitionMismatchError
+ *   naming the measures
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
@@ -44,7 +51,7 @@ const DEBOUNCE_MS = 400;
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, expectedDefinitions = null, confirmPublication = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
@@ -97,6 +104,11 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // and is dropped if the snapshot it was made under is no longer live:
     // the page then shows the new snapshot's views, or none.
     const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
+    // The selected measures the API's code does not compute from their
+    // approved definitions: none unless they are checked
+    const refusals = (answer) =>
+      expectedDefinitions ? definitionRefusals(expectedDefinitions, answer.definitions, policies) : [];
+    const definitions = expectedDefinitions ?? undefined;
     const refuse = (error) => {
       cache.delete(key);
       setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
@@ -108,7 +120,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           if (!(await current()) || signal.aborted) return;
           const raw = await postHouseholdImpact(
             { ...body, include: HEADLINE_INCLUDE },
-            { signal },
+            { signal, definitions },
           );
           first = normaliseHouseholdImpact(raw);
         } catch (error) {
@@ -131,6 +143,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           refuse(new EngineMismatchError(differ));
           return;
         }
+        // Computed from other definitions than the approved ones
+        const refused = refusals(first);
+        if (refused.length) {
+          refuse(new DefinitionMismatchError(refused));
+          return;
+        }
         const complete = first.byPolicy !== null && first.sweep !== null;
         cache.set(key, { data: first, complete });
         setState({
@@ -148,11 +166,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         if (!(await current()) || signal.aborted) return;
         const raw = await postHouseholdImpact(
           { ...body, include: DETAIL_INCLUDE },
-          { signal, timeoutMs: DETAIL_TIMEOUT_MS },
+          { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions },
         );
         if (signal.aborted) return;
+        const detail = normaliseHouseholdImpact(raw);
+        // Checked as the headline was: a deployment between the two stages
+        // may compute a measure from another definition
+        const refused = refusals(detail);
+        if (refused.length) throw new DefinitionMismatchError(refused);
         // Refused unless from the headline's own package versions
-        const merged = mergeStages(first, normaliseHouseholdImpact(raw));
+        const merged = mergeStages(first, detail);
         cache.set(key, { data: merged, complete: true });
         setState({
           key,
@@ -165,7 +188,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         });
       } catch (error) {
         if (signal.aborted) return;
-        if (error instanceof EngineMismatchError) {
+        if (error instanceof EngineMismatchError || error instanceof DefinitionMismatchError) {
           refuse(error);
           return;
         }

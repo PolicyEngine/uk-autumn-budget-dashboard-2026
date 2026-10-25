@@ -27,9 +27,11 @@ and their module state), the household calculation (``household_impact``,
 ``personal_impact``, ``publication.combine``), the request's defaults in
 ``api``, and the locked dependencies beyond the versions the page compares.
 A change to any of them since a receipt, or to the image's base layers,
-reaches Personal impact with the definition unchanged; listing them needs
-git history, which the API image lacks, so the runbook's G5 has whoever
-deploys list them.
+reaches Personal impact with the definition unchanged. Listing them needs
+git history, which the API image lacks, so ``publish definitions`` lists
+them from the checkout it runs in (``run_check``): the paths committed since
+each receipt's commit that could change a calculation, by the area run's
+rule (``publication.receipt.calculation_changes_since``).
 
 A warning issued from a frame in a bound module leaves a
 ``__warningregistry__`` in it, and the receipt API then refuses to bind
@@ -191,19 +193,30 @@ def receipt_definition(document: dict) -> dict:
     }
 
 
+def _shown(value, otherwise: str = "none") -> str:
+    # A reported value as the page shows it too: only strings are shown.
+    return value if isinstance(value, str) else otherwise
+
+
 def differences(approved: dict, reported) -> list[str]:
     """How a reported definition differs from an approved one (empty when
     it is the same definition). A missing report or an ``error`` is a
-    difference."""
+    difference.
+
+    The page compares the same way (``src/utils/publication/
+    definitions.js``); the contract's ``definition_vectors`` hold the two
+    to the same answers.
+    """
     if not isinstance(reported, dict):
         return ["no definition reported"]
     if "error" in reported:
-        return [f"the running code cannot bind it: {reported['error']}"]
+        reason = _shown(reported["error"], "no reason given")
+        return [f"the running code cannot bind it: {reason}"]
     problems = []
     if reported.get("git_sha") != approved.get("git_sha"):
         problems.append(
-            f"reported at commit {reported.get('git_sha')!r}, not the "
-            f"approved {approved.get('git_sha')!r}"
+            f"reported at commit {_shown(reported.get('git_sha'))}, not "
+            f"the approved {_shown(approved.get('git_sha'))}"
         )
     for side in ("baseline", "reform"):
         theirs = reported.get(side)
@@ -214,6 +227,106 @@ def differences(approved: dict, reported) -> list[str]:
             if theirs.get(name) != approved[side].get(name):
                 problems.append(f"its {side} {name} differs")
     return problems
+
+
+# Cases the page's comparison must answer as ``differences`` does: the
+# contract exports them (``definition_vectors``). Identity values are
+# strings or null, as receipts and the API give them.
+_APPROVED = {
+    "git_sha": "1" * 40,
+    "baseline": {
+        "kind": "current_law",
+        "representation": None,
+        "reform_sha256": None,
+        "binding": "content",
+    },
+    "reform": {
+        "kind": "reform",
+        "representation": "policyengine-uk.scenario/v1",
+        "reform_sha256": "a" * 64,
+        "binding": "code_revision",
+    },
+}
+
+
+def _changed(**sides) -> dict:
+    reported = copy.deepcopy(_APPROVED)
+    for side, fields in sides.items():
+        if isinstance(fields, dict):
+            reported[side].update(fields)
+        else:
+            reported[side] = fields
+    return reported
+
+
+DIFFERENCE_CASES = [
+    _APPROVED,
+    {**_APPROVED, "name": "a label", "extra": 1},
+    None,
+    [],
+    "no",
+    {"git_sha": "1" * 40, "error": UNREGISTERED},
+    {**_APPROVED, "error": "refused"},
+    {"git_sha": "1" * 40, "error": None},
+    {"error": {"reason": 1}},
+    {**_APPROVED, "git_sha": "2" * 40},
+    {key: value for key, value in _APPROVED.items() if key != "git_sha"},
+    {**_APPROVED, "git_sha": None},
+    _changed(reform={"reform_sha256": "b" * 64}),
+    _changed(baseline={"kind": "reform"}),
+    _changed(baseline={"representation": "x"}),
+    _changed(baseline={"representation": {"x": 1}}),
+    _changed(reform={"reform_sha256": 1}),
+    _changed(reform={"binding": "content", "representation": None}),
+    _changed(baseline=None),
+    _changed(reform="not an identity"),
+    {key: value for key, value in _APPROVED.items() if key != "reform"},
+    _changed(reform={"name": "a label"}),
+    {
+        **_changed(reform={"reform_sha256": None}),
+        "git_sha": "3" * 64,
+    },
+    {
+        **_APPROVED,
+        "baseline": {
+            key: value
+            for key, value in _APPROVED["baseline"].items()
+            if value is not None
+        },
+    },
+]
+
+RECEIPT_CASES = [
+    {
+        "execution_receipt": {
+            "baseline": {"kind": "current_law", "binding": "content"},
+            "reform": {**_APPROVED["reform"], "name": "alpha"},
+        },
+        "dashboard": {"git_sha": "1" * 40, "key": "alpha"},
+    },
+    {"execution_receipt": {}, "dashboard": {}},
+    {},
+    {"execution_receipt": {"baseline": None}, "dashboard": None},
+]
+
+
+def definition_vectors() -> dict:
+    """``differences`` and ``receipt_definition`` on fixed cases, for the
+    page's copy of both to reproduce."""
+    return {
+        "differences": [
+            {
+                "approved": _APPROVED,
+                "reported": case,
+                "problems": differences(_APPROVED, case),
+            }
+            for case in DIFFERENCE_CASES
+        ],
+        "receipts": [
+            {"receipt": case, "definition": receipt_definition(case)}
+            for case in RECEIPT_CASES
+        ],
+    }
 
 
 class ApiUnanswered(Exception):
@@ -324,15 +437,60 @@ def manifest_report(
     return sorted(rows, key=lambda row: row["key"])
 
 
+def _changes_in_checkout(git_sha: str) -> list[str]:
+    from uk_budget_data.publication.receipt import calculation_changes_since
+
+    return calculation_changes_since(git_sha, Path("."))
+
+
+def changes_lines(rows: list[dict], changes_since) -> list[str]:
+    """For each receipt commit the rows name, the paths committed since it
+    that could change a calculation, as ``changes_since`` lists them.
+
+    A definition binds only a measure's parameter changes and its
+    modifier's own module, so these reach Personal impact with every
+    definition the same (runbook G5, step 1). Each commit is listed once,
+    with the measures whose receipts were made at it.
+    """
+    by_commit = {}
+    for row in rows:
+        git_sha = row["git_sha"]
+        if isinstance(git_sha, str) and FULL_COMMIT.fullmatch(git_sha):
+            by_commit.setdefault(git_sha, []).append(row["key"])
+    if not by_commit:
+        return []
+    lines = [
+        "Calculation paths committed since each receipt's commit (no "
+        "definition shows them; runbook G5, step 1):"
+    ]
+    for git_sha, keys in sorted(by_commit.items(), key=lambda item: item[1]):
+        heading = f"  since {git_sha[:12]} ({', '.join(keys)})"
+        try:
+            paths = changes_since(git_sha)
+        except (OSError, ValueError) as error:
+            lines.append(f"{heading}: cannot list them: {error}")
+            continue
+        if not paths:
+            lines.append(f"{heading}: none")
+            continue
+        lines.append(f"{heading}:")
+        lines.extend(f"    {path}" for path in paths)
+    return lines
+
+
 def run_check(
     data_root: Path,
     out=print,
     report: Callable[[dict], dict] = None,
     where: str = "this code",
+    changes_since: Callable[[str], list[str]] = _changes_in_checkout,
 ) -> int:
-    """``publish definitions``: print the report; 1 if any displayed
-    measure's definition is not the approved one, or ``report`` (the
-    household API, ``where``) gave none, else 0."""
+    """``publish definitions``: print the report, then the calculation
+    paths committed since each receipt's commit (``changes_lines``; by
+    default from the checkout in the working directory); 1 if any
+    displayed measure's definition is not the approved one, or ``report``
+    (the household API, ``where``) gave none, else 0. The paths are listed,
+    not counted: whoever deploys judges them (G5)."""
     from uk_budget_data.publication import manifest as m
 
     if not m.manifest_path(data_root).exists():
@@ -351,6 +509,8 @@ def run_check(
                 out(f"  - {problem}")
         else:
             out(f"same    {row['key']} ({row['status']}, receipt {commit})")
+    for line in changes_lines(rows, changes_since):
+        out(line)
     unbound = sum(1 for row in rows if row["problems"])
     out(
         f"{len(rows) - unbound} of {len(rows)} displayed measures have the "

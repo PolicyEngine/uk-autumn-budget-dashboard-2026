@@ -13,6 +13,864 @@
     "9th",
     "10th"
   ],
+  "definition_commit_pattern": "[0-9a-f]{40}|[0-9a-f]{64}",
+  "definition_identity_fields": [
+    "kind",
+    "representation",
+    "reform_sha256",
+    "binding"
+  ],
+  "definition_vectors": {
+    "differences": [
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "extra": 1,
+          "git_sha": "1111111111111111111111111111111111111111",
+          "name": "a label",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no definition reported"
+        ],
+        "reported": null
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no definition reported"
+        ],
+        "reported": []
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no definition reported"
+        ],
+        "reported": "no"
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "the running code cannot bind it: not a measure the running code registers"
+        ],
+        "reported": {
+          "error": "not a measure the running code registers",
+          "git_sha": "1111111111111111111111111111111111111111"
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "the running code cannot bind it: refused"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "error": "refused",
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "the running code cannot bind it: no reason given"
+        ],
+        "reported": {
+          "error": null,
+          "git_sha": "1111111111111111111111111111111111111111"
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "the running code cannot bind it: no reason given"
+        ],
+        "reported": {
+          "error": {
+            "reason": 1
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "reported at commit 2222222222222222222222222222222222222222, not the approved 1111111111111111111111111111111111111111"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "2222222222222222222222222222222222222222",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "reported at commit none, not the approved 1111111111111111111111111111111111111111"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "reported at commit none, not the approved 1111111111111111111111111111111111111111"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": null,
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its reform reform_sha256 differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its baseline kind differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "reform",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its baseline representation differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": "x"
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its baseline representation differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": {
+              "x": 1
+            }
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its reform reform_sha256 differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": 1,
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "its reform representation differs",
+          "its reform binding differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "content",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": null
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no baseline identity reported"
+        ],
+        "reported": {
+          "baseline": null,
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no reform identity reported"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": "not an identity"
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "no reform identity reported"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111"
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "name": "a label",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [
+          "reported at commit 3333333333333333333333333333333333333333333333333333333333333333, not the approved 1111111111111111111111111111111111111111",
+          "its reform reform_sha256 differs"
+        ],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "3333333333333333333333333333333333333333333333333333333333333333",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": null,
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      },
+      {
+        "approved": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "problems": [],
+        "reported": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law"
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        }
+      }
+    ],
+    "receipts": [
+      {
+        "definition": {
+          "baseline": {
+            "binding": "content",
+            "kind": "current_law",
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": "1111111111111111111111111111111111111111",
+          "reform": {
+            "binding": "code_revision",
+            "kind": "reform",
+            "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "representation": "policyengine-uk.scenario/v1"
+          }
+        },
+        "receipt": {
+          "dashboard": {
+            "git_sha": "1111111111111111111111111111111111111111",
+            "key": "alpha"
+          },
+          "execution_receipt": {
+            "baseline": {
+              "binding": "content",
+              "kind": "current_law"
+            },
+            "reform": {
+              "binding": "code_revision",
+              "kind": "reform",
+              "name": "alpha",
+              "reform_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "representation": "policyengine-uk.scenario/v1"
+            }
+          }
+        }
+      },
+      {
+        "definition": {
+          "baseline": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": null,
+          "reform": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          }
+        },
+        "receipt": {
+          "dashboard": {},
+          "execution_receipt": {}
+        }
+      },
+      {
+        "definition": {
+          "baseline": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": null,
+          "reform": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          }
+        },
+        "receipt": {}
+      },
+      {
+        "definition": {
+          "baseline": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          },
+          "git_sha": null,
+          "reform": {
+            "binding": null,
+            "kind": null,
+            "reform_sha256": null,
+            "representation": null
+          }
+        },
+        "receipt": {
+          "dashboard": null,
+          "execution_receipt": {
+            "baseline": null
+          }
+        }
+      }
+    ]
+  },
   "digest_vectors": [
     {
       "sha256": "77fd7c5c19fdb811dbe28c973d1cf9d47c3bc08699c2a99fce2353f892c2de32",

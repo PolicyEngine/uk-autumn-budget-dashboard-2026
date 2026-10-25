@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
+import { receiptDefinition } from "./definitions";
 import { fiscalSeries } from "./select";
 import {
   BASE_PATH,
@@ -14,6 +15,16 @@ import {
 
 const manifest = fixtureJson("manifest.json");
 const alpha = manifest.measures.alpha.artifact;
+
+describe("loadArtifact's definition", () => {
+  it("is what the verified receipt approved: its commit and both identities", async () => {
+    const tables = await loadArtifact(BASE_PATH, "alpha", manifest.measures.alpha, { fetchImpl: fixtureFetch() });
+    const receipt = fixtureJson(`${alpha}/receipt.json`);
+    expect(tables.definition).toEqual(receiptDefinition(receipt));
+    expect(tables.definition.git_sha).toBe(receipt.dashboard.git_sha);
+    expect(tables.definition.reform.reform_sha256).toBe(receipt.execution_receipt.reform.reform_sha256);
+  });
+});
 
 describe("loadPublication", () => {
   it("loads and verifies the selection's artifacts and its combined run", async () => {

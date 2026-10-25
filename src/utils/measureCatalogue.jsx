@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import { FULL_COMMIT } from "./publication/definitions";
 import { isDisplayable, measureAvailability } from "./publication/manifest";
 import { combinedEntryFor, isSupported } from "./publication/select";
 
@@ -47,6 +48,29 @@ export function publishedEngine(catalogue, ids) {
     engine = { key, value: recorded };
   }
   return engine?.value ?? null;
+}
+
+/**
+ * The definition each selected measure's verified receipt approved (its
+ * commit and reform identities), for the household API to recompute and
+ * report. A measure with none, or whose receipt names no full commit (the
+ * only kind the API takes), is in `missing` with the reason: Personal
+ * impact is then unavailable for it, never answered unchecked.
+ *
+ * @returns {{definitions: Object<string, Object>, missing: Array<{id: string, reason: string}>}}
+ */
+export function publishedDefinitions(catalogue, ids) {
+  // Collected as entries: an id such as `__proto__` stays an own key
+  const found = [];
+  const missing = [];
+  for (const id of ids) {
+    const tables = catalogue?.tablesByKey && Object.hasOwn(catalogue.tablesByKey, id) ? catalogue.tablesByKey[id] : null;
+    const definition = tables?.definition;
+    if (!definition) missing.push({ id, reason: "its published figures record no definition to check the calculator against" });
+    else if (typeof definition.git_sha !== "string" || !FULL_COMMIT.test(definition.git_sha)) missing.push({ id, reason: "its published receipt names no full commit to check the calculator at" });
+    else found.push([id, definition]);
+  }
+  return { definitions: Object.fromEntries(found), missing };
 }
 
 /** Only an explicit publication manifest supplies catalogue membership. */

@@ -7,6 +7,7 @@ import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route, withReportedDefinitions } from "../../test/definitionsFixture";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -17,16 +18,20 @@ const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXT
 
 let household;
 
-/** Answer the household API with `respond(body)`; any other URL is a 404. */
-function serve(respond) {
+/**
+ * Answer the household API with `respond(body)`, beside the definitions an
+ * API running the approved code reports (or `definitionFor(id)` at each
+ * requested commit); any other URL is a 404.
+ */
+function serve(respond, definitionFor) {
   household = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init = {}) => {
-      if (url === HOUSEHOLD_API) {
+      if (route(url) === HOUSEHOLD_API) {
         const body = JSON.parse(init.body);
         household.push(body);
-        return respond(body, init);
+        return withReportedDefinitions(await respond(body, init), url, definitionFor);
       }
       return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
     }),
@@ -58,7 +63,7 @@ const testCatalogue = buildMeasureCatalogue({
     }])),
     combined: {},
   },
-  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE }])),
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
 });
 function PublishedMeasures({ children }) {
   return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;
@@ -97,7 +102,11 @@ describe("Personal impact's results", () => {
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     const urls = fetch.mock.calls.map(([url]) => url);
     expect(urls.length).toBeGreaterThan(0);
-    expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
+    expect(urls.every((url) => route(url) === HOUSEHOLD_API)).toBe(true);
+    // Each names every selected measure's approved commit, in id order
+    for (const url of urls) {
+      expect(requestedDefinitions(url)).toEqual([...SUPPORTED_POLICY_IDS].sort().map((id) => [id, APPROVED_COMMIT]));
+    }
   });
 });
 
@@ -486,5 +495,42 @@ describe("the fixture", () => {
       ].sort(),
     );
     expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});
+
+// W5's page follow-up to #125 (coordinator's ruling): measures the API's
+// code computes from other definitions are listed unavailable, with the
+// existing remove action, and no figure is shown
+describe("a household calculation from other definitions", () => {
+  const [changedId] = [...SUPPORTED_POLICY_IDS].sort();
+  const changedName = POLICIES_FOR_TEST.find((policy) => policy.id === changedId).name;
+  const otherDefinition = (id) => {
+    const definition = approvedDefinition(id);
+    return id === changedId ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+  };
+
+  it("lists the measure unavailable, says how it differs, and offers to remove it", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    const region = await results();
+    expect(await within(region).findByText("Personal impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getByText(/does not compute these measures from the definitions/)).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([`${changedName}: its reform binding differs`]);
+    expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Your household's results" })).not.toBeInTheDocument();
+    // No figure beside the form (the form's own answers show their pounds)
+    expect(region.textContent).not.toMatch(/£\d/);
+    fireEvent.click(within(region).getByRole("button", { name: /^Remove .* from the selection$/ }));
+    expect(remove).toHaveBeenCalledWith([changedId]);
+    // Refused at the headline: the breakdown was never asked for
+    expect(household.map((body) => body.include)).toEqual([[]]);
+  });
+
+  it("shows the results once the API computes every measure from its approved definition", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(screen.queryByText("Personal impact is unavailable for the selected measures")).not.toBeInTheDocument();
   });
 });

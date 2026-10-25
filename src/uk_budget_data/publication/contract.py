@@ -16,7 +16,12 @@ Regenerate the file with::
 import json
 import sys
 
-from uk_budget_data import data_limits, measure_templates, model_limits
+from uk_budget_data import (
+    data_limits,
+    definitions,
+    measure_templates,
+    model_limits,
+)
 from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
@@ -106,6 +111,10 @@ def contract() -> dict:
             if (char := chr(codepoint)).isspace()
         ),
         "digest_vectors": digest_vectors(),
+        # Personal impact's definition check (``uk_budget_data.definitions``)
+        "definition_identity_fields": list(definitions.IDENTITY_FIELDS),
+        "definition_commit_pattern": definitions.FULL_COMMIT.pattern,
+        "definition_vectors": definitions.definition_vectors(),
         "scatter_bins": {
             **SCATTER_BINS,
             "min_households": SCATTER_MIN_HOUSEHOLDS,
