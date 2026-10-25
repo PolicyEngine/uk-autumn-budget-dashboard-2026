@@ -219,7 +219,9 @@ def test_this_repository_passes_the_build_check():
 
 @needs_node
 @pytest.mark.parametrize("area_id", ["alpha", "beta"])
-def test_build_requires_every_area_csv_id_in_verified_provenance(tree, area_id):
+def test_build_requires_every_area_csv_id_in_verified_provenance(
+    tree, area_id
+):
     """An approved national key cannot stand in for a missing area proof."""
     fixture = REPO / "src/test/fixtures/publication"
     manifest = json.loads((fixture / "manifest.json").read_text())
