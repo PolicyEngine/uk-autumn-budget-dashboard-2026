@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Cpu,
   Database,
+  FileCheck,
   Gavel,
   GitCompare,
   HeartPulse,
@@ -48,6 +49,7 @@ const TERM_ICONS = {
   "Household scatter bands": ChartScatter,
   "Gain, loss, no change": ArrowUpDown,
   Disclosure: ShieldCheck,
+  "Sign-off": FileCheck,
   "Age bands": Users,
   "Single year of age": Cake,
   "Who counts": UserCheck,
@@ -61,10 +63,29 @@ const TERM_ICONS = {
 };
 
 /**
- * What a term means: a plain node, or { lead, points } for a short lead
+ * What a term means: a plain node; { value, more } for a one-line value
+ * with its detail folded under "Details"; or { lead, points } for a lead
  * line and one bullet per idea.
  */
 function Description({ children }) {
+  if (children && typeof children === "object" && "value" in children) {
+    const more = (children.more || []).filter(Boolean);
+    return (
+      <>
+        <span className="method-fact-value">{children.value}</span>
+        {more.length > 0 && (
+          <details className="method-fact-more">
+            <summary>Details</summary>
+            <ul className="method-points">
+              {more.map((point, index) => (
+                <li key={index}>{point}</li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </>
+    );
+  }
   if (children && typeof children === "object" && "points" in children) {
     return (
       <>
@@ -86,7 +107,7 @@ function Description({ children }) {
  * item's optional third element overrides the term's icon.
  *
  * @param {Object} props
- * @param {Array<[import("react").ReactNode, import("react").ReactNode | {lead?: import("react").ReactNode, points: import("react").ReactNode[]}, import("react").ComponentType?]>} props.items
+ * @param {Array<[import("react").ReactNode, import("react").ReactNode | {value: import("react").ReactNode, more?: import("react").ReactNode[]} | {lead?: import("react").ReactNode, points: import("react").ReactNode[]}, import("react").ComponentType?]>} props.items
  * @param {string} [props.className]
  */
 function FactList({ items, className = "" }) {

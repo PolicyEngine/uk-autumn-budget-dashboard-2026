@@ -239,7 +239,6 @@ describe("the view tabs", () => {
       "Household impact",
       "Living standards",
       "Limitations",
-      "Versions and replication",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
@@ -255,7 +254,6 @@ describe("the view tabs", () => {
     for (const phrase of [
       /dominance and p% rules/g,
       /leave out interactions between measures/g,
-      /line at the foot of the page/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);
     }

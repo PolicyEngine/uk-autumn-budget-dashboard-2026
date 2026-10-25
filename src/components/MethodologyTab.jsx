@@ -20,14 +20,10 @@ import {
   ChartColumn,
   Compass,
   Database,
-  FileCheck,
-  GitBranch,
   House,
   Info,
   MapPinned,
   PersonStanding,
-  Scale,
-  Sigma,
   TrendingUp,
   TriangleAlert,
   User,
@@ -52,7 +48,6 @@ export const METHOD_SECTIONS = {
   singleYear: "method-single-year",
   living: "method-living",
   limitations: "method-limitations",
-  versions: "method-versions",
 };
 
 /** The sections in the contents, in page order (the household calculation's block sits inside Household impact). */
@@ -66,23 +61,9 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
   { id: METHOD_SECTIONS.living, title: "Living standards", icon: TrendingUp },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
-  { id: METHOD_SECTIONS.versions, title: "Versions and replication", icon: GitBranch },
 ];
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, icon }) => [id, icon]));
-
-// Where each section sits in the flow at the top: the step it explains
-const SECTION_STAGE = {
-  [METHOD_SECTIONS.data]: "Step 1 · Survey data",
-  [METHOD_SECTIONS.model]: "Steps 2 to 4 · Model and scenarios",
-  [METHOD_SECTIONS.population]: "Step 5 · Published figures",
-  [METHOD_SECTIONS.geography]: "Step 5 · Published figures",
-  [METHOD_SECTIONS.young]: "Step 5 · Published figures",
-  [METHOD_SECTIONS.personal]: "Steps 1 to 4 · One household",
-  [METHOD_SECTIONS.living]: "Steps 1 and 2 · No measures",
-  [METHOD_SECTIONS.limitations]: "Reading the figures",
-  [METHOD_SECTIONS.versions]: "Reading the figures",
-};
 
 // An icon for each example household, by its id
 const HOUSEHOLD_ICONS = {
@@ -93,35 +74,6 @@ const HOUSEHOLD_ICONS = {
   higher_income_saver: Briefcase,
 };
 
-// How the national figures are made, as the steps of the flow at the top
-const FLOW = [
-  {
-    title: "Survey data",
-    icon: Database,
-    text: "Microcosm UK 2024-25: households from the Family Resources Survey, with calibrated weights.",
-  },
-  {
-    title: "Tax-benefit model",
-    icon: Calculator,
-    text: "PolicyEngine UK works out each household's taxes, benefits and net income in each year.",
-  },
-  {
-    title: "Two scenarios",
-    icon: Scale,
-    text: "Each measure is run against current law, for every fiscal year shown.",
-  },
-  {
-    title: "Static estimates",
-    icon: Sigma,
-    text: "The difference is the measure's effect, with behavioural responses left out.",
-  },
-  {
-    title: "Published figures",
-    icon: FileCheck,
-    text: "Figures pass disclosure checks, and a named reviewer signs off each public data file; a file awaiting sign-off is marked pending.",
-  },
-];
-
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
@@ -129,18 +81,15 @@ const SCATTER_CHANGE_EDGES = SCATTER_CHANGE_EDGE_LIST.join(", ");
 const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /**
- * A section of the view: a header (icon, title and the step of the flow it
- * explains), a short summary that reads on its own, then the technical
- * details, closed until asked for.
+ * A section of the view: a header (icon and title), a short summary that
+ * reads on its own, then the technical details, closed until asked for.
  */
 function MethodSection({ id, title, summary, details, children, detailsLabel = "Technical details" }) {
-  const stage = SECTION_STAGE[id];
   return (
     <section id={id} className="method-section" aria-labelledby={`${id}-title`}>
       <div className="section-heading method-section-heading">
         <IconChip icon={SECTION_ICONS[id]} />
         <div className="method-section-titles">
-          {stage && <p className="method-stage">{stage}</p>}
           <h2 id={`${id}-title`} tabIndex={-1}>
             {title}
           </h2>
@@ -226,33 +175,11 @@ function MethodologyTab({ onShowTab }) {
           title="At a glance"
           summary={
             <p>
-              Every figure comes from running PolicyEngine&apos;s tax-benefit model over a
-              representative survey of UK households twice, under current law and with a measure,
-              and weighting the difference up to the whole country. The same model works out{" "}
-              <ViewLink tab="personal" onShowTab={onShowTab}>
-                Household impact
-              </ViewLink>{" "}
-              for one household&apos;s answers, and projects{" "}
-              <ViewLink tab="living" onShowTab={onShowTab}>
-                Living standards
-              </ViewLink>{" "}
-              with no measures applied.
+              We run PolicyEngine UK on a representative survey of UK households, with and without
+              each measure, and weight the difference up to the whole country.
             </p>
           }
-        >
-          <ol className="method-flow" aria-label="How the numbers are made">
-            {FLOW.map((step, index) => (
-              <li key={step.title} className="method-flow-step">
-                <span className="method-flow-marker" aria-hidden="true">
-                  <step.icon strokeWidth={1.75} />
-                  <span className="method-flow-number">{index + 1}</span>
-                </span>
-                <span className="method-flow-title">{step.title}</span>
-                <span className="method-flow-text">{step.text}</span>
-              </li>
-            ))}
-          </ol>
-        </MethodSection>
+        />
 
         <MethodSection
           id={METHOD_SECTIONS.data}
@@ -436,16 +363,26 @@ function MethodologyTab({ onShowTab }) {
                 items={[
                   [
                     "Budgetary impact",
-                    "In £ billion a year: taxes collected less benefits and other spending. Each measure's figure is net of every tax and spending change it causes.",
+                    {
+                      value: "Taxes collected less benefits and other spending, in £ billion a year.",
+                      more: ["Each measure's figure is net of every tax and spending change it causes."],
+                    },
                   ],
                   [
                     "Exceptions",
-                    <>
-                      The Plan 2 student loan measure counts the change in loan repayments (
-                      <SourceLink id="student_loan_thresholds">repayment thresholds</SourceLink>); the
-                      employer National Insurance relief changes revenue only (see{" "}
-                      <SectionLink id={METHOD_SECTIONS.model}>Model and measures</SectionLink>).
-                    </>,
+                    {
+                      value: "Two measures are counted differently.",
+                      more: [
+                        <>
+                          The Plan 2 student loan measure counts the change in loan repayments (
+                          <SourceLink id="student_loan_thresholds">repayment thresholds</SourceLink>).
+                        </>,
+                        <>
+                          The employer National Insurance relief changes revenue only (see{" "}
+                          <SectionLink id={METHOD_SECTIONS.model}>Model and measures</SectionLink>).
+                        </>,
+                      ],
+                    },
                   ],
                   ["Years", `Fiscal years ${yearRange}.`],
                   [
@@ -457,7 +394,10 @@ function MethodologyTab({ onShowTab }) {
                   ],
                   [
                     "OBR comparison",
-                    "Where the OBR has costed a measure, the comparison opens on its static costing, like ours; choose Post-behavioural to include its estimate of behavioural responses.",
+                    {
+                      value: "Opens on the OBR's static costing, like ours, where it has one.",
+                      more: ["Choose Post-behavioural to include the OBR's estimate of behavioural responses."],
+                    },
                   ],
                 ]}
               />
@@ -466,12 +406,17 @@ function MethodologyTab({ onShowTab }) {
                 items={[
                   [
                     "Income deciles",
-                    <>
-                      Households ranked by baseline equivalised net income before housing costs (the{" "}
-                      <SourceLink id="dwp_hbai">HBAI</SourceLink> measure) and split into ten groups
-                      with equal numbers of people. Negative incomes count as zero; households without
-                      a decile are left out.
-                    </>,
+                    {
+                      value: "Ten groups of equal numbers of people, by household income.",
+                      more: [
+                        <>
+                          Ranked by baseline equivalised household net income before housing costs (the{" "}
+                          <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
+                        </>,
+                        "Negative incomes count as zero for the ranking.",
+                        "Households without a decile are left out.",
+                      ],
+                    },
                   ],
                   ["Absolute change", "The average change in household net income per household, in £ a year."],
                   ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
@@ -482,28 +427,44 @@ function MethodologyTab({ onShowTab }) {
                 items={[
                   [
                     "Household scatter bands",
-                    <>
-                      Grouped by 2027-28 baseline net income, in {pounds(SCATTER_BINS.income_band_width)}{" "}
-                      bands up to {pounds(SCATTER_BINS.income_max)} (the same households in every year),
-                      and by change in net income, with band edges either way at:
-                      <span className="method-chips" aria-label={`Band edges: ${SCATTER_CHANGE_EDGES}`}>
-                        {SCATTER_CHANGE_EDGE_LIST.map((edge) => (
-                          <Tag key={edge}>{edge}</Tag>
-                        ))}
-                      </span>
-                      {" "}Changes of {pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at
-                      each end, outside the chart&apos;s −£5,000 to £5,000 axis. About 500 dots are
-                      shared out by each income group&apos;s households in 2027-28; a group&apos;s k-th
-                      dot sits at its k-th quantile of change, so it keeps its row between years.
-                    </>,
+                    {
+                      value: "Households grouped by income and by change in income.",
+                      more: [
+                        `Income: 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year.`,
+                        <>
+                          Change: band edges either way at
+                          <span className="method-chips" aria-label={`Band edges: ${SCATTER_CHANGE_EDGES}`}>
+                            {SCATTER_CHANGE_EDGE_LIST.map((edge) => (
+                              <Tag key={edge}>{edge}</Tag>
+                            ))}
+                          </span>
+                        </>,
+                        `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
+                        "About 500 dots, shared out by each income group's households in 2027-28.",
+                        "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
+                      ],
+                    },
                   ],
                   [
                     "Gain, loss, no change",
-                    "No change is under £1 either way; a gain is from £1 up and a loss from −£1 down. Gain bands include their lower edge and loss bands their upper one, so the bands mirror about zero.",
+                    {
+                      value: "No change is under £1 either way; a gain is £1 or more up, a loss £1 or more down.",
+                      more: ["Gain bands include their lower edge and loss bands their upper one, so the bands mirror about zero."],
+                    },
                   ],
                   [
                     "Disclosure",
-                    `Counts are weighted and rounded to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}. Groups come from one simulation of the selection and are never added up.`,
+                    {
+                      value: `Counts are weighted and rounded to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}.`,
+                      more: ["Groups come from one simulation of the selection and are never added up."],
+                    },
+                  ],
+                  [
+                    "Sign-off",
+                    {
+                      value: "A named reviewer signs off every public data file before it is published.",
+                      more: ["A file awaiting sign-off is marked pending, and a pending file expires after 14 days at most."],
+                    },
                   ],
                 ]}
               />
@@ -557,34 +518,54 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Age bands",
-                  <>
-                    {AGE_BANDS.map((band) => band.label).join(", ")}, and all ages: the ONS Labour
-                    Force Survey groups (
-                    <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
-                      {AGE_BAND_SOURCE.label}
-                    </a>
-                    , which splits 16 to 24 at 18). Children are under 16, as in{" "}
-                    <SourceLink id="ons_mid_year_estimates">ONS population statistics</SourceLink> and
-                    DWP&apos;s <SourceLink id="dwp_hbai">Households Below Average Income</SourceLink>;
-                    unlike HBAI, 16- to 19-year-olds in full-time non-advanced education count with 16
-                    to 24.
-                  </>,
+                  {
+                    value: (
+                      <>
+                        {AGE_BANDS.filter((band) => band.label !== "All ages")
+                          .map((band) => band.label)
+                          .join(", ")
+                          .replace(/, ([^,]*)$/, " and $1")}
+                        : the ONS Labour Force Survey age groups (A05), with 16 to 24 as the ONS
+                        definition of young people.
+                      </>
+                    ),
+                    more: [
+                      <>
+                        <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
+                          ONS A05 SA
+                        </a>{" "}
+                        splits 16 to 24 into 16 to 17 and 18 to 24.
+                      </>,
+                      <>
+                        Children are under 16, as in{" "}
+                        <SourceLink id="ons_mid_year_estimates">ONS population statistics</SourceLink> and{" "}
+                        <SourceLink id="dwp_hbai">HBAI</SourceLink>.
+                      </>,
+                      "Unlike HBAI, 16- to 19-year-olds in full-time non-advanced education count in 16 to 24, not as children.",
+                      "Each chart also shows all ages.",
+                    ],
+                  },
                 ],
                 ["Single year of age", `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`],
                 [
                   "Who counts",
-                  `People in households with an income decile; a band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                  {
+                    value: "People in households with an income decile.",
+                    more: [`A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`],
+                  },
                 ],
                 [
                   "Better or worse off",
-                  "When household net income rises or falls by more than 0.01% of its baseline (a baseline below £1 counts as £1); otherwise unchanged.",
+                  {
+                    value: "Household net income rises or falls by more than 0.01%; otherwise unchanged.",
+                    more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
+                  },
                 ],
               ]}
             />
           }
         />
 
-        <div className="method-pair">
           <MethodSection
             id={METHOD_SECTIONS.personal}
             title="Household impact"
@@ -619,10 +600,8 @@ function MethodologyTab({ onShowTab }) {
             details={<LivingStandardsMethod />}
             detailsLabel="Engine, data and gaps"
           />
-        </div>
 
-        <div className="method-pair">
-          <MethodSection
+        <MethodSection
             id={METHOD_SECTIONS.limitations}
             title="Limitations"
             summary={
@@ -651,27 +630,6 @@ function MethodologyTab({ onShowTab }) {
               </div>
             }
           />
-
-          <MethodSection
-            id={METHOD_SECTIONS.versions}
-            title="Versions and replication"
-            summary={
-              <p>
-                The replication code and the engine version behind these figures are in the{" "}
-                <a
-                  href="#replication"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    document.getElementById("replication")?.scrollIntoView?.({ behavior: "smooth" });
-                  }}
-                >
-                  line at the foot of the page
-                </a>
-                .
-              </p>
-            }
-          />
-        </div>
       </div>
     </div>
   );

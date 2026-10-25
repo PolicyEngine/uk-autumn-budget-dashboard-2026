@@ -14,8 +14,8 @@ export const MEASURE_MODELLING = [
   {
     name: "Threshold freeze to 2031-32",
     how: [
-      "Holds the 2031-32 personal allowance and basic rate band at their 2030-31 values.",
-      "From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the allowance and higher rate threshold, so they are held too, as they were frozen alongside them to 2030-31.",
+      "Holds the personal allowance and basic rate band at 2030-31 values in 2031-32; the NI thresholds tied to them are held too.",
+      "From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the allowance and higher rate threshold, as they were frozen alongside them to 2030-31.",
       "The employer secondary threshold is not held: it rises to £5,100 as in current law.",
     ],
     sources: ["hmrc_income_tax_rates", "hmrc_ni_rates"],
@@ -24,7 +24,7 @@ export const MEASURE_MODELLING = [
   {
     name: "Business Asset Disposal Relief restricted",
     how: [
-      "Sets the cap on the gains a person can claim the relief on to £500,000, from £1 million (an assumed value).",
+      "Cuts the cap on gains the relief covers to £500,000, from £1 million (an assumed value).",
       "Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate.",
       "So the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
     ],
@@ -41,13 +41,17 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "VAT cut on road fuel",
-    how: "Lowers VAT on petrol and diesel spending by 5 points for the days the cut is in force in each fiscal year (121 days of 2026-27, 61 of 2027-28).",
+    how: [
+      "Cuts VAT on petrol and diesel spending by 5 points while the cut is in force.",
+      "121 days of 2026-27 and 61 of 2027-28.",
+    ],
     from: 2026,
   },
   {
     name: "Zero VAT on domestic electricity",
     how: [
-      "Removes the 5% VAT from electricity spending: for 182 days of 2026-27 and all of 2027-28.",
+      "Removes the 5% VAT from electricity spending.",
+      "For 182 days of 2026-27 and all of 2027-28.",
       "Gas and other reduced-rate goods are unchanged.",
     ],
     from: 2026,
@@ -55,22 +59,26 @@ export const MEASURE_MODELLING = [
   {
     name: "Warm Home Discount top-up",
     how: [
-      "Adds £100 to households in Great Britain receiving Universal Credit or Pension Credit in 2026-27, as a benefit.",
-      "Receipt follows DESNZ's rates (85% of Pension Credit households, 70% of other eligible households), drawn by household as policyengine-uk will draw the Warm Home Discount (#2616).",
-      "There is no high-cost-to-heat test, and legacy benefits are not counted.",
+      "£100 in winter 2026-27 to households on qualifying benefits, at DESNZ receipt rates (85% Pension Credit, 70% others).",
+      "Qualifying benefits: Universal Credit and Pension Credit (legacy benefits are not counted), paid as a benefit.",
+      "Each household's receipt is drawn as policyengine-uk will draw the Warm Home Discount (#2616).",
+      "Great Britain only.",
     ],
     sources: ["desnz_whd_ia", "pe_uk_2616"],
     from: 2026,
   },
   {
     name: "State Pension income tax protection",
-    how: "Gives people over State Pension age a personal allowance of the full new State Pension, rounded up to £10, withdrawn £1 for £1 above it down to the standard allowance.",
+    how: [
+      "Raises the personal allowance over State Pension age to the full new State Pension, rounded up to £10.",
+      "Withdrawn £1 for £1 above it, down to the standard allowance.",
+    ],
     from: 2027,
   },
   {
     name: "Employer NI relief for under-25s",
     how: [
-      "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24.",
+      "Removes employer National Insurance between the secondary threshold and the upper earnings limit for employees aged 21 to 24.",
       "The model charges under-21s in full, so the existing under-21 relief is not in its baseline.",
       "Apprentices are not identified.",
     ],
@@ -80,7 +88,7 @@ export const MEASURE_MODELLING = [
   {
     name: "Plan 2 student loan threshold unfrozen",
     how: [
-      "Sets the Plan 2 threshold to rise with RPI from 2027-28.",
+      "Raises the Plan 2 repayment threshold with RPI from 2027-28.",
       "Repayments are modelled, replacing those reported in the survey.",
       "The revenue figure is the change in modelled repayments.",
     ],

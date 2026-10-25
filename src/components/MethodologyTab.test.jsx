@@ -73,10 +73,8 @@ describe("MethodologyTab", () => {
     });
   });
 
-  it("shows the five steps, each measure's modelling and the example households", () => {
+  it("shows each measure's modelling and the example households", () => {
     renderTab();
-    const flow = screen.getByRole("list", { name: "How the numbers are made" });
-    expect(within(flow).getAllByRole("listitem")).toHaveLength(5);
 
     const [table, notModelled] = screen.getAllByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
@@ -148,8 +146,6 @@ describe("MethodologyTab", () => {
       const details = section.querySelector("details.method-details");
       if (details) expect(details.open).toBe(false);
     }
-    // Each later section names the step of the flow it explains
-    expect(document.getElementById(METHOD_SECTIONS.data)).toHaveTextContent("Step 1");
   });
 
   it("says nothing tied to the Budget's date, so it stays true on and after Budget day", () => {
