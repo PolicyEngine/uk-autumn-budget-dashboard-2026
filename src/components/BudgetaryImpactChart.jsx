@@ -118,12 +118,18 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
           xAxis.x + xAxis.width - width / 2,
         );
         // A year not yet published has no bars: its tag sits just above the
-        // zero line
-        const top = unpublished
+        // zero line. A negative net's tag goes below the year's costs, unless
+        // that would reach the x-axis ticks: then above its gains instead
+        const plotTop = yAxis.y;
+        const plotBottom = yAxis.y + yAxis.height;
+        const above = yAxis.scale(Math.max(gains, 0)) - gap - height;
+        let top = unpublished
           ? yAxis.scale(0) - height - gap
           : net >= 0
             ? yAxis.scale(gains) - gap - tagHeight
             : yAxis.scale(costs) + gap;
+        if (!unpublished && net < 0 && top + height > plotBottom - 2) top = above;
+        top = Math.max(top, plotTop);
         return (
           <g key={point.year}>
             <rect
@@ -335,10 +341,13 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               />
             ))}
             <Line
-              type="linear"
+              // A smooth net line that never overshoots its points (monotone)
+              type="monotone"
+              strokeLinejoin="round"
+              strokeLinecap="round"
               dataKey="netImpact"
               stroke={CHART_COLOURS.net}
-              strokeWidth={2}
+              strokeWidth={1.75}
               dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: 4 }}
               name="netImpact"
               {...chartMotion()}

@@ -449,7 +449,10 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
                 />
               ))}
               <Line
-                type="linear"
+                // A smooth net line that never overshoots its points (monotone)
+                type="monotone"
+                strokeLinejoin="round"
+                strokeLinecap="round"
                 dataKey="netChange"
                 name="netChange"
                 stroke={CHART_COLOURS.net}

@@ -152,10 +152,10 @@ function useElapsedSeconds(active, startedAt) {
   return active ? seconds : 0;
 }
 
-/** The panels' time line: the usual time and the seconds so far, or that it is late. */
+/** The panels' time line: the usual time, or that it is running late. */
 export function timeText(seconds) {
   if (seconds > SLOW_CALCULATION_SECONDS) return "Taking longer than usual; still working";
-  return `Usually around ${TYPICAL_CALCULATION_SECONDS} seconds · ${seconds} s of ~${TYPICAL_CALCULATION_SECONDS} s`;
+  return `Usually around ${TYPICAL_CALCULATION_SECONDS} seconds`;
 }
 
 /** "+£88", "−£12" or "No change", from whole pounds. */
@@ -460,7 +460,7 @@ function PendingSkeleton({ kind, startedAt }) {
   );
   if (kind === "earnings") {
     return (
-      <div className="charts-grid single-year-chart-pair skeleton-pair" aria-busy="true">
+      <div className="skeleton-pair" aria-busy="true">
         {[0, 1].map((index) => (
           <div key={index} className="card single-year-card skeleton-card is-chart">
             <span className="skeleton-line is-title" />
@@ -473,7 +473,7 @@ function PendingSkeleton({ kind, startedAt }) {
                 />
               </svg>
             </div>
-            {index === 0 && chip}
+            {chip}
           </div>
         ))}
       </div>

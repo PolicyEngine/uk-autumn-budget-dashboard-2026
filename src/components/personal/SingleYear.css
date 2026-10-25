@@ -817,12 +817,31 @@
   border-radius: var(--pe-radius-sm);
 }
 
-/* Skeletons of the detail cards, at their final heights */
+/* Skeletons of the detail cards, at their final heights. Each card holds
+   its own status chip; nothing crosses its edges. */
+.skeleton-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .skeleton-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .skeleton-card {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  overflow: hidden;
+}
+
+/* The placeholders sit back, so the chip reads clearly */
+.skeleton-card > :not(.skeleton-chip) {
+  opacity: 0.6;
 }
 
 .skeleton-card.is-bars {
@@ -918,12 +937,13 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  width: min(300px, calc(100% - 32px));
+  width: max-content;
+  max-width: min(360px, 90%);
   padding: 12px 14px;
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  box-shadow: var(--pe-shadow-md);
+  border-radius: var(--card-radius);
+  box-shadow: var(--pe-shadow-sm);
   transform: translate(-50%, -50%);
   animation: single-year-fade-in 0.3s ease-out both;
 }
@@ -931,6 +951,10 @@
 .skeleton-chip > div {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.skeleton-chip .processing-bar {
+  min-width: 200px;
 }
 
 .skeleton-chip p {

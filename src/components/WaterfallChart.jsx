@@ -345,7 +345,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               ))}
               <Line
                 // Straight segments: deciles are categories, not a curve
-                type="linear"
+                // A smooth net line that never overshoots its points (monotone)
+                type="monotone"
+                strokeLinejoin="round"
+                strokeLinecap="round"
                 dataKey="netChange"
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
