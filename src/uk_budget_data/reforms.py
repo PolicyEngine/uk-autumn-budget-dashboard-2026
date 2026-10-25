@@ -292,7 +292,11 @@ def _create_badr_lifetime_limit_cut() -> Reform:
             "gains qualifying for Business Asset Disposal Relief falls from "
             "£1 million to £500,000; the relief rate stays at 18%. Gains "
             "above the limit pay the main capital gains tax rates. The "
-            "model applies the limit to each year's gains."
+            "model applies the limit to each year's gains. Capital gains "
+            "are imputed and calibrated to 2024-25, when disposals were "
+            "unusually high ahead of the April 2025 rise in the relief's "
+            "rate, so the relief's base, and the revenue from restricting "
+            "it, are likely 1.5 to 1.7 times too high."
         ),
         parameter_changes=threshold_change(
             BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)

@@ -38,10 +38,10 @@ export function unavailableMeasures(catalogue) {
 }
 
 /**
- * Measures reported as likely that the household model cannot cost, for
- * the Methodology view's "Likely but not modelled" table. Independent text
- * with no figures: none of them is a measure in the registry
- * (src/uk_budget_data/reforms.py); one that becomes modelled leaves here.
+ * Measures the household model cannot cost, for the Methodology view's
+ * "Not modelled" table. Independent text with no figures: none of them is a
+ * measure in the registry (src/uk_budget_data/reforms.py); one that becomes
+ * modelled leaves here.
  */
 export const NOT_MODELLED = [
   {

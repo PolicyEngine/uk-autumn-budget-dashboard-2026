@@ -577,6 +577,15 @@ def test_the_employer_ni_description_states_the_apprentice_default():
     assert "cost includes 21 to 24-year-old apprentices" in description
 
 
+def test_the_badr_description_carries_the_capital_gains_caveat():
+    """#127 put the capital gains calibration caveat in the Methodology
+    table, which now shows each measure's registry description (#104), so
+    the caveat lives here, in the text G3 approves."""
+    description = get_reform("badr_lifetime_limit_cut").description
+    assert "calibrated to 2024-25" in description
+    assert "1.5 to 1.7 times too high" in description
+
+
 @pytest.mark.certified_data
 def test_the_certified_data_still_flag_no_apprentices():
     """Tripwire: when certified data flag apprentices, this fails, and the
