@@ -223,10 +223,7 @@ def poverty_by_group(a):
         for g in sorted(set(labels)):
             mask = labels == g
             cells[g] = {
-                **{
-                    m: rate(a[m], w, mask)
-                    for m in GROUP_POVERTY_MEASURES
-                },
+                **{m: rate(a[m], w, mask) for m in GROUP_POVERTY_MEASURES},
                 "median_equivalised_income_bhc": wmedian(
                     a["eq_bhc"][mask], w[mask]
                 ),
