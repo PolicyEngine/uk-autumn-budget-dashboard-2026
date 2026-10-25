@@ -3,7 +3,9 @@
 import pytest
 from policyengine_uk import Simulation
 
-from uk_budget_data.budget_measures import warm_home_discount_top_up
+from uk_budget_data.budget_measures.warm_home_discount_top_up import (
+    warm_home_discount_top_up,
+)
 from uk_budget_data.measure_templates import apply_benefit_receipt_payment
 
 
