@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import useHouseholdImpact, { clearHouseholdImpactCache } from "./useHouseholdImpact";
 import { EngineMismatchError } from "../utils/householdImpactApi";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
@@ -94,6 +94,89 @@ describe("Personal impact's live answers", () => {
     expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
     expect(hook.result.current.data).toBeNull();
     expect(requests).toHaveLength(3);
+  });
+
+  // Review of e9d7c76: the detail service (#147, on Modal) is another build
+  describe("with a detail service", () => {
+    const MAIN = "https://main.test/api/household-impact";
+    const DETAIL = "https://detail.test/api/household-impact";
+    const partOf = (body) => (body.include.length === 0 ? "headline" : body.include[0]);
+    const twoServices = (calls, detailAnswer, mainAnswer = (body) => ({ ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine })) => {
+      vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
+      vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
+      vi.stubGlobal("fetch", async (url, init) => {
+        const body = JSON.parse(init.body);
+        calls.push(`${url === DETAIL ? "detail" : "main"}:${partOf(body)}`);
+        return Response.json(url === DETAIL ? detailAnswer(body) : mainAnswer(body));
+      });
+    };
+    const fromDetail = (change = {}) => (body) => {
+      const answer = structuredClone(householdAnswerFor(body));
+      return { ...answer, ...change(answer) };
+    };
+
+    it("uses a detail build that reports no project version (finding 1)", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail(() => ({ engine: { ...HOUSEHOLD_FIXTURE.engine, uk_budget_data: null } })));
+      const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+      expect(hook.result.current.status).toBe("ready");
+      expect(hook.result.current.data.byPolicy).not.toBeNull();
+      expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:headline"]);
+    });
+
+    for (const [why, change] of [
+      ["other model versions", () => ({ engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } })],
+      ["another net income (older measure definitions)", (answer) => ({ engine: HOUSEHOLD_FIXTURE.engine, net_income: { ...answer.net_income, reform: answer.net_income.reform + 5, change: answer.net_income.change + 5 } })],
+    ]) {
+      it(`asks the main API when the detail build answers with ${why}`, async () => {
+        const calls = [];
+        twoServices(calls, fromDetail(change));
+        const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+        await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+        expect(hook.result.current.status).toBe("ready");
+        expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+      });
+    }
+
+    it("takes the whole answer away when the main API's breakdown is from another build too", async () => {
+      const calls = [];
+      const other = (body) => ({ ...structuredClone(householdAnswerFor(body)), engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } });
+      twoServices(calls, other, (body) => (partOf(body) === "headline" ? { ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine } : other(body)));
+      const hook = renderHook(() => useHouseholdImpact(params));
+      await waitFor(() => expect(hook.result.current.status).toBe("error"));
+      expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
+      expect(hook.result.current.data).toBeNull();
+    });
+  });
+
+  // Review of e9d7c76, finding 6: a refused calculation leaves nothing in
+  // the cache, so asking again starts from the headline
+  it("asks again from the headline after a refusal", async () => {
+    const requests = [];
+    serve(requests, (n) => (n === 1 || n >= 4 ? HOUSEHOLD_FIXTURE.engine : { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" }));
+    const hook = renderHook(() => useHouseholdImpact(params));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    const asked = requests.length;
+    act(() => hook.result.current.retry());
+    await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+    expect(requests[asked].include).toEqual([]);
+  });
+
+  // Review of e9d7c76, finding 5: a part answered without what it was asked
+  // for no longer leaves the breakdown loading for good
+  it("says the breakdown is unavailable when a part comes back without it", async () => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      const answer = { ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine };
+      if (body.include[0] === "sweep") answer.sweep = null;
+      return Response.json(answer);
+    });
+    const hook = renderHook(() => useHouseholdImpact(params));
+    await waitFor(() => expect(hook.result.current.detailStatus).toBe("error"));
+    expect(hook.result.current.status).toBe("ready");
+    expect(hook.result.current.data.byPolicy).not.toBeNull();
   });
 
   // The sweep and the split by policy are asked for at once (#147): one
