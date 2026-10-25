@@ -137,6 +137,12 @@ describe("definitionDifferences", () => {
     expect(big).toBe(2 ** 53);
     expect(definitionDifferences(withValue(2 ** 53), withValue(big))).toEqual(["its reform reform_sha256 differs"]);
     expect(definitionDifferences(withValue(JSON.parse("[9007199254740993]")), withValue([2 ** 53]))).toEqual(["its reform reform_sha256 differs"]);
+    // Inside an object too, and on the approved side as well as the
+    // reported one (review of 52ec7a10)
+    expect(definitionDifferences(withValue({ x: JSON.parse("1e400") }), withValue({ x: null }))).toEqual(["its reform reform_sha256 differs"]);
+    expect(definitionDifferences(withValue({ x: null }), withValue({ x: JSON.parse("1e400") }))).toEqual(["its reform reform_sha256 differs"]);
+    expect(definitionDifferences(withValue(JSON.parse("1e400")), approved)).toEqual(["its reform reform_sha256 differs"]);
+    expect(definitionDifferences(withValue(big), withValue(2 ** 53))).toEqual(["its reform reform_sha256 differs"]);
     // Numbers JSON reads alike on both sides still match
     fc.assert(fc.property(fc.oneof(fc.maxSafeInteger(), fc.double({ noDefaultInfinity: true, noNaN: true }).filter((x) => !Number.isInteger(x))), (value) => {
       expect(definitionDifferences(withValue(value), withValue(JSON.parse(JSON.stringify(value))))).toEqual([]);

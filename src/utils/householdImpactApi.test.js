@@ -634,7 +634,12 @@ describe("the household answer's definitions", () => {
 
     it("names them exactly when every refusal is of measures the request asked for", () => {
       const id = fc.stringMatching(/^[a-z][a-z0-9_]{0,10}$/);
-      fc.assert(fc.property(fc.uniqueArray(id, { minLength: 1, maxLength: 6 }), fc.uniqueArray(id, { minLength: 1, maxLength: 4 }), (requested, named) => {
+      // Named ids drawn from the requested ones as well as new ones, so a
+      // mix (some asked for, some not) is common (review of 52ec7a10)
+      const requestedAndNamed = fc.uniqueArray(id, { minLength: 1, maxLength: 6 }).chain((requested) =>
+        fc.tuple(fc.constant(requested), fc.uniqueArray(fc.oneof(fc.constantFrom(...requested), id), { minLength: 1, maxLength: 4 })),
+      );
+      fc.assert(fc.property(requestedAndNamed, ([requested, named]) => {
         const found = unregisteredMeasures(unknown(named, requested).detail, requested);
         expect(found).toEqual(named.every((name) => requested.includes(name)) ? [...named].sort() : []);
       }));
