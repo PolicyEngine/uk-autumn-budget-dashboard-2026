@@ -123,7 +123,7 @@ describe("results by age", () => {
 describe("YoungPeopleSection", () => {
   it("has a linkable heading, no headline tiles and every card", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
-    const heading = screen.getByRole("heading", { level: 2, name: "Young people (16 to 24)" });
+    const heading = await screen.findByRole("heading", { level: 2, name: "Change by age" });
     expect(heading.parentElement).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
     expect(
       await screen.findByRole("heading", { level: 3, name: /Average change by age, 2029-30/ }),
@@ -140,7 +140,7 @@ describe("YoungPeopleSection", () => {
     const pill = await screen.findByRole("button", { name: /Average change by age shown/ });
     fireEvent.click(pill);
     fireEvent.click(screen.getByRole("option", { name: /By single year of age/ }));
-    expect(screen.getByText(/for each single year of age from 10 to 40, in pounds a year/)).toBeInTheDocument();
+    expect(screen.getByText(/by single year of age \(10 to 40\)/)).toBeInTheDocument();
   });
 
   it("says when the selection has no whole run, never showing zero", async () => {

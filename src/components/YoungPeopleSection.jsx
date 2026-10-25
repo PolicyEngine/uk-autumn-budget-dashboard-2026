@@ -78,13 +78,13 @@ const OUTCOMES = [
 ];
 
 const MEAN_DESCRIPTION =
-  "Average change in household net income per person, by age group, in pounds a year. Each person counts their household's change; bars add up each selected policy's own effect.";
+  "Average change per person, £ a year, by age group; bars add each policy's own effect.";
 const SINGLE_AGE_DESCRIPTION =
-  `Average change in household net income per person, for each single year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}, in pounds a year. Each person counts their household's change, so children show their household's; each bar adds up the selected policies' own effects.`;
+  `Average change per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}).`;
 const SHARES_DESCRIPTION =
-  "The share of people whose household net income rises or falls by more than 0.01%, by age group and for all ages.";
+  "Share of people better or worse off (a change over 0.01%), by age group.";
 const SHARES_SINGLE_DESCRIPTION =
-  "The share of people whose household net income rises or falls by more than 0.01%, for each single year of age from 10 to 40.";
+  "Share of people better or worse off (a change over 0.01%), by single year of age (10 to 40).";
 
 /** The two views of "Average change by age". */
 const AGE_VIEWS = [
@@ -832,17 +832,12 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const props = { rows, policies, selectedPolicies, selectedYear, narrow };
   return (
     <>
-      {/* The page's intro, then two sections of two cards each, as All
-          households pairs its cards */}
-      <SectionHeading
-        id={YOUNG_PEOPLE_ANCHOR}
-        className="young-people-heading"
-        title="Young people (16 to 24)"
-        subtitle="How the selected policies change household incomes by age group, with young people aged 16 to 24 highlighted."
-      />
+      {/* Two sections of two cards each, as All households pairs its
+          cards; the sub-tab's name says what the view is */}
       {status === "ready" ? (
         <>
           <SectionHeading
+            id={YOUNG_PEOPLE_ANCHOR}
             title="Change by age"
             subtitle="How household net income changes for each age group, in the selected year and over time."
           />

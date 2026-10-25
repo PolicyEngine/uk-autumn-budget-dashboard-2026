@@ -104,8 +104,3 @@
   border-radius: 50%;
   opacity: 0.8;
 }
-
-.scatter-legend-dot.is-hollow {
-  background: transparent;
-  border: 1.5px solid var(--pe-gray-500);
-}

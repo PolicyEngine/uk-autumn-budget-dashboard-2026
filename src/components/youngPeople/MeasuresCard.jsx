@@ -122,7 +122,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
 
 export const measuresDescription = (band) => {
   const label = groupLabel(band).replace(/^Aged /, "");
-  return `Each selected policy's own average change in household net income per person, in pounds a year, for people aged ${label} and for people of all ages. Largest effect on the chosen age group first.`;
+  return `Average change per person from each policy, £ a year: ${label} against all ages.`;
 };
 
 const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));

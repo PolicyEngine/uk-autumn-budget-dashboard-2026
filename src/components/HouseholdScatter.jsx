@@ -59,7 +59,7 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 const STACKED_HEIGHT = 400;
 
 // The dots' colours, as colourFor draws them; the key under the plot
-// carries them, and the hollow dot for groups beyond the axis
+// carries them. Groups beyond the axis sit at its edge, coloured alike
 const KEY = [
   { label: "Gain", color: CHART_COLOURS.gain },
   { label: "Loss", color: CHART_COLOURS.loss },
@@ -153,11 +153,10 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             cx={cx}
             cy={cy}
             r={DOT_RADIUS}
-            fill={dot.clamped ? "none" : colourFor(dot)}
+            fill={colourFor(dot)}
             fillOpacity={DOT_OPACITY}
-            stroke={dot.clamped ? colourFor(dot) : undefined}
-            opacity={(dot.clamped ? 0.9 : DOT_OPACITY) * Math.min(1, dot.opacity)}
-            strokeWidth={dot.clamped ? 1.5 : 0}
+            opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
+            strokeWidth={0}
             onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
           />
         );
@@ -198,6 +197,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
           {pounds(point.incomeBand)}–{pounds(incomeTop)}
         </strong>{" "}
         had <strong style={{ color: colourFor(point) }}>{change}</strong>.
+        {point.clamped ? " Beyond the axis range, so drawn at its edge." : ""}
       </p>
     </div>
   );
@@ -208,7 +208,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * 2025 dashboard drew its 500 sampled households: change on the x axis
  * (fitted to the dots shown: fitChangeAxis), baseline household net income
  * on the y axis (£0 to £150,000), uniform dots coloured by gain, loss or no
- * change, and changes beyond the axis drawn hollow at its edge.
+ * change, and changes beyond the axis drawn at its edge.
  *
  * The dots come from the binned cells in household_scatter_binned.csv
  * (£5,000 income bands by change bands). Every year's households are
@@ -243,8 +243,7 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
-  // it stays put while the year changes; dots beyond it sit at its edge,
-  // hollow
+  // it stays put while the year changes; dots beyond it sit at its edge
   const reform = ready ? view.reform : null;
   const yearPoints = ready ? view.yearPoints : null;
   const basisPoints = ready ? view.basisPoints : null;
@@ -374,10 +373,6 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
               {item.label}
             </li>
           ))}
-          <li>
-            <span className="scatter-legend-dot is-hollow" aria-hidden="true" />
-            Beyond the axis
-          </li>
         </ul>
       )}
 

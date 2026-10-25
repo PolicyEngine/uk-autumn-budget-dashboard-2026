@@ -273,7 +273,7 @@ export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
 // Tick steps the fitted change axis may use, in £
 const CHANGE_STEPS = [10, 25, 50, 100, 250, 500, 1000, 2500];
 // The share of dots at each end the fit may leave outside the axis: they
-// are drawn at the edge, hollow, rather than widening it for everyone
+// are drawn at the edge rather than widening it for everyone
 const CHANGE_TRIM = 0.01;
 
 function quantile(sorted, q) {

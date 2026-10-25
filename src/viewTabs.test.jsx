@@ -39,7 +39,7 @@ describe("the view tabs", () => {
     // The intro holds for every view, and sits above the tabs
     const intro = container.querySelector(".dashboard-intro");
     expect(intro).toHaveTextContent(
-      "This dashboard shows how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook. Choose a year and policies in the bar above.",
+      /^This dashboard shows how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the living standards outlook\. Measures and costings: .+; forecast: .+\. Choose a year and policies in the bar above\.$/,
     );
     expect(intro.compareDocumentPosition(viewList())).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -140,16 +140,13 @@ describe("the view tabs", () => {
     expect(panel.firstElementChild).toBe(subList());
     expect(subTabs().map((tab) => tab.textContent)).toEqual(["All households", "Young people"]);
     expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByRole("heading", { name: "Young people (16 to 24)" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Change by age" })).toBeNull();
     // The default sub-tab has no ?sub=
     expect(window.location.search).not.toContain("sub=");
 
     fireEvent.click(subTabs()[1]);
     expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
-    expect(
-      await screen.findByRole("heading", { name: "Young people (16 to 24)" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
+    expect(await screen.findByRole("tabpanel", { name: "Young people" })).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
     // The year and policy pills drive both sub-tabs
     expect(shown(band(document.body).querySelector(".band-year"))).toBe(true);

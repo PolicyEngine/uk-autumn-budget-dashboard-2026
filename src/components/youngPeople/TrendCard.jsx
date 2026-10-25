@@ -40,7 +40,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION =
-  "Average change per person in each year, by age group (£ a year). 16 to 24 is thicker; the shaded year is the one selected.";
+  "Average change per person each year, by age group; 16 to 24 is thicker, the selected year shaded.";
 
 const UNIT = "Change per person (£ a year)";
 // Room beside the ticks for the rotated axis title
