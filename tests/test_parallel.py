@@ -8,6 +8,7 @@ serial against ``--jobs auto`` on the certified data, is in the PR.
 """
 
 import hashlib
+import json
 import multiprocessing
 import pickle
 from pathlib import Path
@@ -481,7 +482,15 @@ def test_area_tables_are_the_same_whatever_order_measures_run_in(
         monkeypatch.setattr(g, "_geography_runner", lambda parsed: runner)
         code, out, _ = run_cli(monkeypatch, directory)
         assert code == 0
-        outputs.append(snapshot(out))
+        written = snapshot(out)
+        # The provenance names the manifest each run read (#104); the
+        # fixture approves a fresh one per run, so only the manifest's
+        # SHA-256 may differ: every table, and each reform's approved
+        # identity, must match.
+        provenance = json.loads((out / "area_provenance.json").read_text())
+        provenance.pop("manifest_sha256")
+        written["area_provenance.json"] = provenance
+        outputs.append(written)
     assert outputs[0] == outputs[1]
     assert outputs[0]
 
