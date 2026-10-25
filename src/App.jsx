@@ -35,12 +35,17 @@ import PolicyCards from "./components/PolicyCards";
 // people is a sub-tab of Population impact (PopulationImpactView).
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "personal", label: "Personal impact", year: true, policies: true },
+  { value: "household", label: "Household impact", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
+
+// Old ?tab= values still opened by shared links, and the view each is now;
+// the address is rewritten to the new value
+const VIEW_ALIASES = { personal: "household" };
+const viewKey = (tab) => VIEW_ALIASES[tab] ?? tab;
 
 // The default view has no ?tab= in the URL; ?tab=dashboard is read too
 const DEFAULT_VIEW = "dashboard";
@@ -70,7 +75,7 @@ export function opensYoungPeople({ search, hash }) {
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
-  const tab = new URLSearchParams(search).get("tab");
+  const tab = viewKey(new URLSearchParams(search).get("tab"));
   return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
 }
 
@@ -440,7 +445,8 @@ function App() {
   // Each view's scroll position when it was left, to return to it
   const tabScroll = useRef({});
   // `sub` opens the new view at one of its sub-tabs (Methodology's links).
-  const handleTabChange = (tab, sub) => {
+  const handleTabChange = (requested, sub) => {
+    const tab = viewKey(requested);
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
     if (tab !== activeTab) {
@@ -521,10 +527,10 @@ function App() {
           <h1>UK Autumn Budget 2026</h1>
 
           {/* The year applies to every chart on Population impact (both
-              sub-tabs) and to Personal impact, and
+              sub-tabs) and to Household impact, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
-              applies to those views and Personal impact. A pill that does
+              applies to those views and Household impact. A pill that does
               not apply keeps its place but is hidden, so the band does not
               move. */}
           <div
@@ -590,7 +596,7 @@ function App() {
           <LivingStandardsTab active={activeTab === value} />
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
-        ) : value === "personal" ? (
+        ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}

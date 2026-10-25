@@ -64,7 +64,7 @@ export const REVENUE_RAISING_NAMES = new Set([
 // it when every policy is selected.
 export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 
-// Personal impact (household API) policy order: the candidate measures
+// Household impact (household API) policy order: the candidate measures
 export const PERSONAL_IMPACT_POLICY_ORDER = [
   "fuel_duty_rise_deferral",
   "state_pension_income_tax_protection",

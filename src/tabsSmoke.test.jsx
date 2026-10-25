@@ -52,7 +52,7 @@ const LOADED = {
   dashboard: (panel) => within(panel).findAllByRole("heading", { name: "Public finances" }),
   // The form's card: its More details section; the results are checked
   // below.
-  personal: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
+  household: (panel) => within(panel).findAllByRole("heading", { name: /^More details/ }),
   // Population impact's Young people sub-tab (?sub=young): the cards
   // render once age_impact.csv is read.
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
@@ -149,7 +149,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
         (r) => r.status !== 200 && !NOT_YET_PUBLISHED.has(r.url),
       );
       expect(missing).toEqual([]);
-      if (value === "personal") {
+      if (value === "household") {
         // The form's first box is the head's age, with its default
         expect(within(panel).getByRole("spinbutton", { name: "Age" })).toHaveValue(30);
         // Nothing is asked before Calculate
@@ -177,7 +177,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     15000,
   );
 
-  it("fails the Personal impact tab when the API URL is not set", async () => {
+  it("fails the Household impact tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the
     // results would be: the check above would catch it.
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
@@ -208,7 +208,7 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     );
     window.history.replaceState({}, "", "/?tab=personal");
     render(<App />);
-    const personal = await screen.findByRole("tabpanel", { name: "Personal impact" });
+    const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
     fireEvent.click(within(personal).getByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
 
@@ -222,8 +222,8 @@ describe("each of the four tabs and the Young people sub-tab, on the real data",
     await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2));
 
     // Back: the same view, with the finished answer, and nothing asked again
-    fireEvent.click(screen.getByRole("tab", { name: "Personal impact" }));
-    expect(screen.getByRole("tabpanel", { name: "Personal impact" })).toBe(personal);
+    fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
+    expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
     expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
     await within(personal).findByRole("heading", { name: /Change in net income by policy/ });
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(2);

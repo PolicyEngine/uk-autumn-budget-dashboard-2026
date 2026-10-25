@@ -27,7 +27,7 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
-      "Personal impact",
+      "Household impact",
       "Living standards",
       "Methodology",
     ]);
@@ -49,7 +49,7 @@ describe("the view tabs", () => {
 
   it("say once, under the intro, that the measures are candidates, except on Living standards and Methodology", () => {
     const { container } = render(<App />);
-    const withBanner = { dashboard: true, personal: true, living: false, methodology: false };
+    const withBanner = { dashboard: true, household: true, living: false, methodology: false };
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
       const banners = screen.queryAllByText(CANDIDATE_BANNER);
@@ -69,8 +69,8 @@ describe("the view tabs", () => {
     const { container } = render(<App />);
     const expected = {
       dashboard: [true, true],
-      // The year drives Personal impact's household calculation
-      personal: [true, true],
+      // The year drives Household impact's household calculation
+      household: [true, true],
       living: [false, false],
       methodology: [false, false],
     };
@@ -83,7 +83,7 @@ describe("the view tabs", () => {
     });
   });
 
-  it("show the year pill on Personal impact, whatever an old ?sub= link says", () => {
+  it("show the year pill on Household impact, whatever an old ?sub= link says", () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     const { container } = render(<App />);
     expect(shown(band(container).querySelector(".band-year"))).toBe(true);
@@ -95,7 +95,7 @@ describe("the view tabs", () => {
     const search = () => new URLSearchParams(window.location.search);
     const expected = {
       dashboard: [null, true],
-      personal: ["personal", false],
+      household: ["household", false],
       living: ["living", false],
       methodology: ["methodology", false],
     };
@@ -107,7 +107,9 @@ describe("the view tabs", () => {
 
   it("open the view an old or new link names", () => {
     for (const [url, label] of [
-      ["/?tab=personal", "Personal impact"],
+      ["/?tab=household", "Household impact"],
+      // An old link: the view it named, at its new address
+      ["/?tab=personal", "Household impact"],
       ["/?tab=living", "Living standards"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
@@ -118,6 +120,7 @@ describe("the view tabs", () => {
       expect(screen.getByRole("tab", { name: label })).toHaveAttribute("aria-selected", "true");
       unmount();
     }
+    expect(viewFromLocation({ search: "?tab=personal", hash: "" })).toBe("household");
     expect(viewFromLocation({ search: "?tab=living", hash: "#young-people" })).toBe("dashboard");
     expect(viewFromLocation({ search: "?tab=young", hash: "" })).toBe("dashboard");
     expect(opensYoungPeople({ search: "?tab=young", hash: "" })).toBe(true);
@@ -238,6 +241,7 @@ describe("the view tabs", () => {
       "Population impact",
       "Figures by area",
       "Young people",
+      // Methodology's own wording is #127's to change
       "Personal impact",
       "Living standards",
       "Limitations",

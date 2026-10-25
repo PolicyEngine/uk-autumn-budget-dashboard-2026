@@ -1145,7 +1145,7 @@ body {
     justify-self: start;
   }
 
-  /* A view without the year pill (Personal impact, Living standards,
+  /* A view without the year pill (Household impact, Living standards,
      Methodology) has one row: no empty second row. App.jsx sets
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {

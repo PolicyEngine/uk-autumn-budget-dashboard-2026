@@ -313,7 +313,7 @@ export function resetSavedWizard() {
 }
 
 /**
- * The Personal impact view: one list of questions about a household, each
+ * The Household impact view: one list of questions about a household, each
  * opening in place, with its net income in the year chosen in the title
  * band before and after the selected policies shown alongside and updated
  * as the answers change, from policyengine.py's household calculation

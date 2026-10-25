@@ -76,7 +76,7 @@ const changeValue = () => headlineCard().querySelector(".result-value").textCont
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
 
-describe("Personal impact's results", () => {
+describe("Household impact's results", () => {
   it("show the household calculation alone: no sub-tabs (an old ?sub= link is ignored), only the household route", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     serve((body) => json(householdAnswerFor(body)));
