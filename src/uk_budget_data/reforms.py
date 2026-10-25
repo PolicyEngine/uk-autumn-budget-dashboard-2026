@@ -10,8 +10,9 @@ policyengine-uk (2.132.6, through policyengine 6.10.2), with no baseline
 changes of its own, except the Plan 2 measure, whose baseline also counts
 modelled student loan repayments. A measure changes parameters
 (``parameter_changes``, bound by content) or applies a modifier from
-``budget_measures`` (a module of fixed shape, which receipts can bind; this
-module fills caches at run time, so no modifier may live here).
+``budget_measures``, each in a module of its own (of fixed shape, which
+receipts can bind; this module fills caches at run time, so no modifier
+may live here).
 
 Year Y is fiscal year Y-(Y+1).
 """
@@ -19,7 +20,25 @@ Year Y is fiscal year Y-(Y+1).
 from datetime import date
 from typing import Optional
 
-from uk_budget_data import budget_measures
+from uk_budget_data.budget_measures.connect_student_loan_repayments import (
+    connect_student_loan_repayments,
+)
+from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
+    employer_ni_relief_ages_21_to_24,
+)
+from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
+    pump_vat_on_fuel_duty_deferral,
+)
+from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
+from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
+    state_pension_income_tax_allowance,
+)
+from uk_budget_data.budget_measures.warm_home_discount_top_up import (
+    warm_home_discount_top_up,
+)
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    zero_vat_on_domestic_electricity,
+)
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.measure_templates import rate_change, threshold_change
 from uk_budget_data.models import Reform
@@ -146,7 +165,7 @@ def _create_fuel_duty_rise_deferral() -> Reform:
             "pump price."
         ),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
-        simulation_modifier=budget_measures.pump_vat_on_fuel_duty_deferral,
+        simulation_modifier=pump_vat_on_fuel_duty_deferral,
     )
 
 
@@ -167,9 +186,7 @@ def _create_state_pension_income_tax_protection() -> Reform:
             "allowance. Someone whose only income is the full new State "
             "Pension pays no income tax."
         ),
-        simulation_modifier=(
-            budget_measures.state_pension_income_tax_allowance
-        ),
+        simulation_modifier=state_pension_income_tax_allowance,
     )
 
 
@@ -190,7 +207,7 @@ def _create_warm_home_discount_top_up() -> Reform:
             "and 70% of other eligible households. Eligibility is "
             "approximate, with no high-cost-to-heat test."
         ),
-        simulation_modifier=budget_measures.warm_home_discount_top_up,
+        simulation_modifier=warm_home_discount_top_up,
     )
 
 
@@ -210,7 +227,7 @@ def _create_domestic_electricity_zero_vat() -> Reform:
             "candidate one-year extension. Applied to electricity spending "
             "only, day-weighted in 2026-27."
         ),
-        simulation_modifier=budget_measures.zero_vat_on_domestic_electricity,
+        simulation_modifier=zero_vat_on_domestic_electricity,
     )
 
 
@@ -228,9 +245,11 @@ def _create_employer_ni_relief_under_25s() -> Reform:
             "secondary Class 1 National Insurance on earnings up to the "
             "upper earnings limit (£50,270) for employees under 25, "
             "extending the under-21 relief to ages 21 to 24. Wages are held "
-            "fixed, so it changes revenue, not household incomes."
+            "fixed, so it changes revenue, not household incomes. The data "
+            "identify no apprentices, so the cost includes 21 to 24-year-old "
+            "apprentices, whose employers already pay none in law."
         ),
-        simulation_modifier=budget_measures.employer_ni_relief_ages_21_to_24,
+        simulation_modifier=employer_ni_relief_ages_21_to_24,
     )
 
 
@@ -273,7 +292,11 @@ def _create_badr_lifetime_limit_cut() -> Reform:
             "gains qualifying for Business Asset Disposal Relief falls from "
             "£1 million to £500,000; the relief rate stays at 18%. Gains "
             "above the limit pay the main capital gains tax rates. The "
-            "model applies the limit to each year's gains."
+            "model applies the limit to each year's gains. Capital gains "
+            "are imputed and calibrated to 2024-25, when disposals were "
+            "unusually high ahead of the April 2025 rise in the relief's "
+            "rate, so the relief's base, and the revenue from restricting "
+            "it, are likely 1.5 to 1.7 times too high."
         ),
         parameter_changes=threshold_change(
             BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
@@ -296,7 +319,7 @@ def _create_road_fuel_vat_cut() -> Reform:
             "to pump prices; spending on fuel is held fixed. Day-weighted "
             "to fiscal years."
         ),
-        simulation_modifier=budget_measures.road_fuel_vat_cut,
+        simulation_modifier=road_fuel_vat_cut,
     )
 
 
@@ -338,10 +361,8 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
         parameter_changes=threshold_change(
             PLAN_2_THRESHOLD, plan_2_unfrozen_thresholds()
         ),
-        simulation_modifier=budget_measures.connect_student_loan_repayments,
-        baseline_simulation_modifier=(
-            budget_measures.connect_student_loan_repayments
-        ),
+        simulation_modifier=connect_student_loan_repayments,
+        baseline_simulation_modifier=connect_student_loan_repayments,
     )
 
 

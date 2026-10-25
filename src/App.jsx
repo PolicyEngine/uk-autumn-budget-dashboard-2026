@@ -116,15 +116,20 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
   const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
-  const [selectedPolicies, setSelectedPolicies] = useState(() =>
-    requested === null ? catalogue.displayable.map((measure) => measure.id) : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
+  const [chosenPolicies, setChosenPolicies] = useState(() =>
+    requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
   );
   const [selectionChosen, setSelectionChosen] = useState(requested !== null);
+  // The default is derived, never stored: an artifact that verifies later
+  // under the same manifest joins it, as on a fresh load (review of
+  // 3d52cff, finding 1). A newer manifest remounts the view instead.
+  const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
+  const selectedPolicies = selectionChosen ? chosenPolicies : defaultPolicies;
   const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
-  const PRESETS = [{ id: "autumn-budget", name: "All candidate measures", policies: catalogue.displayable.map((measure) => measure.id) }];
+  const PRESETS = [{ id: "autumn-budget", name: "All candidate measures" }];
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
@@ -160,18 +165,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
-    setSelectedPolicies((previous) => previous.includes(policyId) ? previous.filter((id) => id !== policyId) : [...previous, policyId]);
+    setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
     setSelectionChosen(true);
   };
   // The one preset is the default, every displayable measure, so choosing
   // it hands the selection back to the publication
-  const handlePresetClick = (policies) => {
-    setSelectedPolicies(policies);
+  const handlePresetClick = () => {
     setSelectionChosen(false);
   };
   // Only on the reader's request: an unavailable measure leaves the selection
   const removeFromSelection = (ids) => {
-    setSelectedPolicies((previous) => previous.filter((id) => !ids.includes(id)));
+    setChosenPolicies(selectedPolicies.filter((id) => !ids.includes(id)));
     setSelectionChosen(true);
   };
 
@@ -283,7 +287,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <button
             key={preset.id}
             className="preset-button"
-            onClick={() => handlePresetClick(preset.policies)}
+            onClick={handlePresetClick}
           >
             {preset.name}
           </button>

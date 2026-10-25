@@ -41,6 +41,17 @@ def test_each_definition_is_one_sentence_in_house_style(household):
         assert not re.search(rf"\b{word}\b", text.lower())
 
 
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_each_definition_states_its_measures_effect_as_conditional(household):
+    """The chooser, the charts' exports and Methodology show a household's
+    definition whatever measures are selected, and its measure can be
+    deselected or withdrawn, so the effect it describes is stated as
+    holding when the measure is selected (review of 3d52cff, finding 5)."""
+    circumstances, effect = household.definition.rsplit("; ", 1)
+    assert ", when selected, " in effect
+    assert "when selected" not in circumstances
+
+
 def test_the_pensioners_are_on_private_pension_income_and_the_rest_on_pay():
     for household in EXAMPLE_HOUSEHOLDS:
         expected = (
@@ -111,6 +122,41 @@ def test_the_pensioners_get_exactly_the_full_new_state_pension():
     assert set(curves) == set(YEARS)
     # Net income rises with private pension income
     assert np.all(np.diff(curves[2026]) > 0)
+
+
+def test_every_household_spends_the_average_on_electricity():
+    """Without it the zero VAT on domestic electricity misses every
+    example household (it did until 25 October 2026)."""
+    from uk_budget_data.household_impact import ELECTRICITY_SPENDING
+
+    for household in EXAMPLE_HOUSEHOLDS:
+        inputs = household.household_inputs
+        assert inputs["electricity_consumption"] == ELECTRICITY_SPENDING
+        assert "£1,040" in household.definition
+
+
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_zero_vat_on_electricity_reaches_every_household(household):
+    """5% VAT on £1,040 including VAT is £1,040 x 5 / 105 = £49.52."""
+    from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.reforms import (
+        ELECTRICITY_VAT_ID,
+        get_autumn_budget_2026_reforms,
+    )
+
+    (reform,) = [
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == ELECTRICITY_VAT_ID
+    ]
+    calculator = IncomeCurveCalculator(num_points=3)
+    baseline = calculator.simulate(household, None, [2027])[2027]
+    reformed = calculator.simulate(household, reform.to_scenario(), [2027])[
+        2027
+    ]
+    assert reformed - baseline == pytest.approx(
+        [1_040 * 5 / 105] * 3, abs=0.01
+    )
 
 
 class _Reform:
@@ -249,3 +295,36 @@ def test_income_curve_defaults_to_every_policy_year():
     from uk_budget_data.cli import parse_args
 
     assert parse_args(["income-curve"]).years == list(POLICY_YEARS)
+
+
+def test_each_household_names_a_registered_measure():
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+    registered = {reform.id for reform in get_autumn_budget_2026_reforms()}
+    shown = [household.measure_id for household in EXAMPLE_HOUSEHOLDS]
+    assert set(shown) <= registered
+    # One household per measure, so each chart shows something different
+    assert len(set(shown)) == len(shown)
+
+
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_each_households_measure_changes_its_net_income(household):
+    """The measure a household is chosen for moves its net income somewhere
+    on its grid, in the year it starts; none of the charts is flat at £0
+    for its own measure."""
+    from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.reforms import get_autumn_budget_2026_reforms
+
+    (reform,) = [
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == household.measure_id
+    ]
+    year = household.measure_year
+    calculator = IncomeCurveCalculator(num_points=11)
+    before = calculator.simulate(
+        household, reform.baseline_scenario_for(DataConfig()), [year]
+    )[year]
+    after = calculator.simulate(household, reform.to_scenario(), [year])[year]
+    assert np.max(np.abs(after - before)) >= 10
