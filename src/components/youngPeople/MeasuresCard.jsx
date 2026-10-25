@@ -10,7 +10,7 @@ import PillSelect from "../PillSelect";
 import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, noEffectReason, pounds, signedPounds } from "./youngPeopleData";
 import { NoEffectList } from "../personal/PolicyBars";
-import { getPolicyColor } from "../../utils/policyConfig";
+import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
@@ -36,6 +36,7 @@ const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(va
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
 function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
+  const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
@@ -70,7 +71,7 @@ function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel }) {
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader">
-              <span className="measure-dumbbell-swatch" style={{ background: getPolicyColor(row.id) }} aria-hidden="true" />
+              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color ?? CHART_COLOURS.noChange }} aria-hidden="true" />
               {row.name}
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
@@ -163,7 +164,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   // No effect: in the card's More info row, each with its colour and reason
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: getPolicyColor(policy.id),
+    color: policy.color ?? CHART_COLOURS.noChange,
     reason: noEffectReason(policy.id, selectedYear),
   }));
   const csvText = () =>

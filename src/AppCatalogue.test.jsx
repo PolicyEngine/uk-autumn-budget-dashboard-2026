@@ -22,7 +22,7 @@ vi.mock("./components/HouseholdScatter", () => ({ default: () => null }));
 vi.mock("./components/EmploymentIncomeChart", () => ({ default: () => null }));
 vi.mock("./components/EmploymentIncomeDiffChart", () => ({ default: () => null }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
-vi.mock("./components/OBRComparisonTable", () => ({ default: () => null }));
+vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
 vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));

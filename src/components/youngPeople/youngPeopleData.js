@@ -212,12 +212,11 @@ export function fitRange(min, max) {
 
 /**
  * Why a measure has no effect in a year, where there is a short reason: an
- * employer cost moves no household's income, and two measures apply in one
- * year or from one year only.
+ * employer cost moves no household's income, and a top-up applies in one
+ * year only.
  */
 export function noEffectReason(id, year) {
   if (id === "employer_ni_relief_under_25s") return "Employer cost; wages held fixed";
-  if (id === "threshold_freeze_2031_32" && year < 2031) return "Starts in 2031-32";
   if (id === "warm_home_discount_top_up" && year !== 2026) return "Paid in 2026-27 only";
   return null;
 }

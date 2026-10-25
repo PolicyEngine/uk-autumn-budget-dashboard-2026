@@ -82,12 +82,6 @@ function EmploymentIncomeChart({
   });
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
-  // Each point's change, for the tooltip; and whether the change is so small
-  // (under 1% of net income everywhere) that the two lines coincide
-  const points = data.map((point) => ({ ...point, change: point.reform - point.baseline }));
-  const linesOverlap =
-    points.length > 0 &&
-    points.every((point) => Math.abs(point.change) < 0.01 * Math.max(Math.abs(point.baseline), 1));
 
   const chartTitle = `${CHART_TITLE}, ${formatYearRange(selectedYear)}`;
 
@@ -95,6 +89,12 @@ function EmploymentIncomeChart({
   // without it the change chart still shows, but this one is unavailable
   const published = levels;
   const data = published ? curve : [];
+  // Each point's change, for the tooltip; and whether the change is so small
+  // (under 1% of net income everywhere) that the two lines coincide
+  const points = data.map((point) => ({ ...point, change: point.reform - point.baseline }));
+  const linesOverlap =
+    points.length > 0 &&
+    points.every((point) => Math.abs(point.change) < 0.01 * Math.max(Math.abs(point.baseline), 1));
   const exportName = `household-net-income-${household.id}-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,

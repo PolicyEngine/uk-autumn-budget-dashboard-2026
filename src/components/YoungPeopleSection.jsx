@@ -28,7 +28,6 @@ import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import SectionHeading from "./SectionHeading";
 import { formatShare, visibleSegments } from "../utils/shareFormat";
-import { getPolicyColor } from "../utils/policyConfig";
 import Note from "./Note";
 import PillSelect from "./PillSelect";
 import MeasuresCard from "./youngPeople/MeasuresCard";
@@ -279,6 +278,7 @@ const singleSharesHeight = (rows) => rows * 17 + X_AXIS_HEIGHT + 24;
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
 /** An age's net change, then each policy's own part of it, largest first. */
 function SingleAgeTooltip({ active, payload, yearLabel }) {
+  const { byId } = useMeasureCatalogue();
   const point = payload?.[0]?.payload;
   if (!active || !point || point.netChange === null) return null;
   return (
@@ -295,7 +295,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
           .filter((part) => Math.round(part.value) !== 0)
           .map((part) => (
             <p key={part.id} className="chart-tooltip-row">
-              <span className="chart-tooltip-swatch" style={{ background: getPolicyColor(part.id) }} aria-hidden="true" />
+              <span className="chart-tooltip-swatch" style={{ background: byId.get(part.id)?.color ?? CHART_COLOURS.noChange }} aria-hidden="true" />
               {part.name} {signedPounds(part.value)}
             </p>
           ))}
