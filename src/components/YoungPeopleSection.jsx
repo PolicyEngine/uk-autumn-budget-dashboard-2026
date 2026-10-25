@@ -170,8 +170,8 @@ function useAgeImpactRows() {
 /** A legend of one row of swatches, in the grouped legend's style. */
 function RowLegend({ items = OUTCOMES }) {
   return (
-    <div className="grouped-legend is-flat">
-      <ul className="grouped-legend-items">
+    <div className="grouped-legend is-row">
+      <ul className="grouped-legend-row">
         {items.map((item) => (
           <li key={item.key} className="grouped-legend-item">
             <span

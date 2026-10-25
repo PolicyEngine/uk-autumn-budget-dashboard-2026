@@ -178,6 +178,16 @@ function GroupedLegend({ names, items, netLabel }) {
                         <span className="grouped-legend-label">{item.label}</span>
                       </li>
                     ))}
+                    {/* In a narrow card the items flow and the net line
+                        joins the last row (CSS); elsewhere it sits below */}
+                    {netLabel &&
+                      index === groups.length - 1 &&
+                      columnIndex === columns.length - 1 && (
+                        <li className="grouped-legend-net-inline" aria-hidden="true">
+                          <span className="grouped-legend-line" />
+                          <span className="grouped-legend-label">{netLabel}</span>
+                        </li>
+                      )}
                   </ul>
                 ))}
               </div>

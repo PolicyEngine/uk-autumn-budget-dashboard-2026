@@ -3,6 +3,7 @@
    SVG/PNG export. Gaps as in legendLayout.js. */
 .grouped-legend {
   position: relative;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -147,5 +148,58 @@
 
   .grouped-legend.is-row .grouped-legend-item {
     white-space: normal;
+  }
+}
+
+/* The net line's copy inside the last group: only for a narrow card */
+.grouped-legend-net-inline {
+  display: none !important;
+}
+
+/* A narrow (half-width) card: each group a block across the card's width,
+   its items flowing into as many columns as fit, names kept whole; the
+   net line on the last row */
+@container (max-width: 640px) {
+  .grouped-legend-groups,
+  .grouped-legend.is-stacked .grouped-legend-groups {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .grouped-legend-columns,
+  .grouped-legend.is-stacked .grouped-legend-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+
+  .grouped-legend-items {
+    display: contents;
+  }
+
+  .grouped-legend-items li {
+    white-space: nowrap;
+    align-items: center;
+  }
+
+  .grouped-legend-label {
+    overflow-wrap: normal;
+  }
+
+  .grouped-legend-swatch,
+  .grouped-legend-swatch-line {
+    margin-top: 0;
+  }
+
+  .grouped-legend > .grouped-legend-net {
+    display: none;
+  }
+
+  .grouped-legend-net-inline {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
   }
 }
