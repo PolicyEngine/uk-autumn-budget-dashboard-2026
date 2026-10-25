@@ -19,7 +19,7 @@ Every chart downloads as CSV, PNG, SVG or plain text.
 
 ## Measures
 
-Nine candidate measures, each compared against current law in policyengine-uk. They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures.py`](src/uk_budget_data/budget_measures.py). `autumn_budget_2026_combined` simulates all nine together, with their interactions.
+Nine candidate measures, each compared against current law in policyengine-uk. They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates all nine together, with their interactions.
 
 | Id | Measure |
 |---|---|

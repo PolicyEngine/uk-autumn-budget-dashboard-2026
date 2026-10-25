@@ -7,12 +7,12 @@ must agree to the penny (it computes in float32).
 """
 
 import math
+from importlib import import_module
 
 import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
 
-from uk_budget_data import budget_measures
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
@@ -34,6 +34,14 @@ from uk_budget_data.reforms import (
     list_reform_ids,
     plan_2_unfrozen_thresholds,
 )
+
+
+def modifier(name):
+    """A measure's modifier, from its own module in ``budget_measures``."""
+    return getattr(
+        import_module(f"uk_budget_data.budget_measures.{name}"), name
+    )
+
 
 PENNY = 0.01
 PARAMETERS = system.parameters
@@ -150,14 +158,13 @@ def test_the_template_modifiers_are_proved_pure_and_two_are_hand_written():
         "road_fuel_vat_cut": ["apply_vat_base_change"],
     }
     for name, templates in pure.items():
-        modifier = getattr(budget_measures, name)
-        assert pure_templates(modifier, REVISION) == templates, name
+        assert pure_templates(modifier(name), REVISION) == templates, name
     # These need the two-person attestation before approval
     for name in (
         "employer_ni_relief_ages_21_to_24",
         "connect_student_loan_repayments",
     ):
-        assert pure_templates(getattr(budget_measures, name), REVISION) is None
+        assert pure_templates(modifier(name), REVISION) is None
 
 
 # --- 1. Fuel duty -----------------------------------------------------------
@@ -193,12 +200,10 @@ def test_the_fuel_duty_path_by_hand():
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
-    defaults = budget_measures.pump_vat_on_fuel_duty_deferral.__defaults__
-    names = (
-        budget_measures.pump_vat_on_fuel_duty_deferral.__code__.co_varnames[
-            1 : 1 + len(defaults)
-        ]
-    )
+    defaults = modifier("pump_vat_on_fuel_duty_deferral").__defaults__
+    names = modifier("pump_vat_on_fuel_duty_deferral").__code__.co_varnames[
+        1 : 1 + len(defaults)
+    ]
     for name, value in zip(names, defaults):
         fuel, year = name.split("_")
         price = getattr(PARAMETERS.household.consumption.fuel.prices, fuel)(
@@ -237,10 +242,10 @@ def nsp(year: int) -> float:
 def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
     defaults = dict(
         zip(
-            budget_measures.state_pension_income_tax_allowance.__code__.co_varnames[
-                1:12
-            ],
-            budget_measures.state_pension_income_tax_allowance.__defaults__,
+            modifier(
+                "state_pension_income_tax_allowance"
+            ).__code__.co_varnames[1:12],
+            modifier("state_pension_income_tax_allowance").__defaults__,
         )
     )
     for year in range(2027, 2032):
@@ -393,7 +398,7 @@ def test_warm_home_discount_receipt_follows_desnz_rates_on_data():
     reformed = Microsimulation(
         dataset=data(),
         scenario=Scenario(
-            simulation_modifier=budget_measures.warm_home_discount_top_up
+            simulation_modifier=modifier("warm_home_discount_top_up")
         ),
     )
     variable = "cost_of_living_support_payment"
@@ -444,8 +449,10 @@ def test_pension_credit_households_draw_against_85_percent():
 
 def test_receipt_rates_come_in_pairs():
     sim = Simulation(situation=situation({"p": {"age": {2026: 40}}}))
+    from uk_budget_data import measure_templates
+
     with pytest.raises(ValueError, match="both receipt rates"):
-        budget_measures.apply_benefit_receipt_payment(
+        measure_templates.apply_benefit_receipt_payment(
             sim,
             amount=100,
             eligible_benefits=["universal_credit"],
@@ -519,10 +526,10 @@ def test_employer_ni_above_the_upper_threshold_is_still_charged():
 def test_the_upper_thresholds_are_the_engines_upper_earnings_limit():
     defaults = dict(
         zip(
-            budget_measures.employer_ni_relief_ages_21_to_24.__code__.co_varnames[
+            modifier("employer_ni_relief_ages_21_to_24").__code__.co_varnames[
                 1:9
             ],
-            budget_measures.employer_ni_relief_ages_21_to_24.__defaults__,
+            modifier("employer_ni_relief_ages_21_to_24").__defaults__,
         )
     )
     uel = PARAMETERS.gov.hmrc.national_insurance.class_1.thresholds

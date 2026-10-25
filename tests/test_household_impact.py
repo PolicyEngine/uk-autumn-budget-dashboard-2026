@@ -213,7 +213,10 @@ def test_a_modifier_that_isnt_module_level_is_refused():
     name = household_impact.modifier_name(
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
-    assert name == "uk_budget_data.budget_measures:road_fuel_vat_cut"
+    assert (
+        name
+        == "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut"
+    )
     assert household_impact.resolve_modifier(name) is (
         get_reform("road_fuel_vat_cut").simulation_modifier
     )
@@ -256,7 +259,7 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": {},
         "modifiers": [
             student_loans,
-            "uk_budget_data.budget_measures:road_fuel_vat_cut",
+            "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut",
         ],
     }
 
