@@ -19,7 +19,7 @@ import {
 } from "./householdImpactApi";
 import contract from "./publication/contract.json";
 import { definitionDifferences } from "./publication/definitions";
-import { approvedDefinition, requestedDefinitions } from "../test/definitionsFixture";
+import { approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
 import {
   areaName,
   groupTotals,
@@ -647,5 +647,95 @@ describe("the household answer's definitions", () => {
         expect(unregisteredMeasures(detail, ["a"])).toEqual([]);
       }
     });
+  });
+});
+
+describe("postHouseholdDetail", () => {
+  const ok = { net_income: { baseline: 1, reform: 2, change: 1 } };
+  const respond = (status, body) => ({ ok: status < 400, status, json: async () => body });
+
+  it("asks the detail URL when the build has one, and falls back to the main API when it fails", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    try {
+      const asked = [];
+      const fetchOk = async (url) => {
+        asked.push(url);
+        return respond(200, ok);
+      };
+      await postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchOk });
+      expect(asked).toEqual([detail]);
+
+      asked.length = 0;
+      const fetchDetailDown = async (url) => {
+        asked.push(url);
+        if (url === detail) return respond(503, {});
+        return respond(200, ok);
+      };
+      const payload = await postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchDetailDown });
+      expect(payload).toEqual(ok);
+      expect(asked).toEqual([detail, main]);
+
+      asked.length = 0;
+      const fetchInvalid = async (url) => {
+        asked.push(url);
+        return respond(400, { detail: "no" });
+      };
+      await expect(
+        postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchInvalid }),
+      ).rejects.toMatchObject({ kind: "invalid" });
+      expect(asked).toEqual([detail]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
+  it("names the asked measures' definitions on the detail URL and on the fallback", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    try {
+      const asked = [];
+      const fetchDetailDown = async (url) => {
+        asked.push(url);
+        if (route(url) === detail) return respond(503, {});
+        return respond(200, ok);
+      };
+      const definitions = { alpha: approvedDefinition() };
+      await postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchDetailDown, definitions });
+      expect(asked.map(route)).toEqual([detail, main]);
+      for (const url of asked) expect(requestedDefinitions(url)).toEqual([["alpha", "c".repeat(40)]]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
+  it("uses the main API alone when no detail URL is set", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = "https://main.example/api/household-impact";
+    delete process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL;
+    try {
+      const asked = [];
+      await postHouseholdDetail(
+        { include: ["by_policy"] },
+        {
+          fetchImpl: async (url) => {
+            asked.push(url);
+            return respond(200, ok);
+          },
+        },
+      );
+      expect(asked).toEqual(["https://main.example/api/household-impact"]);
+    } finally {
+      process.env = saved;
+    }
   });
 });

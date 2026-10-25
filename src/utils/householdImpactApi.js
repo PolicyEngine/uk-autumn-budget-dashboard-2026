@@ -11,11 +11,14 @@
  *   POST NEXT_PUBLIC_HOUSEHOLD_API_URL   (…/api/household-impact)
  *   { year, policies, household: {…}, include: [...] }
  *
- * The page asks in two stages: first `include: []` (the headline and the
- * programmes), then `include: ["by_policy", "sweep"]` (each policy's own
- * effect and the earnings sweep), which are slower. A part a stage did not
- * compute comes back as null; `normaliseHouseholdImpact` turns the answer
- * into the page's own shape.
+ * The page asks first for `include: []` (the headline and the programmes),
+ * then, at once, for `include: ["sweep"]` (the earnings sweep, two runs) and
+ * `include: ["by_policy"]` (one run per measure). The two later requests
+ * share the instance's worker slots fairly, so the sweep's two runs are not
+ * queued behind every measure's run: the earnings charts arrive without
+ * waiting for the split by policy. A part a request did not compute comes
+ * back as null; `normaliseHouseholdImpact` turns the answer into the page's
+ * own shape.
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
@@ -39,9 +42,12 @@ export const DETAIL_TIMEOUT_MS = 200_000;
 /** The year the wizard's salary is entered for; the server grows it. */
 export const SALARY_YEAR = 2026;
 
-/** The two stages of a calculation. */
+/** The requests of a calculation: the headline, then the detail parts. */
 export const HEADLINE_INCLUDE = [];
-export const DETAIL_INCLUDE = ["by_policy", "sweep"];
+export const SWEEP_INCLUDE = ["sweep"];
+export const BY_POLICY_INCLUDE = ["by_policy"];
+/** The detail parts, each asked for on its own and at once, sweep first. */
+export const DETAIL_PARTS = [SWEEP_INCLUDE, BY_POLICY_INCLUDE];
 
 /** The API's field names, as the wizard labels them (for error messages). */
 export const FIELD_LABELS = {
@@ -99,6 +105,18 @@ export const atStatePensionAge = (age, year) => age >= statePensionFor(year).age
 /** The API's URL, or null when the build has none. */
 export function householdApiUrl() {
   const url = process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL;
+  return url ? url.trim() : null;
+}
+
+/**
+ * An optional second URL for the slow parts (the sweep and the split by
+ * policy): the same API run with its simulations fanned out on Modal
+ * (`modal_household.py`). Null when unset, and then every request goes to
+ * householdApiUrl().
+ */
+export const HOUSEHOLD_DETAIL_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL";
+export function householdDetailApiUrl() {
+  const url = process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL;
   return url ? url.trim() : null;
 }
 
@@ -282,16 +300,17 @@ function fieldErrors(detail) {
  *
  * @param {Object} body - From buildHouseholdRequest
  * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch,
- *   definitions?: Object<string, {git_sha: string}> }} [options] -
- *   `definitions`: the selected measures' approved definitions, whose
+ *   definitions?: Object<string, {git_sha: string}>, url?: string }} [options] -
+ *   `definitions`: the asked measures' approved definitions, whose
  *   commits the request names so the answer reports each measure's
- *   definition at its own (`definitions` in the answer)
+ *   definition at its own (`definitions` in the answer); `url`: another
+ *   address for the same API (the detail URL), which takes the same query
  */
 export async function postHouseholdImpact(
   body,
-  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, definitions } = {},
+  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, definitions, url: urlOverride } = {},
 ) {
-  const apiUrl = householdApiUrl();
+  const apiUrl = urlOverride ?? householdApiUrl();
   if (!apiUrl) {
     throw new HouseholdApiError(
       "config",
@@ -626,4 +645,22 @@ export function consistentRound(values, total) {
     diff -= step;
   }
   return rounded.map((value) => (Object.is(value, -0) ? 0 : value));
+}
+
+/**
+ * A detail part (sweep or split by policy): from the detail URL when the
+ * build has one, falling back to the main API if that service cannot be
+ * reached, errs or times out. Answers the page rejects ("invalid") are not
+ * retried: the main API would refuse them too.
+ */
+export async function postHouseholdDetail(body, options = {}) {
+  const detailUrl = householdDetailApiUrl();
+  if (!detailUrl) return postHouseholdImpact(body, options);
+  try {
+    return await postHouseholdImpact(body, { ...options, url: detailUrl });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    if (!(error instanceof HouseholdApiError) || error.kind === "invalid") throw error;
+    return postHouseholdImpact(body, options);
+  }
 }

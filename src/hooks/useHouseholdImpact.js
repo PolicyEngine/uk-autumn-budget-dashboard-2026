@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  DETAIL_INCLUDE,
+  DETAIL_PARTS,
   DETAIL_TIMEOUT_MS,
   DefinitionMismatchError,
   EngineMismatchError,
@@ -10,6 +10,7 @@ import {
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdDetail,
   postHouseholdImpact,
   requestKey,
 } from "../utils/householdImpactApi";
@@ -27,8 +28,9 @@ export function clearHouseholdImpactCache() {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Household impact results for the wizard's answers, in two stages: the
- * headline and programmes, then the per-policy split and earnings sweep.
+ * The Household impact results for the wizard's answers: the headline and
+ * programmes first, then the earnings sweep and the per-policy split, asked
+ * for at once and each shown as it arrives.
  *
  * @param {Object} params
  * @param {Object} params.inputs - The wizard's answers
@@ -184,38 +186,58 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         });
         if (complete) return;
       }
-      try {
-        if (!(await current()) || signal.aborted) return;
-        const raw = await postHouseholdImpact(
-          { ...body, include: DETAIL_INCLUDE },
-          { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions },
-        );
-        if (signal.aborted) return;
-        const detail = normaliseHouseholdImpact(raw);
-        // Checked as the headline was: a deployment between the two stages
-        // may compute a measure from another definition
-        const refused = mismatch(detail);
-        if (refused) throw refused;
-        // Refused unless from the headline's own package versions
-        const merged = mergeStages(first, detail);
-        cache.set(key, { data: merged, complete: true });
-        setState({
-          key,
-          dataKey: key,
-          status: "ready",
-          data: merged,
-          error: null,
-          detailStatus: "ready",
-          detailError: null,
-        });
-      } catch (error) {
-        if (signal.aborted) return;
-        if (error instanceof EngineMismatchError || error instanceof DefinitionMismatchError) {
-          refuse(error);
-          return;
-        }
-        setState((prev) => ({ ...prev, detailStatus: "error", detailError: error }));
-      }
+      // The sweep and the split by policy, asked for at once: each part is
+      // shown as soon as its own answer arrives. They wait for a check of the
+      // live publication, and a part answered by other package versions than
+      // the headline's, or that computes a measure from another definition
+      // than its approved one, refuses the whole result.
+      if (!(await current()) || signal.aborted) return;
+      let merged = first;
+      let failure = null;
+      let refused = false;
+      const parts = DETAIL_PARTS.filter((include) =>
+        include.some((part) => (part === "sweep" ? merged.sweep : merged.byPolicy) === null),
+      );
+      await Promise.all(
+        parts.map(async (include) => {
+          try {
+            const raw = await postHouseholdDetail(
+              { ...body, include },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, definitions },
+            );
+            if (signal.aborted || refused) return;
+            const detail = normaliseHouseholdImpact(raw);
+            // Checked as the headline was: a deployment between the two
+            // stages, or the detail URL's own, may compute a measure from
+            // another definition
+            const mismatched = mismatch(detail);
+            if (mismatched) throw mismatched;
+            // Refused unless from the headline's own package versions
+            merged = mergeStages(merged, detail);
+            const complete = merged.byPolicy !== null && merged.sweep !== null;
+            cache.set(key, { data: merged, complete });
+            setState((prev) => ({
+              ...prev,
+              key,
+              dataKey: key,
+              status: "ready",
+              data: merged,
+              error: null,
+              detailStatus: complete ? "ready" : prev.detailStatus,
+            }));
+          } catch (error) {
+            if (signal.aborted || refused) return;
+            if (error instanceof EngineMismatchError || error instanceof DefinitionMismatchError) {
+              refused = true;
+              refuse(error);
+              return;
+            }
+            failure = failure ?? error;
+          }
+        }),
+      );
+      if (signal.aborted || refused || !failure) return;
+      setState((prev) => ({ ...prev, detailStatus: "error", detailError: failure }));
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);

@@ -42,8 +42,9 @@ describe("the example households", () => {
     for (const example of HOUSEHOLD_EXAMPLES) {
       const text = `${example.label} ${example.description} ${example.note}`;
       for (const name of names) expect(text.toLowerCase(), example.id).not.toContain(name);
-      // Nor in part, as #128's first wording did
-      expect(text, example.id).not.toMatch(/freeze|unfrozen|top-up|Warm Home Discount|fuel duty|\bVAT\b|tax protection|see it/i);
+      // Nor by the short names #128's first wording and the r8 review used.
+      // "Plan 2" stays allowed: it describes the loan a household holds.
+      expect(text, example.id).not.toMatch(/freeze|unfrozen|top-up|Warm Home Discount|fuel duty|\bVAT\b|tax protection|employer NI|\bNI relief|asset disposal|\bBADR\b|threshold|see it/i);
     }
   });
 
