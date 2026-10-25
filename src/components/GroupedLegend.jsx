@@ -107,14 +107,11 @@ function GroupedLegend({ names, items, netLabel, framing = "revenue" }) {
   return (
     <div className="grouped-legend is-flow">
       <ul className="grouped-legend-grid">
-        {groups.map(([heading, groupItems]) => [
-          heading && (
-            <li key={`heading-${heading}`} className="grouped-legend-tag" aria-hidden="true">
-              {heading}
-            </li>
-          ),
-          ...groupItems.map((item) => (heading ? { ...item, title: `${item.label} (${heading.toLowerCase()})` } : item)).map(entry),
-        ])}
+        {/* In group order, so the colours cluster, but no group names:
+            one plain grid of swatch and name */}
+        {groups.flatMap(([heading, groupItems]) =>
+          groupItems.map((item) => (heading ? { ...item, title: `${item.label} (${heading.toLowerCase()})` } : item)).map(entry),
+        )}
         {net}
       </ul>
     </div>
