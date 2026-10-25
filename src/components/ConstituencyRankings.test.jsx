@@ -50,9 +50,14 @@ afterEach(() => {
 const renderCard = () =>
   render(<ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
 
-const switchButton = (name) => screen.getByRole("button", { name, exact: true });
+// The card's view: a "Show" dropdown pill, Map or Rankings
+const viewPill = () => screen.getByRole("button", { name: /^Show constituencies as:/ });
+const chooseView = (label) => {
+  fireEvent.click(viewPill());
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${label}`) }));
+};
 
-const showRankings = () => fireEvent.click(switchButton("Rankings"));
+const showRankings = () => chooseView("Rankings");
 
 const bodyRows = (table) =>
   within(table)
@@ -71,25 +76,18 @@ async function renderRankings() {
 }
 
 describe("The map card's Map / Rankings switch", () => {
-  it("is a group of two pressed buttons, Map first", () => {
+  it("is a Show dropdown pill, Map first", () => {
     renderCard();
-    const group = screen.getByRole("group", { name: "Show constituencies as" });
-    const buttons = within(group).getAllByRole("button");
-    expect(buttons.map((button) => button.textContent)).toEqual(["Map", "Rankings"]);
-    expect(switchButton("Map")).toHaveAttribute("aria-pressed", "true");
-    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "false");
-    // Real buttons: Tab reaches them, Enter and Space press them.
-    buttons.forEach((button) => {
-      expect(button.tagName).toBe("BUTTON");
-      button.focus();
-      expect(button).toHaveFocus();
-    });
+    expect(viewPill()).toHaveAccessibleName("Show constituencies as: Map");
+    fireEvent.click(viewPill());
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent.replace("✓", "")),
+    ).toEqual(["Map", "Rankings"]);
   });
 
   it("switches the description, the controls and the body, and keeps one title", async () => {
     const { container } = await renderRankings();
-    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "true");
-    expect(switchButton("Map")).toHaveAttribute("aria-pressed", "false");
+    expect(viewPill()).toHaveAccessibleName("Show constituencies as: Rankings");
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent(
       "Constituency-level impacts, 2029-30",
     );
@@ -105,7 +103,7 @@ describe("The map card's Map / Rankings switch", () => {
     // The map stays mounted, hidden, so it keeps its zoom.
     expect(container.querySelector(".map-content")).toHaveAttribute("hidden");
 
-    fireEvent.click(switchButton("Map"));
+    chooseView("Map");
     expect(screen.getByLabelText("Search constituency")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Rank by/ })).toBeNull();
     expect(container.querySelector(".map-content")).not.toHaveAttribute("hidden");
@@ -117,13 +115,13 @@ describe("The map card's Map / Rankings switch", () => {
     const { unmount } = await renderRankings();
     expect(new URLSearchParams(window.location.search).get("map")).toBe("rankings");
     expect(new URLSearchParams(window.location.search).get("policies")).toBe("a");
-    fireEvent.click(switchButton("Map"));
+    chooseView("Map");
     expect(new URLSearchParams(window.location.search).has("map")).toBe(false);
     unmount();
 
     window.history.replaceState({}, "", "/?map=rankings");
     renderCard();
-    expect(switchButton("Rankings")).toHaveAttribute("aria-pressed", "true");
+    expect(viewPill()).toHaveAccessibleName("Show constituencies as: Rankings");
     expect(await screen.findByRole("table", { name: /Highest average change/ })).toBeInTheDocument();
   });
 });
@@ -161,7 +159,7 @@ describe("The Rankings view", () => {
     expect(within(table).getByRole("columnheader", { name: "Change (£)" })).toBeInTheDocument();
     expect(within(table).getByText("+£310")).toBeInTheDocument();
     expect(bodyRows(table).at(-1)).toBe("Glen Ardoch");
-    fireEvent.click(switchButton("Map"));
+    chooseView("Map");
     expect(screen.getByRole("button", { name: /Show the change as/ })).toHaveTextContent(
       "£ per household",
     );

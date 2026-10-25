@@ -27,7 +27,7 @@ export function useNarrowViewport() {
  * Chart colours by meaning, the same on every tab: the JS mirror of the
  * --c-* tokens in src/app/globals.css (SVG and PNG exports need literal
  * values, so charts take these rather than var(--c-*)). chartTheme.test.js
- * keeps the two equal. Policy colours are in policyConfig.js.
+ * keeps the two equal. Policy colours come from measureCatalogue.jsx.
  */
 export const CHART_COLOURS = {
   gain: "#319795",
@@ -42,6 +42,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
+  hover: "#EEF6F6",
   obr: "#9CA3AF",
   obrText: "#6B7280",
   net: "#000000",
@@ -71,6 +72,15 @@ export const CHART_COLOURS = {
 };
 
 // Light horizontal gridlines only.
+/** "Before" is a grey dashed line on every chart, "after" a teal solid one */
+export const BEFORE_DASH = "6 4";
+
+/** A reference line or series (all people, all ages, "You"): one dashed style */
+export const REFERENCE_DASH = "4 3";
+
+/** The hover cursor behind a bar or row, on every chart */
+export const HOVER_CURSOR = { fill: "#EEF6F6" };
+
 export const GRID_PROPS = {
   vertical: false,
   stroke: CHART_COLOURS.grid,
@@ -153,4 +163,77 @@ export function shortFiscalYearTick(year) {
 export function fiscalYearTick(year) {
   const y = Number(year);
   return `${y}-${(y + 1).toString().slice(-2)}`;
+}
+
+/**
+ * Every y axis on the dashboard includes 0: an axis over
+ * [min(0, data min), max(0, data max)] with about five round steps (1, 2,
+ * 2.5 or 5 x 10^n), padded by `pad` of the span on the side away from 0,
+ * so a small move is never drawn as a large one. Where values go negative,
+ * 0 stays inside the axis. Returns { domain, ticks }.
+ */
+export function zeroBasedAxis(values, { pad = 0.05 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  let lo = Math.min(0, ...vals);
+  let hi = Math.max(0, ...vals);
+  const span = hi - lo || 1;
+  if (lo < 0) lo -= span * pad;
+  if (hi > 0 || lo === 0) hi += span * pad;
+  const raw = (hi - lo) / 5;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  const start = Math.floor(lo / step) * step;
+  const end = Math.ceil(hi / step) * step;
+  const ticks = [];
+  for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/**
+ * The x axis of a salary sweep: from £0 to exactly the sweep's last point,
+ * so no axis runs past the data, with ticks at a round step inside it
+ * (£0, £50k … £200k for a sweep to £225k). Every chart of one sweep takes
+ * the same axis, so its "You" line sits at the same place in each.
+ *
+ * @param {number} max - The sweep's last point
+ * @returns {{domain: [number, number], ticks: number[]}}
+ */
+export function sweepAxis(max) {
+  const steps = [1000, 2000, 5000, 10000, 20000, 25000, 50000, 100000];
+  const top = max > 0 ? max : 1;
+  const step = steps.find((candidate) => top / candidate <= 5) ?? steps[steps.length - 1];
+  const ticks = [];
+  for (let value = 0; value <= top + 1e-9; value += step) ticks.push(value);
+  return { domain: [0, top], ticks };
+}
+
+// Width a full fiscal-year tick ("2027-28") needs at 12px, with a gap
+const FISCAL_TICK_WIDTH = 64;
+
+/**
+ * Fiscal-year ticks that fit the plot: the full "2027-28" label, every
+ * year if there is room, otherwise every second or third year counted from
+ * `base` (the base year, 2027-28, is always a tick when given), and always
+ * the first and last year. A tick too close to the first or last is
+ * dropped, so labels never touch. The tooltip still names every year.
+ * Returns the years to label (for Recharts' `ticks`).
+ */
+export function fiscalYearTicks(years, plotWidth, { base } = {}) {
+  const list = [...years];
+  if (list.length <= 2 || !plotWidth) return list;
+  const per = plotWidth / list.length;
+  const step = Math.max(1, Math.ceil(FISCAL_TICK_WIDTH / per));
+  if (step === 1) return list;
+  const anchor = list.includes(base) ? list.indexOf(base) : 0;
+  const first = 0;
+  const last = list.length - 1;
+  const picked = new Set([first, last]);
+  for (let i = 0; i < list.length; i += 1) {
+    if ((i - anchor) % step !== 0) continue;
+    // Keep clear of the first and last, which are always shown
+    if (i !== first && i - first < step) continue;
+    if (i !== last && last - i < step) continue;
+    picked.add(i);
+  }
+  return [...picked].sort((a, b) => a - b).map((i) => list[i]);
 }

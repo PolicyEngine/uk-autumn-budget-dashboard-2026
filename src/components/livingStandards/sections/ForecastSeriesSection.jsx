@@ -10,7 +10,7 @@ import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, OUTTURN_COLOUR, PROJECTION_COLOUR } from "../../../utils/livingStandards/baseline";
 import {
   changeClass,
-  forecastName,
+  forecastSeriesLabel,
   pctLabel,
   percentAxis,
   ppLabel,
@@ -28,12 +28,12 @@ const pctText = (v) => `${formatOneDp(v)}%`;
 
 /** Line and column names: the forecasts' labels, or for a derived series what it is derived from. */
 export function forecastNames(forecast, derived) {
-  const pre = forecast.pre_label || "Pre-Budget forecast";
-  const post = forecast.post_label || "Budget forecast";
+  const pre = forecastSeriesLabel(forecast.pre_label) || "OBR forecast";
+  const post = forecastSeriesLabel(forecast.post_label) || "Latest OBR forecast";
   if (!derived) return { pre, post };
   return {
-    pre: `PolicyEngine, from ${forecastName(pre)} (pre-Budget)`,
-    post: `PolicyEngine, from ${forecastName(post)}`,
+    pre: `PolicyEngine, from ${pre}`,
+    post: `PolicyEngine, from ${post}`,
   };
 }
 
@@ -64,6 +64,20 @@ function forecastCsv(series, rows, published, names, source) {
   });
 }
 
+// Each forecast series' title icon, as the headline tiles' are
+const SERIES_ICONS = {
+  cpi: "tag",
+  cpih: "tag",
+  cpi_ahc: "tag",
+  rpi: "receipt",
+  earnings: "briefcase",
+  non_labour_income: "coins",
+  house_prices: "house",
+  rent: "key",
+  social_rent: "key",
+  mortgage_interest: "percent",
+};
+
 function ForecastCard({ series, forecast, published, view }) {
   const rows = toRows(series, published);
   if (!rows.length) return null;
@@ -73,17 +87,13 @@ function ForecastCard({ series, forecast, published, view }) {
   const sourceText = forecastSourceText(forecast, derived);
   const csv = () => forecastCsv(series, rows, published, names, sourceText);
   const period = rowsPeriod(rows);
+  // The basis and the source are said once, in the section's intro; a card
+  // says only what is its own: a series PolicyEngine derives
   const common = {
     title: series.label,
+    icon: SERIES_ICONS[series.key],
     period,
-    about: `Annual growth rate (%), calendar years: growth in the annual average.${
-      published ? "" : " The Budget forecast is not yet published."
-    }`,
-    notes: [
-      series.source && (published ? `Pre-Budget: ${series.source}` : series.source),
-      published && series.post_source && `Budget: ${series.post_source}`,
-    ],
-    source: <ForecastSource forecast={forecast} derived={derived} />,
+    summary: derived ? "A PolicyEngine derivation from the OBR forecast, not an OBR series." : null,
     sourceText,
   };
 

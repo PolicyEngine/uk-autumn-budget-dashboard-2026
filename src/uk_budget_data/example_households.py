@@ -125,7 +125,7 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "One adult aged 30 with a Plan 2 student loan, renting a "
             "one-bedroom home privately in Manchester for £1,007 a month and "
             "spending £1,040 a year on electricity; the unfrozen Plan 2 "
-            "threshold lowers their repayments from 2027-28."
+            "threshold, when selected, lowers their repayments from 2027-28."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -147,8 +147,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "A couple aged 35 and 33 with children aged 3, 6 and 8 and one "
             "earner, renting a three-bedroom home privately in Manchester "
             "for £1,441 a month and spending £957 a year on petrol and "
-            "£1,040 on electricity; the fuel duty and road fuel VAT measures "
-            "lower what they pay at the pump."
+            "£1,040 on electricity; the fuel duty and road fuel VAT measures, "
+            "when selected, lower what they pay at the pump."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Earner's employment income",
@@ -177,8 +177,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "A lone parent aged 32 with children aged 6 and 9, renting a "
             "two-bedroom home privately in Manchester for £1,239 a month and "
             "spending £1,040 a year on electricity; while they receive "
-            "Universal Credit, the Warm Home Discount top-up adds £100 in "
-            "2026-27."
+            "Universal Credit, the Warm Home Discount top-up, when selected, "
+            "adds £100 in 2026-27."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -204,8 +204,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "A couple aged 70 and 68 who own their home outright, each on "
             "the full new State Pension (£241.30 a week in 2026-27); the "
             "older partner has the private pension; they spend £1,040 a year "
-            "on electricity, and the State Pension income tax protection "
-            "lowers their income tax from 2027-28."
+            "on electricity, and the State Pension income tax protection, "
+            "when selected, lowers their income tax from 2027-28."
         ),
         x_variable=PRIVATE_PENSION_INCOME,
         x_label="Older partner's private pension income",
@@ -229,7 +229,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "One adult aged 45 who owns their home with a mortgage, with "
             "£3,000 a year of savings interest and £5,000 of dividends on "
             "top of their pay, spending £1,040 a year on electricity; the "
-            "frozen income tax thresholds raise their income tax from 2031-32."
+            "threshold freeze, when selected, raises their income tax from "
+            "2031-32."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis, BEFORE_DASH, REFERENCE_DASH } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -9,14 +9,14 @@ import useElementWidth from "../../hooks/useElementWidth";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
+import TitleIcon from "../TitleIcon";
 
-export const BEFORE_COLOUR = CHART_COLOURS.noChange;
+export const BEFORE_COLOUR = CHART_COLOURS.before;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
 const LOSS_COLOUR = CHART_COLOURS.loss;
 const ZERO_LINE = CHART_COLOURS.text;
 const YOU_COLOUR = CHART_COLOURS.text;
 const DROP_FILL = CHART_COLOURS.mutedFill;
-const BEFORE_DASH = "6 4";
 
 export const LEGEND_ITEMS = [
   { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
@@ -86,8 +86,8 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
   const drops = useMemo(() => netIncomeDrops(points), [points]);
 
-  const xTicks = roundTicks(sweep.max);
-  const xMax = xTicks[xTicks.length - 1];
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
+  const xMax = xDomain[1];
   const yTicks = roundTicks(Math.max(1, ...points.map((p) => Math.max(p.before, p.after))));
   const cTicks = changeTicks(Math.max(...points.map((p) => Math.abs(p.change))));
 
@@ -164,7 +164,10 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
     <div className="card single-year-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="trend" />
+            <span className="title-text">{title}</span>
+          </h3>
           <p className="chart-description">
             Your household&apos;s net income as your salary varies, with partner income and everything else held fixed.
           </p>
@@ -249,7 +252,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             {/* You */}
             {youX !== null && (
               <g className="earnings-you">
-                <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray="4 3" />
+                <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
                 {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />}
                 <text
                   x={youX + (youX > left + plotW - 40 ? -6 : 6)}

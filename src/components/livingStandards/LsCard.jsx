@@ -4,6 +4,7 @@ import Disclosure from "../Disclosure";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { fyDash } from "../../utils/livingStandards/outlook";
 import { plainWords } from "./sources";
+import TitleIcon from "../TitleIcon";
 
 /**
  * A Living standards chart card in the dashboard's card layout: the title
@@ -26,6 +27,7 @@ import { plainWords } from "./sources";
  */
 export default function LsCard({
   title,
+  icon,
   period,
   summary,
   about,
@@ -62,12 +64,10 @@ export default function LsCard({
       <div className="chart-header">
         <div>
           <h3>
-            {title}
-            {period && (
-              <>
-                , <span className="nowrap">{period}</span>
-              </>
-            )}
+            {icon && <TitleIcon name={icon} />}
+            {/* The years are on the axes, the From/to pill and the headline
+                sentence; the downloads keep them in their titles */}
+            <span className="title-text">{title}</span>
           </h3>
           {summary && <p className="chart-description">{summary}</p>}
         </div>

@@ -6,7 +6,14 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import OBRComparisonTable from "./OBRComparisonTable";
+import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonFoot } from "./OBRComparisonTable";
+
+// The chart/table choice: a "Show" dropdown pill
+const showPill = () => screen.getByRole("button", { name: /^Show as:/ });
+const show = (label) => {
+  fireEvent.click(showPill());
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${label}`) }));
+};
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -56,7 +63,8 @@ describe("the OBR comparison table", () => {
       }),
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Table" }));
+    await screen.findByRole("button", { name: /^Show as:/ });
+    show("Table");
 
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
@@ -80,7 +88,7 @@ describe("the OBR comparison table", () => {
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
     const basis = await screen.findByRole("button", { name: "OBR basis: Static" });
-    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    show("Table");
     fireEvent.click(basis);
     fireEvent.click(screen.getByRole("option", { name: /Post-behavioural/ }));
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
@@ -89,7 +97,7 @@ describe("the OBR comparison table", () => {
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
   });
 
-  it("keeps the intro to one short sentence with the EFO link", async () => {
+  it("keeps the intro to one short sentence naming this year's OBR costings, from the sources config", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -100,14 +108,11 @@ describe("the OBR comparison table", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    const link = await screen.findByRole("link", { name: "EFO" });
-    expect(link).toHaveAttribute(
-      "href",
-      "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/",
-    );
+    await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
     expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates against the OBR's November 2025 costings (EFO), £bn a year; positive values raise revenue.",
+      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings, £bn a year; positive values raise revenue.",
     );
+    expect(container).not.toHaveTextContent("November 2025");
   });
 });
 
@@ -123,14 +128,14 @@ describe("the OBR comparison's chart and table switch", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    const chart = await screen.findByRole("button", { name: "Chart" });
-    const table = screen.getByRole("button", { name: "Table" });
-    expect(chart).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("button", { name: /^Show as:/ })).toHaveAccessibleName(
+      "Show as: Chart",
+    );
     expect(container.querySelector(".obr-dumbbell")).not.toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
 
-    fireEvent.click(table);
-    expect(table).toHaveAttribute("aria-pressed", "true");
+    show("Table");
+    expect(showPill()).toHaveAccessibleName("Show as: Table");
     expect(container.querySelector(".obr-dumbbell")).toBeNull();
     expect(screen.getByRole("table")).toBeInTheDocument();
   });
@@ -194,7 +199,7 @@ describe("the OBR comparison at 2031-32", () => {
       "£0",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Table" }));
+    show("Table");
     const row = screen.getByRole("row", { name: /2 child limit repeal/ });
     const cells = within(row).getAllByRole("cell");
     const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
@@ -210,7 +215,8 @@ it("orders OBR rows from the catalogue rather than CSV insertion order", async (
   const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-1,-2`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
   vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
   const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
-  fireEvent.click(await screen.findByRole("button", { name: "Table" }));
+  await screen.findByRole("button", { name: /^Show as:/ });
+  show("Table");
   expect([...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent)).toEqual(catalogue.displayable.map((measure) => measure.label));
   expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA, ALPHA]);
 });
@@ -224,8 +230,57 @@ describe("before the OBR costs the measures", () => {
         <OBRComparisonTable selectedPolicies={[ALPHA]} selectedYear={YEAR} />
       </MeasureCatalogueProvider>,
     );
-    expect(await screen.findByText("Shown once the OBR publishes its costings for these measures.")).toBeInTheDocument();
+    expect(await screen.findByText("The OBR has not costed the selected measures.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Table" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Show as:/ })).not.toBeInTheDocument();
+  });
+});
+
+// #128's foot under the budgetary chart: the comparison is offered only
+// when a verified OBR file costs a selected measure
+describe("the OBR comparison foot", () => {
+  const fixture = measureCatalogueFixture({ held: false });
+  const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: Object.fromEntries([ALPHA, BETA].map((id) => [id, { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === id) }])) });
+  const COSTED = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},Alpha,${YEAR},-1,-2`].join("\n");
+  // The table beside it settles from the same file, so once it shows its
+  // state the foot has had its answer too
+  const renderBoth = (selectedPolicies) => renderReact(
+    <MeasureCatalogueProvider catalogue={catalogue}>
+      <div data-testid="foot"><ObrComparisonFoot selectedPolicies={selectedPolicies} selectedYear={YEAR} /></div>
+      <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={YEAR} />
+    </MeasureCatalogueProvider>,
+  );
+
+  it("offers the comparison when the OBR file costs a selected measure", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
+    renderBoth([ALPHA]);
+    const foot = screen.getByTestId("foot");
+    expect(await within(foot).findByText("Compare with OBR estimates")).toBeInTheDocument();
+  });
+
+  it("shows nothing while no OBR file can be bound to the approved results", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("not bound"); }));
+    renderBoth([ALPHA]);
+    expect(await screen.findByText(/The OBR comparison is unavailable/)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing when the OBR has costed none of the selected measures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
+    renderBoth([BETA]);
+    expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing for an empty selection, or for an OBR row with no figure", async () => {
+    const blank = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},Alpha,${YEAR},,`].join("\n");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(blank)));
+    renderBoth([ALPHA]);
+    expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    const { container } = renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}><ObrComparisonFoot selectedPolicies={[]} selectedYear={YEAR} /></MeasureCatalogueProvider>,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

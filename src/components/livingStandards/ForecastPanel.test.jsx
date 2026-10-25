@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
@@ -101,14 +101,15 @@ describe("the fixtures", () => {
   });
 });
 
-describe("Forecast changes before the Budget forecast", () => {
-  it("draws the pre-Budget line only and says the Budget forecast is to come", async () => {
+describe("Forecast changes with one forecast", () => {
+  it("draws the one forecast, named from the sources config, and nothing about a later one", async () => {
     await renderForecast(unpublishedOutlook());
-    expect(screen.getByText(/will add the Autumn Budget 2026 forecast once the OBR publishes it/)).toBeInTheDocument();
-    const cpi = card(/^CPI inflation, 2027 to 2030$/);
+    expect(screen.getByText(/The OBR forecast behind the baseline: calendar-year growth, from the/)).toBeInTheDocument();
+    expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
+    const cpi = card(/^CPI inflation$/);
     const legend = cpi.querySelector(".chart-legend");
-    expect(legend).toHaveTextContent("OBR March 2026 (pre-Budget)");
-    expect(legend).not.toHaveTextContent(UNPUBLISHED_LABEL);
+    expect(legend).toHaveTextContent("OBR, March 2026");
+    expect(legend).not.toHaveTextContent("Budget forecast");
     // The tile shows one value and no change
     expect(screen.getByText(pct(cpiPre()))).toBeInTheDocument();
     expect(screen.queryByText(/pp$/)).toBeNull();
@@ -130,6 +131,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Baseline outlook" }));
     expect(await screen.findByRole("heading", { name: "Incomes" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Poverty" })).toBeInTheDocument();
-    expect(screen.queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
+    // The forecast view stays mounted, hidden, since #128; the open one
+    // holds nothing back
+    expect(within(screen.getByRole("tabpanel")).queryByText("Budget-day forecast is unavailable until verified")).toBeNull();
   });
 });
