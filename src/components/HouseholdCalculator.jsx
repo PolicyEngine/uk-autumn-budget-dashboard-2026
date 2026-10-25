@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
@@ -20,6 +20,7 @@ import useCollapse from "../hooks/useCollapse";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
 // The form's answers, each at a typical value until changed. Sources:
@@ -384,11 +385,22 @@ function HouseholdCalculator({
     requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
 
+  const resultsRef = useRef(null);
   const calculate = (event) => {
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
     setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now() });
+    // On a phone the results start screens below the button: bring the
+    // waiting message into view, so pressing Calculate visibly does something
+    requestAnimationFrame(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+      const { top } = target.getBoundingClientRect();
+      if (top > window.innerHeight * 0.6) {
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      }
+    });
   };
 
   // Whether a field applies to the answers so far (rent only when renting)
@@ -631,7 +643,7 @@ function HouseholdCalculator({
           {FORM_SECTIONS.map(renderSection)}
         </form>
 
-        <div className="household-results" role="region" aria-label="Results">
+        <div className="household-results" role="region" aria-label="Results" ref={resultsRef}>
           <SingleYearHeadline
             result={householdResult}
             year={submitted?.year ?? year}

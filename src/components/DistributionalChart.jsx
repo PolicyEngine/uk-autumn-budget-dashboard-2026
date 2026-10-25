@@ -34,8 +34,9 @@ import {
   legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
+  zeroBasedAxis,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 
@@ -129,9 +130,11 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     );
   }, [rawData, selectedPolicies]);
 
-  // Calculate y-axis domain across ALL years, symmetrical around zero
+  // The y axis for the year shown, from the lowest to the highest stack and
+  // always including 0 (not mirrored about 0, so no half of the plot is empty)
   const calculateYAxisDomain = () => {
-    const allYears = DISPLAY_YEARS;
+    // The year shown, so the axis fits its bars
+    const allYears = [selectedYear];
     let minValue = 0;
     let maxValue = 0;
 
@@ -167,20 +170,10 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       });
     });
 
-    // Round to nice numbers and make symmetrical
-    const roundToNice = (val) => {
-      if (val <= 1) return Math.ceil(val * 2) / 2; // Round to 0.5
-      if (val <= 5) return Math.ceil(val); // Round to 1
-      return Math.ceil(val / 2) * 2; // Round to 2
-    };
-
-    const maxAbs = Math.max(Math.abs(minValue), Math.abs(maxValue)) + 0.2;
-    const rounded = roundToNice(maxAbs);
-
-    return [-rounded, rounded];
+    return zeroBasedAxis([minValue, maxValue]);
   };
 
-  const yAxisDomain = calculateYAxisDomain();
+  const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -290,24 +283,12 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               />
               <YAxis
                 domain={yAxisDomain}
-                width={axisWidth(yAxisDomain, formatPercent)}
+                ticks={yAxisTicks}
+                width={axisWidth(yAxisTicks, formatPercent)}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={formatPercent}
                 tick={TICK_STYLE}
-                ticks={(() => {
-                  const [min, max] = yAxisDomain;
-                  const range = max - min;
-                  let interval = 0.5;
-                  if (range > 4) interval = 1;
-                  if (range > 10) interval = 2;
-                  const ticks = [];
-                  for (let i = min; i <= max + 0.001; i += interval) {
-                    ticks.push(Math.round(i * 10) / 10);
-                  }
-                  if (!ticks.includes(0)) ticks.push(0);
-                  return ticks.sort((a, b) => a - b);
-                })()}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 

@@ -34,8 +34,9 @@ import {
   legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
+  zeroBasedAxis,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 
@@ -112,9 +113,11 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     );
   }, [rawData, selectedPolicies]);
 
-  // Calculate y-axis domain across ALL years, symmetrical around zero
+  // The y axis for the year shown, from the lowest to the highest stack and
+  // always including 0 (not mirrored about 0, so no half of the plot is empty)
   const calculateYAxisDomain = () => {
-    const allYears = DISPLAY_YEARS;
+    // The year shown, so the axis fits its bars
+    const allYears = [selectedYear];
     let minValue = 0;
     let maxValue = 0;
 
@@ -152,20 +155,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       });
     });
 
-    // Round to nice numbers and make symmetrical
-    const roundToNice = (val) => {
-      if (val <= 500) return Math.ceil(val / 100) * 100;
-      if (val <= 2000) return Math.ceil(val / 500) * 500;
-      return Math.ceil(val / 1000) * 1000;
-    };
-
-    const maxAbs = Math.max(Math.abs(minValue), Math.abs(maxValue)) + 50;
-    const rounded = roundToNice(maxAbs);
-
-    return [-rounded, rounded];
+    return zeroBasedAxis([minValue, maxValue]);
   };
 
-  const yAxisDomain = calculateYAxisDomain();
+  const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -281,25 +274,12 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               />
               <YAxis
                 domain={yAxisDomain}
+                ticks={yAxisTicks}
                 tickFormatter={formatCurrency}
                 tick={TICK_STYLE}
-                width={axisWidth(yAxisDomain, formatCurrency)}
+                width={axisWidth(yAxisTicks, formatCurrency)}
                 axisLine={false}
                 tickLine={false}
-                ticks={(() => {
-                  const [min, max] = yAxisDomain;
-                  const range = max - min;
-                  let interval = 100;
-                  if (range > 1000) interval = 250;
-                  if (range > 2000) interval = 500;
-                  if (range > 5000) interval = 1000;
-                  const ticks = [];
-                  for (let i = min; i <= max + 0.001; i += interval) {
-                    ticks.push(Math.round(i));
-                  }
-                  if (!ticks.includes(0)) ticks.push(0);
-                  return ticks.sort((a, b) => a - b);
-                })()}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 

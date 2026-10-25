@@ -103,7 +103,12 @@ function ChartTooltip({
  * default, flipped left near the right edge, as Recharts does), 12px away,
  * and kept inside the plot so it never covers the title or description.
  */
+// On a touch screen (no hover) a chart's tooltip opens on a tap
+const TOUCH =
+  typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches;
+
 export const TOOLTIP_PROPS = {
+  trigger: TOUCH ? "click" : "hover",
   offset: 12,
   allowEscapeViewBox: { x: false, y: false },
   isAnimationActive: false,

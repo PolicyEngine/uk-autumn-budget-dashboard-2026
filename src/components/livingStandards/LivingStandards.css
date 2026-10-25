@@ -633,9 +633,11 @@
   margin-bottom: 24px;
 }
 
-@media (max-width: 700px) {
+/* One tile a row below 900px, where three are too narrow for the tag */
+@media (max-width: 900px) {
   .forecast-tiles {
     grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
   }
 }
 
@@ -681,11 +683,17 @@
   text-decoration: underline;
 }
 
+/* The tag drops to its own row when it does not fit beside the figure */
 .forecast-tile-body {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
+}
+
+.forecast-tile-sub {
+  white-space: nowrap;
 }
 
 .forecast-tile-value {
@@ -705,11 +713,12 @@
 
 .forecast-tile-tag {
   flex-shrink: 0;
+  max-width: 100%;
   margin: 0 0 4px;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--pe-gray-100);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--pe-gray-500);
 }
 

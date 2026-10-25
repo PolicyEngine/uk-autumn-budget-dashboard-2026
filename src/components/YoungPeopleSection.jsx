@@ -46,6 +46,7 @@ import {
   axisWidth,
   fiscalYearTick,
   CHART_COLOURS,
+  zeroBasedAxis,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -141,15 +142,6 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
   );
 }
 
-/** Ticks for a symmetric domain: steps of 50, 100, 250, 500 or 1,000. */
-function niceDomain(maxAbs) {
-  const steps = [25, 50, 100, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => maxAbs / candidate <= 4) ?? 5000;
-  const top = Math.max(step, Math.ceil(maxAbs / step) * step);
-  const ticks = [];
-  for (let tick = -top; tick <= top + 1e-9; tick += step) ticks.push(tick);
-  return { domain: [-top, top], ticks };
-}
 
 /** Load age_impact.csv once per mount, typed by the publication contract. */
 function useAgeImpactRows() {
@@ -219,11 +211,13 @@ function AgeTick({ x, y, payload, narrow }) {
   );
 }
 
-/** A stable symmetric axis for the band view, over every year. */
+/** A stable axis for the band view, over every year: from the lowest to the
+ * highest stack, always including 0, not mirrored about it. */
 function useBandDomain(rows, policies, selectedPolicies) {
   return useMemo(() => {
     const years = [...new Set((rows ?? []).map((row) => row.year))];
-    let maxAbs = 0;
+    let lo = 0;
+    let hi = 0;
     for (const year of years) {
       for (const point of meanChangeByBand(rows, policies, selectedPolicies, year)) {
         let up = 0;
@@ -233,10 +227,11 @@ function useBandDomain(rows, policies, selectedPolicies) {
           if (value > 0) up += value;
           else down += value;
         }
-        maxAbs = Math.max(maxAbs, up, -down);
+        hi = Math.max(hi, up);
+        lo = Math.min(lo, down);
       }
     }
-    return niceDomain(maxAbs);
+    return zeroBasedAxis([lo, hi]);
   }, [rows, policies, selectedPolicies]);
 }
 

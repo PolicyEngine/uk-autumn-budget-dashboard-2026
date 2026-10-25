@@ -1195,3 +1195,8 @@
     animation-duration: 2.4s;
   }
 }
+
+/* Scrolled to on Calculate: clear of the sticky title band and tabs */
+.household-results {
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+}
