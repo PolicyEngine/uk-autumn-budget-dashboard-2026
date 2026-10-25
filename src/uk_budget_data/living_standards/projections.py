@@ -100,13 +100,14 @@ def gini(values, weights):
     return float(1 - np.sum(wf * (lorenz + lorenz_prev)))
 
 
-def decile_medians(values, weights):
-    """Person-weighted decile groups (ranked within the year), median of each."""
+def decile_medians(values, weights, groups=10):
+    """Person-weighted income groups (ranked within the year), median of each:
+    deciles by default, quintiles with ``groups=5``."""
     order = np.argsort(values, kind="stable")
     v, w = values[order], weights[order].astype(np.float64)
     cw = np.cumsum(w) / w.sum()
-    group = np.minimum((cw * 10 - 1e-12).astype(int), 9)
-    return [wmedian(v[group == d], w[group == d]) for d in range(10)]
+    group = np.minimum((cw * groups - 1e-12).astype(int), groups - 1)
+    return [wmedian(v[group == d], w[group == d]) for d in range(groups)]
 
 
 def rate(flag, weight, mask):
@@ -235,6 +236,7 @@ def baseline_year(sim, year, snapshot_years=()):
         )
         res[f"median_equivalised_income_{basis}"] = wmedian(inc, w)
         res[f"decile_medians_{basis}"] = decile_medians(inc, w)
+        res[f"quintile_medians_{basis}"] = decile_medians(inc, w, groups=5)
         order = np.argsort(inc, kind="stable")
         cw = np.cumsum(w[order]) / w.sum()
         quint = np.minimum((cw * 5 - 1e-12).astype(int), 4)

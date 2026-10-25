@@ -10,7 +10,6 @@ import ViewCard from "../ViewCard";
 import useHouseholdIncomeView from "./LivingStandardsSection";
 import useInequalityView from "./InequalitySection";
 import useDecileView from "./DecileGrowthSection";
-import useHalvesView from "./NonPensionerSplitSection";
 import usePovertyRateView from "./PovertySection";
 import useDepthView from "./DeepPovertySection";
 
@@ -35,8 +34,8 @@ IncomesOverTimeCard.requires = "living_standards";
 
 export function GrowthCard({ data }) {
   const [show, setShow] = useState("decile");
-  const decile = useDecileView(data);
-  const halves = useHalvesView(data);
+  const decile = useDecileView(data, "decile");
+  const quintile = useDecileView(data, "quintile");
   return (
     <ViewCard
       title="Growth across the distribution"
@@ -45,7 +44,7 @@ export function GrowthCard({ data }) {
       onChange={setShow}
       views={[
         { value: "decile", label: "By decile", view: decile },
-        { value: "halves", label: "Lower- vs higher-income halves", badge: "Halves", view: halves },
+        { value: "quintile", label: "By quintile", view: quintile },
       ]}
     />
   );

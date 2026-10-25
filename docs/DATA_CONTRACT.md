@@ -66,13 +66,14 @@ Both deflators (OBR CPI for BHC, CPI after housing costs for AHC) are rebased to
 All are top-level keys. Years are fiscal, `"2027-28"` to `"2031-32"` (inequality projection from `"2024-25"`). Real values are in 2027-28 prices. Each section carries its own `notes` (section-specific caveats, one sentence each; may be empty).
 
 ### `income_by_decile`
-Real growth in equivalised income by person-weighted income decile (re-ranked each year; growth compares positions, not people).
+Real growth in equivalised income by person-weighted income decile, and by quintile (re-ranked each year; growth compares positions, not people). Quintiles carry their own medians, not two deciles' averaged.
 ```json
 {
-  "base_year": "2027-28", "end_year": "2031-32", "statistic": "...", "deciles": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "base_year": "2027-28", "end_year": "2031-32", "statistic": "...", "deciles": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "quintiles": [1, 2, 3, 4, 5],
   "bases": {"bhc": "...", "ahc": "..."},
   "bhc": {"cumulative_growth_to_end": [10 fractions],
-          "by_year": [{"year": "2027-28", "real_median": [10 x £], "cumulative_growth": [10 fractions vs 2027-28]}]},
+          "by_year": [{"year": "2027-28", "real_median": [10 x £], "cumulative_growth": [10 fractions vs 2027-28]}],
+          "quintile_by_year": [{"year": "2027-28", "real_median": [5 x £], "cumulative_growth": [5 fractions vs 2027-28]}]},
   "ahc": {"...same shape..."},
   "non_pensioner_split": {"basis": "ahc", "statistic": "...", "groups": {"below_middle": "...", "above_middle": "..."},
                           "series": {"below_middle": [{"year": "2027-28", "real_mean": 0, "cumulative_growth": 0.0}], "above_middle": []}},

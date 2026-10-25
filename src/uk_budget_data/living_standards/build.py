@@ -254,14 +254,14 @@ def build_outlook(
     }
 
     # 1. Real income growth by decile, and the non-pensioner split.
-    def decile_block(basis):
+    def group_years(basis, key):
         base = [
             real(v, PRICE_BASE_YEAR, basis)
-            for v in P(PRICE_BASE_YEAR)[f"decile_medians_{basis}"]
+            for v in P(PRICE_BASE_YEAR)[f"{key}_medians_{basis}"]
         ]
         by_year = []
         for y in years:
-            r = [real(v, y, basis) for v in P(y)[f"decile_medians_{basis}"]]
+            r = [real(v, y, basis) for v in P(y)[f"{key}_medians_{basis}"]]
             by_year.append(
                 {
                     "year": fy(y),
@@ -271,9 +271,15 @@ def build_outlook(
                     ],
                 }
             )
+        return by_year
+
+    def decile_block(basis):
+        by_year = group_years(basis, "decile")
         return {
             "cumulative_growth_to_end": by_year[-1]["cumulative_growth"],
             "by_year": by_year,
+            # Quintiles' own medians (not two deciles' averaged), each year
+            "quintile_by_year": group_years(basis, "quintile"),
         }
 
     def split_series(key):
@@ -300,6 +306,7 @@ def build_outlook(
         "end_year": fy(end),
         "statistic": f"Median equivalised income within each person-weighted income decile, real {fy(PRICE_BASE_YEAR)} prices",
         "deciles": list(range(1, 11)),
+        "quintiles": list(range(1, 6)),
         "bases": {
             "bhc": "Before housing costs (deflated by OBR CPI)",
             "ahc": "After housing costs (deflated by CPI excluding housing costs)",

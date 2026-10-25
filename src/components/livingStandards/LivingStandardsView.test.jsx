@@ -124,12 +124,11 @@ describe("the Living standards view", () => {
     // Poverty over time: Rate (with its Measure, Group and Period pills) or Depth
     let poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
     expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toBeInTheDocument();
-    // The view is a segmented switch (Rate | Depth), short labels in the pills
-    const views = within(poverty).getByRole("group", { name: "Poverty view" });
-    expect(within(views).getByRole("button", { name: "Rate" })).toHaveAttribute("aria-pressed", "true");
+    // The view is a "Show" pill (Rate or Depth), short labels in the pills
+    expect(within(poverty).getByRole("button", { name: /^Poverty view:/ })).toHaveTextContent("Rate");
     expect(within(poverty).getByRole("button", { name: /^Poverty measure:/ })).toHaveTextContent("Abs. BHC");
     expect(within(poverty).getByRole("button", { name: /^Population group:/ })).toHaveTextContent("All");
-    fireEvent.click(within(views).getByRole("button", { name: "Depth" }));
+    choose(poverty, "Poverty view", "Depth");
     poverty = (await heading(/^Poverty over time, 2027-28 to 2031-32$/)).closest(".ls-card");
     expect(within(poverty).queryByRole("button", { name: /^Population group:/ })).toBeNull();
     expect(within(poverty).getByText(/very deep poverty/)).toBeInTheDocument();
@@ -161,17 +160,12 @@ describe("the Living standards view", () => {
 
     // Incomes over time and Growth across the distribution
     const incomes = (await heading(/^Incomes over time/)).closest(".ls-card");
-    fireEvent.click(
-      within(within(incomes).getByRole("group", { name: "Income view" })).getByRole("button", { name: "Inequality" }),
-    );
+    choose(incomes, "Income view", "Inequality");
     expect(within(incomes).getByRole("button", { name: /^Inequality measure:/ })).toBeInTheDocument();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
-    const halves = within(within(growth).getByRole("group", { name: "Distribution view" })).getByRole("button", {
-      name: "Halves",
-    });
-    expect(halves).toHaveAttribute("title", "Lower- vs higher-income halves");
-    fireEvent.click(halves);
-    expect(within(growth).getByText(/lower-income half of non-pensioners/)).toBeInTheDocument();
+    expect(within(growth).getByText(/lowest-income tenth/)).toBeInTheDocument();
+    choose(growth, "Distribution view", "By quintile");
+    expect(within(growth).getByText(/lowest-income fifth/)).toBeInTheDocument();
 
     // A change that rounds to zero reads "no change", never "−0.0pp" or "0.0%"
     expect(document.body.textContent).not.toMatch(/[−-]0\.0(pp|%)/);
