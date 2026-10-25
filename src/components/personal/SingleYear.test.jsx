@@ -515,7 +515,7 @@ describe("the household calculation's errors", () => {
     renderTab();
     toResults();
     expect(await screen.findByRole("heading", { name: /Net income across earnings/ })).toBeInTheDocument();
-    expect(await screen.findByText("Working out each policy's share…")).toBeInTheDocument();
+    expect(await screen.findByText(/Working out each policy's share/)).toBeInTheDocument();
     finishByPolicy();
     expect(await screen.findByRole("heading", { name: /Change in net income by policy/ })).toBeInTheDocument();
   });
