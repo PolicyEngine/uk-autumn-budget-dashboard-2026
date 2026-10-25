@@ -200,6 +200,52 @@ describe("an open page follows the publication", () => {
     }), { numRuns: 15 });
   });
 
+  it("retries a failed artifact under the same manifest, keeping the selection", async () => {
+    // Review of 62febdd, finding 3: an artifact failure stayed until a
+    // reload, since an unchanged manifest skipped every recheck.
+    await fc.assert(fc.asyncProperty(
+      fc.constantFrom("receipt.json", "distributional_impact.csv"),
+      fc.constantFrom(500, 503, 404),
+      async (file, status) => {
+        window.history.replaceState({}, "", "/?policies=alpha,beta");
+        const manifest = twoMeasures();
+        const unchanged = { "manifest.json": JSON.stringify(manifest) };
+        const failing = `${manifest.measures.beta.artifact}/${file}`;
+        const healthy = dashboardFixtureFetch({ overrides: unchanged });
+        const broken = dashboardFixtureFetch({ overrides: { ...unchanged, [failing]: status } });
+        let failingNow = true;
+        const requested = [];
+        vi.stubGlobal("fetch", (url, init) => {
+          requested.push(String(url));
+          return (failingNow ? broken : healthy)(url, init);
+        });
+        const tries = () => requested.filter((url) => url.endsWith(`/data/${failing}`)).length;
+        render(<App />);
+        expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+        expect(screen.queryByTestId("distributional-figures")).toBeNull();
+
+        // A focus tries the failed file again; while it fails, no figure
+        const before = tries();
+        await act(async () => { window.dispatchEvent(new Event("focus")); });
+        await waitFor(() => expect(tries()).toBeGreaterThan(before), { timeout: 10000 });
+        expect(screen.getByText("Some selected measures are unavailable")).toBeInTheDocument();
+        expect(screen.queryByTestId("distributional-figures")).toBeNull();
+
+        // The file serves its verified bytes again: a later check recovers.
+        // A focus during a check in flight is skipped, so keep focusing.
+        failingNow = false;
+        await waitFor(async () => {
+          await act(async () => { window.dispatchEvent(new Event("focus")); });
+          expect(screen.getByTestId("distributional-figures")).toBeInTheDocument();
+        }, { timeout: 10000 });
+        expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
+        expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
+        expect(screen.queryByText(/Newer results were published/)).toBeNull();
+        cleanup();
+      },
+    ), { numRuns: 6 });
+  }, 120000);
+
   it("recovers after the initial publication request fails", async () => {
     vi.stubGlobal("fetch", async () => { throw new TypeError("offline"); });
     render(<App />);

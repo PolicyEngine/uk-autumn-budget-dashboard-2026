@@ -558,18 +558,21 @@ function App() {
     // An open page follows the publication: a newer manifest replaces the
     // figures with its own verified ones. A missing, invalid or unreachable
     // manifest takes them away until a later check verifies publication again.
+    // Under the same manifest, artifacts that failed to verify are tried again.
     let checking = false;
     const recheck = async () => {
       if (checking || controller.signal.aborted || !initialComplete) return;
       checking = true;
       try {
         const live = await loadManifest(base, { signal: controller.signal });
-        const shown = current.current?.catalogue?.manifest?.snapshotSha256 ?? null;
-        if (current.current !== null && (live?.snapshotSha256 ?? null) === shown) return;
+        const catalogue = current.current?.catalogue;
+        const shown = catalogue?.manifest?.snapshotSha256 ?? null;
+        const failed = Object.keys(catalogue?.failures ?? {}).length > 0;
+        if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return;
         const next = await loadDashboard(base, { signal: controller.signal });
         if (controller.signal.aborted) return;
         show(next);
-        setUpdated(true);
+        if ((next.catalogue.manifest?.snapshotSha256 ?? null) !== shown) setUpdated(true);
       } catch (failure) {
         if (controller.signal.aborted) return;
         current.current = null;
