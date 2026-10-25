@@ -123,7 +123,7 @@ describe("results by age", () => {
 describe("YoungPeopleSection", () => {
   it("has a linkable heading, no headline tiles and every card", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
-    const heading = screen.getByRole("heading", { level: 2, name: "Young people (under 25)" });
+    const heading = screen.getByRole("heading", { level: 2, name: "Young people (16 to 24)" });
     expect(heading.parentElement).toHaveAttribute("id", YOUNG_PEOPLE_ANCHOR);
     expect(
       await screen.findByRole("heading", { level: 3, name: /Average change by age, 2029-30/ }),

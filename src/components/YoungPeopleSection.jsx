@@ -691,7 +691,7 @@ const pick = (row) =>
   Object.fromEntries(OUTCOMES.map((outcome) => [outcome.key, row[outcome.key]]));
 
 /**
- * "Young people (under 25)": how the selected policies change household
+ * "Young people (16 to 24)": how the selected policies change household
  * incomes by age group (ONS age bands) and single year of age, with young
  * people aged 16 to 24 highlighted. It loads
  * public/data/age_impact.csv itself and follows the page's policy and
@@ -715,31 +715,42 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
   const props = { rows, policies, selectedPolicies, selectedYear, narrow };
   return (
     <>
+      {/* The page's intro, then two sections of two cards each, as All
+          households pairs its cards */}
       <SectionHeading
         id={YOUNG_PEOPLE_ANCHOR}
         className="young-people-heading"
-        title="Young people (under 25)"
+        title="Young people (16 to 24)"
         subtitle="How the selected policies change household incomes by age group, with young people aged 16 to 24 highlighted."
       />
-      <section className="report-section young-people-section" aria-label="Young people (under 25)">
-        {status === "ready" ? (
-          <>
+      {status === "ready" ? (
+        <>
+          <SectionHeading
+            title="Change by age"
+            subtitle="How household net income changes for each age group, in the selected year and over time."
+          />
+          <section className="report-section young-people-section" aria-label="Change by age">
             <div className="charts-grid">
-              {/* Both plots the same height: the nine policy rows set it */}
               <MeanChangeCard {...props} height={narrow ? 360 : 400} />
-              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+              <TrendCard {...props} height={narrow ? 340 : 400} />
             </div>
+          </section>
+          <SectionHeading
+            title="Who gains and from what"
+            subtitle="Which policies drive the change for young people, and how many people are better or worse off."
+          />
+          <section className="report-section young-people-section" aria-label="Who gains and from what">
             <div className="charts-grid">
-              <SharesCard {...props} height={narrow ? 340 : 330} />
-              <TrendCard {...props} height={narrow ? 340 : 330} />
+              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+              <SharesCard {...props} height={narrow ? 340 : 400} />
             </div>
-          </>
-        ) : (
-          <p className="view-status" role="status">
-            {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
-          </p>
-        )}
-      </section>
+          </section>
+        </>
+      ) : (
+        <p className="view-status" role="status">
+          {status === "loading" ? "Loading results by age…" : "Results by age are not available."}
+        </p>
+      )}
     </>
   );
 }

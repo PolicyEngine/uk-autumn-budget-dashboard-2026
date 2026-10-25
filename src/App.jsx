@@ -609,7 +609,7 @@ function App() {
           selectedPolicies.length === 0 ? (
             emptyState
           ) : (
-            // Young people (under 25): results by age, #young-people
+            // Young people (16 to 24): results by age, #young-people
             <YoungPeopleSection
               selectedPolicies={selectedPolicies}
               selectedYear={distributionalYear}
