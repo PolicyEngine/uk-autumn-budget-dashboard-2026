@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { YOUNG_PERSON_PRESETS } from "../utils/youngPersonPresets";
 import SectionHeading from "./SectionHeading";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact from "../hooks/useHouseholdImpact";
 import {
@@ -227,7 +228,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "From April 2029 the National Insurance relief is capped at £2,000 a year.",
+    hint: "Your annual pension contribution paid through salary sacrifice, before any policy changes.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -367,6 +368,9 @@ function HouseholdCalculator({
   selectedPolicies = [],
   policies = [],
   year = DEFAULT_DISPLAY_YEAR,
+  publicationKey = "",
+  expectedEngine = null,
+  confirmPublication = null,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
   // The example the form was last filled from, while its values stand
@@ -408,8 +412,16 @@ function HouseholdCalculator({
     year,
     policies: householdPolicies,
     enabled: true,
+    publicationKey,
+    expectedEngine,
+    confirmPublication,
   });
   const noneSelected = householdPolicies.length === 0;
+  const unmodelled = householdResult.data?.notModelled ?? [];
+  const selectionUnavailable = !noneSelected && unmodelled.length > 0;
+  const unavailableNames = unmodelled.map((measure) =>
+    policies.find((policy) => policy.id === measure.id)?.name ?? measure.name ?? measure.id,
+  );
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
@@ -594,18 +606,25 @@ function HouseholdCalculator({
         </div>
 
         <div className="household-results" role="region" aria-label="Results">
-          <SingleYearHeadline
-            result={householdResult}
-            year={year}
-            policies={policies}
-            noPolicies={noneSelected}
-            renting={isRenting(inputs.tenure)}
-          />
+          {selectionUnavailable ? (
+            <UnavailableNotice reason="Personal impact is unavailable for this selection">
+              <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
+              <p>Select measures that can all be calculated to see your household&apos;s results.</p>
+            </UnavailableNotice>
+          ) : (
+            <SingleYearHeadline
+              result={householdResult}
+              year={year}
+              policies={policies}
+              noPolicies={noneSelected}
+              renting={isRenting(inputs.tenure)}
+            />
+          )}
         </div>
       </div>
 
       {/* The results' sections, below the form and headline */}
-      {!noneSelected && (
+      {!noneSelected && !selectionUnavailable && (
         <div role="region" aria-label="Your household's results">
           <SingleYearDetails result={householdResult} year={year} policies={policies} />
         </div>

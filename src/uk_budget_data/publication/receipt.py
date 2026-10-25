@@ -22,8 +22,10 @@ requires its current receipt rules; this module never reimplements a digest.
 
 import json
 import os
+import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from importlib import metadata
@@ -49,6 +51,23 @@ BASIS_STATUSES = ("pre_budget", "updated")
 # manifest file.
 ARTIFACTS_PREFIX = "public/data/artifacts/"
 MANIFEST_PATH = "public/data/manifest.json"
+# Python files, which is_non_calculation_path never treats as published
+# files or docs: wherever they sit, an import could reach them.
+PYTHON_SUFFIXES = (".py", ".pyc")
+# Suffixes of the page's own files under src/, outside the Python package
+# (is_non_calculation_path). Python reads nothing there.
+FRONTEND_SUFFIXES = (
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".css",
+    ".svg",
+    ".json",
+    ".csv",
+    ".geojson",
+)
+_FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 # Dashboard fields that describe one generation run rather than what was
 # generated, left out of the artifact digest.
 VOLATILE_DASHBOARD_FIELDS = ("generated_at", "generator_argv")
@@ -180,6 +199,125 @@ def is_publication_path(path: str) -> bool:
     )
 
 
+def is_non_calculation_path(path: str) -> bool:
+    """Whether a committed path cannot change what a measure calculates.
+
+    These are what the commits after an approval touch: attestations,
+    published files, the disclosure review, docs and the page. Everything
+    else, including any path not listed here and any Python file under
+    ``public/`` or ``docs/``, could change a calculation. Inputs a command
+    is given explicitly are its run's inputs, not the repository's code,
+    and this does not cover them.
+    """
+    parts = path.split("/")
+    if not path or any(part in ("", ".", "..") for part in parts):
+        return False
+    if parts[:3] == ["data_inputs", "publication", "attestations"]:
+        return len(parts) == 4 and parts[3].endswith(".json")
+    if path == "data_inputs/public_data_review.csv":
+        return True
+    if parts[0] in ("public", "docs"):
+        return len(parts) > 1 and not path.casefold().endswith(PYTHON_SUFFIXES)
+    if len(parts) == 1:
+        return path.endswith(".md")
+    # On a case-insensitive filesystem src/UK_Budget_Data is the package.
+    return (
+        parts[0] == "src"
+        and parts[1].casefold() != "uk_budget_data"
+        and path.endswith(FRONTEND_SUFFIXES)
+    )
+
+
+def calculation_changes_since(
+    git_sha: str, repo_root: Path = Path(".")
+) -> list[str]:
+    """The paths committed since ``git_sha`` that could change a calculation.
+
+    ``git_sha`` must be a full commit sha that HEAD descends from. A rename
+    counts as both of its paths, so moving code out of the package counts.
+    """
+    if not isinstance(git_sha, str) or not _FULL_COMMIT.fullmatch(git_sha):
+        raise ValueError(
+            f"the approved receipt records no full commit sha ({git_sha!r})"
+        )
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", *args], cwd=repo_root, capture_output=True, text=True
+        )
+
+    if git("merge-base", "--is-ancestor", git_sha, "HEAD").returncode != 0:
+        raise ValueError(
+            f"the approved commit {git_sha[:12]} is not an ancestor of HEAD"
+        )
+    changed = git("diff", "--name-only", "--no-renames", "-z", git_sha, "HEAD")
+    if changed.returncode != 0:
+        raise ValueError(
+            f"git could not list the changes since {git_sha[:12]}: "
+            + changed.stderr.strip()
+        )
+    return sorted(
+        {
+            path
+            for path in changed.stdout.split("\0")
+            if path and not is_non_calculation_path(path)
+        }
+    )
+
+
+class CalculationChanged(ValueError):
+    """Code that could change a calculation was committed since a receipt's
+    commit (:func:`approved_revision`)."""
+
+
+def approved_revision(
+    document: dict,
+    revision: CodeRevision,
+    checked: dict,
+    repo_root: Path = Path("."),
+) -> CodeRevision:
+    """The revision to bind an artifact's current code-bound scenarios at.
+
+    A code-bound identity includes the commit its receipt was made at, so
+    committing the measure's attestation, the published files or docs would
+    otherwise change it. The receipt's commit stands in for HEAD when HEAD
+    descends from it and nothing committed since could change a calculation
+    (:func:`calculation_changes_since`). Otherwise this raises
+    :class:`CalculationChanged`, or ValueError when HEAD does not descend
+    from it.
+    The modifier's own module source is hashed from the checkout either way.
+    ``checked`` caches the changes per commit across calls.
+
+    The area run binds an approved measure this way, and a combined run
+    each member it reads from the manifest, so a member keeps the identity
+    its own receipt records. This certifies only the repository's code, not
+    the installed packages or the dataset.
+    """
+    execution = document["execution_receipt"]
+    if all(
+        execution[side].get("binding") != "code_revision"
+        for side in ("baseline", "reform")
+    ):
+        return revision
+    sha = (document.get("dashboard") or {}).get("git_sha")
+    if sha == revision.git_sha:
+        return revision
+    if sha not in checked:
+        try:
+            checked[sha] = calculation_changes_since(sha, repo_root)
+        except ValueError as error:
+            checked[sha] = error
+    changes = checked[sha]
+    if isinstance(changes, ValueError):
+        raise ValueError(str(changes)) from changes
+    if changes:
+        raise CalculationChanged(
+            f"calculation code changed since the approved commit {sha[:12]} "
+            f"({', '.join(changes[:5])})"
+        )
+    return CodeRevision(sha, revision.tree_clean, revision.dirty_paths)
+
+
 # The models whose validation errors mean a measure's configuration cannot
 # build a scenario: policyengine-uk's Scenario and the dashboard's Reform.
 SCENARIO_MODELS = ("Scenario", "Reform")
@@ -239,6 +377,7 @@ def combined_identities(
     *,
     reform_applied_before_data_load: bool,
     baseline_applied_before_data_load: bool,
+    member_revisions: Optional[Mapping[str, CodeRevision]] = None,
 ):
     """The (baseline, reform) identities of a combined run, its members and
     how they were composed.
@@ -251,12 +390,18 @@ def combined_identities(
     baselines (``baseline_bound``), and the returned ``composition`` gives
     each side's phase, so the gate can rebuild both identities from the
     records alone (:func:`composition_problems`).
+
+    A member in ``member_revisions`` is bound at that revision, the one its
+    own receipt was made at (:func:`approved_revision`), so its record is
+    the identity that receipt holds; the others are bound at ``revision``.
     """
     api, _ = receipt_api()
     baselines, reforms, records = [], [], []
     configured_included = False
     for member in members:
-        baseline, reform = measure_identities(member, config, revision)
+        baseline, reform = measure_identities(
+            member, config, (member_revisions or {}).get(member.id, revision)
+        )
         # Members without a baseline of their own share the configured one,
         # which the combined run applies once, so it is bound once.
         bound = member.has_custom_baseline() or not configured_included
@@ -499,6 +644,9 @@ class ReceiptInputs:
     # as the limits are: a not-computable artifact has no tables to carry
     # it, and its entry's name is never the key.
     name: str = field(kw_only=True)
+    # The registry's public description, included in the artifact digest.
+    description: str = field(default="", kw_only=True)
+    personal: Optional[dict] = field(default=None, kw_only=True)
     # One proof per bound modifier on each side: registered template ids,
     # or None for a hand-written modifier. Required so omission fails shut.
     modifier_templates: dict[str, list] = field(kw_only=True)
@@ -552,6 +700,7 @@ def build_receipt_document(
     dashboard = {
         "key": inputs.key,
         "name": inputs.name,
+        "description": inputs.description,
         "measure_ids": list(inputs.measure_ids),
         "members": inputs.members,
         "member_outputs_sha256": inputs.member_outputs,
@@ -586,6 +735,8 @@ def build_receipt_document(
         "publishable": not reasons,
         "reasons": reasons,
     }
+    if inputs.personal is not None:
+        dashboard["personal"] = inputs.personal
     # A hand-written regeneration must void any prior attestation, even
     # when the figures and code are identical. Other runs keep deduplicating.
     if any(

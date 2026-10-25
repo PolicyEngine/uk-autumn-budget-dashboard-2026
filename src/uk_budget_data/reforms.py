@@ -28,6 +28,11 @@ from uk_budget_data.models import Reform
 # budget_years.json, which the page reads too (2026-27 to 2031-32)
 DEFAULT_YEARS = list(POLICY_YEARS)
 
+# Legacy lifetime response columns have no reviewed publication contract.
+# Keep this empty for receipt compatibility; the live single-year calculator
+# uses the current registry through the household API.
+PUBLIC_PERSONAL_SERIES: dict[str, dict] = {}
+
 FUEL_DUTY = "gov.hmrc.fuel_duty.petrol_and_diesel"
 PERSONAL_ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 BASIC_RATE_BAND = "gov.hmrc.income_tax.rates.uk[1].threshold"

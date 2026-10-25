@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DETAIL_INCLUDE,
   DETAIL_TIMEOUT_MS,
+  EngineMismatchError,
   HEADLINE_INCLUDE,
   buildHouseholdRequest,
+  engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
   postHouseholdImpact,
@@ -31,16 +33,23 @@ const DEBOUNCE_MS = 400;
  * @param {number} params.year - The policy year (2029 is 2029-30)
  * @param {string[]} params.policies - Selected measure ids
  * @param {boolean} params.enabled - Ask only while the view is shown
+ * @param {string} [params.publicationKey] - The publication snapshot shown
+ * @param {Object<string, string>} [params.expectedEngine] - The package
+ *   versions the selected measures' receipts record; an answer from others
+ *   is refused, and is an error
+ * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
+ *   - Resolves after a check of the live publication that started after it
+ *   was called; each request waits for it and is dropped unless still current
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
   );
-  const key = requestKey(body);
+  const key = `${publicationKey}:${requestKey(body)}`;
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
@@ -84,10 +93,19 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
       detailStatus: "loading",
       detailError: null,
     }));
+    // Each request waits for a check of the live publication made after it,
+    // and is dropped if the snapshot it was made under is no longer live:
+    // the page then shows the new snapshot's views, or none.
+    const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
+    const refuse = (error) => {
+      cache.delete(key);
+      setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+    };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
       if (!first) {
         try {
+          if (!(await current()) || signal.aborted) return;
           const raw = await postHouseholdImpact(
             { ...body, include: HEADLINE_INCLUDE },
             { signal },
@@ -107,6 +125,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
           return;
         }
         if (signal.aborted) return;
+        // Answered by other package versions than the published figures
+        const differ = expectedEngine ? engineDifferences(expectedEngine, first.engine) : [];
+        if (differ.length) {
+          refuse(new EngineMismatchError(differ));
+          return;
+        }
         const complete = first.byPolicy !== null && first.sweep !== null;
         cache.set(key, { data: first, complete });
         setState({
@@ -121,11 +145,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
         if (complete) return;
       }
       try {
+        if (!(await current()) || signal.aborted) return;
         const raw = await postHouseholdImpact(
           { ...body, include: DETAIL_INCLUDE },
           { signal, timeoutMs: DETAIL_TIMEOUT_MS },
         );
         if (signal.aborted) return;
+        // Refused unless from the headline's own package versions
         const merged = mergeStages(first, normaliseHouseholdImpact(raw));
         cache.set(key, { data: merged, complete: true });
         setState({
@@ -139,6 +165,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled }) 
         });
       } catch (error) {
         if (signal.aborted) return;
+        if (error instanceof EngineMismatchError) {
+          refuse(error);
+          return;
+        }
         setState((prev) => ({ ...prev, detailStatus: "error", detailError: error }));
       }
     }, DEBOUNCE_MS);

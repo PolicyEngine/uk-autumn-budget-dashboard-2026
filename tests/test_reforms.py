@@ -633,17 +633,27 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
     assert reformed == pytest.approx(1_325.97, abs=PENNY)
 
 
-def test_the_page_names_each_measure_as_the_pipeline_does():
-    """src/utils/policies.js lists the same ids, in the same order, with
-    the same names, so the page's rows join the published files."""
-    import re
+def test_the_page_keeps_no_measure_list_of_its_own():
+    """The page lists, names and describes the measures from the published
+    receipts (#104), which generation writes from this registry
+    (test_generated_receipts_carry_the_registry_metadata). A second list in
+    the page's source could disagree with them, so there is none: no page
+    file outside the tests names more than one candidate measure."""
     from pathlib import Path
 
-    source = (
-        Path(__file__).resolve().parents[1] / "src/utils/policies.js"
-    ).read_text()
-    pairs = re.findall(r'id: "([a-z0-9_]+)",\n\s+name: "([^"]+)"', source)
-    assert pairs == [(m, get_reform(m).name) for m in CANDIDATES]
+    root = Path(__file__).resolve().parents[1] / "src"
+    lists = {}
+    for path in sorted(root.rglob("*")):
+        if path.suffix not in {".js", ".jsx", ".ts", ".tsx"}:
+            continue
+        relative = path.relative_to(root)
+        if "test" in relative.parts or ".test." in path.name:
+            continue
+        text = path.read_text()
+        named = [m for m in CANDIDATES if f'"{m}"' in text]
+        if len(named) > 1:
+            lists[relative.as_posix()] = named
+    assert lists == {}
 
 
 # --- Every year the policy differs is covered ---------------------------------

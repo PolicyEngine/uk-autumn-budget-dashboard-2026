@@ -62,11 +62,11 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
   const noEffect = [];
   const suppressed = [];
   for (const policy of policies) {
-    if (!selected.includes(policy.id)) continue;
+    if (!selected.includes(policy.id) || policy.displayable === false) continue;
     const group = findRow(rows, policy.id, year, band);
     const all = findRow(rows, policy.id, year, ALL_BAND);
-    if (!group || !all) continue;
-    if (group.sample_size < MIN_SAMPLE_SIZE) {
+    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) continue;
+    if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
       noEffect.push(policy.name);
@@ -90,22 +90,25 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * @param {Array<number>} years - Every year shown, in order
  */
 export function changeByYear(rows, policies, selected, years) {
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
+  const completeSelection = chosen.length > 0 && chosen.length === selected.length;
   return years.map((year) => {
     const point = { year, published: false, suppressed: [] };
     for (const group of AGE_GROUPS) point[group.key] = null;
-    if (!(rows ?? []).some((row) => row.year === Number(year))) return point;
+    if (!completeSelection || chosen.some((policy) => !(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === policy.id))) return point;
     point.published = true;
     for (const group of AGE_GROUPS) {
       let total = 0;
       let thin = false;
-      for (const policy of policies) {
-        if (!selected.includes(policy.id)) continue;
+      let incomplete = false;
+      for (const policy of chosen) {
         const row = findRow(rows, policy.id, year, group.key);
         if (row && row.sample_size < MIN_SAMPLE_SIZE) thin = true;
-        total += row ? row.mean_change : 0;
+        if (!row || !Number.isFinite(row.mean_change)) incomplete = true;
+        else total += row.mean_change;
       }
       if (thin) point.suppressed.push(group.key);
-      else point[group.key] = total;
+      if (!thin && !incomplete) point[group.key] = total;
     }
     return point;
   });
@@ -160,14 +163,14 @@ export function singleAgeBars(rows, policies, selected, year) {
   for (const row of rows ?? []) {
     if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
   }
-  const chosen = policies.filter((policy) => selected.includes(policy.id));
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const bars = [];
   for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
     let net = 0;
-    let complete = chosen.length > 0;
+    let complete = chosen.length > 0 && chosen.length === selected.length;
     for (const policy of chosen) {
       const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
-      if (!row || row.sample_size < MIN_SAMPLE_SIZE) {
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
         complete = false;
         break;
       }

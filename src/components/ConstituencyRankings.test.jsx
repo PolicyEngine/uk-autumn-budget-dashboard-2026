@@ -1,11 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
 import { downloadFile } from "../utils/downloadFile";
 import { parseCsv } from "../utils/publication/csv";
 import { RANKING_CSV_COLUMNS } from "../utils/constituencyRanking";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import { AREA_ROUTING_URL, areaRouting, geographyFetch } from "../test/geographyFixture";
+import { geographyCatalogue, GeographyCatalogueProvider } from "../test/geographyCatalogueFixture";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+
+// Byte verification against the release index is tested in
+// src/utils/publication/flat.test.js; these tests cover the rankings view.
+vi.mock("../utils/publication/flat", async (importOriginal) => {
+  const { unverifiedFlatLoader } = await import("../test/flatLoaderMock");
+  return { ...(await importOriginal()), ...unverifiedFlatLoader() };
+});
+
+const render = (element, options = {}) => renderReact(element, { wrapper: GeographyCatalogueProvider, ...options });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -228,6 +239,36 @@ describe("Unpublished: one gate, one notice, in either view", () => {
       expectEmptyRankings(container);
     },
   );
+
+  it.each([
+    ["was missing", 404, "Results by constituency could not be loaded."],
+    ["routed no results by area", areaRouting("not_available"), "Results by constituency are not available on this release."],
+  ])("shows the verified figures once routing that %s becomes available", async (_, before, notice) => {
+    // Review of 62febdd, finding 5: routing was cached across publication
+    // snapshots and a 404 was never retried, so the map kept refusing
+    // verified figures.
+    vi.stubGlobal("fetch", geographyFetch({ [AREA_ROUTING_URL]: before }));
+    const first = renderCard();
+    expect(await screen.findByText(notice)).toBeInTheDocument();
+    first.unmount();
+
+    vi.stubGlobal("fetch", geographyFetch());
+    const newer = buildMeasureCatalogue({
+      manifest: { ...geographyCatalogue.manifest, revision: 2, snapshotSha256: "b".repeat(64) },
+      tablesByKey: geographyCatalogue.tablesByKey,
+    });
+    // A missing file is tried again under the same publication; an answer
+    // is kept for its publication, and a newer one reads routing again.
+    const catalogue = typeof before === "number" ? geographyCatalogue : newer;
+    renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />
+      </MeasureCatalogueProvider>,
+    );
+    showRankings();
+    await waitFor(() => expect(screen.getAllByText(FIGURES).length).toBeGreaterThan(0));
+    expect(screen.queryByText(notice)).toBeNull();
+  });
 
   it("requests no constituency file the build does not publish", async () => {
     vi.stubEnv("NEXT_PUBLIC_PUBLISHED_GEOGRAPHY", "regional.csv");

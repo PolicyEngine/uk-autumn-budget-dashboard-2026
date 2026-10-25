@@ -5,7 +5,6 @@
  * functions, so the page and its tests read the same numbers.
  */
 import { consistentRound } from "./householdImpactApi";
-import { getPolicyColor } from "./policyConfig";
 import { CHART_COLOURS } from "./chartTheme";
 
 const MINUS = "−";
@@ -69,7 +68,7 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Salary sacrifice cap: broad-base pay cut",
+  salary_sacrifice_haircut: "Pension contribution adjustment: broad-base pay cut",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -162,7 +161,7 @@ export function largestChangesSentence(groups) {
 
 // Notes about one part of a row, shown only when that part is: income
 // tax's is about the High Income Child Benefit Charge, employment income's
-// about the salary sacrifice cap's pay cut
+// about the pension contribution adjustment's pay cut
 const NOTE_PART = {
   income_tax: "child_benefit_charge",
   employment_income: "salary_sacrifice_haircut",
@@ -201,7 +200,7 @@ export function policyRows(byPolicy, total, policies) {
   const rows = affected.map((row) => ({
     id: row.id,
     name: nameOf(row),
-    color: getPolicyColor(row.id),
+    color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
     change: row.change,
   }));
   if (Math.abs(byPolicy.residual) >= INTERACTION_THRESHOLD) {

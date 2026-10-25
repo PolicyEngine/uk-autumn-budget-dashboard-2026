@@ -10,7 +10,6 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-  LabelList,
   Customized,
 } from "recharts";
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
@@ -19,7 +18,8 @@ import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
 import GroupedLegend from "./GroupedLegend";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
-import { POLICY_COLORS, ALL_POLICY_NAMES, REVENUE_RAISING_NAMES } from "../utils/policyConfig";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import UnavailableNotice from "./publication/UnavailableNotice";
 import {
   useNarrowViewport,
   GRID_PROPS,
@@ -28,7 +28,6 @@ import {
   AXIS_TITLE_STYLE,
   chartMargin,
   legendWrapperStyle,
-  legendLabelStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
@@ -79,7 +78,7 @@ function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
   );
 }
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -90,11 +89,11 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show }) {
   return (
     <g className="net-impact-labels">
       {data.map((point) => {
-        const gains = ALL_POLICY_NAMES.reduce(
+        const gains = policyNames.reduce(
           (sum, name) => sum + Math.max(0, point[name] || 0),
           0,
         );
-        const costs = ALL_POLICY_NAMES.reduce(
+        const costs = policyNames.reduce(
           (sum, name) => sum + Math.min(0, point[name] || 0),
           0,
         );
@@ -164,16 +163,21 @@ const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
   `This chart shows the annual budgetary impact from ${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}, measured in billions of pounds. Positive values indicate revenue gains for the Government, whilst negative values indicate costs to the Treasury.`;
 
-function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
+function BudgetaryImpactChart({ data, selectedYear }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  const {
+    displayable,
+    allPolicyNames: ALL_POLICY_NAMES,
+    policyColors: POLICY_COLORS,
+    bySeriesKey,
+  } = useMeasureCatalogue();
 
   if (!data || data.length === 0) return null;
+  if (!displayable.length) return <UnavailableNotice reason="Revenue figures are unavailable until approved results verify." />;
 
   const formatCurrencyTick = (value) =>
     value < 0 ? `-£${Math.abs(value)}bn` : `£${value}bn`;
-  const formatCurrencyTooltip = (value) =>
-    value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `£${value.toFixed(1)}bn`;
 
   // Check which policies have non-zero values for legend/tooltip
   const hasNonZeroValues = (policyName) => {
@@ -210,9 +214,9 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
   const legendItems = [
     ...activePolicies.map((name) => ({
       color: POLICY_COLORS[name],
-      label: name,
+      label: bySeriesKey.get(name)?.label ?? name,
       type: "rect",
-      group: REVENUE_RAISING_NAMES.has(name) ? "raise" : "cost",
+      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
     })),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net impact", type: "line" }]
@@ -231,7 +235,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
     chartRef,
     name: exportName,
     exportOptions,
-    csv: () => revenueCsv(data, activePolicies),
+    csv: () => revenueCsv(data, activePolicies.map((key) => bySeriesKey.get(key))),
   };
 
   return (
@@ -318,7 +322,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
               content={
                 <GroupedLegend
                   names={activePolicies}
-                  netLabel={activePolicies.length > 1 ? netLabel : undefined}
+                  netLabel={activePolicies.length > 1 ? "Net impact" : undefined}
                 />
               }
             />
@@ -327,7 +331,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
-                name={policyName}
+                name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
                 {...chartMotion()}
                 // Always mounted (a zero series has no height), so a series that
@@ -350,6 +354,7 @@ function BudgetaryImpactChart({ data, selectedYear, netLabel = "Net impact" }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
+                  policyNames={ALL_POLICY_NAMES}
                   show
                 />
               }

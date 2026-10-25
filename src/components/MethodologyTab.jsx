@@ -2,19 +2,15 @@ import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
 import FactList from "./methodology/FactList";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { MEASURE_MODELLING, NOT_MODELLED } from "./methodology/measures";
+import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP } from "../utils/ageImpact";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
-import { POLICY_COLORS } from "../utils/policyConfig";
 import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import "./methodology/Methodology.css";
-
-const RESEARCH = [
-  ["https://policyengine.org/uk/research/fuel-duty-freeze-2025", "fuel duty"],
-];
 
 /**
  * The ids of the Methodology view's sections, for links to them. Other
@@ -143,6 +139,10 @@ function SectionLink({ id, children }) {
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
+  const catalogue = useMeasureCatalogue();
+  const MEASURE_MODELLING = measureModelling(catalogue);
+  const UNAVAILABLE = unavailableMeasures(catalogue);
+  const POLICY_COLORS = catalogue.policyColors;
   const policyNotes = (text) => (
     <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
       {text}
@@ -257,13 +257,13 @@ function MethodologyTab({ onShowTab }) {
           </div>
 
           <div className="card method-card method-table-card">
-            <h3 className="method-card-title">How each measure is modelled</h3>
+            <h3 className="method-card-title">Published measure descriptions</h3>
             <table className="method-measures">
               <thead>
                 <tr>
                   <th scope="col">Measure</th>
-                  <th scope="col">How it is modelled</th>
-                  <th scope="col">From</th>
+                  <th scope="col">Published description</th>
+                  <th scope="col">Results from</th>
                 </tr>
               </thead>
               <tbody>
@@ -272,15 +272,15 @@ function MethodologyTab({ onShowTab }) {
                     <th scope="row">
                       <span
                         className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.name] }}
+                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
                         aria-hidden="true"
                       />
                       {measure.name}
                     </th>
                     <td>{measure.how}</td>
                     <td className="method-measure-year">
-                      <span className="method-cell-label">From </span>
-                      {fiscalYearTick(measure.from)}
+                      <span className="method-cell-label">Results from </span>
+                      {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
                     </td>
                   </tr>
                 ))}
@@ -291,6 +291,29 @@ function MethodologyTab({ onShowTab }) {
               Measures are written as parameter changes where possible, or
               built from tested measure templates.
             </p>
+          </div>
+
+          <div className="card method-card method-table-card">
+            <h3 className="method-card-title">Unavailable measures</h3>
+            <p className="method-more">
+              These measures have no verified results in the current publication.
+            </p>
+            <table className="method-measures">
+              <thead>
+                <tr>
+                  <th scope="col">Measure</th>
+                  <th scope="col">Why results are unavailable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNAVAILABLE.map((measure) => (
+                  <tr key={measure.name}>
+                    <th scope="row">{measure.name}</th>
+                    <td>{measure.why}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="card method-card method-table-card">
@@ -333,7 +356,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Exceptions",
-                  "The Plan 2 student loan measure counts the change in loan repayments. The employer National Insurance relief changes revenue only: with wages fixed, household incomes do not move.",
+                  "A measure whose published description says it is costed another way, such as from a Treasury cost estimate or from the change in loan repayments, follows that description.",
                 ],
                 ["Years", `Fiscal years ${yearRange}.`],
                 [
@@ -552,16 +575,8 @@ function MethodologyTab({ onShowTab }) {
               are in the line at the foot of the page.
             </p>
             <p>
-              Methods and sources: our research on the{" "}
-              {RESEARCH.map(([href, label], index) => (
-                <span key={href}>
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    {label}
-                  </a>
-                  {index < RESEARCH.length - 2 ? ", " : index === RESEARCH.length - 2 ? " and " : ""}
-                </span>
-              ))}
-              .
+              Methods and sources are published with each measure's description. See the{" "}
+              <a href="https://policyengine.org/uk/research" target="_blank" rel="noopener noreferrer">PolicyEngine research library</a>.
             </p>
           </div>
         </MethodSection>

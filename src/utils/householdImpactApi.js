@@ -451,8 +451,53 @@ export function normaliseHouseholdImpact(raw) {
   };
 }
 
-/** A later stage's parts added to the first stage's result. */
+/**
+ * The household API's answer came from other package versions than the
+ * published figures, or than its own other stage. Personal impact is then
+ * unavailable: the figures beside it were not calculated by that model.
+ */
+export class EngineMismatchError extends Error {
+  constructor(packages) {
+    super(`The household calculator runs other model versions (${packages.join(", ")}) than the published figures`);
+    this.name = "EngineMismatchError";
+    this.kind = "engine";
+    this.packages = packages;
+  }
+}
+
+/**
+ * The packages whose versions differ: every package `expected` names that
+ * `reported` lacks or gives another version. Packages only `reported`
+ * names (uk_budget_data, which no receipt records) are not compared.
+ *
+ * @param {Object<string, string>} expected
+ * @param {Object<string, string>} reported
+ * @returns {string[]} sorted package names
+ */
+export function engineDifferences(expected, reported) {
+  const given = reported && typeof reported === "object" ? reported : {};
+  return Object.keys(expected ?? {})
+    .filter((name) => typeof given[name] !== "string" || given[name] !== expected[name])
+    .sort();
+}
+
+const sameEngine = (a, b) => {
+  const names = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
+  return [...names].every((name) => (a ?? {})[name] === (b ?? {})[name]);
+};
+
+/**
+ * A later stage's parts added to the first stage's result. Both stages must
+ * come from the same package versions: a breakdown from another deployment
+ * never sits under a headline from this one.
+ *
+ * @throws {EngineMismatchError} when the stages' engines differ
+ */
 export function mergeStages(first, detail) {
+  if (!sameEngine(first.engine, detail.engine)) {
+    const names = new Set([...Object.keys(first.engine ?? {}), ...Object.keys(detail.engine ?? {})]);
+    throw new EngineMismatchError([...names].filter((name) => (first.engine ?? {})[name] !== (detail.engine ?? {})[name]).sort());
+  }
   return {
     ...first,
     byPolicy: detail.byPolicy ?? first.byPolicy,

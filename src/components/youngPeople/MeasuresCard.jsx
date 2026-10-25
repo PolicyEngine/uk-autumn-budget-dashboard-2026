@@ -213,7 +213,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           </ResponsiveContainer>
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>None of the selected policies changes household incomes in {yearLabel}.</p>
+            <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
+              ? `None of the selected policies changes household incomes in ${yearLabel}.`
+              : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
           </div>
         )}
       </div>

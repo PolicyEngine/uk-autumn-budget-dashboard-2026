@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import PersonalImpactTab from "../PersonalImpactTab";
+import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
+import { fixtureJson } from "../../test/publicationFixture";
 import { resetSavedWizard } from "../HouseholdCalculator";
 import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
+// The receipts' model versions, which the household fixture's answer runs:
+// Personal impact shows nothing when the two differ.
+const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
+const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
+const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
 
 let household;
 
@@ -42,14 +49,30 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const baseEntry = fixtureJson("manifest.json").measures.alpha;
+const testCatalogue = buildMeasureCatalogue({
+  manifest: {
+    ...fixtureJson("manifest.json"),
+    measures: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, {
+      ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
+    }])),
+    combined: {},
+  },
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE }])),
+});
+function PublishedMeasures({ children }) {
+  return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;
+}
+
 function renderTab(props = {}) {
   return render(
     <PersonalImpactTab
-      selectedPolicies={POLICIES_FOR_TEST.map((policy) => policy.id)}
+      selectedPolicies={SUPPORTED_POLICY_IDS}
       policies={POLICIES_FOR_TEST}
       year={2029}
       {...props}
     />,
+    { wrapper: PublishedMeasures },
   );
 }
 
@@ -119,14 +142,13 @@ describe("the household calculation, from the fixture", () => {
     // sentence repeating what the headline says
     expect(panel.querySelector(".single-year-tiles")).toBeNull();
     expect(panel).not.toHaveTextContent("before and after the selected policies.");
-    // One line of assumptions, short items; the rail explanation is in
-    // "About these figures"
+    // One line of assumptions, short items, for the supported selection.
     const assumptions = panel.querySelector("dl.single-year-assumptions");
     expect(assumptions).toHaveTextContent(
       "Salary in 2029-30: £34,192, partner £12,822 (grown from 2026 with OBR earnings)",
     );
     expect(assumptions).toHaveTextContent("Rent area: Central Greater Manchester (region default)");
-    expect(assumptions).toHaveTextContent("Rail fares freeze: not shown (national figures only)");
+    expect(assumptions).not.toHaveTextContent("not modelled");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child
@@ -228,7 +250,7 @@ describe("the household calculation, from the fixture", () => {
     toResults();
     await screen.findByText(HEADLINE);
     rerender(
-      <PersonalImpactTab selectedPolicies={POLICIES_FOR_TEST.map((p) => p.id)} policies={POLICIES_FOR_TEST} year={2030} />,
+      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={POLICIES_FOR_TEST} year={2030} />,
     );
     await waitFor(() => expect(household.some((body) => body.year === 2030)).toBe(true));
     rerender(<PersonalImpactTab selectedPolicies={[]} policies={POLICIES_FOR_TEST} year={2030} />);
@@ -266,7 +288,7 @@ describe("while a new answer loads", () => {
     expect(banner()).toHaveTextContent("in 2029-30");
     expect(stalePart()).toBeNull();
     server.slowDown();
-    const ids = POLICIES_FOR_TEST.map((p) => p.id);
+    const ids = SUPPORTED_POLICY_IDS;
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2030} />);
     // At once, and still after the debounce and while the request is held
     for (const wait of [0, 600]) {
@@ -296,7 +318,7 @@ describe("while a new answer loads", () => {
     toResults();
     await screen.findByRole("heading", { name: /Change in net income by policy/ });
     server.slowDown();
-    const ids = POLICIES_FOR_TEST.map((p) => p.id).slice(1);
+    const ids = SUPPORTED_POLICY_IDS.slice(1);
     rerender(<PersonalImpactTab selectedPolicies={ids} policies={POLICIES_FOR_TEST} year={2029} />);
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(stalePart()).toHaveClass("is-stale");
@@ -409,6 +431,33 @@ describe("the household calculation's errors", () => {
       kind: "timeout",
       message: expect.stringMatching(/took longer than/),
     });
+  });
+});
+
+describe("an unavailable household calculation", () => {
+  it.each(["mixed", "only unmodelled"])("keeps the wizard but suppresses %s aggregate results", async (selection) => {
+    const unmodelledId = HOUSEHOLD_FIXTURE.not_modelled[0].id;
+    const ids = selection === "mixed" ? [...SUPPORTED_POLICY_IDS, unmodelledId] : [unmodelledId];
+    serve((body) => {
+      const answer = structuredClone(householdAnswerFor(body));
+      // An API label never overrides the publication catalogue's label.
+      answer.not_modelled[0].name = "A different API label";
+      if (selection === "only unmodelled") {
+        answer.net_income.reform = answer.net_income.baseline;
+        answer.net_income.change = 0;
+      }
+      return json(answer);
+    });
+    renderTab({ selectedPolicies: ids });
+    const panel = await results();
+    expect(await within(panel).findByText("Personal impact is unavailable for this selection")).toBeInTheDocument();
+    expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
+    expect(panel).not.toHaveTextContent("A different API label");
+    expect(panel).not.toHaveTextContent("£0");
+    expect(screen.queryByText(HEADLINE)).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "More details" })).toBeInTheDocument();
+    expect(household.length).toBeGreaterThan(0);
   });
 });
 

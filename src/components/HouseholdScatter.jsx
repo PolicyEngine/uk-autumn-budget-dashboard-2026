@@ -21,6 +21,7 @@ import {
 } from "../utils/householdScatter";
 import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
@@ -219,15 +220,16 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
   const data = useHouseholdScatterData();
+  const { combinedId } = useMeasureCatalogue();
   const view = useMemo(
-    () =>
-      scatterView({
-        data,
-        selectedIds: selectedPolicies,
-        policyIds: (policies ?? []).map((policy) => policy.id),
-        year: selectedYear,
-      }),
-    [data, selectedPolicies, policies, selectedYear],
+    () => scatterView({
+      data,
+      selectedIds: selectedPolicies,
+      policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
+      year: selectedYear,
+      packageId: combinedId,
+    }),
+    [data, selectedPolicies, policies, selectedYear, combinedId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
   const chartTitle = `${CHART_TITLE}, ${yearLabel}`;
