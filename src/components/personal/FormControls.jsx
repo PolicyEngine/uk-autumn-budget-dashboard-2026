@@ -62,6 +62,107 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, layout 
   );
 }
 
+/**
+ * A field's label and its hint. A short hint goes under the box; a long one
+ * (`hintAs="tooltip"`) sits behind an "i" beside the label, shown on hover
+ * or focus, and is still the box's description for screen readers.
+ */
+function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
+  if (hidden) {
+    return (
+      <label className="visually-hidden" htmlFor={htmlFor}>
+        {label}
+      </label>
+    );
+  }
+  if (!hint || hintAs !== "tooltip") {
+    return (
+      <label className="field-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+    );
+  }
+  return (
+    <div className="label-with-info">
+      <label className="field-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+      <span className="info-icon-wrapper">
+        <button type="button" className="info-icon" aria-label={`About ${label}`} aria-describedby={hintId}>
+          i
+        </button>
+        <span className="info-tooltip" role="tooltip" id={hintId}>
+          {hint}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** A hint under the box, unless it is in the label's tooltip. */
+function FieldHint({ hint, hintId, hintAs }) {
+  if (!hint || hintAs === "tooltip") return null;
+  return (
+    <p className="field-hint" id={hintId}>
+      {hint}
+    </p>
+  );
+}
+
+/**
+ * One choice from a list, as a native select with its label above and a
+ * hint below. Options may hold strings, numbers or booleans: the select
+ * keeps each option's index and gives back its value.
+ *
+ * @param {Object} props
+ * @param {string} props.id - The field's id
+ * @param {string} props.label
+ * @param {Array<{value: string|number|boolean, label: string}>} props.options
+ * @param {*} props.value - The chosen option's value
+ * @param {(value: *) => void} props.onChange
+ * @param {string} [props.hint] - A line under the box
+ * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
+ */
+export function SelectField({ id, label, options, value, onChange, hint, hintAs = "below" }) {
+  const fieldId = `field-${id}`;
+  const hintId = hint ? `hint-${id}` : undefined;
+  const index = options.findIndex((option) => option.value === value);
+  return (
+    <div className="select-field" data-field={id}>
+      <FieldLabel htmlFor={fieldId} label={label} hint={hint} hintId={hintId} hintAs={hintAs} />
+      <div className="select-box">
+        <select
+          id={fieldId}
+          value={String(index)}
+          aria-describedby={hintId}
+          onChange={(event) => onChange(options[Number(event.target.value)].value)}
+        >
+          {options.map((option, i) => (
+            <option key={String(option.value)} value={String(i)}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          className="select-chevron"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+      <FieldHint hint={hint} hintId={hintId} hintAs={hintAs} />
+    </div>
+  );
+}
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 /**
@@ -79,6 +180,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param {boolean} [props.money] - Show £ before the number
  * @param {string} [props.suffix] - A unit after the number ("a month")
  * @param {string} [props.hint]
+ * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
  * @param {string} [props.inputLabel] - The box's accessible name, when it differs from the visible label
  * @param {boolean} [props.hideLabel] - Keep the label for screen readers
  *   only (a row above already shows it)
@@ -97,6 +199,7 @@ export function NumberField({
   money = false,
   suffix,
   hint,
+  hintAs = "below",
   inputLabel,
   outOfRangeMessage,
   hideLabel = false,
@@ -125,9 +228,7 @@ export function NumberField({
   const name = inputLabel ?? label;
   return (
     <div className="number-field" data-field={id}>
-      <label className={hideLabel ? "visually-hidden" : "field-label"} htmlFor={fieldId}>
-        {label}
-      </label>
+      <FieldLabel htmlFor={fieldId} label={label} hint={hint} hintId={hintId} hintAs={hintAs} hidden={hideLabel} />
       <div className="number-stepper">
         <button
           type="button"
@@ -180,11 +281,7 @@ export function NumberField({
         </button>
         {suffix && <span className="number-suffix">{suffix}</span>}
       </div>
-      {hint && (
-        <p className="field-hint" id={hintId}>
-          {hint}
-        </p>
-      )}
+      <FieldHint hint={hint} hintId={hintId} hintAs={hintAs} />
       {outOfRangeMessage && (outOfRange(draft, min, max) || clampedFrom !== null) && (
         <p className="field-error" role="alert">
           {outOfRangeMessage}

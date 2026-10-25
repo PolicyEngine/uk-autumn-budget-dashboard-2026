@@ -5,17 +5,17 @@ import { usePublicationCheck } from "../utils/publication/check";
 import "./PersonalImpactTab.css";
 
 /**
- * Personal impact: one household's answers, then its net income in the
+ * Household impact: one household's answers, then its net income in the
  * year chosen in the title band before and after the selected policies.
  */
-function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemoveUnavailable }) {
+function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemoveUnavailable, active = true }) {
   const catalogue = useMeasureCatalogue();
   const confirmPublication = usePublicationCheck();
   const unavailable = selectedPolicies.filter((id) => !isCatalogueRowDisplayable(catalogue, id, year));
   if (!catalogue.manifest || unavailable.length) {
     const names = unavailable.map((id) => catalogue.byId.get(id)?.name ?? id);
     return (
-      <UnavailableNotice reason="Personal impact is unavailable for the selected measures">
+      <UnavailableNotice reason="Household impact is unavailable for the selected measures">
         <p>{names.join(", ") || "No verified Budget measures are published yet."}</p>
         {catalogue.manifest && onRemoveUnavailable && (
           <RemoveUnavailable names={names} onRemove={() => onRemoveUnavailable(unavailable)} />
@@ -28,7 +28,7 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
   const expectedEngine = publishedEngine(catalogue, selectedPolicies);
   if (selectedPolicies.length && !expectedEngine) {
     return (
-      <UnavailableNotice reason="Personal impact is unavailable for the selected measures">
+      <UnavailableNotice reason="Household impact is unavailable for the selected measures">
         <p>Their published figures do not name one model version for the household calculator to match.</p>
       </UnavailableNotice>
     );
@@ -44,6 +44,7 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
         year={year}
         expectedEngine={expectedEngine}
         confirmPublication={confirmPublication}
+        active={active}
       />
     </div>
   );

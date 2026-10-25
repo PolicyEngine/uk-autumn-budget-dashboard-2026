@@ -474,7 +474,7 @@ PROGRAMMES = (
         children=(
             _row(
                 "salary_sacrifice_haircut",
-                "Salary sacrifice pay cut (current-law cap)",
+                "Pay cut for the salary sacrifice cap (current law)",
                 "salary_sacrifice_broad_base_haircut",
                 "person",
             ),

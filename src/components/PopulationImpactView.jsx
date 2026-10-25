@@ -4,8 +4,8 @@ import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
 
 /** Population impact's sub-tabs; the first, All households, is the default. */
 export const POPULATION_SUB_TABS = [
-  { value: "all", label: "All households" },
-  { value: "young", label: "Young people" },
+  { value: "all", label: "All households", icon: "users" },
+  { value: "young", label: "Young people", icon: "cap" },
 ];
 
 const SUB_TAB_VALUES = POPULATION_SUB_TABS.map((tab) => tab.value);
@@ -18,8 +18,11 @@ function dropYoungHash() {
   window.history.replaceState({}, "", window.location.pathname + window.location.search);
 }
 
-function PopulationSubTabs({ note, children }) {
-  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES);
+function PopulationSubTabs({ note, active = true, children }) {
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
+  // Sub-tabs opened so far stay mounted, hidden while the other is shown
+  const [visited, setVisited] = useState([sub]);
+  if (!visited.includes(sub)) setVisited([...visited, sub]);
 
   // A link to #young-people while this view is open shows its sub-tab
   useEffect(() => {
@@ -47,9 +50,11 @@ function PopulationSubTabs({ note, children }) {
         idPrefix={ID_PREFIX}
       />
       {note}
-      <SubTabPanel idPrefix={ID_PREFIX} value={sub}>
-        {children(sub)}
-      </SubTabPanel>
+      {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
+        <SubTabPanel key={value} idPrefix={ID_PREFIX} value={value} hidden={value !== sub}>
+          {children(value)}
+        </SubTabPanel>
+      ))}
     </>
   );
 }
@@ -68,7 +73,8 @@ function PopulationSubTabs({ note, children }) {
  *
  * @param {Object} props
  * @param {React.ReactNode} [props.note] - A line under the sub-tabs, over both panels
- * @param {(sub: string) => React.ReactNode} props.children - The chosen sub-tab's content
+ * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
+ * @param {(sub: string) => React.ReactNode} props.children - A sub-tab's content
  */
 export default function PopulationImpactView(props) {
   const [ready, setReady] = useState(false);

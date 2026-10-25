@@ -322,7 +322,7 @@
       "children": [
         {
           "id": "salary_sacrifice_haircut",
-          "label": "Salary sacrifice pay cut (current-law cap)",
+          "label": "Pay cut for the salary sacrifice cap (current law)",
           "baseline": 0.0,
           "reform": -75.22,
           "change": -75.22
