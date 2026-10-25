@@ -65,6 +65,12 @@ from rich.console import Console
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.models import DataConfig, Reform
+from uk_budget_data.parallel import (
+    SerialRunner,
+    add_jobs_arguments,
+    portable,
+    resolve_reform,
+)
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
@@ -714,16 +720,7 @@ class SeatMatrix:
     ) -> "SeatMatrix":
         """Weights keyed by year, rows in the constituency lookup's order."""
         path = Path(path)
-
-        def load(year: int) -> np.ndarray:
-            with h5py.File(path, "r") as handle:
-                key = str(year)
-                if key not in handle:
-                    raise KeyError(
-                        f"{path} has no seat weights for {year}; it has "
-                        f"{sorted(handle.keys())}"
-                    )
-                return np.asarray(handle[key][...], dtype=SEAT_MATRIX_DTYPE)
+        load = _SeatWeightsFile(path)
 
         with h5py.File(path, "r") as handle:
             years = tuple(sorted(int(key) for key in handle.keys()))
@@ -733,6 +730,24 @@ class SeatMatrix:
             load=load,
             years=years,
         )
+
+
+@dataclass(frozen=True)
+class _SeatWeightsFile:
+    """Reads one year's seat weights from the file (picklable, so a
+    collector built in a worker process can be sent back)."""
+
+    path: Path
+
+    def __call__(self, year: int) -> np.ndarray:
+        with h5py.File(self.path, "r") as handle:
+            key = str(year)
+            if key not in handle:
+                raise KeyError(
+                    f"{self.path} has no seat weights for {year}; it has "
+                    f"{sorted(handle.keys())}"
+                )
+            return np.asarray(handle[key][...], dtype=SEAT_MATRIX_DTYPE)
 
 
 class GeographyCollector:
@@ -2025,6 +2040,7 @@ def add_geography_parser(subparsers) -> None:
         help="Directory with the region and seat lookups "
         "(default: ./data_inputs)",
     )
+    add_jobs_arguments(parser)
 
 
 @dataclass
@@ -2545,10 +2561,33 @@ def run_geography(parsed: argparse.Namespace) -> int:
     if reason:
         console.print(reason)
     try:
-        return _run_geography(parsed, certification_reason=reason)
+        return _run_geography(
+            parsed,
+            certification_reason=reason,
+            runner=_geography_runner(parsed),
+        )
     finally:
         if reason:
             console.print(reason)
+
+
+def _geography_runner(parsed: argparse.Namespace):
+    """The runner ``--jobs`` asks for (one measure after another by
+    default)."""
+    jobs = getattr(parsed, "jobs", "1")
+    if str(jobs) == "1":
+        return None
+    from uk_budget_data.parallel import footprint_memory_gb, make_runner
+
+    years = len(getattr(parsed, "years", None) or []) or 5
+    unit_gb = getattr(parsed, "unit_memory_gb", None)
+    return make_runner(
+        jobs,
+        len(getattr(parsed, "reforms", None) or []) or 10,
+        years,
+        say=console.print,
+        unit_gb=footprint_memory_gb(years) if unit_gb is None else unit_gb,
+    )
 
 
 def _uses_microcosm(parsed: argparse.Namespace) -> bool:
@@ -2574,8 +2613,95 @@ def _uses_microcosm(parsed: argparse.Namespace) -> bool:
     )
 
 
+@dataclass(frozen=True)
+class GeographyUnit:
+    """One measure's area run: what a worker needs to simulate it."""
+
+    reform: object  # a Reform, or parallel.RegisteredReform
+    dataset: Optional[str]
+    years: tuple
+    kind: str
+    microcosm_export: bool
+    # For the first measure: the collector's arguments, so that it builds
+    # the collector from its baseline (the dataset's survey households,
+    # regions and seats); None for the others.
+    collector: Optional[dict] = None
+
+
+@dataclass
+class GeographyOutcome:
+    """One measure's household arrays by year, and the limits it touched."""
+
+    reform_id: str
+    runs: list = field(default_factory=list)
+    limited: list = field(default_factory=list)
+    held: list = field(default_factory=list)
+    collector: Optional["GeographyCollector"] = None
+
+
+def simulate_area_unit(unit: GeographyUnit) -> GeographyOutcome:
+    """Simulate one measure and read what the release needs of it: each
+    year's household net income in both runs and the household weights,
+    read under the data-limit watch, then the data and model limits it
+    touched, judged on its own two simulations."""
+    reform = resolve_reform(unit.reform)
+    years = list(unit.years)
+    outcome = GeographyOutcome(reform_id=reform.id)
+    console.print(f"Simulating {reform.id}")
+    baseline, reformed = simulate_reform(reform, unit.dataset, years)
+    if unit.collector is not None:
+        outcome.collector = GeographyCollector.from_simulation(
+            baseline,
+            kind=unit.kind,
+            microcosm_export=unit.microcosm_export,
+            **unit.collector,
+        )
+    # A measure the certified data cannot cost has no figure by area
+    # either: what the code that differs reads is watched while the area
+    # figures are calculated, as the generator watches its run. With no
+    # limit registered, nothing is watched.
+    watch = (
+        data_limits.observing(baseline, reformed)
+        if data_limits.DATA_LIMITS
+        else contextlib.nullcontext()
+    )
+    with watch as observed:
+        for year in years:
+            weight = household_values(baseline, "household_weight", year)
+            other = household_values(reformed, "household_weight", year)
+            if not np.array_equal(weight, other):
+                raise ValueError(
+                    f"household_weight differs between the runs of "
+                    f"{reform.id} in {year}"
+                )
+            outcome.runs.append(
+                (
+                    year,
+                    household_values(baseline, "household_net_income", year),
+                    household_values(reformed, "household_net_income", year),
+                    weight,
+                )
+            )
+    if data_limits.DATA_LIMITS:
+        outcome.limited = reform_data_limits(
+            reform, baseline, reformed, observed, years
+        )
+    # A measure the installed model mis-costs is never approved, but one
+    # approved before its limit was registered, or on a model with the fix,
+    # still is: judge the area run's own simulations, as the generator
+    # judges its run.
+    outcome.held = reform_model_limits(reform, baseline, reformed, years)
+    # The observation holds both simulations: free it with them, so the
+    # next pair is never built with this one still alive.
+    del baseline, reformed, observed
+    return outcome
+
+
 def _run_geography(
-    parsed: argparse.Namespace, *, certification_reason: Optional[str]
+    parsed: argparse.Namespace,
+    *,
+    certification_reason: Optional[str],
+    runner=None,
 ) -> int:
     """Build and write a run, inside any dataset certification banners."""
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -2612,49 +2738,46 @@ def _run_geography(
         collector = None
         limited = {}
         held = {}
-        for reform in plan.reforms:
-            console.print(f"Simulating {reform.id}")
-            baseline, reformed = simulate_reform(reform, dataset, plan.years)
+        runner = runner or SerialRunner()
+        units = [
+            GeographyUnit(
+                reform=portable(reform, runner),
+                dataset=dataset,
+                years=tuple(plan.years),
+                kind=parsed.dataset_kind,
+                microcosm_export=plan.microcosm_export,
+                # The first measure's baseline also gives the collector.
+                collector=(
+                    dict(
+                        regions=plan.regions,
+                        seat_regions=plan.seat_regions,
+                        seat_weights=plan.seat_weights,
+                    )
+                    if index == 0
+                    else None
+                ),
+            )
+            for index, reform in enumerate(plan.reforms)
+        ]
+        for outcome in runner.map(
+            simulate_area_unit,
+            units,
+            on_result=lambda i, o: console.print(f"Simulated {o.reform_id}"),
+        ):
             if collector is None:
-                collector = GeographyCollector.from_simulation(
-                    baseline,
-                    kind=parsed.dataset_kind,
-                    regions=plan.regions,
-                    seat_regions=plan.seat_regions,
-                    seat_weights=plan.seat_weights,
-                    microcosm_export=plan.microcosm_export,
+                collector = outcome.collector
+            for year, baseline, reformed, weight in outcome.runs:
+                collector.add(
+                    outcome.reform_id,
+                    year,
+                    baseline=baseline,
+                    reformed=reformed,
+                    weight=weight,
                 )
-            # A measure the certified data cannot cost has no figure by
-            # area either: what the code that differs reads is watched
-            # while the area figures are calculated, as the generator
-            # watches its run. With no limit registered, nothing is
-            # watched.
-            watch = (
-                data_limits.observing(baseline, reformed)
-                if data_limits.DATA_LIMITS
-                else contextlib.nullcontext()
-            )
-            with watch as observed:
-                for year in plan.years:
-                    collector.collect(reform.id, year, baseline, reformed)
-            if data_limits.DATA_LIMITS:
-                touched = reform_data_limits(
-                    reform, baseline, reformed, observed, plan.years
-                )
-                if touched:
-                    limited[reform.id] = touched
-            # A measure the installed model mis-costs is never approved, but
-            # one approved before its limit was registered, or on a model
-            # with the fix, still is: judge the area run's own simulations,
-            # as the generator judges its run.
-            touched = reform_model_limits(
-                reform, baseline, reformed, plan.years
-            )
-            if touched:
-                held[reform.id] = touched
-            # The observation holds both simulations: free it with them, so
-            # the next pair is never built with this one still alive.
-            del baseline, reformed, observed
+            if outcome.limited:
+                limited[outcome.reform_id] = outcome.limited
+            if outcome.held:
+                held[outcome.reform_id] = outcome.held
         simulate_s = time.perf_counter() - start
         for reform_id, touched in limited.items():
             reasons = " ".join(item["reason"] for item in touched)
