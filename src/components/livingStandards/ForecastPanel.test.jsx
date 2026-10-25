@@ -1,7 +1,8 @@
 /**
  * The Forecast changes sub-tab before and after the Budget forecast is
- * published (forecast.post_published), from the real outlook file with a
- * made-up post-Budget forecast.
+ * published (forecast.post_published), from the real outlook file set to
+ * each state, so both hold whichever state the committed file is in: the
+ * Budget-day obr-forecast import publishes it.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,10 +15,34 @@ const REAL = JSON.parse(
 
 const POST_LABEL = "OBR October 2026 (Autumn Budget)";
 const POST_RELEASE = "OBR Economic and fiscal outlook, October 2026: detailed forecast tables, economy";
+// build_outlook's post_label (src/uk_budget_data/living_standards/build.py)
+const UNPUBLISHED_LABEL = "Budget forecast";
+
+/**
+ * The real file, unpublished, as uk-budget-data living-standards writes it
+ * with no Budget forecast loaded: build_outlook's post_label, then
+ * apply_post(outlook, None) (living_standards/forecast.py): post_published
+ * false, post_source null, and every series' post a copy of its pre, with
+ * no post_source.
+ */
+function unpublishedOutlook(base = REAL) {
+  const data = structuredClone(base);
+  const f = data.forecast;
+  f.post_published = false;
+  f.post_label = UNPUBLISHED_LABEL;
+  f.post_source = null;
+  for (const section of f.sections) {
+    for (const series of section.series) {
+      series.post = series.pre.map((p) => ({ ...p }));
+      delete series.post_source;
+    }
+  }
+  return data;
+}
 
 /** The real file, published: CPI 2027 up 0.3 points, RPI 2027 unchanged, earnings 2027 down 0.04 points. */
-function publishedOutlook() {
-  const data = structuredClone(REAL);
+function publishedOutlook(base = REAL) {
+  const data = structuredClone(base);
   const f = data.forecast;
   f.post_published = true;
   f.post_label = POST_LABEL;
@@ -55,14 +80,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("the fixtures", () => {
+  it("do not depend on the committed file's forecast state", () => {
+    expect(unpublishedOutlook(publishedOutlook())).toStrictEqual(unpublishedOutlook());
+    expect(publishedOutlook(unpublishedOutlook())).toStrictEqual(publishedOutlook());
+  });
+});
+
 describe("Forecast changes before the Budget forecast", () => {
   it("draws the pre-Budget line only and says the Budget forecast is to come", async () => {
-    await renderForecast(REAL);
+    await renderForecast(unpublishedOutlook());
     expect(screen.getByText(/will add the Autumn Budget 2026 forecast once the OBR publishes it/)).toBeInTheDocument();
     const cpi = card(/^CPI inflation, 2027 to 2030$/);
     const legend = cpi.querySelector(".chart-legend");
     expect(legend).toHaveTextContent("OBR March 2026 (pre-Budget)");
-    expect(legend).not.toHaveTextContent("Budget forecast");
+    expect(legend).not.toHaveTextContent(UNPUBLISHED_LABEL);
     // The tile shows one value and no change
     expect(screen.getByText(pct(cpiPre()))).toBeInTheDocument();
     expect(screen.queryByText(/pp$/)).toBeNull();
