@@ -6,6 +6,7 @@ const TAB_ICONS = {
   dashboard: "users",
   household: "house",
   living: "trend",
+  policies: "list",
   methodology: "book",
 };
 

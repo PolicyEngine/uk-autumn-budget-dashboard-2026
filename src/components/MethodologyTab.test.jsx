@@ -114,8 +114,10 @@ describe("MethodologyTab", () => {
   it("switches views from its links, in place", () => {
     const onShowTab = vi.fn();
     renderTab(onShowTab);
-    fireEvent.click(screen.getByRole("link", { name: "policy notes on Population impact" }));
-    expect(onShowTab).toHaveBeenLastCalledWith("dashboard");
+    const notes = screen.getByRole("link", { name: "Policies tab" });
+    expect(notes).toHaveAttribute("href", "?tab=policies");
+    fireEvent.click(notes);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
     const living = document.getElementById(METHOD_SECTIONS.living);
     fireEvent.click(within(living).getByRole("link", { name: "Living standards" }));
     expect(onShowTab).toHaveBeenLastCalledWith("living");

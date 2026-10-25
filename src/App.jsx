@@ -21,7 +21,6 @@ import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
 import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
-import Disclosure from "./components/Disclosure";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import PopulationImpactView from "./components/PopulationImpactView";
@@ -33,12 +32,14 @@ import PolicyCards from "./components/PolicyCards";
 // The views, as tabs under the intro. `year` and `policies` say which of
 // the band's pills apply to a view; the others keep their place in the band
 // but are hidden. The Living standards view is the pre-Budget baseline
-// outlook, and Methodology is text: neither pill applies to them. Young
-// people is a sub-tab of Population impact (PopulationImpactView).
+// outlook, Policies describes every measure and Methodology is text: no pill
+// applies to them. Young people is a sub-tab of Population impact
+// (PopulationImpactView).
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },
   { value: "living", label: "Living standards", year: false, policies: false },
+  { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
 ];
 
@@ -82,6 +83,9 @@ export function viewFromLocation({ search, hash }) {
 }
 
 // Preset policy combinations
+// Every measure, for Policies (which ignores the band's selection)
+const ALL_POLICY_IDS = POLICIES.map((p) => p.id);
+
 const PRESETS = [
   {
     id: "autumn-budget",
@@ -588,6 +592,17 @@ function App() {
         >
         {value === "living" ? (
           <LivingStandardsTab active={activeTab === value} />
+        ) : value === "policies" ? (
+          // Every measure's card, whatever the band's selection
+          <div className="results-container">
+            <SectionHeading
+              title="Policies"
+              subtitle="What each measure does, when it starts and how it is modelled."
+            />
+            <section id="policy-details" className="report-section policy-details-content">
+              <PolicyCards policies={POLICIES} selectedPolicies={ALL_POLICY_IDS} />
+            </section>
+          </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
@@ -719,22 +734,20 @@ function App() {
                       />
                     </section>
 
-                    {/* Policy Details Footer */}
-                    <SectionHeading
-                      title="Policies"
-                      subtitle="What each selected policy does and how it is modelled."
-                    />
-                    <section id="policy-details" className="report-section">
-                      <Disclosure
-                        title="About selected policies"
-                        contentClassName="policy-details-content"
+                    {/* The measures are described once, on Policies */}
+                    <p className="policies-link-line">
+                      What each measure does is on{" "}
+                      <a
+                        href="?tab=policies"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          handleTabChange("policies");
+                        }}
                       >
-                        <PolicyCards
-                          policies={POLICIES}
-                          selectedPolicies={selectedPolicies}
-                        />
-                      </Disclosure>
-                    </section>
+                        Policies
+                      </a>
+                      .
+                    </p>
                   </>
                 )}
               </div>

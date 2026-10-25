@@ -1,5 +1,5 @@
 /**
- * Smoke test of the four tabs, and Population impact's Young people
+ * Smoke test of the five tabs, and Population impact's Young people
  * sub-tab, on the real data.
  *
  * Each tab is opened by its address (?tab=, ?sub=), as a shared link opens it, and
@@ -58,6 +58,8 @@ const LOADED = {
   young: (panel) => within(panel).findAllByRole("heading", { name: /Average change by age/ }),
   // The Incomes heading shows once the outlook is read.
   living: (panel) => within(panel).findAllByRole("heading", { name: "Incomes" }),
+  // Every measure's card, whatever the band's selection
+  policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
 };
 
@@ -126,7 +128,7 @@ const CASES = [
   ["Population impact: Young people", "young", "/?sub=young", "Young people"],
 ];
 
-describe("each of the four tabs and the Young people sub-tab, on the real data", () => {
+describe("each of the five tabs and the Young people sub-tab, on the real data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });

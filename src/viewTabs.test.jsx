@@ -23,12 +23,13 @@ const band = (container) => container.querySelector(".title-row");
 const shown = (pill) => !pill.classList.contains("is-hidden") && !pill.hasAttribute("inert");
 
 describe("the view tabs", () => {
-  it("are four tabs under the intro, in order, with no view pill in the band", () => {
+  it("are five tabs under the intro, in order, with no view pill in the band", () => {
     const { container } = render(<App />);
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
       "Household impact",
       "Living standards",
+      "Policies",
       "Methodology",
     ]);
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
@@ -63,6 +64,7 @@ describe("the view tabs", () => {
       // The year drives Household impact's household calculation
       household: [true, true],
       living: [false, false],
+      policies: [false, false],
       methodology: [false, false],
     };
     VIEWS.forEach((view, index) => {
@@ -88,6 +90,7 @@ describe("the view tabs", () => {
       dashboard: [null, true],
       household: ["household", false],
       living: ["living", false],
+      policies: ["policies", false],
       methodology: ["methodology", false],
     };
     VIEWS.forEach((view, index) => {
@@ -102,6 +105,7 @@ describe("the view tabs", () => {
       // An old link: the view it named, at its new address
       ["/?tab=personal", "Household impact"],
       ["/?tab=living", "Living standards"],
+      ["/?tab=policies", "Policies"],
       ["/?tab=dashboard", "Population impact"],
       ["/?tab=methodology", "Methodology"],
       ["/?tab=nonsense", "Population impact"],
@@ -118,6 +122,19 @@ describe("the view tabs", () => {
     expect(opensYoungPeople({ search: "?tab=living", hash: "" })).toBe(false);
   });
 
+  it("describe every measure on Policies, whatever the selection, and link there from Population impact", async () => {
+    window.history.replaceState({}, "", "/?policies=fuel_duty_rise_deferral");
+    render(<App />);
+    const link = await screen.findByRole("link", { name: "Policies" });
+    expect(link).toHaveAttribute("href", "?tab=policies");
+    // Population impact no longer repeats the cards
+    expect(screen.queryByText("About selected policies")).toBeNull();
+    fireEvent.click(link);
+    const panel = screen.getByRole("tabpanel", { name: "Policies" });
+    expect(within(panel).getAllByRole("listitem")).toHaveLength(9);
+    expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
+  });
+
   it("move with the arrow keys, Home and End", () => {
     render(<App />);
     const list = viewList();
@@ -126,7 +143,7 @@ describe("the view tabs", () => {
     expect(tabs()[1]).toHaveFocus();
     fireEvent.keyDown(list, { key: "ArrowLeft" });
     fireEvent.keyDown(list, { key: "ArrowLeft" });
-    expect(tabs()[3]).toHaveAttribute("aria-selected", "true");
+    expect(tabs()[4]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "Home" });
     expect(tabs()[0]).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(list, { key: "End" });

@@ -150,9 +150,9 @@ function SectionLink({ id, children }) {
 /**
  * The Methodology view: how the other views' figures are made, gathered in
  * one place, with a contents list beside it. Each note is said here and
- * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the household calculation with Household impact's "About
- * these figures". Living standards states the engine, data, notes and gaps
+ * nowhere else on the page; the policy descriptions stay on Policies, and
+ * the household calculation with Household impact's "About these
+ * figures". Living standards states the engine, data, notes and gaps
  * of that view's projections.
  *
  * @param {Object} props
@@ -160,7 +160,7 @@ function SectionLink({ id, children }) {
  */
 function MethodologyTab({ onShowTab }) {
   const policyNotes = (text) => (
-    <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
+    <ViewLink tab="policies" onShowTab={onShowTab}>
       {text}
     </ViewLink>
   );
@@ -243,8 +243,8 @@ function MethodologyTab({ onShowTab }) {
               PolicyEngine UK works out each household&apos;s taxes, benefits and net income under
               current law, then again with a measure; the difference between the two runs is the
               measure&apos;s effect. The estimates are static: households do not change their
-              behaviour in response. What each measure does is in the{" "}
-              {policyNotes("policy notes on Population impact")}; how the model represents it is
+              behaviour in response. What each measure does is on the{" "}
+              {policyNotes("Policies tab")}; how the model represents it is
               below.
             </p>
           }

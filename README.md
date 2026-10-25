@@ -19,6 +19,7 @@ The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-ta
 | Population impact | Budgetary impact, distributional impact, winners and losers, and results by region and constituency, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** and **Young people**. |
 | Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
 | Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Policies | Every measure in one place: what changes, when it starts, its type, and its main modelling assumption and source behind "Details". Text from [`src/utils/policies.js`](src/utils/policies.js); Population impact links here rather than repeating it. |
 | Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
 Every chart downloads as CSV, PNG, SVG or plain text.
