@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis, BEFORE_DASH } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis, BEFORE_DASH, REFERENCE_DASH } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -11,7 +11,7 @@ import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import TitleIcon from "../TitleIcon";
 
-export const BEFORE_COLOUR = CHART_COLOURS.noChange;
+export const BEFORE_COLOUR = CHART_COLOURS.before;
 export const AFTER_COLOUR = CHART_COLOURS.gain;
 const LOSS_COLOUR = CHART_COLOURS.loss;
 const ZERO_LINE = CHART_COLOURS.text;
@@ -252,7 +252,7 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
             {/* You */}
             {youX !== null && (
               <g className="earnings-you">
-                <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray="4 3" />
+                <line x1={youX} x2={youX} y1={top1} y2={top2 + bottomH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
                 {youNet !== null && <circle cx={youX} cy={y1(youNet)} r={5} fill={AFTER_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />}
                 <text
                   x={youX + (youX > left + plotW - 40 ? -6 : 6)}

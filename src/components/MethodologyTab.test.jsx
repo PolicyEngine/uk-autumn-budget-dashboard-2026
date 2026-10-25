@@ -109,8 +109,8 @@ describe("MethodologyTab", () => {
     expect(slot).toHaveTextContent("OBR's average earnings forecast");
     expect(slot).not.toHaveTextContent("in the national figures only");
     expect(slot).toHaveTextContent("Every policy applied");
-    expect(slot).toHaveTextContent("employer NI relief for under-25s");
-    expect(slot).toHaveTextContent("if received");
+    expect(slot).toHaveTextContent("Employer NI relief: an employer cost");
+    expect(slot).toHaveTextContent("paid in 2026-27 only");
   });
 
   it("switches views from its links, in place", () => {

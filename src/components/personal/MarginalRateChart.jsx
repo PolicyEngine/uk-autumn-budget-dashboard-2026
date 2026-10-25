@@ -22,6 +22,7 @@ import {
   CHART_COLOURS,
   sweepAxis,
   BEFORE_DASH,
+  REFERENCE_DASH,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
@@ -183,7 +184,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               <ReferenceLine
                 x={salary}
                 stroke={CHART_COLOURS.text}
-                strokeDasharray="4 3"
+                strokeDasharray={REFERENCE_DASH}
                 label={{ value: "You", position: "insideTopRight", fill: CHART_COLOURS.text, fontSize: 13, fontWeight: 600 }}
               />
             )}

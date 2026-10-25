@@ -33,6 +33,7 @@ import {
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
+  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
   NOT_YET_PUBLISHED,
@@ -301,7 +302,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
 
               {...TOOLTIP_PROPS}
 
-              cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+              cursor={HOVER_CURSOR}
 
               content={
 

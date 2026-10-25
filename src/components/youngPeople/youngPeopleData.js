@@ -16,7 +16,7 @@ import {
   singleAgeKey,
   wholeSelectionRun,
 } from "../../utils/ageImpact";
-import { CHART_COLOURS } from "../../utils/chartTheme";
+import { CHART_COLOURS, REFERENCE_DASH } from "../../utils/chartTheme";
 
 /**
  * A colour per age group for charts that show them all: 16 to 24 in the
@@ -30,7 +30,7 @@ export const GROUP_STYLES = {
   "35-49": { color: CHART_COLOURS.ageAdults },
   "50-64": { color: CHART_COLOURS.ageOlder },
   "65+": { color: CHART_COLOURS.agePension },
-  all: { color: CHART_COLOURS.reference, dash: "5 3" },
+  all: { color: CHART_COLOURS.reference, dash: REFERENCE_DASH },
 };
 
 /** Below this (in £ a year) a mean change counts as no change. */

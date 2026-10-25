@@ -42,6 +42,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
+  hover: "#EEF6F6",
   obr: "#9CA3AF",
   obrText: "#6B7280",
   net: "#000000",
@@ -73,6 +74,12 @@ export const CHART_COLOURS = {
 // Light horizontal gridlines only.
 /** "Before" is a grey dashed line on every chart, "after" a teal solid one */
 export const BEFORE_DASH = "6 4";
+
+/** A reference line or series (all people, all ages, "You"): one dashed style */
+export const REFERENCE_DASH = "4 3";
+
+/** The hover cursor behind a bar or row, on every chart */
+export const HOVER_CURSOR = { fill: "#EEF6F6" };
 
 export const GRID_PROPS = {
   vertical: false,

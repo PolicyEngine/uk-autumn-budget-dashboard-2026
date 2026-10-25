@@ -46,7 +46,7 @@ const UNIT = "Change per person (£ a year)";
 // Room beside the ticks for the rotated axis title
 const TITLE_ROOM = 20;
 // The selected year's shading, as the 16 to 24 band in "Average change by age"
-const SELECTED_FILL = "rgba(49, 151, 149, 0.10)";
+const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 /**
  * The selected year's shading, and each unpublished year's grey band with

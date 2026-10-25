@@ -47,6 +47,7 @@ import {
   fiscalYearTick,
   CHART_COLOURS,
   zeroBasedAxis,
+  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -68,7 +69,7 @@ const DATA_URL = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/age_impact.csv
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
 // on white)
-const YOUNG_FILL = "rgba(49, 151, 149, 0.10)";
+const YOUNG_FILL = CHART_COLOURS.highlightBand;
 const YOUNG_SWATCH = CHART_COLOURS.highlightBand;
 // Better off, unchanged, worse off: the page's teal and amber, grey between
 const OUTCOMES = [
@@ -478,7 +479,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                cursor={HOVER_CURSOR}
                 content={<SingleAgeTooltip yearLabel={yearLabel} />}
               />
               {/* Each policy's own part, gains stacked above zero and losses
@@ -523,7 +524,7 @@ function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow
               <ReferenceLine y={0} stroke={CHART_COLOURS.text} strokeWidth={1} />
               <Tooltip
                 {...TOOLTIP_PROPS}
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                cursor={HOVER_CURSOR}
                 content={
                   <ChartTooltip
                     format={pounds}
@@ -741,7 +742,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               />
               <Tooltip
                 {...TOOLTIP_PROPS}
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                cursor={HOVER_CURSOR}
                 content={<SharesTooltip yearLabel={yearLabel} />}
               />
               {OUTCOMES.map((outcome) => (
@@ -811,7 +812,7 @@ function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, he
               />
               <Tooltip
                 {...TOOLTIP_PROPS}
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                cursor={HOVER_CURSOR}
                 content={<SharesTooltip yearLabel={yearLabel} />}
               />
               {OUTCOMES.map((outcome) => (

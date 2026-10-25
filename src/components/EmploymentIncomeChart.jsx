@@ -37,6 +37,7 @@ import {
   axisWidth,
   CHART_COLOURS,
   sweepAxis,
+  BEFORE_DASH,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
@@ -50,7 +51,7 @@ const CHART_TITLE = "Household net income";
 
 // Legend items for export
 const LEGEND_ITEMS = [
-  { color: CHART_COLOURS.before, label: "Before the selected policies", type: "line" },
+  { color: CHART_COLOURS.before, label: "Before the selected policies", type: "line", dash: BEFORE_DASH },
   { color: CHART_COLOURS.after, label: "After the selected policies", type: "line" },
 ];
 
@@ -213,6 +214,7 @@ function EmploymentIncomeChart({
                 dataKey="baseline"
                 stroke={CHART_COLOURS.before}
                 strokeWidth={2.5}
+                strokeDasharray={BEFORE_DASH}
                 dot={false}
                 name="Before the selected policies"
                 {...chartMotion()}
@@ -222,7 +224,6 @@ function EmploymentIncomeChart({
                 dataKey="reform"
                 stroke={CHART_COLOURS.after}
                 strokeWidth={2.5}
-                strokeDasharray="8 4"
                 dot={false}
                 name="After the selected policies"
                 {...chartMotion()}

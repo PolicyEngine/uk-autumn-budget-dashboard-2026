@@ -35,6 +35,7 @@ import {
   axisWidth,
   CHART_COLOURS,
   zeroBasedAxis,
+  HOVER_CURSOR,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
@@ -293,7 +294,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
                 {...TOOLTIP_PROPS}
 
-                cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+                cursor={HOVER_CURSOR}
 
                 content={
 

@@ -26,6 +26,7 @@ import {
   useNarrowViewport,
   CHART_COLOURS,
   fiscalYearTicks,
+  HOVER_CURSOR,
 } from "../../utils/chartTheme";
 import { fyLabel } from "../../utils/livingStandards/outlook";
 
@@ -226,7 +227,7 @@ export function LsBarChart({
           <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
           <Tooltip
             {...TOOLTIP_PROPS}
-            cursor={{ fill: "rgba(49, 151, 149, 0.08)" }}
+            cursor={HOVER_CURSOR}
             content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
           />
           {series.map((s) => (
