@@ -1,10 +1,9 @@
 import LsCard from "./LsCard";
-import ViewSwitch from "../ViewSwitch";
+import PillSelect from "../PillSelect";
 
 /**
- * A card that shows one of several views of a topic, chosen with a small
- * segmented switch (ViewSwitch, without icons; each view's short `badge`
- * as its label, the full label as its title). Each view (from a use…View hook) gives the card's parts: period,
+ * A card that shows one of several views of a topic, chosen with a
+ * "Show [ ▾ ]" pill, as Population impact's charts choose theirs. Each view (from a use…View hook) gives the card's parts: period,
  * summary, about, notes, source, download, its own pills and the chart.
  * The switch comes first in the one controls row, then the view's own
  * pills. A view with none keeps the first view's pills in place, hidden and
@@ -12,7 +11,7 @@ import ViewSwitch from "../ViewSwitch";
  *
  * views: [{ value, label, view }], where a null view is left out.
  */
-export default function ViewCard({ title, name, views, value, onChange }) {
+export default function ViewCard({ title, icon, name, views, value, onChange }) {
   const available = views.filter((v) => v.view);
   if (!available.length) return null;
   const current = available.find((v) => v.value === value) || available[0];
@@ -20,6 +19,7 @@ export default function ViewCard({ title, name, views, value, onChange }) {
   return (
     <LsCard
       title={title}
+      icon={icon}
       period={view.period}
       summary={view.summary}
       about={view.about}
@@ -30,12 +30,14 @@ export default function ViewCard({ title, name, views, value, onChange }) {
       controls={
         <>
           {available.length > 1 && (
-            <ViewSwitch
-              compact
-              label={name}
+            <PillSelect
+              variant="light"
+              prefix="Show"
+              name={name}
               value={current.value}
               onChange={onChange}
-              options={available.map((v) => ({ value: v.value, label: v.badge ?? v.label, title: v.label }))}
+              options={available.map((v) => ({ value: v.value, label: v.label }))}
+              stableWidth
             />
           )}
           {view.controls ??
