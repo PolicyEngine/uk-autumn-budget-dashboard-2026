@@ -140,6 +140,19 @@ describe("MethodologyTab", () => {
     expect(measureModelling({ displayable: [{ ...other, id: MODELLING_NOTE.id }] })[0].note).toBe(MODELLING_NOTE.note);
   });
 
+  it("keeps every figure in the modelling note attributed to its outside source", () => {
+    // Review of 3d52cff, finding 3: a figure of ours needs a receipt, so the
+    // hand-written note may carry only dated estimates from named sources
+    const sentences = MODELLING_NOTE.note.split(/(?<=\.)\s+/);
+    const priced = sentences.filter((sentence) => sentence.includes("£"));
+    expect(priced.length).toBeGreaterThan(0);
+    for (const sentence of priced) {
+      expect(sentence).toMatch(/Resolution Foundation|Tax Policy Associates|HMRC/);
+    }
+    expect(MODELLING_NOTE.note).not.toMatch(/\bthe model\b|PolicyEngine/i);
+    expect(MODELLING_NOTE.note).toMatch(/2025-26/);
+  });
+
   it("lists the measures reported as likely that the model cannot cost", () => {
     renderTab();
     const card = screen.getByRole("heading", { name: "Likely but not modelled" }).closest(".method-card");

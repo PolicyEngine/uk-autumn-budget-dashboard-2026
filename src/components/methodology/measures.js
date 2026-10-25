@@ -5,16 +5,19 @@
  */
 
 /**
- * The one modelling note written by hand: the employer NI relief's scope
- * against other estimates (#113). Independent text, not part of the
- * receipt, shown under the measure's published description while it is
- * displayed. A note for a second measure would make this a measure list
- * of the page's own (test_the_page_keeps_no_measure_list_of_its_own); it
- * belongs in the registry and its receipts instead.
+ * The one modelling note written by hand: other estimates of the employer
+ * NI relief, each dated and attributed (#113). Independent text, not part
+ * of the receipt, shown under the measure's published description while it
+ * is displayed. It holds no figure of ours, which would need a receipt
+ * (review of 3d52cff, finding 3); what the data and the model leave out of
+ * the measure is in its registry description, which G3 approves. A note for
+ * a second measure would make this a measure list of the page's own
+ * (test_the_page_keeps_no_measure_list_of_its_own); it belongs in the
+ * registry and its receipts instead.
  */
 export const MODELLING_NOTE = {
   id: "employer_ni_relief_under_25s",
-  note: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (HMRC puts that relief at about £0.57bn in 2025-26). The figure is static and gross: no pay response and no corporation tax effect. Other estimates, also gross and static, are for 2025-26: on that year's earnings the model gives £5.7bn. The Resolution Foundation's £5.1bn (Take a chance on me, June 2026) scraps employer NI altogether for under-25s, with no upper limit. Tax Policy Associates' £6.2bn to £7.4bn covers 21 to 24-year-olds who are not apprentices, up to £50,270.",
+  note: "Other estimates, gross and static like this one (no pay response and no corporation tax effect), are for 2025-26. The Resolution Foundation's £5.1bn (Take a chance on me, June 2026) scraps employer NI altogether for under-25s, with no upper limit. Tax Policy Associates' £6.2bn to £7.4bn covers 21 to 24-year-olds who are not apprentices, up to £50,270. HMRC puts the existing relief for apprentices under 25, which this cost includes for those aged 21 to 24, at about £0.57bn.",
 };
 
 export function measureModelling(catalogue) {

@@ -6,6 +6,7 @@ and thresholds of the installed policyengine-uk (2.132.6), and the model
 must agree to the penny (it computes in float32).
 """
 
+import inspect
 import math
 from importlib import import_module
 
@@ -559,6 +560,39 @@ def test_employer_ni_relief_leaves_apprentices_as_the_model_has_them():
         "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
     )
     assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
+def test_the_employer_ni_description_states_the_apprentice_default():
+    """The measure reads ``is_apprentice``, which the certified data leave
+    at its default, False, so its cost includes 21 to 24-year-old
+    apprentices. A measure that reads an input the data leave at its
+    default is released at the Treasury check (G3) with the default stated
+    in its public text (coordinator, 24 October, policyengine.py#715), and
+    the description is the text G3 approves. So while the measure reads the
+    input, the description must say the data identify no apprentices."""
+    source = inspect.getsource(modifier("employer_ni_relief_ages_21_to_24"))
+    assert '"is_apprentice"' in source
+    description = get_reform("employer_ni_relief_under_25s").description
+    assert "identify no apprentices" in description
+    assert "cost includes 21 to 24-year-old apprentices" in description
+
+
+@pytest.mark.certified_data
+def test_the_certified_data_still_flag_no_apprentices():
+    """Tripwire: when certified data flag apprentices, this fails, and the
+    employer NI relief's description and methodology note, which say the
+    cost includes them, are corrected in the bundle-adoption PR that brings
+    that data."""
+    from uk_budget_data.pipeline import build_microsimulation
+
+    sim = build_microsimulation(None)
+    # Control: a column the data do carry has its periods set, so an empty
+    # holder below means the data lack the input, not that nothing loaded.
+    assert sim.get_holder("age").get_known_periods()
+    assert sim.get_holder("is_apprentice").get_known_periods() == [], (
+        "the certified data now set is_apprentice: correct the employer NI "
+        "relief's description and methodology note"
+    )
 
 
 def test_employer_ni_above_the_upper_threshold_is_still_charged():
