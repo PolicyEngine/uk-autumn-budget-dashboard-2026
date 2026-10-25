@@ -514,8 +514,7 @@
   color: var(--pe-gray-500);
 }
 
-/* The header's right side: Examples (quiet) and Calculate (primary) on one
-   row, the same height and radius */
+/* The header's right side: Calculate (primary) */
 .household-header-actions {
   display: flex;
   align-items: center;
@@ -524,93 +523,28 @@
   margin-left: auto;
 }
 
-.example-picker {
-  position: relative;
+/* The examples: a row of cards above the form, as the student loan
+   calculator's scenario cards; the chosen one teal */
+.example-cards {
+  margin-bottom: 24px;
 }
 
-.example-picker-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 14px;
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--pe-gray-700);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-md);
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+.example-cards-title {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--pe-gray-800);
 }
 
-.example-picker-button:hover {
-  border-color: var(--pe-gray-300);
-  background: var(--pe-gray-50);
+.example-cards-groups {
+  display: grid;
+  grid-template-columns: 3fr 5fr;
+  gap: 16px;
 }
 
-.example-picker-button:active {
-  transform: translateY(1px);
-}
-
-.example-picker-button:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--pe-teal-200);
-}
-
-.example-picker-button svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-.example-picker-chevron {
-  transition: transform 0.2s ease;
-}
-
-.example-picker-button[aria-expanded="true"] .example-picker-chevron {
-  transform: rotate(180deg);
-}
-
-/* The menu: a popover list under the button, right-aligned */
-.example-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 50;
-  width: 340px;
-  max-width: calc(100vw - 32px);
-  max-height: min(480px, 70vh);
-  padding: 6px;
-  overflow-y: auto;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--pe-shadow-lg);
-  animation: example-menu-in 0.15s ease-out both;
-}
-
-@keyframes example-menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.example-menu-group + .example-menu-group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.example-menu-title {
-  margin: 0;
-  padding: 8px 10px 4px;
+.example-cards-group-title {
+  margin: 0 0 8px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.8px;
@@ -618,43 +552,78 @@
   color: var(--pe-gray-400);
 }
 
-.example-menu-item {
+.example-cards-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 10px;
+}
+
+.example-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  padding: 8px 10px;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
   font-family: inherit;
   text-align: left;
-  background: transparent;
-  border: none;
-  border-radius: var(--pe-radius-md);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 
-.example-menu-item:hover,
-.example-menu-item:focus-visible {
-  background: var(--pe-gray-50);
+.example-card:hover {
+  border-color: var(--pe-teal-300);
+}
+
+.example-card:active {
+  transform: translateY(1px);
+}
+
+.example-card:focus-visible {
   outline: none;
+  box-shadow: 0 0 0 3px var(--pe-teal-200);
 }
 
-.example-menu-item:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--pe-teal-200);
-}
-
-.example-menu-item[aria-checked="true"] {
+.example-card[aria-pressed="true"] {
   background: var(--pe-teal-50);
+  border-color: var(--pe-teal-500);
 }
 
-.example-menu-name {
+.example-card-name {
   font-size: var(--fs-small);
   font-weight: 600;
+  line-height: 1.3;
   color: var(--pe-gray-800);
 }
 
-.example-menu-description {
+.example-card-description {
   font-size: var(--fs-micro);
+  line-height: 1.4;
   color: var(--pe-gray-500);
+}
+
+/* Narrower screens: the groups stacked, each row scrolling sideways */
+@media (max-width: 1100px) {
+  .example-cards-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .example-cards-row {
+    grid-auto-columns: minmax(200px, 72%);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 4px;
+  }
+
+  .example-card {
+    scroll-snap-align: start;
+  }
 }
 
 /* Calculate, as the student loan calculator's .calculate-button */
@@ -1176,19 +1145,8 @@
     margin-left: 0;
   }
 
-  .example-picker,
   .calculate-button {
     flex: 1 1 0;
-  }
-
-  .example-picker-button {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .example-menu {
-    left: 0;
-    right: auto;
   }
 
   .household-more {
@@ -1201,13 +1159,8 @@
   .info-tooltip,
   .calculate-button,
   .calculate-arrow,
-  .example-picker-button,
-  .example-picker-chevron {
+  .example-card {
     transition: none;
-  }
-
-  .example-menu {
-    animation: none;
   }
 
   .calculate-spinner {

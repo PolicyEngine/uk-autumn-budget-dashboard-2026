@@ -101,6 +101,7 @@ The web app's population figures are files in `public/data/`, written by the `uk
 | `geography` | Disclosure-controlled results by region and constituency |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
 | `living-standards` | `living_standards_outlook.json`, the Living standards tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
+| `scripts/precompute_household_presets.py` (not the CLI; reads `bun scripts/household-preset-requests.mjs`) | `household_presets.json`, the Household impact examples' answers with every measure selected, 2027-28 to 2031-32, shown at once when an example is chosen (no dataset needed; about ten minutes locally) |
 | `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Living standards Forecast changes series |
 | `publish …` | Reconciles, stages, approves and checks entries in the publication manifest |
 

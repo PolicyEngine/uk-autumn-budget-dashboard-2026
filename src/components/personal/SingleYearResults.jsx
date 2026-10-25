@@ -395,7 +395,7 @@ export function SingleYearHeadline({
     return (
       <div className="single-year-headline">
         <div className="card single-year-prompt" role="status">
-          Choose your answers and press Calculate.
+          Choose an example, or enter your answers and press Calculate.
         </div>
       </div>
     );

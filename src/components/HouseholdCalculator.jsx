@@ -3,9 +3,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { EXAMPLE_GROUPS, HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
-import ExamplePicker from "./personal/ExamplePicker";
+import ExampleCards from "./personal/ExampleCards";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
-import useHouseholdImpact from "../hooks/useHouseholdImpact";
+import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
+import { loadPresetResults } from "../utils/householdPresets";
 import {
   CHILD_AGE_MESSAGE,
   OLDEST_CHILD_AGE,
@@ -18,50 +19,15 @@ import {
   statePensionFor,
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
-import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
+import { SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "../utils/householdDefaults";
+
+// The form's answers at their defaults (utils/householdDefaults.js)
+export { WIZARD_DEFAULTS };
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 
-// The form's answers, each at a typical value until changed. Sources:
-// utils/householdDefaults.js
-export const WIZARD_DEFAULTS = {
-  current_age: 30,
-  current_salary: DEFAULT_SALARY,
-  region: "NORTH_WEST",
-  tenure: "RENT_PRIVATELY",
-  // null: the region's average private rent (ONS), until changed
-  monthly_rent: null,
-  // policyengine-uk's repayment depends on the plan and income alone: the
-  // balance only caps a year's repayment, and is not asked for
-  student_loan_plan: "NONE",
-  has_partner: false,
-  partner_age: 30,
-  partner_salary: DEFAULT_SALARY,
-  children_ages: "",
-  // Per child, in the order of children_ages: whether a 16- to 19-year-old
-  // is in full-time non-advanced education (school or college); yes until
-  // answered
-  children_in_education: [],
-  // Entitlement: the household claims what it is due
-  claims_universal_credit: true,
-  council_tax_band: "D",
-  salary_sacrifice_per_year: 0,
-  petrol_spending_per_year: DEFAULT_SPENDING.petrol,
-  diesel_spending_per_year: DEFAULT_SPENDING.diesel,
-  electricity_spending_per_year: DEFAULT_SPENDING.electricity,
-  dividends_per_year: 0,
-  savings_interest_per_year: 0,
-  property_income_per_year: 0,
-  // Private and workplace pensions in payment, £ a year
-  private_pension_per_year: 0,
-  partner_private_pension_per_year: 0,
-  monthly_childcare: 0,
-  // At State Pension age; null is the full new State Pension for the year
-  state_pension_per_year: null,
-  partner_state_pension_per_year: null,
-};
 
 // The form: one card of questions in labelled sections, each a grid of
 // boxes. The essentials first, then the optional details in More details,
@@ -362,11 +328,21 @@ function HouseholdCalculator({
     savedWizard.submitted = submitted;
   }, [inputs, presetId, moreOpen, submitted]);
 
-  // Fill the form from an example; every value stays editable
-  const applyPreset = (preset) => {
-    setInputs({ ...WIZARD_DEFAULTS, ...preset.inputs });
-    setPresetId(preset.id);
-  };
+  // The examples' precomputed answers, loaded once and added to the
+  // session cache; `seeded` tells a request already waiting to look again
+  const [seeded, setSeeded] = useState(0);
+  useEffect(() => {
+    let live = true;
+    loadPresetResults().then((entries) => {
+      if (!live || entries.length === 0) return;
+      seedHouseholdImpactCache(entries);
+      setSeeded((n) => n + 1);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
 
   const householdPolicies = useMemo(
@@ -374,6 +350,16 @@ function HouseholdCalculator({
     [selectionKey],
   );
   const noneSelected = householdPolicies.length === 0;
+  // Fill the form from an example and show its result at once (no
+  // Calculate); every value stays editable
+  const applyPreset = (preset) => {
+    const next = { ...WIZARD_DEFAULTS, ...preset.inputs };
+    setInputs(next);
+    setPresetId(preset.id);
+    if (householdPolicies.length > 0) {
+      setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now() });
+    }
+  };
   // The results for the answers sent with Calculate, never the ones being
   // edited. The request carries on whatever else changes on the page (this
   // view stays mounted while another is shown).
@@ -382,6 +368,7 @@ function HouseholdCalculator({
     year: submitted?.year ?? year,
     policies: submitted?.policies ?? householdPolicies,
     enabled: submitted !== null,
+    seeded,
   });
   // The answers, year or policies differ from those of the result shown
   const changed =
@@ -391,6 +378,8 @@ function HouseholdCalculator({
   // Busy while the headline is calculated, and while the slower parts are
   // for these same answers; changed answers can be sent once the headline
   // is back, without waiting for the split by policy and the sweep
+  // An example's result, as chosen and unedited: no Calculate to press
+  const showingExample = presetId !== null && submitted !== null && !changed;
   const running =
     submitted !== null &&
     (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
@@ -630,6 +619,11 @@ function HouseholdCalculator({
 
   return (
     <div className="household-calculator">
+      <ExampleCards
+        groups={EXAMPLE_GROUPS}
+        value={presetId}
+        onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
+      />
       <div className="household-layout">
         {/* The whole form in one card: a header with the examples, then
             the questions in sections */}
@@ -642,12 +636,8 @@ function HouseholdCalculator({
               </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
+            {!showingExample && (
             <div className="household-header-actions">
-            <ExamplePicker
-              groups={EXAMPLE_GROUPS}
-              value={presetId}
-              onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
-            />
             <button
               type="submit"
               className={`calculate-button ${running ? "is-busy" : ""}`}
@@ -669,6 +659,7 @@ function HouseholdCalculator({
               )}
             </button>
             </div>
+            )}
           </div>
           {activePreset && (
             <p className="household-examples-note" role="status">
