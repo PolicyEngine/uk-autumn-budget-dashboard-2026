@@ -118,9 +118,12 @@ function ForecastPanel({ data, forecastView, setForecastView }) {
   );
 }
 
-export default function LivingStandardsTab() {
+export default function LivingStandardsTab({ active = true }) {
   const [state, setState] = useState({ loading: true, data: null, error: null });
-  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES);
+  const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
+  // Sub-tabs opened so far stay mounted, hidden while the other is shown
+  const [visited, setVisited] = useState([sub]);
+  if (!visited.includes(sub)) setVisited([...visited, sub]);
   // Charts or tables: kept here so it survives a sub-tab switch
   const [forecastView, setForecastView] = useState("chart");
 
@@ -165,13 +168,15 @@ export default function LivingStandardsTab() {
               measures are not modelled.
             </p>
           </div>
-          <SubTabPanel idPrefix="living" value={sub}>
-            {sub === "forecast" ? (
-              <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
-            ) : (
-              <BaselinePanel data={data} />
-            )}
-          </SubTabPanel>
+          {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
+            <SubTabPanel key={value} idPrefix="living" value={value} hidden={value !== sub}>
+              {value === "forecast" ? (
+                <ForecastPanel data={data} forecastView={forecastView} setForecastView={setForecastView} />
+              ) : (
+                <BaselinePanel data={data} />
+              )}
+            </SubTabPanel>
+          ))}
         </div>
       )}
     </>

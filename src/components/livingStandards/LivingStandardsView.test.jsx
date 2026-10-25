@@ -190,9 +190,11 @@ describe("the Living standards view", () => {
     expect(params.get("tab")).toBe("methodology");
     expect(params.has("sub")).toBe(false);
 
-    // Back on Living standards, it opens at the default sub-tab
+    // Back on Living standards (kept mounted), the sub-tab left open stays,
+    // with its ?sub= again
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
-    expect(await screen.findByRole("tab", { name: "Baseline outlook" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tab", { name: "Forecast changes" })).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("forecast");
   });
 
   it("opens Baseline outlook for an unknown ?sub=", async () => {

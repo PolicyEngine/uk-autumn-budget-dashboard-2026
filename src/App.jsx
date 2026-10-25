@@ -158,6 +158,11 @@ function App() {
   );
   const [results, setResults] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  // The views opened so far: each stays mounted once opened, hidden while
+  // another is shown, so its state, open expanders and any calculation in
+  // flight carry on
+  const [visited, setVisited] = useState(["dashboard"]);
+  if (!visited.includes(activeTab)) setVisited([...visited, activeTab]);
 
   // Valid policy IDs from POLICIES
   const validPolicyIds = POLICIES.map((p) => p.id);
@@ -432,11 +437,16 @@ function App() {
   // no year pill), so this runs once the new view is laid out.
   const appRef = useRef(null);
   const tabScrollPending = useRef(false);
+  // Each view's scroll position when it was left, to return to it
+  const tabScroll = useRef({});
   // `sub` opens the new view at one of its sub-tabs (Methodology's links).
   const handleTabChange = (tab, sub) => {
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
-    if (tab !== activeTab) dropSubTab(sub);
+    if (tab !== activeTab) {
+      dropSubTab(sub);
+      tabScroll.current[activeTab] = window.scrollY;
+    }
     setActiveTab(tab);
     // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
@@ -454,7 +464,11 @@ function App() {
     const band =
       parseFloat(getComputedStyle(appRef.current).getPropertyValue("--title-row-height")) || 0;
     const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
-    if (window.scrollY > top) window.scrollTo({ top });
+    // A view opened before returns to where it was left, if that was below
+    // the tabs; otherwise the tabs come back up under the band
+    const saved = tabScroll.current[activeTab];
+    if (saved !== undefined && saved > top) window.scrollTo({ top: saved });
+    else if (window.scrollY > top) window.scrollTo({ top });
   }, [activeTab]);
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
@@ -563,17 +577,20 @@ function App() {
           panelId={panelId}
         />
 
+        {VIEWS.filter(({ value }) => visited.includes(value) || value === activeTab).map(({ value }) => (
         <div
-          id={panelId(activeTab)}
+          key={value}
+          id={panelId(value)}
           role="tabpanel"
-          aria-labelledby={tabId(activeTab)}
+          aria-labelledby={tabId(value)}
           className="tab-panel"
+          hidden={value !== activeTab}
         >
-        {activeTab === "living" ? (
-          <LivingStandardsTab />
-        ) : activeTab === "methodology" ? (
+        {value === "living" ? (
+          <LivingStandardsTab active={activeTab === value} />
+        ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
-        ) : activeTab === "personal" ? (
+        ) : value === "personal" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
@@ -581,7 +598,7 @@ function App() {
           />
         ) : (
           // Population impact: All households and Young people sub-tabs
-          <PopulationImpactView note={showingLine}>
+          <PopulationImpactView note={showingLine} active={activeTab === value}>
           {(sub) => sub === "young" ? (
           selectedPolicies.length === 0 ? (
             emptyState
@@ -724,6 +741,7 @@ function App() {
           </PopulationImpactView>
         )}
         </div>
+        ))}
         <ReplicationLine />
       </main>
     </div>

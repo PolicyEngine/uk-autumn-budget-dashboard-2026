@@ -15,17 +15,30 @@ export const SUB_TAB_PARAM = "sub";
  * a value this view does not have opens the default.
  *
  * @param {string[]} values - The sub-tabs' values; the first is the default
+ * @param {boolean} [active] - Whether the view is shown (kept mounted while hidden)
  * @returns {[string, (value: string) => void]}
  */
-export function useSubTabParam(values) {
+export function useSubTabParam(values, active = true) {
   const fallback = values[0];
   const [value, setValue] = useState(() => {
     if (typeof window === "undefined") return fallback;
     const sub = new URLSearchParams(window.location.search).get(SUB_TAB_PARAM);
     return values.includes(sub) ? sub : fallback;
   });
+  // Shown again after another view (which dropped ?sub=): a ?sub= the
+  // link brought opens that sub-tab; with none, the sub-tab left open stays
+  const [wasActive, setWasActive] = useState(active);
+  if (active !== wasActive) {
+    setWasActive(active);
+    if (active && typeof window !== "undefined") {
+      const sub = new URLSearchParams(window.location.search).get(SUB_TAB_PARAM);
+      if (values.includes(sub) && sub !== value) setValue(sub);
+    }
+  }
 
   useEffect(() => {
+    // A hidden view leaves the address to the view shown
+    if (!active) return;
     const params = new URLSearchParams(window.location.search);
     if (value === fallback) params.delete(SUB_TAB_PARAM);
     else params.set(SUB_TAB_PARAM, value);
@@ -34,7 +47,7 @@ export function useSubTabParam(values) {
     if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
       window.history.replaceState({}, "", url);
     }
-  }, [value, fallback]);
+  }, [value, fallback, active]);
 
   return [value, setValue];
 }
@@ -110,7 +123,7 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
             role="tab"
             id={subTabId(idPrefix, tab.value)}
             aria-selected={selected}
-            // Only the chosen sub-tab's panel is rendered
+            // A sub-tab's panel exists once it has been opened
             aria-controls={selected ? subPanelId(idPrefix, tab.value) : undefined}
             tabIndex={selected ? 0 : -1}
             className="sub-tab"
@@ -124,14 +137,15 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
   );
 }
 
-/** The chosen sub-tab's panel, labelled by its tab. */
-export function SubTabPanel({ idPrefix, value, className, children }) {
+/** A sub-tab's panel, labelled by its tab; hidden while another is chosen. */
+export function SubTabPanel({ idPrefix, value, className, hidden, children }) {
   return (
     <div
       id={subPanelId(idPrefix, value)}
       role="tabpanel"
       aria-labelledby={subTabId(idPrefix, value)}
       className={className}
+      hidden={hidden}
     >
       {children}
     </div>

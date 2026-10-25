@@ -287,6 +287,13 @@ body {
   padding-top: 32px;
 }
 
+/* Views and sub-tabs stay mounted once opened; the hidden ones take no
+   space */
+.tab-panel[hidden],
+[role="tabpanel"][hidden] {
+  display: none !important;
+}
+
 /* The view tabs: an underline tab bar under the intro, the chosen view
    underlined in the band's teal. It sticks under the band. Its background
    spans the window so nothing shows beside it while it is stuck; the tabs

@@ -162,11 +162,13 @@ describe("the view tabs", () => {
     expect(shown(band(document.body).querySelector(".band-policy"))).toBe(true);
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(true);
 
-    // Another view drops ?sub=; coming back opens All households
+    // Another view drops ?sub=; the view stays mounted, so coming back
+    // shows the sub-tab left open, and its ?sub= again
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
     expect(window.location.search).not.toContain("sub=");
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
-    expect(subTabs()[0]).toHaveAttribute("aria-selected", "true");
+    expect(subTabs()[1]).toHaveAttribute("aria-selected", "true");
+    expect(new URLSearchParams(window.location.search).get("sub")).toBe("young");
   });
 
   it("open the Young people sub-tab from the old links, keeping the hash", () => {
