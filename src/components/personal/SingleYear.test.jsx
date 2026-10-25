@@ -131,6 +131,9 @@ describe("the household calculation, from the fixture", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
         const body = JSON.parse(init.body);
         asked.push([url, body.include]);
         // Nothing answers until all the requests are out: none waits for
@@ -162,6 +165,9 @@ describe("the household calculation, from the fixture", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
         const body = JSON.parse(init.body);
         return body.include.length === 0 ? json({ detail: "boom" }, 503) : json(householdAnswerFor(body));
       }),
