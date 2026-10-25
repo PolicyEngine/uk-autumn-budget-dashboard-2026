@@ -20,6 +20,7 @@ import {
   axisWidth,
   useNarrowViewport,
   CHART_COLOURS,
+  sweepAxis,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
@@ -91,7 +92,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
     return rows;
   }, [rates]);
   const title = `Marginal tax rate across earnings, ${yearLabel}`;
-  const xTicks = roundTicks(sweep.max);
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
   // The API's own rates at your salary, else the step that holds it
   const own = sweep.own;
   const yours =
@@ -152,7 +153,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               tick={TICK_STYLE}
               tickFormatter={formatPoundsShort}
               ticks={xTicks}
-              domain={[0, xTicks[xTicks.length - 1]]}
+              domain={xDomain}
               // As the earnings chart beside it: axis line 44 px from the foot
               height={44}
               label={{

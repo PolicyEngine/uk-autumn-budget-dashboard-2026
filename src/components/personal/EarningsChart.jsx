@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS } from "../../utils/chartTheme";
+import { GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, axisWidth, useNarrowViewport, CHART_COLOURS, sweepAxis } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
 import { netIncomeDrops, sweepPoints } from "../../utils/singleYear";
@@ -86,8 +86,8 @@ export default function EarningsChart({ sweep, salary, yearLabel }) {
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
   const drops = useMemo(() => netIncomeDrops(points), [points]);
 
-  const xTicks = roundTicks(sweep.max);
-  const xMax = xTicks[xTicks.length - 1];
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
+  const xMax = xDomain[1];
   const yTicks = roundTicks(Math.max(1, ...points.map((p) => Math.max(p.before, p.after))));
   const cTicks = changeTicks(Math.max(...points.map((p) => Math.abs(p.change))));
 

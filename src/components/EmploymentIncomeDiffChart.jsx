@@ -37,6 +37,7 @@ import {
   legendWrapperStyle,
   legendLabelStyle,
   CHART_COLOURS,
+  sweepAxis,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
@@ -101,7 +102,7 @@ function EmploymentIncomeDiffChart({
     published,
   };
 
-  const xTicks = roundTicks(household.x_max);
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(household.x_max);
   const picker = <HouseholdPicker value={household.id} onChange={setHouseholdId} />;
 
   if (loading) {
@@ -172,7 +173,7 @@ function EmploymentIncomeDiffChart({
                 tick={TICK_STYLE}
                 height={48}
                 ticks={xTicks}
-                domain={[0, xTicks[xTicks.length - 1]]}
+                domain={xDomain}
               />
               <YAxis
                 axisLine={false}

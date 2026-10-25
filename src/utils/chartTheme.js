@@ -178,3 +178,21 @@ export function zeroBasedAxis(values, { pad = 0.05 } = {}) {
   for (let v = start; v <= end + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
 }
+
+/**
+ * The x axis of a salary sweep: from £0 to exactly the sweep's last point,
+ * so no axis runs past the data, with ticks at a round step inside it
+ * (£0, £50k … £200k for a sweep to £225k). Every chart of one sweep takes
+ * the same axis, so its "You" line sits at the same place in each.
+ *
+ * @param {number} max - The sweep's last point
+ * @returns {{domain: [number, number], ticks: number[]}}
+ */
+export function sweepAxis(max) {
+  const steps = [1000, 2000, 5000, 10000, 20000, 25000, 50000, 100000];
+  const top = max > 0 ? max : 1;
+  const step = steps.find((candidate) => top / candidate <= 5) ?? steps[steps.length - 1];
+  const ticks = [];
+  for (let value = 0; value <= top + 1e-9; value += step) ticks.push(value);
+  return { domain: [0, top], ticks };
+}

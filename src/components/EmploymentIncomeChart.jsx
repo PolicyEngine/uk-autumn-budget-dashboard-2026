@@ -36,6 +36,7 @@ import {
   legendLabelStyle,
   axisWidth,
   CHART_COLOURS,
+  sweepAxis,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { chartMotion } from "../utils/chartMotion";
@@ -97,7 +98,7 @@ function EmploymentIncomeChart({
     published,
   };
 
-  const xTicks = roundTicks(household.x_max);
+  const { domain: xDomain, ticks: xTicks } = sweepAxis(household.x_max);
   const yMax = Math.max(1, ...data.map((point) => Math.max(point.baseline, point.reform)));
   const yTicks = roundTicks(yMax);
   const picker = <HouseholdPicker value={household.id} onChange={setHouseholdId} />;
@@ -155,7 +156,7 @@ function EmploymentIncomeChart({
                 tick={TICK_STYLE}
                 height={48}
                 ticks={xTicks}
-                domain={[0, xTicks[xTicks.length - 1]]}
+                domain={xDomain}
               />
               <YAxis
                 axisLine={false}
