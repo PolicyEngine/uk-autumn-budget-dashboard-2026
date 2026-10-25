@@ -939,8 +939,15 @@ UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
 
 - **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 11 at once, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends.
 - **Cost:** about $0.70 per container-hour at 4 CPU and 64 GiB. Ten measures of about 20 minutes each plus the release come to roughly $3; the worst case, every unit hitting its timeout, about $11. Check with `uvx --from modal modal billing report --for today` before and after.
-- **No reuse:** every Modal run simulates every measure again.
+- **No reuse:** every Modal run simulates every measure again. The refusal message's "run again … the measures already simulated are reused" holds for a local run only: on Modal the units' records stay on the Volume, so the rerun simulates them again (about 5 min).
 - **Smoke test (no secret, no data):** `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. On 25 October: ten units fanned out in 23 s end to end (1–2 s in each container), the release read them all back in 8 s, 53 s in all including the image build.
+- **Measured on the real cut, 25 October** (`main` at 63c61a1 with #138 merged in; cut `…-ee5c2dbe`; a timing-only scratch manifest and a scratch `--out-dir`, nothing published):
+  - **All ten units at once (`--fresh`): 7:05 end to end**, 3:28–6:35 per container, peak resident 33.5–42.2 GB. Four were refused by the model-limit gate (`fuel_duty_rise_deferral`, `domestic_electricity_zero_vat`, `road_fuel_vat_cut` and the package), so no table was written. That is the gate working, not Modal.
+  - **The six admissible measures, then the release: 13:53 end to end**, 3:40–5:16 per measure, then 8:07 for the release in one container (7.5 min of it estimating). `validate_public` found 0 problems in `constituency.csv`.
+  - **Before:** 2–3.5 h on the 64 GB laptop (#138, #115).
+  - **Cost** (Modal's billing report): $0.70 for the ten-unit run, $0.51 for the six-plus-release run.
+  - **Peaks are under 43 GB,** so 48 GiB containers would do. That would cut the memory part of the cost by a quarter; not changed here.
+  - **Main publishes no `constituency.csv`,** so there is no published table to compare with.
 
 ## Data and model limitations: say these wherever a measure depends on them
 
