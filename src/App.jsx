@@ -691,7 +691,7 @@ function App() {
                         charts */}
                     <SectionHeading
                       title="Example households"
-                      subtitle="Net income of five example households across their incomes."
+                      subtitle="Net income of five example households across their incomes. Each spends the average household's £960 a year on petrol and diesel and £1,040 on electricity."
                     />
                     <div className="example-household-picker">
                       <HouseholdPicker

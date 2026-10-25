@@ -121,7 +121,6 @@ def test_every_household_spends_the_average_on_electricity():
     for household in EXAMPLE_HOUSEHOLDS:
         inputs = household.household_inputs
         assert inputs["electricity_consumption"] == ELECTRICITY_SPENDING
-        assert "£1,040" in household.definition
 
 
 @pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
@@ -145,6 +144,69 @@ def test_zero_vat_on_electricity_reaches_every_household(household):
     ]
     assert reformed - baseline == pytest.approx(
         [1_040 * 5 / 105] * 3, abs=0.01
+    )
+
+
+def test_every_household_spends_the_calculators_default_on_road_fuel():
+    """Without it the road fuel VAT cut and the fuel duty deferral changed
+    the household calculator's net income but not four of the five example
+    households' (#153). The amounts are the calculator's defaults."""
+    import json
+    from pathlib import Path
+
+    defaults = Path("src/utils/householdDefaults.js").read_text()
+    spending = json.loads(
+        re.sub(
+            r"(\w+):",
+            r'"\1":',
+            re.search(r"DEFAULT_SPENDING = (\{[^}]*\})", defaults)
+            .group(1)
+            .replace(",\n}", "\n}"),
+        )
+    )
+    for household in EXAMPLE_HOUSEHOLDS:
+        inputs = household.household_inputs
+        assert inputs["petrol_spending"] == spending["petrol"]
+        assert inputs["diesel_spending"] == spending["diesel"]
+
+
+@pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
+def test_road_fuel_vat_cut_moves_every_chart_alike(household):
+    """The road fuel VAT cut changes each example household's net income by
+    as much as it changes the household calculator's for the same spending:
+    VAT is in household net income in both. 2027-28: 5 points off 20% for
+    61 of 366 days, on £960 of fuel including VAT, is
+    £960 x 0.05 x 61 / 366 / 1.2 = £6.67."""
+    from uk_budget_data import household_impact
+    from uk_budget_data.calculators import IncomeCurveCalculator
+    from uk_budget_data.reforms import (
+        FUEL_VAT_ID,
+        get_autumn_budget_2026_reforms,
+    )
+
+    (reform,) = [
+        reform
+        for reform in get_autumn_budget_2026_reforms()
+        if reform.id == FUEL_VAT_ID
+    ]
+    calculator = IncomeCurveCalculator(num_points=3)
+    baseline = calculator.simulate(household, None, [2027])[2027]
+    reformed = calculator.simulate(household, reform.to_scenario(), [2027])[
+        2027
+    ]
+    inputs = household.household_inputs
+    answers = household_impact.HouseholdAnswers(
+        petrol_spending=inputs["petrol_spending"],
+        diesel_spending=inputs["diesel_spending"],
+    )
+    calculator_change = household_impact.calculate_household_impact(
+        answers, [FUEL_VAT_ID], 2027, include=()
+    )["net_income"]["change"]
+    assert calculator_change == pytest.approx(
+        960 * 0.05 * 61 / 366 / 1.2, abs=0.01
+    )
+    assert reformed - baseline == pytest.approx(
+        [calculator_change] * 3, abs=0.01
     )
 
 

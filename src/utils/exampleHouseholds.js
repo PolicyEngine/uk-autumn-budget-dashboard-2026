@@ -37,3 +37,19 @@ export function formatPoundsShort(value) {
 export function formatPounds(value) {
   return `${value < 0 ? "-" : ""}£${Math.abs(Math.round(value)).toLocaleString("en-GB")}`;
 }
+
+/**
+ * The top of the change chart's symmetric axis: the smallest round amount
+ * (10, 20 or 50 times a power of ten) at or above the largest change. A
+ * fixed £1,000 floor flattened small changes, such as the road fuel VAT
+ * cut's £7, onto the zero line, so they changed one chart and seemed not to
+ * change this one.
+ */
+export function changeAxisMax(maxAbs) {
+  if (!(maxAbs > 0)) return 10;
+  for (let power = 10; ; power *= 10) {
+    for (const factor of [1, 2, 5]) {
+      if (factor * power >= maxAbs) return factor * power;
+    }
+  }
+}

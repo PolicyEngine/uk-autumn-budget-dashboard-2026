@@ -25,6 +25,7 @@ import {
   exampleHousehold,
   formatPounds,
   formatPoundsShort,
+  changeAxisMax,
   roundTicks,
 } from "../utils/exampleHouseholds";
 import {
@@ -133,7 +134,7 @@ function EmploymentIncomeDiffChart({
 
   // Calculate symmetric y-axis domain
   const maxAbs = Math.max(...data.map((d) => Math.abs(d.difference)));
-  const yMax = Math.ceil(maxAbs / 1000) * 1000 || 1000;
+  const yMax = changeAxisMax(maxAbs);
   // Symmetric ticks, set here so the axis is as wide as the longest label
   // ("-£500" is wider than "-£1k")
   const yTicks = [-yMax, -yMax / 2, 0, yMax / 2, yMax];
