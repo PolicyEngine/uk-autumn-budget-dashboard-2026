@@ -50,10 +50,6 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 // The default view has no ?tab= in the URL; ?tab=dashboard is read too
 const DEFAULT_VIEW = "dashboard";
 
-// Views whose links keep the chosen policies in the URL: the two the
-// selection drives
-const POLICY_PARAM_VIEWS = new Set(["dashboard", "personal"]);
-
 const tabId = (view) => `tab-${view}`;
 const panelId = (view) => `panel-${view}`;
 
@@ -117,11 +113,13 @@ const BUDGET_VIEWS = new Set(["dashboard", "personal"]);
 function Dashboard({ published, unavailable = null, updated = false }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
-  const [selectedPolicies, setSelectedPolicies] = useState(() => {
-    const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
-    const available = catalogue.displayable.map((measure) => measure.id);
-    return requested === null ? available : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))];
-  });
+  // A link's ?policies= is a chosen selection. Without one the selection is
+  // the default, every displayable measure, and follows the publication.
+  const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
+  const [selectedPolicies, setSelectedPolicies] = useState(() =>
+    requested === null ? catalogue.displayable.map((measure) => measure.id) : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
+  );
+  const [selectionChosen, setSelectionChosen] = useState(requested !== null);
   const [exampleHouseholdId, setExampleHouseholdId] = useState(EXAMPLE_HOUSEHOLDS[0].id);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
@@ -142,15 +140,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (activeTab === DEFAULT_VIEW) params.delete("tab");
     else params.set("tab", activeTab);
     if (!unavailable) {
-      // The selection, an empty one included, stays in the address on the
-      // views it drives, so a later snapshot's remount restores exactly it:
-      // a withdrawn measure shows as unavailable rather than dropping out,
-      // and a newly published one is not added unasked.
-      if (POLICY_PARAM_VIEWS.has(activeTab)) params.set("policies", selectedPolicies.join(","));
+      // A chosen selection, an empty one included, stays in the address on
+      // every view, so a later snapshot's remount restores exactly it: a
+      // withdrawn measure shows as unavailable rather than dropping out,
+      // and a newly published one is not added unasked. The default stays
+      // out of the address, so a remount shows every measure then
+      // displayable, a newly published one included.
+      if (selectionChosen) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, activeTab, locationReady, unavailable]);
+  }, [selectedPolicies, selectionChosen, activeTab, locationReady, unavailable]);
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
@@ -161,10 +161,19 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
     setSelectedPolicies((previous) => previous.includes(policyId) ? previous.filter((id) => id !== policyId) : [...previous, policyId]);
+    setSelectionChosen(true);
   };
-  const handlePresetClick = setSelectedPolicies;
+  // The one preset is the default, every displayable measure, so choosing
+  // it hands the selection back to the publication
+  const handlePresetClick = (policies) => {
+    setSelectedPolicies(policies);
+    setSelectionChosen(false);
+  };
   // Only on the reader's request: an unavailable measure leaves the selection
-  const removeFromSelection = (ids) => setSelectedPolicies((previous) => previous.filter((id) => !ids.includes(id)));
+  const removeFromSelection = (ids) => {
+    setSelectedPolicies((previous) => previous.filter((id) => !ids.includes(id)));
+    setSelectionChosen(true);
+  };
 
   const titleSentinelRef = useRef(null);
   const [titleStuck, setTitleStuck] = useState(false);
