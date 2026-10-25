@@ -60,7 +60,7 @@ export const MEASURE_MODELLING = [
     name: "Warm Home Discount top-up",
     how: [
       "£100 in winter 2026-27 to households on qualifying benefits, at DESNZ receipt rates (85% Pension Credit, 70% others).",
-      "Qualifying benefits: Universal Credit and Pension Credit (legacy benefits are not counted), paid as a benefit.",
+      "Qualifying benefits: Universal Credit, Pension Credit, Housing Benefit and income-related ESA (England and Wales's 2026-27 core group; Scotland's differs), paid as a benefit.",
       "Each household's receipt is drawn as policyengine-uk will draw the Warm Home Discount (#2616).",
       "Great Britain only.",
     ],
