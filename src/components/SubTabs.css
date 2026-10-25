@@ -4,7 +4,10 @@
    underline, no full-width bar, and it does not stick. */
 .sub-tabs {
   display: flex;
+  width: fit-content;
   max-width: 100%;
+  /* A 1px line as wide as the group, the chosen tab's underline on it */
+  border-bottom: 1px solid var(--card-border);
   gap: 4px;
   margin: 0 0 32px;
   padding: 0;
@@ -62,7 +65,7 @@
   position: absolute;
   left: 6px;
   right: 6px;
-  bottom: 0;
+  bottom: -1px;
   height: 3px;
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
@@ -77,6 +80,7 @@
 @media (max-width: 600px) {
   .sub-tabs {
     display: grid;
+    width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     margin-bottom: 24px;
