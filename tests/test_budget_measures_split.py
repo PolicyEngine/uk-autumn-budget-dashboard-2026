@@ -1,8 +1,13 @@
 """The split of ``budget_measures.py`` into one module per modifier (#134).
 
-``tests/budget_measures_before_split.py`` is ``budget_measures.py`` exactly
-as it was on ``main`` before the split (65280bd). The split moved code and
-nothing else, so each modifier's identity changes only through its module
+``tests/budget_measures_before_split.b64`` is ``budget_measures.py``
+exactly as it was on ``main`` before the split (65280bd), base64-encoded.
+Kept as Python, git paired the copy with the deleted file as a rename
+(100% similar), so a branch still editing ``budget_measures.py`` merged its
+edit into the copy, with no conflict, instead of into the modifier's
+module. Encoded, the copy shares no line with it: the edit is a conflict
+with the deletion, to be ported by hand. The split moved code and nothing
+else, so each modifier's identity changes only through its module
 (its name, its source, and the other functions' defaults there), and each
 measure gives the same figures from the copy as from the split.
 
@@ -13,8 +18,12 @@ skipped, saying so; a new module (construction step 1) has no copy to
 compare with. The copy itself is never updated, since its digest is pinned.
 """
 
+import base64
 import hashlib
+import importlib.util
 import inspect
+import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -32,8 +41,29 @@ from tests.test_budget_measures import (
 )
 from uk_budget_data.reforms import get_all_reforms
 
+COPY = Path(__file__).with_name("budget_measures_before_split.b64")
+COPY_MODULE = "budget_measures_before_split"
+# Where the copy's source is written: the receipt binds a module by its
+# file's source. Removed when the test run ends.
+_COPY_DIRECTORY = tempfile.TemporaryDirectory(prefix="before-split-")
+
+
+def _load_copy():
+    path = Path(_COPY_DIRECTORY.name) / f"{COPY_MODULE}.py"
+    path.write_bytes(base64.b64decode(COPY.read_bytes(), validate=False))
+    spec = importlib.util.spec_from_file_location(COPY_MODULE, path)
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[COPY_MODULE] = loaded
+    try:
+        spec.loader.exec_module(loaded)
+    except BaseException:
+        del sys.modules[COPY_MODULE]
+        raise
+    return loaded
+
+
 try:
-    from tests import budget_measures_before_split as before_split
+    before_split = _load_copy()
 except ImportError as error:  # a helper the copy imports was renamed since
     pytest.skip(
         f"the pre-split copy no longer imports ({error}); the split was "
@@ -90,6 +120,14 @@ def test_the_copy_is_main_before_the_split():
     path = Path(before_split.__file__)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     assert digest == BEFORE_SPLIT_SHA256
+
+
+def test_the_stored_copy_shares_no_line_with_its_source():
+    """So git can't take it for ``budget_measures.py`` renamed (above)."""
+    source = Path(before_split.__file__).read_text().splitlines()
+    stored = COPY.read_text().splitlines()
+    assert stored
+    assert not set(stored) & set(source)
 
 
 def test_the_split_wrote_a_module_for_each_modifier_in_the_copy():
