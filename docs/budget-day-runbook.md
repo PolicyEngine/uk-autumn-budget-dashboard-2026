@@ -134,7 +134,7 @@ Every published measure is receipted, and the receipt can only bind a measure wr
 - **`parameter_changes`**, wherever the measure can be expressed that way.
 - **A module-level function** as `simulation_modifier`, with its numbers as default arguments: `def energy_vat_cut(sim, rate_change=-0.05, start_year=2027): ...`. The tested templates (#23) are helpers to call from such a function.
 - **In a module of fixed shape**: only imports, literal constants and undecorated functions, each name bound once. Not in `reforms.py`, whose run-time caches make every modifier in it unbindable (question 6 in `budget-day-publication.md`). `tests/template_measures.py` is the pattern.
-- **A new modifier gets a module of its own.** The receipt binds a modifier's whole module, so adding a function to a module, or editing one, changes the definition of every modifier there: each must be regenerated, and attested again where it needs attestation (see G5, steps 1 and 4). `budget_measures.py` holds the seven modifiers on `main`; don't add an eighth to it.
+- **Each modifier has a module of its own, named after it, in `src/uk_budget_data/budget_measures/`.** The receipt binds a modifier's whole module (its source, and the default arguments of every function in it), so adding a function to a module, or editing one, changes the definition of every modifier there: each must be regenerated, and attested again where it needs attestation (see G5, "Which displayed measures a fix changes"). So a new modifier goes in a new module, `budget_measures/<its name>.py`, holding that one function, with any constant it uses written in that module; `reforms.py` imports it as `from uk_budget_data.budget_measures.<its name> import <its name>`. A helper two modifiers share goes outside the package, as the templates in `measure_templates.py` do: a change there reaches every measure whose modifier calls it, and no definition shows it (G5's "Which displayed measures a fix changes", under "Code national generation also runs"). `tests/test_budget_measures.py` fails on a module holding more than one function or one not named after it, on a registered modifier from anywhere else (in the package or outside it; only the combined measure's composition of its members' is exempt), on a road fuel VAT rate that differs between the two modules writing it or a missing fuel module, and on a module the receipt can't bind; a new module, or a fix to one that keeps those, passes it. `tests/test_budget_measures_split.py` checks the split itself, each module only while its source is the one the split wrote: a later fix skips that module's comparison, saying so. (Until 25 October all seven were in one `budget_measures.py`, and any edit there changed all seven definitions.)
 
 **Its name and description may name only the taxes it moves.** Both are public: the personal impact API returns them. Every registered measure must be declared in `DECLARED` in `tests/test_measure_descriptions.py` with the taxes whose rules its code changes, and the required Python tests fail until it is. They also fail on copy that names a tax the measure doesn't declare, or one the module doesn't know (add it to `TAX_NAMES`, and its parameters to `TAX_PARAMETERS`), on an unnamed "tax", "taxed" or "taxable" in a measure that doesn't move income tax, on an unnamed "duty" in one that moves no duty, and on an unnamed "levy" in one that moves no levy. Second-round and modelling effects don't count: a measure declares the taxes whose rules its code changes, not every tax the model moves.
 
@@ -494,7 +494,7 @@ María classifies every statement measure as `coded` or `ledger`, with a reason,
 ## Construction (from G1)
 
 For each coded measure:
-1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module of its own, not in `reforms.py` itself (question 6 in `budget-day-publication.md`) and not added to `budget_measures.py`, where it would change the definitions of all seven modifiers there. Register it in `reforms.py`, which imports it. The page lists it from the published manifest, so it needs no frontend change.
+1. **Write it** in one of the bindable forms above: a template called from a module-level function, in a fixed-shape module of its own, `src/uk_budget_data/budget_measures/<its name>.py`, never in `reforms.py` itself (question 6 in `budget-day-publication.md`) and never added to another modifier's module, where it would change that modifier's definition too. Register it in `reforms.py`, which imports it, and in `policyConfig.js`.
 2. **Declare what it should do** in `data_inputs/treasury/expected_effects.csv`. The columns are `measure_id,direction,from_year,to_year,reviewer,note`; `to_year` and `note` may be blank. `positive` improves the government balance and `negative` worsens it. Without this, and before any Treasury figure exists, the measure is "undeclared" and cannot be published.
 3. **Declare the taxes it moves** in `DECLARED` in `tests/test_measure_descriptions.py`, and check that its name and description name only those (see "How a measure must be written" above). Without this, the required Python tests fail on the new id.
 4. **Add one numerical test.**
@@ -537,11 +537,30 @@ uv run uk-budget-data publish check
   - W3 saw HTTP 403.
   - uk-data #536 records a 200 answer that is an HTML page titled "No Access - Office for Budget Responsibility" instead of the workbook.
   - On 15 October, from W5's machine, the March 2026 EFO receipts workbook downloaded by script, but the expenditure workbook got that "No Access" page.
+  - On 25 October (dry run), curl got that "No Access" page for all three workbooks below, with HTTP 200 and `text/html` (88,552 bytes each).
 
-  A browser download works.
-- **What:** the EFO's detailed forecast tables, at least receipts and expenditure. W3 lists the full set.
-- **Where the files go:** to W3's Budget-day ingest in policyengine-uk-data, which records each file's SHA-256, vintage, units, geography and year coverage. Today the OBR loader's fallback reads committed workbooks from `storage/obr_efo/` (uk-data #536). W3 to confirm the path for the Budget-day files.
+  A browser download works: on 25 October each workbook took under a second.
+- **What:** three of the EFO's *detailed forecast tables* workbooks, each its own link on the EFO page (each appears twice there, as an "xlsx" icon and as its title):
+  - **economy**, for the Living standards tab (next section);
+  - **receipts** and **expenditure**, for the OBR targets in policyengine-uk-data.
+
+  The page also offers aggregates, policy, debt interest and a zip of all of them; none is needed. Take the single workbooks, not the zip: an unzipped file's modification time is not its download time.
+- **Check each file is a workbook**, not the "No Access" page saved as `.xlsx`: `file <file>` must say "Microsoft Excel 2007+", not "HTML document".
 - **Record:** each file's name and SHA-256 (`shasum -a 256 <file>`) in the coverage ledger as it lands, so the ingest's record can be checked against what was downloaded.
+- **Receipts and expenditure go to policyengine-uk-data's ingest** (`policyengine_uk_data/targets/obr_sources.py`). In a policyengine-uk-data checkout, dry run first; it writes nothing and prints each workbook's title, SHA-256 and every OBR target's old and new value:
+
+  ```sh
+  uv run python -m policyengine_uk_data.targets.obr_sources ingest \
+    --vintage october_2026 --label "October 2026" \
+    --receipts <receipts xlsx> --expenditure <expenditure xlsx> \
+    --receipts-url https://obr.uk/download/<receipts page>/ \
+    --expenditure-url https://obr.uk/download/<expenditure page>/ \
+    --first-year 2025 --last-year 2031 --dry-run
+  ```
+
+  The `--*-url` values are the obr.uk download pages the files came from (on the EFO page, the links' addresses without the `?tmstv=` query); every target cites them. The ingest refuses a workbook whose title doesn't name the vintage. Then run it again without `--dry-run`: it moves the files under `storage/obr_efo/october_2026/` and writes the vintage's manifest; pointing `sources.yaml` at that manifest adopts it, in a policyengine-uk-data pull request. About 40 s, nearly all start-up.
+
+  Dry run, 25 October, on the March 2026 workbooks (`--vintage march_2026 --label "March 2026" --first-year 2024 --last-year 2030`): both files matched the committed manifest's SHA-256 (receipts `f65b6cb7…`, expenditure `700bfd70…`), all 168 target-years were unchanged, and it ended "a rehearsal, nothing to write".
 
 **Treasury tables come from gov.uk by script.** On 15 October `assets.publishing.service.gov.uk` served a spreadsheet to both curl's and python-requests' user agents (HTTP 200, the right content type), so gov.uk does not refuse scripted downloads. The importer below reads a workbook from a local path and fetches nothing itself. If gov.uk does refuse on the day, download Table 4.1 in a browser the same way and pass its path.
 
@@ -570,14 +589,16 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
      --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
    ```
 
-   It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending. A stored `post_published` flag does not authorise the figures on the page.
+   It takes about 2 seconds. It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending, with a new SHA-256 and a 14-day expiry. A stored `post_published` flag does not authorise the figures on the page.
 3. **Check what it printed:**
-   - every series: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, with the table and column it read each from; CPI after housing costs and social rent recomputed by PolicyEngine;
+   - every series, with its values for 2027 to 2030: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, then CPI after housing costs and social rent recomputed by PolicyEngine. The console prints values only; the table and column each was read from are in each series' `post_source` in `public/data/living_standards_outlook.json`;
    - the file name and SHA-256 match the download;
-   - any "kept at the pre-Budget value" line (only mortgage interest 2030 may say this, if the OBR stops forecasting it before 2030).
+   - any "kept at the pre-Budget value" line. Only mortgage interest 2030 may say this, and on the March 2026 tables it does, because the OBR stops forecasting it after 2030 Q1. That line is expected; any other series saying it is not.
 
    If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
 4. **Commit for review** both files and the review row in a pull request. The stored source and label can then be reviewed, but the post-Budget lines, changes and tiles remain unavailable until their dedicated verified publication route is implemented and approved. Once merged, the Forecast changes sub-tab shows an unavailable notice in place of the March 2026 forecast as well. The Baseline outlook is unaffected. If the March forecast must stay visible on the day, hold the import's pull request.
+
+**Rehearsing with the March tables.** Loading the March 2026 economy workbook (SHA-256 `fde1de4b…`, the same bytes as `data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx`) under a test `--label` gives post equal to pre: on 25 October all 40 values of the 10 series matched, and the Forecast changes sub-tab showed the test label, "no change" on each headline and the post line drawn over the pre line. Don't commit a rehearsal. Undo it with `git checkout -- public/data/living_standards_outlook.json data_inputs/public_data_review.csv` and `rm data_inputs/living_standards/obr_forecast_post.json`.
 
 **This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
 
@@ -721,15 +742,26 @@ A fix that changes a package version (policyengine-uk, say) is a re-cut, not a G
 
 An approval or an exception carries over only where the outputs are byte-identical.
 
+**Which displayed measures a fix changes.** Before deploying the household API with a fix, run `uv run uk-budget-data publish definitions` on the fixed commit (#125). For each displayed measure, it recomputes the measure's receipt identities from this code at the commit its receipt was made at. It lists every measure whose definition differs from its approved receipt, and exits 1 if any does. It takes a few seconds and needs no data.
+- **A fix in a modifier's module lists the measures that use that modifier, and only those.** The receipt binds a modifier's whole module, and each modifier has a module of its own (since 25 October; before, all seven shared `budget_measures.py`, and a fix there listed all seven). A comment counts. `connect_student_loan_repayments` is on both sides of `plan_2_threshold_unfreeze`, so a fix there lists that measure once, with both sides.
+  - **Regenerate or withdraw every listed measure before the deploy.** A listed measure left as it is shows as unavailable in Personal impact once the page compares definitions.
+  - **Two need a fresh two-person attestation when listed:** `employer_ni_relief_under_25s` and `plan_2_threshold_unfreeze` have hand-written modifiers, and while a data limit is active each regenerated receipt is held until attested again (`attestations.py`: an attestation binds the whole receipt document). Budget the reviewers' time, or withdraw them.
+  - **The split itself changed all seven definitions once**, through each modifier's module: its name, its source, and its module defaults, which now hold only that function's own (none, for `connect_student_loan_repayments`). Nothing else changed: `tests/test_budget_measures_split.py` checks that the function sources and defaults are as they were, and that each measure gives the same figures. Receipts made before it differ from it; the next regeneration (Monday's rehearsal, or at the latest the final cut's) absorbs it.
+- **It can't see a fix outside the measures' own module.** A receipt binds everything else only through its commit. List what has changed since each displayed measure's receipt with `git diff --name-only <receipt commit> HEAD -- src pyproject.toml uv.lock data_inputs Dockerfile` (the commit is the one `publish definitions` prints, from the receipt's `dashboard.git_sha`). The image's base layers (`python:3.13-slim` and `uv:latest` in the `Dockerfile`) can change with no commit at all; the deploy smoke checks the served packages' versions, not those layers.
+  - **Code national generation also runs** (`measure_templates.py`, `reforms.py`, `models.py`, the scenario helpers in `personal_impact.py`, or anything else a modifier calls): regenerate every measure it reaches, as for a fix in its own module. The page can't tell these apart.
+  - **Code only the household route runs** (`household_impact.py`, which only `api.py` imports, and the request defaults in `api.py`): no receipt changes. The deploy changes Personal impact's answers for every measure it reaches, and nothing on the page marks it.
+  - **From the page follow-up (stacked on #104, which adds `calculation_changes_since`),** `publish definitions` lists these files itself.
+- **The gap after the merge.** The corrected entry is live on the dashboard about a minute after the merge; the household API runs the fix only once its deploy promotes it, 6 to 7 minutes after dispatch (see "Adopting a release"). For a fix in a measure's own module, the page (once it compares) shows the measure unavailable through that gap. For a fix elsewhere, the tab answers from the previous code with nothing saying so. If that answer can't stand for those minutes, withdraw the measure in the fix's pull request, and approve it again in a second one after the deploy's household check passes.
+
 ## Budget day: publish one measure
 
 **Proposed in [#105](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/105); the commands exist once its PR merges.** Each measure is generated and staged on its own when its pull request merges, so a measure ready at 13:30 doesn't wait for the slowest one, and a late fix reruns one measure. It is G2 to G4 above, one measure at a time: the same receipted artifacts, gates and manifest, run by a workflow. The combined run is refreshed in batches.
 
 **A measure moves through** coded → run → staged → approved (live):
 
-1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py` and merges to `main` on the usual gates.
+1. **Coded and checked.** The measure's PR changes `src/uk_budget_data/reforms.py`, or only the modifier or template it uses (a module in `budget_measures/`, `measure_templates.py`), and merges to `main` on the usual gates.
 2. **Run (automatic).** The merge starts the "Publish measures (Budget day)" workflow (`.github/workflows/publish-measure.yml`):
-   - it finds the measures the merge added or changed, comparing the registry on `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach): `uv run uk-budget-data changed-measures`;
+   - it finds the measures the merge added or changed, loading each revision's whole package and comparing `HEAD` with `HEAD^` by what each measure is (name, description, parameter changes, and the code and constants its modifiers reach in any `uk_budget_data` module), so a change only in a module in `budget_measures/` reruns just the measures whose modifiers reach it, and one in a shared template reruns every measure using it: `uv run uk-budget-data changed-measures`. A change to code every measure runs through (`pipeline.py`, `publication/`, `models.py`, `uv.lock`, `pyproject.toml`) reruns every measure and marks the combined run stale. The output also lists each measure's files;
    - it generates each one's receipted artifact in parallel, one job per measure on `larger-runner` (or on Modal, below): `uk-budget-data publish-measure <id> --no-stage`, which is `generate --artifacts --reforms <id>`. One measure per job, so a hand-written modifier is always generated alone. Every policy year: there is no `--years`.
 3. **Staged (automatic).** One job collects the new artifacts and runs `uk-budget-data stage-artifacts` on them: `publish reconcile` (status only; `reconciliation.json` goes to the runner's temporary directory, never into the commit), `publish stage` (or `--provisional`, a dispatch choice, for G2's statement figures), `publish index` once results by area are bound, and `publish check`. It marks the new files' review rows **pending**: kind `pending`, the Reconciler named, expiring in 7 days, so the public-file check passes while nothing is signed. It opens **one draft data PR** with the artifacts, the manifest and a summary (each entry's status, reconciliation and revenue by year). A staged entry is the measure "being costed"; the page doesn't show it.
 4. **Approved (María, the Reconciler).** Review the data PR. Then, on its branch:

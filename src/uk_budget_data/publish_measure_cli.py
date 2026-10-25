@@ -7,7 +7,8 @@
   elsewhere, mark their review rows pending and write the summary (the
   workflow's collect job);
 - ``refresh-combined``: the approved measures as one combined run, staged;
-- ``changed-measures``: the measure ids a registry change added or changed;
+- ``changed-measures``: the measure ids a push added or changed (any file
+  a measure's definition reaches, or code every measure runs through);
 - ``sign-measures --by NAME --reviewer HANDLE``: the Reconciler approves the
   staged entries and writes the review rows, by hand;
 - ``measure-status``: the manifest's live measures and whether the package
@@ -149,7 +150,7 @@ def add_publish_measure_parsers(subparsers) -> None:
 
     changed = subparsers.add_parser(
         "changed-measures",
-        help="Measure ids a registry change added or changed, as JSON",
+        help="Measure ids a push added or changed, as JSON",
     )
     changed.add_argument("--base", default="HEAD^")
     changed.add_argument("--head", default="HEAD")

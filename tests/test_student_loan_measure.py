@@ -8,7 +8,9 @@ import pytest
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
-from uk_budget_data.budget_measures import connect_student_loan_repayments
+from uk_budget_data.budget_measures.connect_student_loan_repayments import (
+    connect_student_loan_repayments,
+)
 from uk_budget_data.reforms import get_reform
 
 REPORTED = 500.0

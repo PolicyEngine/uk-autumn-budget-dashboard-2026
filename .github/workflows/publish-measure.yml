@@ -4,10 +4,14 @@ name: Publish measures (Budget day)
 # reconciled and staged when its pull request merges, and goes live when
 # the Reconciler approves it on the data pull request.
 #
-# On a push to main that touches the measure registry, this workflow finds
-# the measures the push added or changed (the registry on HEAD against
-# HEAD^, compared in Python by what each measure is: uk-budget-data
-# changed-measures), generates each one's receipted artifact in parallel
+# On a push to main that touches the package, the lockfile or
+# pyproject.toml, this workflow finds the measures the push added or changed
+# (each revision's whole package loaded on its own, HEAD against HEAD^, and
+# compared by what each measure is, including the modifiers and templates
+# it reaches in budget_measures/ and measure_templates.py:
+# uk-budget-data changed-measures). A change to code every measure runs
+# through (the pipeline, the publication code, uv.lock) publishes every
+# measure. It then generates each one's receipted artifact in parallel
 # (`publish-measure <id> --no-stage`, one measure per job, so a hand-written
 # modifier is always generated alone), then stages them in one job
 # (`stage-artifacts`: reconcile, stage, pending review rows, publish check)
@@ -38,7 +42,9 @@ on:
   push:
     branches: [main]
     paths:
-      - src/uk_budget_data/reforms.py
+      - src/uk_budget_data/**
+      - uv.lock
+      - pyproject.toml
   workflow_dispatch:
     inputs:
       measures:
