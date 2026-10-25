@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ChartTooltip from "./ChartTooltip";
 import "./ChartTooltip.css";
 
@@ -48,7 +48,26 @@ export function useFloatingTooltip(containerRef, resetKey) {
       if (point) setTip({ key, content, resetKey, ...point });
     },
     onBlur: () => setTip(null),
+    // A tap (touch has no hover): open this point's tooltip, or close it
+    // when it is already open
+    onClick: (event) => {
+      // A mouse already shows it on hover; a click there changes nothing
+      if (event.nativeEvent?.pointerType === "mouse") return;
+      const point = at(event);
+      if (!point) return;
+      setTip((current) => (current && current.key === key ? null : { key, content, resetKey, ...point }));
+    },
   });
+
+  // A tap anywhere outside the plot closes an open tooltip
+  useEffect(() => {
+    if (!tip) return undefined;
+    const close = (event) => {
+      if (!containerRef.current?.contains(event.target)) setTip(null);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [tip, containerRef]);
 
   return { tip, handlers, hide: () => setTip(null) };
 }

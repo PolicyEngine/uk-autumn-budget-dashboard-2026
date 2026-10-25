@@ -12,9 +12,10 @@ import { SourceLink, Tag } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords } from "../livingStandards/sources";
 
-// Notes said elsewhere: the demo status (Status, below) and the Budget
+// Notes said elsewhere: the validation status (Status, below) and the Budget
 // forecast date (the Forecast changes subtitle).
-const SAID_ELSEWHERE = [/unvalidated demo output/i, /OBR forecast is due on/i];
+const UNVALIDATED = /unvalidated|not yet validated/i;
+const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
 const ext = { target: "_blank", rel: "noopener noreferrer" };
 
@@ -74,7 +75,7 @@ export default function LivingStandardsMethod() {
   const ds = describeDataset(meta.dataset);
   const dataset = [ds.name, ds.date].filter(Boolean).join(", ") + (ds.id ? ` (${ds.id})` : "");
   // The outlook's status, from its own notes
-  const unvalidated = (meta.notes || []).some((n) => /unvalidated/i.test(n));
+  const unvalidated = (meta.notes || []).some((n) => UNVALIDATED.test(n));
   const hbai = splitSource(meta.outturn_source);
   const notes = (meta.notes || []).filter((n) => !SAID_ELSEWHERE.some((re) => re.test(n)));
   const caveats = meta.caveats || [];

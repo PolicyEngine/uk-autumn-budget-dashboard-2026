@@ -31,6 +31,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import "./RegionView.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import TitleIcon from "./TitleIcon";
 
 const TITLE = "Results by region";
 
@@ -149,7 +150,10 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       <div className="chart-header">
         <div>
           <h3 id={titleId}>
-            {TITLE}, <span className="nowrap">{yearLabel}</span>
+            <TitleIcon name="map" />
+            <span className="title-text">
+              {TITLE}, <span className="nowrap">{yearLabel}</span>
+            </span>
           </h3>
           <p className="chart-description">
             The average change in household net income in each region and

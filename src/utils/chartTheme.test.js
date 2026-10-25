@@ -25,3 +25,11 @@ describe("CHART_COLOURS", () => {
     expect(CHART_COLOURS.before).toBe(CHART_COLOURS.noChange);
   });
 });
+
+describe("sweepAxis", () => {
+  it("ends at the sweep's last point, with round ticks inside it", async () => {
+    const { sweepAxis } = await import("./chartTheme");
+    expect(sweepAxis(225000)).toEqual({ domain: [0, 225000], ticks: [0, 50000, 100000, 150000, 200000] });
+    expect(sweepAxis(150000)).toEqual({ domain: [0, 150000], ticks: [0, 50000, 100000, 150000] });
+  });
+});

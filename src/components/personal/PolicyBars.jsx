@@ -3,9 +3,11 @@ import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
+import Disclosure from "../Disclosure";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import { CHART_COLOURS } from "../../utils/chartTheme";
+import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
 const NAME_COLOUR = CHART_COLOURS.text;
@@ -23,12 +25,15 @@ const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
  * @param {Object} props
  * @param {Array<{id, name, color, rounded}>} props.rows
  * @param {string[]} props.noEffect - Names of measures that do not move the household
+ * @param {Array<{id, name, color, reason}>} [props.noEffectItems] - Every
+ *   measure that does not move it, an employer cost with its reason: listed
+ *   under the chart in one expander, closed at first
  * @param {string[]} [props.underAPound] - Names of measures worth under £1
  * @param {Array<{id, name, kind, text}>} [props.notes] - Notes on measures'
  *   figures: an employer cost (£0 for every household) or "if received"
  * @param {string} props.yearLabel - "2029-30"
  */
-export default function PolicyBars({ rows, noEffect, underAPound = [], notes = [], yearLabel }) {
+export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAPound = [], notes = [], yearLabel }) {
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
   const width = measured > 0 ? measured : 640;
@@ -86,7 +91,10 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], notes = [
     <div className="card single-year-card">
       <div className="chart-header">
         <div>
-          <h3>{title}</h3>
+          <h3>
+            <TitleIcon name="hbars" />
+            <span className="title-text">{title}</span>
+          </h3>
         </div>
         <ChartDownloadMenu download={rows.length ? download : undefined} chartTitle={title} />
       </div>
@@ -178,14 +186,38 @@ export default function PolicyBars({ rows, noEffect, underAPound = [], notes = [
       {underAPound.length > 0 && rows.length > 0 && (
         <p className="single-year-quiet">Less than £1 a year: {underAPound.join(", ")}.</p>
       )}
-      {noEffect.length > 0 && rows.length > 0 && (
-        <p className="single-year-quiet">No effect on your household: {noEffect.join(", ")}.</p>
-      )}
-      {notes.map((note) => (
-        <p key={note.id} className="single-year-quiet" data-note={note.kind}>
-          <strong>{note.name}</strong>: {note.text}
-        </p>
-      ))}
+      {notes
+        .filter((note) => note.kind !== "employer_cost")
+        .map((note) => (
+          <p key={note.id} className="single-year-quiet" data-note={note.kind}>
+            <strong>{note.name}</strong>: {note.text}
+          </p>
+        ))}
+      {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title="No effect on your household" />}
     </div>
+  );
+}
+
+/**
+ * The measures that leave the household where it was, in the card's "More
+ * info" row (closed at first, as "Compare with OBR estimates"): each on its
+ * own row with its colour and, for an employer cost, why.
+ */
+export function NoEffectList({ items, title }) {
+  return (
+    <Disclosure inCard title="More info" contentClassName="no-effect">
+      <p className="no-effect-title">
+        {title} ({items.length})
+      </p>
+      <ul className="no-effect-list">
+        {items.map((item) => (
+          <li key={item.id} className="no-effect-item" data-policy={item.id}>
+            <span className="no-effect-dot" style={{ background: item.color }} aria-hidden="true" />
+            <span className="no-effect-name">{item.name}</span>
+            {item.reason && <span className="no-effect-reason">{item.reason}</span>}
+          </li>
+        ))}
+      </ul>
+    </Disclosure>
   );
 }

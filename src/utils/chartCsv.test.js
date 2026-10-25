@@ -102,7 +102,7 @@ describe("chart CSV downloads", () => {
     );
     expect(income[1]).toContain(pensioners.definition);
     expect(income.slice(2)).toEqual([
-      `${pensioners.x_label},Net income before the Budget,Net income after the Budget`,
+      `${pensioners.x_label},Net income before the selected policies,Net income after the selected policies`,
       "20000,30000.12,31000.5",
     ]);
     const renter = exampleHousehold("single_renter");

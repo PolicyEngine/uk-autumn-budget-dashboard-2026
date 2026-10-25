@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { toChangeAxis } from "./publication/scatter";
 import {
   allocateDots,
+  clampToAxis,
+  fitChangeAxis,
   changeBandLabel,
   edgeOf,
   householdsPerDot,
@@ -318,5 +320,47 @@ describe("scatterView across years", () => {
     expect(result.basisYear).toBe(2027);
     // No 2027 cells in this file: the year's own cells share the dots out
     expect(result.basisPoints).toEqual(result.points);
+  });
+});
+
+describe("fitChangeAxis and clampToAxis", () => {
+  const dot = (change, extra = {}) => ({ change, hidden: false, ...extra });
+
+  it("fits the axis to the dots, always including zero", () => {
+    const dots = Array.from({ length: 200 }, (_, i) => dot(20 + i));
+    const { domain, ticks } = fitChangeAxis(dots);
+    expect(domain[0]).toBeLessThan(0);
+    expect(domain[1]).toBeGreaterThanOrEqual(219);
+    expect(domain[1]).toBeLessThan(1000);
+    expect(ticks).toContain(0);
+    expect(ticks.length).toBeLessThanOrEqual(6);
+  });
+
+  it("leaves a stray change out of the fit and clamps it hollow to the edge", () => {
+    const dots = [...Array.from({ length: 300 }, (_, i) => dot(i % 200)), dot(4500)];
+    const { domain } = fitChangeAxis(dots);
+    expect(domain[1]).toBeLessThan(4500);
+    const clamped = clampToAxis(dots, domain);
+    const far = clamped[clamped.length - 1];
+    expect(far.clamped).toBe(true);
+    expect(far.change).toBe(domain[1]);
+  });
+
+  it("puts dots in the open-ended bands at the edge, shown", () => {
+    const edgeDot = dot(5600, { hidden: true, edge: "upper" });
+    const [placed] = clampToAxis([edgeDot], [-100, 300]);
+    expect(placed).toMatchObject({ hidden: false, clamped: true, change: 300 });
+  });
+
+  it("never fits wider than ±£5,000", () => {
+    const dots = Array.from({ length: 50 }, (_, i) => dot(i % 2 ? 9000 : -9000));
+    const { domain } = fitChangeAxis(dots);
+    expect(domain[0]).toBeGreaterThanOrEqual(-5000);
+    expect(domain[1]).toBeLessThanOrEqual(5000);
+  });
+
+  it("keeps groups with no published cells hidden", () => {
+    const empty = { change: 0, hidden: true };
+    expect(clampToAxis([empty], [-100, 100])[0]).toBe(empty);
   });
 });
