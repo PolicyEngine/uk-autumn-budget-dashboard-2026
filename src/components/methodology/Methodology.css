@@ -275,6 +275,15 @@
   color: var(--pe-gray-700);
 }
 
+.method-measure-note {
+  margin: 6px 0 0;
+  color: var(--pe-gray-600);
+}
+
+.method-measure-note-label {
+  font-weight: 600;
+}
+
 .method-measure-year {
   width: 72px;
   white-space: nowrap;

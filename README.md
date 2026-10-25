@@ -27,7 +27,7 @@ Nine candidate measures, each compared against current law in policyengine-uk. T
 | `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension over State Pension age, from April 2027 |
 | `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
-| `employer_ni_relief_under_25s` | Employer NI relief for under-25s: none up to the upper earnings limit, from April 2027 |
+| `employer_ni_relief_under_25s` | Employer NI relief for employees aged 21 to 24 (extending the under-21 relief): none up to the upper earnings limit, from April 2027 |
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
 | `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit cut from £1m to £500,000, from April 2027 |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |

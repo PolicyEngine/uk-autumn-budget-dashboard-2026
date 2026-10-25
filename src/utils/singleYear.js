@@ -68,7 +68,6 @@ export const PROGRAMME_LABELS = {
   targeted_childcare_entitlement: "Disadvantaged 2-year-olds' hours",
   other_benefits: "Other benefits",
   employment_income: "Employment income",
-  salary_sacrifice_haircut: "Pension contribution adjustment: broad-base pay cut",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -161,7 +160,7 @@ export function largestChangesSentence(groups) {
 
 // Notes about one part of a row, shown only when that part is: income
 // tax's is about the High Income Child Benefit Charge, employment income's
-// about the pension contribution adjustment's pay cut
+// about its pay cut row (labelled by the household API)
 const NOTE_PART = {
   income_tax: "child_benefit_charge",
   employment_income: "salary_sacrifice_haircut",
@@ -438,7 +437,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, between neighbouring points of the earnings sweep, with everything else held as entered.",
+    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
   ],
   [
     "Every policy applied",

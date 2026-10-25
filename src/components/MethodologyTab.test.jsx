@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
-import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { measureModelling, MODELLING_NOTE, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -117,6 +117,27 @@ describe("MethodologyTab", () => {
     // The first supported year: an unsupported year has no results
     const partly = { displayable: [{ description: "From 6 April 2031", years: [2028, 2026, 2027], unsupported_years: [2026] }] };
     expect(measureModelling(partly)[0].from).toBe(2027);
+  });
+
+  it("shows the one modelling note under its measure's published description", () => {
+    // #113's scope note: independent text, not part of the receipt
+    const noted = { ...catalogue, displayable: catalogue.displayable.map((measure, index) => (index === 0 ? { ...measure, id: MODELLING_NOTE.id } : measure)) };
+    render(<MeasureCatalogueProvider catalogue={noted}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
+    const [table] = screen.getAllByRole("table");
+    const notes = table.querySelectorAll(".method-measure-note");
+    expect(notes).toHaveLength(1);
+    const row = within(table).getByRole("rowheader", { name: noted.displayable[0].name }).closest("tr");
+    expect(row).toContainElement(notes[0]);
+    expect(row).toHaveTextContent(noted.displayable[0].description);
+    expect(notes[0]).toHaveTextContent(`Modelling note: ${MODELLING_NOTE.note}`);
+  });
+
+  it("shows no modelling note while its measure is not displayed", () => {
+    renderTab();
+    expect(document.querySelectorAll(".method-measure-note")).toHaveLength(0);
+    const other = { description: "Published.", years: [2027], unsupported_years: [] };
+    expect(measureModelling({ displayable: [{ ...other, id: "another_measure" }] })[0].note).toBeNull();
+    expect(measureModelling({ displayable: [{ ...other, id: MODELLING_NOTE.id }] })[0].note).toBe(MODELLING_NOTE.note);
   });
 
   it("lists the measures reported as likely that the model cannot cost", () => {

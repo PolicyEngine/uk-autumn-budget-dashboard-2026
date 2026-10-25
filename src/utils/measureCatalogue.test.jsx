@@ -165,13 +165,22 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   // removing them would change reform logic, which this change must preserve.
   const root = join(fileURLToPath(import.meta.url), "..", "..");
   const forbidden = /two[ _-]child[ _-]limit|2 child limit repeal|fuel[ _-]duty[ _-]freeze|rail[ _-]fares?[ _-]freeze|threshold[ _-]freeze|dividend_tax_increase_2pp|savings_tax_increase_2pp|property_tax_increase_2pp|(?:dividend|savings(?: income)?|property(?: income)?) tax increase|salary[ _-]sacrifice[ _-]cap|freeze_student_loan_thresholds|freeze student loan repayment thresholds|sl_threshold_freeze|unearned_income_tax/i;
+  // The example households' definitions are Python's (example_households.py,
+  // generated into the contract), and each names the measure it shows (#131)
+  const contractPath = join(root, "utils", "publication", "contract.json");
+  const scanned = (path) => {
+    const text = readFileSync(path, "utf8");
+    if (path !== contractPath) return text;
+    const contract = JSON.parse(text);
+    return JSON.stringify({ ...contract, income_curve_households: contract.income_curve_households.map(({ definition, ...rest }) => rest) });
+  };
   const matches = [];
   function walk(directory) {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       if (entry.isDirectory()) {
         if (!["test", "__pycache__", "uk_budget_data"].includes(entry.name) && !entry.name.endsWith(".egg-info")) walk(path);
-      } else if (!/\.(test|spec)\./.test(entry.name) && forbidden.test(readFileSync(path, "utf8"))) matches.push(relative(root, path));
+      } else if (!/\.(test|spec)\./.test(entry.name) && forbidden.test(scanned(path))) matches.push(relative(root, path));
     }
   }
   walk(root);

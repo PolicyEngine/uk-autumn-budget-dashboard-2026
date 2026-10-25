@@ -277,7 +277,15 @@ function MethodologyTab({ onShowTab }) {
                       />
                       {measure.name}
                     </th>
-                    <td>{measure.how}</td>
+                    <td>
+                      {measure.how}
+                      {measure.note && (
+                        <p className="method-measure-note">
+                          <span className="method-measure-note-label">Modelling note: </span>
+                          {measure.note}
+                        </p>
+                      )}
+                    </td>
                     <td className="method-measure-year">
                       <span className="method-cell-label">Results from </span>
                       {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}

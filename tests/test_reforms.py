@@ -502,6 +502,58 @@ def test_employer_ni_on_30000_pounds_by_age(age, relieved):
     assert income[1] == pytest.approx(income[0], abs=PENNY)
 
 
+@pytest.mark.parametrize("age, relief", [(22, 3_000), (30, 0)])
+def test_employer_ni_relief_on_25000_pounds_by_hand(age, relief):
+    """2027-28, checked by hand: a 22-year-old on £25,000 saves their
+    employer 15% x (£25,000 - £5,000) = £3,000 a year; a 30-year-old
+    saves nothing. Employer NI before the measure is £3,000 for both."""
+    year = 2027
+    sit = situation(
+        {"worker": {"age": {year: age}, "employment_income": {year: 25_000}}}
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert baseline == pytest.approx(3_000, abs=PENNY)
+    assert baseline - reformed == pytest.approx(relief, abs=PENNY)
+
+
+def test_employer_ni_relief_starts_in_2027_28():
+    """2026-27 is before the measure: a 22-year-old on £25,000 is charged
+    £3,000 in both runs."""
+    year = 2026
+    sit = situation(
+        {"worker": {"age": {year: 22}, "employment_income": {year: 25_000}}}
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
+def test_employer_ni_relief_leaves_apprentices_as_the_model_has_them():
+    """A 23-year-old apprentice has the s.9B zero rate in law, so the
+    measure does not relieve them again. On £60,000 the charge above the
+    upper threshold, 15% x (£60,000 - £50,270) = £1,459.50 once the
+    engine applies s.9B, must survive; relieving twice and flooring at
+    zero would remove it. Under policyengine-uk 2.132.6 the engine still
+    charges the full £8,250, and the measure leaves it there."""
+    year = 2027
+    sit = situation(
+        {
+            "worker": {
+                "age": {year: 23},
+                "employment_income": {year: 60_000},
+                "is_apprentice": {year: True},
+            }
+        }
+    )
+    baseline, reformed = change(
+        "employer_ni_relief_under_25s", sit, "ni_class_1_employer", year
+    )
+    assert reformed == pytest.approx(baseline, abs=PENNY)
+
+
 def test_employer_ni_above_the_upper_threshold_is_still_charged():
     """£60,000 at 23: 15% of £55,000, £8,250, less the relief of 15% of
     £50,270 - £5,000, £6,790.50, leaves £1,459.50."""
@@ -654,6 +706,23 @@ def test_the_page_keeps_no_measure_list_of_its_own():
         if len(named) > 1:
             lists[relative.as_posix()] = named
     assert lists == {}
+
+
+def test_the_methodology_note_is_for_a_registered_measure():
+    """The one modelling note the page keeps by hand (MODELLING_NOTE in
+    measures.js, #113's scope note) names a registered measure, so renaming
+    the measure can't leave its note unshown without a failure here."""
+    import re
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src/components/methodology/measures.js"
+    ).read_text()
+    (measure_id,) = re.findall(
+        r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source
+    )
+    assert get_reform(measure_id) is not None
 
 
 # --- Every year the policy differs is covered ---------------------------------

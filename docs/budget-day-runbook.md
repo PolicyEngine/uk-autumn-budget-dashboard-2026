@@ -22,7 +22,7 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
   - Last production deployment ID, the rollback target: record before every merge on the day.
 - [ ] **Household API live.**
   - URL, **the household URL for the day**: `https://uk-budget-api-2026-qevs5bboca-ew.a.run.app` (Cloud Run `uk-budget-api-2026`, project `policyengine-apps`, `europe-west1`).
-  - Serving revision and image: record after the last deploy before the day. On 25 October it is `uk-budget-api-2026-00024-lir` (git `5fd6925`, the merge of #69; policyengine 6.10.2, policyengine-uk 2.132.6, core 3.33.3), deployed by Vahid at 23:27Z on 24 October. Each re-cut redeploys it (see "Rolling re-cuts" below).
+  - Serving revision and image: record after the last deploy before the day. On 25 October it is `uk-budget-api-2026-00026-xol` (git `65280bd`, the merge of #125; policyengine 6.10.2, policyengine-uk 2.132.6, core 3.33.3; image `sha256:3309d448…`), promoted at 11:24Z on 25 October (run 40188251705). Before it, `00024-lir` (git `5fd6925`, the merge of #69) served from 23:27Z on 24 October. Each re-cut redeploys it (see "Rolling re-cuts" below).
   - **How long one household answer takes.** Since #69 the Personal impact tab calls `/api/household-impact`: one household, one year, the selected measures. It asks in two stages: the headline first (`include: []`), then each measure's own effect and the earnings sweep (`by_policy`, `sweep`). It waits 90 s for the first and 200 s for the second (`householdImpactApi.js`), and the server gives up at 280 s with a 504 (`HOUSEHOLD_CALCULATION_TIMEOUT`). On `00024-lir`, for a household new to the revision, a headline took 16.7 to 17.3 s and a breakdown 81.0 to 83.9 s.
     - **What the gates cover.** The deploy's smoke test asks `/api/household-impact` for one headline of one measure (`SMOKE_HOUSEHOLD_IMPACT` in `deploy_smoke.py`: `badr_lifetime_limit_cut`, 2028, `include: []`). From #125 the same request names every registered measure's definition at the deployed commit, and the candidate must serve exactly what its image computes. The smoke test also makes one full `/api/personal-impact` request for the £30,000 earner (six years, now nine measures), a route the page no longer calls. The same request took 96.1 s on `00024-lir` in the timings below. The household check posts only to each fixture's `route`, and the plumbing fixture's is `/api/personal-impact`.
     - **So no gate asks for a breakdown,** the stage the page waits longest for. A revision whose breakdown passes 200 s, or 280 s, would still take traffic. So after each deploy, time one breakdown (see "Adopting a release").
@@ -92,12 +92,13 @@ Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
     | 22 October, `ff217d3` | 39698257053 | `00020-pal`, replacing `00018-xuv` | policyengine 6.10.0 (#72): Microcosm data 0.1.0, policyengine-uk 2.132.6 |
     | 24 October, `1acbd44` | 40114977669 | `00022-suw`, replacing `00020-pal` | policyengine 6.10.2 (#102): the same policyengine-uk and data as 6.10.0; only version strings change |
     | 24 October, `5fd6925` | 40142327478 | `00024-lir`, replacing `00022-suw` | #69, the UI redesign: adds `/api/household-impact`, the route the Personal impact tab calls, and removes `/api/lifecycle/calculate`. Dispatched by Vahid |
+    | 25 October, `65280bd` | 40188251705 | `00026-xol`, replacing `00024-lir` | #125: `/api/household-impact` reports each measure's definition at its approved commit. The same policyengine, policyengine-uk and core as `00024-lir` |
 
-  - **Live and rollback target, 25 October:** `00024-lir` is live. The revision it replaced, `00022-suw`, passed the smoke test when it was deployed, but **it can't serve the page that is live now.**
+  - **Live and rollback target, 25 October:** `00026-xol` is live, promoted at 11:24Z, and its rollback target is `00024-lir`, which reports no definitions. The revision before that, `00022-suw`, passed the smoke test when it was deployed, but **it can't serve the page that is live now.**
     - **Why:** since #69 the Personal impact tab calls `/api/household-impact`, which no revision before `00024-lir` has (`household_impact.py` doesn't exist at `1acbd44`). Rolling the API back to `00022-suw` or earlier keeps the rest of the page, but the tab fails for every household.
     - **The rollback pipeline doesn't catch it.** Its smoke test checks `/api/household-impact` only on an image that has the route (`expected_household_impact` in `deploy_smoke.py`), so a rollback to `00022-suw` passes and moves traffic.
     - **Rolling the dashboard back to before #69 doesn't help either.** Its Personal impact tab, the lifetime calculator, never calculated in production: it throws before any request when `NEXT_PUBLIC_LIFECYCLE_API_URL` is unset (`LifecycleCalculator.jsx` at `1329312`). None of the 70 production builds before #69 (12 to 24 October) had that variable. The production project's only variable is `NEXT_PUBLIC_HOUSEHOLD_API_URL` (production and preview), added at 23:19:54Z on 24 October, just before #69 merged.
-    - **So until the next deploy,** keeping a working Personal impact tab through an API fault means fixing forward, or redeploying `main` if the fault isn't in its code. From the next deploy on, its rollback target is `00024-lir`, the first revision with the route.
+    - **So never roll the API back past `00024-lir`,** the first revision with the route. Through an API fault, roll back to it or fix forward.
   - **The household route can exceed 2 GiB.** Cloud Run killed two instances for exceeding the 2 GiB limit. Those are the only two such kills since 12 October, from the coordinator's read of the logs:
     - `00004-fur` at 12:40:03Z (2050 MiB), which gave step 2's 503;
     - `00003-jic` at 10:09:59Z (2054 MiB), during the first deploy's smoke test, so that 504 may have been memory as well as the 300 s limit.
@@ -537,11 +538,30 @@ uv run uk-budget-data publish check
   - W3 saw HTTP 403.
   - uk-data #536 records a 200 answer that is an HTML page titled "No Access - Office for Budget Responsibility" instead of the workbook.
   - On 15 October, from W5's machine, the March 2026 EFO receipts workbook downloaded by script, but the expenditure workbook got that "No Access" page.
+  - On 25 October (dry run), curl got that "No Access" page for all three workbooks below, with HTTP 200 and `text/html` (88,552 bytes each).
 
-  A browser download works.
-- **What:** the EFO's detailed forecast tables, at least receipts and expenditure. W3 lists the full set.
-- **Where the files go:** to W3's Budget-day ingest in policyengine-uk-data, which records each file's SHA-256, vintage, units, geography and year coverage. Today the OBR loader's fallback reads committed workbooks from `storage/obr_efo/` (uk-data #536). W3 to confirm the path for the Budget-day files.
+  A browser download works: on 25 October each workbook took under a second.
+- **What:** three of the EFO's *detailed forecast tables* workbooks, each its own link on the EFO page (each appears twice there, as an "xlsx" icon and as its title):
+  - **economy**, for the Living standards tab (next section);
+  - **receipts** and **expenditure**, for the OBR targets in policyengine-uk-data.
+
+  The page also offers aggregates, policy, debt interest and a zip of all of them; none is needed. Take the single workbooks, not the zip: an unzipped file's modification time is not its download time.
+- **Check each file is a workbook**, not the "No Access" page saved as `.xlsx`: `file <file>` must say "Microsoft Excel 2007+", not "HTML document".
 - **Record:** each file's name and SHA-256 (`shasum -a 256 <file>`) in the coverage ledger as it lands, so the ingest's record can be checked against what was downloaded.
+- **Receipts and expenditure go to policyengine-uk-data's ingest** (`policyengine_uk_data/targets/obr_sources.py`). In a policyengine-uk-data checkout, dry run first; it writes nothing and prints each workbook's title, SHA-256 and every OBR target's old and new value:
+
+  ```sh
+  uv run python -m policyengine_uk_data.targets.obr_sources ingest \
+    --vintage october_2026 --label "October 2026" \
+    --receipts <receipts xlsx> --expenditure <expenditure xlsx> \
+    --receipts-url https://obr.uk/download/<receipts page>/ \
+    --expenditure-url https://obr.uk/download/<expenditure page>/ \
+    --first-year 2025 --last-year 2031 --dry-run
+  ```
+
+  The `--*-url` values are the obr.uk download pages the files came from (on the EFO page, the links' addresses without the `?tmstv=` query); every target cites them. The ingest refuses a workbook whose title doesn't name the vintage. Then run it again without `--dry-run`: it moves the files under `storage/obr_efo/october_2026/` and writes the vintage's manifest; pointing `sources.yaml` at that manifest adopts it, in a policyengine-uk-data pull request. About 40 s, nearly all start-up.
+
+  Dry run, 25 October, on the March 2026 workbooks (`--vintage march_2026 --label "March 2026" --first-year 2024 --last-year 2030`): both files matched the committed manifest's SHA-256 (receipts `f65b6cb7…`, expenditure `700bfd70…`), all 168 target-years were unchanged, and it ended "a rehearsal, nothing to write".
 
 **Treasury tables come from gov.uk by script.** On 15 October `assets.publishing.service.gov.uk` served a spreadsheet to both curl's and python-requests' user agents (HTTP 200, the right content type), so gov.uk does not refuse scripted downloads. The importer below reads a workbook from a local path and fetches nothing itself. If gov.uk does refuse on the day, download Table 4.1 in a browser the same way and pass its path.
 
@@ -570,14 +590,16 @@ The Living standards tab's **Forecast changes** sub-tab shows the OBR March 2026
      --url https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
    ```
 
-   It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending. A stored `post_published` flag does not authorise the figures on the page.
+   It takes about 2 seconds. It writes `data_inputs/living_standards/obr_forecast_post.json` and the `forecast` block of `public/data/living_standards_outlook.json` (nothing else in the file changes), and sets that file's review row to pending, with a new SHA-256 and a 14-day expiry. A stored `post_published` flag does not authorise the figures on the page.
 3. **Check what it printed:**
-   - every series: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, with the table and column it read each from; CPI after housing costs and social rent recomputed by PolicyEngine;
+   - every series, with its values for 2027 to 2030: CPI, CPIH, RPI, earnings, non-labour income, house prices, rent and mortgage interest from the OBR tables, then CPI after housing costs and social rent recomputed by PolicyEngine. The console prints values only; the table and column each was read from are in each series' `post_source` in `public/data/living_standards_outlook.json`;
    - the file name and SHA-256 match the download;
-   - any "kept at the pre-Budget value" line (only mortgage interest 2030 may say this, if the OBR stops forecasting it before 2030).
+   - any "kept at the pre-Budget value" line. Only mortgage interest 2030 may say this, and on the March 2026 tables it does, because the OBR stops forecasting it after 2030 Q1. That line is expected; any other series saying it is not.
 
    If a table, column or year is missing, it stops and names the series; nothing is written. Don't fill a value by hand: fix the reader's pattern in `living_standards/obr.py` (`OBR_SERIES`), with a test.
 4. **Commit for review** both files and the review row in a pull request. The stored source and label can then be reviewed, but the post-Budget lines, changes and tiles remain unavailable until their dedicated verified publication route is implemented and approved. Once merged, the Forecast changes sub-tab shows an unavailable notice in place of the March 2026 forecast as well. The Baseline outlook is unaffected. If the March forecast must stay visible on the day, hold the import's pull request.
+
+**Rehearsing with the March tables.** Loading the March 2026 economy workbook (SHA-256 `fde1de4b…`, the same bytes as `data_inputs/living_standards/efo-march-2026-detailed-forecast-tables-economy.xlsx`) under a test `--label` gives post equal to pre: on 25 October all 40 values of the 10 series matched, and the Forecast changes sub-tab showed the test label, "no change" on each headline and the post line drawn over the pre line. Don't commit a rehearsal. Undo it with `git checkout -- public/data/living_standards_outlook.json data_inputs/public_data_review.csv` and `rm data_inputs/living_standards/obr_forecast_post.json`.
 
 **This does not change the model.** The national results, and every projection on the Baseline outlook, uprate with the OBR forecast in the policyengine-uk release the bundle pins (March 2026 on 2.132.6). Moving the model onto the Budget forecast needs a policyengine-uk release and a bundle adoption, then `uk-budget-data living-standards` to rerun the projections (it keeps the loaded post forecast). The tab runs 2027-28 to 2031-32 on any engine; below policyengine-uk 2.134.4 its baseline applies that release's UC health element fix for 2030-31 and 2031-32 itself (`living_standards/uc_health_element.py`, policyengine-uk #2428).
 
