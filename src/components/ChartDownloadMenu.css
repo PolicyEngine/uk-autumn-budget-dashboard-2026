@@ -9,8 +9,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   font-family: inherit;
   font-size: var(--fs-caption);
@@ -80,10 +80,10 @@
 
 /* Phone: 40px targets; the list opens to the right of the button */
 @media (max-width: 768px) {
-  /* Top right of the title row, 32px */
+  /* Top right of the title row, 40px to tap */
   .chart-download-button {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
   }
 
   .chart-download-item {

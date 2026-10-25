@@ -197,7 +197,7 @@ def run_living_standards(parsed: argparse.Namespace) -> int:
             f"Microcosm {meta['dataset']['tag']} "
             f"({meta['dataset']['sha256'][:8]}), "
             f"{meta['headline_start_year']} base year and prices, to "
-            f"{meta['headline_end_year']}. Demo output, unvalidated. No "
+            f"{meta['headline_end_year']}. Unvalidated. No "
             "area below the UK."
         ),
     )
@@ -252,8 +252,8 @@ def run_obr_forecast(parsed: argparse.Namespace) -> int:
             f"obr-forecast from {source['file']} "
             f"({source['file_sha256'][:8]}), {label}. Baseline projections "
             f"unchanged (policyengine {outlook['meta']['policyengine']}, "
-            f"policyengine-uk {outlook['meta']['policyengine_uk']}). Demo "
-            "output, unvalidated. No area below the UK."
+            f"policyengine-uk {outlook['meta']['policyengine_uk']}). "
+            "Unvalidated. No area below the UK."
         ),
     )
     return 0

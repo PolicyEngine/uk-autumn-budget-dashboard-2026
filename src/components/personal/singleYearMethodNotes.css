@@ -1,0 +1,79 @@
+/* "About these figures": a lead line, then one point per idea */
+.method-note-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.method-note-icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 3px;
+  color: var(--pe-gray-500);
+}
+
+.method-note ul {
+  margin: 0;
+  padding-left: 38px;
+  list-style: disc;
+}
+
+.method-note li::marker {
+  color: var(--pe-gray-400);
+}
+
+.method-note li + li {
+  margin-top: 2px;
+}
+
+/* The rest of a note behind a small Details toggle */
+.method-note-details {
+  margin: 0 0 0 20px;
+}
+
+.method-note-details > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--band-teal);
+  cursor: pointer;
+  list-style: none;
+}
+
+.method-note-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.method-note-details > summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+}
+
+.method-note-details[open] > summary::after {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.method-note-details > summary:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.method-note-details ul {
+  padding-left: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .method-note-details > summary::after {
+    transition: none;
+  }
+}

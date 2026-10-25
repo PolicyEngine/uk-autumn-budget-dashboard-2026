@@ -4,6 +4,8 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "../../PillSelect";
+import YearRangeSelect from "../YearRangeSelect";
+import { rangeYears } from "../../../utils/livingStandards/yearRange";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import {
   EMPTY,
@@ -24,7 +26,7 @@ const FORMAT = {
 };
 
 /** The Inequality view: card parts for the Incomes over time card. */
-export default function useInequalityView(data) {
+export default function useInequalityView(data, range = null, setRange = null) {
   const ineq = data.inequality;
   const [measure, setMeasure] = useState("gini");
   const [basis, setBasis] = useState("bhc");
@@ -41,7 +43,7 @@ export default function useInequalityView(data) {
   const noOutturn = outturn.length === 0;
   const series = lineSeries(viewMode, !noOutturn);
 
-  const span = headlineSpan(projection, data);
+  const span = headlineSpan(projection, data, range);
   let summary = null;
   if (span) {
     const [a, b] = span;
@@ -88,8 +90,12 @@ export default function useInequalityView(data) {
       : null,
     controls: (
       <>
+        {range && setRange && rangeYears(data).length > 2 && (
+          <YearRangeSelect years={rangeYears(data)} from={range[0]} to={range[1]} onChange={setRange} />
+        )}
         <PillSelect
           variant="light"
+          prefix="Measure"
           name="Inequality measure"
           value={measure}
           onChange={setMeasure}
@@ -112,6 +118,7 @@ export default function useInequalityView(data) {
     ),
     chart: (
       <LsLineChart
+          highlight={range}
         data={rows}
         series={series}
         yFormat={(v) => (measure === "gini" ? v.toFixed(2) : v.toFixed(1))}

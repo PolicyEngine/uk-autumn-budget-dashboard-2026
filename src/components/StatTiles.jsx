@@ -4,8 +4,9 @@
  * across the foot. Used by Young people and by the Living standards
  * forecast.
  *
- * items: [{ key, value, extra?, label, sub?, subClassName? }]. `extra` sits
- * after the number in smaller type; `sub` is a second, muted line.
+ * items: [{ key, value, extra?, label, sub?, subClassName?, valueClassName? }].
+ * `extra` sits after the number in smaller type; `sub` is a second, muted
+ * line.
  */
 function StatTiles({ items, footer, className = "" }) {
   return (
@@ -13,7 +14,7 @@ function StatTiles({ items, footer, className = "" }) {
       <div className="stat-tiles-row" style={{ "--stat-count": items.length }}>
         {items.map((item) => (
           <div key={item.key} className="stat-tile">
-            <p className="stat-value">
+            <p className={`stat-value ${item.valueClassName ?? ""}`.trim()}>
               {item.value}
               {item.extra && <span className="stat-extra"> {item.extra}</span>}
             </p>

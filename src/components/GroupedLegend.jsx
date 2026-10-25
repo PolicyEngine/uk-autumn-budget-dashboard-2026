@@ -132,6 +132,28 @@ function GroupedLegend({ names, items, netLabel }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 
+  // A short legend with no groups (before / after): one row, side by side
+  if (groups.length === 1 && !groups[0][0] && all.length <= 3) {
+    return (
+      <div ref={ref} className="grouped-legend is-row">
+        <ul className="grouped-legend-row">
+          {all.map((item) => (
+            <li key={item.label} className="grouped-legend-item">
+              <Swatch item={item} />
+              <span className="grouped-legend-label">{item.label}</span>
+            </li>
+          ))}
+        </ul>
+        {netLabel && (
+          <p className="grouped-legend-net">
+            <span className="grouped-legend-line" aria-hidden="true" />
+            {netLabel}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   const mode = layout?.mode ?? "stacked";
   return (
     <div ref={ref} className={`grouped-legend is-${mode}`}>
@@ -156,6 +178,16 @@ function GroupedLegend({ names, items, netLabel }) {
                         <span className="grouped-legend-label">{item.label}</span>
                       </li>
                     ))}
+                    {/* In a narrow card the items flow and the net line
+                        joins the last row (CSS); elsewhere it sits below */}
+                    {netLabel &&
+                      index === groups.length - 1 &&
+                      columnIndex === columns.length - 1 && (
+                        <li className="grouped-legend-net-inline" aria-hidden="true">
+                          <span className="grouped-legend-line" />
+                          <span className="grouped-legend-label">{netLabel}</span>
+                        </li>
+                      )}
                   </ul>
                 ))}
               </div>
