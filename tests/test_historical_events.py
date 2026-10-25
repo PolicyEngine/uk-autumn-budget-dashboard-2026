@@ -348,6 +348,9 @@ def _parsed(**overrides):
         dataset=None,
         skip_input_check=False,
         output_dir=Path("public/data"),
+        jobs="1",
+        backend="local",
+        unit_memory_gb=None,
     )
     for key, value in overrides.items():
         setattr(parsed, key, value)
@@ -360,9 +363,11 @@ def captured(monkeypatch):
 
     calls = []
 
-    def fake(parsed, config, reforms, lookup, out=print):
+    def fake(parsed, config, reforms, lookup, out=print, runner=None):
         calls.append(
-            SimpleNamespace(config=config, reforms=reforms, lookup=lookup)
+            SimpleNamespace(
+                config=config, reforms=reforms, lookup=lookup, runner=runner
+            )
         )
         return 0
 
@@ -388,6 +393,8 @@ def test_a_past_events_artifacts_root_generates_its_own_measures(captured):
     other = IMPORTED[HISTORICAL[1].id]["measures"][0]["id"]
     assert call.lookup(other) is None
     assert call.lookup(THIS_BUDGETS_MEASURE) is None
+    # No runner: generate_artifacts runs them here, one after another
+    assert call.runner is None
 
 
 @pytest.mark.parametrize(
@@ -396,6 +403,11 @@ def test_a_past_events_artifacts_root_generates_its_own_measures(captured):
         {"reforms": [THIS_BUDGETS_MEASURE]},
         {"years": [2031]},
         {"only": "age_impact"},
+        # A worker would look an unpicklable measure up in this Budget's
+        # registry, so a past event's measures never leave this process
+        {"jobs": "2"},
+        {"jobs": "auto"},
+        {"backend": "modal"},
     ],
 )
 def test_a_past_event_refuses_what_is_not_its_own(captured, overrides):
@@ -419,6 +431,7 @@ def test_an_unregistered_release_root_is_refused(captured):
 
 def test_this_budgets_generation_keeps_its_registry_and_years(captured):
     from uk_budget_data import cli
+    from uk_budget_data.parallel import SerialRunner
     from uk_budget_data.reforms import get_reform
 
     parsed = _parsed(reforms=[THIS_BUDGETS_MEASURE])
@@ -426,6 +439,8 @@ def test_this_budgets_generation_keeps_its_registry_and_years(captured):
     (call,) = captured
     assert call.lookup is get_reform
     assert call.config.years == list(POLICY_YEARS)
+    # --jobs 1, the default, runs this Budget's measures one after another
+    assert isinstance(call.runner, SerialRunner)
 
 
 # --- regeneration -------------------------------------------------------

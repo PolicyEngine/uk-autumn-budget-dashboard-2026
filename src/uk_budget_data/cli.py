@@ -421,6 +421,14 @@ def run_generate_historical(parsed: argparse.Namespace, release) -> int:
         raise historical_events.EventImportError(
             "a past event is generated only as receipted artifacts"
         )
+    # A worker process is sent a measure that does not pickle by its id,
+    # looked up in this Budget's registry (parallel.portable), so a past
+    # event's measures run here, one after another, never by that route
+    if parsed.backend != "local" or str(parsed.jobs) != "1":
+        raise historical_events.EventImportError(
+            "a past event's measures run locally, one after another "
+            "(--jobs 1, --backend local)"
+        )
     lookup = historical_events.release_reform_lookup(release)
     ids = parsed.reforms or [record["id"] for record in document["measures"]]
     reforms = [lookup(reform_id) for reform_id in ids]
