@@ -80,7 +80,9 @@ export const MEASURE_MODELLING = [
     how: [
       "Removes employer National Insurance between the secondary threshold and the upper earnings limit for employees aged 21 to 24.",
       "The model charges under-21s in full, so the existing under-21 relief is not in its baseline.",
-      "Apprentices are not identified.",
+      "The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (about £0.57bn in 2025-26, HMRC).",
+      "Static and gross: no pay response and no corporation tax effect.",
+      "Other estimates, also gross and static, are for 2025-26, when the model gives £5.7bn: the Resolution Foundation's £5.1bn (Take a chance on me, June 2026) scraps employer NI for all under-25s with no upper limit; Tax Policy Associates' £6.2bn to £7.4bn covers 21 to 24-year-olds who are not apprentices, up to £50,270.",
     ],
     sources: ["hmrc_employer_rates"],
     from: 2027,
