@@ -1,10 +1,10 @@
 /**
  * How the national run represents each candidate measure, for the
  * Methodology view's table. Each row restates src/uk_budget_data/reforms.py
- * and budget_measures.py: what the measure changes against current law,
- * and the first model year it changes (year 2027 means 2027-28). The
- * policy descriptions themselves stay with the Policies section of
- * Population impact; these are modelling facts only.
+ * and the modifiers in budget_measures/: what the measure changes against
+ * current law, and the first model year it changes (year 2027 means
+ * 2027-28). The policy descriptions themselves stay with the Policies
+ * section of Population impact; these are modelling facts only.
  *
  * `name` matches the measure's name on the page (POLICY_COLORS keys), so
  * the table's swatches are the charts' colours.
@@ -47,7 +47,7 @@ export const MEASURE_MODELLING = [
   },
   {
     name: "Employer NI relief for under-25s",
-    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline; apprentices are not identified.",
+    how: "Removes employer National Insurance on earnings between the secondary threshold and the upper earnings limit for employees aged 21 to 24. The model charges under-21s in full, so the existing under-21 relief is not in its baseline. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay no NI on these earnings (HMRC puts that relief at about £0.57bn in 2025-26). The figure is static and gross: no pay response and no corporation tax effect. Other estimates, also gross and static, are for 2025-26: on that year's earnings the model gives £5.7bn. The Resolution Foundation's £5.1bn (Take a chance on me, June 2026) scraps employer NI altogether for under-25s, with no upper limit. Tax Policy Associates' £6.2bn to £7.4bn covers 21 to 24-year-olds who are not apprentices, up to £50,270.",
     from: 2027,
   },
   {
