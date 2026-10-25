@@ -55,13 +55,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Forecast changes before the Budget forecast", () => {
-  it("draws the pre-Budget line only and says the Budget forecast is to come", async () => {
+describe("Forecast changes with one forecast", () => {
+  it("draws the one forecast, named from the sources config, and nothing about a later one", async () => {
     await renderForecast(REAL);
-    expect(screen.getByText(/will add the Autumn Budget 2026 forecast once the OBR publishes it/)).toBeInTheDocument();
+    expect(screen.getByText(/The OBR forecast behind the baseline: calendar-year growth, from the/)).toBeInTheDocument();
+    expect(screen.queryByText(/28 October|pre-Budget/)).toBeNull();
     const cpi = card(/^CPI inflation$/);
     const legend = cpi.querySelector(".chart-legend");
-    expect(legend).toHaveTextContent("OBR March 2026 (pre-Budget)");
+    expect(legend).toHaveTextContent("OBR, March 2026");
     expect(legend).not.toHaveTextContent("Budget forecast");
     // The tile shows one value and no change
     expect(screen.getByText(pct(cpiPre()))).toBeInTheDocument();
@@ -76,7 +77,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     // The basis and both releases, once, in the section's intro
     const intro = screen.getByText(/compares the OBR March 2026 forecast with the OBR October 2026 forecast/);
     expect(intro).toHaveTextContent(POST_RELEASE);
-    expect(intro).toHaveTextContent(/pre-Budget: OBR/);
+    expect(intro).toHaveTextContent(/earlier forecast: OBR/);
 
     // Every chart: pre-Budget grey and dashed, the Budget forecast teal and solid
     const cards = document.querySelectorAll(".ls-card");
@@ -84,12 +85,12 @@ describe("Forecast changes once the Budget forecast is published", () => {
     for (const c of cards) {
       const text = c.querySelector(".chart-legend").textContent;
       expect(c.querySelectorAll(".grouped-legend .grouped-legend-swatch-line")).toHaveLength(2);
-      expect(text).toMatch(/pre-Budget/);
+      expect(text).toMatch(/March 2026/);
       expect(text).toMatch(/October 2026/);
     }
     const legendText = card(/^CPI inflation$/).querySelector(".chart-legend").textContent;
-    expect(legendText).toContain("OBR March 2026 (pre-Budget)");
-    expect(legendText).toContain(POST_LABEL);
+    expect(legendText).toContain("OBR, March 2026");
+    expect(legendText).toContain("OBR, October 2026");
 
     // Tiles: "March 2026 2.3% → October 2026 2.6%" and "+0.3pp"; a change that
     // rounds to zero reads "no change"
@@ -107,7 +108,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     fireEvent.click(screen.getByRole("option", { name: "Tables" }));
     const cpi = card(/^CPI inflation$/);
     const headers = within(cpi).getAllByRole("columnheader").map((h) => h.textContent);
-    expect(headers).toEqual(["Year", "OBR March 2026 (pre-Budget)", POST_LABEL, "Difference"]);
+    expect(headers).toEqual(["Year", "OBR, March 2026", "OBR, October 2026", "Difference"]);
     const first = within(cpi).getAllByRole("row")[1];
     expect(first).toHaveTextContent(`2027${pct(cpiPre())}${pct(cpiPre() + 0.003)}+0.3pp`);
   });

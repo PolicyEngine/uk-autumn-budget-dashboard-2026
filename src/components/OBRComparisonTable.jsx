@@ -7,12 +7,7 @@ import Disclosure from "./Disclosure";
 import SourceLink from "./SourceLink";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
-export const OBR_UNAVAILABLE =
-  "Shown once the OBR publishes its costings for these measures.";
-
-/** The card-foot line while the OBR has not costed the selected measures. */
-export const OBR_PENDING_LINE =
-  "OBR comparison: available after the OBR publishes its costings on 28 October.";
+export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
 
 /**
  * PolicyEngine's and the OBR's figures by measure and year, read once from
@@ -309,9 +304,8 @@ export default OBRComparisonTable;
 export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
   const data = useObrComparisonData();
   if (!data || selectedPolicies.length === 0) return null;
-  if (!hasObrFigures(data, selectedPolicies)) {
-    return <p className="card-foot-note obr-pending">{OBR_PENDING_LINE}</p>;
-  }
+  // No OBR figures for the selection: nothing at all
+  if (!hasObrFigures(data, selectedPolicies)) return null;
   return (
     <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
       <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />

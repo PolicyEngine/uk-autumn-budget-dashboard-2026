@@ -85,7 +85,7 @@ export function viewFromLocation({ search, hash }) {
 const PRESETS = [
   {
     id: "autumn-budget",
-    name: "All candidate measures",
+    name: "All measures",
     policies: POLICIES.map((p) => p.id),
   },
 ];

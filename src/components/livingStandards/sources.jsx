@@ -79,7 +79,7 @@ export function ForecastSource({ forecast, derived = false }) {
       <Label />{" "}
       {post ? (
         <>
-          {linked(post)}; pre-Budget: {linked(pre)}
+          {linked(post)}; earlier forecast: {linked(pre)}
         </>
       ) : (
         linked(pre)
@@ -92,7 +92,7 @@ export function ForecastSource({ forecast, derived = false }) {
 export function forecastSourceText(forecast, derived = false) {
   if (derived) return CSV_SOURCES.peDerived;
   const { pre, post } = obrSources(forecast);
-  return post ? `${post.name}; pre-Budget: ${pre.name}` : pre.name;
+  return post ? `${post.name}; earlier forecast: ${pre.name}` : pre.name;
 }
 
 /** Spell out "HBAI" in text from outlook.json. */

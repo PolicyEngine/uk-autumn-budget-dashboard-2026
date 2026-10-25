@@ -95,9 +95,7 @@ export default function ForecastHeadlineSection({ data }) {
                   {tile.shownChange > 0 ? "▲" : tile.shownChange < 0 ? "▼" : ""} {ppWords(tile.shownChange)}
                 </span>
               </p>
-            ) : (
-              <p className="forecast-tile-tag">Budget forecast from 28 October</p>
-            )}
+            ) : null}
           </div>
         </div>
       ))}

@@ -10,7 +10,7 @@ import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH, OUTTURN_COLOUR, PROJECTION_COLOUR } from "../../../utils/livingStandards/baseline";
 import {
   changeClass,
-  forecastName,
+  forecastSeriesLabel,
   pctLabel,
   percentAxis,
   ppLabel,
@@ -28,12 +28,12 @@ const pctText = (v) => `${formatOneDp(v)}%`;
 
 /** Line and column names: the forecasts' labels, or for a derived series what it is derived from. */
 export function forecastNames(forecast, derived) {
-  const pre = forecast.pre_label || "Pre-Budget forecast";
-  const post = forecast.post_label || "Budget forecast";
+  const pre = forecastSeriesLabel(forecast.pre_label) || "OBR forecast";
+  const post = forecastSeriesLabel(forecast.post_label) || "Latest OBR forecast";
   if (!derived) return { pre, post };
   return {
-    pre: `PolicyEngine, from ${forecastName(pre)} (pre-Budget)`,
-    post: `PolicyEngine, from ${forecastName(post)}`,
+    pre: `PolicyEngine, from ${pre}`,
+    post: `PolicyEngine, from ${post}`,
   };
 }
 

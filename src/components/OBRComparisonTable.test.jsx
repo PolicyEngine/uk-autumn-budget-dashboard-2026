@@ -95,7 +95,7 @@ describe("the OBR comparison table", () => {
     );
     await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
     expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings (28 October 2026), £bn a year; positive values raise revenue.",
+      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings, £bn a year; positive values raise revenue.",
     );
     expect(container).not.toHaveTextContent("November 2025");
   });
@@ -210,7 +210,7 @@ describe("before the OBR costs the measures", () => {
     );
     expect(
       await screen.findByText(
-        "Shown once the OBR publishes its costings for these measures.",
+        "The OBR has not costed the selected measures.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();

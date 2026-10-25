@@ -96,7 +96,7 @@ Object.assign(SOURCES, {
   },
   // Published with the Budget on 28 October 2026; linked once it exists
   obr_budget_2026_costings: {
-    label: "the OBR's Autumn Budget 2026 costings (28 October 2026)",
+    label: "the OBR's Autumn Budget 2026 costings",
     url: null,
   },
   ons_ashe: {

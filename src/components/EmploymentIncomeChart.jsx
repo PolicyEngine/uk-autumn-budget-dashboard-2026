@@ -50,8 +50,8 @@ const CHART_TITLE = "Household net income";
 
 // Legend items for export
 const LEGEND_ITEMS = [
-  { color: CHART_COLOURS.before, label: "Before the Budget", type: "line" },
-  { color: CHART_COLOURS.after, label: "After the Budget", type: "line" },
+  { color: CHART_COLOURS.before, label: "Before the selected policies", type: "line" },
+  { color: CHART_COLOURS.after, label: "After the selected policies", type: "line" },
 ];
 
 /**
@@ -214,7 +214,7 @@ function EmploymentIncomeChart({
                 stroke={CHART_COLOURS.before}
                 strokeWidth={2.5}
                 dot={false}
-                name="Before the Budget"
+                name="Before the selected policies"
                 {...chartMotion()}
               />
               <Line
@@ -224,7 +224,7 @@ function EmploymentIncomeChart({
                 strokeWidth={2.5}
                 strokeDasharray="8 4"
                 dot={false}
-                name="After the Budget"
+                name="After the selected policies"
                 {...chartMotion()}
               />
               <Customized component={<ChartUnitLabel text="Household net income" />} />

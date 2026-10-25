@@ -25,7 +25,7 @@ export const CHANGE_BY_POLICY_NOTE = (
     icon="hbars"
     lead="Each bar is one policy on its own."
     points={[
-      "It is switched to its Budget setting, with every other selected policy at pre-Budget law, against the same baseline.",
+      "It is switched on alone, with every other selected policy at current law, against the same baseline.",
       "Policies can interact, so their own effects need not add up to the combined change.",
       "A difference of £1 or more shows as “Interaction between policies”, so the bars add up to the headline change.",
     ]}
