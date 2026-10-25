@@ -592,6 +592,34 @@ def test_a_partial_or_callable_object_as_modifier_counts_too():
         assert "directly_held_shares" in build_reads(scenario)
 
 
+OTHER_SIMULATION_MODIFIER = """
+def modify(sim):
+    OTHER.calculate("directly_held_shares", 2027)
+    return sim
+"""
+
+
+def test_a_shipped_modifier_applied_before_the_data_counts_too():
+    """The modifier of the part applied before the data load is the
+    scenario's as much as the one after it. It can't read its own
+    simulation's values yet, but what it reads elsewhere, here from a
+    simulation built outside the watch, counts (review of 82866f3d)."""
+    namespace = {"OTHER": one_adult()}
+    exec(
+        compile(
+            OTHER_SIMULATION_MODIFIER,
+            "/x/site-packages/policyengine_uk/scenarios/before.py",
+            "exec",
+        ),
+        namespace,
+    )
+    scenario = Scenario(
+        simulation_modifier=namespace["modify"],
+        applied_before_data_load=True,
+    )
+    assert "directly_held_shares" in build_reads(scenario)
+
+
 def test_a_formula_replaced_before_the_data_counts_when_the_build_runs_it():
     """A modifier applied before the data load replaces share-like capital;
     the rebalancing then runs it, and the native formula it wraps reads the

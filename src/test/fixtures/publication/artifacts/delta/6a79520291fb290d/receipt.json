@@ -14,16 +14,8 @@
     },
     "composition": null,
     "config_baseline": null,
-    "data_limits": [
-      {
-        "key": "additional_dwelling_purchases",
-        "parameters": [
-          "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
-        ],
-        "reason": "The survey data record no purchases of additional dwellings, only the property households already own, so the higher rates cannot be costed. From policyengine-uk's fix for issue #2238 they apply to nothing; before it, to a buyer's whole stock of other property. The purchase imputation (policyengine-uk-data #573) would lift this."
-      }
-    ],
-    "data_limits_registry_sha256": "e73b1002109291b7f55387f85b6c6a2cabd662223aa792f8dfd65cc65e897123",
+    "data_limits": [],
+    "data_limits_registry_sha256": "1419b889054ca382645cec3267e9f57b06fd7dc5ddfd9295b39a3c0743a8c734",
     "dataset_years": [
       2024,
       2025,
@@ -37,18 +29,26 @@
     ],
     "digests": {
       "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
-      "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "receipt_sha256": "2b05b72ecd679d3774aa6df28465fbe3f34f1e079dbcf60b94bb6f14839220ec"
+      "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
+      "receipt_sha256": "16cb8f138643332d3fc79e8835fc96de095bea8aa702c60230ede37b6f27649a"
     },
-    "files": {},
-    "generated_at": "2026-10-25T16:26:33.964076+00:00",
+    "files": {
+      "budgetary_impact.csv": "b41e21098838003c7ee8cc427ba99c99c4120337d68d6f29f5d0a2e3eab53332",
+      "distributional_impact.csv": "ee9a7bd092a05e2473d7f9cccb57dd366ba21269e35dbaf481fe9f7f15ac5ca5",
+      "household_scatter_binned.csv": "43b8d1378ec99f5c2d48a694c2abdca7cfea0381fdc3d67923de9e21b1a187ad",
+      "income_curve.csv": "87b54f14232ed77c6a103fc284c303151422d9864aad917f2a835141966e516c",
+      "metrics.csv": "076e66401111e512aedf393d9f4adf72cc7f97ee0d303dda275a6e3e2fd4c45e",
+      "winners_losers.csv": "5f9243ddb6e8f21c58ef4ca908c2dc6eb67967aa2a38ed543eeec9d98eaccc2c"
+    },
+    "generated_at": "2026-10-25T20:30:37.776261+00:00",
+    "generation_id": "10f0b1363f1149f2844ff70bea1f2315",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "epsilon",
+    "key": "delta",
     "measure_ids": [
-      "epsilon"
+      "delta"
     ],
     "member_outputs_sha256": null,
     "members": null,
@@ -56,9 +56,11 @@
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
-      "reform": []
+      "reform": [
+        null
+      ]
     },
-    "name": "Epsilon",
+    "name": "Delta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.2",
@@ -71,7 +73,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "epsilon baseline"
+      "name": "delta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.2",
@@ -111,13 +113,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "outputs_sha256": "c34d4a0a48e58e4b3fa9a9d8e29f08e6fd1df11e80787295792ced89e271470b",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
-      "binding": "content",
+      "binding": "code_revision",
       "kind": "reform",
-      "name": "epsilon",
-      "reform_sha256": "6d64fa2298d4c04d10be25e40776ed4c289e668287d5cbce1d820a214f81ad54",
+      "name": "delta",
+      "reform_sha256": "3ad5353bb38d2f9d8e85245ebcbfe2613f9be57d31d99eddd43102364cb3459e",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

@@ -128,9 +128,10 @@ DATA_LIMITS = (
             "the recorded award. A change to the points needed for the "
             "standard or enhanced rate therefore moves no one. Changes to "
             "the rates themselves are not affected. A measure that changes "
-            "the recorded awards cannot be costed either: the model carries "
-            "a recorded award into later years that have none, unless newer "
-            "points replace it."
+            "the recorded awards is held too, as a precaution: in a year with "
+            "no recorded award the model carries an earlier one forward "
+            "unless newer points replace it, though its copy of the certified "
+            "data records an award in every Budget year."
         ),
     ),
     DataLimit(
@@ -144,9 +145,10 @@ DATA_LIMITS = (
             "the recorded award. A change to the points needed for the "
             "standard or enhanced rate therefore moves no one. Changes to "
             "the rates themselves are not affected. A measure that changes "
-            "the recorded awards cannot be costed either: the model carries "
-            "a recorded award into later years that have none, unless newer "
-            "points replace it."
+            "the recorded awards is held too, as a precaution: in a year with "
+            "no recorded award the model carries an earlier one forward "
+            "unless newer points replace it, though its copy of the certified "
+            "data records an award in every Budget year."
         ),
     ),
     DataLimit(
@@ -182,10 +184,10 @@ DATA_LIMITS = (
             "The certified data record no salary sacrifice returned to "
             "ordinary pay, and the model's default is none. A measure that "
             "returns sacrificed pay to income, or changes how the model "
-            "counts it, cannot be costed, nor can one that changes recorded "
-            "employment income or employee pension contributions, to both "
-            "of which the model adds it. The pension salary sacrifice cap "
-            "does not act through it in this model."
+            "counts it, cannot be costed, nor can one that sets employment "
+            "income or employee pension contributions directly, replacing "
+            "the totals the model adds it to. The pension salary sacrifice "
+            "cap does not act through it in this model."
         ),
     ),
     DataLimit(
