@@ -25,6 +25,7 @@ import os
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from importlib import metadata
@@ -258,6 +259,59 @@ def calculation_changes_since(
     )
 
 
+class CalculationChanged(ValueError):
+    """Code that could change a calculation was committed since a receipt's
+    commit (:func:`approved_revision`)."""
+
+
+def approved_revision(
+    document: dict,
+    revision: CodeRevision,
+    checked: dict,
+    repo_root: Path = Path("."),
+) -> CodeRevision:
+    """The revision to bind an artifact's current code-bound scenarios at.
+
+    A code-bound identity includes the commit its receipt was made at, so
+    committing the measure's attestation, the published files or docs would
+    otherwise change it. The receipt's commit stands in for HEAD when HEAD
+    descends from it and nothing committed since could change a calculation
+    (:func:`calculation_changes_since`). Otherwise this raises
+    :class:`CalculationChanged`, or ValueError when HEAD does not descend
+    from it.
+    The modifier's own module source is hashed from the checkout either way.
+    ``checked`` caches the changes per commit across calls.
+
+    The area run binds an approved measure this way, and a combined run
+    each member it reads from the manifest, so a member keeps the identity
+    its own receipt records. This certifies only the repository's code, not
+    the installed packages or the dataset.
+    """
+    execution = document["execution_receipt"]
+    if all(
+        execution[side].get("binding") != "code_revision"
+        for side in ("baseline", "reform")
+    ):
+        return revision
+    sha = (document.get("dashboard") or {}).get("git_sha")
+    if sha == revision.git_sha:
+        return revision
+    if sha not in checked:
+        try:
+            checked[sha] = calculation_changes_since(sha, repo_root)
+        except ValueError as error:
+            checked[sha] = error
+    changes = checked[sha]
+    if isinstance(changes, ValueError):
+        raise ValueError(str(changes)) from changes
+    if changes:
+        raise CalculationChanged(
+            f"calculation code changed since the approved commit {sha[:12]} "
+            f"({', '.join(changes[:5])})"
+        )
+    return CodeRevision(sha, revision.tree_clean, revision.dirty_paths)
+
+
 # The models whose validation errors mean a measure's configuration cannot
 # build a scenario: policyengine-uk's Scenario and the dashboard's Reform.
 SCENARIO_MODELS = ("Scenario", "Reform")
@@ -317,6 +371,7 @@ def combined_identities(
     *,
     reform_applied_before_data_load: bool,
     baseline_applied_before_data_load: bool,
+    member_revisions: Optional[Mapping[str, CodeRevision]] = None,
 ):
     """The (baseline, reform) identities of a combined run, its members and
     how they were composed.
@@ -329,12 +384,18 @@ def combined_identities(
     baselines (``baseline_bound``), and the returned ``composition`` gives
     each side's phase, so the gate can rebuild both identities from the
     records alone (:func:`composition_problems`).
+
+    A member in ``member_revisions`` is bound at that revision, the one its
+    own receipt was made at (:func:`approved_revision`), so its record is
+    the identity that receipt holds; the others are bound at ``revision``.
     """
     api, _ = receipt_api()
     baselines, reforms, records = [], [], []
     configured_included = False
     for member in members:
-        baseline, reform = measure_identities(member, config, revision)
+        baseline, reform = measure_identities(
+            member, config, (member_revisions or {}).get(member.id, revision)
+        )
         # Members without a baseline of their own share the configured one,
         # which the combined run applies once, so it is bound once.
         bound = member.has_custom_baseline() or not configured_included

@@ -38,7 +38,9 @@ from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication.artifacts import (
     ARTIFACTS_ROOT,
     COMBINED_PREFIX,
+    ArtifactError,
     ArtifactRef,
+    read_receipt,
     write_artifact,
 )
 from uk_budget_data.publication.manifest import load_manifest
@@ -47,6 +49,7 @@ from uk_budget_data.publication.receipt import (
     CodeRevision,
     ReceiptInputs,
     ReceiptUnavailable,
+    approved_revision,
     build_receipt_document,
     code_revision,
     combined_identities,
@@ -313,6 +316,31 @@ def generate_artifacts(
 
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     argv = list(generator_argv) if generator_argv is not None else None
+    checked_commits: dict = {}
+
+    def member_revisions(key: str, ids: list[str]) -> dict[str, CodeRevision]:
+        """Each member read from the manifest, bound at the commit its own
+        receipt was made at, so the combined run records the identity that
+        receipt holds and staging (which compares them exactly) accepts it.
+        A member written in this run was made at HEAD."""
+        revisions = {}
+        for member in ids:
+            if member in written_outputs or member not in manifest.measures:
+                continue
+            try:
+                document = read_receipt(
+                    artifacts_root.parent / manifest.measures[member].artifact
+                )
+                revisions[member] = approved_revision(
+                    document, revision, checked_commits, repo_root
+                )
+            except (ArtifactError, OSError, ValueError, KeyError) as error:
+                raise ReceiptUnavailable(
+                    key,
+                    f"member {member}: {error}; regenerate {member} and stage "
+                    "it before its combined runs",
+                ) from error
+        return revisions
 
     def run(
         reform: Reform,
@@ -440,6 +468,7 @@ def generate_artifacts(
         )
 
         def prepare():
+            revisions = member_revisions(key, ids)
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
@@ -470,6 +499,7 @@ def generate_artifacts(
                     if combined_baseline is not None
                     else False
                 ),
+                member_revisions=revisions,
             )
 
         try:

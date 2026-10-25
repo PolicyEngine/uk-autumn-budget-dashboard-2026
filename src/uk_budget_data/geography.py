@@ -2056,8 +2056,12 @@ def manifest_key(reform_id: str) -> str:
     return reform_id
 
 
-def _area_identities(reform_id: str, years, revision):
-    """Bind exactly the scenarios the area run will build, as generation does."""
+def _area_identities(reform_id: str, years, revision, member_revisions=None):
+    """Bind exactly the scenarios the area run will build, as generation does.
+
+    A package's members are bound at ``member_revisions``, each the commit
+    its own approved receipt was made at, as their combined run binds them.
+    """
     reform = get_reform(reform_id)
     config = DataConfig(years=list(years))
     if reform_id not in PACKAGES:
@@ -2080,6 +2084,7 @@ def _area_identities(reform_id: str, years, revision):
             if baseline is not None
             else False
         ),
+        member_revisions=member_revisions,
     )
     return identities[:2]
 
@@ -2087,45 +2092,89 @@ def _area_identities(reform_id: str, years, revision):
 def _approved_revision(
     reform_id: str, document: dict, revision, checked: dict
 ):
-    """The revision to bind the current code-bound scenarios at.
+    """The revision to bind the current code-bound scenarios at
+    (``publication_receipt.approved_revision``).
 
-    A code-bound identity includes the commit its receipt was made at, so
-    committing the measure's attestation, or the published files, would
-    otherwise end every area run. The approved commit stands in for HEAD
-    when HEAD descends from it and nothing committed since could change a
-    calculation (``publication_receipt.calculation_changes_since``). The
-    modifier's own module source is hashed from the checkout either way.
-
-    This certifies only the repository's code. The installed packages and
-    the dataset are separate concerns that it does not certify; the area
-    run's Microcosm data is uncertified by design.
+    Committing the measure's attestation, or the published files, would
+    otherwise end every area run. The installed packages and the dataset
+    are separate concerns that this does not certify; the area run's
+    Microcosm data is uncertified by design.
     """
-    approved = document["execution_receipt"]
-    if all(
-        approved[side].get("binding") != "code_revision"
-        for side in ("baseline", "reform")
-    ):
-        return revision
-    sha = (document.get("dashboard") or {}).get("git_sha")
-    if sha == revision.git_sha:
-        return revision
-    if sha not in checked:
-        try:
-            checked[sha] = publication_receipt.calculation_changes_since(sha)
-        except ValueError as error:
-            checked[sha] = error
-    changes = checked[sha]
-    if isinstance(changes, ValueError):
-        raise ValueError(f"{reform_id}: {changes}") from changes
-    if changes:
-        raise ValueError(
-            f"{reform_id}: calculation code changed since the approved "
-            f"commit {sha[:12]} ({', '.join(changes[:5])}); regenerate and "
-            "approve before the area run"
+    try:
+        return publication_receipt.approved_revision(
+            document, revision, checked
         )
-    return publication_receipt.CodeRevision(
-        sha, revision.tree_clean, revision.dirty_paths
-    )
+    except publication_receipt.CalculationChanged as error:
+        raise ValueError(
+            f"{reform_id}: {error}; regenerate and approve before the area run"
+        ) from error
+    except ValueError as error:
+        raise ValueError(f"{reform_id}: {error}") from error
+
+
+def _approved_document(
+    label: str,
+    key: str,
+    entry: publication_manifest.Entry,
+    data_root: Path,
+) -> dict:
+    """The receipt a manifest entry names, refused unless it is exactly the
+    artifact the entry records."""
+    receipt_path = data_root / entry.artifact / "receipt.json"
+    if receipt_path.is_symlink() or not receipt_path.is_file():
+        raise ValueError(f"{label}: no regular approved receipt")
+    document = json.loads(receipt_path.read_bytes())
+    if not isinstance(document, dict):
+        raise ValueError(f"{label}: approved receipt is not an object")
+    problems = publication_receipt.document_problems(document)
+    if publication_receipt.artifact_sha256(document) != entry.artifact_sha256:
+        problems.append("approved artifact identity differs")
+    dashboard = document.get("dashboard") or {}
+    if dashboard.get("key") != key:
+        problems.append("approved receipt key differs")
+    for digest in (
+        "receipt_sha256",
+        "outputs_sha256",
+        "execution_identity_sha256",
+    ):
+        if (dashboard.get("digests") or {}).get(digest) != getattr(
+            entry, digest
+        ):
+            problems.append(f"approved {digest} differs")
+    if problems:
+        raise ValueError(f"{label}: " + "; ".join(problems))
+    return document
+
+
+def _member_revisions(
+    reform_id: str,
+    document: dict,
+    manifest: publication_manifest.Manifest,
+    data_root: Path,
+    revision,
+    checked: dict,
+) -> dict:
+    """Each code-bound member of a package, bound at the commit its own
+    manifest entry's receipt was made at, as the combined run bound it."""
+    revisions = {}
+    for record in (document.get("dashboard") or {}).get("members") or []:
+        if all(
+            (record.get(side) or {}).get("binding") != "code_revision"
+            for side in ("baseline", "reform")
+        ):
+            continue
+        member = record["id"]
+        label = f"{reform_id} member {member}"
+        entry = manifest.measures.get(member)
+        if entry is None:
+            raise ValueError(f"{label}: no manifest entry to bind it at")
+        revisions[member] = _approved_revision(
+            label,
+            _approved_document(label, member, entry, data_root),
+            revision,
+            checked,
+        )
+    return revisions
 
 
 def area_provenance(
@@ -2142,7 +2191,8 @@ def area_provenance(
     semantic identity (including structural code bindings and composition)
     must equal the approved artifact's receipt. Names are presentation labels.
     Code-bound scenarios are bound at the approved commit when only
-    non-calculation files have been committed since (``_approved_revision``).
+    non-calculation files have been committed since (``_approved_revision``);
+    a package's code-bound members at their own approved commits.
     """
     revision = publication_receipt.code_revision()
     checked = {}
@@ -2150,36 +2200,20 @@ def area_provenance(
     for reform_id in reform_ids:
         key = manifest_key(reform_id)
         entry = manifest.entries()[key]
-        receipt_path = data_root / entry.artifact / "receipt.json"
-        if receipt_path.is_symlink() or not receipt_path.is_file():
-            raise ValueError(f"{reform_id}: no regular approved receipt")
-        document = json.loads(receipt_path.read_bytes())
-        if not isinstance(document, dict):
-            raise ValueError(f"{reform_id}: approved receipt is not an object")
-        problems = publication_receipt.document_problems(document)
-        if (
-            publication_receipt.artifact_sha256(document)
-            != entry.artifact_sha256
-        ):
-            problems.append("approved artifact identity differs")
-        dashboard = document.get("dashboard") or {}
-        if dashboard.get("key") != key:
-            problems.append("approved receipt key differs")
-        for digest in (
-            "receipt_sha256",
-            "outputs_sha256",
-            "execution_identity_sha256",
-        ):
-            if (dashboard.get("digests") or {}).get(digest) != getattr(
-                entry, digest
-            ):
-                problems.append(f"approved {digest} differs")
+        document = _approved_document(reform_id, key, entry, data_root)
         if set(years) - (set(entry.years) - set(entry.unsupported_years)):
-            problems.append("requested years are not approved and supported")
-        if problems:
-            raise ValueError(f"{reform_id}: " + "; ".join(problems))
+            raise ValueError(
+                f"{reform_id}: requested years are not approved and supported"
+            )
         bound = _approved_revision(reform_id, document, revision, checked)
-        actual = _area_identities(reform_id, years, bound)
+        members = (
+            _member_revisions(
+                reform_id, document, manifest, data_root, revision, checked
+            )
+            if reform_id in PACKAGES
+            else None
+        )
+        actual = _area_identities(reform_id, years, bound, members)
         approved = document["execution_receipt"]
         identities = {}
         for side, identity in zip(("baseline", "reform"), actual):

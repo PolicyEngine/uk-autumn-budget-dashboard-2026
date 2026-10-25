@@ -21,14 +21,21 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests import fixed_shape_measures
-from tests.publication_support import RATE_PATH, World
+from tests.publication_support import (
+    BASIS,
+    RATE_PATH,
+    World,
+    make_household_rows,
+    make_tables,
+)
 from uk_budget_data import geography as g
-from uk_budget_data.models import DataConfig, Reform
+from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import attestations as a
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication import receipt as r
 from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.combine import combined_key
+from uk_budget_data.publication.generate import generate_artifacts
 from uk_budget_data.publication.publish import approve, stage
 
 YEARS = [2027]
@@ -314,6 +321,208 @@ def test_uncommitted_calculation_code_is_still_refused(state, monkeypatch):
     (state.repo / "src" / "uk_budget_data" / "new.py").write_text("x = 1\n")
     with pytest.raises(ValueError, match="alpha: current .* not committed"):
         run_area(state, monkeypatch, ["alpha"])
+
+
+# --- the documented order: G2, attestation, G4 (review of 428d209, 1) ---
+
+PACKAGE = combined_key(sorted(PACKAGES["pkg"]))
+VALUES = {"alpha": {2027: -1.0}, "beta": {2027: -0.5}, PACKAGE: {2027: -1.5}}
+
+
+def fake_process(reform, config, baseline, reformed, baseline_scenario):
+    """The tables the calculators would return, without simulating."""
+    values = VALUES[reform.id]
+    tables = make_tables(reform.id, values, reform.name)
+    tables.pop("household_scatter_binned")
+    return ReformResult(
+        household_scatter=make_household_rows(reform.id, values, reform.name),
+        reform_id=reform.id,
+        reform_name=reform.name,
+        constituency=[],
+        demographic_constituency=[],
+        **tables,
+    )
+
+
+def generate(world, repo, reforms=(), combined=None):
+    """``uk-budget-data generate --artifacts``, at the repository's HEAD."""
+    return generate_artifacts(
+        list(reforms),
+        DataConfig(years=YEARS),
+        combined_sets=combined,
+        artifacts_root=world.artifacts,
+        repo_root=repo,
+        generator_argv=["test"],
+        build=lambda dataset, scenario=None: world.sim(),
+        process=fake_process,
+    )
+
+
+def written(world, report, key):
+    assert key not in report.refused, report.refused
+    (reference,) = [ref for ref in report.written if ref.key == key]
+    world.costing(key, VALUES[key])
+    world.reconcile(reference)
+    return reference
+
+
+@pytest.fixture(scope="module")
+def documented(tmp_path_factory):
+    """The runbook's order: each measure generated alone (G2), the
+    hand-written one's attestation committed, both staged, a docs commit,
+    then the package generated (G4), attested, staged and every entry
+    approved."""
+    repo = new_repository(tmp_path_factory.mktemp("documented") / "repo")
+    generated = commit(
+        repo,
+        {
+            "README.md": "Dashboard\n",
+            "uv.lock": "lock\n",
+            "src/uk_budget_data/reforms.py": "MEASURES = {}\n",
+            "data_inputs/publication_basis.json": json.dumps(BASIS),
+        },
+        "Code the measures",
+    )
+    world = World()
+    patch = pytest.MonkeyPatch()
+    attestations = repo / "data_inputs" / "publication" / "attestations"
+    patch.setattr(a, "ATTESTATIONS_ROOT", attestations)
+    patch.setattr(a, "ATTESTATION_REPOSITORY", repo)
+    folder = attestations.relative_to(repo)
+    args = dict(data_root=world.data_root, inputs=world.inputs)
+    try:
+        # G2: a hand-written modifier is generated alone, in its own call.
+        alpha = written(
+            world, generate(world, repo, [DEFINITIONS["alpha"]]), "alpha"
+        )
+        beta = written(
+            world, generate(world, repo, [DEFINITIONS["beta"]]), "beta"
+        )
+        alpha_document = read_receipt(alpha.path)
+        assert a.requires_attestation(alpha_document)
+        assert alpha_document["dashboard"]["git_sha"] == generated
+        attested = commit(
+            repo,
+            {
+                f"{folder}/alpha.json": json.dumps(
+                    attestation_record(alpha_document)
+                )
+            },
+            "Attest alpha",
+        )
+        manifest = m.Manifest()
+        stage(manifest, alpha.path, **args)
+        stage(manifest, beta.path, **args)
+        m.save_manifest(manifest, world.data_root)
+        later = commit(
+            repo, {"docs/budget-day-runbook.md": "Notes\n"}, "Runbook"
+        )
+        # G4: the package, generated after every member is staged.
+        report = generate(
+            world,
+            repo,
+            combined=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+        )
+        package = written(world, report, PACKAGE)
+        package_document = read_receipt(package.path)
+        assert package_document["dashboard"]["git_sha"] == later
+        head = commit(
+            repo,
+            {
+                f"{folder}/{PACKAGE}.json": json.dumps(
+                    attestation_record(package_document)
+                )
+            },
+            "Attest the package",
+        )
+        stage(manifest, package.path, **args)
+        for key in ("alpha", "beta", PACKAGE):
+            approve(manifest, key, "Reviewer", **args)
+        m.save_manifest(manifest, world.data_root)
+        yield SimpleNamespace(
+            repo=repo,
+            branch=git(repo, "symbolic-ref", "--short", "HEAD"),
+            generated=generated,
+            attested=attested,
+            head=head,
+            manifest=manifest,
+            manifest_bytes=manifest.model_dump_json(by_alias=True).encode(),
+            world=world,
+            alpha=alpha_document,
+            package=package_document,
+        )
+    finally:
+        patch.undo()
+        world.close()
+
+
+@pytest.fixture
+def documented_state(documented):
+    yield documented
+    git(documented.repo, "checkout", "-q", "-f", documented.branch)
+    git(documented.repo, "reset", "-q", "--hard", documented.head)
+    git(documented.repo, "clean", "-q", "-fdx")
+
+
+def test_a_package_generated_after_the_attestation_commit_stages(documented):
+    """Generated at a later commit than its hand-written member, the package
+    records that member exactly as the member's own receipt binds it, so
+    staging and approval accept it (the fixture approved every entry)."""
+    (member,) = [
+        record
+        for record in documented.package["dashboard"]["members"]
+        if record["id"] == "alpha"
+    ]
+    own = documented.alpha["execution_receipt"]["reform"]
+    assert member["reform"]["binding"] == "code_revision"
+    for field in ("kind", "representation", "reform_sha256", "binding"):
+        assert member["reform"][field] == own[field]
+    statuses = {
+        key: entry.status
+        for key, entry in documented.manifest.entries().items()
+    }
+    assert statuses == {key: m.APPROVED for key in ("alpha", "beta", PACKAGE)}
+
+
+def test_the_documented_order_reaches_results_by_area(
+    documented_state, monkeypatch
+):
+    provenance = run_area(documented_state, monkeypatch)
+    assert sorted(provenance["reforms"]) == ["alpha", "beta", "pkg"]
+
+
+def test_a_package_whose_code_bound_member_has_no_entry_is_refused(
+    documented_state, monkeypatch
+):
+    """The member's own receipt names the commit to bind it at, so without
+    its manifest entry the package cannot be checked."""
+    manifest = documented_state.manifest.model_copy(deep=True)
+    del manifest.measures["alpha"]
+    state = SimpleNamespace(**{**vars(documented_state), "manifest": manifest})
+    with pytest.raises(
+        ValueError, match="pkg member alpha: no manifest entry"
+    ):
+        run_area(state, monkeypatch, ["pkg"])
+
+
+@pytest.mark.parametrize(
+    "path", ["src/uk_budget_data/budget_measures.py", "uv.lock"]
+)
+def test_a_package_is_refused_when_its_member_s_code_changed(
+    documented_state, path
+):
+    """A calculation commit after the member's receipt: the package cannot
+    bind that member, so generation refuses it, naming the member and the
+    path, before simulating."""
+    commit(documented_state.repo, {path: f"changed {path}\n"})
+    report = generate(
+        documented_state.world,
+        documented_state.repo,
+        combined=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+    )
+    assert report.written == []
+    assert "alpha" in report.refused[PACKAGE]
+    assert path in report.refused[PACKAGE]
 
 
 # --- the allowlist, over generated commits ----------------------------
