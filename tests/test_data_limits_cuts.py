@@ -109,12 +109,16 @@ def test_the_released_check_refuses_an_unlisted_or_still_limited_input():
 
 def carried_again() -> list[str]:
     """The inputs NO_LONGER_MISSING lists that are still inputs of the
-    installed model: one that has left it has nothing to set."""
+    installed model, as the recorded inputs must be (no formula, nothing
+    added or subtracted): one that has left it has nothing to set."""
     names = []
     for name in sorted(NO_LONGER_MISSING):
         variable = system.variables.get(name)
-        if variable is not None and not variable.formulas:
-            names.append(name)
+        if variable is None or variable.formulas:
+            continue
+        if variable.adds or variable.subtracts:
+            continue
+        names.append(name)
     return names
 
 
@@ -143,7 +147,12 @@ def test_an_input_that_left_the_model_needs_nothing_set(monkeypatch):
     not checked, and with none left nothing is built."""
     import uk_budget_data.pipeline as pipeline
 
-    left = {"income_tax": "computed now", "not_a_variable_any_more": "gone"}
+    left = {
+        "income_tax": "computed now",
+        # No formula, but a total of others now: nothing to set
+        "employment_income": "added up now",
+        "not_a_variable_any_more": "gone",
+    }
     monkeypatch.setattr(sys.modules[__name__], "NO_LONGER_MISSING", left)
     assert carried_again() == []
 
@@ -152,6 +161,43 @@ def test_an_input_that_left_the_model_needs_nothing_set(monkeypatch):
 
     monkeypatch.setattr(pipeline, "build_microsimulation", no_build)
     test_every_input_carried_again_is_set_by_the_certified_data()
+
+
+@pytest.mark.parametrize("data_set_it", [True, False])
+def test_an_input_carried_again_must_be_set_by_the_data(
+    monkeypatch, data_set_it
+):
+    """The check itself, which runs on certified data only once a cut
+    lists an input (review of ddc72326): a listed input still in the model
+    passes when the data set it and fails when they don't."""
+    from policyengine_uk import Simulation
+
+    import uk_budget_data.pipeline as pipeline
+
+    name = "self_employment_income"
+    monkeypatch.setattr(
+        sys.modules[__name__], "NO_LONGER_MISSING", {name: "carried again"}
+    )
+    assert carried_again() == [name]
+    person = {"age": {2026: 40}}
+    if data_set_it:
+        person[name] = {2026: 1_000}
+
+    def toy(*args, **kwargs):
+        return Simulation(
+            situation={
+                "people": {"a": person},
+                "benunits": {"b": {"members": ["a"]}},
+                "households": {"h": {"members": ["a"]}},
+            }
+        )
+
+    monkeypatch.setattr(pipeline, "build_microsimulation", toy)
+    if data_set_it:
+        test_every_input_carried_again_is_set_by_the_certified_data()
+    else:
+        with pytest.raises(AssertionError, match=name):
+            test_every_input_carried_again_is_set_by_the_certified_data()
 
 
 # --- what each new limit says -------------------------------------------
