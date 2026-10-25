@@ -984,7 +984,7 @@ the Reconciler signs (sign-measures) and merges: nothing here approves
   |---|---|---|
   | Modal workspace secret `uk-budget-2026-hf-token` (key `HUGGING_FACE_TOKEN`, an organisation read-only token) | Anthony | missing; the job stops with "Modal secret missing" |
   | Repository secrets `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` (for the workflow) | Anthony | not checked from here; the job stops with an error if they are absent |
-  | Running the Microcosm data on Modal is within its terms | Max | to confirm |
+  | Running the Microcosm data on Modal | Vahid | decided on 25 October ([#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119#issuecomment-6398276075)), as PolicyEngine/uk-cgt-reform already does |
   | Repository variable `PUBLISH_MEASURE_BACKEND=modal` (Budget day only) | whoever runs Budget day | unset (the workflow defaults to the larger runner) |
 
 - **Smoke test without the licensed data** (no secret, no dataset sent):
@@ -1002,6 +1002,8 @@ the Reconciler signs (sign-measures) and merges: nothing here approves
   | First run, including building the image from `uv.lock` (3 measures) | 171 s |
   | Nine measures, warm image, one container each, at once | 127 s end to end; 67–92 s per container |
   | Return path (pack, send back, write locally, write again) | 13 s |
+
+  **Switching to the real data** is one change once the secret exists: leave out `--dataset synthetic:…` (the bundle's dataset is the default), or set `PUBLISH_MEASURE_BACKEND=modal` for the workflow. Nothing else in the code changes.
 
   On the real data a container also downloads the dataset (about 1.5 GB) and each measure runs over every policy year; a local receipted measure takes about 3.3 min, so nine at once should take about 5–7 min end to end. That is an estimate until the secret exists.
 - **Fallback:** locally with `--jobs 1` (about 30 min for the nine, or about 14 min with #112's shared simulations), as in "Fast full run".
