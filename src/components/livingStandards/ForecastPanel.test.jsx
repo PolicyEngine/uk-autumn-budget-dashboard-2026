@@ -21,9 +21,9 @@ const UNPUBLISHED_LABEL = "Budget forecast";
 /**
  * The real file, unpublished, as uk-budget-data living-standards writes it
  * with no Budget forecast loaded: build_outlook's post_label, then
- * apply_post(outlook, None) (living_standards/forecast.py): post_published
- * false, post_source null, and every series' post a copy of its pre, with
- * no post_source.
+ * apply_post(outlook, None) (src/uk_budget_data/living_standards/forecast.py):
+ * post_published false, post_source null, and every series' post a copy of
+ * its pre, with no post_source.
  */
 function unpublishedOutlook(base = REAL) {
   const data = structuredClone(base);
@@ -84,6 +84,12 @@ describe("the fixtures", () => {
   it("do not depend on the committed file's forecast state", () => {
     expect(unpublishedOutlook(publishedOutlook())).toStrictEqual(unpublishedOutlook());
     expect(publishedOutlook(unpublishedOutlook())).toStrictEqual(publishedOutlook());
+  });
+
+  // Until the Budget-day import publishes the committed file, the unpublished
+  // fixture is that file, as the pipeline wrote it.
+  it.skipIf(REAL.forecast.post_published)("unpublished is the committed file while it is unpublished", () => {
+    expect(unpublishedOutlook()).toStrictEqual(REAL);
   });
 });
 
