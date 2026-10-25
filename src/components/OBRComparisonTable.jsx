@@ -5,6 +5,7 @@ import PillSelect from "./PillSelect";
 import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import Disclosure from "./Disclosure";
+import SourceLink from "./SourceLink";
 
 /** What the comparison says while the OBR has not costed the selected measures. */
 export const OBR_UNAVAILABLE =
@@ -187,16 +188,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       {/* Intro across the full width; the controls sit below it */}
       <div className="obr-intro-row">
         <p className="comparison-description">
-          PolicyEngine's static estimates against the OBR's November 2025
-          costings (
-          <a
-            href="https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            EFO
-          </a>
-          ), £bn a year; positive values raise revenue.
+          PolicyEngine's static estimates against{" "}
+          <SourceLink source="obrBudget2026Costings" />, £bn a year; positive values raise revenue.
         </p>
       </div>
 
@@ -283,8 +276,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             <tr>
               {years.map((year) => (
                 <React.Fragment key={year}>
-                  <th className="source-header pe">PE</th>
-                  <th className="source-header obr">OBR</th>
+                  <th className="source-header pe">PolicyEngine (static)</th>
+                  <th className="source-header obr">OBR ({showBehavioural ? "post-behavioural" : "static"})</th>
                 </React.Fragment>
               ))}
             </tr>

@@ -10,6 +10,7 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTool
 import NoBreakYear from "./NoBreakYear";
 import useElementWidth from "../hooks/useElementWidth";
 import "./OBRDumbbellChart.css";
+import { SOURCES } from "../utils/sources";
 
 /**
  * PolicyEngine and OBR estimates for one fiscal year as a dumbbell chart:
@@ -207,7 +208,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
             buildChartCsv({
               title: chartTitle,
               units: "£ billion a year; positive values raise revenue",
-              source: `PolicyEngine UK microsimulation; OBR ${obrKind} costings, Economic and Fiscal Outlook November 2025`,
+              source: `PolicyEngine UK microsimulation; OBR ${obrKind} costings, ${SOURCES.obrBudget2026Costings.label.replace(/^the /, "")}`,
               columns: [
                 { key: "name", label: "Policy" },
                 { key: "pe", label: "PolicyEngine (£bn)", decimals: 4 },

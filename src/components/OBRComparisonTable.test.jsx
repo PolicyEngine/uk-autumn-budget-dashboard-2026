@@ -74,7 +74,7 @@ describe("the OBR comparison table", () => {
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
   });
 
-  it("keeps the intro to one short sentence with the EFO link", async () => {
+  it("keeps the intro to one short sentence naming this year's OBR costings, from the sources config", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -85,14 +85,11 @@ describe("the OBR comparison table", () => {
     const { container } = render(
       <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
     );
-    const link = await screen.findByRole("link", { name: "EFO" });
-    expect(link).toHaveAttribute(
-      "href",
-      "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/",
-    );
+    await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
     expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates against the OBR's November 2025 costings (EFO), £bn a year; positive values raise revenue.",
+      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings (28 October 2026), £bn a year; positive values raise revenue.",
     );
+    expect(container).not.toHaveTextContent("November 2025");
   });
 });
 
