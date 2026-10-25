@@ -12,6 +12,7 @@ here.
 """
 
 import functools
+import sys
 from unittest import mock
 
 import pytest
@@ -106,20 +107,51 @@ def test_the_released_check_refuses_an_unlisted_or_still_limited_input():
                 test_an_input_no_longer_missing_was_listed_and_its_limit_removed()
 
 
+def carried_again() -> list[str]:
+    """The inputs NO_LONGER_MISSING lists that are still inputs of the
+    installed model: one that has left it has nothing to set."""
+    names = []
+    for name in sorted(NO_LONGER_MISSING):
+        variable = system.variables.get(name)
+        if variable is not None and not variable.formulas:
+            names.append(name)
+    return names
+
+
 @pytest.mark.certified_data
-@pytest.mark.parametrize("name", sorted(NO_LONGER_MISSING))
-def test_an_input_carried_again_is_set_by_the_certified_data(name):
+def test_every_input_carried_again_is_set_by_the_certified_data():
+    """One test, not one per input: the certified-data job fails on any
+    certified-data test that skips (conftest), and an empty parameter list
+    skips, which kept that job red with nothing listed (review of
+    1630a725). With nothing to check it passes without building."""
     from uk_budget_data.pipeline import build_microsimulation
 
-    variable = system.variables.get(name)
-    if variable is None or variable.formulas:
-        pytest.skip("no longer an input of the installed model")
+    names = carried_again()
+    if not names:
+        return
     sim = build_microsimulation(None)
-    assert sim.get_holder(
-        name
-    ).get_known_periods(), (
-        f"{name} is in NO_LONGER_MISSING but the certified data don't set it"
-    )
+    unset = [
+        name for name in names if not sim.get_holder(name).get_known_periods()
+    ]
+    assert (
+        not unset
+    ), f"in NO_LONGER_MISSING but the certified data don't set them: {unset}"
+
+
+def test_an_input_that_left_the_model_needs_nothing_set(monkeypatch):
+    """Not a skip: an input the model now computes, or no longer has, is
+    not checked, and with none left nothing is built."""
+    import uk_budget_data.pipeline as pipeline
+
+    left = {"income_tax": "computed now", "not_a_variable_any_more": "gone"}
+    monkeypatch.setattr(sys.modules[__name__], "NO_LONGER_MISSING", left)
+    assert carried_again() == []
+
+    def no_build(*args, **kwargs):
+        raise AssertionError("built a simulation with nothing to check")
+
+    monkeypatch.setattr(pipeline, "build_microsimulation", no_build)
+    test_every_input_carried_again_is_set_by_the_certified_data()
 
 
 # --- what each new limit says -------------------------------------------
