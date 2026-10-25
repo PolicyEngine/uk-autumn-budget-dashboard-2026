@@ -467,5 +467,6 @@ def test_the_combined_run_is_never_its_own_member():
 
     with pytest.raises(pm.PublishMeasureError, match="combined run"):
         pm.combined_reform(
-            ["warm_home_discount_top_up", AUTUMN_BUDGET_2026_COMBINED_ID], DataConfig()
+            ["warm_home_discount_top_up", AUTUMN_BUDGET_2026_COMBINED_ID],
+            DataConfig(),
         )
