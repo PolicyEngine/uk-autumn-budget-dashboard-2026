@@ -762,6 +762,11 @@ function HouseholdCalculator({
             policies={policies}
             noPolicies={noneSelected}
             renting={isRenting((submitted?.inputs ?? inputs).tenure)}
+            spending={{
+              petrol: (submitted?.inputs ?? inputs).petrol_spending_per_year,
+              diesel: (submitted?.inputs ?? inputs).diesel_spending_per_year,
+              electricity: (submitted?.inputs ?? inputs).electricity_spending_per_year,
+            }}
             submitted={submitted !== null}
             changed={changed}
             policyCount={submitted?.policies.length ?? householdPolicies.length}
