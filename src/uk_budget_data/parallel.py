@@ -46,9 +46,19 @@ GB = 1024**3
 # resident size leaves out), measured on 24 October 2026 with policyengine
 # 6.10.2 and the pinned Microcosm national dataset (``/usr/bin/time -l``):
 # 19.1 GB over two years and 22.5 GB over six. The peak grows a little with
-# the years read, so it is estimated per year.
-UNIT_BASE_GB = 17.4
-UNIT_PER_YEAR_GB = 0.85
+# the years read, so it is estimated per year. Area runs (geography), which
+# have not been measured side by side, still hold a unit back for this much.
+FOOTPRINT_BASE_GB = 17.4
+FOOTPRINT_PER_YEAR_GB = 0.85
+# What a flat-table unit holds in physical memory at its peak while others
+# run beside it: the full run (nine measures and the combined package, six
+# years) measured on 25 October 2026 on an 18-core, 64 GB Mac reached 12.8
+# GB resident across two units (6.4 GB each) at --jobs 2 and 16.4 GB across
+# three at --jobs 4, with swap rising no more than in the serial run. The
+# footprint above is most of a unit's pages compressed or swapped, and
+# holding a unit back for it kept auto and --jobs 2 to one unit at a time
+# on a machine with 21 GB free.
+UNIT_GB = 6.5
 # A unit's memory grows over its first minutes (the two builds, then the
 # calculation), so a unit that started less than this long ago still counts
 # as needing its whole estimate when the next is admitted.
@@ -71,8 +81,15 @@ PRELOAD = ["uk_budget_data.pipeline", "policyengine_uk.system"]
 
 
 def unit_memory_gb(years: int) -> float:
-    """Estimated peak memory of one measure over ``years`` years."""
-    return UNIT_BASE_GB + UNIT_PER_YEAR_GB * max(1, int(years))
+    """Estimated peak resident memory of one flat-table measure (any number
+    of years up to the six measured)."""
+    return UNIT_GB
+
+
+def footprint_memory_gb(years: int) -> float:
+    """Estimated peak footprint of one measure over ``years`` years: what an
+    area run holds a unit back for."""
+    return FOOTPRINT_BASE_GB + FOOTPRINT_PER_YEAR_GB * max(1, int(years))
 
 
 # -- the machine's memory ----------------------------------------------------

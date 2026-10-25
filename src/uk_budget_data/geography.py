@@ -2362,14 +2362,16 @@ def _geography_runner(parsed: argparse.Namespace):
     jobs = getattr(parsed, "jobs", "1")
     if str(jobs) == "1":
         return None
-    from uk_budget_data.parallel import make_runner
+    from uk_budget_data.parallel import footprint_memory_gb, make_runner
 
+    years = len(getattr(parsed, "years", None) or []) or 5
+    unit_gb = getattr(parsed, "unit_memory_gb", None)
     return make_runner(
         jobs,
         len(getattr(parsed, "reforms", None) or []) or 10,
-        len(getattr(parsed, "years", None) or []) or 5,
+        years,
         say=console.print,
-        unit_gb=getattr(parsed, "unit_memory_gb", None),
+        unit_gb=footprint_memory_gb(years) if unit_gb is None else unit_gb,
     )
 
 

@@ -86,9 +86,23 @@ def test_auto_takes_no_more_than_the_cores_less_one_or_the_units():
     assert plan_jobs("auto", 2, 1.0, available=512 * GB, cpus=18).jobs == 2
 
 
-def test_a_measure_s_memory_grows_with_its_years():
-    assert parallel.unit_memory_gb(2) == pytest.approx(19.1)
-    assert parallel.unit_memory_gb(6) == pytest.approx(22.5)
+def test_a_measure_s_footprint_grows_with_its_years():
+    assert parallel.footprint_memory_gb(2) == pytest.approx(19.1)
+    assert parallel.footprint_memory_gb(6) == pytest.approx(22.5)
+
+
+def test_auto_runs_two_flat_measures_on_a_shared_mac():
+    # 25 October: 21 GB free beside other sessions, six years, ten units.
+    unit_gb = parallel.unit_memory_gb(6)
+    assert plan_jobs("auto", 10, unit_gb, available=21 * GB, cpus=18).jobs == 2
+
+
+def test_a_second_flat_measure_is_admitted_while_the_first_ramps():
+    runner = parallel.ProcessRunner(
+        2, parallel.unit_memory_gb(6), available=lambda: 21 * GB
+    )
+    assert runner._room(ramping=1)
+    assert not runner._room(ramping=2)
 
 
 def test_one_job_is_the_serial_runner():

@@ -770,7 +770,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   - **Building them:** about 15 s each, all inside policyengine-uk's `Simulation.__init__` (the UC reform, enum encoding, uprating). Loading the dataset itself is not the cost.
   - **The example households' income curve** was the largest part: about 17 s per measure and year. It now runs one household simulation per scenario for every year. The rows are identical to the bit, and it is about four times faster.
   - **Everything else** (budgetary, distributional, winners and losers, age, scatter): about 5 s per year, mostly `gov_balance` and net income.
-  - **Memory:** about 19 GB per measure over two years and 22.5 GB over six (peak footprint, compressed pages included).
+  - **Memory:** about 19 GB per measure over two years and 22.5 GB over six as peak footprint (compressed pages included), but about 6.5 GB resident at its peak with another measure running beside it ("Fast full run" below).
 - **One pass writes every flat file.** `generate` now writes `household_scatter_binned.csv` from the same simulations, beside `age_impact.csv` and `income_curve.csv`, so `--only age_impact`, `--only household_scatter` and `income-curve` are needed only to rerun one file.
 - **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
 
@@ -782,7 +782,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 
   - **One worker process per measure,** started from a forkserver that has already imported the engine. The data-limit watch, the model-limit check and the receipt each read one measure's two simulations, so a measure is never split across workers.
   - **The same bytes as a serial run.** Results are written in measure order, and each artifact gets the same digest. Only `receipt.json`'s run fields (`generated_at`, `generator_argv`) differ.
-  - **`auto` never pushes the machine into swap.** It takes as many workers as the free memory holds at the per-measure estimate, after keeping 6 GB back. A measure starts only when its memory is free, and one still starting up counts at its whole estimate. With more than 30 GB of swap already in use, measures run one at a time. `--unit-memory-gb` overrides the estimate.
+  - **`auto` never pushes the machine into swap.** It takes as many workers as the free memory holds at the per-measure estimate, after keeping 6 GB back. A measure starts only when its memory is free, and one still starting up counts at its whole estimate. With more than 30 GB of swap already in use, measures run one at a time. The estimate is 6.5 GB for `generate` (measured resident peak) and the footprint above for `geography` (not yet measured side by side). `--unit-memory-gb` overrides it.
   - **Before a heavy run,** check `sysctl vm.swapusage` and `pgrep -fl uk-budget-data`. Other generations share the machine.
 - **Expected times for the whole run** (10 measures × 6 years). These are scaled from the measured figures, not timed end to end:
 
@@ -818,12 +818,12 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 |---|---|---|---|---|
 | `--jobs 1` (serial) | 16.0 min | 1 | 10.3 GB | +5.3 GB |
 | `--jobs auto` | 14.7 min | 1 (it chose 1: "21 GB free, 22.5 GB per unit") | 12.2 GB | 0 |
-| `--jobs 2` (default memory estimate) | not timed end to end: expected to be about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time (seen in the interrupted runs) | n/a | n/a |
+| `--jobs 2` (old 22.5 GB estimate) | not timed end to end: expected to be about serial + 1 min | 1: the 22.5 GB estimate never fitted, so units ran one at a time (seen in the interrupted runs) | n/a | n/a |
 | **`--jobs 2 --unit-memory-gb 4`** | **7.8 min** | 2 | 12.8 GB | +5.3 GB |
 | `--jobs 4 --unit-memory-gb 4` | 7.3 min | up to 3 | 16.4 GB | +5.3 GB |
 
-- **Use on Budget day: `--jobs 2 --unit-memory-gb 4`, about 8 minutes.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
-- **Why override the estimate.** The default per-unit estimate (17.4 GB + 0.85 GB per year, so 22.5 GB for six years) is a peak footprint that includes compressed pages. On a shared Mac, `auto` and the admission check then fall back to one unit at a time. Two units at once peaked at 12.8 GB RSS, and free memory never fell below 8.4 GB.
+- **Use on Budget day: `--jobs 2`, about 8 minutes.** Four jobs save only about 30 s more, probably because the combined run is the long pole (inferred, since the log has no per-measure times). They also put more pressure on a machine others are using.
+- **The per-unit estimate is now 6.5 GB** (it was 22.5 GB, a peak footprint that counts compressed pages). With 22.5 GB, `auto` and the admission check fell back to one unit at a time on this Mac. Two units at once peaked at 12.8 GB RSS (6.4 GB each), three at 16.4 GB, swap rose no more than in the serial run, and free memory never fell below 8.4 GB. With 6.5 GB and 21 GB free, `auto` picks 2 and the admission check lets a second unit start while the first ramps up, but not a third. The table's `--unit-memory-gb 4` rows are how this was measured before the change; 4 and 6.5 both admit two units on this machine.
 - **Before 25 October,** `--jobs 2` waited forever for its first unit when the estimate never fitted. It now waits at most 60 s once per run, then starts the unit alone, as a serial run would.
 
 ```bash
@@ -831,7 +831,7 @@ cd <checkout of the release commit>
 export HUGGING_FACE_TOKEN="$(cat ~/.cache/huggingface/token)"   # never echo it
 sysctl vm.swapusage; pgrep -fl uk-budget-data                   # nothing else generating
 top -l 1 -n 0 | grep PhysMem                                    # at least ~15 GB unused or inactive
-uv run uk-budget-data generate --jobs 2 --unit-memory-gb 4      # about 8 min, writes public/data
+uv run uk-budget-data generate --jobs 2                         # about 8 min, writes public/data
 git status --short public/data                                  # review the diff before committing
 ```
 
