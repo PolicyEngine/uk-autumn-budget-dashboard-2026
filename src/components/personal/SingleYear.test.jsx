@@ -131,7 +131,7 @@ describe("the household calculation, from the fixture", () => {
     expect(document.querySelector("#household-breakdown")).not.toBeNull();
     // The split by policy and the sweep wait in their own cards
     await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(2));
-    expect(await screen.findAllByText("Usually about a minute")).toHaveLength(2);
+    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(2);
     // Changed answers can be sent without waiting for the slower parts
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
     expect(calculateButton()).not.toBeDisabled();
@@ -370,7 +370,7 @@ describe("while a new answer loads", () => {
       expect(screen.queryByRole("heading", { name: /Change in net income by policy/ })).toBeNull();
     }
     expect(container.querySelector(".processing-panel")).toHaveTextContent("Calculating your household");
-    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually about 15 seconds");
+    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually around 60 seconds");
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     server.releaseAll();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));
