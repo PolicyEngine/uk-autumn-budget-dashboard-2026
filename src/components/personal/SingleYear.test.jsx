@@ -801,6 +801,56 @@ describe("a household calculation from other definitions", () => {
     expect(household.length).toBe(asked);
   });
 
+  // Re-review of bc41dada (finding A): the hook checks a request again
+  // when the definitions of the measures it asks about change, so a
+  // refusal made against the selection on coming back doesn't outlive it
+  it("a restored submission shows its result once its removed measure is back and the edit undone", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    first.unmount();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const { rerender } = render(tab(rest), { wrapper: PublishedMeasures });
+    await settle();
+    expect(within(await results()).getByText(PROMPT)).toBeInTheDocument();
+    // The measure comes back and the edit is undone: the restored
+    // submission is the request on the page again
+    rerender(tab(SUPPORTED_POLICY_IDS));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "30" } });
+    const region = await results();
+    expect(await within(region).findByText(HEADLINE)).toBeInTheDocument();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(household.at(-1).policies).toEqual(SUPPORTED_POLICY_IDS);
+  });
+
+  it("names only the definitions of the measures it asks about", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const urls = [];
+    const served = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      urls.push(String(url));
+      return served(url, init);
+    }));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    first.unmount();
+    // Asked again on coming back, with another measure selected besides:
+    // its definition is the selection's, not the request's
+    clearHouseholdImpactCache();
+    const [extra] = POLICIES_FOR_TEST.map((policy) => policy.id).filter((id) => !SUPPORTED_POLICY_IDS.includes(id));
+    const before = urls.length;
+    render(tab([...SUPPORTED_POLICY_IDS, extra]), { wrapper: PublishedMeasures });
+    await waitFor(() => expect(urls.length).toBeGreaterThan(before));
+    expect(household.at(-1).policies).toEqual(SUPPORTED_POLICY_IDS);
+    for (const url of urls) {
+      expect(requestedDefinitions(url).map(([id]) => id).sort()).toEqual([...SUPPORTED_POLICY_IDS].sort());
+    }
+  });
+
   // Review of 0608183, finding 2: published before the deploy that
   // registers it, or after a rollback past it
   it("lists a measure the running code doesn't register as unavailable, with the remove action", async () => {

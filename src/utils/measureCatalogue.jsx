@@ -54,7 +54,7 @@ export function publishedEngine(catalogue, ids) {
  * The definition each selected measure's verified receipt approved (its
  * commit and reform identities), for the household API to recompute and
  * report. A measure with none, or whose receipt names no full commit (the
- * only kind the API takes), is in `missing` with the reason: Personal
+ * only kind the API takes), is in `missing` with the reason: Household
  * impact is then unavailable for it, never answered unchecked.
  *
  * @returns {{definitions: Object<string, Object>, missing: Array<{id: string, reason: string}>}}

@@ -43,8 +43,10 @@ const DEBOUNCE_MS = 400;
  *   selected measure's approved definition (`publishedDefinitions`). Both
  *   stages name their commits, and an answer whose reported definitions
  *   differ, or that reports none, is refused: a DefinitionMismatchError
- *   naming the measures. A selected measure with none here is refused
- *   before any request, so leaving it out never shows an unchecked answer
+ *   naming the measures. A measure asked about with none here is refused
+ *   before any request, so leaving it out never shows an unchecked answer.
+ *   Only those of `policies` are used and sent, and the request is checked
+ *   again when one of them comes or goes
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
@@ -58,6 +60,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     [inputs, year, policies],
   );
   const key = `${publicationKey}:${requestKey(body)}`;
+  // The approved definitions of the measures asked about, and only those:
+  // each request names them. The page works them out from the current
+  // selection, which can differ from the policies asked about (answers sent
+  // with Calculate, then edited while the bar changed). The check is made
+  // again whenever one of them comes or goes, so a refusal never outlives
+  // the definitions it was made against.
+  const approved = Object.fromEntries(
+    policies.filter((id) => Object.hasOwn(expectedDefinitions ?? {}, id)).map((id) => [id, expectedDefinitions[id]]),
+  );
+  const checksKey = JSON.stringify([Object.entries(approved), expectedEngine]);
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
@@ -80,9 +92,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     };
     // Nothing is answered unchecked: a selected measure with no approved
     // definition is refused before any request
-    const unapproved = policies.filter((id) => !Object.hasOwn(expectedDefinitions ?? {}, id));
+    const unapproved = policies.filter((id) => !Object.hasOwn(approved, id));
     if (unapproved.length) {
-      refuse(new DefinitionMismatchError(definitionRefusals(expectedDefinitions, null, unapproved)));
+      refuse(new DefinitionMismatchError(definitionRefusals(approved, null, unapproved)));
       return undefined;
     }
     const cached = cache.get(key);
@@ -119,10 +131,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // The refusal of the selected measures the API's code does not compute
     // from their approved definitions, or null when it computes them all
     const mismatch = (answer) => {
-      const refused = definitionRefusals(expectedDefinitions, answer.definitions, policies);
+      const refused = definitionRefusals(approved, answer.definitions, policies);
       return refused.length ? new DefinitionMismatchError(refused, { unchecked: answer.definitions === null }) : null;
     };
-    const definitions = expectedDefinitions;
+    const definitions = approved;
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
       if (!first) {
@@ -209,9 +221,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       clearTimeout(timer);
       controller.abort();
     };
-    // body is derived from key's inputs
+    // body is derived from key's inputs, approved and expectedEngine from
+    // checksKey's
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, attempt, policies.length]);
+  }, [key, enabled, attempt, policies.length, checksKey]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
