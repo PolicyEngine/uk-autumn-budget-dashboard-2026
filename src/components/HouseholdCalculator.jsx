@@ -1,3 +1,4 @@
+import TitleIcon from "./TitleIcon";
 import { useState, useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
@@ -67,18 +68,21 @@ export const WIZARD_DEFAULTS = {
 // closed at first, in groups of their own. `children` stands for each
 // child's answers (their age and, from 16, their education).
 export const FORM_SECTIONS = [
-  { title: "You", fields: ["current_age", "current_salary", "region"] },
+  { title: "You", icon: "user", fields: ["current_age", "current_salary", "region"] },
   {
     title: "Family and home",
+    icon: "house",
     fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
   },
   {
     title: "More details",
+    icon: "sliders",
     collapsible: true,
     groups: [
-      { title: "Other income", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
+      { title: "Other income", icon: "coins", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
       {
         title: "Pension and student loan",
+        icon: "piggy",
         fields: [
           "private_pension_per_year",
           "partner_private_pension_per_year",
@@ -90,9 +94,10 @@ export const FORM_SECTIONS = [
       },
       {
         title: "Spending",
+        icon: "cart",
         fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
       },
-      { title: "Council tax and benefits", fields: ["council_tax_band", "claims_universal_credit"] },
+      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
     ],
   },
 ];
@@ -529,6 +534,7 @@ function HouseholdCalculator({
       return (
         <section key={section.title} className="household-group" aria-labelledby={labelId}>
           <h3 className="household-group-label" id={labelId}>
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
             {section.title}
           </h3>
           {renderGrid(section.fields)}
@@ -549,6 +555,7 @@ function HouseholdCalculator({
             aria-controls={panelId}
             onClick={() => setMoreOpen((value) => !value)}
           >
+            <TitleIcon name={section.icon} bare size={14} className="household-label-icon" />
             {section.title}{" "}
             <span className="household-more-count">{shown} questions</span>
             <svg
@@ -582,6 +589,7 @@ function HouseholdCalculator({
               return (
                 <div key={group.title} className="household-subgroup" role="group" aria-labelledby={groupId}>
                   <h4 className="household-subgroup-label" id={groupId}>
+                    <TitleIcon name={group.icon} bare size={13} className="household-label-icon" />
                     {group.title}
                   </h4>
                   {renderGrid(group.fields)}
@@ -604,7 +612,10 @@ function HouseholdCalculator({
         <form className="card household-form" onSubmit={calculate} noValidate aria-label="Your household">
           <div className="household-form-header">
             <div className="household-form-title">
-              <h2>Your household</h2>
+              <h2>
+                <TitleIcon name="house" />
+                Your household
+              </h2>
               <p>Every answer starts at a typical value. Change any of them, then press Calculate.</p>
             </div>
             <div className="household-header-actions">

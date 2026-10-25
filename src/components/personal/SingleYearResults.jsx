@@ -1,3 +1,4 @@
+import TitleIcon from "../TitleIcon";
 import { useEffect, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import useCountUp from "../../hooks/useCountUp";
@@ -179,7 +180,10 @@ export function progressShare(seconds, typical = TYPICAL_CALCULATION_SECONDS) {
 function ProcessingPanel({ seconds }) {
   return (
     <div className="processing-panel" role="status">
-      <span className="processing-spinner" aria-hidden="true" />
+      <span className="processing-icon" aria-hidden="true">
+        <TitleIcon name="calculator" bare size={22} />
+        <span className="processing-spinner" />
+      </span>
       <div className="processing-text">
         <p className="processing-title">Calculating your household</p>
         <p className="processing-time">{timeText(seconds)}</p>

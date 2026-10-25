@@ -936,6 +936,24 @@
   transition: transform 1s linear;
 }
 
+/* A calculator inside the spinning ring */
+.processing-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  color: var(--pe-teal-700);
+}
+
+.processing-icon .processing-spinner {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
 .processing-spinner {
   width: 28px;
   height: 28px;

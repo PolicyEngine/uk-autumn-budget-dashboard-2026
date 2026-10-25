@@ -246,7 +246,7 @@ describe("the household calculation, from the fixture", () => {
     expect(terms).toContain("Universal Credit");
     expect(terms).toContain("Change by policy");
     expect(within(panel).getByText(/Elements are before the earnings taper/).tagName).toBe("DD");
-    expect(within(panel).getByText(/Each policy's bar is that policy on its own/)).toBeInTheDocument();
+    expect(within(panel).getByText(/Each bar is one policy on its own/)).toBeInTheDocument();
   });
 
   it("marks you on the earnings chart, with the marginal rate in its own card beside it", async () => {

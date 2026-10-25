@@ -1,0 +1,28 @@
+/* "About these figures": a lead line, then one point per idea */
+.method-note-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.method-note-icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 3px;
+  color: var(--pe-gray-500);
+}
+
+.method-note ul {
+  margin: 0;
+  padding-left: 38px;
+  list-style: disc;
+}
+
+.method-note li::marker {
+  color: var(--pe-gray-400);
+}
+
+.method-note li + li {
+  margin-top: 2px;
+}
