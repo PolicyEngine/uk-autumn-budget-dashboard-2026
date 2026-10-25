@@ -200,7 +200,7 @@ The flat tables have no winner and loser shares. The nearest field is `metrics.p
 
 ## Labour supply tab
 
-The dashboard's "Labour supply" tab shows María Juaristi's labour supply check from [issue #120](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/120): each drill measure-year statically and with the OBR route and the parameter route, on policyengine-uk 2.153.0 (not the 2.132.6 used elsewhere here).
+The dashboard's "Labour supply" tab shows María Juaristi's labour supply check from [issue #120](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/120): each drill measure-year with no behaviour change and with labour-supply responses by the OBR method (the issue's OBR route) and the PolicyEngine method (its parameter route), on policyengine-uk 2.153.0 (not the 2.132.6 used elsewhere here).
 
 - The issue publishes no data file. `labour_supply/issue-120.md` keeps the issue text as fetched on 25 October 2026, and `scripts/parse_labour_supply_issue.py` copies its tables value by value into `labour_supply/labour_supply.csv` and `dashboard/labour_supply.json`. Cells marked n/r, withheld or not rerun stay so.
 - The headline "2.5%" and "28 of 29" are the issue's own overview figures; "−52 to −57%" and "+9 to +22%" are computed from its tables.

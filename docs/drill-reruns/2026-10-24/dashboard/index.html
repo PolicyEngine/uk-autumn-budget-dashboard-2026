@@ -251,7 +251,7 @@ details.src .dl{display:grid;grid-template-columns:90px minmax(0,1fr);gap:16px 2
 .lleg i{display:inline-block;vertical-align:-1px;margin-right:6px}
 .lother{font-size:13.5px;color:var(--muted);margin-top:12px}
 .ltog{font-size:14px;color:var(--muted);margin:0 0 12px;display:flex;gap:8px;align-items:center}
-@media(max-width:760px){.lr,.lscale{grid-template-columns:minmax(0,1fr) auto}.lr .ltr,.lscale .sc{grid-column:1/-1;grid-row:2}.lscale>div:first-child,.lscale>div:last-child{display:none}}
+@media(max-width:760px){.lr,.lscale{grid-template-columns:minmax(0,1fr);row-gap:4px}.lr .lch{justify-self:start;grid-row:2}.lr .ltr{grid-row:3}.lscale .sc{grid-column:1/-1}.lscale>div:first-child,.lscale>div:last-child{display:none}}
 </style>
 </head>
 <body>
@@ -467,15 +467,15 @@ const lfmt=v=>(v>0?'+':v<0?'−':'')+(Math.abs(v)<10?Math.abs(v).toFixed(1):Math
 const lm=v=>v==null?'—':(v>0?'+':v<0?'−':'')+'£'+Math.abs(v).toLocaleString('en-GB')+'m';
 const lbn=v=>v==null?'—':(v>0?'+':v<0?'−':'')+'£'+Math.abs(v).toFixed(2)+'bn';
 function lchip(r){if(r.status!=='ok')return `<span class="lch no">${r.status==='withheld'?'withheld':'not rerun'}</span>`;
-  if(r.now_static_bn==null||r.now_obr_m==null)return `<span class="lch no"${T('Not reliable on this route or engine: see the marks in issue #120.',true)}>n/r</span>`;
-  const c=lsize(r.now_static_bn,r.now_obr_m);if(Math.abs(c)<0.05){const p=r.marks.includes('param_blind')?null:lsize(r.now_static_bn,r.now_param_m);return p!=null&&Math.abs(p)>=0.05?`<span class="lch no"${T('No response on the OBR route; the parameter route responds through net income.',true)}>parameter route only</span>`:'<span class="lch no">no response</span>'}
+  if(r.now_static_bn==null||r.now_obr_m==null)return `<span class="lch no"${T('n/r: not reliable or not rerun on this method or engine (see the marks in issue #120).',true)}>n/r</span>`;
+  const c=lsize(r.now_static_bn,r.now_obr_m);if(Math.abs(c)<0.05){const p=r.marks.includes('param_blind')?null:lsize(r.now_static_bn,r.now_param_m);return p!=null&&Math.abs(p)>=0.05?`<span class="lch no"${T('No response with the OBR method; the PolicyEngine method responds through net income.',true)}>PolicyEngine method only</span>`:'<span class="lch no">no response</span>'}
   const w=r.now_static_bn>0?'yield':'cost';return `<span class="lch ${r.now_obr_m<0?'up':'dn'}"${T(r.now_obr_m<0?'The response worsens the public finances.':'The response improves the public finances.',true)}>${w} ${lfmt(c)}</span>`}
 function ltip(r){const L=[`${r.name} · ${r.year}`];
   if(r.status!=='ok'){L.push(r.status_note);return L.join('\n')}
-  L.push(`Static, now: ${r.now_static_bn_raw==null?'—':r.now_static_bn==null?r.now_static_bn_raw:lbn(r.now_static_bn)}`);
-  L.push(`OBR route, now: ${r.now_obr_m==null?r.now_obr_m_raw:lm(r.now_obr_m)}`);
-  L.push(`Parameter route, now: ${r.now_param_m==null?r.now_param_m_raw:lm(r.now_param_m)}${r.marks.includes('param_blind')?' (blind to values the measure\'s code sets)':''}`);
-  L.push(`OBR route, drill day: ${r.drill_obr_m==null?r.drill_obr_m_raw:lm(r.drill_obr_m)} on ${lbn(r.drill_published_bn)}`);
+  L.push(`No behaviour change, today: ${r.now_static_bn_raw==null?'—':r.now_static_bn==null?r.now_static_bn_raw:lbn(r.now_static_bn)}`);
+  L.push(`OBR method, today: ${r.now_obr_m==null?r.now_obr_m_raw:lm(r.now_obr_m)}`);
+  L.push(`PolicyEngine method, today: ${r.now_param_m==null?r.now_param_m_raw:lm(r.now_param_m)}${r.marks.includes('param_blind')?' (blind to values the measure\'s code sets)':''}`);
+  L.push(`OBR method, on drill day: ${r.drill_obr_m==null?r.drill_obr_m_raw:lm(r.drill_obr_m)} on ${lbn(r.drill_published_bn)}`);
   if(r.marks.includes('not_reproduced'))L.push('The published drill figure does not reproduce on the drill engine.');
   if(r.marks.includes('not_comparable'))L.push('Not comparable on 2.153.0: its fuel duty dates are read as one day a month.');
   return L.join('\n')}
@@ -494,36 +494,37 @@ function labourTab(){
   if(!LS)return '<p class="cl">Loading…</p>';
   const all=LS.rows;
   const cards=`<div class="sec lcards">
-   <div class="card sb"><div class="big">2.5%</div><div class="slab">Typical response <span class="yi"${T('Median OBR-route response as a share of the static figure, today, over the 42 cells with a response (1.9% at drill time). From the overview in issue #120.',true)}>ⓘ</span></div><div class="sl">of the static figure, today</div></div>
-   <div class="card sb"><div class="big">−52 to −57%</div><div class="slab">Biggest loss of yield <span class="yi"${T('Drill 3: the additional rate starting at £100,000 of taxable income, in 2027-28 and 2031-32, on both routes.',true)}>ⓘ</span></div><div class="sl">Additional rate from £100,000</div></div>
-   <div class="card sb"><div class="big">+9 to +22%</div><div class="slab">Benefit increases cost more <span class="yi"${T('Child Benefit increase, Child Benefit Early Years Addition, LHA reset and UC child element: cost with the OBR-route response against the static cost.',true)}>ⓘ</span></div><div class="sl">Child Benefit, LHA, UC child element</div></div>
-   <div class="card sb"><div class="big">28 of 29</div><div class="slab">Routes agree in sign <span class="yi"${T('Cells where both routes respond on 2.153.0. The parameter route gives a median 0.88 times the OBR route\'s effect. From the overview in issue #120.',true)}>ⓘ</span></div><div class="sl">where both routes respond</div></div></div>`;
+   <div class="card sb"><div class="big">2.5%</div><div class="slab">Typical response <span class="yi"${T('Median OBR-method response as a share of the figure with no behaviour change, today, over the 42 cells with a response (1.9% on drill day). From the overview in issue #120.',true)}>ⓘ</span></div><div class="sl">of the figure without it, today</div></div>
+   <div class="card sb"><div class="big">−52 to −57%</div><div class="slab">Biggest loss of yield <span class="yi"${T('Drill 3: the additional rate starting at £100,000 of taxable income, in 2027-28 and 2031-32, with both methods.',true)}>ⓘ</span></div><div class="sl">Additional rate from £100,000</div></div>
+   <div class="card sb"><div class="big">+9 to +22%</div><div class="slab">Benefit increases cost more <span class="yi"${T('Child Benefit increase, Child Benefit Early Years Addition, LHA reset and UC child element: cost with the OBR-method response against the cost with no behaviour change.',true)}>ⓘ</span></div><div class="sl">Child Benefit, LHA, UC child element</div></div>
+   <div class="card sb"><div class="big">28 of 29</div><div class="slab">The two methods agree in direction <span class="yi"${T('Cells where both methods respond on 2.153.0. The PolicyEngine method gives a median 0.88 times the OBR method\'s effect. From the overview in issue #120.',true)}>ⓘ</span></div><div class="sl">where both methods respond</div></div></div>`;
   const cave=`<div class="sec card lcave"><div class="btitle">Read with care</div><ul>
-   <li>Responses are computed on policyengine-uk 2.153.0 and the 23 October Microcosm data, not the 2.132.6 used in the other tabs: on 2.132.6 the parameter route always returns zero (${ext('policyengine-uk #2268','https://github.com/PolicyEngine/policyengine-uk/pull/2268','The route compared the reform with a copy of itself.')}, fixed in 2.133.0).</li>
+   <li>Responses are computed on policyengine-uk 2.153.0 and the 23 October Microcosm data, not the 2.132.6 used in the other tabs: on 2.132.6 the PolicyEngine method always returns zero (${ext('policyengine-uk #2268','https://github.com/PolicyEngine/policyengine-uk/pull/2268','The method compared the reform with a copy of itself.')}, fixed in 2.133.0).</li>
    <li>Hours only: the participation response is off, so nobody starts or stops work.</li>
-   <li>The OBR route ignores indirect taxes (VAT, fuel duty, fares) and CGT; the parameter route sees them only through net income.</li>
-   <li>CGT already responds by default from policyengine-uk 2.134.0; here every CGT response is set to zero so the static figures compare.</li>
+   <li>The OBR method ignores indirect taxes (VAT, fuel duty, fares) and CGT; the PolicyEngine method sees them only through net income.</li>
+   <li>CGT already responds by default from policyengine-uk 2.134.0; here every CGT response is set to zero so the no-behaviour-change figures compare.</li>
    <li>These are the drills' mock measures, two years each: the patterns matter more than the levels.</li></ul></div>`;
-  const tog=`<label class="ltog"><input type="checkbox" id="lzero"${st.lzero?' checked':''}> Show measures with no response on either route</label>`;
+  const expl=`<p class="cl" style="max-width:85ch;margin:0 0 14px">Each row: how much a measure's cost or yield changes once people adjust their working hours, against the figure with no behaviour change. OBR method: the OBR's labour-supply elasticities. PolicyEngine method: PolicyEngine's own labour-supply settings. <span class="tiny">n/r: not reliable or not rerun.</span></p>`;
+  const tog=`<label class="ltog"><input type="checkbox" id="lzero"${st.lzero?' checked':''}> Show measures with no response with either method</label>`;
   const drills=['1','2','3','4'].map(d=>{
     const rs=all.filter(r=>r.drill===d);
     const ok=rs.filter(r=>r.status==='ok').filter(r=>st.lzero||r.now_static_bn==null||(r.now_obr_m||0)!==0||(r.now_param_m||0)!==0&&!r.marks.includes('param_blind')||r.now_obr_m==null);
     const hidden=rs.filter(r=>r.status==='ok').length-ok.length;
     const other=rs.filter(r=>r.status!=='ok');
     return `<div class="sec"><div class="sh">Drill ${d} · ${LDATES[d]}</div><div class="card">${lrows(ok)}
-     ${hidden?`<div class="lother">${hidden} measure-year${hidden>1?'s':''} with no response on either route hidden.</div>`:''}
+     ${hidden?`<div class="lother">${hidden} measure-year${hidden>1?'s':''} with no response with either method hidden.</div>`:''}
      ${other.length?`<div class="lother">${other.map(r=>`${esc(r.name)}: ${esc(r.status==='withheld'?'withheld (fewer than 10 households)':'not rerun on either engine')}`).join(' · ')}</div>`:''}</div></div>`}).join('');
-  const leg=`<div class="lleg"><span><i class="sw" style="width:12px;height:12px;border:2px solid var(--slate);border-radius:50%;background:#fff"></i>static (0%)</span><span><i class="sw" style="width:10px;height:10px;border-radius:50%;background:var(--teal2)"></i>OBR route, today</span><span><i class="sw" style="width:9px;height:9px;transform:rotate(45deg);border:2px solid #7c5cbf;background:#fff"></i>parameter route, today</span><span><i class="sw" style="width:2px;height:14px;background:var(--faint)"></i>OBR route, drill day</span></div>`;
+  const leg=`<div class="lleg"><span><i class="sw" style="width:12px;height:12px;border:2px solid var(--slate);border-radius:50%;background:#fff"></i>No behaviour change (0%)</span><span><i class="sw" style="width:10px;height:10px;border-radius:50%;background:var(--teal2)"></i>OBR method</span><span><i class="sw" style="width:9px;height:9px;transform:rotate(45deg);border:2px solid #7c5cbf;background:#fff"></i>PolicyEngine method</span><span><i class="sw" style="width:2px;height:14px;background:var(--faint)"></i>OBR method, on drill day</span></div>`;
   const meth=`<details class="card src"><summary>Sources and method</summary><dl class="dl">
     <dt>Data</dt><dd>The tables in ${ext('issue #120',ISSUE120,'Labour supply responses, by María Juaristi, 25 October 2026.')}, copied value by value; the issue publishes no data file. 89 measure-years over 50 measures, two years each.</dd>
     <dt>Today</dt><dd>policyengine-uk 2.153.0 on the Microcosm national release of 23 October (a133f37a), with CGT responses at zero.</dd>
-    <dt>Drill day</dt><dd>Each drill's own engine and data, OBR route only.</dd>
-    <dt>OBR route</dt><dd>The OBR's hours elasticities (Tables A1 and A2, February 2024), responding to changes in household income as HBAI measures it.</dd>
-    <dt>Parameter route</dt><dd>One substitution elasticity of 0.15 and an income elasticity of −0.05 for everyone; not shown where it cannot see values the measure's code sets.</dd>
-    <dt>Size change</dt><dd>The measure's static figure with the route's response added, against the static figure: "yield −52%" means it raises 52% less; "cost +12%" means it costs 12% more.</dd>
-    <dt>Not shown</dt><dd>Cells the issue marks not reliable (n/r), withheld (fewer than 10 households or responders) or not rerun.</dd></dl></details>`;
-  return `<div class="dhd"><h2>Labour supply responses</h2><div class="chips"><a class="chip" href="${ISSUE120}" target="_blank" rel="noopener">Analysis by María Juaristi (issue #120)</a></div><p>How much each drill measure's yield or cost changes once people adjust their hours, against its static figure. The published figures stay static.</p></div>
-   ${cards}${cave}${tog}${drills}${leg}<div class="sec"></div>${meth}`}
+    <dt>Drill day</dt><dd>Each drill's own engine and data, OBR method only.</dd>
+    <dt>OBR method</dt><dd>The OBR's labour-supply (hours) elasticities (Tables A1 and A2, February 2024), responding to changes in household income as HBAI measures it.</dd>
+    <dt>PolicyEngine method</dt><dd>PolicyEngine's own labour-supply settings: one substitution elasticity of 0.15 and an income elasticity of −0.05 for everyone; not shown where it cannot see values the measure's code sets.</dd>
+    <dt>Size change</dt><dd>The measure's figure with the method's response added, against the figure with no behaviour change: "yield −52%" means it raises 52% less; "cost +12%" means it costs 12% more.</dd>
+    <dt>Not shown</dt><dd>Cells the issue marks n/r (not reliable or not rerun), withheld (fewer than 10 households or responders) or not rerun.</dd></dl></details>`;
+  return `<div class="dhd"><h2>Labour supply responses</h2><div class="chips"><a class="chip" href="${ISSUE120}" target="_blank" rel="noopener">Analysis by María Juaristi (issue #120)</a></div><p>How much each drill measure's yield or cost changes once people adjust their hours, against the figure with no behaviour change. The published figures assume no behaviour change.</p></div>
+   ${cards}${cave}${expl}${tog}${drills}${leg}<div class="sec"></div>${meth}`}
 /* ---------- tabs, render ---------- */
 function tabs(){const bar=document.getElementById('tabs');bar.innerHTML=TABS.map(([k,l])=>`<button role="tab" class="tab ${st.tab===k?'on':''}" data-tab="${k}" aria-selected="${st.tab===k}" tabindex="${st.tab===k?0:-1}">${l}</button>`).join('');
   const on=bar.querySelector('.tab.on');if(on&&bar.scrollWidth>bar.clientWidth)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2)}
