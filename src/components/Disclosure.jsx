@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import useCollapse from "../hooks/useCollapse";
 
 /**
  * A disclosure, closed by default: a full-width button with a chevron, and
@@ -9,6 +10,8 @@ import { useId, useState } from "react";
  */
 function Disclosure({ title, inCard = false, id, className = "", contentClassName = "", children }) {
   const [open, setOpen] = useState(false);
+  // Opens and shuts with an eased height (none with reduced motion)
+  const { mounted, expanded } = useCollapse(open);
   const contentId = useId();
   const classes = ["disclosure", inCard ? "disclosure-in-card" : "disclosure-card", className]
     .filter(Boolean)
@@ -38,9 +41,11 @@ function Disclosure({ title, inCard = false, id, className = "", contentClassNam
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      {open && (
-        <div id={contentId} className={`disclosure-content ${contentClassName}`.trim()}>
-          {children}
+      {mounted && (
+        <div id={contentId} className={`collapse ${expanded ? "is-expanded" : ""}`}>
+          <div className="collapse-inner">
+            <div className={`disclosure-content ${contentClassName}`.trim()}>{children}</div>
+          </div>
         </div>
       )}
     </div>

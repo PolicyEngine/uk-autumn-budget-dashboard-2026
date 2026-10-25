@@ -182,13 +182,14 @@ describe("the household calculation, from the fixture", () => {
     expect(sum).toBe(3765);
     // The measures that leave the household where it was: one expander
     // under the chart, closed at first, each on its own row with its colour
-    const noEffect = screen.getByRole("button", { name: /^No effect on your household \(\d+\)$/ });
+    const chart = container.querySelector("#change-by-policy");
+    const noEffect = within(chart).getByRole("button", { name: "More info" });
     expect(noEffect).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".no-effect-item")).toBeNull();
     fireEvent.click(noEffect);
     expect(noEffect).toHaveAttribute("aria-expanded", "true");
     const items = [...container.querySelectorAll(".no-effect-item")];
-    expect(noEffect).toHaveTextContent(`(${items.length})`);
+    expect(chart.querySelector(".no-effect-title")).toHaveTextContent(`No effect on your household (${items.length})`);
     expect(items.map((item) => item.querySelector(".no-effect-name").textContent)).toContain(
       "Dividend tax increase (+2pp)",
     );

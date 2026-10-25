@@ -1,9 +1,9 @@
-import { useId, useRef, useState } from "react";
+import { useRef } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
-import useCollapse from "../../hooks/useCollapse";
+import Disclosure from "../Disclosure";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import { CHART_COLOURS } from "../../utils/chartTheme";
@@ -189,58 +189,31 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
             <strong>{note.name}</strong>: {note.text}
           </p>
         ))}
-      {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} />}
+      {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title="No effect on your household" />}
     </div>
   );
 }
 
 /**
- * The measures that leave the household where it was, in one expander
- * under the chart, closed at first: each on its own row with its colour
- * and, for an employer cost, why.
+ * The measures that leave the household where it was, in the card's "More
+ * info" row (closed at first, as "Compare with OBR estimates"): each on its
+ * own row with its colour and, for an employer cost, why.
  */
-function NoEffectList({ items }) {
-  const [open, setOpen] = useState(false);
-  const { mounted, expanded } = useCollapse(open);
-  const panelId = useId();
+export function NoEffectList({ items, title }) {
   return (
-    <div className="no-effect">
-      <button
-        type="button"
-        className="no-effect-toggle"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
-      >
-        No effect on your household ({items.length})
-        <svg
-          className="no-effect-chevron"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {mounted && (
-        <div id={panelId} className={`collapse ${expanded ? "is-expanded" : ""}`}>
-          <ul className="no-effect-list collapse-inner">
-            {items.map((item) => (
-              <li key={item.id} className="no-effect-item" data-policy={item.id}>
-                <span className="no-effect-dot" style={{ background: item.color }} aria-hidden="true" />
-                <span className="no-effect-name">{item.name}</span>
-                {item.reason && <span className="no-effect-reason">{item.reason}</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <Disclosure inCard title="More info" contentClassName="no-effect">
+      <p className="no-effect-title">
+        {title} ({items.length})
+      </p>
+      <ul className="no-effect-list">
+        {items.map((item) => (
+          <li key={item.id} className="no-effect-item" data-policy={item.id}>
+            <span className="no-effect-dot" style={{ background: item.color }} aria-hidden="true" />
+            <span className="no-effect-name">{item.name}</span>
+            {item.reason && <span className="no-effect-reason">{item.reason}</span>}
+          </li>
+        ))}
+      </ul>
+    </Disclosure>
   );
 }

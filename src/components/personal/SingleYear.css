@@ -1121,65 +1121,13 @@
   }
 }
 
-/* ---------- Expanders: height eased open and shut (useCollapse) ---------- */
-.collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
-}
 
-.collapse.is-expanded {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-.collapse-inner {
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* No effect on your household: one expander under the chart */
-.no-effect {
-  margin-top: 16px;
-  border-top: 1px solid var(--card-border);
-}
-
-.no-effect-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  padding: 14px 0 0;
-  font-family: inherit;
-  font-size: var(--fs-small);
+/* No effect: listed in the card's More info row */
+.no-effect-title {
+  margin: 0;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  color: var(--pe-gray-700);
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.no-effect-toggle:hover {
-  color: var(--pe-teal-700);
-}
-
-.no-effect-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-  border-radius: var(--pe-radius-sm);
-}
-
-.no-effect-chevron {
-  flex: none;
-  color: var(--pe-gray-500);
-  transition: transform 0.2s ease;
-}
-
-.no-effect-toggle[aria-expanded="true"] .no-effect-chevron {
-  transform: rotate(180deg);
+  color: var(--pe-gray-600);
 }
 
 .no-effect-list {
@@ -1264,11 +1212,9 @@
     animation-duration: 2.4s;
   }
 
-  .collapse,
   .result-bar-fill,
   .result-bar-diff,
   .processing-bar span,
-  .no-effect-chevron,
   .single-year-result,
   .single-year-details .report-section {
     transition: none;
