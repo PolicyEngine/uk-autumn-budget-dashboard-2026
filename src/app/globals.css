@@ -1465,6 +1465,9 @@ body {
 }
 
 .policy-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 10px;
   font-size: var(--fs-micro);
   font-weight: 600;
@@ -1534,7 +1537,22 @@ body {
 }
 
 .policy-chip dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--pe-gray-500);
+}
+
+.policy-fact-icon,
+.policy-group-icon {
+  display: inline-flex;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-details summary .policy-fact-icon {
+  margin-right: 4px;
+  vertical-align: -2px;
+  color: currentColor;
 }
 
 .policy-chip dd {

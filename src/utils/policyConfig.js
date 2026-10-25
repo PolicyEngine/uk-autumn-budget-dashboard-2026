@@ -36,6 +36,33 @@ export const POLICY_COLORS_BY_KEY = Object.fromEntries(
   POLICIES.map((policy) => [policy.id, POLICY_COLORS[policy.name]]),
 );
 
+// Each measure's icon, by measure id (so catalogue data can use it too),
+// chosen by the tax or benefit it changes (TitleIcon names). A new measure
+// picks the icon of its type from POLICY_TYPE_ICONS.
+export const POLICY_TYPE_ICONS = {
+  incomeTax: "receipt",
+  capitalGainsTax: "briefcase",
+  fuelDuty: "fuel",
+  vat: "tag",
+  electricityVat: "bolt",
+  energyBenefit: "flame",
+  pension: "clock",
+  employerNi: "building",
+  studentLoan: "cap",
+};
+
+export const POLICY_ICONS = {
+  threshold_freeze_2031_32: POLICY_TYPE_ICONS.incomeTax,
+  badr_lifetime_limit_cut: POLICY_TYPE_ICONS.capitalGainsTax,
+  fuel_duty_rise_deferral: POLICY_TYPE_ICONS.fuelDuty,
+  road_fuel_vat_cut: POLICY_TYPE_ICONS.vat,
+  domestic_electricity_zero_vat: POLICY_TYPE_ICONS.electricityVat,
+  warm_home_discount_top_up: POLICY_TYPE_ICONS.energyBenefit,
+  state_pension_income_tax_protection: POLICY_TYPE_ICONS.pension,
+  employer_ni_relief_under_25s: POLICY_TYPE_ICONS.employerNi,
+  plan_2_threshold_unfreeze: POLICY_TYPE_ICONS.studentLoan,
+};
+
 // Order: revenue raisers first (positive for gov), then costs (negative for gov)
 export const ALL_POLICY_NAMES = [
   // Raise revenue
