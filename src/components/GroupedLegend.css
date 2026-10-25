@@ -213,4 +213,6 @@
 
 .grouped-legend-info .info-tooltip {
   width: 240px;
+  white-space: normal;
+  text-align: left;
 }

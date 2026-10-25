@@ -74,7 +74,7 @@ export const CHART_COLOURS = {
   mtrAllowanceTaper: "#285E61",
   mtrNationalInsurance: "#A7E3DA",
   mtrStudentLoan: "#E8B66A",
-  mtrUniversalCredit: "#2C7A7B",
+  mtrUniversalCredit: "#2F855A",
   mtrOtherBenefits: "#9AE6B4",
   mtrOther: "#D1D5DB",
 };

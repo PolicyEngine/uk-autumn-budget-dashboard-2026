@@ -1449,7 +1449,8 @@ def sweep_rate_parts(
 def _rounded_parts(parts: dict, total: float) -> dict:
     """The parts to four places, with "other" taking the rounding, so they
     add up to the rounded total the answer reports."""
-    out = {k: round(v, 4) for k, v in parts.items() if k != "other"}
+    # (+ 0.0: no "-0.0" in the answer)
+    out = {k: round(v, 4) + 0.0 for k, v in parts.items() if k != "other"}
     out["other"] = round(round(total, 4) - sum(out.values()), 4)
     return out
 

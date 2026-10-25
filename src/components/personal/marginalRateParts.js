@@ -2,11 +2,12 @@ import { CHART_COLOURS } from "../../utils/chartTheme";
 
 /**
  * The marginal tax rate's parts, in the API's stacking order: what each
- * takes of an extra pound of salary, its colour, and for the less familiar
- * ones a one-line note behind an "i" in the legend.
+ * takes of an extra pound of salary, its colour, its name mid-sentence
+ * (`phrase`, when not the label), and for the less familiar ones a
+ * one-line note behind an "i" in the legend.
  */
 export const RATE_PARTS = [
-  { name: "income_tax", label: "Income tax", color: CHART_COLOURS.mtrIncomeTax },
+  { name: "income_tax", label: "Income tax", phrase: "income tax", color: CHART_COLOURS.mtrIncomeTax },
   {
     name: "child_benefit_charge",
     label: "Child Benefit clawback",
@@ -20,10 +21,10 @@ export const RATE_PARTS = [
     info: "The personal allowance falls by £1 for every £2 of income above £100,000, until it is gone at £125,140: each extra pound also makes 50p more taxable.",
   },
   { name: "national_insurance", label: "National Insurance", color: CHART_COLOURS.mtrNationalInsurance },
-  { name: "student_loan", label: "Student loan", color: CHART_COLOURS.mtrStudentLoan },
+  { name: "student_loan", label: "Student loan", phrase: "student loan", color: CHART_COLOURS.mtrStudentLoan },
   { name: "universal_credit", label: "UC taper", color: CHART_COLOURS.mtrUniversalCredit },
-  { name: "other_benefits", label: "Other benefits", color: CHART_COLOURS.mtrOtherBenefits },
-  { name: "other", label: "Other", color: CHART_COLOURS.mtrOther },
+  { name: "other_benefits", label: "Other benefits", phrase: "other benefits", color: CHART_COLOURS.mtrOtherBenefits },
+  { name: "other", label: "Other", phrase: "other", color: CHART_COLOURS.mtrOther },
 ];
 
 // A part smaller than this on every step is left off the chart and legend
@@ -67,9 +68,6 @@ export function describeParts(own) {
   if (!own) return "";
   return RATE_PARTS.filter((part) => (own[part.name] ?? 0) >= NEGLIGIBLE)
     .sort((a, b) => own[b.name] - own[a.name])
-    .map((part) => {
-      const label = part.name === "income_tax" ? "income tax" : part.label;
-      return `${label} ${Math.round(own[part.name] * 100)}%`;
-    })
+    .map((part) => `${part.phrase ?? part.label} ${Math.round(own[part.name] * 100)}%`)
     .join(", ");
 }
