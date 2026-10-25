@@ -36,4 +36,17 @@ describe("SummaryMetricChart", () => {
     );
     expect(screen.getByRole("status")).toHaveTextContent("Choose one policy or all policies");
   });
+
+  it("says a run is not yet published rather than drawing zeros", () => {
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={ROWS.filter((row) => row.reform_id !== "autumn_budget_2026_combined")}
+        policies={POLICIES}
+        selectedPolicies={POLICIES.map((policy) => policy.id)}
+        selectedYear={2027}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Not yet published for this selection");
+  });
 });

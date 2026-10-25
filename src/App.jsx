@@ -609,33 +609,12 @@ function App() {
         </div>
       );
     }
-    // All households: places, how changes vary, and example households
+    // All households: example households, places, and how changes vary
     return (
       <div className="results-container">
-        {/* The constituency map beside the household scatter. The scatter
-            shows binned groups of households only: the per-household
-            scatter stays withdrawn, as it showed survey households one by
-            one. Results by region are hidden for now (RegionView is kept,
-            not rendered). */}
-        <SectionHeading
-          title="Where and who"
-          subtitle="Average change by constituency, and how changes vary between households."
-        />
-        <section id="constituencies" className="report-section charts-grid charts-row-2">
-          <ConstituencyMap
-            selectedPolicies={selectedPolicies}
-            selectedYear={distributionalYear}
-            policies={POLICIES}
-            showRegionLink={false}
-          />
-          <HouseholdScatter
-            selectedPolicies={selectedPolicies}
-            policies={POLICIES}
-            selectedYear={distributionalYear}
-          />
-        </section>
-
-        {/* Example households, one chooser above both charts */}
+        {/* Example households first, so the view does not open on the
+            constituency card, the last result to publish. One chooser
+            above both charts */}
         <SectionHeading
           title="Example households"
           subtitle="Net income of five example households across their incomes."
@@ -657,6 +636,29 @@ function App() {
             household={exampleHouseholdId}
             onHouseholdChange={setExampleHouseholdId}
             showPicker={false}
+          />
+        </section>
+
+        {/* The constituency map beside the household scatter. The scatter
+            shows binned groups of households only: the per-household
+            scatter stays withdrawn, as it showed survey households one by
+            one. Results by region are hidden for now (RegionView is kept,
+            not rendered). */}
+        <SectionHeading
+          title="Where and who"
+          subtitle="Average change by constituency, and how changes vary between households."
+        />
+        <section id="constituencies" className="report-section charts-grid charts-row-2">
+          <ConstituencyMap
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+            policies={POLICIES}
+            showRegionLink={false}
+          />
+          <HouseholdScatter
+            selectedPolicies={selectedPolicies}
+            policies={POLICIES}
+            selectedYear={distributionalYear}
           />
         </section>
 

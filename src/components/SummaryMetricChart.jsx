@@ -142,6 +142,12 @@ function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selected
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>Choose one policy or all policies</p>
           </div>
+        ) : shown.length === 0 ? (
+          // On Budget day a run (the combined one last) can be named
+          // before its rows are published: say so, never draw zeros
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>Not yet published for this selection</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
             <BarChart
@@ -176,11 +182,16 @@ function SummaryMetricChart({ metric, rows, policies, selectedPolicies, selected
                     labelFormat={fiscalYearTick}
                     showPlus
                     showZero
-                    single={{ key: "value", label: metric.title, color: CHART_COLOURS.gain }}
+                    grouped={false}
                   />
                 }
               />
-              <Bar dataKey="value" name={metric.title} {...chartMotion()}>
+              <Bar
+                dataKey="value"
+                name={metric.title}
+                fill={CHART_COLOURS.gain}
+                {...chartMotion()}
+              >
                 {data.map((point) => {
                   const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
                   return (
