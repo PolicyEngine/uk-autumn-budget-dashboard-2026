@@ -6,7 +6,10 @@ per process.
     uv run python scripts/verify_household_skips.py <households> <processes>
 """
 
-import json, random, sys, time
+import json
+import random
+import sys
+import time
 from concurrent.futures import ProcessPoolExecutor
 
 
