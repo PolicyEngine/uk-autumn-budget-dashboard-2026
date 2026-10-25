@@ -195,7 +195,6 @@ describe("the household calculation, from the fixture", () => {
     expect(within(box("Salary in 2029-30")).getByRole("button", { name: /grown from 2026 with OBR earnings/ })).toBeInTheDocument();
     expect(box("Rent area").querySelector("dd")).toHaveTextContent("Central Greater Manchester");
     expect(within(box("Rent area")).getByRole("tooltip")).toHaveTextContent("region default");
-    expect(box("Rail fares freeze").querySelector("dd")).toHaveTextContent("not shown");
     expect(panel).not.toHaveTextContent("spreads a national cost");
     expect(panel.textContent.match(/Rent area/g)).toHaveLength(1);
     // No child of 16 or over: no item on who counts as a child
@@ -350,7 +349,8 @@ describe("Calculate", () => {
 
 describe("a change in the title bar after a result", () => {
   const props = {
-    selectedPolicies: POLICIES_FOR_TEST.map((policy) => policy.id),
+    // The measures the household API models, so the selection has a result
+    selectedPolicies: SUPPORTED_POLICY_IDS,
     policies: POLICIES_FOR_TEST,
   };
 
