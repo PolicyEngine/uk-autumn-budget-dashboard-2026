@@ -41,6 +41,7 @@ Discount), carries a note with its change (``HOUSEHOLD_NOTES``).
 import copy
 import importlib
 import json
+import os
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -1392,7 +1393,13 @@ def _run_all(jobs: list, workers: int) -> list:
     todo = [i for i, result in enumerate(results) if result is None]
     # With workers, even one run goes to a worker: requests run at once, and
     # two runs in this process at the same time would share its engine.
-    if workers > 1 and todo:
+    if todo and os.environ.get("HOUSEHOLD_RUNNER") == "modal":
+        # On Modal (modal_household.py): every run in its own container at
+        # once, each with the engine already loaded.
+        from uk_budget_data.modal_household import fan_out
+
+        done = fan_out([jobs[i] for i in todo])
+    elif workers > 1 and todo:
         from uk_budget_data.personal_impact import (
             CALCULATION_TIMEOUT_SECONDS,
             household_slots,
@@ -1449,12 +1456,62 @@ def _programme_entry(row: Programme, before: dict, after: dict) -> dict:
     return entry
 
 
+# Measures that cannot move this household's net income in this year,
+# from the household's answers alone, so the split by policy need not run
+# them: each shows as "not affected", exactly as its run would. Every rule is
+# checked against the full run in tests/test_household_skips.py, over many
+# households and every policy year.
+SKIP_REASONS = {
+    "employer_ni_relief_under_25s": "an employer cost; wages are held fixed",
+    "warm_home_discount_top_up": "paid in 2026-27 only",
+    "threshold_freeze_2031_32": "changes nothing before 2031-32",
+    "plan_2_threshold_unfreeze": "no Plan 2 student loan",
+    "state_pension_income_tax_protection": "no one at State Pension age",
+    "badr_lifetime_limit_cut": "no capital gains",
+    "fuel_duty_rise_deferral": "no petrol or diesel spending",
+    "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
+    "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
+}
+
+
+def provably_unaffected(
+    measure_id: str, answers: HouseholdAnswers, year: int
+) -> bool:
+    """Whether ``measure_id`` cannot change this household's net income in
+    ``year``. False whenever it might (and for any measure without a rule)."""
+    adults = [(answers.age, answers.student_loan_plan)]
+    if answers.has_partner:
+        adults.append((answers.partner_age, answers.partner_student_loan_plan))
+    no_fuel = not answers.petrol_spending and not answers.diesel_spending
+    if measure_id == "employer_ni_relief_under_25s":
+        return True
+    if measure_id == "warm_home_discount_top_up":
+        return year != 2026
+    if measure_id == "threshold_freeze_2031_32":
+        return year < 2031
+    if measure_id == "plan_2_threshold_unfreeze":
+        return all(plan != "PLAN_2" for _, plan in adults)
+    if measure_id == "state_pension_income_tax_protection":
+        return all(age < state_pension_age(year) for age, _ in adults)
+    if measure_id == "badr_lifetime_limit_cut":
+        # The household's answers carry no capital gains.
+        return True
+    if measure_id == "fuel_duty_rise_deferral":
+        return no_fuel
+    if measure_id == "road_fuel_vat_cut":
+        return no_fuel or year >= 2028
+    if measure_id == "domestic_electricity_zero_vat":
+        return not answers.electricity_spending or year >= 2028
+    return False
+
+
 def calculate_household_impact(
     answers: HouseholdAnswers,
     reform_ids: list[str],
     year: int,
     include: tuple = PARTS,
     workers: int = 1,
+    skip_unaffected: bool = True,
 ) -> dict:
     """The household's net income in ``year`` before and after the
     selected measures, and the programmes; with "by_policy" in
@@ -1493,10 +1550,16 @@ def calculate_household_impact(
     jobs = [job(sides.before), job(sides.after)]
     by_policy = "by_policy" in include
     many = len(sides.included) > 1
+    # The measures whose own run is needed (provably_unaffected: the rest
+    # are exactly £0 for this household and year, so they are not run).
+    to_run = [
+        id_
+        for id_ in sides.included
+        if not (skip_unaffected and provably_unaffected(id_, answers, year))
+    ]
     if by_policy and many:
         jobs += [
-            job(sides.singles[id_], net_income_only=True)
-            for id_ in sides.included
+            job(sides.singles[id_], net_income_only=True) for id_ in to_run
         ]
     sweep = "sweep" in include
     if sweep:
@@ -1595,11 +1658,12 @@ def calculate_household_impact(
         "engine": runtime_identity()["packages"],
     }
     if by_policy:
-        singles = (
-            outputs[2 : 2 + len(sides.included)]
-            if many
-            else ([after] if sides.included else [])
-        )
+        if many:
+            ran = dict(zip(to_run, outputs[2 : 2 + len(to_run)]))
+            unaffected = {"household_net_income": base_net}
+            singles = [ran.get(id_, unaffected) for id_ in sides.included]
+        else:
+            singles = [after] if sides.included else []
         result["by_policy"] = _by_policy(
             sides.included, singles, base_net, combined
         )

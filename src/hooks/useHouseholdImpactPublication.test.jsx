@@ -31,16 +31,16 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const first = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-one" }));
   await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
   expect(first.result.current.data.net.change).toBe(change);
-  expect(requests).toHaveLength(2);
+  // The headline, then the sweep and the split by policy
+  expect(requests).toHaveLength(3);
   first.unmount();
 
   change += 111;
   const second = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-two" }));
   expect(second.result.current.data).toBeNull();
   await waitFor(() => expect(second.result.current.detailStatus).toBe("ready"));
-  expect(requests).toHaveLength(4);
-  expect(requests[2]).toEqual(requests[0]);
-  expect(requests[3]).toEqual(requests[1]);
+  expect(requests).toHaveLength(6);
+  expect(requests.slice(3)).toEqual(requests.slice(0, 3));
   expect(second.result.current.data.net.change).toBe(change);
   second.unmount();
 
@@ -48,7 +48,7 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const reopened = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-two" }));
   await waitFor(() => expect(reopened.result.current.detailStatus).toBe("ready"));
   expect(reopened.result.current.data.net.change).toBe(change);
-  expect(requests).toHaveLength(4);
+  expect(requests).toHaveLength(6);
 });
 
 // Review of 428d209, finding 2: requests were unbound to the approved
@@ -71,7 +71,7 @@ describe("Personal impact's live answers", () => {
     const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
     expect(hook.result.current.status).toBe("ready");
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
   });
 
   it("refuses an answer from other package versions than the published figures", async () => {
@@ -93,8 +93,38 @@ describe("Personal impact's live answers", () => {
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
     expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
     expect(hook.result.current.data).toBeNull();
-    expect(requests).toHaveLength(2);
+    expect(requests).toHaveLength(3);
   });
+
+  // The sweep and the split by policy are asked for at once (#147): one
+  // part from another deployment takes the whole answer away, whether it
+  // arrives before or after the other part, and the other part's later
+  // answer never brings it back.
+  for (const bad of ["sweep", "by_policy"]) {
+    for (const badFirst of [true, false]) {
+      it(`takes the whole answer away when only the ${bad} part comes from another deployment (${badFirst ? "it arrives first" : "it arrives last"})`, async () => {
+        vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+        const requests = [];
+        vi.stubGlobal("fetch", async (url, init) => {
+          const body = JSON.parse(init.body);
+          requests.push(body);
+          const part = body.include.length === 0 ? "headline" : body.include[0];
+          const isBad = part === bad;
+          if (part !== "headline") await new Promise((resolve) => setTimeout(resolve, isBad === badFirst ? 0 : 60));
+          const engine = isBad ? { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } : HOUSEHOLD_FIXTURE.engine;
+          return Response.json({ ...structuredClone(householdAnswerFor(body)), engine });
+        });
+        const hook = renderHook(() => useHouseholdImpact(params));
+        await waitFor(() => expect(hook.result.current.status).toBe("error"));
+        await waitFor(() => expect(requests).toHaveLength(3));
+        // Past the slower part's answer
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        expect(hook.result.current.status).toBe("error");
+        expect(hook.result.current.error).toBeInstanceOf(EngineMismatchError);
+        expect(hook.result.current.data).toBeNull();
+      });
+    }
+  }
 
   it("asks only after a check of the live publication that started after the request", async () => {
     const requests = [];
@@ -110,7 +140,8 @@ describe("Personal impact's live answers", () => {
     });
     const hook = renderHook(() => useHouseholdImpact({ ...params, confirmPublication }));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
-    expect(log).toEqual(["check snapshot-one", "post", "check snapshot-one", "post"]);
+    // One check before the headline, one before the two detail parts
+    expect(log).toEqual(["check snapshot-one", "post", "check snapshot-one", "post", "post"]);
   });
 
   it("drops the request when the snapshot it was made under is no longer live", async () => {
