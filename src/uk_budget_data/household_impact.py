@@ -474,13 +474,15 @@ PROGRAMMES = (
         children=(
             _row(
                 "salary_sacrifice_haircut",
-                "Salary sacrifice cap: broad-base pay cut",
+                "Salary sacrifice pay cut (current-law cap)",
                 "salary_sacrifice_broad_base_haircut",
                 "person",
             ),
         ),
         note=(
-            "policyengine-uk assumes employers recover the salary sacrifice "
+            "The £2,000 salary sacrifice cap from April 2029 is existing law "
+            "(Budget 2025), so it is the same before and after the measures. "
+            "policyengine-uk assumes employers recover the "
             "cap's extra employer National Insurance by cutting every "
             "employee's pay by a set share, whether or not they use salary "
             "sacrifice: the pay cut row, a negative amount."
@@ -577,6 +579,13 @@ EARNINGS_INDEX = "gov.economic_assumptions.indices.obr.average_earnings"
 # twice the head's employment income.
 SWEEP_POINTS = 50
 SWEEP_MIN_MAX = 150_000
+
+# The marginal rate at the head's own income: the change in net income when
+# the head earns this much more. The sweep's points are several thousand
+# pounds apart, so a rate over the sweep interval holding the income can
+# average across a kink (the end of the Personal Allowance taper) that the
+# head has not reached.
+OWN_RATE_STEP = 100
 
 
 def measure_ids() -> list[str]:
@@ -1337,12 +1346,17 @@ def marginal_rates(grid: list[float], net: list[float]) -> list:
     ]
 
 
-def _own_rate(grid: list[float], rates: list[float], income: float):
-    """The rate over the sweep interval holding the head's own income."""
-    for i in range(len(grid) - 1):
-        if grid[i] <= income < grid[i + 1]:
-            return rates[i]
-    return rates[-1]
+def with_pay_rise(people: list, step: float) -> list:
+    """The household's people with the head earning ``step`` more."""
+    people = [dict(person) for person in people]
+    people[0]["employment_income"] = people[0]["employment_income"] + step
+    return people
+
+
+def own_rate(net: float, net_higher: float, step: float) -> float:
+    """The marginal effective tax rate at the head's own income: the share
+    of the next ``step`` pounds that does not reach household net income."""
+    return 1 - (net_higher - net) / step
 
 
 # Runs already done, by their inputs: the breakdown stage asks again for the
@@ -1465,9 +1479,9 @@ def calculate_household_impact(
     salary, partner_salary = salaries_in(answers, year)
     pension, partner_pension = state_pensions(answers, year)
 
-    def job(reform, axes=None, net_income_only=False):
+    def job(reform, axes=None, net_income_only=False, members=None):
         return (
-            people,
+            members or people,
             benunit,
             household,
             year,
@@ -1487,9 +1501,12 @@ def calculate_household_impact(
     sweep = "sweep" in include
     if sweep:
         axes, grid = sweep_axes(salary)
+        raised = with_pay_rise(people, OWN_RATE_STEP)
         jobs += [
             job(sides.before, axes, True),
             job(sides.after, axes, True),
+            job(sides.before, net_income_only=True, members=raised),
+            job(sides.after, net_income_only=True, members=raised),
         ]
     outputs = _run_all(jobs, workers)
     before, after = outputs[0], outputs[1]
@@ -1589,11 +1606,23 @@ def calculate_household_impact(
     if sweep:
         result["sweep"] = _sweep(
             grid,
-            outputs[-2]["household_net_income"],
-            outputs[-1]["household_net_income"],
+            outputs[-4]["household_net_income"],
+            outputs[-3]["household_net_income"],
             salary,
             base_net,
             reform_net,
+            (
+                own_rate(
+                    base_net,
+                    outputs[-2]["household_net_income"],
+                    OWN_RATE_STEP,
+                ),
+                own_rate(
+                    reform_net,
+                    outputs[-1]["household_net_income"],
+                    OWN_RATE_STEP,
+                ),
+            ),
         )
     return result
 
@@ -1644,7 +1673,9 @@ def _by_policy(
     }
 
 
-def _sweep(grid, base_line, reform_line, salary, base_net, reform_net):
+def _sweep(
+    grid, base_line, reform_line, salary, base_net, reform_net, own_rates
+):
     base_rates = marginal_rates(grid, base_line)
     reform_rates = marginal_rates(grid, reform_line)
     return {
@@ -1672,17 +1703,15 @@ def _sweep(grid, base_line, reform_line, salary, base_net, reform_net):
             "employment_income": _money(salary),
             "baseline": _money(base_net),
             "reform": _money(reform_net),
-            "baseline_marginal_rate": round(
-                _own_rate(grid, base_rates, salary), 4
-            ),
-            "reform_marginal_rate": round(
-                _own_rate(grid, reform_rates, salary), 4
-            ),
+            "baseline_marginal_rate": round(own_rates[0], 4),
+            "reform_marginal_rate": round(own_rates[1], 4),
         },
         "note": (
             "Only the head's employment income varies; everything else is "
             "held as entered. A marginal rate is over the interval between "
             "two neighbouring points: one minus the change in household net "
-            "income over the change in the head's employment income."
+            "income over the change in the head's employment income. The "
+            f"rate at the head's own income is over the next £{OWN_RATE_STEP} "
+            "they earn."
         ),
     }

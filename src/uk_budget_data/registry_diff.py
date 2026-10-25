@@ -9,12 +9,12 @@ revisions, by what each measure *is*, not by the lines of the diff:
 - its reform and baseline parameter changes;
 - the code of its simulation modifiers, with every function and data value
   they reach in any ``uk_budget_data`` module (so a change to
-  ``RAIL_FARE_INCREASES``, to a modifier in ``budget_measures.py`` or to a
+  ``RAIL_FARE_INCREASES``, to a modifier in ``budget_measures`` or to a
   measure template it calls changes exactly the measures that use it).
 
 Each revision's whole ``src/uk_budget_data`` is loaded in a subprocess of
 its own, from that revision's files, so a change made only in
-``budget_measures.py`` or ``measure_templates.py`` is seen, and the two
+``a module in ``budget_measures`` or ``measure_templates.py`` is seen, and the two
 revisions never share module state or lazy caches. A change to code every
 measure runs through (``CORE_PATHS``: the pipeline, the publication code,
 the lockfile) publishes every measure and the combined run. Otherwise the

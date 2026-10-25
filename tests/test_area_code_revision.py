@@ -273,7 +273,7 @@ def test_later_page_docs_and_publication_commits_do_not_block(
     "path",
     [
         "src/uk_budget_data/reforms.py",
-        "src/uk_budget_data/budget_measures.py",
+        "src/uk_budget_data/budget_measures/road_fuel_vat_cut.py",
         "uv.lock",
         "pyproject.toml",
         "data_inputs/regions.csv",
@@ -506,7 +506,7 @@ def test_a_package_whose_code_bound_member_has_no_entry_is_refused(
 
 
 @pytest.mark.parametrize(
-    "path", ["src/uk_budget_data/budget_measures.py", "uv.lock"]
+    "path", ["src/uk_budget_data/budget_measures/road_fuel_vat_cut.py", "uv.lock"]
 )
 def test_a_package_is_refused_when_its_member_s_code_changed(
     documented_state, path
@@ -523,6 +523,34 @@ def test_a_package_is_refused_when_its_member_s_code_changed(
     assert report.written == []
     assert "alpha" in report.refused[PACKAGE]
     assert path in report.refused[PACKAGE]
+
+
+def test_a_package_is_refused_when_its_member_s_receipt_is_not_its_entry_s(
+    documented_state,
+):
+    """Review of 15439f4, finding 5: generation read a member's receipt
+    without checking it against the member's manifest entry, as the area
+    run does. A receipt edited to name a later commit with no calculation
+    change since would be bound there; now it is refused before
+    simulating."""
+    world = documented_state.world
+    entry = documented_state.manifest.measures["alpha"]
+    path = world.data_root / entry.artifact / "receipt.json"
+    original = path.read_bytes()
+    edited = json.loads(original)
+    edited["dashboard"]["git_sha"] = documented_state.attested
+    try:
+        path.write_text(json.dumps(edited))
+        report = generate(
+            world,
+            documented_state.repo,
+            combined=[[DEFINITIONS["alpha"], DEFINITIONS["beta"]]],
+        )
+    finally:
+        path.write_bytes(original)
+    assert report.written == []
+    assert "member alpha" in report.refused[PACKAGE]
+    assert "artifact identity differs" in report.refused[PACKAGE]
 
 
 # --- the allowlist, over generated commits ----------------------------

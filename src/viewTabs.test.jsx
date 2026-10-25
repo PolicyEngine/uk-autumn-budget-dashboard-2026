@@ -97,18 +97,22 @@ describe("the view tabs", () => {
     expect(container.querySelector(".app")).not.toHaveAttribute("data-band");
   });
 
-  it("keep ?tab= in step, with the policies only on the views they drive", async () => {
-    await renderApp();
+  it("keep ?tab= in step, the default selection out of the address and a chosen one on every view", async () => {
+    // Review of 15439f4, finding 2: the default follows the publication,
+    // and a chosen selection survives a view without the policy pill
     const search = () => new URLSearchParams(window.location.search);
-    const expected = {
-      dashboard: [null, true],
-      personal: ["personal", true],
-      living: ["living", false],
-      methodology: ["methodology", false],
-    };
+    const tabParam = { dashboard: null, personal: "personal", living: "living", methodology: "methodology" };
+    const { unmount } = await renderApp();
     VIEWS.forEach((view, index) => {
       fireEvent.click(tabs()[index]);
-      expect([search().get("tab"), search().has("policies")]).toEqual(expected[view.value]);
+      expect([search().get("tab"), search().get("policies")]).toEqual([tabParam[view.value], null]);
+    });
+    unmount();
+    window.history.replaceState({}, "", "/?policies=alpha");
+    await renderApp();
+    VIEWS.forEach((view, index) => {
+      fireEvent.click(tabs()[index]);
+      expect([search().get("tab"), search().get("policies")]).toEqual([tabParam[view.value], "alpha"]);
     });
   });
 
@@ -167,7 +171,8 @@ describe("the view tabs", () => {
     // The year and policy pills drive both sub-tabs
     expect(shown(band(document.body).querySelector(".band-year"))).toBe(true);
     expect(shown(band(document.body).querySelector(".band-policy"))).toBe(true);
-    expect(new URLSearchParams(window.location.search).has("policies")).toBe(true);
+    // The default selection stays out of the address
+    expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
 
     // Another view drops ?sub=; coming back opens All households
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));

@@ -102,7 +102,7 @@ def test_a_registry_new_at_head_publishes_every_measure(tmp_path):
 
 
 # A package-shaped repository: a measure's definition spread over
-# reforms.py, budget_measures.py and measure_templates.py, as on main.
+# reforms.py, a module in budget_measures/ and measure_templates.py, as on main.
 PACKAGE_FILES = {
     "__init__.py": "",
     "measure_templates.py": """
@@ -113,23 +113,34 @@ def apply_payment(sim, amount):
 def apply_rate(sim, rate):
     return sim * rate
 """,
-    "budget_measures.py": """
-from uk_budget_data.measure_templates import apply_payment, apply_rate
+    "budget_measures/__init__.py": "",
+    "budget_measures/warm_home_discount_top_up.py": """
+from uk_budget_data.measure_templates import apply_payment
 
 
 def warm_home_discount_top_up(sim):
     return apply_payment(sim, 100)
+""",
+    "budget_measures/winter_fuel_top_up.py": """
+from uk_budget_data.measure_templates import apply_payment
 
 
 def winter_fuel_top_up(sim):
     return apply_payment(sim, 200)
+""",
+    "budget_measures/electricity_vat.py": """
+from uk_budget_data.measure_templates import apply_rate
 
 
 def electricity_vat(sim):
     return apply_rate(sim, 0.95)
 """,
     "reforms.py": """
-from uk_budget_data import budget_measures
+from uk_budget_data.budget_measures.electricity_vat import electricity_vat
+from uk_budget_data.budget_measures.warm_home_discount_top_up import (
+    warm_home_discount_top_up,
+)
+from uk_budget_data.budget_measures.winter_fuel_top_up import winter_fuel_top_up
 from uk_budget_data.models import Reform
 
 
@@ -138,17 +149,17 @@ def get_autumn_budget_2026_reforms():
         Reform(
             id="warm_home_discount_top_up",
             name="WHD",
-            simulation_modifier=budget_measures.warm_home_discount_top_up,
+            simulation_modifier=warm_home_discount_top_up,
         ),
         Reform(
             id="winter_fuel_top_up",
             name="Winter fuel",
-            simulation_modifier=budget_measures.winter_fuel_top_up,
+            simulation_modifier=winter_fuel_top_up,
         ),
         Reform(
             id="electricity_vat",
             name="Electricity VAT",
-            simulation_modifier=budget_measures.electricity_vat,
+            simulation_modifier=electricity_vat,
         ),
         Reform(
             id="threshold_freeze",
@@ -175,6 +186,7 @@ def _package_repo(tmp_path):
     package = repo / rd.PACKAGE_PATH
     package.mkdir(parents=True)
     for name, text in PACKAGE_FILES.items():
+        (package / name).parent.mkdir(parents=True, exist_ok=True)
         (package / name).write_text(text)
 
     def git(*args):
@@ -201,14 +213,19 @@ def _edit(package, name, old, new):
 
 def test_a_change_only_in_a_modifier_runs_just_its_measure(tmp_path):
     repo, package, git = _package_repo(tmp_path)
-    _edit(package, "budget_measures.py", "sim, 100)", "sim, 150)")
+    _edit(
+        package,
+        "budget_measures/warm_home_discount_top_up.py",
+        "sim, 100)",
+        "sim, 150)",
+    )
     git("commit", "-q", "-am", "WHD top-up to 150")
     result = rd.changed_between("HEAD^", "HEAD", repo)
     assert result["changed"] == ["warm_home_discount_top_up"]
     assert result["core"] == []
     assert result["combined"] is True
     assert result["files"]["warm_home_discount_top_up"] == [
-        "src/uk_budget_data/budget_measures.py",
+        "src/uk_budget_data/budget_measures/warm_home_discount_top_up.py",
         "src/uk_budget_data/measure_templates.py",
         "src/uk_budget_data/reforms.py",
     ]
@@ -249,7 +266,7 @@ def test_core_paths_match_files_and_folders():
         [
             "uv.lock",
             "src/uk_budget_data/publication/generate.py",
-            "src/uk_budget_data/budget_measures.py",
+            "src/uk_budget_data/budget_measures/road_fuel_vat_cut.py",
             "docs/budget-day-runbook.md",
         ]
     ) == ["uv.lock", "src/uk_budget_data/publication/generate.py"]
