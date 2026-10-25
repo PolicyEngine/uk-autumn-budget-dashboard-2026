@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
-import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
+import { DEFAULT_SALARY, DEFAULT_SPENDING } from "../utils/householdDefaults";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -50,7 +50,7 @@ describe("the personal impact form", () => {
     // More details starts closed, with how many questions it holds
     const more = screen.getByRole("button", { name: "More details 11 questions" });
     expect(more).toHaveAttribute("aria-expanded", "false");
-    const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "monthly_rent"];
+    const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "brma", "monthly_rent"];
     expect(fields()).toEqual(essentials);
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "true");
@@ -77,7 +77,7 @@ describe("the personal impact form", () => {
     expect(chosen("Region")).toBe("North West");
     expect(chosen("Partner")).toBe("No");
     expect(chosen("Housing")).toBe("Rent privately");
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
+    expect(box("Rent")).toHaveValue(775);
     expect(chosen("Council tax band")).toBe("D");
     fireEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "false");
@@ -89,12 +89,19 @@ describe("the personal impact form", () => {
     expect(box("Age")).toHaveValue(31);
     choose("Region", "London");
     expect(chosen("Region")).toBe("London");
-    // The rent follows the region until it is changed
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
+    // The rental area and the rent follow the region until changed
+    expect(chosen("Rental area")).toBe("Inner South East London");
+    expect(box("Rent")).toHaveValue(1296);
     fireEvent.click(screen.getByRole("button", { name: "Rent: £25 more" }));
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON + 25 - (REGIONAL_RENT.LONDON % 25));
-    fireEvent.click(screen.getByRole("button", { name: "Use the regional average" }));
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
+    expect(box("Rent")).toHaveValue(1300);
+    fireEvent.click(screen.getByRole("button", { name: "Use the local rate" }));
+    expect(box("Rent")).toHaveValue(1296);
+    // Another area: its own rate; the areas offered are London's only
+    choose("Rental area", "Outer North London");
+    expect(box("Rent")).not.toHaveValue(1296);
+    expect(within(select("Rental area")).getAllByRole("option").length).toBeGreaterThan(5);
+    choose("Region", "Wales");
+    expect(chosen("Rental area")).toBe("Cardiff");
     fireEvent.change(box("Salary in 2026"), { target: { value: "52000" } });
     expect(box("Salary in 2026")).toHaveValue(52000);
     expect(within(select("Region")).getAllByRole("option")).toHaveLength(12);
@@ -104,10 +111,14 @@ describe("the personal impact form", () => {
     render(<HouseholdCalculator />);
     expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
     expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
-    expect(screen.getByText(/average private rent in North West \(ONS, September 2026\)/)).toBeInTheDocument();
+    expect(box("Rent")).toHaveValue(775);
+    expect(
+      screen.getByText(
+        /Local Housing Allowance rate for a one-bedroom home in Central Greater Manchester \(DWP, 2026-27\)/,
+      ),
+    ).toBeInTheDocument();
     // A long note is the box's description, behind an "i" by its label
-    expect(box("Rent")).toHaveAccessibleDescription(/average private rent in North West/);
+    expect(box("Rent")).toHaveAccessibleDescription(/Local Housing Allowance rate/);
     expect(screen.getByRole("button", { name: "About Rent" })).toBeInTheDocument();
     openMore();
     expect(chosen("Student loan plan")).toBe("No loan");

@@ -23,6 +23,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { householdArea, localRent } from "./localRents";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -61,6 +62,7 @@ export const FIELD_LABELS = {
   claims_universal_credit: "Universal Credit",
   tenure: "Housing",
   monthly_rent: "Monthly rent",
+  brma: "Rental area",
   dividend_income: "Dividends",
   savings_interest_income: "Savings interest",
   property_income: "Property income",
@@ -198,8 +200,10 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       region: inputs.region,
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
-      // Left as prefilled (null), the region's average private rent
+      // Left as prefilled (null), the area's Local Housing Allowance rate
       monthly_rent: renting ? monthlyRent(inputs) : 0,
+      // The rental area, when chosen (else the API takes the region's default)
+      ...(renting && inputs.brma ? { brma: householdArea(inputs) } : {}),
       dividend_income: inputs.dividends_per_year,
       savings_interest_income: inputs.savings_interest_per_year,
       private_pension_income: inputs.private_pension_per_year ?? 0,
@@ -231,11 +235,15 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
   };
 }
 
-/** The rent a month: as entered, else the region's average private rent. */
+/**
+ * The rent a month: as entered, else the Local Housing Allowance rate for
+ * the household's area and size (localRents.js), else the region's average
+ * private rent.
+ */
 export const monthlyRent = (inputs) =>
   typeof inputs.monthly_rent === "number" && Number.isFinite(inputs.monthly_rent)
     ? inputs.monthly_rent
-    : regionalRent(inputs.region);
+    : (localRent(inputs, parseChildrenAges(inputs.children_ages).length) ?? regionalRent(inputs.region));
 
 const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 

@@ -80,7 +80,7 @@ export const OTHER_HOUSEHOLD_EXAMPLES = [
       tenure: "RENT_PRIVATELY",
       monthly_rent: null,
     },
-    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents privately at the regional average.",
+    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents a one-bedroom home privately at the Local Housing Allowance rate.",
   },
   {
     id: "driver",

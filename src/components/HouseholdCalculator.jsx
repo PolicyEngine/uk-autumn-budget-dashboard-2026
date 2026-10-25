@@ -13,12 +13,14 @@ import {
   atStatePensionAge,
   buildHouseholdRequest,
   isRenting,
+  monthlyRent,
   parseChildrenAges,
   requestKey,
   statePensionFor,
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
-import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE, regionalRent } from "../utils/householdDefaults";
+import { DEFAULT_SALARY, DEFAULT_SPENDING, SALARY_SOURCE } from "../utils/householdDefaults";
+import { LOCAL_RENT_YEAR, areaLabel, areasIn, homeSize, householdArea } from "../utils/localRents";
 import { NumberField, SelectField } from "./personal/FormControls";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
@@ -31,7 +33,9 @@ export const WIZARD_DEFAULTS = {
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
   tenure: "RENT_PRIVATELY",
-  // null: the region's average private rent (ONS), until changed
+  // null: the region's default rental area (the API's), until chosen
+  brma: null,
+  // null: the area's Local Housing Allowance rate, until changed
   monthly_rent: null,
   // policyengine-uk's repayment depends on the plan and income alone: the
   // balance only caps a year's repayment, and is not asked for
@@ -72,7 +76,16 @@ export const FORM_SECTIONS = [
   {
     title: "Family and home",
     icon: "house",
-    fields: ["has_partner", "partner_age", "partner_salary", "children_count", "children", "tenure", "monthly_rent"],
+    fields: [
+      "has_partner",
+      "partner_age",
+      "partner_salary",
+      "children_count",
+      "children",
+      "tenure",
+      "brma",
+      "monthly_rent",
+    ],
   },
   {
     title: "More details",
@@ -273,6 +286,7 @@ const NUMBER_CONFIGS = {
 // Shown only when they apply
 const FIELD_APPLIES = {
   monthly_rent: (inputs) => isRenting(inputs.tenure),
+  brma: (inputs) => isRenting(inputs.tenure) && areasIn(inputs.region).length > 0,
   partner_age: (inputs) => inputs.has_partner,
   partner_salary: (inputs) => inputs.has_partner,
   children_ages: (inputs, childrenCount) => childrenCount > 0,
@@ -289,7 +303,7 @@ const FIELD_APPLIES = {
 const PREFILLED = {
   state_pension_per_year: (year) => Math.round(statePensionFor(year).full),
   partner_state_pension_per_year: (year) => Math.round(statePensionFor(year).full),
-  monthly_rent: (year, inputs) => regionalRent(inputs.region),
+  monthly_rent: (year, inputs) => monthlyRent({ ...inputs, monthly_rent: null }),
 };
 
 // A short hint goes under its box; a long one behind an "i" by the label
@@ -297,7 +311,6 @@ const PREFILLED = {
 // the "i" so its note never makes its row taller than the others.
 const hintPlace = (hint, place) => place ?? (hint && hint.length > 60 ? "tooltip" : "below");
 
-const regionName = (region) => REGION_OPTIONS.find(([value]) => value === region)?.[1] ?? region;
 
 // The prefilled fields' notes: what the prefill is
 const PREFILL_HINTS = {
@@ -308,9 +321,10 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${
-      inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
-    } 2026); change it if yours differs.`,
+    `Prefilled with the Local Housing Allowance rate for ${homeSize(
+      inputs,
+      parseChildrenAges(inputs.children_ages).length,
+    )} in ${areaLabel(householdArea(inputs))} (DWP, ${fiscalYearTick(LOCAL_RENT_YEAR)}), the 30th percentile of local private rents; change it if yours differs.`,
 };
 
 // The form's last state, kept for the session so switching tabs keeps it
@@ -348,8 +362,9 @@ function HouseholdCalculator({
   const handleInputChange = (id, value) => {
     setPresetId(null);
     // The controls give typed values: numbers from the number boxes,
-    // strings and booleans from the choice boxes
-    setInputs((prev) => ({ ...prev, [id]: value }));
+    // strings and booleans from the choice boxes. A new region starts at
+    // its default rental area.
+    setInputs((prev) => ({ ...prev, [id]: value, ...(id === "region" ? { brma: null } : {}) }));
   };
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
@@ -460,7 +475,19 @@ function HouseholdCalculator({
     if (!fieldApplies(id)) return null;
     if (id === "children") return childAges.map(renderChild);
     let field;
-    if (id === "children_count") {
+    if (id === "brma") {
+      field = (
+        <SelectField
+          id={id}
+          label="Rental area"
+          options={areasIn(inputs.region)}
+          value={householdArea(inputs)}
+          hint="Your Broad Rental Market Area: it sets the Local Housing Allowance your Universal Credit housing costs are capped at, and prefills the rent."
+          hintAs="tooltip"
+          onChange={(value) => handleInputChange(id, value)}
+        />
+      );
+    } else if (id === "children_count") {
       field = (
         <SelectField
           id={id}
@@ -502,7 +529,7 @@ function HouseholdCalculator({
           />
           {PREFILLED[id] && !prefilled && (
             <button type="button" className="text-button" onClick={() => handleInputChange(id, null)}>
-              {id === "monthly_rent" ? "Use the regional average" : "Use the full new State Pension"}
+              {id === "monthly_rent" ? "Use the local rate" : "Use the full new State Pension"}
             </button>
           )}
         </div>

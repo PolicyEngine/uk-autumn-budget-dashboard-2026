@@ -107,7 +107,7 @@ describe("the household calculation, from the fixture", () => {
       employment_income: 34200,
       region: "NORTH_WEST",
       tenure: "RENT_PRIVATELY",
-      monthly_rent: 975,
+      monthly_rent: 775,
       student_loan_plan: "NONE",
       has_partner: false,
       claims_universal_credit: true,

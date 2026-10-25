@@ -1,0 +1,2667 @@
+{
+ "year": 2026,
+ "source": "Local Housing Allowance rates for 2026-27 (DWP, Universal Credit monthly rates), from policyengine-uk",
+ "categories": [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E"
+ ],
+ "region_defaults": {
+  "NORTH_EAST": "TYNESIDE",
+  "NORTH_WEST": "CENTRAL_GREATER_MANCHESTER",
+  "YORKSHIRE": "LEEDS",
+  "EAST_MIDLANDS": "LEICESTER",
+  "WEST_MIDLANDS": "BIRMINGHAM",
+  "EAST_OF_ENGLAND": "CENTRAL_NORFOLK_NORWICH",
+  "LONDON": "INNER_SOUTH_EAST_LONDON",
+  "SOUTH_EAST": "SOUTHAMPTON",
+  "SOUTH_WEST": "BRISTOL",
+  "WALES": "CARDIFF",
+  "SCOTLAND": "LOTHIAN",
+  "NORTHERN_IRELAND": "BELFAST"
+ },
+ "areas": {
+  "ABERDEEN_AND_SHIRE": {
+   "name": "Aberdeen and Shire",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    325.0,
+    475.0,
+    650.0,
+    860.0,
+    1250.0
+   ]
+  },
+  "ARGYLL_AND_BUTE": {
+   "name": "Argyll and Bute",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    350.0,
+    450.0,
+    600.0,
+    695.0,
+    1200.0
+   ]
+  },
+  "ASHFORD": {
+   "name": "Ashford",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    393.24,
+    750.0,
+    850.0,
+    1097.8,
+    1440.0
+   ]
+  },
+  "AYLESBURY": {
+   "name": "Aylesbury",
+   "regions": [
+    "EAST_OF_ENGLAND",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    442.67,
+    800.0,
+    995.0,
+    1330.0,
+    1650.0
+   ]
+  },
+  "AYRSHIRES": {
+   "name": "Ayrshires",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    375.0,
+    375.0,
+    475.0,
+    564.88,
+    800.0
+   ]
+  },
+  "BARNSLEY": {
+   "name": "Barnsley",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    316.33,
+    415.0,
+    450.0,
+    550.0,
+    775.0
+   ]
+  },
+  "BARROW_IN_FURNESS": {
+   "name": "Barrow-in-Furness",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    395.42,
+    475.0,
+    500.0,
+    635.0,
+    807.5
+   ]
+  },
+  "BASINGSTOKE": {
+   "name": "Basingstoke",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    406.33,
+    780.0,
+    950.0,
+    1150.0,
+    1400.0
+   ]
+  },
+  "BATH": {
+   "name": "Bath",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    540.0,
+    815.0,
+    980.0,
+    1200.0,
+    1945.0
+   ]
+  },
+  "BEDFORD": {
+   "name": "Bedford",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    450.0,
+    650.0,
+    825.0,
+    1000.0,
+    1300.0
+   ]
+  },
+  "BELFAST": {
+   "name": "Belfast",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    329.15,
+    605.47,
+    676.86,
+    752.07,
+    954.91
+   ]
+  },
+  "BIRMINGHAM": {
+   "name": "Birmingham",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    341.58,
+    695.0,
+    750.0,
+    825.0,
+    1100.0
+   ]
+  },
+  "BLACKWATER_VALLEY": {
+   "name": "Blackwater Valley",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    477.98,
+    800.0,
+    1000.0,
+    1295.0,
+    1700.0
+   ]
+  },
+  "BLACK_COUNTRY": {
+   "name": "Black Country",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    320.0,
+    495.0,
+    625.0,
+    750.0,
+    925.0
+   ]
+  },
+  "BLAENAU_GWENT": {
+   "name": "Blaenau Gwent",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    325.89,
+    430.0,
+    490.0,
+    650.0
+   ]
+  },
+  "BOLTON_AND_BURY": {
+   "name": "Bolton and Bury",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    341.51,
+    475.0,
+    575.0,
+    700.0,
+    950.0
+   ]
+  },
+  "BOURNEMOUTH": {
+   "name": "Bournemouth",
+   "regions": [
+    "SOUTH_EAST",
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    426.33,
+    695.0,
+    875.0,
+    1150.0,
+    1550.0
+   ]
+  },
+  "BRADFORD_SOUTH_DALES": {
+   "name": "Bradford & South Dales",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    326.33,
+    450.0,
+    525.0,
+    635.0,
+    750.0
+   ]
+  },
+  "BRECON_AND_RADNOR": {
+   "name": "Brecon and Radnor",
+   "regions": [
+    "WALES",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    332.41,
+    340.0,
+    440.0,
+    550.0,
+    650.0
+   ]
+  },
+  "BRIDGEND": {
+   "name": "Bridgend",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    400.0,
+    525.0,
+    575.0,
+    775.0
+   ]
+  },
+  "BRIGHTON_AND_HOVE": {
+   "name": "Brighton and Hove",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    586.61,
+    920.0,
+    1200.0,
+    1450.0,
+    2000.0
+   ]
+  },
+  "BRISTOL": {
+   "name": "Bristol",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    511.33,
+    900.0,
+    1095.0,
+    1300.0,
+    1850.0
+   ]
+  },
+  "BURY_ST_EDMUNDS": {
+   "name": "Bury St Edmunds",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    451.33,
+    630.0,
+    775.0,
+    955.0,
+    1300.0
+   ]
+  },
+  "CAERPHILLY": {
+   "name": "Caerphilly",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    337.41,
+    350.0,
+    495.0,
+    550.0,
+    750.0
+   ]
+  },
+  "CAMBRIDGE": {
+   "name": "Cambridge",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    526.33,
+    900.0,
+    950.0,
+    1125.0,
+    1450.0
+   ]
+  },
+  "CANTERBURY": {
+   "name": "Canterbury",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    425.0,
+    675.0,
+    895.0,
+    1100.0,
+    1315.0
+   ]
+  },
+  "CARDIFF": {
+   "name": "Cardiff",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    366.1,
+    650.0,
+    825.0,
+    925.0,
+    1300.0
+   ]
+  },
+  "CARMARTHENSHIRE": {
+   "name": "Carmarthenshire",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    336.76,
+    400.0,
+    488.84,
+    535.0,
+    650.0
+   ]
+  },
+  "CENTRAL_GREATER_MANCHESTER": {
+   "name": "Central Greater Manchester",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    411.58,
+    775.0,
+    875.0,
+    950.0,
+    1350.0
+   ]
+  },
+  "CENTRAL_LANCS": {
+   "name": "Central Lancs",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    304.17,
+    450.0,
+    575.0,
+    650.0,
+    925.0
+   ]
+  },
+  "CENTRAL_LONDON": {
+   "name": "Central London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    829.83,
+    1439.97,
+    1793.98,
+    2160.02,
+    3060.0
+   ]
+  },
+  "CENTRAL_NORFOLK_NORWICH": {
+   "name": "Central Norfolk & Norwich",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    393.5,
+    590.0,
+    695.0,
+    800.0,
+    1150.0
+   ]
+  },
+  "CEREDIGION": {
+   "name": "Ceredigion",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    304.17,
+    420.0,
+    500.0,
+    550.0,
+    650.0
+   ]
+  },
+  "CHELMSFORD": {
+   "name": "Chelmsford",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    426.33,
+    795.0,
+    950.0,
+    1200.0,
+    1450.0
+   ]
+  },
+  "CHELTENHAM": {
+   "name": "Cheltenham",
+   "regions": [
+    "SOUTH_EAST",
+    "SOUTH_WEST",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    436.5,
+    625.0,
+    800.0,
+    1000.0,
+    1470.0
+   ]
+  },
+  "CHERWELL_VALLEY": {
+   "name": "Cherwell Valley",
+   "regions": [
+    "EAST_MIDLANDS",
+    "SOUTH_EAST",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    466.5,
+    775.0,
+    950.0,
+    1185.0,
+    1450.0
+   ]
+  },
+  "CHESTERFIELD": {
+   "name": "Chesterfield",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    351.33,
+    450.0,
+    525.0,
+    600.0,
+    850.0
+   ]
+  },
+  "CHICHESTER": {
+   "name": "Chichester",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    450.0,
+    788.0,
+    950.0,
+    1225.0,
+    1600.0
+   ]
+  },
+  "CHILTERNS": {
+   "name": "Chilterns",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    525.0,
+    850.0,
+    1100.0,
+    1450.0,
+    2000.0
+   ]
+  },
+  "COLCHESTER": {
+   "name": "Colchester",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    401.33,
+    625.0,
+    795.0,
+    975.0,
+    1250.0
+   ]
+  },
+  "COVENTRY": {
+   "name": "Coventry",
+   "regions": [
+    "EAST_MIDLANDS",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    432.35,
+    575.0,
+    675.0,
+    775.0,
+    1000.0
+   ]
+  },
+  "CRAWLEY_REIGATE": {
+   "name": "Crawley & Reigate",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    476.33,
+    860.0,
+    1100.0,
+    1365.0,
+    1750.0
+   ]
+  },
+  "DARLINGTON": {
+   "name": "Darlington",
+   "regions": [
+    "NORTH_EAST",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    288.96,
+    360.0,
+    450.0,
+    530.0,
+    695.0
+   ]
+  },
+  "DERBY": {
+   "name": "Derby",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    359.83,
+    450.0,
+    595.0,
+    700.0,
+    935.0
+   ]
+  },
+  "DONCASTER": {
+   "name": "Doncaster",
+   "regions": [
+    "EAST_MIDLANDS",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    304.17,
+    425.0,
+    500.0,
+    550.0,
+    725.0
+   ]
+  },
+  "DOVER_SHEPWAY": {
+   "name": "Dover-Shepway",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    431.5,
+    510.0,
+    695.0,
+    865.0,
+    1200.0
+   ]
+  },
+  "DUMFRIES_AND_GALLOWAY": {
+   "name": "Dumfries and Galloway",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    335.0,
+    380.0,
+    450.0,
+    500.0,
+    690.0
+   ]
+  },
+  "DUNDEE_AND_ANGUS": {
+   "name": "Dundee and Angus",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    375.0,
+    400.0,
+    615.0,
+    795.0,
+    1100.0
+   ]
+  },
+  "DURHAM": {
+   "name": "Durham",
+   "regions": [
+    "NORTH_EAST"
+   ],
+   "rates": [
+    393.25,
+    393.25,
+    400.0,
+    475.0,
+    659.87
+   ]
+  },
+  "EASTBOURNE": {
+   "name": "Eastbourne",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    422.5,
+    720.0,
+    900.0,
+    1083.0,
+    1400.0
+   ]
+  },
+  "EASTERN_STAFFORDSHIRE": {
+   "name": "Eastern Staffordshire",
+   "regions": [
+    "EAST_MIDLANDS",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    321.33,
+    495.0,
+    600.0,
+    725.0,
+    985.8
+   ]
+  },
+  "EAST_CHESHIRE": {
+   "name": "East Cheshire",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    421.5,
+    550.0,
+    725.0,
+    995.0,
+    1750.0
+   ]
+  },
+  "EAST_DUNBARTONSHIRE": {
+   "name": "East Dunbartonshire",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    425.0,
+    550.0,
+    750.0,
+    1000.0,
+    1400.0
+   ]
+  },
+  "EAST_LANCS": {
+   "name": "East Lancs",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    291.5,
+    425.0,
+    475.0,
+    595.0,
+    795.0
+   ]
+  },
+  "EAST_THAMES_VALLEY": {
+   "name": "East Thames Valley",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    591.5,
+    900.0,
+    1200.0,
+    1450.0,
+    1900.0
+   ]
+  },
+  "EXETER": {
+   "name": "Exeter",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    537.0,
+    630.0,
+    795.0,
+    950.0,
+    1300.0
+   ]
+  },
+  "FIFE": {
+   "name": "Fife",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    375.0,
+    450.0,
+    590.0,
+    715.0,
+    1250.0
+   ]
+  },
+  "FLINTSHIRE": {
+   "name": "Flintshire",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    380.21,
+    450.0,
+    595.0,
+    695.0,
+    925.0
+   ]
+  },
+  "FORTH_VALLEY": {
+   "name": "Forth Valley",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    415.0,
+    460.0,
+    650.0,
+    800.0,
+    1300.0
+   ]
+  },
+  "FYLDE_COAST": {
+   "name": "Fylde Coast",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    350.88,
+    400.0,
+    542.0,
+    625.0,
+    742.5
+   ]
+  },
+  "GLOUCESTER": {
+   "name": "Gloucester",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    406.33,
+    550.0,
+    725.0,
+    850.0,
+    1200.0
+   ]
+  },
+  "GRANTHAM_NEWARK": {
+   "name": "Grantham & Newark",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    376.33,
+    425.0,
+    575.0,
+    655.0,
+    875.01
+   ]
+  },
+  "GREATER_GLASGOW": {
+   "name": "Greater Glasgow",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    450.0,
+    695.0,
+    850.0,
+    970.0,
+    1800.0
+   ]
+  },
+  "GREATER_LIVERPOOL": {
+   "name": "Greater Liverpool",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    344.36,
+    500.0,
+    595.0,
+    650.0,
+    875.0
+   ]
+  },
+  "GRIMSBY": {
+   "name": "Grimsby",
+   "regions": [
+    "EAST_MIDLANDS",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    317.2,
+    395.0,
+    480.0,
+    521.43,
+    720.0
+   ]
+  },
+  "GUILDFORD": {
+   "name": "Guildford",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    515.0,
+    950.0,
+    1225.0,
+    1480.0,
+    1978.0
+   ]
+  },
+  "HALIFAX": {
+   "name": "Halifax",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    356.31,
+    440.0,
+    525.0,
+    625.0,
+    750.0
+   ]
+  },
+  "HARLOW_STORTFORD": {
+   "name": "Harlow & Stortford",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    451.33,
+    810.0,
+    1025.0,
+    1210.0,
+    1375.0
+   ]
+  },
+  "HARROGATE": {
+   "name": "Harrogate",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    421.33,
+    595.0,
+    735.86,
+    875.0,
+    1275.0
+   ]
+  },
+  "HEREFORDSHIRE": {
+   "name": "Herefordshire",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    351.5,
+    475.0,
+    600.0,
+    750.0,
+    975.0
+   ]
+  },
+  "HIGHLAND_AND_ISLANDS": {
+   "name": "Highland and Islands",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    380.0,
+    475.0,
+    595.0,
+    695.0,
+    850.0
+   ]
+  },
+  "HIGH_WEALD": {
+   "name": "High Weald",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    459.83,
+    800.0,
+    1075.0,
+    1323.0,
+    1825.0
+   ]
+  },
+  "HULL_EAST_RIDING": {
+   "name": "Hull & East Riding",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    335.83,
+    380.0,
+    475.0,
+    550.0,
+    700.0
+   ]
+  },
+  "HUNTINGDON": {
+   "name": "Huntingdon",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    460.0,
+    650.0,
+    795.0,
+    950.0,
+    1250.0
+   ]
+  },
+  "INNER_EAST_LONDON": {
+   "name": "Inner East London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    699.5,
+    1439.97,
+    1750.0,
+    2160.02,
+    3000.0
+   ]
+  },
+  "INNER_NORTH_LONDON": {
+   "name": "Inner North London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    708.27,
+    1439.97,
+    1793.98,
+    2160.02,
+    3060.0
+   ]
+  },
+  "INNER_SOUTH_EAST_LONDON": {
+   "name": "Inner South East London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    650.0,
+    1295.5,
+    1550.0,
+    1950.0,
+    2625.0
+   ]
+  },
+  "INNER_SOUTH_WEST_LONDON": {
+   "name": "Inner South West London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    685.0,
+    1420.0,
+    1700.0,
+    2160.02,
+    2900.0
+   ]
+  },
+  "INNER_WEST_LONDON": {
+   "name": "Inner West London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    760.0,
+    1350.0,
+    1625.0,
+    2050.0,
+    2550.0
+   ]
+  },
+  "IPSWICH": {
+   "name": "Ipswich",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    366.5,
+    595.0,
+    717.0,
+    800.0,
+    1100.0
+   ]
+  },
+  "ISLE_OF_WIGHT": {
+   "name": "Isle of Wight",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    343.27,
+    515.0,
+    650.0,
+    815.0,
+    995.0
+   ]
+  },
+  "KENDAL": {
+   "name": "Kendal",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    325.89,
+    575.0,
+    650.0,
+    775.0,
+    995.0
+   ]
+  },
+  "KERNOW_WEST": {
+   "name": "Kernow West",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    392.5,
+    550.0,
+    695.0,
+    815.0,
+    1100.0
+   ]
+  },
+  "KINGS_LYNN": {
+   "name": "Kings Lynn",
+   "regions": [
+    "EAST_MIDLANDS",
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    399.83,
+    548.23,
+    650.0,
+    775.0,
+    1050.0
+   ]
+  },
+  "KIRKLEES": {
+   "name": "Kirklees",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    316.33,
+    450.0,
+    525.0,
+    650.0,
+    825.0
+   ]
+  },
+  "LANCASTER": {
+   "name": "Lancaster",
+   "regions": [
+    "NORTH_WEST",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    394.33,
+    475.0,
+    575.0,
+    650.0,
+    725.0
+   ]
+  },
+  "LEEDS": {
+   "name": "Leeds",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    347.62,
+    675.0,
+    775.0,
+    850.0,
+    1200.0
+   ]
+  },
+  "LEICESTER": {
+   "name": "Leicester",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    395.42,
+    540.0,
+    650.0,
+    775.0,
+    1050.0
+   ]
+  },
+  "LINCOLN": {
+   "name": "Lincoln",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    354.14,
+    495.0,
+    600.0,
+    675.0,
+    925.0
+   ]
+  },
+  "LINCOLNSHIRE_FENS": {
+   "name": "Lincolnshire Fens",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    368.33,
+    500.0,
+    625.0,
+    735.0,
+    865.03
+   ]
+  },
+  "LOTHIAN": {
+   "name": "Lothian",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    475.0,
+    750.0,
+    970.0,
+    1375.0,
+    2180.0
+   ]
+  },
+  "LOUGH_NEAGH_LOWER": {
+   "name": "Lough Neagh Lower",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    362.78,
+    422.97,
+    526.43,
+    596.64,
+    652.87
+   ]
+  },
+  "LOUGH_NEAGH_UPPER": {
+   "name": "Lough Neagh Upper",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    308.86,
+    421.1,
+    515.17,
+    581.22,
+    615.37
+   ]
+  },
+  "LOWESTOFT_GREAT_YARMOUTH": {
+   "name": "Lowestoft & Great Yarmouth",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    376.33,
+    441.07,
+    575.0,
+    630.0,
+    825.0
+   ]
+  },
+  "LUTON": {
+   "name": "Luton",
+   "regions": [
+    "EAST_OF_ENGLAND",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    436.17,
+    700.0,
+    875.0,
+    1100.0,
+    1350.0
+   ]
+  },
+  "MAIDSTONE": {
+   "name": "Maidstone",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    444.83,
+    750.0,
+    905.0,
+    1200.0,
+    1550.0
+   ]
+  },
+  "MEDWAY_SWALE": {
+   "name": "Medway & Swale",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    410.0,
+    675.0,
+    850.0,
+    940.0,
+    1300.0
+   ]
+  },
+  "MENDIP": {
+   "name": "Mendip",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    405.0,
+    600.0,
+    775.0,
+    975.0,
+    1350.0
+   ]
+  },
+  "MERTHYR_CYNON": {
+   "name": "Merthyr Cynon",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    434.52,
+    500.0,
+    550.0,
+    725.0
+   ]
+  },
+  "MID_EAST_DEVON": {
+   "name": "Mid & East Devon",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    404.11,
+    530.0,
+    685.0,
+    825.0,
+    1100.0
+   ]
+  },
+  "MID_STAFFS": {
+   "name": "Mid Staffs",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    352.4,
+    500.0,
+    625.0,
+    740.0,
+    995.0
+   ]
+  },
+  "MID_WEST_DORSET": {
+   "name": "Mid & West Dorset",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    426.33,
+    595.0,
+    750.0,
+    900.0,
+    1250.0
+   ]
+  },
+  "MILTON_KEYNES": {
+   "name": "Milton Keynes",
+   "regions": [
+    "EAST_MIDLANDS",
+    "EAST_OF_ENGLAND",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    501.33,
+    775.0,
+    925.0,
+    1195.0,
+    1495.0
+   ]
+  },
+  "MONMOUTHSHIRE": {
+   "name": "Monmouthshire",
+   "regions": [
+    "SOUTH_WEST",
+    "WALES"
+   ],
+   "rates": [
+    337.41,
+    533.16,
+    700.0,
+    795.0,
+    1100.0
+   ]
+  },
+  "NEATH_PORT_TALBOT": {
+   "name": "Neath Port Talbot",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    375.0,
+    411.67,
+    450.0,
+    500.0,
+    575.0
+   ]
+  },
+  "NEWBURY": {
+   "name": "Newbury",
+   "regions": [
+    "SOUTH_EAST",
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    451.33,
+    750.0,
+    895.0,
+    1200.0,
+    1605.0
+   ]
+  },
+  "NEWPORT": {
+   "name": "Newport",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    337.41,
+    440.0,
+    600.0,
+    650.0,
+    880.0
+   ]
+  },
+  "NORTHAMPTON": {
+   "name": "Northampton",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    410.62,
+    645.0,
+    750.0,
+    900.0,
+    1160.0
+   ]
+  },
+  "NORTHANTS_CENTRAL": {
+   "name": "Northants Central",
+   "regions": [
+    "EAST_MIDLANDS",
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    375.86,
+    550.0,
+    695.0,
+    795.0,
+    995.0
+   ]
+  },
+  "NORTHUMBERLAND": {
+   "name": "Northumberland",
+   "regions": [
+    "NORTH_EAST"
+   ],
+   "rates": [
+    356.33,
+    375.0,
+    425.0,
+    530.0,
+    760.0
+   ]
+  },
+  "NORTH_CHESHIRE": {
+   "name": "North Cheshire",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    341.5,
+    475.0,
+    590.0,
+    695.0,
+    1000.0
+   ]
+  },
+  "NORTH_CLWYD": {
+   "name": "North Clwyd",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    342.41,
+    395.0,
+    550.0,
+    650.0,
+    855.0
+   ]
+  },
+  "NORTH_CORNWALL_DEVON_BORDERS": {
+   "name": "North Cornwall & Devon Borders",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    368.33,
+    475.0,
+    609.0,
+    725.0,
+    950.0
+   ]
+  },
+  "NORTH_CUMBRIA": {
+   "name": "North Cumbria",
+   "regions": [
+    "NORTH_EAST",
+    "NORTH_WEST"
+   ],
+   "rates": [
+    319.83,
+    395.0,
+    475.0,
+    590.0,
+    740.0
+   ]
+  },
+  "NORTH_DEVON": {
+   "name": "North Devon",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    425.0,
+    485.0,
+    645.0,
+    775.0,
+    995.0
+   ]
+  },
+  "NORTH_LANARKSHIRE": {
+   "name": "North Lanarkshire",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    375.0,
+    440.0,
+    550.0,
+    675.0,
+    895.0
+   ]
+  },
+  "NORTH_NI": {
+   "name": "North (NI)",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    322.5,
+    520.52,
+    535.85,
+    580.0,
+    641.44
+   ]
+  },
+  "NORTH_NOTTINGHAM": {
+   "name": "North Nottingham",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    338.93,
+    445.0,
+    550.0,
+    585.0,
+    810.0
+   ]
+  },
+  "NORTH_POWYS": {
+   "name": "North Powys",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    293.3,
+    325.0,
+    400.0,
+    550.0,
+    675.0
+   ]
+  },
+  "NORTH_WEST_KENT": {
+   "name": "North West Kent",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    451.33,
+    750.0,
+    995.0,
+    1200.0,
+    1450.0
+   ]
+  },
+  "NORTH_WEST_LONDON": {
+   "name": "North West London",
+   "regions": [
+    "EAST_OF_ENGLAND",
+    "LONDON"
+   ],
+   "rates": [
+    621.33,
+    1100.0,
+    1350.0,
+    1680.0,
+    2100.0
+   ]
+  },
+  "NORTH_WEST_NI": {
+   "name": "North West (NI)",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    383.29,
+    431.18,
+    513.61,
+    579.39,
+    667.86
+   ]
+  },
+  "NORTH_WEST_WALES": {
+   "name": "North West Wales",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    342.41,
+    391.07,
+    550.0,
+    625.0,
+    750.0
+   ]
+  },
+  "NOTTINGHAM": {
+   "name": "Nottingham",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    380.0,
+    550.0,
+    650.0,
+    750.0,
+    970.0
+   ]
+  },
+  "OLDHAM_ROCHDALE": {
+   "name": "Oldham & Rochdale",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    344.83,
+    475.0,
+    577.5,
+    695.0,
+    950.0
+   ]
+  },
+  "OUTER_EAST_LONDON": {
+   "name": "Outer East London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    561.33,
+    1200.0,
+    1400.0,
+    1675.0,
+    1950.0
+   ]
+  },
+  "OUTER_NORTH_EAST_LONDON": {
+   "name": "Outer North East London",
+   "regions": [
+    "EAST_OF_ENGLAND",
+    "LONDON"
+   ],
+   "rates": [
+    549.83,
+    1000.0,
+    1250.0,
+    1500.0,
+    1800.0
+   ]
+  },
+  "OUTER_NORTH_LONDON": {
+   "name": "Outer North London",
+   "regions": [
+    "EAST_OF_ENGLAND",
+    "LONDON"
+   ],
+   "rates": [
+    595.0,
+    1150.0,
+    1400.0,
+    1695.0,
+    2200.0
+   ]
+  },
+  "OUTER_SOUTH_EAST_LONDON": {
+   "name": "Outer South East London",
+   "regions": [
+    "LONDON",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    600.0,
+    1050.0,
+    1300.0,
+    1550.0,
+    1800.0
+   ]
+  },
+  "OUTER_SOUTH_LONDON": {
+   "name": "Outer South London",
+   "regions": [
+    "LONDON",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    569.33,
+    950.0,
+    1200.0,
+    1500.0,
+    1950.0
+   ]
+  },
+  "OUTER_SOUTH_WEST_LONDON": {
+   "name": "Outer South West London",
+   "regions": [
+    "LONDON",
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    591.5,
+    1200.0,
+    1495.0,
+    1800.0,
+    2550.0
+   ]
+  },
+  "OUTER_WEST_LONDON": {
+   "name": "Outer West London",
+   "regions": [
+    "LONDON"
+   ],
+   "rates": [
+    576.33,
+    1000.0,
+    1300.0,
+    1475.0,
+    1800.0
+   ]
+  },
+  "OXFORD": {
+   "name": "Oxford",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    550.0,
+    900.0,
+    1125.0,
+    1325.0,
+    1750.0
+   ]
+  },
+  "PEAKS_DALES": {
+   "name": "Peaks & Dales",
+   "regions": [
+    "EAST_MIDLANDS",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    347.62,
+    475.0,
+    595.0,
+    695.0,
+    900.0
+   ]
+  },
+  "PEMBROKESHIRE": {
+   "name": "Pembrokeshire",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    297.41,
+    360.0,
+    460.0,
+    575.0,
+    700.0
+   ]
+  },
+  "PERTH_AND_KINROSS": {
+   "name": "Perth and Kinross",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    359.17,
+    425.0,
+    560.0,
+    750.0,
+    1250.0
+   ]
+  },
+  "PETERBOROUGH": {
+   "name": "Peterborough",
+   "regions": [
+    "EAST_MIDLANDS",
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    344.83,
+    575.0,
+    700.0,
+    810.0,
+    1050.0
+   ]
+  },
+  "PLYMOUTH": {
+   "name": "Plymouth",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    400.0,
+    550.0,
+    675.0,
+    800.0,
+    975.0
+   ]
+  },
+  "PORTSMOUTH": {
+   "name": "Portsmouth",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    422.83,
+    695.0,
+    845.0,
+    1000.0,
+    1300.0
+   ]
+  },
+  "READING": {
+   "name": "Reading",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    391.5,
+    850.0,
+    1095.0,
+    1300.0,
+    1654.0
+   ]
+  },
+  "RENFREWSHIRE_AND_INVERCLYDE": {
+   "name": "Renfrewshire and Inverclyde",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    360.0,
+    400.0,
+    525.0,
+    600.0,
+    1100.0
+   ]
+  },
+  "RICHMOND_HAMBLETON": {
+   "name": "Richmond & Hambleton",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    417.67,
+    450.0,
+    550.0,
+    650.0,
+    830.0
+   ]
+  },
+  "ROTHERHAM": {
+   "name": "Rotherham",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    351.33,
+    430.0,
+    500.0,
+    550.0,
+    817.5
+   ]
+  },
+  "RUGBY_EAST": {
+   "name": "Rugby & East",
+   "regions": [
+    "EAST_MIDLANDS",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    425.0,
+    595.0,
+    725.0,
+    850.0,
+    1200.0
+   ]
+  },
+  "SALISBURY": {
+   "name": "Salisbury",
+   "regions": [
+    "SOUTH_EAST",
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    426.33,
+    650.0,
+    780.0,
+    915.0,
+    1250.0
+   ]
+  },
+  "SCARBOROUGH": {
+   "name": "Scarborough",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    309.83,
+    425.0,
+    550.0,
+    650.0,
+    725.0
+   ]
+  },
+  "SCOTTISH_BORDERS": {
+   "name": "Scottish Borders",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    325.0,
+    375.0,
+    500.0,
+    615.0,
+    985.0
+   ]
+  },
+  "SCUNTHORPE": {
+   "name": "Scunthorpe",
+   "regions": [
+    "EAST_MIDLANDS",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    310.68,
+    410.0,
+    495.0,
+    575.0,
+    725.0
+   ]
+  },
+  "SHEFFIELD": {
+   "name": "Sheffield",
+   "regions": [
+    "EAST_MIDLANDS",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    350.0,
+    575.0,
+    620.0,
+    680.0,
+    950.0
+   ]
+  },
+  "SHROPSHIRE": {
+   "name": "Shropshire",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    369.35,
+    475.0,
+    595.0,
+    725.0,
+    975.0
+   ]
+  },
+  "SOLIHULL": {
+   "name": "Solihull",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    412.5,
+    700.0,
+    825.0,
+    1000.0,
+    1375.0
+   ]
+  },
+  "SOUTHAMPTON": {
+   "name": "Southampton",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    425.0,
+    700.0,
+    875.0,
+    1075.0,
+    1450.0
+   ]
+  },
+  "SOUTHEND": {
+   "name": "Southend",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    406.33,
+    680.0,
+    875.0,
+    1100.0,
+    1350.0
+   ]
+  },
+  "SOUTHERN_GREATER_MANCHESTER": {
+   "name": "Southern Greater Manchester",
+   "regions": [
+    "EAST_MIDLANDS",
+    "NORTH_WEST"
+   ],
+   "rates": [
+    411.58,
+    625.0,
+    750.0,
+    900.0,
+    1400.0
+   ]
+  },
+  "SOUTHPORT": {
+   "name": "Southport",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    369.35,
+    475.0,
+    600.0,
+    775.0,
+    925.0
+   ]
+  },
+  "SOUTH_CHESHIRE": {
+   "name": "South Cheshire",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    325.0,
+    475.0,
+    575.0,
+    680.0,
+    995.0
+   ]
+  },
+  "SOUTH_DEVON": {
+   "name": "South Devon",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    367.17,
+    505.0,
+    675.0,
+    840.0,
+    1100.0
+   ]
+  },
+  "SOUTH_EAST_HERTS": {
+   "name": "South East Herts",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    475.0,
+    835.0,
+    1050.0,
+    1370.0,
+    1700.0
+   ]
+  },
+  "SOUTH_EAST_NI": {
+   "name": "South East (NI)",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    346.32,
+    476.33,
+    626.71,
+    706.01,
+    865.22
+   ]
+  },
+  "SOUTH_GWYNEDD": {
+   "name": "South Gwynedd",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    342.41,
+    350.0,
+    434.52,
+    543.15,
+    675.0
+   ]
+  },
+  "SOUTH_LANARKSHIRE": {
+   "name": "South Lanarkshire",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    375.0,
+    450.0,
+    575.0,
+    715.84,
+    1107.0
+   ]
+  },
+  "SOUTH_NI": {
+   "name": "South (NI)",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    284.57,
+    478.32,
+    541.46,
+    601.64,
+    716.14
+   ]
+  },
+  "SOUTH_WEST_ESSEX": {
+   "name": "South West Essex",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    476.33,
+    775.0,
+    950.0,
+    1200.0,
+    1500.0
+   ]
+  },
+  "SOUTH_WEST_HERTS": {
+   "name": "South West Herts",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    501.33,
+    950.0,
+    1250.0,
+    1500.0,
+    2000.0
+   ]
+  },
+  "SOUTH_WEST_NI": {
+   "name": "South West (NI)",
+   "regions": [
+    "NORTHERN_IRELAND"
+   ],
+   "rates": [
+    309.73,
+    385.34,
+    456.95,
+    492.92,
+    579.09
+   ]
+  },
+  "STAFFORDSHIRE_NORTH": {
+   "name": "Staffordshire North",
+   "regions": [
+    "NORTH_WEST",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    301.33,
+    425.0,
+    480.0,
+    595.0,
+    800.0
+   ]
+  },
+  "STEVENAGE_NORTH_HERTS": {
+   "name": "Stevenage & North Herts",
+   "regions": [
+    "EAST_OF_ENGLAND"
+   ],
+   "rates": [
+    436.17,
+    775.0,
+    975.0,
+    1250.0,
+    1600.0
+   ]
+  },
+  "ST_HELENS": {
+   "name": "St Helens",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    324.75,
+    425.0,
+    525.0,
+    625.0,
+    800.0
+   ]
+  },
+  "SUNDERLAND": {
+   "name": "Sunderland",
+   "regions": [
+    "NORTH_EAST"
+   ],
+   "rates": [
+    321.33,
+    425.0,
+    475.0,
+    550.0,
+    700.0
+   ]
+  },
+  "SUSSEX_EAST": {
+   "name": "Sussex East",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    361.0,
+    595.0,
+    750.0,
+    950.0,
+    1150.0
+   ]
+  },
+  "SWANSEA": {
+   "name": "Swansea",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    375.0,
+    525.0,
+    550.0,
+    600.0,
+    820.0
+   ]
+  },
+  "SWINDON": {
+   "name": "Swindon",
+   "regions": [
+    "SOUTH_EAST",
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    451.33,
+    675.0,
+    785.0,
+    950.0,
+    1300.0
+   ]
+  },
+  "TAFF_RHONDDA": {
+   "name": "Taff Rhondda",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    375.0,
+    450.0,
+    495.0,
+    650.0
+   ]
+  },
+  "TAMESIDE_GLOSSOP": {
+   "name": "Tameside & Glossop",
+   "regions": [
+    "EAST_MIDLANDS",
+    "NORTH_WEST"
+   ],
+   "rates": [
+    321.08,
+    525.0,
+    600.0,
+    750.0,
+    1150.0
+   ]
+  },
+  "TAUNTON_WEST_SOMERSET": {
+   "name": "Taunton & West Somerset",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    404.11,
+    575.0,
+    725.0,
+    850.0,
+    1000.0
+   ]
+  },
+  "TEESSIDE": {
+   "name": "Teesside",
+   "regions": [
+    "NORTH_EAST",
+    "YORKSHIRE"
+   ],
+   "rates": [
+    288.96,
+    410.0,
+    475.0,
+    550.0,
+    750.0
+   ]
+  },
+  "THANET": {
+   "name": "Thanet",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    380.0,
+    577.84,
+    750.0,
+    900.0,
+    1150.0
+   ]
+  },
+  "TORFAEN": {
+   "name": "Torfaen",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    500.0,
+    564.88,
+    650.0,
+    750.0
+   ]
+  },
+  "TYNESIDE": {
+   "name": "Tyneside",
+   "regions": [
+    "NORTH_EAST"
+   ],
+   "rates": [
+    381.33,
+    490.0,
+    550.0,
+    650.0,
+    925.0
+   ]
+  },
+  "VALE_OF_GLAMORGAN": {
+   "name": "Vale of Glamorgan",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    300.0,
+    525.77,
+    666.0,
+    725.0,
+    1025.0
+   ]
+  },
+  "WAKEFIELD": {
+   "name": "Wakefield",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    326.98,
+    500.0,
+    595.0,
+    725.0,
+    885.0
+   ]
+  },
+  "WALTON": {
+   "name": "Walton",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    620.0,
+    950.0,
+    1212.0,
+    1450.0,
+    1975.0
+   ]
+  },
+  "WARWICKSHIRE_SOUTH": {
+   "name": "Warwickshire South",
+   "regions": [
+    "SOUTH_WEST",
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    412.5,
+    700.0,
+    850.0,
+    1045.0,
+    1350.0
+   ]
+  },
+  "WESTON_S_MARE": {
+   "name": "Weston-S-Mare",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    451.33,
+    580.0,
+    750.0,
+    925.0,
+    1250.0
+   ]
+  },
+  "WEST_CHESHIRE": {
+   "name": "West Cheshire",
+   "regions": [
+    "NORTH_WEST",
+    "WALES"
+   ],
+   "rates": [
+    375.86,
+    550.0,
+    675.0,
+    795.0,
+    1224.0
+   ]
+  },
+  "WEST_CUMBRIA": {
+   "name": "West Cumbria",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    319.83,
+    385.0,
+    475.0,
+    550.0,
+    700.0
+   ]
+  },
+  "WEST_DUNBARTONSHIRE": {
+   "name": "West Dunbartonshire",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    350.0,
+    475.0,
+    595.0,
+    675.0,
+    950.0
+   ]
+  },
+  "WEST_LOTHIAN": {
+   "name": "West Lothian",
+   "regions": [
+    "SCOTLAND"
+   ],
+   "rates": [
+    410.0,
+    500.0,
+    625.0,
+    750.0,
+    1112.5
+   ]
+  },
+  "WEST_PENNINE": {
+   "name": "West Pennine",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    310.68,
+    400.0,
+    450.0,
+    505.0,
+    762.5
+   ]
+  },
+  "WEST_WILTSHIRE": {
+   "name": "West Wiltshire",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    450.0,
+    595.0,
+    725.0,
+    900.0,
+    1200.0
+   ]
+  },
+  "WIGAN": {
+   "name": "Wigan",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    339.83,
+    400.0,
+    500.0,
+    595.0,
+    775.0
+   ]
+  },
+  "WINCHESTER": {
+   "name": "Winchester",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    525.0,
+    825.0,
+    1050.0,
+    1275.0,
+    1700.0
+   ]
+  },
+  "WIRRAL": {
+   "name": "Wirral",
+   "regions": [
+    "NORTH_WEST"
+   ],
+   "rates": [
+    318.71,
+    425.0,
+    525.0,
+    650.0,
+    825.0
+   ]
+  },
+  "WOLDS_AND_COAST": {
+   "name": "Wolds and Coast",
+   "regions": [
+    "EAST_MIDLANDS"
+   ],
+   "rates": [
+    344.36,
+    400.0,
+    495.0,
+    600.0,
+    675.0
+   ]
+  },
+  "WORCESTER_NORTH": {
+   "name": "Worcester North",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    329.83,
+    515.0,
+    650.0,
+    750.0,
+    995.0
+   ]
+  },
+  "WORCESTER_SOUTH": {
+   "name": "Worcester South",
+   "regions": [
+    "WEST_MIDLANDS"
+   ],
+   "rates": [
+    382.58,
+    569.0,
+    700.0,
+    825.0,
+    1150.0
+   ]
+  },
+  "WORTHING": {
+   "name": "Worthing",
+   "regions": [
+    "SOUTH_EAST"
+   ],
+   "rates": [
+    445.0,
+    760.0,
+    950.0,
+    1180.0,
+    1465.0
+   ]
+  },
+  "WREXHAM": {
+   "name": "Wrexham",
+   "regions": [
+    "WALES"
+   ],
+   "rates": [
+    391.31,
+    475.0,
+    525.0,
+    600.0,
+    750.0
+   ]
+  },
+  "YEOVIL": {
+   "name": "Yeovil",
+   "regions": [
+    "SOUTH_WEST"
+   ],
+   "rates": [
+    435.0,
+    525.0,
+    695.0,
+    850.0,
+    1250.0
+   ]
+  },
+  "YORK": {
+   "name": "York",
+   "regions": [
+    "YORKSHIRE"
+   ],
+   "rates": [
+    417.67,
+    675.0,
+    775.0,
+    825.0,
+    1200.0
+   ]
+  }
+ }
+}
