@@ -1,0 +1,93 @@
+drill,measure_id,name,year,status,status_note,marks,moves,drill_rerun_bn,drill_published_bn,drill_published_bn_raw,drill_obr_m,drill_obr_m_raw,now_static_bn,now_static_bn_raw,now_obr_m,now_obr_m_raw,now_param_m,now_param_m_raw
+1,bus_fare_cap,Bus fare cap,2027-28,ok,,,,,-0.26,-0.26,0.0,+0,-0.3,-0.30,0.0,+0,-5.0,-5
+1,bus_fare_cap,Bus fare cap,2030-31,ok,,,static size,,-0.28,-0.28,0.0,+0,-0.36,-0.36,0.0,+0,-8.0,-8
+1,cgt_equalisation,CGT equalisation,2026-27,ok,,,static size,,4.11,+4.11,0.0,+0,19.01,+19.01,0.0,+0,15.0,+15
+1,cgt_equalisation,CGT equalisation,2030-31,ok,,,static size,,4.79,+4.79,0.0,+0,22.25,+22.25,0.0,+0,19.0,+19
+1,dividend_tax_increase_2pp,Dividend tax up 2 points,2026-27,ok,,,OBR effect size,,0.94,+0.94,32.0,+32,1.03,+1.03,20.0,+20,20.0,+20
+1,dividend_tax_increase_2pp,Dividend tax up 2 points,2030-31,ok,,,OBR effect size,,1.07,+1.07,55.0,+55,1.17,+1.17,30.0,+30,26.0,+26
+1,fuel_duty_freeze,Fuel duty freeze (Budget 2025),2026-27,ok,,not_reproduced,static size,-2.04,-3.52,-3.52 ‡ (rerun -2.04),0.0,+0,-1.0,-1.00,0.0,+0,-18.0,-18
+1,fuel_duty_freeze,Fuel duty freeze (Budget 2025),2030-31,ok,,not_reproduced,static size,-0.33,-0.72,-0.72 ‡ (rerun -0.33),0.0,+0,-0.19,-0.19,0.0,+0,-3.0,-3
+1,fuel_duty_rise_cancellation,Fuel duty rise cancelled (Budget 2025),2027-28,ok,,not_comparable nr,,,-2.04,-2.04,0.0,+0,,n/r ¶,,n/r ¶,,n/r ¶
+1,fuel_duty_rise_cancellation,Fuel duty rise cancelled (Budget 2025),2030-31,ok,,not_comparable nr,,,-1.94,-1.94,0.0,+0,,n/r ¶,,n/r ¶,,n/r ¶
+1,mock_child_benefit_increase,Child Benefit increase,2027-28,ok,,,static size,,-1.21,-1.21,-99.0,-99,-1.03,-1.03,-123.0,-123,-99.0,-99
+1,mock_child_benefit_increase,Child Benefit increase,2030-31,ok,,,"static size, OBR effect size",,-1.27,-1.27,-135.0,-135,-1.08,-1.08,-184.0,-184,-158.0,-158
+1,mock_energy_vat_zero_rate,VAT zero rate on household energy,2027-28,ok,,param_blind,,,-1.88,-1.88,0.0,+0,-1.71,-1.71,0.0,+0,-27.0,-27 †
+1,mock_energy_vat_zero_rate,VAT zero rate on household energy,2028-29,ok,,param_blind,static size,,-0.64,-0.64,0.0,+0,-0.57,-0.57,0.0,+0,-9.0,-9 †
+1,mock_fuel_duty_freeze,Fuel duty freeze,2027-28,ok,,not_comparable nr,,,-1.72,-1.72,0.0,+0,,n/r ¶,,n/r ¶,,n/r ¶
+1,mock_fuel_duty_freeze,Fuel duty freeze,2030-31,ok,,not_comparable nr,,,-2.1,-2.10,0.0,+0,,n/r ¶,,n/r ¶,,n/r ¶
+1,mock_hvcts_extension,Council tax surcharge from £1.5m,2028-29,ok,,,,,0.27,+0.27,0.0,+0,0.24,+0.24,0.0,+0,6.0,+6
+1,mock_hvcts_extension,Council tax surcharge from £1.5m,2030-31,ok,,,,,0.28,+0.28,0.0,+0,0.25,+0.25,0.0,+0,6.0,+6
+1,mock_nics_threshold_rise,National Insurance threshold rise,2027-28,ok,,,static size,,-0.79,-0.79,-13.0,-13,-0.95,-0.95,-10.0,-10,-11.0,-11
+1,mock_nics_threshold_rise,National Insurance threshold rise,2030-31,ok,,,OBR effect size,,-1.02,-1.02,-9.0,-9,-0.97,-0.97,-2.0,-2,-4.0,-4
+1,property_tax_increase_2pp,Property income tax up 2 points,2027-28,ok,,,static size,,0.88,+0.88,9.0,+9,0.4,+0.40,5.0,+5,4.0,+4
+1,property_tax_increase_2pp,Property income tax up 2 points,2030-31,ok,,,"static size, OBR effect size",,1.01,+1.01,11.0,+11,0.45,+0.45,3.0,+3,6.0,+6
+1,rail_fares_freeze,Rail fares freeze,2026-27,ok,,,,,-0.15,-0.15,0.0,+0,-0.15,-0.15,0.0,+0,-3.0,-3
+1,rail_fares_freeze,Rail fares freeze,2030-31,ok,,,,,-0.15,-0.15,0.0,+0,-0.15,-0.15,0.0,+0,-4.0,-4
+1,salary_sacrifice_cap,Salary sacrifice cap,2029-30,ok,,not_reproduced nr,static size,1.2,2.78,+2.78 ‡ (rerun +1.20),,n/r,1.56,+1.56,107.0,+107,148.0,+148
+1,salary_sacrifice_cap,Salary sacrifice cap,2030-31,ok,,not_reproduced,"static size, OBR effect size",1.14,2.91,+2.91 ‡ (rerun +1.14),203.0,+203,1.61,+1.61,119.0,+119,152.0,+152
+1,savings_tax_increase_2pp,Savings income tax up 2 points,2027-28,ok,,,"static size, OBR effect size",,0.79,+0.79,-15.0,-15,0.28,+0.28,-1.0,-1,-3.0,-3
+1,savings_tax_increase_2pp,Savings income tax up 2 points,2030-31,ok,,,"static size, OBR effect size",,0.93,+0.93,1.0,+1,0.33,+0.33,36.0,+36,-2.0,-2
+1,threshold_freeze_extension,Threshold freeze extended,2028-29,ok,,,OBR effect sign,,3.73,+3.73,-191.0,-191,3.61,+3.61,32.0,+32,-53.0,-53
+1,threshold_freeze_extension,Threshold freeze extended,2030-31,ok,,,OBR effect size,,12.12,+12.12,-243.0,-243,11.96,+11.96,-415.0,-415,-583.0,-583
+1,two_child_limit,Two-child limit removed,2026-27,ok,,not_reproduced,"static size, OBR effect size",-2.83,-2.95,-2.95 ‡ (rerun -2.83),-170.0,-170,-2.27,-2.27,-125.0,-125,-105.0,-105
+1,two_child_limit,Two-child limit removed,2030-31,ok,,not_reproduced nr,,-3.52,-3.72,-3.72 ‡ (rerun -3.52),,n/r,-3.66,-3.66,-238.0,-238,-186.0,-186
+1,autumn_budget_2025_combined,Autumn Budget 2025 package,–,not_rerun,"not rerun: its modifier edits `gov_tax.adds`, which 2.153.0 and 2.90.2 no longer define",,,,,,,,,,,,,
+1,freeze_student_loan_thresholds,Student loan thresholds frozen,–,not_rerun,"not rerun: its modifier edits `gov_tax.adds`, which 2.153.0 and 2.90.2 no longer define",,,,,,,,,,,,,
+2,mock2_cgt_rates,Capital Gains Tax rate rise,2027-28,ok,,,,,4.42,+4.42,0.0,+0,4.38,+4.38,0.0,+0,7.0,+7
+2,mock2_cgt_rates,Capital Gains Tax rate rise,2030-31,ok,,,,,4.96,+4.96,0.0,+0,4.91,+4.91,0.0,+0,15.0,+15
+2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2027-28,ok,,param_blind,,,-0.94,-0.94,0.0,+0,-1.04,-1.04,0.0,+0,-16.0,-16 †
+2,mock2_electricity_vat_zero,No VAT on household electricity to March 2028,2028-29,ok,,param_blind,,,-0.31,-0.31,0.0,+0,-0.35,-0.35,0.0,+0,-6.0,-6 †
+2,mock2_employer_ni_threshold,Employer National Insurance threshold rise,2027-28,ok,,,OBR effect size,,-1.32,-1.32,-43.0,-43,-1.26,-1.26,-85.0,-85,-56.0,-56
+2,mock2_employer_ni_threshold,Employer National Insurance threshold rise,2030-31,ok,,not_reproduced,OBR effect size,,-1.31,-1.31 ‡,-17.0,-17,-1.26,-1.26,-113.0,-113,-94.0,-94
+2,mock2_energy_price_payment,Energy Price Protection Payment,2026-27,ok,,,OBR effect size,,-1.06,-1.06,-25.0,-25,-1.02,-1.02,-37.0,-37,-27.0,-27
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,2027-28,ok,,param_blind,,,-1.38,-1.38,0.0,+0,-1.5,-1.50,0.0,+0,-27.0,-27 †
+2,mock2_fuel_duty_hold,Fuel duty held until September 2027,2030-31,ok,,param_blind,static size,,-1.03,-1.03,0.0,+0,-0.87,-0.87,0.0,+0,-17.0,-17 †
+2,mock2_hvcts_band,Council tax surcharge band from £1.5m,2028-29,ok,,param_blind,,,0.15,+0.15,0.0,+0,0.14,+0.14,0.0,+0,3.0,+3 †
+2,mock2_hvcts_band,Council tax surcharge band from £1.5m,2030-31,ok,,param_blind,,,0.16,+0.16,0.0,+0,0.14,+0.14,0.0,+0,3.0,+3 †
+2,mock2_state_pension_personal_allowance,State Pension personal allowance,2027-28,ok,,,OBR effect size,,-0.35,-0.35,-0.0,-0,-0.38,-0.38,14.0,+14,12.0,+12
+2,mock2_state_pension_personal_allowance,State Pension personal allowance,2030-31,ok,,,,,-1.35,-1.35,-0.0,-0,-1.34,-1.34,2.0,+2,-4.0,-4
+2,mock2_state_pension_uprating,State Pension uprating: higher of CPI and 2.5%,2030-31,ok,,not_reproduced,static size,,0.99,+0.99 ‡,0.0,+0,0.87,+0.87,-0.0,-0,1.0,+1
+3,mock3_additional_rate_threshold,Lower additional rate threshold,2027-28,ok,,,OBR effect size,,1.65,+1.65,-578.0,-578,1.64,+1.64,-854.0,-854,-930.0,-930
+3,mock3_additional_rate_threshold,Lower additional rate threshold,2031-32,ok,,,,,2.17,+2.17,-985.0,-985,2.09,+2.09,-1197.0,"-1,197",-1310.0,"-1,310"
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2027-28,ok,,,,,4.49,+4.49,0.0,+0,4.44,+4.44,0.0,+0,5.0,+5
+3,mock3_cgt_higher_rate_aea,Capital Gains Tax higher rate and annual exempt amount,2031-32,ok,,,,,5.23,+5.23,0.0,+0,5.16,+5.16,0.0,+0,14.0,+14
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,2027-28,ok,,,OBR effect size,,0.35,+0.35,12.0,+12,0.36,+0.36,-3.0,-3,-1.0,-1
+3,mock3_class4_main_rate,Class 4 National Insurance main rate rise,2031-32,ok,,,OBR effect sign,,0.44,+0.44,-21.0,-21,0.45,+0.45,11.0,+11,8.0,+8
+3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2027-28,ok,,param_blind,static size,,-1.33,-1.33,0.0,+0,-1.56,-1.56,0.0,+0,0.0,+0 †
+3,mock3_employer_ni_under_22,Employer National Insurance relief for under-22s,2031-32,ok,,param_blind,static size,,-1.52,-1.52,0.0,+0,-1.78,-1.78,0.0,+0,0.0,+0 †
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,2027-28,ok,,param_blind,,,-0.91,-0.91,0.0,+0,-0.88,-0.88,0.0,+0,-16.0,-16 †
+3,mock3_fuel_duty_phasing,Fuel duty rises phased,2031-32,ok,,param_blind,static size,,-0.52,-0.52,0.0,+0,-0.44,-0.44,0.0,+0,-9.0,-9 †
+3,mock3_hvcts_top_bands,Council tax surcharge top bands,2027-28,ok,,param_blind,,,0.0,+0.00,0.0,+0,0.0,+0.00,0.0,+0,0.0,+0 †
+3,mock3_hvcts_top_bands,Council tax surcharge top bands,2031-32,ok,,param_blind,static sign,,0.0,+0.00,0.0,+0,0.03,+0.03,0.0,+0,1.0,+1 †
+3,mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2027-28,ok,,,,,-0.48,-0.48,-74.0,-74,-0.47,-0.47,-78.0,-78,-76.0,-76
+3,mock3_lha_30th_percentile,Local Housing Allowance restored to 30th percentile,2031-32,ok,,,static size,,-0.99,-0.99,-147.0,-147,-1.13,-1.13,-173.0,-173,-158.0,-158
+3,mock3_pensioner_allowance,Pensioner Allowance,2027-28,ok,,,,,-1.57,-1.57,-1.0,-1,-1.65,-1.65,-1.0,-1,-5.0,-5
+3,mock3_pensioner_allowance,Pensioner Allowance,2031-32,ok,,,,,-2.99,-2.99,-1.0,-1,-3.04,-3.04,-1.0,-1,-11.0,-11
+3,mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2029-30,ok,,nr param_blind,OBR effect sign,,0.97,+0.97,-16.0,-16,0.97,+0.97,14.0,+14,,n/r †
+3,mock3_salary_sacrifice_cap,Lower pension salary sacrifice limit,2031-32,ok,,nr param_blind,OBR effect size,,1.1,+1.10,34.0,+34,1.01,+1.01,22.0,+22,,n/r †
+3,mock3_threshold_freeze_2032,Threshold freeze extended to April 2032,2031-32,ok,,,OBR effect sign,,4.46,+4.46,117.0,+117,4.33,+4.33,-85.0,-85,-82.0,-82
+3,mock3_whd_top_up,Warm Home Discount £100 top-up,2026-27,ok,,,OBR effect size,,-0.72,-0.72,-15.0,-15,-0.69,-0.69,-31.0,-31,-25.0,-25
+3,mock3_whd_top_up,Warm Home Discount £100 top-up,2027-28,ok,,,OBR effect size,,-0.72,-0.72,-15.0,-15,-0.7,-0.70,-39.0,-39,-35.0,-35
+4,mock4_carers_allowance_limit,Carer's Allowance earnings limit £230,–,withheld,withheld (<10),,,,,,,,,,,,,
+4,mock4_cb_early_years_addition,Child Benefit Early Years Addition,2027-28,ok,,param_blind,OBR effect size,,-0.21,-0.21,-21.0,-21,-0.19,-0.19,-40.0,-40,0.0,+0 †
+4,mock4_cb_early_years_addition,Child Benefit Early Years Addition,2031-32,ok,,param_blind,OBR effect size,,-0.2,-0.20,-30.0,-30,-0.18,-0.18,-40.0,-40,0.0,+0 †
+4,mock4_cgt_higher_rate,CGT higher rate 26%,2027-28,ok,,,,,2.16,+2.16,0.0,+0,2.15,+2.15,0.0,+0,-2.0,-2
+4,mock4_cgt_higher_rate,CGT higher rate 26%,2031-32,ok,,,,,2.52,+2.52,0.0,+0,2.51,+2.51,0.0,+0,6.0,+6
+4,mock4_combined,All drill 4 measures together,2026-27,ok,,nr param_blind,,,-1.53,-1.53,,n/r,-1.58,-1.58,,n/r,,n/r †
+4,mock4_combined,All drill 4 measures together,2031-32,ok,,not_reproduced nr param_blind,static size,,1.18,+1.18 ‡,,n/r,0.68,+0.68,,n/r,,n/r †
+4,mock4_employer_ni_under23,Employer NI relief for under-23s,2027-28,ok,,,static size,,-2.27,-2.27,0.0,+0,-2.57,-2.57,0.0,+0,0.0,+0
+4,mock4_employer_ni_under23,Employer NI relief for under-23s,2031-32,ok,,,static size,,-2.4,-2.40,0.0,+0,-2.72,-2.72,0.0,+0,0.0,+0
+4,mock4_fuel_duty,Fuel duty rises cancelled and restaged,2026-27,ok,,,,,-0.2,-0.20,0.0,+0,-0.21,-0.21,0.0,+0,-4.0,-4
+4,mock4_fuel_duty,Fuel duty rises cancelled and restaged,2031-32,ok,,,,,-0.65,-0.65,0.0,+0,-0.68,-0.68,0.0,+0,-15.0,-15
+4,mock4_fuel_vat_cut,VAT cut on road fuel,2026-27,ok,,,,,-0.51,-0.51,0.0,+0,-0.53,-0.53,0.0,+0,-10.0,-10
+4,mock4_fuel_vat_cut,VAT cut on road fuel,2027-28,ok,,,,,-0.25,-0.25,0.0,+0,-0.26,-0.26,0.0,+0,-5.0,-5
+4,mock4_lha_reset,LHA reset to 30th percentile,2027-28,ok,,,OBR effect size,,-1.47,-1.47,-88.0,-88,-1.39,-1.39,-150.0,-150,-142.0,-142
+4,mock4_lha_reset,LHA reset to 30th percentile,2031-32,ok,,,,,-1.68,-1.68,-106.0,-106,-1.56,-1.56,-140.0,-140,-119.0,-119
+4,mock4_savings_starting_band,"Savings starting-rate band £2,000",2028-29,ok,,,static size,,0.28,+0.28,4.0,+4,0.13,+0.13,6.0,+6,8.0,+8
+4,mock4_savings_starting_band,"Savings starting-rate band £2,000",2031-32,ok,,,static size,,0.31,+0.31,4.0,+4,0.12,+0.12,3.0,+3,7.0,+7
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2027-28,ok,,nr param_blind,,,-0.22,-0.22,,n/r,-0.22,-0.22,,n/r,,n/r †
+4,mock4_state_pension_topup_allowance,State Pension Top-up Allowance,2031-32,ok,,nr param_blind,,,-0.63,-0.63,,n/r,-0.62,-0.62,,n/r,,n/r †
+4,mock4_threshold_freeze_2032,Thresholds frozen to April 2032,2031-32,ok,,,OBR effect size,,4.8,+4.80,-37.0,-37,4.82,+4.82,-123.0,-123,-89.0,-89
+4,mock4_uc_child_element,UC child element +£12.50 a month,2027-28,ok,,,,,-0.76,-0.76,-112.0,-112,-0.79,-0.79,-104.0,-104,-68.0,-68
+4,mock4_uc_child_element,UC child element +£12.50 a month,2031-32,ok,,,,,-0.76,-0.76,-112.0,-112,-0.78,-0.78,-110.0,-110,-70.0,-70
+4,mock4_whd_topup,Warm Home Discount top-up,2026-27,ok,,param_blind,,,-0.82,-0.82,-7.0,-7,-0.84,-0.84,-7.0,-7,0.0,+0 †
