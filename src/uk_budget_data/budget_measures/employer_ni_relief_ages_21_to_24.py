@@ -37,6 +37,12 @@ def employer_ni_relief_ages_21_to_24(
     wage pass-through read the NI parameters, which do not change, so
     earnings and household incomes are fixed: the measure moves revenue
     alone.
+
+    Apprentices (``is_apprentice``) are left as the model has them, as
+    under-21s are: they already have the zero rate in law. The certified
+    dataset flags no apprentices, so today this changes no result; the
+    cost therefore includes 21 to 24-year-old apprentices (HMRC prices the
+    apprentice relief at about £0.57bn in 2025-26).
     """
     native = sim.tax_benefit_system.get_variable("ni_class_1_employer")
     thresholds = {
@@ -66,7 +72,16 @@ def employer_ni_relief_ages_21_to_24(
             0, np.minimum(earnings, thresholds[year]) - secondary_threshold
         )
         age = person("age", period)
-        in_ages = (age >= lowest_age) & (age < age_limit)
+        # Relevant apprentices under 25 have their own zero rate in law
+        # (SSCBA 1992 s.9B), which policyengine-uk #2505 applies natively.
+        # Relieving them here as well would take the relief off a charge
+        # that no longer includes it, and the floor at zero would then
+        # wipe out the ordinary charge above the threshold.
+        in_ages = (
+            (age >= lowest_age)
+            & (age < age_limit)
+            & ~person("is_apprentice", period)
+        )
         relief = np.where(in_ages, class_1.rates.employer * relieved, 0)
         return np.maximum(current - relief, 0)
 

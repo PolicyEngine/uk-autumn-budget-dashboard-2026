@@ -96,9 +96,9 @@ def test_every_registered_modifier_lives_in_a_module_of_its_own():
     """Every measure's modifier, on either side, is the one function of a
     module of its own in the package, named after it: none comes from
     anywhere else, in the package or outside it, where it could share a
-    module with another. The combined measure's reform modifier composes
-    its members' (``publication.combine``); each member's is checked as
-    its own measure's."""
+    module with another. The combined measure's modifiers, on both sides,
+    compose its members' (``publication.combine``); each member's is
+    checked as its own measure's."""
     checked = 0
     for reform in get_all_reforms():
         if reform.id == AUTUMN_BUDGET_2026_COMBINED_ID:

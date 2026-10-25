@@ -1,7 +1,8 @@
 """The split of ``budget_measures.py`` into one module per modifier (#134).
 
 ``tests/budget_measures_before_split.b64`` is ``budget_measures.py``
-exactly as it was on ``main`` before the split (65280bd), base64-encoded.
+exactly as it was on ``main`` before the split (674e896, last changed
+by #113), base64-encoded.
 Kept as Python, git paired the copy with the deleted file as a rename
 (100% similar), so a branch still editing ``budget_measures.py`` merged its
 edit into the copy, with no conflict, instead of into the modifier's
@@ -50,7 +51,9 @@ _COPY_DIRECTORY = tempfile.TemporaryDirectory(prefix="before-split-")
 
 def _load_copy():
     path = Path(_COPY_DIRECTORY.name) / f"{COPY_MODULE}.py"
-    path.write_bytes(base64.b64decode(COPY.read_bytes(), validate=False))
+    # Strict: anything but base64 and line breaks in the file is an error
+    stored = b"".join(COPY.read_bytes().split())
+    path.write_bytes(base64.b64decode(stored, validate=True))
     spec = importlib.util.spec_from_file_location(COPY_MODULE, path)
     loaded = importlib.util.module_from_spec(spec)
     sys.modules[COPY_MODULE] = loaded
@@ -71,10 +74,10 @@ except ImportError as error:  # a helper the copy imports was renamed since
         allow_module_level=True,
     )
 
-# SHA-256 of budget_measures.py on main at 65280bd, the last commit before
-# the split: the copy is that file, byte for byte.
+# SHA-256 of budget_measures.py on main at 674e896, as #113 left it, the
+# last version before the split: the copy is that file, byte for byte.
 BEFORE_SPLIT_SHA256 = (
-    "b9eb17b3a8b80c8e62a8749e78d447326d790e3cf36fd62f499f27a6012cb42d"
+    "8d04930f4441e241ae04d98c4bead82dd79354161a817baeb846a4fc9369ea66"
 )
 # SHA-256 of each module as the split wrote it.
 SPLIT_SHA256 = {
@@ -82,7 +85,7 @@ SPLIT_SHA256 = {
         "8992487f9496048a3eb44e81d4857365540383f2d16d0e779c984cdc79171219"
     ),
     "employer_ni_relief_ages_21_to_24": (
-        "f3146191e61ca89ddb1eed743f705a12dcaff370f84f985eb66e1c2d8e5e01d3"
+        "96bf3fe6eb8428bac192214dcf9a36d1adbf2a051d8e8cb81db36218915bfdaa"
     ),
     "pump_vat_on_fuel_duty_deferral": (
         "ee58cdf6addca2bbda55e491a9b2c255386c99eaef9e54936febefc25722eb7e"
